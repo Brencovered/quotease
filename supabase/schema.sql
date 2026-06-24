@@ -1,0 +1,72 @@
+-- Tradie Quote App schema
+-- Run this in the Supabase SQL editor for a new project
+
+create extension if not exists "uuid-ossp";
+
+-- One row per tradie business using the app
+create table profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  business_name text,
+  trade text not null default 'electrician', -- electrician, plumber, carpenter, etc
+  hourly_rate numeric not null default 95,
+  materials_margin_pct numeric not null default 20,
+  contact_email text,
+  contact_phone text,
+  xero_connected boolean not null default false,
+  xero_tenant_id text,
+  xero_access_token text,
+  xero_refresh_token text,
+  xero_token_expires_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+-- Per-tradie material price book. Seeded with placeholder defaults on signup,
+-- then overwritten by their own CSV upload or manual edits.
+create table material_items (
+  id uuid primary key default uuid_generate_v4(),
+  profile_id uuid not null references profiles(id) on delete cascade,
+  trade text not null default 'electrician',
+  item_key text not null,      -- stable key the calculator references, e.g. 'pp', 'dl_builder'
+  label text not null,         -- display name, e.g. 'Power point'
+  unit_cost numeric not null default 0,
+  supplier text,
+  updated_at timestamptz not null default now(),
+  unique (profile_id, item_key)
+);
+
+-- A saved job + quote
+create table quotes (
+  id uuid primary key default uuid_generate_v4(),
+  profile_id uuid not null references profiles(id) on delete cascade,
+  client_name text,
+  client_email text,
+  client_phone text,
+  site_address text,
+  trade text not null default 'electrician',
+  job_type text,
+  -- raw form inputs, stored as JSON so the schema doesn't need to change
+  -- every time a field is added to a trade's intake form
+  intake_data jsonb not null default '{}',
+  labour_hours numeric,
+  materials_cost numeric,
+  total_cost numeric,
+  status text not null default 'draft', -- draft, sent, accepted, declined, invoiced
+  pdf_url text,
+  sent_at timestamptz,
+  xero_invoice_id text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table profiles enable row level security;
+alter table material_items enable row level security;
+alter table quotes enable row level security;
+
+create policy "Own profile" on profiles
+  for all using (auth.uid() = id);
+
+create policy "Own materials" on material_items
+  for all using (auth.uid() = profile_id);
+
+create policy "Own quotes" on quotes
+  for all using (auth.uid() = profile_id);
