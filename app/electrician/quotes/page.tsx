@@ -11,13 +11,13 @@ export default async function QuotesPage() {
     if (userData.user) {
       const { data: dbQuotes } = await supabase
         .from("quotes")
-        .select("*")
+        .select("id, client_name, client_email, site_address, status, total_cost, amount_paid, payment_terms, invoice_number, xero_exported_at, completed_at, created_at, follow_up_at, quote_expires_at, sent_at")
         .eq("profile_id", userData.user.id)
         .order("created_at", { ascending: false });
       if (dbQuotes) quotes = dbQuotes;
     }
   } catch (err) {
-    console.error("Quotes page: falling back to empty list —", err);
+    console.error("Quotes page:", err);
   }
 
   return (

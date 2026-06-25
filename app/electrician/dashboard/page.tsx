@@ -12,12 +12,12 @@ export default async function DashboardPage() {
     if (userData.user) {
       const { data: quotes } = await supabase
         .from("quotes")
-        .select("status, total_cost, amount_paid, created_at")
+        .select("status, total_cost, amount_paid, created_at, follow_up_at, quote_expires_at, sent_at, labour_hours, materials_cost")
         .eq("profile_id", userData.user.id);
       if (quotes) stats = computeDashboardStats(quotes);
     }
   } catch (err) {
-    console.error("Dashboard page: showing empty stats —", err);
+    console.error("Dashboard page:", err);
   }
 
   return (

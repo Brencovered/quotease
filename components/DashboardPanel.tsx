@@ -11,6 +11,10 @@ import {
   CheckCircle2,
   XCircle,
   BadgeCheck,
+  Bell,
+  AlertTriangle,
+  CalendarDays,
+  Users,
 } from "lucide-react";
 
 const STATUS_META: Record<string, { label: string; color: string; icon: typeof FileText }> = {
@@ -66,6 +70,31 @@ export default function DashboardPanel({ stats }: { stats: DashboardStats }) {
             </a>
           </div>
 
+          {/* ACTION ALERTS */}
+          {(stats.overdueFollowUps > 0 || stats.expiredQuotes > 0) && (
+            <div className="flex flex-col gap-2 mb-5">
+              {stats.overdueFollowUps > 0 && (
+                <a href="/electrician/quotes" className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-700">
+                  <Bell size={16} className="shrink-0" />
+                  <span className="text-[13.5px] font-semibold">{stats.overdueFollowUps} overdue follow-up{stats.overdueFollowUps !== 1 ? "s" : ""} — check your sent quotes</span>
+                </a>
+              )}
+              {stats.expiredQuotes > 0 && (
+                <a href="/electrician/quotes" className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-amber-800">
+                  <AlertTriangle size={16} className="shrink-0" />
+                  <span className="text-[13.5px] font-semibold">{stats.expiredQuotes} expired quote{stats.expiredQuotes !== 1 ? "s" : ""} — resend with updated pricing</span>
+                </a>
+              )}
+            </div>
+          )}
+
+          {/* QUICK LINKS */}
+          <div className="grid grid-cols-3 gap-3 mb-5">
+            <a href="/electrician" className="bg-[var(--amber)] text-[var(--navy)] rounded-xl p-3 text-center font-bold text-sm">+ New quote</a>
+            <a href="/electrician/schedule" className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3 text-center font-semibold text-[13px] text-[var(--ink)] flex flex-col items-center gap-1"><CalendarDays size={16} className="text-[var(--ink-faint)]" />Schedule</a>
+            <a href="/electrician/clients" className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3 text-center font-semibold text-[13px] text-[var(--ink)] flex flex-col items-center gap-1"><Users size={16} className="text-[var(--ink-faint)]" />Clients</a>
+          </div>
+
           {/* SECONDARY STATS */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-5">
             <StatCard icon={FileText} label="Quotes raised" value={stats.totalQuotes.toString()} />
@@ -79,6 +108,7 @@ export default function DashboardPanel({ stats }: { stats: DashboardStats }) {
             <StatCard icon={DollarSign} label="Total quoted" value={`$${stats.totalQuotedValue.toLocaleString()}`} accent />
             <StatCard icon={BadgeCheck} label="Total won" value={`$${stats.totalWonValue.toLocaleString()}`} accent />
             <StatCard icon={Clock} label="Outstanding" value={`$${stats.totalOutstanding.toLocaleString()}`} warn={stats.totalOutstanding > 0} />
+            {stats.avgLabourHours !== null && <StatCard icon={Clock} label="Avg labour hrs" value={`${stats.avgLabourHours}h`} />}
             <StatCard icon={Wallet} label="Collected" value={`$${stats.totalCollected.toLocaleString()}`} success />
           </div>
 
