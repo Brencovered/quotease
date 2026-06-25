@@ -1,77 +1,69 @@
 @import "tailwindcss";
 
-/* --- Quotease design tokens ---
-   Grounded in the actual object this product replaces: the carbon-copy
-   quote pad a tradie fills out leaning on the tailgate. Navy = workwear,
-   orange = site safety signage, paper = the docket itself. */
 :root {
-  --navy: #15202b;
-  --navy-deep: #0e161e;
-  --paper: #f3eee0;
-  --paper-line: #d8d0b8;
-  --ink: #1c1c1a;
-  --orange: #ff6a1a;
-  --orange-deep: #d9560f;
-  --off-white: #f5f6f7;
-  --steel: #8993a1;
-}
-
-@theme inline {
-  --font-display: "Oswald", "Arial Narrow", sans-serif;
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --navy: #0a1722;
+  --navy-deep: #0c1e2e;
+  --card: #0e2233;
+  --amber: #ffb400;
+  --amber-deep: #e89e00;
+  --paper: #f6f9fb;
+  --ink: #0a1722;
+  --text: #eaf0f4;
+  --steel-1: #a9bcc8;
+  --steel-2: #92a6b3;
+  --steel-3: #7e94a2;
+  --steel-4: #6f8593;
+  --line: rgba(255, 255, 255, 0.08);
 }
 
 body {
-  background: var(--off-white);
-  color: var(--ink);
-  font-family: var(--font-sans);
+  background: var(--navy);
+  color: var(--text);
+  font-family: "Archivo", sans-serif;
 }
 
 .font-display {
-  font-family: var(--font-display);
+  font-family: "Anton", sans-serif;
+  font-weight: 400;
 }
 
-.font-mono-num {
-  font-family: var(--font-mono);
-  font-feature-settings: "tnum";
+.tabular {
+  font-variant-numeric: tabular-nums;
 }
 
-/* Perforated edge on the quote docket card - a row of punched holes like
-   a real carbon-copy pad, not decoration: it's the actual tear-off edge. */
-.docket-perf::before {
-  content: "";
-  position: absolute;
-  left: -7px;
-  top: 16px;
-  bottom: 16px;
-  width: 14px;
-  background-image: radial-gradient(circle, var(--off-white) 3.5px, transparent 3.6px);
-  background-size: 14px 18px;
-  background-repeat: repeat-y;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .docket-enter {
-    animation: docket-enter 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+@keyframes qstamp {
+  0%,
+  100% {
+    transform: rotate(-9deg) scale(1);
   }
-  @keyframes docket-enter {
-    from {
-      opacity: 0;
-      transform: rotate(0deg) translateY(16px) scale(0.97);
-    }
-    to {
-      opacity: 1;
-      transform: rotate(-2.5deg) translateY(0) scale(1);
-    }
+  50% {
+    transform: rotate(-9deg) scale(1.04);
   }
+}
+.stamp-wobble {
+  animation: qstamp 3.2s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  .docket-enter {
-    transform: rotate(-2.5deg);
+  .stamp-wobble {
+    animation: none;
   }
 }
 
-.stamp-press:active {
-  transform: translateY(1px) scale(0.99);
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.reveal {
+  animation: reveal-up 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    animation: none;
+  }
 }
