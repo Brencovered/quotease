@@ -177,6 +177,12 @@ export default function QuoteBuilder({
 
   return (
     <main className="max-w-2xl mx-auto px-6 py-10">
+      <div className="flex justify-between items-center mb-4">
+        <p className="text-sm text-neutral-500">Electrician</p>
+        <a href="/electrician/quotes" className="text-sm text-blue-600">
+          View all quotes
+        </a>
+      </div>
       <div className="flex gap-2 mb-6">
         <button
           onClick={() => setTab("job")}

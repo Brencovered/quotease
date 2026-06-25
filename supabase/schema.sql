@@ -50,13 +50,27 @@ create table quotes (
   labour_hours numeric,
   materials_cost numeric,
   total_cost numeric,
-  status text not null default 'draft', -- draft, sent, accepted, declined, invoiced
+  status text not null default 'draft', -- draft, sent, accepted, declined, paid
   pdf_url text,
   sent_at timestamptz,
-  xero_invoice_id text,
+  accepted_at timestamptz,
+  paid_at timestamptz,
+  invoice_number text,          -- e.g. INV-0001, generated when first exported to Xero
+  xero_exported_at timestamptz, -- set when included in a CSV export, so it isn't exported twice
+  xero_invoice_id text,         -- only used if a tradie later connects full Xero OAuth
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Per-tradie running invoice number counter, so invoice numbers are
+-- sequential per business rather than global across all tradies
+create table invoice_counters (
+  profile_id uuid primary key references profiles(id) on delete cascade,
+  next_number integer not null default 1
+);
+alter table invoice_counters enable row level security;
+create policy "Own invoice counter" on invoice_counters
+  for all using (auth.uid() = profile_id);
 
 alter table profiles enable row level security;
 alter table material_items enable row level security;
