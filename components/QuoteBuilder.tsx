@@ -76,9 +76,11 @@ export default function QuoteBuilder({
   }
   const [saving, setSaving] = useState(false);
   const [drawingFile, setDrawingFile] = useState<File | null>(null);
+  const [drawingInstructions, setDrawingInstructions] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<{ confidence: string; notes: string } | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [usageLimitReached, setUsageLimitReached] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   const costs: MaterialCostMap = useMemo(() => {
@@ -136,14 +138,17 @@ export default function QuoteBuilder({
     setAnalyzing(true);
     setAnalysisError(null);
     setAnalysisResult(null);
+    setUsageLimitReached(false);
 
     try {
       const formData = new FormData();
       formData.append("file", file);
+      if (drawingInstructions.trim()) formData.append("instructions", drawingInstructions.trim());
       const res = await fetch("/api/quotes/analyze-drawing", { method: "POST", body: formData });
       const body = await res.json();
       if (!res.ok) {
         setAnalysisError(body.error ?? "Analysis failed");
+        if (body.usageLimitReached) setUsageLimitReached(true);
         setAnalyzing(false);
         return;
       }
@@ -301,6 +306,19 @@ export default function QuoteBuilder({
           </div>
 
           <SectionCard label="Drawing" title="Estimate from a drawing (optional)" sub="Upload a floor plan, electrical drawing, or site photo — AI reads it and pre-fills the fields below for you to review">
+            <label className="block mb-3">
+              <span className="block text-[12.5px] font-medium text-[var(--ink-soft)] mb-1.5">
+                Anything specific the AI should focus on? (optional)
+              </span>
+              <textarea
+                value={drawingInstructions}
+                onChange={(e) => setDrawingInstructions(e.target.value)}
+                rows={2}
+                placeholder="e.g. only count new circuits marked in red, ignore the existing wiring shown in grey"
+                className="app-field"
+              />
+            </label>
+
             <label className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--navy)] border-2 border-[var(--line)] rounded-lg px-3 py-2 cursor-pointer">
               <ScanLine size={15} />
               {analyzing ? "Reading drawing..." : drawingFile ? "Re-analyse a different file" : "Upload drawing"}
@@ -312,9 +330,16 @@ export default function QuoteBuilder({
             )}
 
             {analysisError && (
-              <p className="text-[13px] text-red-600 mt-2 flex items-center gap-1.5">
-                <AlertTriangle size={14} /> {analysisError}
-              </p>
+              <div className="mt-2">
+                <p className="text-[13px] text-red-600 flex items-center gap-1.5">
+                  <AlertTriangle size={14} /> {analysisError}
+                </p>
+                {usageLimitReached && (
+                  <a href="/settings" className="text-[13px] font-semibold text-[var(--navy)] underline">
+                    Go to Settings to subscribe
+                  </a>
+                )}
+              </div>
             )}
 
             {analysisResult && (

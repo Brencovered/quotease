@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { FREE_ANALYSES_LIMIT, ADDON_MONTHLY_LIMIT, currentPeriod } from "@/lib/aiUsage";
 
 const TRADES = [
   { key: "electrician", label: "Electrician", ready: true },
@@ -20,6 +21,10 @@ type Profile = {
   license_number?: string | null;
   business_address?: string | null;
   terms_and_conditions?: string | null;
+  ai_free_analyses_used?: number;
+  ai_addon_status?: string;
+  ai_addon_period?: string | null;
+  ai_addon_analyses_used?: number;
 } | null;
 
 export default function SettingsPanel({ profile }: { profile: Profile }) {
@@ -36,6 +41,23 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
   const [companySaving, setCompanySaving] = useState(false);
   const [companySaved, setCompanySaved] = useState(false);
   const [companyError, setCompanyError] = useState<string | null>(null);
+  const [addonLoading, setAddonLoading] = useState(false);
+
+  async function subscribeToAddon() {
+    setAddonLoading(true);
+    const res = await fetch("/api/stripe/addon-checkout", { method: "POST" });
+    const data = await res.json();
+    if (data.url) window.location.href = data.url;
+    setAddonLoading(false);
+  }
+
+  async function manageAddon() {
+    setAddonLoading(true);
+    const res = await fetch("/api/stripe/portal", { method: "POST" });
+    const data = await res.json();
+    if (data.url) window.location.href = data.url;
+    setAddonLoading(false);
+  }
 
   async function toggle(key: string) {
     const next = trades.includes(key) ? trades.filter((t) => t !== key) : [...trades, key];
@@ -182,6 +204,51 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
         >
           {companySaving ? "Saving..." : "Save company details"}
         </button>
+      </div>
+
+      <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-4 sm:p-5 mb-4">
+        <p className="text-[11px] tracking-[.12em] uppercase text-[var(--amber-deep)] font-bold mb-1">AI</p>
+        <p className="font-semibold text-[var(--ink)] mb-1">Drawing analysis</p>
+        {(() => {
+          const freeUsed = profile?.ai_free_analyses_used ?? 0;
+          const freeLeft = Math.max(FREE_ANALYSES_LIMIT - freeUsed, 0);
+          const addonActive = profile?.ai_addon_status === "active";
+          const addonUsed = profile?.ai_addon_period === currentPeriod() ? profile?.ai_addon_analyses_used ?? 0 : 0;
+
+          if (addonActive) {
+            return (
+              <>
+                <p className="text-[13px] text-[var(--ink-faint)] mb-3">
+                  {addonUsed} of {ADDON_MONTHLY_LIMIT} analyses used this month. Resets on the 1st.
+                </p>
+                <button
+                  onClick={manageAddon}
+                  disabled={addonLoading}
+                  className="border-2 border-[var(--line)] rounded-lg px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
+                >
+                  {addonLoading ? "Opening..." : "Manage subscription"}
+                </button>
+              </>
+            );
+          }
+          return (
+            <>
+              <p className="text-[13px] text-[var(--ink-faint)] mb-3">
+                {freeLeft > 0
+                  ? `${freeLeft} of ${FREE_ANALYSES_LIMIT} free drawing analyses left.`
+                  : `You've used all ${FREE_ANALYSES_LIMIT} free analyses.`}{" "}
+                Subscribe for $10/mo to get {ADDON_MONTHLY_LIMIT} analyses every month.
+              </p>
+              <button
+                onClick={subscribeToAddon}
+                disabled={addonLoading}
+                className="bg-[var(--navy)] text-white rounded-lg px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
+              >
+                {addonLoading ? "Redirecting..." : "Subscribe — $10/mo"}
+              </button>
+            </>
+          );
+        })()}
       </div>
 
       <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-4 sm:p-5 mb-4">

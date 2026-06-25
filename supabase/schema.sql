@@ -29,6 +29,14 @@ create table profiles (
   license_number text,
   business_address text,
   terms_and_conditions text default 'Quote valid for 30 days. Materials and labour as listed above. Any variation to the scope of work will be quoted separately before proceeding. Payment due as per the terms stated on this quote.',
+  -- AI drawing analysis: 3 free lifetime uses per account, then requires
+  -- the paid add-on. ai_addon_period is reset lazily (compared against the
+  -- current month at request time) rather than via a cron job.
+  ai_free_analyses_used integer not null default 0,
+  ai_addon_status text not null default 'none', -- none, active, canceled
+  ai_addon_subscription_id text,
+  ai_addon_period text,
+  ai_addon_analyses_used integer not null default 0,
   created_at timestamptz not null default now()
 );
 

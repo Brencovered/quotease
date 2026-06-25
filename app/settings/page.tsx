@@ -8,6 +8,10 @@ export default async function SettingsPage() {
     contact_email?: string;
     xero_connected?: boolean;
     trades?: string[];
+    ai_free_analyses_used?: number;
+    ai_addon_status?: string;
+    ai_addon_period?: string | null;
+    ai_addon_analyses_used?: number;
   } | null = null;
 
   try {

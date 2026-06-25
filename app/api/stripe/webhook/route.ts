@@ -24,6 +24,17 @@ export async function POST(request: Request) {
     const profileId = subscription.metadata.profile_id;
     if (!profileId) return; // not one of our subscriptions
 
+    if (subscription.metadata.plan === "ai_addon") {
+      await supabase
+        .from("profiles")
+        .update({
+          ai_addon_status: subscription.status === "active" ? "active" : "canceled",
+          ai_addon_subscription_id: subscription.id,
+        })
+        .eq("id", profileId);
+      return;
+    }
+
     const item = subscription.items.data[0];
     await supabase
       .from("profiles")
@@ -39,6 +50,16 @@ export async function POST(request: Request) {
       .eq("id", profileId);
   }
 
+  async function cancelSubscription(subscription: Stripe.Subscription) {
+    const profileId = subscription.metadata.profile_id;
+    if (!profileId) return;
+    if (subscription.metadata.plan === "ai_addon") {
+      await supabase.from("profiles").update({ ai_addon_status: "canceled" }).eq("id", profileId);
+    } else {
+      await supabase.from("profiles").update({ subscription_status: "canceled" }).eq("id", profileId);
+    }
+  }
+
   switch (event.type) {
     case "customer.subscription.created":
     case "customer.subscription.updated":
@@ -48,10 +69,7 @@ export async function POST(request: Request) {
 
     case "customer.subscription.deleted": {
       const subscription = event.data.object as Stripe.Subscription;
-      const profileId = subscription.metadata.profile_id;
-      if (profileId) {
-        await supabase.from("profiles").update({ subscription_status: "canceled" }).eq("id", profileId);
-      }
+      await cancelSubscription(subscription);
       break;
     }
 
