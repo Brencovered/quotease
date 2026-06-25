@@ -14,6 +14,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [checkEmail, setCheckEmail] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -32,32 +33,46 @@ export default function SignupPage() {
     try {
       const supabase = createClient();
 
-      const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
-      if (signUpError || !data.user) {
-        setError(signUpError?.message ?? "Something went wrong");
-        return;
-      }
-
-      const { error: profileError } = await supabase.from("profiles").insert({
-        id: data.user.id,
-        business_name: businessName,
-        contact_email: email,
+      // business_name travels in user metadata, not a separate insert -
+      // a database trigger creates the profile row from this on signup,
+      // since there's no logged-in session yet to satisfy RLS directly
+      // (Supabase withholds the session until the email is confirmed).
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { business_name: businessName } },
       });
-      if (profileError) {
-        setError(profileError.message);
+      if (signUpError) {
+        setError(signUpError.message);
         return;
       }
 
-      router.push("/onboarding");
-      router.refresh();
+      if (data.session) {
+        // Email confirmation is off (or already satisfied) - go straight in.
+        router.push("/onboarding");
+        router.refresh();
+      } else {
+        // Confirmation required - no session yet, so there's nowhere
+        // authenticated to send them until they click the email link.
+        setCheckEmail(true);
+      }
     } catch (err) {
-      // Catches network-level failures (e.g. Supabase URL unreachable) that
-      // the SDK doesn't surface as a normal {error} response — without this,
-      // the button hung on "Creating account..." forever with no feedback.
       setError(err instanceof Error ? err.message : "Could not reach the server. Please try again.");
     } finally {
       setLoading(false);
     }
+  }
+
+  if (checkEmail) {
+    return (
+      <main className="max-w-sm mx-auto px-6 py-20">
+        <h1 className="text-xl font-medium mb-2">Check your email</h1>
+        <p className="text-sm text-neutral-600">
+          We've sent a confirmation link to <strong>{email}</strong>. Click it, then come back and
+          log in.
+        </p>
+      </main>
+    );
   }
 
   return (
