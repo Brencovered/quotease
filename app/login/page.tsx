@@ -34,7 +34,7 @@ export default function LoginPage() {
         setError(error.message);
         return;
       }
-      router.push("/electrician");
+      router.push("/electrician/dashboard");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not reach the server. Please try again.");

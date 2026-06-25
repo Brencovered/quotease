@@ -97,7 +97,7 @@ export default function OnboardingPage() {
     }
 
     setSaving(false);
-    router.push("/electrician");
+    router.push("/electrician/dashboard");
     router.refresh();
   }
 
