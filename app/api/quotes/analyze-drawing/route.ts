@@ -8,7 +8,15 @@ import { checkUsage, currentPeriod, type UsageProfile } from "@/lib/aiUsage";
 // (3 free, then gated behind the paid add-on) so the cost stays bounded
 // and recoverable through the add-on subscription rather than unmetered.
 const SYSTEM_PROMPT_BASE = `You are helping an electrician estimate a residential job from a floor plan or electrical drawing.
-Look at the attached drawing and count standard AS/NZS electrical symbols:
+
+STEP 1 — Classify the drawing:
+A) "electrical" — drawing contains standard AS/NZS electrical symbols (GPO outlets, light point circles, switch symbols, etc.)
+B) "architectural" — drawing is a floor plan or building plan with ROOMS but NO electrical symbols
+C) "other" — site photo, unclear image, or something else entirely
+
+STEP 2 — Extract data based on type:
+
+If type A (electrical drawing): count the symbols directly:
 - Power points (GPOs)
 - Light points / fittings
 - Switches
@@ -17,6 +25,21 @@ Look at the attached drawing and count standard AS/NZS electrical symbols:
 - Whether 3-phase supply is indicated
 - Data/network points
 - Smoke alarms
+
+If type B (architectural floor plan — no electrical symbols): do NOT return all zeros. Instead:
+- Count the total number of distinct rooms / spaces visible across ALL floors (include bedrooms, living, kitchen, bathrooms, hallways, laundry, garage — every defined space)
+- Estimate downlights as rooms × 3 (typical new install density for Australian residential)
+- Estimate switches as rooms × 1 (one switching location per room/zone)
+- Estimate smoke_alarms as rooms × 1 (one interconnected photoelectric alarm per room/zone per AS 3786)
+- Set power_points to 0 (cannot be determined without electrical symbols — tradie must assess on site)
+- Set light_points to 0 (downlights field covers this for new install)
+- Set switchboard_upgrade to false (unknown — tradie must assess switchboard capacity on site)
+- Set three_phase to false (unknown)
+- Set data_points to 0 (unknown)
+- Set confidence to "low"
+- In notes: explain this is an architectural plan with no electrical symbols, state how many rooms you counted, that all quantities are estimates only, that an on-site survey is essential to confirm ceiling construction, roof cavity access, and switchboard capacity before quoting
+
+If type C (other): return all zeros, confidence "low", explain in notes.
 
 Respond with ONLY a JSON object, no other text, in exactly this shape:
 {
@@ -29,10 +52,8 @@ Respond with ONLY a JSON object, no other text, in exactly this shape:
   "data_points": <integer>,
   "smoke_alarms": <integer>,
   "confidence": "<high|medium|low>",
-  "notes": "<one sentence on anything unclear or worth the tradie double-checking on site>"
-}
-
-If the drawing is unclear, low-resolution, or doesn't look like an electrical/floor plan at all, set confidence to "low" and explain in notes rather than guessing wildly at numbers.`;
+  "notes": "<one or two sentences on anything unclear or worth the tradie double-checking on site>"
+}`;
 
 export async function POST(request: Request) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
