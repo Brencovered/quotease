@@ -23,7 +23,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("business_name, contact_email, contact_phone, abn, license_number, business_address, terms_and_conditions, logo_url")
+    .select("business_name, contact_email, contact_phone, abn, license_number, business_address, terms_and_conditions, logo_url, bank_account_name, bank_bsb, bank_account_number, accepts_cash")
     .eq("id", userData.user.id)
     .single();
 

@@ -241,6 +241,7 @@ export async function generateQuotePdf(
   }
 
   // --- Header: logo + business name ---
+  let logoEmbedded = false;
   if (logoBytes) {
     try {
       // pdf-lib can only embed PNG or JPEG directly. Logos get uploaded in
@@ -258,14 +259,22 @@ export async function generateQuotePdf(
         width: image.width * scale,
         height: image.height * scale,
       });
-      y -= maxH + 10;
+      y -= maxH + 14;
+      logoEmbedded = true;
     } catch {
       // If the logo can't be processed for any reason, skip it rather than
       // failing the whole PDF over a cosmetic detail.
     }
   }
 
-  text(profile.business_name ?? "Quote", { size: 18, bold: true });
+  // When the logo embedded successfully, it already carries the brand -
+  // repeating the business name as a second large heading right underneath
+  // just duplicates it (and looks broken if that field happens to be a
+  // placeholder value). Drop it down to a small label instead, the way a
+  // letterhead would, rather than printing it twice at full size.
+  if (profile.business_name) {
+    text(profile.business_name, logoEmbedded ? { size: 11, bold: true, color: [0.3, 0.32, 0.35] } : { size: 18, bold: true });
+  }
   const businessDetailLine = [profile.business_address, profile.abn ? `ABN ${profile.abn}` : null, profile.license_number ? `Licence ${profile.license_number}` : null]
     .filter(Boolean)
     .join("   |   ");
