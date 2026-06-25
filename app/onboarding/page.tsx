@@ -4,12 +4,15 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ELECTRICIAN_DEFAULT_MATERIALS } from "@/lib/calc";
+import { PLUMBER_DEFAULT_MATERIALS } from "@/lib/calcPlumber";
+import { CARPENTER_DEFAULT_MATERIALS } from "@/lib/calcCarpenter";
+import { ROOFER_DEFAULT_MATERIALS } from "@/lib/calcRoofer";
 
 const TRADES = [
-  { key: "electrician", label: "Electrician", ready: true },
-  { key: "plumber", label: "Plumber", ready: false },
-  { key: "carpenter", label: "Carpenter", ready: false },
-  { key: "tiler", label: "Tiler", ready: false },
+  { key: "electrician", label: "Electrician", emoji: "⚡", ready: true },
+  { key: "plumber",     label: "Plumber",     emoji: "🔧", ready: true },
+  { key: "carpenter",   label: "Carpenter",   emoji: "🪚", ready: true },
+  { key: "roofer",      label: "Roofer",      emoji: "🏠", ready: true },
 ];
 
 const DEFAULT_TERMS =
@@ -85,14 +88,16 @@ export default function OnboardingPage() {
       return;
     }
 
-    if (selected.includes("electrician")) {
-      const seedRows = ELECTRICIAN_DEFAULT_MATERIALS.map((m) => ({
-        profile_id: userId,
-        trade: "electrician",
-        item_key: m.item_key,
-        label: m.label,
-        unit_cost: m.unit_cost,
-      }));
+    const TRADE_SEED: Record<string, readonly { item_key: string; label: string; unit_cost: number }[]> = {
+      electrician: ELECTRICIAN_DEFAULT_MATERIALS,
+      plumber:     PLUMBER_DEFAULT_MATERIALS,
+      carpenter:   CARPENTER_DEFAULT_MATERIALS,
+      roofer:      ROOFER_DEFAULT_MATERIALS,
+    };
+    for (const t of selected) {
+      const defaults = TRADE_SEED[t];
+      if (!defaults) continue;
+      const seedRows = defaults.map((m) => ({ profile_id: userId, trade: t, item_key: m.item_key, label: m.label, unit_cost: m.unit_cost }));
       await supabase.from("material_items").upsert(seedRows, { onConflict: "profile_id,item_key" });
     }
 
@@ -121,10 +126,8 @@ export default function OnboardingPage() {
                   isSelected ? "border-[var(--navy)] bg-[var(--navy)]" : "border-[var(--line)] bg-[var(--surface)]"
                 }`}
               >
+                <span className="text-2xl">{t.emoji}</span>
                 <span className={`font-semibold text-sm ${isSelected ? "text-white" : "text-[var(--ink)]"}`}>{t.label}</span>
-                <span className={`text-xs ${isSelected ? "text-[var(--steel-2)]" : "text-[var(--ink-faint)]"}`}>
-                  {t.ready ? "Ready now" : "Coming soon"}
-                </span>
               </button>
             );
           })}

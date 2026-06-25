@@ -3,12 +3,23 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { FREE_ANALYSES_LIMIT, ADDON_MONTHLY_LIMIT, currentPeriod } from "@/lib/aiUsage";
+import { ELECTRICIAN_DEFAULT_MATERIALS } from "@/lib/calc";
+import { PLUMBER_DEFAULT_MATERIALS } from "@/lib/calcPlumber";
+import { CARPENTER_DEFAULT_MATERIALS } from "@/lib/calcCarpenter";
+import { ROOFER_DEFAULT_MATERIALS } from "@/lib/calcRoofer";
+
+const TRADE_SEED: Record<string, readonly { item_key: string; label: string; unit_cost: number }[]> = {
+  electrician: ELECTRICIAN_DEFAULT_MATERIALS,
+  plumber:     PLUMBER_DEFAULT_MATERIALS,
+  carpenter:   CARPENTER_DEFAULT_MATERIALS,
+  roofer:      ROOFER_DEFAULT_MATERIALS,
+};
 
 const TRADES = [
-  { key: "electrician", label: "Electrician", ready: true },
-  { key: "plumber", label: "Plumber", ready: false },
-  { key: "carpenter", label: "Carpenter", ready: false },
-  { key: "tiler", label: "Tiler", ready: false },
+  { key: "electrician", label: "Electrician", emoji: "⚡" },
+  { key: "plumber",     label: "Plumber",     emoji: "🔧" },
+  { key: "carpenter",   label: "Carpenter",   emoji: "🪚" },
+  { key: "roofer",      label: "Roofer",      emoji: "🏠" },
 ];
 
 type Profile = {
@@ -60,7 +71,8 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
   }
 
   async function toggle(key: string) {
-    const next = trades.includes(key) ? trades.filter((t) => t !== key) : [...trades, key];
+    const adding = !trades.includes(key);
+    const next = adding ? [...trades, key] : trades.filter((t) => t !== key);
     setTrades(next);
     setSaving(true);
     setSaved(false);
@@ -68,6 +80,14 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
     const { data: userData } = await supabase.auth.getUser();
     if (userData.user) {
       await supabase.from("profiles").update({ trades: next }).eq("id", userData.user.id);
+      // Seed default materials for newly enabled trade
+      if (adding && TRADE_SEED[key]) {
+        const seedRows = TRADE_SEED[key].map((m) => ({
+          profile_id: userData.user!.id, trade: key,
+          item_key: m.item_key, label: m.label, unit_cost: m.unit_cost,
+        }));
+        await supabase.from("material_items").upsert(seedRows, { onConflict: "profile_id,item_key" });
+      }
     }
     setSaving(false);
     setSaved(true);
@@ -140,14 +160,14 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
             return (
               <button
                 key={t.key}
-                onClick={() => t.ready && toggle(t.key)}
-                disabled={!t.ready || saving}
-                className={`text-left rounded-lg border-2 p-3 text-sm font-semibold disabled:opacity-40 transition-colors ${
+                onClick={() => !saving && toggle(t.key)}
+                disabled={saving}
+                className={`text-left rounded-xl border-2 p-3 font-semibold transition-colors flex items-center gap-2.5 ${
                   isSelected ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] text-[var(--ink)]"
                 }`}
               >
-                {t.label}
-                {!t.ready && <span className="text-xs text-[var(--ink-faint)] block font-normal">Coming soon</span>}
+                <span className="text-xl">{t.emoji}</span>
+                <span className="text-[14px]">{t.label}</span>
               </button>
             );
           })}
