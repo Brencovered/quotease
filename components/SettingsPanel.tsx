@@ -7,6 +7,7 @@ import { ELECTRICIAN_DEFAULT_MATERIALS } from "@/lib/calc";
 import { PLUMBER_DEFAULT_MATERIALS } from "@/lib/calcPlumber";
 import { CARPENTER_DEFAULT_MATERIALS } from "@/lib/calcCarpenter";
 import { ROOFER_DEFAULT_MATERIALS } from "@/lib/calcRoofer";
+import { Check, Upload } from "lucide-react";
 
 const TRADE_SEED: Record<string, readonly { item_key: string; label: string; unit_cost: number }[]> = {
   electrician: ELECTRICIAN_DEFAULT_MATERIALS,
@@ -23,36 +24,28 @@ const TRADES = [
 ];
 
 type Profile = {
-  business_name?: string;
-  contact_email?: string;
-  xero_connected?: boolean;
-  trades?: string[];
-  logo_url?: string | null;
-  abn?: string | null;
-  license_number?: string | null;
-  business_address?: string | null;
-  terms_and_conditions?: string | null;
-  ai_free_analyses_used?: number;
-  ai_addon_status?: string;
-  ai_addon_period?: string | null;
-  ai_addon_analyses_used?: number;
+  business_name?: string; contact_email?: string; xero_connected?: boolean;
+  trades?: string[]; logo_url?: string | null; abn?: string | null;
+  license_number?: string | null; business_address?: string | null;
+  terms_and_conditions?: string | null; ai_free_analyses_used?: number;
+  ai_addon_status?: string; ai_addon_period?: string | null; ai_addon_analyses_used?: number;
 } | null;
 
 export default function SettingsPanel({ profile }: { profile: Profile }) {
-  const [trades, setTrades] = useState<string[]>(profile?.trades ?? []);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [trades,         setTrades]         = useState<string[]>(profile?.trades ?? []);
+  const [tradeSaving,    setTradeSaving]    = useState(false);
+  const [tradeSaved,     setTradeSaved]     = useState(false);
 
-  const [abn, setAbn] = useState(profile?.abn ?? "");
-  const [licenseNumber, setLicenseNumber] = useState(profile?.license_number ?? "");
-  const [businessAddress, setBusinessAddress] = useState(profile?.business_address ?? "");
-  const [terms, setTerms] = useState(profile?.terms_and_conditions ?? "");
-  const [logoPreview, setLogoPreview] = useState<string | null>(profile?.logo_url ?? null);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [companySaving, setCompanySaving] = useState(false);
-  const [companySaved, setCompanySaved] = useState(false);
-  const [companyError, setCompanyError] = useState<string | null>(null);
-  const [addonLoading, setAddonLoading] = useState(false);
+  const [abn,            setAbn]            = useState(profile?.abn ?? "");
+  const [licenceNumber,  setLicenceNumber]  = useState(profile?.license_number ?? "");
+  const [businessAddress,setBusinessAddress] = useState(profile?.business_address ?? "");
+  const [terms,          setTerms]          = useState(profile?.terms_and_conditions ?? "");
+  const [logoPreview,    setLogoPreview]    = useState<string | null>(profile?.logo_url ?? null);
+  const [logoFile,       setLogoFile]       = useState<File | null>(null);
+  const [companySaving,  setCompanySaving]  = useState(false);
+  const [companySaved,   setCompanySaved]   = useState(false);
+  const [companyError,   setCompanyError]   = useState<string | null>(null);
+  const [addonLoading,   setAddonLoading]   = useState(false);
 
   async function subscribeToAddon() {
     setAddonLoading(true);
@@ -61,7 +54,6 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
     if (data.url) window.location.href = data.url;
     setAddonLoading(false);
   }
-
   async function manageAddon() {
     setAddonLoading(true);
     const res = await fetch("/api/stripe/portal", { method: "POST" });
@@ -72,227 +64,207 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
 
   async function toggle(key: string) {
     const adding = !trades.includes(key);
-    const next = adding ? [...trades, key] : trades.filter((t) => t !== key);
-    setTrades(next);
-    setSaving(true);
-    setSaved(false);
+    const next   = adding ? [...trades, key] : trades.filter((t) => t !== key);
+    setTrades(next); setTradeSaving(true); setTradeSaved(false);
     const supabase = createClient();
-    const { data: userData } = await supabase.auth.getUser();
-    if (userData.user) {
-      await supabase.from("profiles").update({ trades: next }).eq("id", userData.user.id);
-      // Seed default materials for newly enabled trade
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from("profiles").update({ trades: next }).eq("id", user.id);
       if (adding && TRADE_SEED[key]) {
-        const seedRows = TRADE_SEED[key].map((m) => ({
-          profile_id: userData.user!.id, trade: key,
-          item_key: m.item_key, label: m.label, unit_cost: m.unit_cost,
-        }));
-        await supabase.from("material_items").upsert(seedRows, { onConflict: "profile_id,item_key" });
+        await supabase.from("material_items").upsert(
+          TRADE_SEED[key].map((m) => ({ profile_id: user.id, trade: key, item_key: m.item_key, label: m.label, unit_cost: m.unit_cost })),
+          { onConflict: "profile_id,item_key" }
+        );
       }
     }
-    setSaving(false);
-    setSaved(true);
+    setTradeSaving(false); setTradeSaved(true);
+    setTimeout(() => setTradeSaved(false), 2000);
   }
 
   function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setLogoFile(file);
-    setLogoPreview(URL.createObjectURL(file));
+    const file = e.target.files?.[0]; if (!file) return;
+    setLogoFile(file); setLogoPreview(URL.createObjectURL(file));
   }
 
   async function saveCompanyDetails() {
-    setCompanySaving(true);
-    setCompanyError(null);
-    setCompanySaved(false);
+    setCompanySaving(true); setCompanyError(null); setCompanySaved(false);
     const supabase = createClient();
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) {
-      setCompanyError("Not signed in");
-      setCompanySaving(false);
-      return;
-    }
-    const userId = userData.user.id;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setCompanyError("Not signed in"); setCompanySaving(false); return; }
 
     let logoUrl: string | undefined;
     if (logoFile) {
       const ext = logoFile.name.split(".").pop() || "png";
-      const path = `${userId}/logo.${ext}`;
-      const { error: uploadError } = await supabase.storage.from("logos").upload(path, logoFile, { upsert: true });
-      if (uploadError) {
-        setCompanyError(`Logo upload failed: ${uploadError.message}`);
-        setCompanySaving(false);
-        return;
-      }
-      const { data: publicUrlData } = supabase.storage.from("logos").getPublicUrl(path);
-      logoUrl = publicUrlData.publicUrl;
+      const path = `${user.id}/logo.${ext}`;
+      const { error: upErr } = await supabase.storage.from("logos").upload(path, logoFile, { upsert: true });
+      if (upErr) { setCompanyError(`Logo upload failed: ${upErr.message}`); setCompanySaving(false); return; }
+      const { data: pub } = supabase.storage.from("logos").getPublicUrl(path);
+      logoUrl = pub.publicUrl;
     }
 
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        abn: abn || null,
-        license_number: licenseNumber || null,
-        business_address: businessAddress || null,
-        terms_and_conditions: terms,
-        ...(logoUrl ? { logo_url: logoUrl } : {}),
-      })
-      .eq("id", userId);
+    const { error } = await supabase.from("profiles").update({
+      abn: abn || null, license_number: licenceNumber || null,
+      business_address: businessAddress || null, terms_and_conditions: terms,
+      ...(logoUrl ? { logo_url: logoUrl } : {}),
+    }).eq("id", user.id);
 
-    if (error) {
-      setCompanyError(error.message);
-    } else {
-      setCompanySaved(true);
-    }
+    if (error) setCompanyError(error.message);
+    else { setCompanySaved(true); setTimeout(() => setCompanySaved(false), 2000); }
     setCompanySaving(false);
   }
 
-  return (
-    <main className="max-w-2xl mx-auto px-4 sm:px-6 py-6 pb-16">
-      <h1 className="font-display text-2xl text-[var(--ink)] mb-5">Settings</h1>
+  const freeUsed   = profile?.ai_free_analyses_used ?? 0;
+  const freeLeft   = Math.max(FREE_ANALYSES_LIMIT - freeUsed, 0);
+  const addonActive = profile?.ai_addon_status === "active";
+  const addonUsed  = profile?.ai_addon_period === currentPeriod() ? (profile?.ai_addon_analyses_used ?? 0) : 0;
 
-      <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-4 sm:p-5 mb-4">
-        <p className="text-[11px] tracking-[.12em] uppercase text-[var(--amber-deep)] font-bold mb-1">Trades</p>
-        <p className="font-semibold text-[var(--ink)] mb-1">Your trades</p>
-        <p className="text-[13px] text-[var(--ink-faint)] mb-3">Toggle which trades show up in your account.</p>
+  return (
+    <div className="page-wrap-narrow">
+      <h1 className="font-display text-[28px] text-[var(--ink)] mb-6">Settings</h1>
+
+      {/* Account summary */}
+      <div className="card mb-4 flex items-center gap-4">
+        <div className="w-10 h-10 rounded-full bg-[var(--navy)] flex items-center justify-center font-display text-[var(--amber)] text-lg shrink-0">
+          {(profile?.business_name ?? profile?.contact_email ?? "?")[0]?.toUpperCase()}
+        </div>
+        <div className="min-w-0">
+          <p className="font-bold text-[var(--ink)] text-[15px] truncate">{profile?.business_name ?? "Your business"}</p>
+          <p className="text-[13px] text-[var(--ink-faint)] truncate">{profile?.contact_email ?? ""}</p>
+        </div>
+      </div>
+
+      {/* Trades */}
+      <div className="card mb-4">
+        <div className="flex items-center justify-between mb-1">
+          <p className="section-tag">Trades</p>
+          {tradeSaving && <span className="text-[12px] text-[var(--ink-faint)]">Saving...</span>}
+          {tradeSaved  && <span className="text-[12px] text-[var(--green)] font-semibold flex items-center gap-1"><Check size={12}/>Saved</span>}
+        </div>
+        <p className="font-semibold text-[var(--ink)] mb-1">Your active trades</p>
+        <p className="text-[13px] text-[var(--ink-faint)] mb-3">Toggle trades on or off. Default material prices are loaded automatically.</p>
         <div className="grid grid-cols-2 gap-2">
           {TRADES.map((t) => {
-            const isSelected = trades.includes(t.key);
+            const on = trades.includes(t.key);
             return (
-              <button
-                key={t.key}
-                onClick={() => !saving && toggle(t.key)}
-                disabled={saving}
-                className={`text-left rounded-xl border-2 p-3 font-semibold transition-colors flex items-center gap-2.5 ${
-                  isSelected ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] text-[var(--ink)]"
-                }`}
-              >
+              <button key={t.key} onClick={() => !tradeSaving && toggle(t.key)} disabled={tradeSaving}
+                className={`flex items-center gap-2.5 rounded-xl border-2 px-3 py-3 font-semibold transition-colors ${
+                  on ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] text-[var(--ink)] hover:border-[var(--navy)]/40"
+                }`}>
                 <span className="text-xl">{t.emoji}</span>
                 <span className="text-[14px]">{t.label}</span>
+                {on && <Check size={13} className="ml-auto text-[var(--amber)]" />}
               </button>
             );
           })}
         </div>
-        {saved && <p className="text-[13px] text-green-700 mt-2">Saved</p>}
       </div>
 
-      <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-4 sm:p-5 mb-4">
-        <p className="text-[11px] tracking-[.12em] uppercase text-[var(--amber-deep)] font-bold mb-1">Branding</p>
+      {/* Company branding */}
+      <div className="card mb-4">
+        <p className="section-tag mb-1">Branding</p>
         <p className="font-semibold text-[var(--ink)] mb-1">Company details</p>
-        <p className="text-[13px] text-[var(--ink-faint)] mb-4">Shows up on every quote you send.</p>
+        <p className="text-[13px] text-[var(--ink-faint)] mb-4">Appears on every quote you send to clients.</p>
 
         <div className="space-y-3">
-          <label className="block">
-            <span className="block text-[12.5px] font-medium text-[var(--ink-soft)] mb-1.5">Logo</span>
+          {/* Logo */}
+          <div>
+            <p className="text-[12.5px] font-semibold text-[var(--ink-soft)] mb-2">Logo</p>
             <div className="flex items-center gap-3">
-              {logoPreview && (
+              {logoPreview ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={logoPreview} alt="Logo preview" className="w-12 h-12 object-contain rounded-lg border border-[var(--line)] bg-white" />
+                <img src={logoPreview} alt="Logo" className="w-14 h-14 object-contain rounded-xl border border-[var(--line)] bg-white" />
+              ) : (
+                <div className="w-14 h-14 rounded-xl border-2 border-dashed border-[var(--line)] bg-[var(--app-bg)] flex items-center justify-center text-[var(--ink-faint)]">
+                  <Upload size={18} />
+                </div>
               )}
-              <input type="file" accept="image/*" onChange={handleLogoChange} className="text-sm flex-1" />
+              <label className="btn-secondary text-[13px] py-2 cursor-pointer">
+                {logoPreview ? "Change logo" : "Upload logo"}
+                <input type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
+              </label>
             </div>
-          </label>
-
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block">
-              <span className="block text-[12.5px] font-medium text-[var(--ink-soft)] mb-1.5">ABN</span>
-              <input value={abn} onChange={(e) => setAbn(e.target.value)} className="app-field" />
-            </label>
-            <label className="block">
-              <span className="block text-[12.5px] font-medium text-[var(--ink-soft)] mb-1.5">Licence number</span>
-              <input value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} className="app-field" />
-            </label>
           </div>
 
-          <label className="block">
-            <span className="block text-[12.5px] font-medium text-[var(--ink-soft)] mb-1.5">Business address</span>
-            <input value={businessAddress} onChange={(e) => setBusinessAddress(e.target.value)} className="app-field" />
-          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">ABN</label>
+              <input value={abn} onChange={(e) => setAbn(e.target.value)} className="app-field" placeholder="11 222 333 444" />
+            </div>
+            <div>
+              <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Licence number</label>
+              <input value={licenceNumber} onChange={(e) => setLicenceNumber(e.target.value)} className="app-field" placeholder="REC 23538" />
+            </div>
+          </div>
 
-          <label className="block">
-            <span className="block text-[12.5px] font-medium text-[var(--ink-soft)] mb-1.5">Terms and conditions</span>
-            <textarea value={terms} onChange={(e) => setTerms(e.target.value)} rows={4} className="app-field" />
-          </label>
+          <div>
+            <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Business address</label>
+            <input value={businessAddress} onChange={(e) => setBusinessAddress(e.target.value)} className="app-field" placeholder="123 Main St, Suburb VIC 3000" />
+          </div>
+
+          <div>
+            <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Quote terms and conditions</label>
+            <textarea value={terms} onChange={(e) => setTerms(e.target.value)} rows={4} className="app-field text-[13px]" />
+            <p className="text-[11.5px] text-[var(--ink-faint)] mt-1">Sent at the bottom of every quote email.</p>
+          </div>
         </div>
 
-        {companyError && <p className="text-[13px] text-red-600 mt-3">{companyError}</p>}
-        {companySaved && <p className="text-[13px] text-green-700 mt-3">Saved</p>}
+        {companyError  && <div className="bg-[var(--red-bg)] border border-red-200 rounded-xl px-3 py-2.5 text-[13px] text-[var(--red)] font-semibold mt-3">{companyError}</div>}
 
-        <button
-          onClick={saveCompanyDetails}
-          disabled={companySaving}
-          className="mt-4 bg-[var(--navy)] text-white rounded-lg px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
-        >
-          {companySaving ? "Saving..." : "Save company details"}
-        </button>
+        <div className="flex items-center gap-3 mt-4">
+          <button onClick={saveCompanyDetails} disabled={companySaving} className="btn-primary flex-1">
+            {companySaving ? "Saving..." : "Save details"}
+          </button>
+          {companySaved && <span className="text-[13px] text-[var(--green)] font-semibold flex items-center gap-1"><Check size={13}/>Saved</span>}
+        </div>
       </div>
 
-      <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-4 sm:p-5 mb-4">
-        <p className="text-[11px] tracking-[.12em] uppercase text-[var(--amber-deep)] font-bold mb-1">AI</p>
-        <p className="font-semibold text-[var(--ink)] mb-1">Drawing analysis</p>
-        {(() => {
-          const freeUsed = profile?.ai_free_analyses_used ?? 0;
-          const freeLeft = Math.max(FREE_ANALYSES_LIMIT - freeUsed, 0);
-          const addonActive = profile?.ai_addon_status === "active";
-          const addonUsed = profile?.ai_addon_period === currentPeriod() ? profile?.ai_addon_analyses_used ?? 0 : 0;
-
-          if (addonActive) {
-            return (
-              <>
-                <p className="text-[13px] text-[var(--ink-faint)] mb-3">
-                  {addonUsed} of {ADDON_MONTHLY_LIMIT} analyses used this month. Resets on the 1st.
-                </p>
-                <button
-                  onClick={manageAddon}
-                  disabled={addonLoading}
-                  className="border-2 border-[var(--line)] rounded-lg px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
-                >
-                  {addonLoading ? "Opening..." : "Manage subscription"}
-                </button>
-              </>
-            );
-          }
-          return (
-            <>
-              <p className="text-[13px] text-[var(--ink-faint)] mb-3">
-                {freeLeft > 0
-                  ? `${freeLeft} of ${FREE_ANALYSES_LIMIT} free drawing analyses left.`
-                  : `You've used all ${FREE_ANALYSES_LIMIT} free analyses.`}{" "}
-                Subscribe for $10/mo to get {ADDON_MONTHLY_LIMIT} analyses every month.
-              </p>
-              <button
-                onClick={subscribeToAddon}
-                disabled={addonLoading}
-                className="bg-[var(--navy)] text-white rounded-lg px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
-              >
-                {addonLoading ? "Redirecting..." : "Subscribe — $10/mo"}
-              </button>
-            </>
-          );
-        })()}
-      </div>
-
-      <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-4 sm:p-5 mb-4">
-        <p className="text-[11px] tracking-[.12em] uppercase text-[var(--amber-deep)] font-bold mb-1">Accounting</p>
+      {/* Xero */}
+      <div className="card mb-4">
+        <p className="section-tag mb-1">Accounting</p>
+        <p className="font-semibold text-[var(--ink)] mb-1">Xero integration</p>
         {profile?.xero_connected ? (
-          <p className="text-sm text-green-700 font-semibold">Connected to Xero</p>
+          <div className="flex items-center gap-2 text-[var(--green)] font-semibold text-[14px] mt-2">
+            <Check size={15} /> Connected to Xero
+          </div>
         ) : (
           <>
             <p className="text-[13px] text-[var(--ink-faint)] mb-3">
-              Optional — most tradies use the free CSV export from the Quotes page instead. Only
-              connect this if you specifically want automatic invoice sync.
+              Most tradies use the free CSV export on the Quotes page. Only connect this for automatic invoice sync.
             </p>
-            <a href="/api/xero/connect" className="inline-block bg-[var(--navy)] text-white rounded-lg px-4 py-2.5 text-sm font-semibold">
+            <a href="/api/xero/connect" className="btn-secondary inline-flex text-[13px] py-2">
               Connect Xero
             </a>
           </>
         )}
       </div>
 
-      <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-4 sm:p-5">
-        <p className="text-[11px] tracking-[.12em] uppercase text-[var(--amber-deep)] font-bold mb-1">Business</p>
-        <p className="text-sm text-[var(--ink)] font-semibold">{profile?.business_name ?? "Not signed in — demo view"}</p>
-        <p className="text-sm text-[var(--ink-faint)]">{profile?.contact_email ?? ""}</p>
+      {/* AI addon — lower priority */}
+      <div className="card mb-4">
+        <p className="section-tag mb-1">AI drawing analysis</p>
+        <p className="font-semibold text-[var(--ink)] mb-1">Auto-fill from plans</p>
+        {addonActive ? (
+          <>
+            <p className="text-[13px] text-[var(--ink-faint)] mb-3">
+              {addonUsed} of {ADDON_MONTHLY_LIMIT} analyses used this month.
+            </p>
+            <button onClick={manageAddon} disabled={addonLoading} className="btn-secondary text-[13px] py-2">
+              {addonLoading ? "Opening..." : "Manage subscription"}
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="text-[13px] text-[var(--ink-faint)] mb-3">
+              {freeLeft > 0
+                ? `${freeLeft} free analysis${freeLeft !== 1 ? "es" : ""} remaining.`
+                : `All ${FREE_ANALYSES_LIMIT} free analyses used.`}{" "}
+              Upgrade for {ADDON_MONTHLY_LIMIT} per month.
+            </p>
+            <button onClick={subscribeToAddon} disabled={addonLoading} className="btn-secondary text-[13px] py-2">
+              {addonLoading ? "Redirecting..." : "Upgrade — $10/mo"}
+            </button>
+          </>
+        )}
       </div>
-    </main>
+    </div>
   );
 }

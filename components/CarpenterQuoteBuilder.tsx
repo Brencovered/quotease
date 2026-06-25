@@ -19,11 +19,11 @@ const DEFAULT_INTAKE: CarpenterIntake = {
 };
 
 const STEPS = [
-  { id: "drawing", label: "Drawing"  },
   { id: "job",     label: "Job"      },
   { id: "doors",   label: "Doors"    },
   { id: "timber",  label: "Timber"   },
   { id: "send",    label: "Send"     },
+  { id: "drawing", label: "Files"    },
 ];
 
 export default function CarpenterQuoteBuilder({ profile, materials }: {

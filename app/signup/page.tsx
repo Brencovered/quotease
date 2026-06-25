@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 const SUPABASE_CONFIGURED =
@@ -9,109 +10,111 @@ const SUPABASE_CONFIGURED =
   !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder");
 
 export default function SignupPage() {
-  const router = useRouter();
+  const router  = useRouter();
   const [businessName, setBusinessName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [checkEmail, setCheckEmail] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [email,        setEmail]        = useState("");
+  const [password,     setPassword]     = useState("");
+  const [error,        setError]        = useState<string | null>(null);
+  const [loading,      setLoading]      = useState(false);
+  const [checkEmail,   setCheckEmail]   = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-
-    if (!SUPABASE_CONFIGURED) {
-      setError("Signup isn't connected yet — this deployment doesn't have a real Supabase project configured.");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
+    if (!SUPABASE_CONFIGURED) { setError("Not connected to a database yet."); return; }
+    setLoading(true); setError(null);
     try {
       const supabase = createClient();
       const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
+        email, password,
         options: { data: { business_name: businessName } },
       });
-      if (signUpError) {
-        setError(signUpError.message);
-        return;
-      }
-
-      if (data.session) {
-        router.push("/onboarding");
-        router.refresh();
-      } else {
-        setCheckEmail(true);
-      }
+      if (signUpError) { setError(signUpError.message); return; }
+      if (data.session) { router.push("/onboarding"); router.refresh(); }
+      else { setCheckEmail(true); }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not reach the server. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  if (checkEmail) {
-    return (
-      <main className="max-w-sm mx-auto px-6 py-20">
-        <p className="font-display text-lg text-[var(--navy)] mb-6">QUOTEASE</p>
-        <h1 className="text-xl font-semibold text-[var(--ink)] mb-2">Check your email</h1>
-        <p className="text-sm text-[var(--ink-soft)]">
-          We&apos;ve sent a confirmation link to <strong>{email}</strong>. Click it, then come back and log in.
-        </p>
-      </main>
-    );
+      setError(err instanceof Error ? err.message : "Could not reach the server.");
+    } finally { setLoading(false); }
   }
 
   return (
-    <main className="max-w-sm mx-auto px-6 py-20">
-      <p className="font-display text-lg text-[var(--navy)] mb-6">QUOTEASE</p>
-      <h1 className="text-xl font-semibold text-[var(--ink)] mb-1">Create your account</h1>
-      <p className="text-sm text-[var(--ink-faint)] mb-6">You&apos;ll pick your trades on the next step.</p>
+    <div className="min-h-screen bg-[var(--app-bg)] flex flex-col">
+      <div className="bg-[var(--navy)] px-6 py-4">
+        <Link href="/" className="font-display text-[15px] tracking-widest text-white">QUOTEASE</Link>
+      </div>
 
-      {!SUPABASE_CONFIGURED && (
-        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
-          This deployment isn&apos;t connected to a database yet, so signup won&apos;t actually work until that&apos;s set up.
-        </p>
-      )}
+      <div className="flex-1 flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-sm">
 
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <input
-          type="text"
-          placeholder="Business name"
-          value={businessName}
-          onChange={(e) => setBusinessName(e.target.value)}
-          required
-          className="app-field"
-        />
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="app-field"
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={6}
-          className="app-field"
-        />
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-[var(--amber)] text-[var(--navy)] rounded-lg py-3 font-bold disabled:opacity-50"
-        >
-          {loading ? "Creating account..." : "Sign up"}
-        </button>
-      </form>
-    </main>
+          {checkEmail ? (
+            <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-8 shadow-sm text-center">
+              <div className="w-14 h-14 rounded-full bg-[var(--green-bg)] border border-green-200 flex items-center justify-center mx-auto mb-4 text-2xl">
+                ✉️
+              </div>
+              <h1 className="font-display text-[24px] text-[var(--ink)] mb-2">Check your inbox</h1>
+              <p className="text-[14px] text-[var(--ink-soft)] leading-[1.6] mb-6">
+                We&apos;ve sent a confirmation link to{" "}
+                <strong className="text-[var(--ink)]">{email}</strong>.
+                Click it to verify your account, then log in.
+              </p>
+              <Link href="/login" className="btn-primary inline-flex justify-center">
+                Go to login →
+              </Link>
+              <p className="text-[12px] text-[var(--ink-faint)] mt-4">
+                Didn&apos;t get it? Check your spam folder.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-8 shadow-sm">
+                <h1 className="font-display text-[26px] text-[var(--ink)] mb-1">Start free trial</h1>
+                <p className="text-[13.5px] text-[var(--ink-faint)] mb-6">7 days free. No credit card needed.</p>
+
+                <form onSubmit={handleSubmit} className="space-y-3">
+                  <div>
+                    <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Business name</label>
+                    <input type="text" value={businessName} onChange={(e) => setBusinessName(e.target.value)}
+                      required autoFocus className="app-field" placeholder="Spark Ease Electrical" />
+                  </div>
+                  <div>
+                    <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Email</label>
+                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                      required className="app-field" placeholder="you@example.com" />
+                  </div>
+                  <div>
+                    <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Password</label>
+                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                      required minLength={6} className="app-field" placeholder="At least 6 characters" />
+                  </div>
+                  {error && (
+                    <div className="bg-[var(--red-bg)] border border-red-200 rounded-lg px-3 py-2.5 text-[13px] text-[var(--red)] font-semibold">
+                      {error}
+                    </div>
+                  )}
+                  <button type="submit" disabled={loading} className="btn-primary mt-1">
+                    {loading ? "Creating account..." : "Create account →"}
+                  </button>
+                </form>
+
+                <p className="text-[13px] text-[var(--ink-faint)] mt-5 text-center">
+                  Already have an account?{" "}
+                  <Link href="/login" className="text-[var(--navy)] font-bold hover:underline">Log in</Link>
+                </p>
+              </div>
+
+              <div className="mt-4 flex items-start gap-3 bg-[var(--amber-light)] border border-[var(--amber)]/30 rounded-xl px-4 py-3">
+                <span className="text-lg shrink-0">⚡</span>
+                <p className="text-[12.5px] text-[var(--amber-deep)] font-semibold leading-snug">
+                  Most tradies send their first quote within 10 minutes of signing up.
+                </p>
+              </div>
+
+              <p className="text-center text-[12px] text-[var(--ink-faint)] mt-4">
+                7-day free trial · then $40/mo flat · cancel anytime
+              </p>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

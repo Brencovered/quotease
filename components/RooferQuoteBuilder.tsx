@@ -16,11 +16,11 @@ const DEFAULT_INTAKE: RooferIntake = {
 };
 
 const STEPS = [
-  { id: "drawing", label: "Drawing" },
   { id: "job",     label: "Job"     },
   { id: "roof",    label: "Roof"    },
   { id: "extras",  label: "Extras"  },
   { id: "send",    label: "Send"    },
+  { id: "drawing", label: "Files"   },
 ];
 
 export default function RooferQuoteBuilder({ profile, materials }: {

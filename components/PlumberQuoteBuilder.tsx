@@ -21,11 +21,11 @@ const DEFAULT_INTAKE: PlumberIntake = {
 };
 
 const STEPS = [
-  { id: "drawing",  label: "Drawing"  },
   { id: "job",      label: "Job"      },
   { id: "fixtures", label: "Fixtures" },
   { id: "pipework", label: "Pipework" },
   { id: "send",     label: "Send"     },
+  { id: "drawing",  label: "Files"    },
 ];
 
 export default function PlumberQuoteBuilder({ profile, materials }: {

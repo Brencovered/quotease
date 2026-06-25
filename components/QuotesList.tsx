@@ -128,8 +128,21 @@ export default function QuotesList({ quotes: initial }: { quotes: Quote[] }) {
       {/* List */}
       <div className="space-y-3">
         {filtered.length === 0 && (
-          <div className="card text-center py-10">
-            <p className="text-[var(--ink-faint)] text-[14px]">No quotes{filter !== "all" ? ` with status "${filter}"` : " yet"}.</p>
+          <div className="card text-center py-12">
+            {filter === "all" ? (
+              <>
+                <p className="text-[32px] mb-3">📋</p>
+                <p className="font-semibold text-[var(--ink)] mb-1">No quotes yet</p>
+                <p className="text-[13.5px] text-[var(--ink-faint)] mb-5 max-w-[220px] mx-auto">
+                  Build your first quote and send it before the next tradie does.
+                </p>
+                <Link href="/electrician" className="btn-primary inline-flex w-auto px-6 text-[14px]">
+                  Build a quote →
+                </Link>
+              </>
+            ) : (
+              <p className="text-[var(--ink-faint)] text-[14px]">No {filter} quotes.</p>
+            )}
           </div>
         )}
         {filtered.map((q) => {

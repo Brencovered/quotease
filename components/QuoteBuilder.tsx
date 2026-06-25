@@ -28,11 +28,11 @@ const DEFAULT_INTAKE: ElectricianIntake = {
 };
 
 const STEPS = [
-  { id: "drawing",    label: "Drawing" },
   { id: "job",        label: "Job" },
   { id: "electrical", label: "Electrical" },
   { id: "site",       label: "Site" },
   { id: "send",       label: "Send" },
+  { id: "drawing",    label: "Files" },
 ];
 
 export default function QuoteBuilder({
