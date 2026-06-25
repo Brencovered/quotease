@@ -1,8 +1,20 @@
 import Stripe from "stripe";
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-06-24.dahlia",
-});
+let stripeInstance: Stripe | null = null;
+
+// Lazy singleton — created on first actual use, not at module import time.
+// Vercel evaluates route modules during the build's page-data-collection step
+// even before env vars are wired up, so constructing Stripe eagerly at the
+// top level crashes the build with "Neither apiKey nor config.authenticator
+// provided" the moment STRIPE_SECRET_KEY is missing.
+export function getStripe(): Stripe {
+  if (!stripeInstance) {
+    stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+      apiVersion: "2026-06-24.dahlia",
+    });
+  }
+  return stripeInstance;
+}
 
 // $40 AUD/month flat, unlimited users. Annual gets roughly 2 months free
 // ($400/year vs $480 if paid monthly) as the loyalty incentive.
