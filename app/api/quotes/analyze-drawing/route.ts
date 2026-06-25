@@ -96,6 +96,15 @@ export async function POST(request: Request) {
   const arrayBuffer = await file.arrayBuffer();
   const base64 = Buffer.from(arrayBuffer).toString("base64");
   const isPdf = file.type === "application/pdf";
+  const SUPPORTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+  if (!isPdf && !SUPPORTED_IMAGE_TYPES.includes(file.type)) {
+    return NextResponse.json(
+      {
+        error: `Unsupported file format (${file.type || "unknown"}). Use a JPEG, PNG, GIF, WebP, or PDF — HEIC photos from an iPhone aren't supported.`,
+      },
+      { status: 400 }
+    );
+  }
 
   const contentBlock = isPdf
     ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } }

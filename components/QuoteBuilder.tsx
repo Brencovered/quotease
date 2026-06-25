@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
 import { AlertTriangle, Paperclip, X, Sparkles, ChevronRight, ChevronLeft, Check } from "lucide-react";
+import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import {
   calcElectricianQuote,
   ELECTRICIAN_DEFAULT_MATERIALS,
@@ -103,7 +104,8 @@ export default function QuoteBuilder({
     setUsageLimitReached(false);
     try {
       const fd = new FormData();
-      fd.append("file", drawingFiles[0]);
+      const fileForAnalysis = await normalizeForAnalysis(drawingFiles[0]);
+      fd.append("file", fileForAnalysis);
       if (drawingInstructions.trim()) fd.append("instructions", drawingInstructions.trim());
       const res  = await fetch("/api/quotes/analyze-drawing", { method: "POST", body: fd });
       const body = await res.json();
@@ -130,8 +132,8 @@ export default function QuoteBuilder({
         multistorey:       r.multistorey        ?? prev.multistorey,
       }));
       setAnalysisResult({ confidence: r.confidence ?? "medium", notes: r.notes ?? "" });
-    } catch {
-      setAnalysisError("Could not reach the drawing analysis service.");
+    } catch (err) {
+      setAnalysisError(err instanceof Error ? err.message : "Could not reach the drawing analysis service.");
     } finally {
       setAnalyzing(false);
     }

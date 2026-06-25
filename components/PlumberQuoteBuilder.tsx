@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
 import { AlertTriangle, Paperclip, X, Sparkles, ChevronRight, ChevronLeft, Check } from "lucide-react";
+import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import { calcPlumberQuote, PLUMBER_DEFAULT_MATERIALS, type PlumberIntake } from "@/lib/calcPlumber";
 
 type MaterialRow = { item_key: string; label: string; unit_cost: number };
@@ -75,13 +76,14 @@ export default function PlumberQuoteBuilder({ profile, materials }: {
     setAnalyzing(true); setAnalysisError(null); setAnalysisResult(null);
     try {
       const fd = new FormData();
-      fd.append("file", drawingFiles[0]);
+      const fileForAnalysis = await normalizeForAnalysis(drawingFiles[0]);
+      fd.append("file", fileForAnalysis);
       fd.append("instructions", "This is a plumbing job. Focus on wet areas, fixture counts, pipe runs.");
       const res  = await fetch("/api/quotes/analyze-drawing", { method: "POST", body: fd });
       const body = await res.json();
       if (!res.ok) { setAnalysisError(body.error ?? "Analysis failed"); return; }
       setAnalysisResult({ confidence: body.result?.confidence ?? "low", notes: body.result?.notes ?? "" });
-    } catch { setAnalysisError("Could not reach analysis service."); }
+    } catch (err) { setAnalysisError(err instanceof Error ? err.message : "Could not reach analysis service."); }
     finally { setAnalyzing(false); }
   }
 
