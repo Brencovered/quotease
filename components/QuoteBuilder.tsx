@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
+import { ScanLine, AlertTriangle } from "lucide-react";
 import {
   calcElectricianQuote,
   ELECTRICIAN_DEFAULT_MATERIALS,
@@ -74,6 +75,10 @@ export default function QuoteBuilder({
     setCustomTerms((prev) => prev.filter((_, i) => i !== index));
   }
   const [saving, setSaving] = useState(false);
+  const [drawingFile, setDrawingFile] = useState<File | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<{ confidence: string; notes: string } | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   const costs: MaterialCostMap = useMemo(() => {
@@ -124,6 +129,45 @@ export default function QuoteBuilder({
     reader.readAsText(file);
   }
 
+  async function analyzeDrawing(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setDrawingFile(file);
+    setAnalyzing(true);
+    setAnalysisError(null);
+    setAnalysisResult(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/quotes/analyze-drawing", { method: "POST", body: formData });
+      const body = await res.json();
+      if (!res.ok) {
+        setAnalysisError(body.error ?? "Analysis failed");
+        setAnalyzing(false);
+        return;
+      }
+
+      const r = body.result;
+      setIntake((prev) => ({
+        ...prev,
+        powerPoints: r.power_points ?? prev.powerPoints,
+        lightPoints: r.light_points ?? prev.lightPoints,
+        switches: r.switches ?? prev.switches,
+        downlights: r.downlights ?? prev.downlights,
+        switchboardUpgrade: r.switchboard_upgrade ?? prev.switchboardUpgrade,
+        threePhase: r.three_phase ?? prev.threePhase,
+        dataPoints: r.data_points ?? prev.dataPoints,
+        smokeAlarms: r.smoke_alarms ?? prev.smokeAlarms,
+      }));
+      setAnalysisResult({ confidence: r.confidence ?? "medium", notes: r.notes ?? "" });
+    } catch {
+      setAnalysisError("Could not reach the drawing analysis service.");
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
   async function saveAndSend(sendEmail: boolean) {
     setSaving(true);
     setSaveMessage(null);
@@ -167,6 +211,22 @@ export default function QuoteBuilder({
       setSaveMessage(error.message);
       setSaving(false);
       return;
+    }
+
+    if (drawingFile) {
+      const safeName = drawingFile.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+      const path = `${userData.user.id}/${quote.id}/${Date.now()}-${safeName}`;
+      const { error: uploadError } = await supabase.storage.from("job-files").upload(path, drawingFile);
+      if (!uploadError) {
+        await supabase.from("job_attachments").insert({
+          quote_id: quote.id,
+          profile_id: userData.user.id,
+          file_name: drawingFile.name,
+          storage_path: path,
+          file_type: drawingFile.type,
+          file_size: drawingFile.size,
+        });
+      }
     }
 
     if (sendEmail) {
@@ -239,6 +299,40 @@ export default function QuoteBuilder({
               </div>
             </div>
           </div>
+
+          <SectionCard label="Drawing" title="Estimate from a drawing (optional)" sub="Upload a floor plan, electrical drawing, or site photo — AI reads it and pre-fills the fields below for you to review">
+            <label className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--navy)] border-2 border-[var(--line)] rounded-lg px-3 py-2 cursor-pointer">
+              <ScanLine size={15} />
+              {analyzing ? "Reading drawing..." : drawingFile ? "Re-analyse a different file" : "Upload drawing"}
+              <input type="file" accept="image/*,application/pdf" className="hidden" disabled={analyzing} onChange={analyzeDrawing} />
+            </label>
+
+            {drawingFile && !analyzing && (
+              <p className="text-[12.5px] text-[var(--ink-faint)] mt-2">{drawingFile.name} — attached to this job once saved</p>
+            )}
+
+            {analysisError && (
+              <p className="text-[13px] text-red-600 mt-2 flex items-center gap-1.5">
+                <AlertTriangle size={14} /> {analysisError}
+              </p>
+            )}
+
+            {analysisResult && (
+              <div
+                className={`mt-3 rounded-lg p-3 text-[13px] flex items-start gap-2 ${
+                  analysisResult.confidence === "low" ? "bg-red-50 text-red-800" : "bg-amber-50 text-amber-900"
+                }`}
+              >
+                <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-semibold">
+                    Fields below were pre-filled from the drawing ({analysisResult.confidence} confidence) — check every number before sending.
+                  </p>
+                  {analysisResult.notes && <p className="mt-1">{analysisResult.notes}</p>}
+                </div>
+              </div>
+            )}
+          </SectionCard>
 
           <SectionCard label="Rates" title="Your rate for this quote">
             <FieldGrid cols={2}>
