@@ -3,10 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { checkUsage, currentPeriod, type UsageProfile } from "@/lib/aiUsage";
 
 // Requires an ANTHROPIC_API_KEY env var (console.anthropic.com -> API Keys).
-// This is one shared key owned by the business, not something individual
-// tradies need their own account for - usage is metered per-profile below
-// (3 free, then gated behind the paid add-on) so the cost stays bounded
-// and recoverable through the add-on subscription rather than unmetered.
 const SYSTEM_PROMPT_BASE = `You are helping an electrician estimate a residential job from a floor plan or electrical drawing.
 
 STEP 1 — Classify the drawing:
@@ -16,28 +12,29 @@ C) "other" — site photo, unclear image, or something else entirely
 
 STEP 2 — Extract data based on type:
 
-If type A (electrical drawing): count the symbols directly:
-- Power points (GPOs)
-- Light points / fittings
-- Switches
-- Downlights specifically (if distinguishable from general light points)
-- Whether a switchboard upgrade symbol or note is visible
-- Whether 3-phase supply is indicated
-- Data/network points
-- Smoke alarms
+If type A (electrical drawing): count symbols directly.
 
 If type B (architectural floor plan — no electrical symbols): do NOT return all zeros. Instead:
-- Count the total number of distinct rooms / spaces visible across ALL floors (include bedrooms, living, kitchen, bathrooms, hallways, laundry, garage — every defined space)
+- Count total distinct rooms/spaces across ALL floors (bedrooms, living, kitchen, bathrooms, hallways, laundry, garage — every defined space)
 - Estimate downlights as rooms × 3 (typical new install density for Australian residential)
-- Estimate switches as rooms × 1 (one switching location per room/zone)
-- Estimate smoke_alarms as rooms × 1 (one interconnected photoelectric alarm per room/zone per AS 3786)
-- Set power_points to 0 (cannot be determined without electrical symbols — tradie must assess on site)
-- Set light_points to 0 (downlights field covers this for new install)
-- Set switchboard_upgrade to false (unknown — tradie must assess switchboard capacity on site)
+- Estimate switches as rooms × 1
+- Estimate smoke_alarms as rooms × 1 (per AS 3786 — one interconnected photoelectric per room/zone)
+- Estimate exhaust_fans: count wet areas (bathrooms, laundry, kitchen) × 1
+- Estimate cable_metres: rooms × 15 as a rough new-install cabling estimate
+- Set power_points to 0 (cannot determine without symbols — tradie assesses on site)
+- Set light_points to 0
+- Set switchboard_upgrade to false (unknown — tradie must check switchboard capacity)
 - Set three_phase to false (unknown)
-- Set data_points to 0 (unknown)
-- Set confidence to "low"
-- In notes: explain this is an architectural plan with no electrical symbols, state how many rooms you counted, that all quantities are estimates only, that an on-site survey is essential to confirm ceiling construction, roof cavity access, and switchboard capacity before quoting
+- Set data_points to 0
+
+Ceiling type assessment — look for clues in the drawing:
+- If the drawing shows "heritage", "period home", "colonial", "federation", "1900s–1960s" or visible exposed beams/rafters, set ceiling_type to "heritage_timber"
+- If notes say "concrete", "slab ceiling", or it appears to be a multi-storey apartment, set to "concrete_slab"
+- If it's a modern skillion or cathedral ceiling, set to "skillion"
+- If it looks like standard modern residential, set to "standard_plasterboard"
+- If unclear, set to "unknown"
+
+Multistorey: set to true if more than one floor level is shown.
 
 If type C (other): return all zeros, confidence "low", explain in notes.
 
@@ -47,12 +44,17 @@ Respond with ONLY a JSON object, no other text, in exactly this shape:
   "light_points": <integer>,
   "switches": <integer>,
   "downlights": <integer>,
+  "exhaust_fans": <integer>,
+  "cable_metres": <integer>,
   "switchboard_upgrade": <boolean>,
   "three_phase": <boolean>,
   "data_points": <integer>,
   "smoke_alarms": <integer>,
+  "ceiling_type": "<standard_plasterboard|concrete_slab|heritage_timber|skillion|unknown>",
+  "multistorey": <boolean>,
+  "external_circuits": <integer>,
   "confidence": "<high|medium|low>",
-  "notes": "<one or two sentences on anything unclear or worth the tradie double-checking on site>"
+  "notes": "<one or two sentences: state drawing type, how many rooms counted if architectural, and what a tradie must verify on site>"
 }`;
 
 export async function POST(request: Request) {
@@ -100,7 +102,7 @@ export async function POST(request: Request) {
     : { type: "image", source: { type: "base64", media_type: file.type || "image/png", data: base64 } };
 
   const systemPrompt = instructions
-    ? `${SYSTEM_PROMPT_BASE}\n\nThe tradie who uploaded this drawing gave these additional instructions - follow them, they know their own job better than a generic reading of the symbols:\n"${instructions}"`
+    ? `${SYSTEM_PROMPT_BASE}\n\nThe tradie who uploaded this drawing gave these additional instructions — follow them, they know their own job better than a generic reading of the symbols:\n"${instructions}"`
     : SYSTEM_PROMPT_BASE;
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -112,7 +114,7 @@ export async function POST(request: Request) {
     },
     body: JSON.stringify({
       model: "claude-sonnet-4-6",
-      max_tokens: 500,
+      max_tokens: 600,
       system: systemPrompt,
       messages: [
         {
@@ -139,9 +141,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Could not parse a response from the drawing analysis" }, { status: 502 });
   }
 
-  // Only meter successful analyses - a parse failure or upstream error
-  // above already returned before this point, so nothing's been charged
-  // against the tradie's quota for a result they didn't actually get.
   if (usage.via === "free") {
     await supabase
       .from("profiles")
