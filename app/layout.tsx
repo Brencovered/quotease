@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
+import "@fontsource/oswald/500.css";
+import "@fontsource/oswald/700.css";
+import "@fontsource/inter/400.css";
+import "@fontsource/inter/500.css";
+import "@fontsource/inter/600.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Tradie Quote App",
-  description: "Quote faster, on site.",
+  title: "Quotease — quoting software built by tradies, for tradies",
+  description: "Quote the job before you've left the driveway.",
 };
 
 export default function RootLayout({
