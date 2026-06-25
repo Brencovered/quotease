@@ -46,7 +46,7 @@ export default function JobsPanel({ jobs: initialJobs }: { jobs: Job[] }) {
 
   useEffect(() => {
     if (jobs.length === 0) return;
-    loadAttachments();
+    loadAttachments(); // eslint-disable-line react-hooks/exhaustive-deps
   }, [jobs]);
 
   async function loadAttachments() {

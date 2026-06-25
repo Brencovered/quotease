@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
@@ -66,7 +67,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
         {/* Header */}
         <div className="flex items-start justify-between gap-3 mb-5">
           <div>
-            <p className="text-[12px] text-[var(--ink-faint)] mb-1"><a href="/electrician/quotes" className="hover:underline">Quotes</a> / {quote.invoice_number ?? id.slice(0, 8)}</p>
+            <p className="text-[12px] text-[var(--ink-faint)] mb-1"><Link href="/electrician/quotes" className="hover:underline">Quotes</Link> / {quote.invoice_number ?? id.slice(0, 8)}</p>
             <h1 className="font-display text-2xl text-[var(--ink)]">{quote.client_name || "Unnamed client"}</h1>
             {quote.site_address && <p className="text-[13px] text-[var(--ink-faint)] mt-0.5">{quote.site_address}</p>}
           </div>

@@ -1,4 +1,5 @@
 import type { DashboardStats } from "@/lib/dashboardStats";
+import Link from "next/link";
 import {
   Briefcase,
   TrendingUp,
@@ -74,25 +75,25 @@ export default function DashboardPanel({ stats }: { stats: DashboardStats }) {
           {(stats.overdueFollowUps > 0 || stats.expiredQuotes > 0) && (
             <div className="flex flex-col gap-2 mb-5">
               {stats.overdueFollowUps > 0 && (
-                <a href="/electrician/quotes" className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-700">
+                <Link href="/electrician/quotes" className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-700">
                   <Bell size={16} className="shrink-0" />
                   <span className="text-[13.5px] font-semibold">{stats.overdueFollowUps} overdue follow-up{stats.overdueFollowUps !== 1 ? "s" : ""} — check your sent quotes</span>
-                </a>
+                </Link>
               )}
               {stats.expiredQuotes > 0 && (
-                <a href="/electrician/quotes" className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-amber-800">
+                <Link href="/electrician/quotes" className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-amber-800">
                   <AlertTriangle size={16} className="shrink-0" />
                   <span className="text-[13.5px] font-semibold">{stats.expiredQuotes} expired quote{stats.expiredQuotes !== 1 ? "s" : ""} — resend with updated pricing</span>
-                </a>
+                </Link>
               )}
             </div>
           )}
 
           {/* QUICK LINKS */}
           <div className="grid grid-cols-3 gap-3 mb-5">
-            <a href="/electrician" className="bg-[var(--amber)] text-[var(--navy)] rounded-xl p-3 text-center font-bold text-sm">+ New quote</a>
-            <a href="/electrician/schedule" className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3 text-center font-semibold text-[13px] text-[var(--ink)] flex flex-col items-center gap-1"><CalendarDays size={16} className="text-[var(--ink-faint)]" />Schedule</a>
-            <a href="/electrician/clients" className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3 text-center font-semibold text-[13px] text-[var(--ink)] flex flex-col items-center gap-1"><Users size={16} className="text-[var(--ink-faint)]" />Clients</a>
+            <Link href="/electrician" className="bg-[var(--amber)] text-[var(--navy)] rounded-xl p-3 text-center font-bold text-sm">+ New quote</Link>
+            <Link href="/electrician/schedule" className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3 text-center font-semibold text-[13px] text-[var(--ink)] flex flex-col items-center gap-1"><CalendarDays size={16} className="text-[var(--ink-faint)]" />Schedule</Link>
+            <Link href="/electrician/clients" className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3 text-center font-semibold text-[13px] text-[var(--ink)] flex flex-col items-center gap-1"><Users size={16} className="text-[var(--ink-faint)]" />Clients</Link>
           </div>
 
           {/* SECONDARY STATS */}

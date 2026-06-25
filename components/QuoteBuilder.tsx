@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
-import { ScanLine, AlertTriangle, Paperclip, X, Sparkles } from "lucide-react";
+import { AlertTriangle, Paperclip, X, Sparkles } from "lucide-react";
 import {
   calcElectricianQuote,
   ELECTRICIAN_DEFAULT_MATERIALS,

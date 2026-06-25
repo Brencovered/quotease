@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Paperclip, Upload, X, FileImage, FileText } from "lucide-react";
+import { Paperclip, Upload, X, FileText } from "lucide-react";
 
 type Attachment = { id: string; file_name: string; storage_path: string; file_type: string | null; file_size: number | null; signedUrl?: string; created_at: string; };
 
