@@ -34,14 +34,14 @@ export default function CarpenterQuoteBuilder({ profile, materials }: {
   const [intake, setIntake] = useState<CarpenterIntake>(DEFAULT_INTAKE);
   const [rate,   setRate]   = useState(profile.hourly_rate ?? 85);
   const [margin, setMargin] = useState(profile.materials_margin_pct ?? 20);
-  const [lib,    setLib]    = useState<MaterialRow[]>(
+  const [lib, _setLib] = useState<MaterialRow[]>(
     materials.length > 0 ? materials : CARPENTER_DEFAULT_MATERIALS.map((m) => ({ ...m }))
   );
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [siteAddress, setSiteAddress] = useState("");
   const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">("full_on_completion");
-  const [customTerms, setCustomTerms] = useState<PaymentTerm[]>([
+  const [customTerms, _setCustomTerms] = useState<PaymentTerm[]>([
     { label: "Deposit", percent: 50, trigger: "acceptance", days: 0 },
     { label: "Final",   percent: 50, trigger: "completion",  days: 7 },
   ]);

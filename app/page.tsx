@@ -156,7 +156,7 @@ export default function Home() {
         <div className="mb-12">
           <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">Sound familiar?</span>
           <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.95] mt-3 text-white">
-            Every problem you're dealing with<br className="hidden sm:block" /> has a fix built in.
+            Every problem you&apos;re dealing with<br className="hidden sm:block" /> has a fix built in.
           </h2>
         </div>
         <div className="flex flex-col gap-3">

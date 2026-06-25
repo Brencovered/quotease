@@ -31,14 +31,14 @@ export default function RooferQuoteBuilder({ profile, materials }: {
   const [intake, setIntake] = useState<RooferIntake>(DEFAULT_INTAKE);
   const [rate, setRate]     = useState(profile.hourly_rate ?? 90);
   const [margin, setMargin] = useState(profile.materials_margin_pct ?? 20);
-  const [lib, setLib]       = useState<MaterialRow[]>(
+  const [lib, _setLib]       = useState<MaterialRow[]>(
     materials.length > 0 ? materials : ROOFER_DEFAULT_MATERIALS.map((m) => ({ ...m }))
   );
   const [clientName, setClientName]   = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [siteAddress, setSiteAddress] = useState("");
   const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">("deposit_30_70");
-  const [customTerms, setCustomTerms] = useState<PaymentTerm[]>([
+  const [customTerms, _setCustomTerms] = useState<PaymentTerm[]>([
     { label: "Deposit", percent: 30, trigger: "acceptance", days: 0 },
     { label: "Final",   percent: 70, trigger: "completion",  days: 7 },
   ]);
