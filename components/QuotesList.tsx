@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 
+type PaymentTerm = { label: string; percent: number; trigger: string; days: number };
+
 type Quote = {
   id: string;
   client_name: string | null;
@@ -10,8 +12,11 @@ type Quote = {
   site_address: string | null;
   status: string;
   total_cost: number | null;
+  amount_paid: number | null;
+  payment_terms: PaymentTerm[] | null;
   invoice_number: string | null;
   xero_exported_at: string | null;
+  completed_at: string | null;
   created_at: string;
 };
 
@@ -23,25 +28,43 @@ const STATUS_STYLE: Record<string, string> = {
   paid: "bg-green-100 text-green-700",
 };
 
+function statusLabel(q: Quote): string {
+  if (q.status === "accepted") {
+    const owing = (q.total_cost ?? 0) - (q.amount_paid ?? 0);
+    return owing > 0 ? `outstanding $${owing.toLocaleString()}` : "accepted";
+  }
+  return q.status;
+}
+
 export default function QuotesList({ quotes: initialQuotes }: { quotes: Quote[] }) {
-  const [quotes, setQuotes] = useState(initialQuotes);
+  const [quotes] = useState(initialQuotes);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [paymentInputId, setPaymentInputId] = useState<string | null>(null);
+  const [paymentValue, setPaymentValue] = useState("");
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
   const acceptedNotExported = quotes.filter((q) => q.status === "accepted" && !q.xero_exported_at);
 
-  async function setStatus(quoteId: string, status: string) {
-    setBusyId(quoteId);
+  async function callUpdate(body: Record<string, unknown>) {
+    setBusyId(body.quoteId as string);
     const res = await fetch("/api/quotes/update-status", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ quoteId, status }),
+      body: JSON.stringify(body),
     });
     if (res.ok) {
-      setQuotes((prev) => prev.map((q) => (q.id === quoteId ? { ...q, status } : q)));
+      window.location.reload();
     }
     setBusyId(null);
+  }
+
+  async function recordPayment(quoteId: string) {
+    const amount = Number(paymentValue);
+    if (!amount || amount <= 0) return;
+    await callUpdate({ quoteId, paymentAmount: amount });
+    setPaymentInputId(null);
+    setPaymentValue("");
   }
 
   async function exportToXero() {
@@ -68,9 +91,8 @@ export default function QuotesList({ quotes: initialQuotes }: { quotes: Quote[] 
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    setExportMessage(`Exported ${acceptedNotExported.length} invoice(s). Import this file in Xero under Business > Invoices > Import.`);
-    setQuotes((prev) =>
-      prev.map((q) => (q.status === "accepted" && !q.xero_exported_at ? { ...q, xero_exported_at: new Date().toISOString() } : q))
+    setExportMessage(
+      `Exported ${acceptedNotExported.length} invoice(s). Import this file in Xero under Business > Invoices > Import.`
     );
     setExporting(false);
   }
@@ -104,54 +126,104 @@ export default function QuotesList({ quotes: initialQuotes }: { quotes: Quote[] 
 
       <div className="space-y-3">
         {quotes.length === 0 && <p className="text-sm text-neutral-500">No quotes yet.</p>}
-        {quotes.map((q) => (
-          <div key={q.id} className="border rounded-lg p-4">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="font-medium text-sm">{q.client_name || "Unnamed client"}</p>
-                <p className="text-xs text-neutral-500">{q.site_address}</p>
-                {q.invoice_number && (
-                  <p className="text-xs text-neutral-400 font-mono mt-1">{q.invoice_number}</p>
+        {quotes.map((q) => {
+          const owing = (q.total_cost ?? 0) - (q.amount_paid ?? 0);
+          return (
+            <div key={q.id} className="border rounded-lg p-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="font-medium text-sm">{q.client_name || "Unnamed client"}</p>
+                  <p className="text-xs text-neutral-500">{q.site_address}</p>
+                  {q.invoice_number && (
+                    <p className="text-xs text-neutral-400 font-mono mt-1">{q.invoice_number}</p>
+                  )}
+                </div>
+                <div className="text-right">
+                  <p className="font-medium text-sm">${(q.total_cost ?? 0).toLocaleString()}</p>
+                  {(q.amount_paid ?? 0) > 0 && q.status !== "paid" && (
+                    <p className="text-xs text-neutral-500">paid ${q.amount_paid?.toLocaleString()}</p>
+                  )}
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_STYLE[q.status] ?? ""}`}>
+                    {statusLabel(q)}
+                  </span>
+                </div>
+              </div>
+
+              {q.payment_terms && q.payment_terms.length > 0 && (
+                <div className="text-xs text-neutral-500 mt-2 space-y-0.5">
+                  {q.payment_terms.map((t, i) => (
+                    <p key={i}>
+                      {t.label}: {t.percent}% ({t.trigger.replace("_", " ")}, +{t.days}d)
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-2 mt-3 flex-wrap items-center">
+                {q.status === "sent" && (
+                  <button
+                    onClick={() => callUpdate({ quoteId: q.id, status: "accepted" })}
+                    disabled={busyId === q.id}
+                    className="text-xs border rounded-md px-3 py-1 disabled:opacity-40"
+                  >
+                    Mark accepted
+                  </button>
+                )}
+                {q.status === "accepted" && !q.completed_at && (
+                  <button
+                    onClick={() => callUpdate({ quoteId: q.id, completeJob: true })}
+                    disabled={busyId === q.id}
+                    className="text-xs border rounded-md px-3 py-1 disabled:opacity-40"
+                  >
+                    Mark job complete
+                  </button>
+                )}
+                {q.status === "accepted" && owing > 0 && (
+                  <>
+                    {paymentInputId === q.id ? (
+                      <span className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          autoFocus
+                          value={paymentValue}
+                          onChange={(e) => setPaymentValue(e.target.value)}
+                          placeholder={`up to ${owing}`}
+                          className="text-xs border rounded-md px-2 py-1 w-24"
+                        />
+                        <button
+                          onClick={() => recordPayment(q.id)}
+                          disabled={busyId === q.id}
+                          className="text-xs bg-green-600 text-white rounded-md px-2 py-1 disabled:opacity-40"
+                        >
+                          Save
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setPaymentInputId(q.id);
+                          setPaymentValue(String(owing));
+                        }}
+                        className="text-xs border rounded-md px-3 py-1"
+                      >
+                        Record payment
+                      </button>
+                    )}
+                  </>
+                )}
+                {(q.status === "sent" || q.status === "draft") && (
+                  <button
+                    onClick={() => callUpdate({ quoteId: q.id, status: "declined" })}
+                    disabled={busyId === q.id}
+                    className="text-xs border rounded-md px-3 py-1 text-red-600 disabled:opacity-40"
+                  >
+                    Mark declined
+                  </button>
                 )}
               </div>
-              <div className="text-right">
-                <p className="font-medium text-sm">${(q.total_cost ?? 0).toLocaleString()}</p>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_STYLE[q.status] ?? ""}`}>
-                  {q.status}
-                </span>
-              </div>
             </div>
-            <div className="flex gap-2 mt-3">
-              {q.status === "sent" && (
-                <button
-                  onClick={() => setStatus(q.id, "accepted")}
-                  disabled={busyId === q.id}
-                  className="text-xs border rounded-md px-3 py-1 disabled:opacity-40"
-                >
-                  Mark accepted
-                </button>
-              )}
-              {q.status === "accepted" && (
-                <button
-                  onClick={() => setStatus(q.id, "paid")}
-                  disabled={busyId === q.id}
-                  className="text-xs border rounded-md px-3 py-1 disabled:opacity-40"
-                >
-                  Mark paid
-                </button>
-              )}
-              {(q.status === "sent" || q.status === "draft") && (
-                <button
-                  onClick={() => setStatus(q.id, "declined")}
-                  disabled={busyId === q.id}
-                  className="text-xs border rounded-md px-3 py-1 text-red-600 disabled:opacity-40"
-                >
-                  Mark declined
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </main>
   );

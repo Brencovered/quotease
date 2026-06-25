@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
 import {
   calcElectricianQuote,
   ELECTRICIAN_DEFAULT_MATERIALS,
@@ -57,6 +58,8 @@ export default function QuoteBuilder({
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [siteAddress, setSiteAddress] = useState("");
+  const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS>("full_on_completion");
+  const paymentTerms: PaymentTerm[] = PAYMENT_TERM_PRESETS[termsPreset];
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
@@ -145,6 +148,7 @@ export default function QuoteBuilder({
         labour_hours: result.labourHours,
         materials_cost: result.materialsCost,
         total_cost: result.totalCost,
+        payment_terms: paymentTerms,
         status: sendEmail ? "sent" : "draft",
       })
       .select()
@@ -319,7 +323,28 @@ export default function QuoteBuilder({
           </Section>
 
           <div className="border-t pt-4 mt-2 space-y-3">
-            <p className="font-medium text-sm">Send to client</p>
+            <p className="font-medium text-sm">Payment terms</p>
+            <select
+              value={termsPreset}
+              onChange={(e) => setTermsPreset(e.target.value as keyof typeof PAYMENT_TERM_PRESETS)}
+              className="w-full border rounded-md px-3 py-2"
+            >
+              <option value="full_on_completion">100% on completion (14 days)</option>
+              <option value="deposit_50_50">50% deposit, 50% on completion</option>
+              <option value="deposit_30_70">30% deposit, 70% on completion</option>
+              <option value="due_on_invoice">100% due on invoice (7 days)</option>
+            </select>
+            <div className="text-xs text-neutral-500 space-y-0.5">
+              {paymentTerms.map((t, i) => (
+                <p key={i}>
+                  {t.label}: {t.percent}% — ${Math.round((result.totalCost * t.percent) / 100).toLocaleString()},
+                  due {t.days === 0 ? "on " : `${t.days} days after `}
+                  {t.trigger === "acceptance" ? "acceptance" : t.trigger === "completion" ? "job completion" : "invoice date"}
+                </p>
+              ))}
+            </div>
+
+            <p className="font-medium text-sm pt-2">Send to client</p>
             <input placeholder="Client name" value={clientName} onChange={(e) => setClientName(e.target.value)} className="w-full border rounded-md px-3 py-2" />
             <input placeholder="Client email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className="w-full border rounded-md px-3 py-2" />
             <input placeholder="Site address" value={siteAddress} onChange={(e) => setSiteAddress(e.target.value)} className="w-full border rounded-md px-3 py-2" />

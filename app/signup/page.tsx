@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { ELECTRICIAN_DEFAULT_MATERIALS } from "@/lib/calc";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -26,11 +25,9 @@ export default function SignupPage() {
       return;
     }
 
-    // Create the profile row
     const { error: profileError } = await supabase.from("profiles").insert({
       id: data.user.id,
       business_name: businessName,
-      trade: "electrician",
       contact_email: email,
     });
     if (profileError) {
@@ -39,25 +36,15 @@ export default function SignupPage() {
       return;
     }
 
-    // Seed the materials library with placeholder defaults — the tradie
-    // overwrites these via CSV upload or manual edit on first login.
-    const seedRows = ELECTRICIAN_DEFAULT_MATERIALS.map((m) => ({
-      profile_id: data.user!.id,
-      trade: "electrician",
-      item_key: m.item_key,
-      label: m.label,
-      unit_cost: m.unit_cost,
-    }));
-    await supabase.from("material_items").insert(seedRows);
-
     setLoading(false);
-    router.push("/electrician");
+    router.push("/onboarding");
     router.refresh();
   }
 
   return (
     <main className="max-w-sm mx-auto px-6 py-20">
-      <h1 className="text-xl font-medium mb-6">Create your account</h1>
+      <h1 className="text-xl font-medium mb-1">Create your account</h1>
+      <p className="text-sm text-neutral-500 mb-6">You'll pick your trades on the next step.</p>
       <form onSubmit={handleSubmit} className="space-y-3">
         <input
           type="text"

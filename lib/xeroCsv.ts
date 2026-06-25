@@ -9,20 +9,20 @@
 // *InvoiceDate, *DueDate, InventoryItemCode, *Description, *Quantity,
 // *UnitAmount, Discount, *AccountCode, *TaxType, TrackingName1, TrackingOption1,
 // TrackingName2, TrackingOption2, Currency, BrandingTheme
-//
-// Columns marked * are required by Xero. Quantity is left at 1 and the full
-// job total goes in UnitAmount, since a quote is one lump-sum line item, not
-// a per-unit breakdown — Xero doesn't need the labour/materials split, just
-// the total owed.
+
+import { resolveDueDate, termAmount, type PaymentTerm } from "./paymentTerms";
 
 export interface QuoteForExport {
   invoiceNumber: string;
   clientName: string;
   clientEmail: string | null;
   siteAddress: string | null;
-  acceptedAt: string; // ISO date
+  acceptedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
   totalCost: number;
   jobType: string | null;
+  paymentTerms: PaymentTerm[];
 }
 
 function csvEscape(value: string): string {
@@ -30,12 +30,6 @@ function csvEscape(value: string): string {
     return `"${value.replace(/"/g, '""')}"`;
   }
   return value;
-}
-
-function addDays(isoDate: string, days: number): string {
-  const d = new Date(isoDate);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
 }
 
 const HEADER = [
@@ -70,51 +64,73 @@ const HEADER = [
 // AccountCode 200 is Xero's default "Sales" revenue account on most AU charts
 // of accounts — the tradie can remap this in Xero if their chart differs.
 // TaxType "OUTPUT" is the standard AU GST-on-income tax type.
+//
+// A quote with split payment terms (e.g. 30% deposit / 70% on completion)
+// becomes one invoice ROW PER TERM, sharing the same invoice number with a
+// letter suffix (INV-0001-A, INV-0001-B) so Xero treats them as related but
+// distinct invoices rather than one invoice for the wrong amount.
 export function buildXeroInvoiceCsv(
   quotes: QuoteForExport[],
-  options: { accountCode?: string; taxType?: string; dueInDays?: number } = {}
+  options: { accountCode?: string; taxType?: string } = {}
 ): string {
   const accountCode = options.accountCode ?? "200";
   const taxType = options.taxType ?? "OUTPUT";
-  const dueInDays = options.dueInDays ?? 14;
 
-  const rows = quotes.map((q) => {
-    const invoiceDate = q.acceptedAt.slice(0, 10);
-    const dueDate = addDays(q.acceptedAt, dueInDays);
-    const description = `Electrical work${q.jobType ? " — " + q.jobType : ""}${
-      q.siteAddress ? " at " + q.siteAddress : ""
-    }`;
+  const rows: string[] = [];
 
-    const row = [
-      q.clientName || "Unknown client",
-      q.clientEmail ?? "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      q.invoiceNumber,
-      invoiceDate,
-      dueDate,
-      "",
-      description,
-      "1",
-      q.totalCost.toFixed(2),
-      "",
-      accountCode,
-      taxType,
-      "",
-      "",
-      "",
-      "",
-      "AUD",
-      "",
-    ];
-    return row.map((v) => csvEscape(String(v))).join(",");
-  });
+  for (const q of quotes) {
+    const terms = q.paymentTerms.length > 0
+      ? q.paymentTerms
+      : [{ label: "Payment due", percent: 100, trigger: "completion" as const, days: 14 }];
+
+    const multiTerm = terms.length > 1;
+
+    terms.forEach((term, i) => {
+      const dueDate = resolveDueDate(term, {
+        acceptedAt: q.acceptedAt,
+        completedAt: q.completedAt,
+        createdAt: q.createdAt,
+      });
+      const invoiceDate = new Date(q.acceptedAt ?? q.createdAt);
+      const invoiceNumber = multiTerm
+        ? `${q.invoiceNumber}-${String.fromCharCode(65 + i)}`
+        : q.invoiceNumber;
+
+      const description = `Electrical work${q.jobType ? " — " + q.jobType : ""}${
+        q.siteAddress ? " at " + q.siteAddress : ""
+      }${multiTerm ? ` (${term.label})` : ""}`;
+
+      const row = [
+        q.clientName || "Unknown client",
+        q.clientEmail ?? "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        invoiceNumber,
+        invoiceDate.toISOString().slice(0, 10),
+        dueDate.toISOString().slice(0, 10),
+        "",
+        description,
+        "1",
+        termAmount(term, q.totalCost).toFixed(2),
+        "",
+        accountCode,
+        taxType,
+        "",
+        "",
+        "",
+        "",
+        "AUD",
+        "",
+      ];
+      rows.push(row.map((v) => csvEscape(String(v))).join(","));
+    });
+  }
 
   return [HEADER.join(","), ...rows].join("\n");
 }

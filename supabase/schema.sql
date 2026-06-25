@@ -7,11 +7,12 @@ create extension if not exists "uuid-ossp";
 create table profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   business_name text,
-  trade text not null default 'electrician', -- electrician, plumber, carpenter, etc
+  trades text[] not null default '{}', -- e.g. {'electrician','carpenter'} - chosen during onboarding, not before signup
   hourly_rate numeric not null default 95,
   materials_margin_pct numeric not null default 20,
   contact_email text,
   contact_phone text,
+  onboarded_at timestamptz, -- set once they've picked their trades; null means they land back on /onboarding
   xero_connected boolean not null default false,
   xero_tenant_id text,
   xero_access_token text,
@@ -56,11 +57,22 @@ create table quotes (
   labour_hours numeric,
   materials_cost numeric,
   total_cost numeric,
+  -- draft -> sent -> accepted -> (outstanding while amount_paid < total_cost) -> paid
+  -- declined is a dead end from sent. "outstanding" isn't its own stored value —
+  -- it's derived in the UI from status='accepted' and amount_paid < total_cost,
+  -- so partial payments update naturally without a separate status to keep in sync.
   status text not null default 'draft', -- draft, sent, accepted, declined, paid
+  amount_paid numeric not null default 0,
+  -- e.g. [{"label":"Deposit","percent":30,"trigger":"acceptance","days":0},
+  --       {"label":"Final payment","percent":70,"trigger":"completion","days":7}]
+  -- trigger is when the clock starts: 'acceptance', 'completion', or 'invoice_date'.
+  -- Defaults to a single 100%-on-completion term if a tradie never sets one.
+  payment_terms jsonb not null default '[{"label":"Payment due","percent":100,"trigger":"completion","days":14}]',
   pdf_url text,
   sent_at timestamptz,
   accepted_at timestamptz,
-  paid_at timestamptz,
+  completed_at timestamptz, -- when the job itself was finished, separate from when the quote was accepted
+  paid_at timestamptz, -- set when amount_paid reaches total_cost
   invoice_number text,          -- e.g. INV-0001, generated when first exported to Xero
   xero_exported_at timestamptz, -- set when included in a CSV export, so it isn't exported twice
   xero_invoice_id text,         -- only used if a tradie later connects full Xero OAuth

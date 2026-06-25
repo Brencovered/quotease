@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { termAmount, type PaymentTerm } from "@/lib/paymentTerms";
 
 // Requires a RESEND_API_KEY env var (https://resend.com) and a verified sending domain.
 // Resend is used here as a simple, low-setup choice — swap for any transactional
@@ -39,6 +40,16 @@ export async function POST(request: Request) {
   }
 
   const business = quote.profiles?.business_name ?? "Your tradie";
+  const terms: PaymentTerm[] = quote.payment_terms ?? [
+    { label: "Payment due", percent: 100, trigger: "completion", days: 14 },
+  ];
+
+  const termsRows = terms
+    .map(
+      (t) =>
+        `<tr><td>${t.label} (${t.percent}%)</td><td>$${termAmount(t, quote.total_cost ?? 0).toLocaleString()}</td></tr>`
+    )
+    .join("");
 
   const html = `
     <h2>Quote from ${business}</h2>
@@ -48,6 +59,10 @@ export async function POST(request: Request) {
       <tr><td>Labour</td><td>${quote.labour_hours} hrs</td></tr>
       <tr><td>Materials</td><td>$${quote.materials_cost}</td></tr>
       <tr style="font-weight:bold"><td>Total</td><td>$${quote.total_cost}</td></tr>
+    </table>
+    <h3>Payment terms</h3>
+    <table cellpadding="6" style="border-collapse:collapse;width:100%">
+      ${termsRows}
     </table>
     <p>This quote is an estimate based on the details provided and may change once the job is reviewed on site.</p>
     <p>${business}${quote.profiles?.contact_phone ? " — " + quote.profiles.contact_phone : ""}</p>

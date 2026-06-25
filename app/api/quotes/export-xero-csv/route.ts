@@ -53,9 +53,12 @@ export async function GET() {
       clientName: q.client_name ?? "Unknown client",
       clientEmail: q.client_email,
       siteAddress: q.site_address,
-      acceptedAt: q.accepted_at ?? now,
+      acceptedAt: q.accepted_at,
+      completedAt: q.completed_at,
+      createdAt: q.created_at ?? now,
       totalCost: q.total_cost ?? 0,
       jobType: q.job_type,
+      paymentTerms: q.payment_terms ?? [],
     });
   }
 
