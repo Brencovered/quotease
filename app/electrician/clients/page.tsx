@@ -28,7 +28,7 @@ export default async function ClientsPage() {
             job_count: wonQuotes.length,
             total_spent: wonQuotes.reduce((s: number, q) => s + (q.total_cost ?? 0), 0),
             last_job_at: sorted[0]?.created_at ?? null,
-          } as Client;
+          } as unknown as Client;
         });
       }
     }
