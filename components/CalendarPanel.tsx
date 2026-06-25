@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { CalendarDays, Clock, MapPin, ChevronLeft, ChevronRight, Plus, Bell, Send, FileText } from "lucide-react";
+import { CalendarDays, MapPin, ChevronLeft, ChevronRight, Plus, Bell, Send } from "lucide-react";
 
 type ScheduledJob = {
   id: string; client_name: string | null; site_address: string | null;
@@ -42,12 +42,14 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
   for (const j of jobs) {
     // Scheduled job blocks
     if (j.scheduled_start) {
-      const start = new Date(j.scheduled_start);
-      const end   = j.scheduled_end ? new Date(j.scheduled_end) : start;
-      let cur = new Date(start);
-      while (cur <= end) {
+      const start       = new Date(j.scheduled_start);
+      const end         = j.scheduled_end ? new Date(j.scheduled_end) : start;
+      const startMs     = start.getTime();
+      const endMs       = end.getTime();
+      const oneDayMs    = 86400000;
+      for (let ms = startMs; ms <= endMs; ms += oneDayMs) {
+        const cur = new Date(ms);
         events.push({ id: `job-${j.id}-${toDateStr(cur)}`, date: toDateStr(cur), type: "job", label: j.client_name ?? "Job", sub: j.site_address ?? undefined, jobId: j.id });
-        cur.setDate(cur.getDate()+1);
       }
     }
     // Follow-up reminders

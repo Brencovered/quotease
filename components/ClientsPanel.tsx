@@ -7,7 +7,6 @@ import type { Client } from "@/lib/clients";
 
 const EMPTY_FORM = { name: "", email: "", phone: "", billing_address: "", abn: "", notes: "" };
 
-const CSV_HEADERS = ["name","email","phone","billing_address","abn","notes"];
 const CSV_TEMPLATE = `name,email,phone,billing_address,abn,notes\nJane Smith,jane@example.com,0412345678,"123 Main St, Suburb VIC 3000",12345678901,Prefers SMS\nBob Jones,bob@example.com,0487654321,"45 Oak Ave, Suburb NSW 2000",,Heritage home`;
 
 export default function ClientsPanel({ clients: initial }: { clients: Client[] }) {

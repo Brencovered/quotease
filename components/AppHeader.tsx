@@ -6,7 +6,6 @@ import { createClient } from "@/lib/supabase/client";
 import {
   LayoutDashboard,
   FileText,
-  Briefcase,
   CalendarDays,
   Users,
   Plus,

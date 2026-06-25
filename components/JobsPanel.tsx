@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Briefcase, Hammer, Wallet, CheckCircle2, Paperclip, X, Upload, Plus, ChevronRight } from "lucide-react";
+import { Briefcase, Hammer, Wallet, CheckCircle2, X, Upload, Plus, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 type PaymentTerm = { label: string; percent: number; trigger: string; days: number };

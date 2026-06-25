@@ -5,7 +5,7 @@ import type { DashboardStats } from "@/lib/dashboardStats";
 import {
   Briefcase, DollarSign, TrendingUp, Target,
   Bell, AlertTriangle, ChevronRight,
-  CheckCircle2, Clock, Send, FileText,
+  CheckCircle2, Send, FileText,
   BadgeCheck, XCircle, Wallet,
 } from "lucide-react";
 
