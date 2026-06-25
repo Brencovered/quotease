@@ -51,7 +51,7 @@ export default function SignupPage() {
     await supabase.from("material_items").insert(seedRows);
 
     setLoading(false);
-    router.push("/electrician");
+    router.push("/billing");
     router.refresh();
   }
 

@@ -25,13 +25,29 @@ export async function middleware(request: NextRequest) {
 
   const { data } = await supabase.auth.getUser();
 
-  const protectedPaths = ["/electrician", "/settings"];
-  const isProtected = protectedPaths.some((p) => request.nextUrl.pathname.startsWith(p));
+  const loginRequiredPaths = ["/electrician", "/settings", "/billing"];
+  const subscriptionRequiredPaths = ["/electrician", "/settings"];
+  const pathname = request.nextUrl.pathname;
 
-  if (isProtected && !data.user) {
+  if (loginRequiredPaths.some((p) => pathname.startsWith(p)) && !data.user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
+  }
+
+  if (subscriptionRequiredPaths.some((p) => pathname.startsWith(p)) && data.user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("subscription_status")
+      .eq("id", data.user.id)
+      .single();
+
+    const activeStatuses = ["trialing", "active"];
+    if (!profile || !activeStatuses.includes(profile.subscription_status)) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/billing";
+      return NextResponse.redirect(url);
+    }
   }
 
   return response;

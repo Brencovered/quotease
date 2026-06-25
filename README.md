@@ -36,7 +36,32 @@ not shared.
 **Not yet built**: actually pushing an accepted quote into Xero as a draft
 invoice (the OAuth connection and token storage are in place, but the
 `POST /api/v2.0/Invoices` call itself isn't wired up yet — that's the next
-piece once a real Xero developer app exists to test against).
+piece once a real Xero developer app exists to test against). The CSV export
+on the quotes page covers the same need today at zero ongoing cost, and
+doesn't require any of the above setup.
+
+### Enabling billing (Stripe)
+$40/mo or $400/yr, unlimited users, 7-day free trial, no per-seat pricing.
+
+1. In the Stripe dashboard, create two recurring **Products > Prices**:
+   - Monthly: $40 AUD, billed monthly
+   - Annual: $400 AUD, billed yearly
+2. Copy each Price ID (`price_...`, not the product ID) into `STRIPE_PRICE_MONTHLY`
+   and `STRIPE_PRICE_ANNUAL`
+3. Add `STRIPE_SECRET_KEY` from Developers > API keys
+4. Add a webhook endpoint in Stripe pointing to `<your-deployed-url>/api/stripe/webhook`,
+   listening for `customer.subscription.created`, `.updated`, `.deleted`, and
+   `checkout.session.completed`. Copy its signing secret into `STRIPE_WEBHOOK_SECRET`
+5. Add `SUPABASE_SERVICE_ROLE_KEY` (Project Settings > API in Supabase) — the
+   webhook needs this since it has no logged-in user session to read/write
+   through normal RLS-protected access
+6. Set `NEXT_PUBLIC_APP_URL` to your real deployed URL (used for Checkout's
+   success/cancel redirect and the billing portal return URL)
+
+New signups land on `/billing` to start their trial before they can reach
+`/electrician`. Subscription status is checked in `middleware.ts` on every
+request to a protected route — anyone not `trialing` or `active` gets
+redirected back to `/billing` automatically, including if a renewal fails.
 
 ## What's a placeholder right now
 

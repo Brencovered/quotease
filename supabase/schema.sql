@@ -17,6 +17,12 @@ create table profiles (
   xero_access_token text,
   xero_refresh_token text,
   xero_token_expires_at timestamptz,
+  stripe_customer_id text,
+  stripe_subscription_id text,
+  subscription_status text not null default 'none', -- none, trialing, active, past_due, canceled
+  subscription_plan text,                            -- monthly, annual
+  trial_ends_at timestamptz,
+  current_period_end timestamptz,
   created_at timestamptz not null default now()
 );
 
