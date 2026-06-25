@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { DashboardStats } from "@/lib/dashboardStats";
+import type { DashboardStats, ProfitStats } from "@/lib/dashboardStats";
 import {
   Briefcase, DollarSign, TrendingUp, Target,
   Bell, AlertTriangle, ChevronRight,
@@ -18,7 +18,7 @@ const STATUS_META: Record<string, { label: string; bg: string; text: string; ico
 };
 const STATUS_ORDER = ["draft","sent","accepted","paid","declined"];
 
-export default function DashboardPanel({ stats }: { stats: DashboardStats }) {
+export default function DashboardPanel({ stats, profit }: { stats: DashboardStats; profit: ProfitStats }) {
   const maxMonthly = Math.max(...stats.monthly.map((m) => m.value), 1);
   const hasAlerts  = stats.overdueFollowUps > 0 || stats.expiredQuotes > 0;
 
@@ -56,6 +56,30 @@ export default function DashboardPanel({ stats }: { stats: DashboardStats }) {
           )}
         </div>
       )}
+
+      {/* ── Profit ─── */}
+      <div className="bg-[var(--navy)] rounded-xl p-4 sm:p-5 mb-5 flex items-center justify-between gap-4">
+        <div>
+          <p className="text-[11px] tracking-[.1em] uppercase text-[var(--steel-3)] font-bold mb-1">Profit</p>
+          {profit.jobsTracked > 0 ? (
+            <>
+              <p className="font-display text-2xl text-[var(--amber)]">
+                ${profit.totalProfit.toLocaleString()}
+                <span className="text-[13px] text-[var(--steel-2)] font-sans font-medium ml-2">
+                  {profit.avgMarginPct}% avg margin
+                </span>
+              </p>
+              <p className="text-[12px] text-[var(--steel-2)] mt-0.5">
+                Based on actuals logged for {profit.jobsTracked} job{profit.jobsTracked !== 1 ? "s" : ""}
+              </p>
+            </>
+          ) : (
+            <p className="text-[13px] text-[var(--steel-1)]">
+              Log actual hours and materials on a job&apos;s detail page to see real profit here.
+            </p>
+          )}
+        </div>
+      </div>
 
       {/* ── Two-column layout on desktop ─── */}
       <div className="grid lg:grid-cols-[1fr_340px] gap-5 items-start">

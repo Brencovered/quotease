@@ -54,6 +54,9 @@ export default function AppHeader() {
                 {n.label}
               </Link>
             ))}
+            <Link href="/electrician/map" className={isActive("/electrician/map") ? "text-[var(--amber)]" : "text-[var(--steel-1)] hover:text-white transition-colors"}>
+              Map
+            </Link>
             <Link href="/electrician" className="bg-[var(--amber)] text-[var(--navy)] font-extrabold text-[12px] px-4 py-1.5 rounded-lg">
               + New quote
             </Link>

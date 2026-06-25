@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Lightbulb } from "lucide-react";
+import { generateCostingInsight } from "@/lib/jobInsights";
 
 type Actuals = {
   id: string;
@@ -12,13 +13,14 @@ type Actuals = {
   recorded_at: string;
 };
 
-export default function JobCostingPanel({ quoteId, quotedHours, quotedMaterials, quotedTotal, hourlyRate, actuals: initial }: {
+export default function JobCostingPanel({ quoteId, quotedHours, quotedMaterials, quotedTotal, hourlyRate, actuals: initial, intakeData }: {
   quoteId: string;
   quotedHours: number;
   quotedMaterials: number;
   quotedTotal: number;
   hourlyRate: number;
   actuals: Actuals[];
+  intakeData?: Record<string, unknown> | null;
 }) {
   const [actuals, setActuals] = useState(initial);
   const [showForm, setShowForm] = useState(actuals.length === 0);
@@ -35,6 +37,7 @@ export default function JobCostingPanel({ quoteId, quotedHours, quotedMaterials,
 
   const hoursVar = totalActualHours - quotedHours;
   const matVar = totalActualMaterials - quotedMaterials;
+  const insight = actuals.length > 0 ? generateCostingInsight(hoursVar, quotedHours, intakeData) : null;
 
   async function saveActuals() {
     if (!form.hours && !form.materials) { setError("Enter at least hours or materials"); return; }
@@ -92,6 +95,13 @@ export default function JobCostingPanel({ quoteId, quotedHours, quotedMaterials,
               <p className={`text-[12px] font-semibold mt-0.5 ${margin >= 0 ? "text-green-700" : "text-red-600"}`}>{margin >= 0 ? "+" : ""}${margin.toLocaleString()}</p>
             </div>
           </div>
+
+          {insight && (
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-[13px] text-amber-900">
+              <Lightbulb size={15} className="mt-0.5 shrink-0 text-amber-600" />
+              <p>{insight}</p>
+            </div>
+          )}
 
           {/* Actuals history */}
           {actuals.length > 1 && (

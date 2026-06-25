@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
 import { AlertTriangle, Paperclip, X, Sparkles, ChevronRight, ChevronLeft, Check } from "lucide-react";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
+import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import {
   calcElectricianQuote,
   ELECTRICIAN_DEFAULT_MATERIALS,
@@ -140,6 +141,43 @@ export default function QuoteBuilder({
     }
   }
 
+  async function runAiAnalysisFromVoice(transcript: string) {
+    setAnalyzing(true);
+    setAnalysisError(null);
+    setAnalysisResult(null);
+    setUsageLimitReached(false);
+    try {
+      const res = await fetch("/api/quotes/analyze-voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcript, instructions: drawingInstructions.trim() || undefined }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        setAnalysisError(body.error ?? "Analysis failed");
+        if (body.usageLimitReached) setUsageLimitReached(true);
+        return;
+      }
+      const r = body.result;
+      setIntake((prev) => ({
+        ...prev,
+        powerPoints:       r.power_points      ?? prev.powerPoints,
+        lightPoints:       r.light_points       ?? prev.lightPoints,
+        switches:          r.switches           ?? prev.switches,
+        downlights:        r.downlights         ?? prev.downlights,
+        switchboardUpgrade: r.switchboard_upgrade ?? prev.switchboardUpgrade,
+        threePhase:        r.three_phase        ?? prev.threePhase,
+        dataPoints:        r.data_points        ?? prev.dataPoints,
+        smokeAlarms:       r.smoke_alarms       ?? prev.smokeAlarms,
+      }));
+      setAnalysisResult({ confidence: r.confidence ?? "medium", notes: r.notes ?? "" });
+    } catch (err) {
+      setAnalysisError(err instanceof Error ? err.message : "Could not reach the voice analysis service.");
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
   async function saveAndSend(sendEmail: boolean) {
     setSaving(true);
     setSaveMessage(null);
@@ -251,6 +289,7 @@ export default function QuoteBuilder({
           onUpload={handleDrawingUpload}
           onRemove={(name) => { setDrawingFiles((p) => p.filter((f) => f.name !== name)); setAnalysisResult(null); }}
           onAnalyse={runAiAnalysis}
+          onVoiceTranscript={runAiAnalysisFromVoice}
         />
       )}
 
@@ -296,12 +335,13 @@ export default function QuoteBuilder({
 }
 
 /* ─── Step: Drawing ─────────────────────────────────────────────── */
-function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions, analyzing, analysisResult, analysisError, usageLimitReached, onUpload, onRemove, onAnalyse }: {
+function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions, analyzing, analysisResult, analysisError, usageLimitReached, onUpload, onRemove, onAnalyse, onVoiceTranscript }: {
   drawingFiles: File[]; drawingInstructions: string; setDrawingInstructions: (v: string) => void;
   analyzing: boolean; analysisResult: { confidence: string; notes: string } | null;
   analysisError: string | null; usageLimitReached: boolean;
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRemove: (name: string) => void; onAnalyse: () => void;
+  onVoiceTranscript: (transcript: string) => void;
 }) {
   return (
     <div className="space-y-4">
@@ -331,6 +371,14 @@ function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions
           </div>
         )}
       </div>
+
+      <VoiceNoteRecorder
+        onTranscriptReady={onVoiceTranscript}
+        analyzing={analyzing}
+        analysisError={analysisError}
+        analysisResult={analysisResult}
+        usageLimitReached={usageLimitReached}
+      />
 
       {drawingFiles.length > 0 && (
         <div className="card border-2 border-[var(--amber-light)]">

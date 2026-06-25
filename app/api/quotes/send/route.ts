@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { termAmount, type PaymentTerm } from "@/lib/paymentTerms";
 
 // Requires a RESEND_API_KEY env var (https://resend.com) and a verified sending domain.
-// Resend is used here as a simple, low-setup choice — swap for any transactional
-// email provider (Postmark, SendGrid) by changing only this file.
 export async function POST(request: Request) {
   const { quoteId } = await request.json();
   if (!quoteId) {
@@ -19,9 +16,7 @@ export async function POST(request: Request) {
 
   const { data: quote, error: quoteError } = await supabase
     .from("quotes")
-    .select(
-      "*, profiles!quotes_profile_id_fkey(business_name, contact_email, contact_phone, logo_url, abn, license_number, business_address, terms_and_conditions)"
-    )
+    .select("*, profiles!quotes_profile_id_fkey(business_name, contact_phone, logo_url)")
     .eq("id", quoteId)
     .eq("profile_id", userData.user.id)
     .single();
@@ -42,53 +37,30 @@ export async function POST(request: Request) {
   }
 
   const business = quote.profiles?.business_name ?? "Your tradie";
-  const terms: PaymentTerm[] = quote.payment_terms ?? [
-    { label: "Payment due", percent: 100, trigger: "completion", days: 14 },
-  ];
-
-  const termsRows = terms
-    .map(
-      (t) =>
-        `<tr><td>${t.label} (${t.percent}%)</td><td>$${termAmount(t, quote.total_cost ?? 0).toLocaleString()}</td></tr>`
-    )
-    .join("");
-
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
+  const quoteUrl = `${appUrl}/q/${quote.public_token}`;
   const logoHtml = quote.profiles?.logo_url
-    ? `<img src="${quote.profiles.logo_url}" alt="${business}" style="max-height:56px;max-width:200px;margin-bottom:16px;" />`
+    ? `<img src="${quote.profiles.logo_url}" alt="${business}" style="max-height:48px;max-width:180px;margin-bottom:20px;" />`
     : "";
 
-  const businessDetailLines = [
-    quote.profiles?.business_address,
-    quote.profiles?.abn ? `ABN ${quote.profiles.abn}` : null,
-    quote.profiles?.license_number ? `Licence ${quote.profiles.license_number}` : null,
-  ].filter(Boolean);
-
-  const tcText = quote.profiles?.terms_and_conditions;
-
+  // Short and branded - the full breakdown, accept/decline, and payment
+  // details live on the quote page itself, not crammed into the email body.
+  // That page is also the thing a client can actually act on (the email
+  // attachment-only version had no accept/decline mechanism at all).
   const html = `
-    ${logoHtml}
-    <h2>Quote from ${business}</h2>
-    <p>Hi ${quote.client_name ?? ""},</p>
-    <p>Here's your quote for the job at ${quote.site_address ?? "the site you provided"}.</p>
-    <table cellpadding="6" style="border-collapse:collapse;width:100%">
-      <tr><td>Labour</td><td>${quote.labour_hours} hrs</td></tr>
-      <tr><td>Materials</td><td>$${quote.materials_cost}</td></tr>
-      <tr style="font-weight:bold"><td>Total</td><td>$${quote.total_cost}</td></tr>
-    </table>
-    <h3>Payment terms</h3>
-    <table cellpadding="6" style="border-collapse:collapse;width:100%">
-      ${termsRows}
-    </table>
-    <p>This quote is an estimate based on the details provided and may change once the job is reviewed on site.</p>
-    ${
-      tcText
-        ? `<p style="font-size:12px;color:#666;border-top:1px solid #eee;padding-top:12px;margin-top:20px;">${tcText}</p>`
-        : ""
-    }
-    <p style="font-size:13px;color:#444;margin-top:16px;">
-      ${business}${quote.profiles?.contact_phone ? " — " + quote.profiles.contact_phone : ""}
-      ${businessDetailLines.length ? "<br />" + businessDetailLines.join(" · ") : ""}
-    </p>
+    <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;">
+      ${logoHtml}
+      <h2 style="margin:0 0 8px;">Quote from ${business}</h2>
+      <p style="color:#333;">Hi ${quote.client_name ?? ""},</p>
+      <p style="color:#333;">Your quote for the job at ${quote.site_address ?? "the site you provided"} is ready to view.</p>
+      <p style="margin:28px 0;">
+        <a href="${quoteUrl}" style="background:#ffb400;color:#0a1722;font-weight:bold;text-decoration:none;padding:14px 28px;border-radius:8px;display:inline-block;">
+          View quote — $${(quote.total_cost ?? 0).toLocaleString()}
+        </a>
+      </p>
+      <p style="color:#888;font-size:13px;">You can accept or decline, see full payment details, and download a PDF from that page.</p>
+      <p style="color:#888;font-size:12px;margin-top:24px;">${business}${quote.profiles?.contact_phone ? " — " + quote.profiles.contact_phone : ""}</p>
+    </div>
   `;
 
   const res = await fetch("https://api.resend.com/emails", {
@@ -100,7 +72,7 @@ export async function POST(request: Request) {
     body: JSON.stringify({
       from: process.env.RESEND_FROM_EMAIL ?? "quotes@yourdomain.com",
       to: quote.client_email,
-      subject: `Quote from ${business}`,
+      subject: `Quote from ${business} — $${(quote.total_cost ?? 0).toLocaleString()}`,
       html,
     }),
   });
@@ -112,5 +84,5 @@ export async function POST(request: Request) {
 
   await supabase.from("quotes").update({ status: "sent", sent_at: new Date().toISOString() }).eq("id", quoteId);
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, quoteUrl });
 }

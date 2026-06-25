@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Bell, AlertTriangle, ChevronRight, Plus, FileText, Send, CheckCircle2, BadgeCheck, XCircle } from "lucide-react";
+import WinCelebration from "./WinCelebration";
 
 type PaymentTerm = { label: string; percent: number; trigger: string; days: number };
 type Quote = {
@@ -35,6 +36,12 @@ export default function QuotesList({ quotes: initial }: { quotes: Quote[] }) {
   const [payVal,  setPayVal]  = useState("");
   const [exporting, setExporting] = useState(false);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
+  const [celebrating, setCelebrating] = useState<number | null>(null);
+
+  async function markAccepted(q: Quote) {
+    setCelebrating(q.total_cost ?? 0);
+    setTimeout(() => callUpdate({ quoteId: q.id, status: "accepted" }), 1100);
+  }
 
   const filtered = filter === "all" ? quotes : quotes.filter((q) => q.status === filter);
   const overdueFollowUps = quotes.filter((q) => q.status === "sent" && q.follow_up_at && daysUntil(q.follow_up_at)! < 0);
@@ -63,6 +70,7 @@ export default function QuotesList({ quotes: initial }: { quotes: Quote[] }) {
 
   return (
     <div className="page-wrap">
+      {celebrating !== null && <WinCelebration amount={celebrating} />}
       <div className="flex items-center justify-between mb-5">
         <h1 className="font-display text-[28px] text-[var(--ink)]">Quotes</h1>
         <Link href="/electrician" className="inline-flex items-center gap-1.5 bg-[var(--amber)] text-[var(--navy)] font-extrabold text-[13px] px-4 py-2.5 rounded-xl">
@@ -184,7 +192,7 @@ export default function QuotesList({ quotes: initial }: { quotes: Quote[] }) {
                   Open →
                 </Link>
                 {q.status === "sent" && (
-                  <button onClick={() => callUpdate({ quoteId: q.id, status: "accepted" })} disabled={busyId === q.id} className="btn-secondary text-[12.5px] py-1.5 px-3">
+                  <button onClick={() => markAccepted(q)} disabled={busyId === q.id} className="btn-secondary text-[12.5px] py-1.5 px-3">
                     Mark accepted
                   </button>
                 )}

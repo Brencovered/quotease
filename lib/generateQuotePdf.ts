@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
+import sharp from "sharp";
 import { termAmount, type PaymentTerm } from "./paymentTerms";
 
 export interface QuotePdfProfile {
@@ -10,6 +11,10 @@ export interface QuotePdfProfile {
   business_address?: string | null;
   terms_and_conditions?: string | null;
   logo_url?: string | null;
+  bank_account_name?: string | null;
+  bank_bsb?: string | null;
+  bank_account_number?: string | null;
+  accepts_cash?: boolean | null;
 }
 
 export interface QuotePdfQuote {
@@ -238,12 +243,13 @@ export async function generateQuotePdf(
   // --- Header: logo + business name ---
   if (logoBytes) {
     try {
-      let image;
-      try {
-        image = await pdfDoc.embedPng(logoBytes);
-      } catch {
-        image = await pdfDoc.embedJpg(logoBytes);
-      }
+      // pdf-lib can only embed PNG or JPEG directly. Logos get uploaded in
+      // whatever format the tradie's phone/computer produced (WebP is the
+      // common one from modern phone cameras/screenshots), so normalize to
+      // PNG here rather than silently dropping the logo when the format
+      // doesn't happen to match - that was the actual bug before this fix.
+      const pngBytes = await sharp(logoBytes).png().toBuffer();
+      const image = await pdfDoc.embedPng(pngBytes);
       const maxH = 50;
       const scale = Math.min(maxH / image.height, 140 / image.width);
       page.drawImage(image, {
@@ -254,8 +260,8 @@ export async function generateQuotePdf(
       });
       y -= maxH + 10;
     } catch {
-      // If the logo can't be embedded (unsupported format etc.), just skip it
-      // rather than failing the whole PDF over a cosmetic detail.
+      // If the logo can't be processed for any reason, skip it rather than
+      // failing the whole PDF over a cosmetic detail.
     }
   }
 
@@ -312,6 +318,23 @@ export async function generateQuotePdf(
     drawRow(`${t.label} (${t.percent}%)`, `$${termAmount(t, quote.total_cost ?? 0).toLocaleString()}`);
   }
   y -= 6;
+
+  // --- How to pay ---
+  const hasBankDetails = profile.bank_bsb && profile.bank_account_number;
+  if (hasBankDetails || profile.accepts_cash) {
+    rule();
+    text("How to pay", { size: 13, bold: true });
+    if (hasBankDetails) {
+      text("Bank transfer:", { size: 10.5, bold: true });
+      text(`Account name: ${profile.bank_account_name ?? profile.business_name ?? ""}`, { size: 10.5 });
+      text(`BSB: ${profile.bank_bsb}    Account: ${profile.bank_account_number}`, { size: 10.5 });
+      y -= 4;
+    }
+    if (profile.accepts_cash) {
+      text("Cash accepted on completion of the job.", { size: 10.5 });
+    }
+    y -= 2;
+  }
 
   // --- Terms and conditions ---
   if (profile.terms_and_conditions) {

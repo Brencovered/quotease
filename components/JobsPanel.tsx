@@ -94,9 +94,14 @@ export default function JobsPanel({ jobs: initialJobs }: { jobs: Job[] }) {
     <div className="page-wrap">
       <div className="flex items-center justify-between mb-5">
         <h1 className="font-display text-[28px] text-[var(--ink)]">Active jobs</h1>
-        <Link href="/electrician" className="inline-flex items-center gap-1.5 bg-[var(--amber)] text-[var(--navy)] font-extrabold text-[13px] px-4 py-2.5 rounded-xl">
-          <Plus size={15} /> New quote
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/electrician/map" className="text-[13px] font-semibold text-[var(--navy)] border-2 border-[var(--line)] rounded-xl px-3 py-2.5">
+            Map
+          </Link>
+          <Link href="/electrician" className="inline-flex items-center gap-1.5 bg-[var(--amber)] text-[var(--navy)] font-extrabold text-[13px] px-4 py-2.5 rounded-xl">
+            <Plus size={15} /> New quote
+          </Link>
+        </div>
       </div>
 
       {/* Totals */}

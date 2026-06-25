@@ -37,6 +37,10 @@ create table profiles (
   ai_addon_subscription_id text,
   ai_addon_period text,
   ai_addon_analyses_used integer not null default 0,
+  bank_account_name text,
+  bank_bsb text,
+  bank_account_number text,
+  accepts_cash boolean not null default true,
   created_at timestamptz not null default now()
 );
 

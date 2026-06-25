@@ -1,3 +1,52 @@
+export interface JobActualForStats {
+  quote_id: string;
+  actual_hours: number | null;
+  actual_materials_cost: number | null;
+}
+
+export interface ProfitStats {
+  jobsTracked: number; // jobs that have at least one actuals entry logged
+  totalProfit: number;
+  avgMarginPct: number | null;
+  jobs: { quoteId: string; quotedTotal: number; actualCost: number; profit: number; marginPct: number }[];
+}
+
+// Profit only exists where actuals have been logged - a quoted total tells
+// you what you charged, not what it cost you to deliver. Rather than fake a
+// number from the quote alone, this only counts jobs where the tradie has
+// actually recorded what the job really took, and is honest with a zero
+// state otherwise instead of showing a misleading "profit" for untracked work.
+export function computeProfitStats(
+  quotes: { id: string; total_cost: number | null }[],
+  actuals: JobActualForStats[],
+  hourlyRate: number
+): ProfitStats {
+  const actualsByQuote = new Map<string, { hours: number; materials: number }>();
+  for (const a of actuals) {
+    const existing = actualsByQuote.get(a.quote_id) ?? { hours: 0, materials: 0 };
+    existing.hours += a.actual_hours ?? 0;
+    existing.materials += a.actual_materials_cost ?? 0;
+    actualsByQuote.set(a.quote_id, existing);
+  }
+
+  const jobs: ProfitStats["jobs"] = [];
+  for (const q of quotes) {
+    const actual = actualsByQuote.get(q.id);
+    if (!actual) continue;
+    const quotedTotal = q.total_cost ?? 0;
+    const actualCost = actual.hours * hourlyRate + actual.materials;
+    const profit = quotedTotal - actualCost;
+    const marginPct = quotedTotal > 0 ? Math.round((profit / quotedTotal) * 1000) / 10 : 0;
+    jobs.push({ quoteId: q.id, quotedTotal, actualCost, profit, marginPct });
+  }
+
+  const totalProfit = jobs.reduce((sum, j) => sum + j.profit, 0);
+  const totalQuoted = jobs.reduce((sum, j) => sum + j.quotedTotal, 0);
+  const avgMarginPct = totalQuoted > 0 ? Math.round((totalProfit / totalQuoted) * 1000) / 10 : null;
+
+  return { jobsTracked: jobs.length, totalProfit, avgMarginPct, jobs };
+}
+
 export interface QuoteForStats {
   status: string;
   total_cost: number | null;

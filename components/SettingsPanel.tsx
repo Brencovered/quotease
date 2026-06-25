@@ -30,6 +30,8 @@ type Profile = {
   license_number?: string | null; business_address?: string | null;
   terms_and_conditions?: string | null; ai_free_analyses_used?: number;
   ai_addon_status?: string; ai_addon_period?: string | null; ai_addon_analyses_used?: number;
+  bank_account_name?: string | null; bank_bsb?: string | null; bank_account_number?: string | null;
+  accepts_cash?: boolean;
 } | null;
 
 export default function SettingsPanel({ profile }: { profile: Profile }) {
@@ -41,6 +43,10 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
   const [licenceNumber,  setLicenceNumber]  = useState(profile?.license_number ?? "");
   const [businessAddress,setBusinessAddress] = useState(profile?.business_address ?? "");
   const [terms,          setTerms]          = useState(profile?.terms_and_conditions ?? "");
+  const [bankAccountName, setBankAccountName] = useState(profile?.bank_account_name ?? "");
+  const [bankBsb,          setBankBsb]          = useState(profile?.bank_bsb ?? "");
+  const [bankAccountNumber, setBankAccountNumber] = useState(profile?.bank_account_number ?? "");
+  const [acceptsCash,      setAcceptsCash]      = useState(profile?.accepts_cash ?? true);
   const [logoPreview,    setLogoPreview]    = useState<string | null>(profile?.logo_url ?? null);
   const [logoFile,       setLogoFile]       = useState<File | null>(null);
   const [companySaving,  setCompanySaving]  = useState(false);
@@ -112,6 +118,8 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
     const { error } = await supabase.from("profiles").update({
       abn: abn || null, license_number: licenceNumber || null,
       business_address: businessAddress || null, terms_and_conditions: terms,
+      bank_account_name: bankAccountName || null, bank_bsb: bankBsb || null,
+      bank_account_number: bankAccountNumber || null, accepts_cash: acceptsCash,
       ...(logoUrl ? { logo_url: logoUrl } : {}),
     }).eq("id", user.id);
 
@@ -212,6 +220,20 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
             <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Quote terms and conditions</label>
             <textarea value={terms} onChange={(e) => setTerms(e.target.value)} rows={4} className="app-field text-[13px]" />
             <p className="text-[11.5px] text-[var(--ink-faint)] mt-1">Sent at the bottom of every quote email.</p>
+          </div>
+
+          <div className="border-t border-[var(--line)] pt-3 mt-1">
+            <p className="text-[12.5px] font-semibold text-[var(--ink-soft)] mb-2">How clients can pay you</p>
+            <div className="grid grid-cols-3 gap-2 mb-2">
+              <input value={bankAccountName} onChange={(e) => setBankAccountName(e.target.value)} className="app-field text-[13px]" placeholder="Account name" />
+              <input value={bankBsb} onChange={(e) => setBankBsb(e.target.value)} className="app-field text-[13px]" placeholder="BSB" />
+              <input value={bankAccountNumber} onChange={(e) => setBankAccountNumber(e.target.value)} className="app-field text-[13px]" placeholder="Account number" />
+            </div>
+            <label className="flex items-center gap-2 text-[13px] text-[var(--ink-soft)]">
+              <input type="checkbox" checked={acceptsCash} onChange={(e) => setAcceptsCash(e.target.checked)} />
+              Accept cash on completion
+            </label>
+            <p className="text-[11.5px] text-[var(--ink-faint)] mt-1">Shown to clients on the quote page and PDF. Card payments need Stripe Connect — ask if you want that built next.</p>
           </div>
         </div>
 

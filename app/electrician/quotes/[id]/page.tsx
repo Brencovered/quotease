@@ -120,6 +120,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
               quotedTotal={quote.total_cost ?? 0}
               hourlyRate={hourlyRate}
               actuals={actuals ?? []}
+              intakeData={quote.intake_data}
             />
           )}
 
