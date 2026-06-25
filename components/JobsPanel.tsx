@@ -46,7 +46,22 @@ export default function JobsPanel({ jobs: initialJobs }: { jobs: Job[] }) {
 
   useEffect(() => {
     if (jobs.length === 0) return;
-    loadAttachments(); // eslint-disable-line react-hooks/exhaustive-deps
+    const supabase = createClient();
+    (async () => {
+      const { data, error } = await supabase
+        .from("job_attachments")
+        .select("*")
+        .in("quote_id", jobs.map((j) => j.id))
+        .order("created_at", { ascending: false });
+      if (error || !data) return;
+      const grouped: Record<string, Attachment[]> = {};
+      for (const row of data) {
+        const { data: signed } = await supabase.storage.from("job-files").createSignedUrl(row.storage_path, 3600);
+        const entry: Attachment = { id: row.id, file_name: row.file_name, storage_path: row.storage_path, file_type: row.file_type, signedUrl: signed?.signedUrl };
+        grouped[row.quote_id] = [...(grouped[row.quote_id] ?? []), entry];
+      }
+      setAttachments(grouped);
+    })();
   }, [jobs]);
 
   async function loadAttachments() {

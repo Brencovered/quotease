@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Paperclip, Upload, X, FileText } from "lucide-react";
 
 type Attachment = { id: string; file_name: string; storage_path: string; file_type: string | null; file_size: number | null; signedUrl?: string; created_at: string; };
+export type { Attachment as AttachmentRow };
 
 export default function JobFilesPanel({ quoteId, attachments: initial }: { quoteId: string; attachments: Attachment[] }) {
   const [attachments, setAttachments] = useState(initial);

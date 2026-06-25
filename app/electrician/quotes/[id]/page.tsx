@@ -33,7 +33,8 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
   ]);
 
   // Generate signed URLs for attachments
-  const attachmentsWithUrls = await Promise.all(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const attachmentsWithUrls: any[] = await Promise.all(
     (attachments ?? []).map(async (a: Record<string, unknown>) => {
       const { data: signed } = await supabase.storage.from("job-files").createSignedUrl(a.storage_path as string, 3600);
       return { ...a, signedUrl: signed?.signedUrl };
