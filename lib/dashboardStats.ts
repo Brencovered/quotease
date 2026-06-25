@@ -14,6 +14,8 @@ export interface DashboardStats {
   totalCollected: number; // sum of amount_paid across everything
   winRate: number | null; // accepted+paid / (sent+accepted+paid+declined), as a %
   avgJobValue: number | null;
+  activeJobsCount: number; // accepted, not yet paid - i.e. work owed right now
+  activeJobsValue: number;
   monthly: { label: string; count: number; value: number }[]; // last 6 months, oldest first
 }
 
@@ -25,6 +27,8 @@ export function computeDashboardStats(quotes: QuoteForStats[]): DashboardStats {
   let totalCollected = 0;
   let decidedCount = 0; // sent, accepted, declined, paid - i.e. quotes that left draft and got a verdict
   let wonCount = 0;
+  let activeJobsCount = 0;
+  let activeJobsValue = 0;
 
   for (const q of quotes) {
     const status = q.status in byStatus ? q.status : "draft";
@@ -44,6 +48,8 @@ export function computeDashboardStats(quotes: QuoteForStats[]): DashboardStats {
     }
     if (status === "accepted") {
       totalOutstanding += Math.max(cost - paid, 0);
+      activeJobsCount += 1;
+      activeJobsValue += cost;
     }
   }
 
@@ -82,6 +88,8 @@ export function computeDashboardStats(quotes: QuoteForStats[]): DashboardStats {
     totalCollected,
     winRate,
     avgJobValue,
+    activeJobsCount,
+    activeJobsValue,
     monthly: months.map(({ label, count, value }) => ({ label, count, value })),
   };
 }
