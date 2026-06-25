@@ -63,7 +63,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
 
   return (
     <>
-      <AppHeader active="quotes" />
+      <AppHeader />
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 pb-16">
         {/* Header */}
         <div className="flex items-start justify-between gap-3 mb-5">

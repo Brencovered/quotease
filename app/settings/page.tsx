@@ -27,7 +27,7 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <AppHeader active="settings" />
+      <AppHeader />
       <SettingsPanel profile={profile} />
     </>
   );

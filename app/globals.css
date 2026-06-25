@@ -1,116 +1,180 @@
 @import "tailwindcss";
 
 :root {
-  /* Brand (used for the marketing page, header bar, and accents in-app) */
   --navy: #0a1722;
-  --navy-deep: #0c1e2e;
+  --navy-mid: #0e2030;
   --card: #0e2233;
   --amber: #ffb400;
   --amber-deep: #e89e00;
+  --amber-light: #fff3cc;
   --paper: #f6f9fb;
 
-  /* App surfaces - light by design. Tradies use this outdoors on a phone;
-     a dark UI looks moody in a mockup but washes out badly in direct sun.
-     Light, high-contrast surfaces with the brand colour as accent is the
-     more usable choice for a tool used for hours on site, every day. */
-  --app-bg: #f4f5f7;
+  --app-bg: #f0f2f5;
   --surface: #ffffff;
+  --surface-raised: #ffffff;
   --line: #e2e5ea;
-  --ink: #14202b;
-  --ink-soft: #5b6772;
+  --line-subtle: #eef0f3;
+  --ink: #111a22;
+  --ink-soft: #4a5560;
   --ink-faint: #8b96a1;
+
+  --green: #16a34a;
+  --green-bg: #f0fdf4;
+  --red: #dc2626;
+  --red-bg: #fef2f2;
+  --blue: #2563eb;
+  --blue-bg: #eff6ff;
 
   --text: #eaf0f4;
   --steel-1: #a9bcc8;
   --steel-2: #92a6b3;
   --steel-3: #7e94a2;
-  --steel-4: #6f8593;
+
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+
+  /* Bottom nav height — used to pad page content */
+  --bottom-nav: 64px;
 }
 
-/* Default: light app theme. The marketing landing page opts into the dark
-   navy theme itself (it sets bg-[var(--navy)] on its own <main>), so this
-   default only affects screens that don't - i.e. every app screen. */
 body {
   background: var(--app-bg);
   color: var(--ink);
   font-family: "Archivo", sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 .font-display {
   font-family: "Anton", sans-serif;
   font-weight: 400;
+  letter-spacing: 0.01em;
 }
 
-.tabular {
-  font-variant-numeric: tabular-nums;
-}
+.tabular { font-variant-numeric: tabular-nums; }
 
-/* Recolour native checkboxes/radios to brand amber instead of browser-default
-   blue, and make them big enough to actually tap accurately on a job site. */
+/* Checkboxes */
 input[type="checkbox"],
 input[type="radio"] {
   accent-color: var(--amber);
-  width: 19px;
-  height: 19px;
+  width: 20px;
+  height: 20px;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
-/* Consistent, larger tap targets and visible focus state across every
-   text/number/select field in the app - this was previously left to bare
-   browser defaults, which is most of why the form looked broken. */
+/* App fields */
 .app-field {
   width: 100%;
   background: var(--surface);
   border: 1.5px solid var(--line);
   color: var(--ink);
-  border-radius: 8px;
-  padding: 11px 13px;
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
   font-size: 15px;
   font-family: "Archivo", sans-serif;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.12s, box-shadow 0.12s;
+  -webkit-appearance: none;
 }
 .app-field:focus {
   outline: none;
   border-color: var(--amber);
-  box-shadow: 0 0 0 3px rgba(255, 180, 0, 0.18);
+  box-shadow: 0 0 0 3px rgba(255,180,0,0.15);
 }
-.app-field::placeholder {
-  color: var(--ink-faint);
+.app-field::placeholder { color: var(--ink-faint); }
+
+/* Card */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
 }
 
-@keyframes qstamp {
-  0%,
-  100% {
-    transform: rotate(-9deg) scale(1);
-  }
-  50% {
-    transform: rotate(-9deg) scale(1.04);
-  }
+/* Pill label */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 100px;
+  white-space: nowrap;
 }
-.stamp-wobble {
-  animation: qstamp 3.2s ease-in-out infinite;
+
+/* Btn primary */
+.btn-primary {
+  background: var(--amber);
+  color: var(--navy);
+  font-weight: 800;
+  font-size: 15px;
+  padding: 14px 24px;
+  border-radius: var(--radius);
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity 0.12s;
 }
-@media (prefers-reduced-motion: reduce) {
-  .stamp-wobble {
-    animation: none;
-  }
+.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btn-secondary {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 14px;
+  padding: 12px 20px;
+  border-radius: var(--radius);
+  border: 2px solid var(--line);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: border-color 0.12s;
+}
+.btn-secondary:hover { border-color: var(--ink-faint); }
+.btn-secondary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Section header inside a form */
+.section-tag {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--amber-deep);
+}
+
+/* Hide scrollbar utility */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Page wrapper — accounts for fixed bottom nav on mobile */
+.page-wrap {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 16px 16px calc(var(--bottom-nav) + 24px);
+}
+
+@media (min-width: 640px) {
+  .page-wrap { padding: 24px 24px 40px; }
 }
 
 @keyframes reveal-up {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-.reveal {
-  animation: reveal-up 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+.reveal { animation: reveal-up 0.5s cubic-bezier(0.2,0.7,0.2,1) both; }
+
+@keyframes qstamp {
+  0%,100% { transform: rotate(-9deg) scale(1); }
+  50%      { transform: rotate(-9deg) scale(1.04); }
 }
+.stamp-wobble { animation: qstamp 3.2s ease-in-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
-  .reveal {
-    animation: none;
-  }
+  .reveal, .stamp-wobble { animation: none; }
 }

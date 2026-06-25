@@ -1,209 +1,191 @@
-import type { DashboardStats } from "@/lib/dashboardStats";
+"use client";
+
 import Link from "next/link";
+import type { DashboardStats } from "@/lib/dashboardStats";
 import {
-  Briefcase,
-  TrendingUp,
-  Target,
-  DollarSign,
-  Wallet,
-  Clock,
-  FileText,
-  Send,
-  CheckCircle2,
-  XCircle,
-  BadgeCheck,
-  Bell,
-  AlertTriangle,
-  CalendarDays,
-  Users,
+  Briefcase, DollarSign, TrendingUp, Target,
+  Bell, AlertTriangle, ChevronRight,
+  CheckCircle2, Clock, Send, FileText,
+  BadgeCheck, XCircle, Wallet,
 } from "lucide-react";
 
-const STATUS_META: Record<string, { label: string; color: string; icon: typeof FileText }> = {
-  draft: { label: "Draft", color: "var(--ink-faint)", icon: FileText },
-  sent: { label: "Sent", color: "#3b82f6", icon: Send },
-  accepted: { label: "Accepted", color: "var(--amber)", icon: CheckCircle2 },
-  paid: { label: "Paid", color: "#16a34a", icon: BadgeCheck },
-  declined: { label: "Declined", color: "#dc2626", icon: XCircle },
+const STATUS_META: Record<string, { label: string; bg: string; text: string; icon: typeof FileText }> = {
+  draft:    { label: "Draft",    bg: "bg-[var(--app-bg)]",  text: "text-[var(--ink-faint)]", icon: FileText },
+  sent:     { label: "Sent",     bg: "bg-[var(--blue-bg)]", text: "text-[var(--blue)]",      icon: Send },
+  accepted: { label: "Accepted", bg: "bg-[var(--amber-light)]", text: "text-[var(--amber-deep)]", icon: CheckCircle2 },
+  paid:     { label: "Paid",     bg: "bg-[var(--green-bg)]", text: "text-[var(--green)]",    icon: BadgeCheck },
+  declined: { label: "Declined", bg: "bg-[var(--red-bg)]",  text: "text-[var(--red)]",       icon: XCircle },
 };
-const STATUS_ORDER = ["draft", "sent", "accepted", "paid", "declined"];
+const STATUS_ORDER = ["draft","sent","accepted","paid","declined"];
 
 export default function DashboardPanel({ stats }: { stats: DashboardStats }) {
   const maxMonthly = Math.max(...stats.monthly.map((m) => m.value), 1);
+  const hasAlerts  = stats.overdueFollowUps > 0 || stats.expiredQuotes > 0;
 
   return (
-    <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-16">
-      <div className="flex items-center justify-between mb-5">
-        <h1 className="font-display text-2xl sm:text-3xl text-[var(--ink)]">Dashboard</h1>
+    <div className="page-wrap">
+
+      {/* ── Greeting ─────────────────────────────────── */}
+      <div className="mb-5">
+        <h1 className="font-display text-[28px] text-[var(--ink)]">Good morning</h1>
+        <p className="text-[13.5px] text-[var(--ink-faint)] mt-0.5">Here&apos;s where things stand today.</p>
       </div>
 
-      {stats.totalQuotes === 0 ? (
-        <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-10 text-center">
-          <Briefcase size={28} className="mx-auto mb-3 text-[var(--ink-faint)]" />
-          <p className="text-[var(--ink-faint)] text-sm">
-            No quotes yet — once you start raising and sending quotes, your numbers will show up here.
-          </p>
-        </div>
-      ) : (
-        <>
-          {/* HERO: ACTIVE JOBS - the headline metric, since accepted quotes are now work owed */}
-          <div
-            className="bg-[var(--navy)] rounded-2xl p-5 sm:p-6 mb-5 grid sm:grid-cols-[auto_1fr_auto] gap-4 sm:gap-6 items-center"
-            style={{ boxShadow: "0 16px 32px rgba(10,23,34,.16)" }}
-          >
-            <div className="w-12 h-12 rounded-xl bg-[var(--amber)]/15 flex items-center justify-center">
-              <Briefcase size={22} className="text-[var(--amber)]" />
-            </div>
-            <div>
-              <p className="text-[11px] tracking-[.14em] uppercase text-[var(--steel-3)] font-bold mb-1">Active jobs</p>
-              <p className="font-display text-3xl text-white leading-none">
-                {stats.activeJobsCount}
-                <span className="text-base text-[var(--steel-2)] font-sans font-medium ml-2">
-                  worth ${stats.activeJobsValue.toLocaleString()}
-                </span>
-              </p>
-              <p className="text-[13px] text-[var(--steel-2)] mt-1">Accepted, not yet fully paid</p>
-            </div>
-            <a
-              href="/electrician/jobs"
-              className="bg-[var(--amber)] text-[var(--navy)] text-sm font-bold px-4 py-2.5 rounded-lg text-center whitespace-nowrap"
-            >
-              View jobs →
-            </a>
-          </div>
-
-          {/* ACTION ALERTS */}
-          {(stats.overdueFollowUps > 0 || stats.expiredQuotes > 0) && (
-            <div className="flex flex-col gap-2 mb-5">
-              {stats.overdueFollowUps > 0 && (
-                <Link href="/electrician/quotes" className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-700">
-                  <Bell size={16} className="shrink-0" />
-                  <span className="text-[13.5px] font-semibold">{stats.overdueFollowUps} overdue follow-up{stats.overdueFollowUps !== 1 ? "s" : ""} — check your sent quotes</span>
-                </Link>
-              )}
-              {stats.expiredQuotes > 0 && (
-                <Link href="/electrician/quotes" className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-amber-800">
-                  <AlertTriangle size={16} className="shrink-0" />
-                  <span className="text-[13.5px] font-semibold">{stats.expiredQuotes} expired quote{stats.expiredQuotes !== 1 ? "s" : ""} — resend with updated pricing</span>
-                </Link>
-              )}
-            </div>
+      {/* ── Action alerts ────────────────────────────── */}
+      {hasAlerts && (
+        <div className="space-y-2 mb-5">
+          {stats.overdueFollowUps > 0 && (
+            <Link href="/electrician/quotes" className="flex items-center gap-3 bg-[var(--red-bg)] border border-red-200 rounded-xl px-4 py-3">
+              <Bell size={16} className="text-[var(--red)] shrink-0" />
+              <div className="flex-1">
+                <p className="text-[13.5px] font-bold text-[var(--red)]">
+                  {stats.overdueFollowUps} overdue follow-up{stats.overdueFollowUps !== 1 ? "s" : ""}
+                </p>
+                <p className="text-[12px] text-red-400">Tap to review sent quotes</p>
+              </div>
+              <ChevronRight size={15} className="text-red-300 shrink-0" />
+            </Link>
           )}
-
-          {/* QUICK LINKS */}
-          <div className="grid grid-cols-3 gap-3 mb-5">
-            <Link href="/electrician" className="bg-[var(--amber)] text-[var(--navy)] rounded-xl p-3 text-center font-bold text-sm">+ New quote</Link>
-            <Link href="/electrician/schedule" className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3 text-center font-semibold text-[13px] text-[var(--ink)] flex flex-col items-center gap-1"><CalendarDays size={16} className="text-[var(--ink-faint)]" />Schedule</Link>
-            <Link href="/electrician/clients" className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3 text-center font-semibold text-[13px] text-[var(--ink)] flex flex-col items-center gap-1"><Users size={16} className="text-[var(--ink-faint)]" />Clients</Link>
-          </div>
-
-          {/* SECONDARY STATS */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-5">
-            <StatCard icon={FileText} label="Quotes raised" value={stats.totalQuotes.toString()} />
-            <StatCard
-              icon={Target}
-              label="Win rate"
-              value={stats.winRate !== null ? `${stats.winRate}%` : "—"}
-              sub={stats.winRate === null ? "No decided quotes yet" : undefined}
-            />
-            <StatCard icon={TrendingUp} label="Avg job value" value={stats.avgJobValue !== null ? `$${stats.avgJobValue.toLocaleString()}` : "—"} />
-            <StatCard icon={DollarSign} label="Total quoted" value={`$${stats.totalQuotedValue.toLocaleString()}`} accent />
-            <StatCard icon={BadgeCheck} label="Total won" value={`$${stats.totalWonValue.toLocaleString()}`} accent />
-            <StatCard icon={Clock} label="Outstanding" value={`$${stats.totalOutstanding.toLocaleString()}`} warn={stats.totalOutstanding > 0} />
-            {stats.avgLabourHours !== null && <StatCard icon={Clock} label="Avg labour hrs" value={`${stats.avgLabourHours}h`} />}
-            <StatCard icon={Wallet} label="Collected" value={`$${stats.totalCollected.toLocaleString()}`} success />
-          </div>
-
-          <div className="grid lg:grid-cols-[1.3fr_1fr] gap-5">
-            {/* MONTHLY CHART */}
-            <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-4 sm:p-5">
-              <p className="text-[11px] tracking-[.12em] uppercase text-[var(--amber-deep)] font-bold mb-1">Trend</p>
-              <p className="font-semibold text-[var(--ink)] mb-4">Quoted value by month</p>
-              <div className="flex items-end justify-between gap-2 sm:gap-3 h-40 border-b border-[var(--line)] pb-0">
-                {stats.monthly.map((m) => (
-                  <div key={m.label} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end" title={`${m.label}: $${m.value.toLocaleString()} across ${m.count} quote(s)`}>
-                    <span className="text-[11px] text-[var(--ink-faint)] font-semibold tabular">
-                      {m.value > 0 ? `$${Math.round(m.value / 1000)}k` : ""}
-                    </span>
-                    <div
-                      className="w-full rounded-t-md transition-all"
-                      style={{
-                        height: `${Math.max((m.value / maxMonthly) * 100, m.value > 0 ? 5 : 2)}px`,
-                        background: m.value > 0 ? "linear-gradient(180deg, var(--amber) 0%, var(--navy) 100%)" : "var(--line)",
-                      }}
-                    />
-                  </div>
-                ))}
+          {stats.expiredQuotes > 0 && (
+            <Link href="/electrician/quotes" className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+              <AlertTriangle size={16} className="text-amber-600 shrink-0" />
+              <div className="flex-1">
+                <p className="text-[13.5px] font-bold text-amber-700">
+                  {stats.expiredQuotes} expired quote{stats.expiredQuotes !== 1 ? "s" : ""}
+                </p>
+                <p className="text-[12px] text-amber-500">Prices may have changed — resend</p>
               </div>
-              <div className="flex justify-between gap-2 sm:gap-3 mt-2">
-                {stats.monthly.map((m) => (
-                  <span key={m.label} className="flex-1 text-center text-[11px] text-[var(--ink-faint)] font-medium">
-                    {m.label}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* STATUS BREAKDOWN */}
-            <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-4 sm:p-5">
-              <p className="text-[11px] tracking-[.12em] uppercase text-[var(--amber-deep)] font-bold mb-1">Pipeline</p>
-              <p className="font-semibold text-[var(--ink)] mb-4">Quotes by status</p>
-
-              <div className="flex h-2.5 rounded-full overflow-hidden mb-4 bg-[var(--app-bg)]">
-                {STATUS_ORDER.map((s) =>
-                  stats.byStatus[s] > 0 ? (
-                    <div
-                      key={s}
-                      style={{ width: `${(stats.byStatus[s] / stats.totalQuotes) * 100}%`, background: STATUS_META[s].color }}
-                    />
-                  ) : null
-                )}
-              </div>
-
-              <div className="space-y-2.5">
-                {STATUS_ORDER.map((s) => {
-                  const Icon = STATUS_META[s].icon;
-                  return (
-                    <div key={s} className="flex items-center gap-2.5">
-                      <Icon size={15} style={{ color: STATUS_META[s].color }} />
-                      <span className="text-[13.5px] text-[var(--ink-soft)] flex-1">{STATUS_META[s].label}</span>
-                      <span className="text-[14px] font-bold text-[var(--ink)] tabular">{stats.byStatus[s]}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </>
+              <ChevronRight size={15} className="text-amber-300 shrink-0" />
+            </Link>
+          )}
+        </div>
       )}
-    </main>
+
+      {/* ── Active jobs hero ─────────────────────────── */}
+      <div className="bg-[var(--navy)] rounded-2xl p-5 mb-4" style={{ boxShadow: "0 8px 24px rgba(10,23,34,.14)" }}>
+        <p className="text-[11px] tracking-[.14em] uppercase text-[var(--steel-3)] font-bold mb-3">Active jobs</p>
+        <div className="flex items-end justify-between">
+          <div>
+            <p className="font-display text-[42px] leading-none text-white">{stats.activeJobsCount}</p>
+            <p className="text-[13px] text-[var(--steel-2)] mt-1">jobs in progress</p>
+          </div>
+          <div className="text-right">
+            <p className="font-display text-[28px] leading-none text-[var(--amber)]">
+              ${stats.activeJobsValue.toLocaleString()}
+            </p>
+            <p className="text-[12px] text-[var(--steel-3)] mt-1">total value</p>
+          </div>
+        </div>
+        {stats.totalOutstanding > 0 && (
+          <div className="mt-4 pt-4 border-t border-white/10 flex justify-between items-center">
+            <p className="text-[12.5px] text-[var(--steel-2)]">Outstanding</p>
+            <p className="text-[15px] font-bold text-red-400">${stats.totalOutstanding.toLocaleString()}</p>
+          </div>
+        )}
+        <Link href="/electrician/jobs" className="mt-4 flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 transition-colors rounded-xl py-2.5 text-[13px] font-bold text-white w-full">
+          View active jobs <ChevronRight size={14} />
+        </Link>
+      </div>
+
+      {/* ── Stats row ────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <StatCard icon={Target}     label="Win rate"      value={stats.winRate !== null ? `${stats.winRate}%` : "—"} sub="of sent quotes" />
+        <StatCard icon={TrendingUp} label="Avg job value" value={stats.avgJobValue !== null ? `$${stats.avgJobValue.toLocaleString()}` : "—"} />
+        <StatCard icon={DollarSign} label="Won this year" value={`$${stats.totalWonValue.toLocaleString()}`} accent />
+        <StatCard icon={Wallet}     label="Collected"     value={`$${stats.totalCollected.toLocaleString()}`} success />
+      </div>
+
+      {/* ── Pipeline ─────────────────────────────────── */}
+      {stats.totalQuotes > 0 && (
+        <div className="card mb-4">
+          <p className="section-tag mb-1">Pipeline</p>
+          <p className="font-semibold text-[var(--ink)] mb-3">Quotes by status</p>
+          <div className="flex h-2 rounded-full overflow-hidden bg-[var(--app-bg)] mb-4">
+            {STATUS_ORDER.map((s) =>
+              stats.byStatus[s] > 0 ? (
+                <div key={s} style={{ width: `${(stats.byStatus[s] / stats.totalQuotes) * 100}%` }}
+                  className={`${STATUS_META[s].bg} transition-all`} />
+              ) : null
+            )}
+          </div>
+          <div className="space-y-2">
+            {STATUS_ORDER.map((s) => {
+              const Icon = STATUS_META[s].icon;
+              const count = stats.byStatus[s];
+              if (!count) return null;
+              return (
+                <div key={s} className="flex items-center gap-2.5">
+                  <span className={`pill ${STATUS_META[s].bg} ${STATUS_META[s].text}`}>
+                    <Icon size={11} />{STATUS_META[s].label}
+                  </span>
+                  <div className="flex-1 h-1.5 bg-[var(--app-bg)] rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full ${STATUS_META[s].bg} border ${STATUS_META[s].text.replace("text","border")}`}
+                      style={{ width: `${(count / stats.totalQuotes) * 100}%` }} />
+                  </div>
+                  <span className="text-[13px] font-bold text-[var(--ink)] tabular w-5 text-right">{count}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Monthly chart ────────────────────────────── */}
+      {stats.totalQuotes > 0 && (
+        <div className="card mb-4">
+          <p className="section-tag mb-1">Revenue trend</p>
+          <p className="font-semibold text-[var(--ink)] mb-4">Quoted value — last 6 months</p>
+          <div className="flex items-end gap-2 h-28">
+            {stats.monthly.map((m) => (
+              <div key={m.label} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+                {m.value > 0 && (
+                  <span className="text-[10px] text-[var(--ink-faint)] font-semibold tabular">
+                    ${Math.round(m.value / 1000)}k
+                  </span>
+                )}
+                <div className="w-full rounded-t-md transition-all"
+                  style={{
+                    height: `${Math.max((m.value / maxMonthly) * 80, m.value > 0 ? 6 : 3)}px`,
+                    background: m.value > 0 ? "var(--amber)" : "var(--line)",
+                    opacity: m.value > 0 ? 1 : 0.5,
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2 mt-2">
+            {stats.monthly.map((m) => (
+              <span key={m.label} className="flex-1 text-center text-[10.5px] text-[var(--ink-faint)] font-semibold">{m.label}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {stats.totalQuotes === 0 && (
+        <div className="card text-center py-12">
+          <Briefcase size={32} className="mx-auto mb-3 text-[var(--ink-faint)]" />
+          <p className="font-semibold text-[var(--ink)] mb-1">No quotes yet</p>
+          <p className="text-[13px] text-[var(--ink-faint)] mb-5">Build your first quote and your numbers will show up here.</p>
+          <Link href="/electrician" className="btn-primary inline-flex w-auto px-8">
+            Build a quote
+          </Link>
+        </div>
+      )}
+    </div>
   );
 }
 
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  sub,
-  accent,
-  warn,
-  success,
-}: {
-  icon: typeof FileText;
-  label: string;
-  value: string;
-  sub?: string;
-  accent?: boolean;
-  warn?: boolean;
-  success?: boolean;
+function StatCard({ icon: Icon, label, value, sub, accent, success }: {
+  icon: typeof Briefcase; label: string; value: string; sub?: string; accent?: boolean; success?: boolean;
 }) {
-  const valueColor = warn ? "text-red-600" : success ? "text-green-700" : accent ? "text-[var(--amber-deep)]" : "text-[var(--ink)]";
+  const vc = accent ? "text-[var(--amber-deep)]" : success ? "text-[var(--green)]" : "text-[var(--ink)]";
   return (
-    <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-4">
-      <div className="flex items-center gap-2 mb-2">
-        <Icon size={14} className="text-[var(--ink-faint)]" />
-        <p className="text-[11px] text-[var(--ink-faint)] font-semibold">{label}</p>
+    <div className="card">
+      <div className="flex items-center gap-1.5 mb-2">
+        <Icon size={13} className="text-[var(--ink-faint)]" />
+        <p className="text-[11px] text-[var(--ink-faint)] font-bold uppercase tracking-wide">{label}</p>
       </div>
-      <p className={`font-display text-xl sm:text-2xl ${valueColor}`}>{value}</p>
+      <p className={`font-display text-[22px] leading-tight ${vc}`}>{value}</p>
       {sub && <p className="text-[11px] text-[var(--ink-faint)] mt-0.5">{sub}</p>}
     </div>
   );

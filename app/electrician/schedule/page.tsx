@@ -23,7 +23,7 @@ export default async function SchedulePage() {
 
   return (
     <>
-      <AppHeader active="schedule" />
+      <AppHeader />
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       <CalendarPanel jobs={jobs as any} />
     </>

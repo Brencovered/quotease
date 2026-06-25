@@ -38,7 +38,7 @@ export default async function ClientsPage() {
 
   return (
     <>
-      <AppHeader active="clients" />
+      <AppHeader />
       <ClientsPanel clients={clients} />
     </>
   );

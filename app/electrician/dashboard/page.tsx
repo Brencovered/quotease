@@ -22,7 +22,7 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <AppHeader active="dashboard" />
+      <AppHeader />
       <DashboardPanel stats={stats} />
     </>
   );

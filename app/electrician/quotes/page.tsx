@@ -22,7 +22,7 @@ export default async function QuotesPage() {
 
   return (
     <>
-      <AppHeader active="quotes" />
+      <AppHeader />
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       <QuotesList quotes={quotes as any} />
     </>

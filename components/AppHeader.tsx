@@ -1,13 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import {
+  LayoutDashboard,
+  FileText,
+  Briefcase,
+  CalendarDays,
+  Users,
+  Plus,
+  Settings,
+} from "lucide-react";
 
-type ActivePage = "dashboard" | "quotes" | "jobs" | "clients" | "schedule" | "settings";
+const NAV = [
+  { href: "/electrician/dashboard", icon: LayoutDashboard, label: "Home" },
+  { href: "/electrician/quotes",    icon: FileText,         label: "Quotes" },
+  { href: "/electrician",           icon: Plus,             label: "Quote",  fab: true },
+  { href: "/electrician/schedule",  icon: CalendarDays,     label: "Schedule" },
+  { href: "/electrician/clients",   icon: Users,            label: "Clients" },
+];
 
-export default function AppHeader({ active }: { active?: ActivePage }) {
-  const router = useRouter();
+export default function AppHeader() {
+  const pathname = usePathname();
+  const router   = useRouter();
 
   async function logOut() {
     const supabase = createClient();
@@ -16,31 +32,79 @@ export default function AppHeader({ active }: { active?: ActivePage }) {
     router.refresh();
   }
 
-  const link = (href: string, label: string, page: ActivePage) => (
-    <Link href={href} className={active === page ? "text-[var(--amber)]" : "text-[var(--steel-1)]"}>
-      {label}
-    </Link>
-  );
+  function isActive(href: string) {
+    if (href === "/electrician") return pathname === "/electrician";
+    return pathname.startsWith(href);
+  }
 
   return (
-    <header className="bg-[var(--navy)] sticky top-0 z-40">
-      <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between gap-4">
-        <Link href="/electrician/dashboard" className="font-display text-base tracking-wide text-white shrink-0">
+    <>
+      {/* ── Desktop top bar (hidden on mobile) ───────────────────── */}
+      <header className="hidden sm:flex bg-[var(--navy)] sticky top-0 z-40 h-14 items-center">
+        <div className="max-w-5xl mx-auto w-full px-6 flex items-center justify-between">
+          <Link href="/electrician/dashboard" className="font-display text-[15px] tracking-widest text-white">
+            QUOTEASE
+          </Link>
+          <nav className="flex items-center gap-5 text-[13px] font-semibold">
+            {NAV.filter((n) => !n.fab).map((n) => (
+              <Link
+                key={n.href}
+                href={n.href}
+                className={isActive(n.href) ? "text-[var(--amber)]" : "text-[var(--steel-1)] hover:text-white transition-colors"}
+              >
+                {n.label}
+              </Link>
+            ))}
+            <Link href="/electrician" className="bg-[var(--amber)] text-[var(--navy)] font-extrabold text-[12px] px-4 py-1.5 rounded-lg">
+              + New quote
+            </Link>
+            <Link href="/settings" className={`${isActive("/settings") ? "text-[var(--amber)]" : "text-[var(--steel-1)] hover:text-white"} transition-colors`}>
+              <Settings size={16} />
+            </Link>
+            <button onClick={logOut} className="text-[var(--steel-3)] font-medium text-[12px]">
+              Log out
+            </button>
+          </nav>
+        </div>
+      </header>
+
+      {/* ── Mobile top bar (logo + settings) ─────────────────────── */}
+      <header className="sm:hidden bg-[var(--navy)] sticky top-0 z-40 h-12 flex items-center justify-between px-4">
+        <Link href="/electrician/dashboard" className="font-display text-[14px] tracking-widest text-white">
           QUOTEASE
         </Link>
-        <nav className="flex items-center gap-4 sm:gap-5 text-sm font-semibold overflow-x-auto hide-scrollbar">
-          {link("/electrician/dashboard", "Dashboard", "dashboard")}
-          <Link href="/electrician" className={active === undefined ? "text-[var(--amber)]" : "text-[var(--steel-1)]"}>New quote</Link>
-          {link("/electrician/quotes", "Quotes", "quotes")}
-          {link("/electrician/jobs", "Jobs", "jobs")}
-          {link("/electrician/schedule", "Schedule", "schedule")}
-          {link("/electrician/clients", "Clients", "clients")}
-          {link("/settings", "Settings", "settings")}
-          <button onClick={logOut} className="text-[var(--steel-3)] font-medium whitespace-nowrap">
-            Log out
-          </button>
-        </nav>
-      </div>
-    </header>
+        <Link href="/settings" className="text-[var(--steel-2)] p-1">
+          <Settings size={18} />
+        </Link>
+      </header>
+
+      {/* ── Mobile bottom nav ─────────────────────────────────────── */}
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-[var(--surface)] border-t border-[var(--line)] flex items-center safe-bottom"
+           style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+        {NAV.map((n) => {
+          const active = isActive(n.href);
+          if (n.fab) {
+            return (
+              <Link key={n.href} href={n.href}
+                className="flex-1 flex flex-col items-center justify-center py-1 relative"
+              >
+                <span className="bg-[var(--amber)] text-[var(--navy)] w-12 h-12 rounded-full flex items-center justify-center shadow-lg -mt-5">
+                  <Plus size={22} strokeWidth={3} />
+                </span>
+                <span className="text-[10px] font-bold text-[var(--ink-faint)] mt-0.5">Quote</span>
+              </Link>
+            );
+          }
+          return (
+            <Link key={n.href} href={n.href}
+              className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors ${active ? "text-[var(--amber-deep)]" : "text-[var(--ink-faint)]"}`}
+            >
+              <n.icon size={20} strokeWidth={active ? 2.2 : 1.8} />
+              <span className={`text-[10px] font-bold`}>{n.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+    </>
   );
 }

@@ -23,7 +23,7 @@ export default async function JobsPage() {
 
   return (
     <>
-      <AppHeader active="jobs" />
+      <AppHeader />
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       <JobsPanel jobs={jobs as any} />
     </>
