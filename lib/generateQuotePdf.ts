@@ -30,15 +30,98 @@ export interface QuotePdfQuote {
   completed_at?: string | null;
 }
 
-// Turns the raw intake form state into a readable "scope of works" list.
-// This isn't a stored line-item snapshot with per-item dollar amounts -
-// the calculators apply access multipliers and margins across categories
-// in a way that doesn't cleanly decompose back into one price per row -
-// so this shows exactly what was specified for the job, and the cost
-// summary below it shows what that came to in total. That's an honest
-// representation of how the quote was actually built, not a guess at
-// numbers that could drift from what the client was really charged.
-function humanizeIntake(intake: Record<string, unknown> | null | undefined): string[] {
+// --- Electrician-specific labels, matching the exact option text used in
+// the quote builder dropdowns, so the PDF reads in plain English rather
+// than exposing internal field names or raw access-difficulty multipliers
+// (e.g. "1.7" meaning nothing to a client - it's a wiring-time multiplier,
+// not a thing that should ever reach a client-facing document).
+const JOB_TYPE_LABELS: Record<string, string> = {
+  reno: "Renovation / alteration",
+  newbuild: "New build",
+  fault: "Fault find / repair",
+  compliance: "Compliance / inspection",
+};
+const CEILING_TYPE_LABELS: Record<string, string> = {
+  unknown: "Unknown — check on site",
+  standard_plasterboard: "Standard plasterboard",
+  skillion: "Skillion / cathedral",
+  concrete_slab: "Concrete slab",
+  heritage_timber: "Heritage / period timber",
+};
+const DOWNLIGHT_GRADE_LABELS: Record<string, string> = {
+  builder: "Builder grade",
+  standard: "Standard grade",
+  premium: "Premium / smart",
+};
+const ROOF_ACCESS_LABELS: Record<number, string> = {
+  1.3: "Easy access",
+  1.7: "Tight crawl",
+  2.3: "Extreme — very difficult",
+};
+const SUBFLOOR_ACCESS_LABELS: Record<number, string> = {
+  1.3: "Easy crawl",
+  1.8: "Tight crawl",
+  2.4: "Wet / very low clearance",
+};
+const SITE_ACCESS_LABELS: Record<string, string> = { easy: "Easy", moderate: "Moderate", difficult: "Difficult" };
+
+function buildElectricianScope(intake: Record<string, unknown>): string[] {
+  const i = intake as Record<string, string | number | boolean | undefined>;
+  const lines: string[] = [];
+
+  if (i.jobType) lines.push(`Job type: ${JOB_TYPE_LABELS[i.jobType as string] ?? i.jobType}`);
+  if (i.ceilingType) lines.push(`Ceiling type: ${CEILING_TYPE_LABELS[i.ceilingType as string] ?? i.ceilingType}`);
+
+  if (i.switchboardUpgrade) lines.push(i.switchboardRcbo ? "Switchboard upgrade — full RCBO" : "Switchboard upgrade");
+  if (i.threePhase) lines.push("3-phase supply");
+
+  if (Number(i.powerPoints) > 0) lines.push(`Power points: ${i.powerPoints}`);
+  if (Number(i.lightPoints) > 0) lines.push(`Light points: ${i.lightPoints}`);
+  if (Number(i.switches) > 0) lines.push(`Switches: ${i.switches}`);
+  if (Number(i.downlights) > 0) {
+    const grade = DOWNLIGHT_GRADE_LABELS[i.downlightGrade as string] ?? i.downlightGrade;
+    lines.push(`Downlights: ${i.downlights} (${grade})`);
+  }
+  if (Number(i.exhaustFans) > 0) lines.push(`Exhaust fans: ${i.exhaustFans}`);
+
+  if (Number(i.cableMetres) > 0) lines.push(`Cable run: ${i.cableMetres}m`);
+  if (Number(i.trenchMetres) > 0) lines.push(`Trenching: ${i.trenchMetres}m`);
+  if (i.roofAccess && Number(i.roofAccess) !== 1) {
+    lines.push(`Roof access: ${ROOF_ACCESS_LABELS[Number(i.roofAccess)] ?? i.roofAccess}`);
+  }
+  if (i.subfloorAccess && Number(i.subfloorAccess) !== 1) {
+    lines.push(`Subfloor access: ${SUBFLOOR_ACCESS_LABELS[Number(i.subfloorAccess)] ?? i.subfloorAccess}`);
+  }
+  if (i.siteAccess && i.siteAccess !== "easy") lines.push(`Site access: ${SITE_ACCESS_LABELS[i.siteAccess as string] ?? i.siteAccess}`);
+  if (i.multistorey) lines.push("Multi-storey property");
+
+  const appliances = [
+    i.applianceOven && "Oven",
+    i.applianceCooktop && "Cooktop",
+    i.applianceHwc && "Hot water",
+    i.applianceAircon && "Aircon",
+    i.appliancePool && "Pool / spa",
+  ].filter(Boolean);
+  if (appliances.length) lines.push(`Appliance circuits: ${appliances.join(", ")}`);
+  if (i.evCharger) lines.push("EV charger circuit");
+  if (i.solarConnection) lines.push("Solar connection");
+  if (Number(i.externalCircuits) > 0) lines.push(`External circuits: ${i.externalCircuits}`);
+
+  if (Number(i.dataPoints) > 0) lines.push(`Data points: ${i.dataPoints}`);
+  if (i.nbn) lines.push("NBN connection point");
+
+  if (Number(i.smokeAlarms) > 0) lines.push(`Smoke alarms (interconnected): ${i.smokeAlarms}`);
+  if (i.coes) lines.push("Certificate of Electrical Safety (COES)");
+  if (i.ccew) lines.push("Certificate of Compliance for Electrical Work (CCEW)");
+  if (i.callout) lines.push("Call-out fee included");
+
+  return lines;
+}
+
+// Generic fallback for trades without a dedicated formatter yet (plumber,
+// carpenter, roofer). Safer than the bare version: title-cases snake_case
+// enum values too, instead of printing them raw (e.g. "concrete_slab").
+function humanizeIntakeGeneric(intake: Record<string, unknown> | null | undefined): string[] {
   if (!intake) return [];
   const SKIP = new Set(["jobType", "notes"]);
   const lines: string[] = [];
@@ -56,11 +139,27 @@ function humanizeIntake(intake: Record<string, unknown> | null | undefined): str
 
     if (typeof value === "boolean") {
       lines.push(label);
+    } else if (typeof value === "string" && value.includes("_")) {
+      const niceValue = value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+      lines.push(`${label}: ${niceValue}`);
     } else {
       lines.push(`${label}: ${value}`);
     }
   }
   return lines;
+}
+
+// This isn't a stored line-item snapshot with per-item dollar amounts - the
+// calculators apply access multipliers and margins across categories in a
+// way that doesn't cleanly decompose back into one price per row - so this
+// shows exactly what was specified for the job, and the cost summary below
+// shows what that came to in total. That's honest to how the quote was
+// actually built, rather than a guess at numbers that could drift from
+// what the client was really charged.
+function buildScopeLines(trade: string | null | undefined, intake: Record<string, unknown> | null | undefined): string[] {
+  if (!intake) return [];
+  if (trade === "electrician") return buildElectricianScope(intake);
+  return humanizeIntakeGeneric(intake);
 }
 
 const PAGE_WIDTH = 595.28; // A4 at 72dpi
@@ -104,6 +203,36 @@ export async function generateQuotePdf(
       color: rgb(0.85, 0.85, 0.85),
     });
     y -= 14;
+  }
+
+  // Draws a label/value row, with the value right-aligned. Returns nothing -
+  // mutates the shared `y` cursor, same as the other draw helpers.
+  function drawRow(label: string, value: string, bold = false) {
+    const size = bold ? 12.5 : 11;
+    const usedFont = bold ? fontBold : font;
+    newPageIfNeeded(size + 8);
+    page.drawText(label, { x: MARGIN, y, size, font: usedFont, color: rgb(0.08, 0.09, 0.1) });
+    if (value) {
+      const width = usedFont.widthOfTextAtSize(value, size);
+      page.drawText(value, { x: PAGE_WIDTH - MARGIN - width, y, size, font: usedFont, color: rgb(0.08, 0.09, 0.1) });
+    }
+    y -= size + 7;
+  }
+
+  // A horizontal divider sitting clearly ABOVE the next row of text, with
+  // real clearance - not at the same y as the text baseline. (Drawing the
+  // rule too close to the following text is exactly what previously made
+  // a "Total" line render with the rule cutting straight through the
+  // letters like a strikethrough.)
+  function ruleAboveNextRow() {
+    newPageIfNeeded(24);
+    page.drawLine({
+      start: { x: MARGIN, y: y + 11 },
+      end: { x: PAGE_WIDTH - MARGIN, y: y + 11 },
+      thickness: 1,
+      color: rgb(0.08, 0.09, 0.1),
+    });
+    y -= 4;
   }
 
   // --- Header: logo + business name ---
@@ -150,9 +279,9 @@ export async function generateQuotePdf(
   y -= 6;
   rule();
 
-  // --- Scope of works (itemized from the intake) ---
+  // --- Scope of works ---
   text("Scope of works", { size: 13, bold: true });
-  const scopeLines = humanizeIntake(quote.intake_data);
+  const scopeLines = buildScopeLines(quote.trade, quote.intake_data);
   if (scopeLines.length === 0) {
     text("As discussed on site.", { size: 10.5, color: [0.4, 0.42, 0.45] });
   } else {
@@ -169,23 +298,10 @@ export async function generateQuotePdf(
   const labourCost = (quote.total_cost ?? 0) - (quote.materials_cost ?? 0);
   drawRow(`Labour (${quote.labour_hours ?? 0} hrs)`, `$${labourCost.toLocaleString()}`);
   drawRow("Materials", `$${(quote.materials_cost ?? 0).toLocaleString()}`);
-  newPageIfNeeded(20);
-  page.drawLine({ start: { x: MARGIN, y: y + 4 }, end: { x: PAGE_WIDTH - MARGIN, y: y + 4 }, thickness: 1, color: rgb(0.08, 0.09, 0.1) });
+  ruleAboveNextRow();
   drawRow("Total", `$${(quote.total_cost ?? 0).toLocaleString()}`, true);
   y -= 6;
   rule();
-
-  function drawRow(label: string, value: string, bold = false) {
-    const size = bold ? 12.5 : 11;
-    const usedFont = bold ? fontBold : font;
-    newPageIfNeeded(size + 8);
-    page.drawText(label, { x: MARGIN, y, size, font: usedFont, color: rgb(0.08, 0.09, 0.1) });
-    if (value) {
-      const width = usedFont.widthOfTextAtSize(value, size);
-      page.drawText(value, { x: PAGE_WIDTH - MARGIN - width, y, size, font: usedFont, color: rgb(0.08, 0.09, 0.1) });
-    }
-    y -= size + 7;
-  }
 
   // --- Payment terms ---
   const terms: PaymentTerm[] = quote.payment_terms?.length

@@ -8,6 +8,7 @@ import { PLUMBER_DEFAULT_MATERIALS } from "@/lib/calcPlumber";
 import { CARPENTER_DEFAULT_MATERIALS } from "@/lib/calcCarpenter";
 import { ROOFER_DEFAULT_MATERIALS } from "@/lib/calcRoofer";
 import { Check, Upload } from "lucide-react";
+import { normalizeToPng } from "@/lib/imageNormalize";
 
 const TRADE_SEED: Record<string, readonly { item_key: string; label: string; unit_cost: number }[]> = {
   electrician: ELECTRICIAN_DEFAULT_MATERIALS,
@@ -94,12 +95,18 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
 
     let logoUrl: string | undefined;
     if (logoFile) {
-      const ext = logoFile.name.split(".").pop() || "png";
-      const path = `${user.id}/logo.${ext}`;
-      const { error: upErr } = await supabase.storage.from("logos").upload(path, logoFile, { upsert: true });
-      if (upErr) { setCompanyError(`Logo upload failed: ${upErr.message}`); setCompanySaving(false); return; }
-      const { data: pub } = supabase.storage.from("logos").getPublicUrl(path);
-      logoUrl = pub.publicUrl;
+      try {
+        const pngFile = await normalizeToPng(logoFile);
+        const path = `${user.id}/logo.png`;
+        const { error: upErr } = await supabase.storage.from("logos").upload(path, pngFile, { upsert: true });
+        if (upErr) { setCompanyError(`Logo upload failed: ${upErr.message}`); setCompanySaving(false); return; }
+        const { data: pub } = supabase.storage.from("logos").getPublicUrl(path);
+        logoUrl = pub.publicUrl;
+      } catch (err) {
+        setCompanyError(err instanceof Error ? err.message : "Could not process this logo image.");
+        setCompanySaving(false);
+        return;
+      }
     }
 
     const { error } = await supabase.from("profiles").update({
