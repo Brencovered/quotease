@@ -7,7 +7,8 @@ import CompliancePanel from "@/components/CompliancePanel";
 import FollowUpPanel from "@/components/FollowUpPanel";
 import JobFilesPanel from "@/components/JobFilesPanel";
 
-export default async function QuoteDetailPage({ params }: { params: { id: string } }) {
+export default async function QuoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) notFound();
@@ -15,18 +16,18 @@ export default async function QuoteDetailPage({ params }: { params: { id: string
   const { data: quote } = await supabase
     .from("quotes")
     .select("*")
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("profile_id", userData.user.id)
     .single();
 
   if (!quote) notFound();
 
   const [{ data: variations }, { data: actuals }, { data: certs }, { data: followUps }, { data: attachments }, { data: profile }] = await Promise.all([
-    supabase.from("variations").select("*").eq("quote_id", params.id).order("created_at"),
-    supabase.from("job_actuals").select("*").eq("quote_id", params.id).order("recorded_at"),
-    supabase.from("compliance_certs").select("*").eq("quote_id", params.id).order("created_at"),
-    supabase.from("follow_up_log").select("*").eq("quote_id", params.id).order("followed_up_at", { ascending: false }),
-    supabase.from("job_attachments").select("*").eq("quote_id", params.id).order("created_at"),
+    supabase.from("variations").select("*").eq("quote_id", id).order("created_at"),
+    supabase.from("job_actuals").select("*").eq("quote_id", id).order("recorded_at"),
+    supabase.from("compliance_certs").select("*").eq("quote_id", id).order("created_at"),
+    supabase.from("follow_up_log").select("*").eq("quote_id", id).order("followed_up_at", { ascending: false }),
+    supabase.from("job_attachments").select("*").eq("quote_id", id).order("created_at"),
     supabase.from("profiles").select("hourly_rate, materials_margin_pct").eq("id", userData.user.id).single(),
   ]);
 
@@ -65,7 +66,7 @@ export default async function QuoteDetailPage({ params }: { params: { id: string
         {/* Header */}
         <div className="flex items-start justify-between gap-3 mb-5">
           <div>
-            <p className="text-[12px] text-[var(--ink-faint)] mb-1"><a href="/electrician/quotes" className="hover:underline">Quotes</a> / {quote.invoice_number ?? quote.id.slice(0, 8)}</p>
+            <p className="text-[12px] text-[var(--ink-faint)] mb-1"><a href="/electrician/quotes" className="hover:underline">Quotes</a> / {quote.invoice_number ?? id.slice(0, 8)}</p>
             <h1 className="font-display text-2xl text-[var(--ink)]">{quote.client_name || "Unnamed client"}</h1>
             {quote.site_address && <p className="text-[13px] text-[var(--ink-faint)] mt-0.5">{quote.site_address}</p>}
           </div>
