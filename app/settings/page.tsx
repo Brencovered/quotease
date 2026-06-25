@@ -1,16 +1,18 @@
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function SettingsPage() {
-  const supabase = await createClient();
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) redirect("/login");
+  let profile: { business_name?: string; contact_email?: string; xero_connected?: boolean } | null = null;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", userData.user.id)
-    .single();
+  try {
+    const supabase = await createClient();
+    const { data: userData } = await supabase.auth.getUser();
+    if (userData.user) {
+      const { data } = await supabase.from("profiles").select("*").eq("id", userData.user.id).single();
+      profile = data;
+    }
+  } catch (err) {
+    console.error("Settings page: continuing without profile data —", err);
+  }
 
   return (
     <main className="max-w-md mx-auto px-6 py-16">
@@ -37,8 +39,8 @@ export default async function SettingsPage() {
 
       <div className="border rounded-lg p-4">
         <p className="font-medium text-sm mb-1">Business</p>
-        <p className="text-sm text-neutral-500">{profile?.business_name}</p>
-        <p className="text-sm text-neutral-500">{profile?.contact_email}</p>
+        <p className="text-sm text-neutral-500">{profile?.business_name ?? "Not signed in — demo view"}</p>
+        <p className="text-sm text-neutral-500">{profile?.contact_email ?? ""}</p>
       </div>
     </main>
   );
