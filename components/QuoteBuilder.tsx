@@ -64,6 +64,7 @@ export default function QuoteBuilder({
 
   const [saving, setSaving]         = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [savedQuoteId, setSavedQuoteId] = useState<string | null>(null);
 
   const [drawingFiles, setDrawingFiles]         = useState<File[]>([]);
   const [drawingInstructions, setDrawingInstructions] = useState("");
@@ -162,6 +163,7 @@ export default function QuoteBuilder({
     }).select().single();
 
     if (error) { setSaveMessage(error.message); setSaving(false); return; }
+    setSavedQuoteId(quote.id);
 
     for (const file of drawingFiles) {
       const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
@@ -272,7 +274,7 @@ export default function QuoteBuilder({
           clientName={clientName} setClientName={setClientName}
           clientEmail={clientEmail} setClientEmail={setClientEmail}
           siteAddress={siteAddress} setSiteAddress={setSiteAddress}
-          saving={saving} saveMessage={saveMessage} onSave={saveAndSend}
+          saving={saving} saveMessage={saveMessage} savedQuoteId={savedQuoteId} onSave={saveAndSend}
         />
       )}
 
@@ -593,7 +595,7 @@ function StepSite({ intake, set }: {
 /* ─── Step: Send ────────────────────────────────────────────────── */
 function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTerms, setCustomTerms, customTermsTotal,
   clientName, setClientName, clientEmail, setClientEmail, siteAddress, setSiteAddress,
-  saving, saveMessage, onSave }: {
+  saving, saveMessage, savedQuoteId, onSave }: {
   intake: ElectricianIntake;
   result: { labourHours: number; materialsCost: number; totalCost: number };
   paymentTerms: PaymentTerm[];
@@ -603,7 +605,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
   clientName: string; setClientName: (v: string) => void;
   clientEmail: string; setClientEmail: (v: string) => void;
   siteAddress: string; setSiteAddress: (v: string) => void;
-  saving: boolean; saveMessage: string | null;
+  saving: boolean; saveMessage: string | null; savedQuoteId: string | null;
   onSave: (send: boolean) => void;
 }) {
   return (
@@ -691,6 +693,16 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
           <div className={`rounded-xl px-4 py-3 text-[13.5px] font-semibold text-center ${saveMessage.includes("fail") || saveMessage.includes("error") ? "bg-[var(--red-bg)] text-[var(--red)]" : "bg-[var(--green-bg)] text-[var(--green)]"}`}>
             {saveMessage}
           </div>
+        )}
+        {savedQuoteId && (
+          <a
+            href={`/api/quotes/${savedQuoteId}/pdf`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-secondary w-full justify-center block text-center"
+          >
+            Download PDF
+          </a>
         )}
       </div>
     </div>

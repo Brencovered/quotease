@@ -45,6 +45,7 @@ export default function RooferQuoteBuilder({ profile, materials }: {
   const paymentTerms = termsPreset === "custom" ? customTerms : PAYMENT_TERM_PRESETS[termsPreset];
   const [saving, setSaving]         = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [savedQuoteId, setSavedQuoteId] = useState<string | null>(null);
   const [drawingFiles, setDrawingFiles] = useState<File[]>([]);
 
   const costs  = useMemo(() => { const m: Record<string,number> = {}; lib.forEach((r) => (m[r.item_key] = Number(r.unit_cost)||0)); return m; }, [lib]);
@@ -60,6 +61,8 @@ export default function RooferQuoteBuilder({ profile, materials }: {
     for (const m of lib) await supabase.from("material_items").upsert({ profile_id: user.id, trade: "roofer", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost }, { onConflict: "profile_id,item_key" });
     const { data: quote, error } = await supabase.from("quotes").insert({ profile_id: user.id, client_name: clientName, client_email: clientEmail, site_address: siteAddress, trade: "roofer", job_type: intake.jobType, intake_data: intake, labour_hours: result.labourHours, materials_cost: result.materialsCost, total_cost: result.totalCost, payment_terms: paymentTerms, status: sendEmail ? "sent" : "draft" }).select().single();
     if (error) { setSaveMessage(error.message); setSaving(false); return; }
+    setSavedQuoteId(quote.id);
+    setSavedQuoteId(quote.id);
     for (const file of drawingFiles) {
       const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g,"_");
       const path = `${user.id}/${quote.id}/${Date.now()}-${safeName}`;
@@ -200,6 +203,7 @@ export default function RooferQuoteBuilder({ profile, materials }: {
             <button onClick={() => saveAndSend(true)} disabled={saving||!clientEmail} className="btn-primary">{saving ? "Sending..." : "Send quote to client"}</button>
             <button onClick={() => saveAndSend(false)} disabled={saving} className="btn-secondary w-full justify-center">Save as draft</button>
             {saveMessage && <div className={`rounded-xl px-4 py-3 text-[13.5px] font-semibold text-center ${saveMessage.includes("fail") ? "bg-[var(--red-bg)] text-[var(--red)]" : "bg-[var(--green-bg)] text-[var(--green)]"}`}>{saveMessage}</div>}
+            {savedQuoteId && (<a href={`/api/quotes/${savedQuoteId}/pdf`} target="_blank" rel="noopener noreferrer" className="btn-secondary w-full justify-center block text-center">Download PDF</a>)}
           </div>
         </div>
       )}

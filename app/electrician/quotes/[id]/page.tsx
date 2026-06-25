@@ -75,6 +75,14 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
           <div className="text-right shrink-0">
             <p className="font-display text-2xl text-[var(--ink)]">${(quote.total_cost ?? 0).toLocaleString()}</p>
             <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold inline-block mt-1 ${statusColor[quote.status] ?? ""}`}>{quote.status}</span>
+            <a
+              href={`/api/quotes/${quote.id}/pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block text-[12.5px] font-semibold text-[var(--navy)] underline mt-2"
+            >
+              Download PDF
+            </a>
           </div>
         </div>
 
