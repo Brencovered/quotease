@@ -2,10 +2,13 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { User, Phone, Mail, MapPin, Plus, ChevronDown, ChevronUp, Pencil, X } from "lucide-react";
+import { User, Phone, Mail, MapPin, Plus, ChevronDown, ChevronUp, Pencil, X, Upload, Download } from "lucide-react";
 import type { Client } from "@/lib/clients";
 
 const EMPTY_FORM = { name: "", email: "", phone: "", billing_address: "", abn: "", notes: "" };
+
+const CSV_HEADERS = ["name","email","phone","billing_address","abn","notes"];
+const CSV_TEMPLATE = `name,email,phone,billing_address,abn,notes\nJane Smith,jane@example.com,0412345678,"123 Main St, Suburb VIC 3000",12345678901,Prefers SMS\nBob Jones,bob@example.com,0487654321,"45 Oak Ave, Suburb NSW 2000",,Heritage home`;
 
 export default function ClientsPanel({ clients: initial }: { clients: Client[] }) {
   const [clients, setClients] = useState(initial);
@@ -16,6 +19,8 @@ export default function ClientsPanel({ clients: initial }: { clients: Client[] }
   const [expanded, setExpanded] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [csvImporting, setCsvImporting] = useState(false);
+  const [csvResult, setCsvResult] = useState<{ imported: number; skipped: number } | null>(null);
 
   const filtered = clients.filter(
     (c) =>
@@ -23,6 +28,69 @@ export default function ClientsPanel({ clients: initial }: { clients: Client[] }
       (c.email ?? "").toLowerCase().includes(search.toLowerCase()) ||
       (c.phone ?? "").includes(search)
   );
+
+  function downloadCsvTemplate() {
+    const blob = new Blob([CSV_TEMPLATE], { type: "text/csv" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url; a.download = "clients-template.csv";
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  }
+
+  async function handleCsvUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; if (!file) return;
+    setCsvImporting(true); setCsvResult(null); setError(null);
+    const supabase = createClient();
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) { setError("Not signed in"); setCsvImporting(false); return; }
+
+    const text   = await file.text();
+    const lines  = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    if (lines.length < 2) { setError("CSV appears empty"); setCsvImporting(false); return; }
+
+    const headerLine = lines[0].toLowerCase().split(",").map((h) => h.replace(/"/g,"").trim());
+    const nameIdx    = headerLine.indexOf("name");
+    if (nameIdx === -1) { setError("CSV must have a 'name' column"); setCsvImporting(false); return; }
+
+    const idx = (col: string) => headerLine.indexOf(col);
+
+    let imported = 0; let skipped = 0;
+    const newClients: Client[] = [];
+
+    for (const line of lines.slice(1)) {
+      // Handle quoted CSV fields
+      const cols: string[] = [];
+      let inQuote = false; let cur = "";
+      for (const ch of line) {
+        if (ch === '"') { inQuote = !inQuote; }
+        else if (ch === "," && !inQuote) { cols.push(cur.trim()); cur = ""; }
+        else { cur += ch; }
+      }
+      cols.push(cur.trim());
+
+      const name = cols[idx("name")]?.replace(/"/g,"").trim();
+      if (!name) { skipped++; continue; }
+
+      const row = {
+        profile_id:      userData.user.id,
+        name,
+        email:           idx("email")           >= 0 ? cols[idx("email")]?.replace(/"/g,"").trim() || null           : null,
+        phone:           idx("phone")           >= 0 ? cols[idx("phone")]?.replace(/"/g,"").trim() || null           : null,
+        billing_address: idx("billing_address") >= 0 ? cols[idx("billing_address")]?.replace(/"/g,"").trim() || null : null,
+        abn:             idx("abn")             >= 0 ? cols[idx("abn")]?.replace(/"/g,"").trim() || null             : null,
+        notes:           idx("notes")           >= 0 ? cols[idx("notes")]?.replace(/"/g,"").trim() || null           : null,
+      };
+
+      const { data, error: err } = await supabase.from("clients").insert(row).select().single();
+      if (err) { skipped++; } else { imported++; newClients.push(data); }
+    }
+
+    setClients((prev) => [...newClients, ...prev]);
+    setCsvResult({ imported, skipped });
+    setCsvImporting(false);
+    e.target.value = "";
+  }
 
   function openNew() {
     setForm(EMPTY_FORM);
@@ -77,13 +145,37 @@ export default function ClientsPanel({ clients: initial }: { clients: Client[] }
   }
 
   return (
-    <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 pb-16">
-      <div className="flex items-center justify-between mb-5">
-        <h1 className="font-display text-2xl text-[var(--ink)]">Clients</h1>
-        <button onClick={openNew} className="inline-flex items-center gap-1.5 bg-[var(--amber)] text-[var(--navy)] text-sm font-bold px-4 py-2 rounded-lg">
-          <Plus size={15} /> Add client
-        </button>
+    <div className="page-wrap">
+      <div className="flex items-center justify-between mb-4 gap-3">
+        <h1 className="font-display text-[28px] text-[var(--ink)]">Clients</h1>
+        <div className="flex gap-2 items-center">
+          <label className="btn-secondary text-[13px] py-2 cursor-pointer" title="Import from CSV">
+            <Upload size={14} />
+            {csvImporting ? "Importing..." : "Import CSV"}
+            <input type="file" accept=".csv,text/csv" className="hidden" disabled={csvImporting} onChange={handleCsvUpload} />
+          </label>
+          <button onClick={openNew} className="inline-flex items-center gap-1.5 bg-[var(--amber)] text-[var(--navy)] text-[13px] font-extrabold px-4 py-2.5 rounded-xl">
+            <Plus size={15} /> Add client
+          </button>
+        </div>
       </div>
+
+      {/* CSV help */}
+      <div className="flex items-center gap-2 mb-4">
+        <button onClick={downloadCsvTemplate} className="inline-flex items-center gap-1 text-[12px] font-semibold text-[var(--ink-faint)] hover:text-[var(--ink)] transition-colors">
+          <Download size={12} /> Download CSV template
+        </button>
+        <span className="text-[var(--line)]">·</span>
+        <span className="text-[12px] text-[var(--ink-faint)]">Columns: name, email, phone, billing_address, abn, notes</span>
+      </div>
+
+      {/* CSV import result */}
+      {csvResult && (
+        <div className={`rounded-xl px-4 py-3 mb-4 text-[13.5px] font-semibold flex items-center justify-between ${csvResult.skipped > 0 ? "bg-amber-50 text-amber-800" : "bg-[var(--green-bg)] text-[var(--green)]"}`}>
+          <span>Imported {csvResult.imported} client{csvResult.imported !== 1 ? "s" : ""}{csvResult.skipped > 0 ? `, ${csvResult.skipped} skipped (missing name)` : ""}</span>
+          <button onClick={() => setCsvResult(null)} className="text-inherit opacity-50 hover:opacity-100"><X size={14} /></button>
+        </div>
+      )}
 
       {/* Search */}
       <input
@@ -192,7 +284,7 @@ export default function ClientsPanel({ clients: initial }: { clients: Client[] }
           );
         })}
       </div>
-    </main>
+    </div>
   );
 }
 

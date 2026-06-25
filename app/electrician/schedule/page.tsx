@@ -9,11 +9,12 @@ export default async function SchedulePage() {
     const supabase = await createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (userData.user) {
+      // Fetch accepted/paid jobs (schedulable) + sent quotes (for follow-up/expiry events)
       const { data } = await supabase
         .from("quotes")
-        .select("id, client_name, site_address, total_cost, job_type, status, scheduled_start, scheduled_end, estimated_days")
+        .select("id, client_name, site_address, total_cost, job_type, status, scheduled_start, scheduled_end, estimated_days, follow_up_at, quote_expires_at, sent_at")
         .eq("profile_id", userData.user.id)
-        .in("status", ["accepted", "paid"])
+        .in("status", ["accepted", "paid", "sent"])
         .order("scheduled_start", { ascending: true, nullsFirst: false });
       if (data) jobs = data;
     }

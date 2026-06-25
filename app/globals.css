@@ -154,13 +154,17 @@ input[type="radio"] {
 
 /* Page wrapper — accounts for fixed bottom nav on mobile */
 .page-wrap {
-  max-width: 680px;
+  max-width: 1040px;
   margin: 0 auto;
   padding: 16px 16px calc(var(--bottom-nav) + 24px);
 }
 
 @media (min-width: 640px) {
-  .page-wrap { padding: 24px 24px 40px; }
+  .page-wrap { padding: 24px 32px 40px; }
+}
+
+@media (min-width: 1024px) {
+  .page-wrap { padding: 32px 48px 48px; }
 }
 
 @keyframes reveal-up {
