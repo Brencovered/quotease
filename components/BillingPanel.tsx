@@ -41,34 +41,28 @@ export default function BillingPanel({ profile }: { profile: Profile }) {
   if (isActive) {
     const isTrialing = profile!.subscription_status === "trialing";
     return (
-      <main className="max-w-sm mx-auto px-6 py-16">
-        <h1 className="text-xl font-medium mb-4">Billing</h1>
-        <div className="border rounded-lg p-4 mb-4">
-          <p className="text-sm font-medium">
-            {isTrialing ? "Free trial active" : "Subscription active"}
-          </p>
-          <p className="text-sm text-neutral-500 mt-1">
+      <main className="max-w-sm mx-auto px-4 sm:px-6 py-10">
+        <h1 className="font-display text-2xl text-[var(--ink)] mb-4">Billing</h1>
+        <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-4 mb-4">
+          <p className="text-sm font-semibold text-[var(--ink)]">{isTrialing ? "Free trial active" : "Subscription active"}</p>
+          <p className="text-sm text-[var(--ink-faint)] mt-1">
             Plan: {profile!.subscription_plan === "annual" ? "Annual ($400/yr)" : "Monthly ($40/mo)"}
           </p>
           {isTrialing && profile!.trial_ends_at && (
-            <p className="text-sm text-neutral-500">
-              Trial ends {new Date(profile!.trial_ends_at).toLocaleDateString()}
-            </p>
+            <p className="text-sm text-[var(--ink-faint)]">Trial ends {new Date(profile!.trial_ends_at).toLocaleDateString()}</p>
           )}
           {!isTrialing && profile!.current_period_end && (
-            <p className="text-sm text-neutral-500">
-              Renews {new Date(profile!.current_period_end).toLocaleDateString()}
-            </p>
+            <p className="text-sm text-[var(--ink-faint)]">Renews {new Date(profile!.current_period_end).toLocaleDateString()}</p>
           )}
         </div>
         <button
           onClick={openPortal}
           disabled={loading === "portal"}
-          className="w-full border rounded-md py-2 text-sm font-medium disabled:opacity-50"
+          className="w-full border-2 border-[var(--line)] rounded-lg py-3 text-sm font-semibold disabled:opacity-50"
         >
           {loading === "portal" ? "Opening..." : "Manage billing"}
         </button>
-        <button onClick={() => router.push("/electrician")} className="w-full text-sm text-blue-600 mt-3">
+        <button onClick={() => router.push("/electrician")} className="w-full text-sm text-[var(--navy)] font-semibold mt-3">
           Back to quotes
         </button>
       </main>
@@ -76,31 +70,31 @@ export default function BillingPanel({ profile }: { profile: Profile }) {
   }
 
   return (
-    <main className="max-w-sm mx-auto px-6 py-16">
-      <h1 className="text-xl font-medium mb-2">Start your 7-day free trial</h1>
-      <p className="text-sm text-neutral-500 mb-6">
+    <main className="max-w-sm mx-auto px-4 sm:px-6 py-10">
+      <h1 className="font-display text-2xl text-[var(--ink)] mb-2">Start your 7-day free trial</h1>
+      <p className="text-sm text-[var(--ink-faint)] mb-6">
         Unlimited users on every plan. Cancel anytime during the trial and you won&apos;t be charged.
       </p>
 
       <button
         onClick={() => startCheckout("monthly")}
         disabled={loading !== null}
-        className="w-full border-2 border-blue-500 bg-blue-50 rounded-lg p-4 text-left mb-3 disabled:opacity-50"
+        className="w-full border-2 border-[var(--navy)] bg-[var(--app-bg)] rounded-xl p-4 text-left mb-3 disabled:opacity-50"
       >
-        <p className="font-medium text-blue-900">Monthly — $40/mo</p>
-        <p className="text-xs text-blue-700">Unlimited users, billed monthly</p>
+        <p className="font-semibold text-[var(--ink)]">Monthly — $40/mo</p>
+        <p className="text-xs text-[var(--ink-soft)]">Unlimited users, billed monthly</p>
       </button>
 
       <button
         onClick={() => startCheckout("annual")}
         disabled={loading !== null}
-        className="w-full border rounded-lg p-4 text-left disabled:opacity-50"
+        className="w-full border-2 border-[var(--line)] rounded-xl p-4 text-left disabled:opacity-50"
       >
-        <p className="font-medium">Annual — $400/yr</p>
-        <p className="text-xs text-neutral-500">Equivalent to $33.33/mo — 2 months free</p>
+        <p className="font-semibold text-[var(--ink)]">Annual — $400/yr</p>
+        <p className="text-xs text-[var(--ink-faint)]">Equivalent to $33.33/mo — 2 months free</p>
       </button>
 
-      {loading && <p className="text-sm text-neutral-500 mt-4">Redirecting to checkout...</p>}
+      {loading && <p className="text-sm text-[var(--ink-faint)] mt-4">Redirecting to checkout...</p>}
     </main>
   );
 }

@@ -37,12 +37,13 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
   }
 
   return (
-    <main className="max-w-md mx-auto px-6 py-16">
-      <h1 className="text-xl font-medium mb-6">Settings</h1>
+    <main className="max-w-2xl mx-auto px-4 sm:px-6 py-6 pb-16">
+      <h1 className="font-display text-2xl text-[var(--ink)] mb-5">Settings</h1>
 
-      <div className="border rounded-lg p-4 mb-4">
-        <p className="font-medium text-sm mb-1">Your trades</p>
-        <p className="text-xs text-neutral-500 mb-3">Toggle which trades show up in your account.</p>
+      <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-4 sm:p-5 mb-4">
+        <p className="text-[11px] tracking-[.12em] uppercase text-[var(--amber-deep)] font-bold mb-1">Trades</p>
+        <p className="font-semibold text-[var(--ink)] mb-1">Your trades</p>
+        <p className="text-[13px] text-[var(--ink-faint)] mb-3">Toggle which trades show up in your account.</p>
         <div className="grid grid-cols-2 gap-2">
           {TRADES.map((t) => {
             const isSelected = trades.includes(t.key);
@@ -51,43 +52,40 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
                 key={t.key}
                 onClick={() => t.ready && toggle(t.key)}
                 disabled={!t.ready || saving}
-                className={`text-left rounded-md border-2 p-2 text-sm disabled:opacity-40 ${
-                  isSelected ? "border-blue-500 bg-blue-50 text-blue-900" : "border-neutral-200"
+                className={`text-left rounded-lg border-2 p-3 text-sm font-semibold disabled:opacity-40 transition-colors ${
+                  isSelected ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] text-[var(--ink)]"
                 }`}
               >
                 {t.label}
-                {!t.ready && <span className="text-xs text-neutral-400 block">Coming soon</span>}
+                {!t.ready && <span className="text-xs text-[var(--ink-faint)] block font-normal">Coming soon</span>}
               </button>
             );
           })}
         </div>
-        {saved && <p className="text-xs text-green-700 mt-2">Saved</p>}
+        {saved && <p className="text-[13px] text-green-700 mt-2">Saved</p>}
       </div>
 
-      <div className="border rounded-lg p-4 mb-4">
-        <p className="font-medium text-sm mb-1">Accounting</p>
+      <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-4 sm:p-5 mb-4">
+        <p className="text-[11px] tracking-[.12em] uppercase text-[var(--amber-deep)] font-bold mb-1">Accounting</p>
         {profile?.xero_connected ? (
-          <p className="text-sm text-green-700">Connected to Xero</p>
+          <p className="text-sm text-green-700 font-semibold">Connected to Xero</p>
         ) : (
           <>
-            <p className="text-sm text-neutral-500 mb-3">
+            <p className="text-[13px] text-[var(--ink-faint)] mb-3">
               Optional — most tradies use the free CSV export from the Quotes page instead. Only
               connect this if you specifically want automatic invoice sync.
             </p>
-            <a
-              href="/api/xero/connect"
-              className="inline-block bg-blue-600 text-white rounded-md px-4 py-2 text-sm font-medium"
-            >
+            <a href="/api/xero/connect" className="inline-block bg-[var(--navy)] text-white rounded-lg px-4 py-2.5 text-sm font-semibold">
               Connect Xero
             </a>
           </>
         )}
       </div>
 
-      <div className="border rounded-lg p-4">
-        <p className="font-medium text-sm mb-1">Business</p>
-        <p className="text-sm text-neutral-500">{profile?.business_name ?? "Not signed in — demo view"}</p>
-        <p className="text-sm text-neutral-500">{profile?.contact_email ?? ""}</p>
+      <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-4 sm:p-5">
+        <p className="text-[11px] tracking-[.12em] uppercase text-[var(--amber-deep)] font-bold mb-1">Business</p>
+        <p className="text-sm text-[var(--ink)] font-semibold">{profile?.business_name ?? "Not signed in — demo view"}</p>
+        <p className="text-sm text-[var(--ink-faint)]">{profile?.contact_email ?? ""}</p>
       </div>
     </main>
   );

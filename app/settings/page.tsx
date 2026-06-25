@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import SettingsPanel from "@/components/SettingsPanel";
+import AppHeader from "@/components/AppHeader";
 
 export default async function SettingsPage() {
   let profile: {
@@ -20,5 +21,10 @@ export default async function SettingsPage() {
     console.error("Settings page: continuing without profile data —", err);
   }
 
-  return <SettingsPanel profile={profile} />;
+  return (
+    <>
+      <AppHeader active="settings" />
+      <SettingsPanel profile={profile} />
+    </>
+  );
 }

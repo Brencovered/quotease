@@ -51,9 +51,7 @@ export default function QuoteBuilder({
   const [rate, setRate] = useState(profile.hourly_rate ?? 95);
   const [margin, setMargin] = useState(profile.materials_margin_pct ?? 20);
   const [lib, setLib] = useState<MaterialRow[]>(
-    materials.length > 0
-      ? materials
-      : ELECTRICIAN_DEFAULT_MATERIALS.map((m) => ({ ...m }))
+    materials.length > 0 ? materials : ELECTRICIAN_DEFAULT_MATERIALS.map((m) => ({ ...m }))
   );
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
@@ -69,10 +67,7 @@ export default function QuoteBuilder({
     return map;
   }, [lib]);
 
-  const result = useMemo(
-    () => calcElectricianQuote(intake, costs, rate, margin),
-    [intake, costs, rate, margin]
-  );
+  const result = useMemo(() => calcElectricianQuote(intake, costs, rate, margin), [intake, costs, rate, margin]);
 
   function set<K extends keyof ElectricianIntake>(key: K, value: ElectricianIntake[K]) {
     setIntake((prev) => ({ ...prev, [key]: value }));
@@ -125,7 +120,6 @@ export default function QuoteBuilder({
       return;
     }
 
-    // Persist any material price edits made in this session
     for (const m of lib) {
       await supabase
         .from("material_items")
@@ -180,257 +174,300 @@ export default function QuoteBuilder({
   }
 
   return (
-    <main className="max-w-2xl mx-auto px-6 py-10">
-      <div className="flex justify-between items-center mb-4">
-        <p className="text-sm text-neutral-500">Electrician</p>
-        <a href="/electrician/quotes" className="text-sm text-blue-600">
-          View all quotes
-        </a>
-      </div>
-      <div className="flex gap-2 mb-6">
+    <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 pb-16">
+      {/* TABS */}
+      <div className="flex gap-2 mb-5">
         <button
           onClick={() => setTab("job")}
-          className={`flex-1 py-2 rounded-md border-2 ${tab === "job" ? "border-blue-500 bg-blue-50 text-blue-900" : "border-neutral-200"}`}
+          className={`flex-1 py-3 rounded-lg font-semibold text-sm border-2 transition-colors ${
+            tab === "job"
+              ? "border-[var(--navy)] bg-[var(--navy)] text-white"
+              : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-soft)]"
+          }`}
         >
           Job intake
         </button>
         <button
           onClick={() => setTab("library")}
-          className={`flex-1 py-2 rounded-md border-2 ${tab === "library" ? "border-blue-500 bg-blue-50 text-blue-900" : "border-neutral-200"}`}
+          className={`flex-1 py-3 rounded-lg font-semibold text-sm border-2 transition-colors ${
+            tab === "library"
+              ? "border-[var(--navy)] bg-[var(--navy)] text-white"
+              : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-soft)]"
+          }`}
         >
           Materials library
         </button>
       </div>
 
       {tab === "job" ? (
-        <div>
-          <div className="bg-neutral-100 rounded-lg p-4 mb-6">
-            <p className="text-sm text-neutral-500 mb-2">Live quote estimate</p>
+        <div className="flex flex-col gap-4">
+          {/* LIVE TOTAL - docket-styled, sticky so it's always visible while scrolling a long form */}
+          <div
+            className="sticky top-[68px] z-30 bg-[var(--navy)] rounded-xl px-5 py-4"
+            style={{ boxShadow: "0 10px 24px rgba(10,23,34,.18)" }}
+          >
+            <p className="text-[11px] tracking-[.14em] uppercase text-[var(--steel-3)] font-bold mb-2">
+              Live quote estimate
+            </p>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <p className="text-xs text-neutral-500">Labour</p>
-                <p className="text-lg font-medium">{result.labourHours} hrs</p>
+                <p className="text-[11px] text-[var(--steel-2)] font-medium">Labour</p>
+                <p className="font-display text-xl text-white">{result.labourHours}h</p>
               </div>
               <div>
-                <p className="text-xs text-neutral-500">Materials</p>
-                <p className="text-lg font-medium">${result.materialsCost.toLocaleString()}</p>
+                <p className="text-[11px] text-[var(--steel-2)] font-medium">Materials</p>
+                <p className="font-display text-xl text-white">${result.materialsCost.toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-xs text-neutral-500">Total</p>
-                <p className="text-lg font-medium">${result.totalCost.toLocaleString()}</p>
+                <p className="text-[11px] text-[var(--steel-2)] font-medium">Total</p>
+                <p className="font-display text-xl text-[var(--amber)]">${result.totalCost.toLocaleString()}</p>
               </div>
             </div>
           </div>
 
-          <div className="flex gap-4 mb-6">
-            <label className="flex-1 text-sm">
-              Hourly rate ($)
-              <input type="number" value={rate} onChange={(e) => setRate(Number(e.target.value))} className="w-full border rounded-md px-2 py-1 mt-1" />
-            </label>
-            <label className="flex-1 text-sm">
-              Materials margin (%)
-              <input type="number" value={margin} onChange={(e) => setMargin(Number(e.target.value))} className="w-full border rounded-md px-2 py-1 mt-1" />
-            </label>
-          </div>
+          <SectionCard label="Rates" title="Your rate for this quote">
+            <FieldGrid cols={2}>
+              <Field label="Hourly rate ($)">
+                <input type="number" inputMode="decimal" value={rate} onChange={(e) => setRate(Number(e.target.value))} className="app-field" />
+              </Field>
+              <Field label="Materials margin (%)">
+                <input type="number" inputMode="decimal" value={margin} onChange={(e) => setMargin(Number(e.target.value))} className="app-field" />
+              </Field>
+            </FieldGrid>
+          </SectionCard>
 
-          <Section title="Switchboard">
-            <Checkbox label="Switchboard upgrade needed" checked={intake.switchboardUpgrade} onChange={(v) => set("switchboardUpgrade", v)} />
-            <Checkbox label="3-phase supply" checked={intake.threePhase} onChange={(v) => set("threePhase", v)} />
-            <Checkbox label="Full RCBO upgrade" checked={intake.switchboardRcbo} onChange={(v) => set("switchboardRcbo", v)} />
-          </Section>
+          <SectionCard label="Switchboard" title="Switchboard work">
+            <CheckRow checked={intake.switchboardUpgrade} onChange={(v) => set("switchboardUpgrade", v)} label="Switchboard upgrade needed" />
+            <CheckRow checked={intake.threePhase} onChange={(v) => set("threePhase", v)} label="3-phase supply" />
+            <CheckRow checked={intake.switchboardRcbo} onChange={(v) => set("switchboardRcbo", v)} label="Full RCBO upgrade (vs RCD only)" />
+          </SectionCard>
 
-          <Section title="Circuits and points">
-            <NumberField label="Power points" value={intake.powerPoints} onChange={(v) => set("powerPoints", v)} />
-            <NumberField label="Light points" value={intake.lightPoints} onChange={(v) => set("lightPoints", v)} />
-            <NumberField label="Switches" value={intake.switches} onChange={(v) => set("switches", v)} />
-          </Section>
+          <SectionCard label="Circuits" title="Circuits and points">
+            <FieldGrid cols={3}>
+              <Field label="Power points"><NumInput value={intake.powerPoints} onChange={(v) => set("powerPoints", v)} /></Field>
+              <Field label="Light points"><NumInput value={intake.lightPoints} onChange={(v) => set("lightPoints", v)} /></Field>
+              <Field label="Switches"><NumInput value={intake.switches} onChange={(v) => set("switches", v)} /></Field>
+            </FieldGrid>
+          </SectionCard>
 
-          <Section title="Lighting">
-            <NumberField label="Downlights" value={intake.downlights} onChange={(v) => set("downlights", v)} />
-            <label className="text-sm flex-1">
-              Fitting grade
-              <select
-                value={intake.downlightGrade}
-                onChange={(e) => set("downlightGrade", e.target.value as ElectricianIntake["downlightGrade"])}
-                className="w-full border rounded-md px-2 py-1 mt-1"
-              >
-                <option value="builder">Builder grade</option>
-                <option value="standard">Standard</option>
-                <option value="premium">Premium / smart</option>
-              </select>
-            </label>
-          </Section>
+          <SectionCard label="Lighting" title="Downlights and fittings">
+            <FieldGrid cols={2}>
+              <Field label="Downlights"><NumInput value={intake.downlights} onChange={(v) => set("downlights", v)} /></Field>
+              <Field label="Fitting grade">
+                <select
+                  value={intake.downlightGrade}
+                  onChange={(e) => set("downlightGrade", e.target.value as ElectricianIntake["downlightGrade"])}
+                  className="app-field"
+                >
+                  <option value="builder">Builder grade</option>
+                  <option value="standard">Standard</option>
+                  <option value="premium">Premium / smart</option>
+                </select>
+              </Field>
+            </FieldGrid>
+          </SectionCard>
 
-          <Section title="Roof and subfloor access">
-            <label className="text-sm flex-1">
-              Roof cavity access
-              <select
-                value={intake.roofAccess}
-                onChange={(e) => set("roofAccess", Number(e.target.value) as ElectricianIntake["roofAccess"])}
-                className="w-full border rounded-md px-2 py-1 mt-1"
-              >
-                <option value={1}>No roof work</option>
-                <option value={1.3}>Easy access</option>
-                <option value={1.7}>Tight crawl</option>
-                <option value={2.3}>Extreme</option>
-              </select>
-            </label>
-            <label className="text-sm flex-1">
-              Subfloor access
-              <select
-                value={intake.subfloorAccess}
-                onChange={(e) => set("subfloorAccess", Number(e.target.value) as ElectricianIntake["subfloorAccess"])}
-                className="w-full border rounded-md px-2 py-1 mt-1"
-              >
-                <option value={1}>No subfloor work</option>
-                <option value={1.3}>Easy crawl</option>
-                <option value={1.8}>Tight crawl</option>
-                <option value={2.4}>Wet / very low clearance</option>
-              </select>
-            </label>
-            <NumberField label="Trenching (metres)" value={intake.trenchMetres} onChange={(v) => set("trenchMetres", v)} />
-          </Section>
+          <SectionCard label="Access" title="Roof and subfloor access" sub="Drives the wiring time estimate — not switchboard or appliance work">
+            <FieldGrid cols={2}>
+              <Field label="Roof cavity access">
+                <select value={intake.roofAccess} onChange={(e) => set("roofAccess", Number(e.target.value) as ElectricianIntake["roofAccess"])} className="app-field">
+                  <option value={1}>No roof work</option>
+                  <option value={1.3}>Easy access</option>
+                  <option value={1.7}>Tight crawl</option>
+                  <option value={2.3}>Extreme</option>
+                </select>
+              </Field>
+              <Field label="Subfloor access">
+                <select value={intake.subfloorAccess} onChange={(e) => set("subfloorAccess", Number(e.target.value) as ElectricianIntake["subfloorAccess"])} className="app-field">
+                  <option value={1}>No subfloor work</option>
+                  <option value={1.3}>Easy crawl</option>
+                  <option value={1.8}>Tight crawl</option>
+                  <option value={2.4}>Wet / very low clearance</option>
+                </select>
+              </Field>
+            </FieldGrid>
+            <div className="mt-3">
+              <Field label="Trenching (metres)"><NumInput value={intake.trenchMetres} onChange={(v) => set("trenchMetres", v)} /></Field>
+            </div>
+          </SectionCard>
 
-          <Section title="Fixed appliance circuits">
-            <Checkbox label="Oven" checked={intake.applianceOven} onChange={(v) => set("applianceOven", v)} />
-            <Checkbox label="Cooktop" checked={intake.applianceCooktop} onChange={(v) => set("applianceCooktop", v)} />
-            <Checkbox label="Hot water" checked={intake.applianceHwc} onChange={(v) => set("applianceHwc", v)} />
-            <Checkbox label="Aircon" checked={intake.applianceAircon} onChange={(v) => set("applianceAircon", v)} />
-            <Checkbox label="Pool / spa" checked={intake.appliancePool} onChange={(v) => set("appliancePool", v)} />
-          </Section>
+          <SectionCard label="Appliances" title="Fixed appliance circuits">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4">
+              <CheckRow checked={intake.applianceOven} onChange={(v) => set("applianceOven", v)} label="Oven" />
+              <CheckRow checked={intake.applianceCooktop} onChange={(v) => set("applianceCooktop", v)} label="Cooktop" />
+              <CheckRow checked={intake.applianceHwc} onChange={(v) => set("applianceHwc", v)} label="Hot water" />
+              <CheckRow checked={intake.applianceAircon} onChange={(v) => set("applianceAircon", v)} label="Aircon" />
+              <CheckRow checked={intake.appliancePool} onChange={(v) => set("appliancePool", v)} label="Pool / spa" />
+            </div>
+          </SectionCard>
 
-          <Section title="Data and comms">
-            <NumberField label="Data points" value={intake.dataPoints} onChange={(v) => set("dataPoints", v)} />
-            <Checkbox label="NBN connection point" checked={intake.nbn} onChange={(v) => set("nbn", v)} />
-          </Section>
+          <SectionCard label="Data" title="Data and comms">
+            <FieldGrid cols={2}>
+              <Field label="Data points"><NumInput value={intake.dataPoints} onChange={(v) => set("dataPoints", v)} /></Field>
+              <div className="flex items-end pb-2.5">
+                <CheckRow checked={intake.nbn} onChange={(v) => set("nbn", v)} label="NBN connection point" />
+              </div>
+            </FieldGrid>
+          </SectionCard>
 
-          <Section title="Site access and compliance">
-            <label className="text-sm flex-1">
-              Overall site access
-              <select
-                value={intake.siteAccess}
-                onChange={(e) => set("siteAccess", e.target.value as ElectricianIntake["siteAccess"])}
-                className="w-full border rounded-md px-2 py-1 mt-1"
-              >
-                <option value="easy">Easy</option>
-                <option value="moderate">Moderate</option>
-                <option value="difficult">Difficult</option>
-              </select>
-            </label>
-            <Checkbox label="Multi-storey" checked={intake.multistorey} onChange={(v) => set("multistorey", v)} />
-            <NumberField label="Smoke alarms to interconnect" value={intake.smokeAlarms} onChange={(v) => set("smokeAlarms", v)} />
-            <Checkbox label="COES required" checked={intake.coes} onChange={(v) => set("coes", v)} />
-          </Section>
+          <SectionCard label="Site" title="Site access and compliance">
+            <FieldGrid cols={2}>
+              <Field label="Overall site access">
+                <select value={intake.siteAccess} onChange={(e) => set("siteAccess", e.target.value as ElectricianIntake["siteAccess"])} className="app-field">
+                  <option value="easy">Easy</option>
+                  <option value="moderate">Moderate</option>
+                  <option value="difficult">Difficult</option>
+                </select>
+              </Field>
+              <div className="flex items-end pb-2.5">
+                <CheckRow checked={intake.multistorey} onChange={(v) => set("multistorey", v)} label="Multi-storey" />
+              </div>
+            </FieldGrid>
+            <FieldGrid cols={2} className="mt-3">
+              <Field label="Smoke alarms to interconnect"><NumInput value={intake.smokeAlarms} onChange={(v) => set("smokeAlarms", v)} /></Field>
+              <div className="flex items-end pb-2.5">
+                <CheckRow checked={intake.coes} onChange={(v) => set("coes", v)} label="COES required" />
+              </div>
+            </FieldGrid>
+          </SectionCard>
 
-          <div className="border-t pt-4 mt-2 space-y-3">
-            <p className="font-medium text-sm">Payment terms</p>
+          <SectionCard label="Payment" title="Payment terms">
             <select
               value={termsPreset}
               onChange={(e) => setTermsPreset(e.target.value as keyof typeof PAYMENT_TERM_PRESETS)}
-              className="w-full border rounded-md px-3 py-2"
+              className="app-field mb-3"
             >
               <option value="full_on_completion">100% on completion (14 days)</option>
               <option value="deposit_50_50">50% deposit, 50% on completion</option>
               <option value="deposit_30_70">30% deposit, 70% on completion</option>
               <option value="due_on_invoice">100% due on invoice (7 days)</option>
             </select>
-            <div className="text-xs text-neutral-500 space-y-0.5">
+            <div className="bg-[var(--app-bg)] rounded-lg p-3 space-y-1">
               {paymentTerms.map((t, i) => (
-                <p key={i}>
-                  {t.label}: {t.percent}% — ${Math.round((result.totalCost * t.percent) / 100).toLocaleString()},
-                  due {t.days === 0 ? "on " : `${t.days} days after `}
-                  {t.trigger === "acceptance" ? "acceptance" : t.trigger === "completion" ? "job completion" : "invoice date"}
+                <p key={i} className="text-[13px] text-[var(--ink-soft)] flex justify-between">
+                  <span>{t.label}</span>
+                  <span className="font-semibold text-[var(--ink)] tabular">
+                    {t.percent}% — ${Math.round((result.totalCost * t.percent) / 100).toLocaleString()}
+                  </span>
                 </p>
               ))}
             </div>
+          </SectionCard>
 
-            <p className="font-medium text-sm pt-2">Send to client</p>
-            <input placeholder="Client name" value={clientName} onChange={(e) => setClientName(e.target.value)} className="w-full border rounded-md px-3 py-2" />
-            <input placeholder="Client email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className="w-full border rounded-md px-3 py-2" />
-            <input placeholder="Site address" value={siteAddress} onChange={(e) => setSiteAddress(e.target.value)} className="w-full border rounded-md px-3 py-2" />
-            <div className="flex gap-3">
-              <button onClick={() => saveAndSend(false)} disabled={saving} className="flex-1 border rounded-md py-2 font-medium disabled:opacity-50">
+          <SectionCard label="Send" title="Send to client">
+            <FieldGrid cols={1}>
+              <Field label="Client name"><input value={clientName} onChange={(e) => setClientName(e.target.value)} className="app-field" /></Field>
+              <Field label="Client email"><input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className="app-field" /></Field>
+              <Field label="Site address"><input value={siteAddress} onChange={(e) => setSiteAddress(e.target.value)} className="app-field" /></Field>
+            </FieldGrid>
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => saveAndSend(false)}
+                disabled={saving}
+                className="flex-1 border-2 border-[var(--line)] text-[var(--ink)] rounded-lg py-3 font-semibold text-sm disabled:opacity-50"
+              >
                 Save draft
               </button>
               <button
                 onClick={() => saveAndSend(true)}
                 disabled={saving || !clientEmail}
-                className="flex-1 bg-blue-600 text-white rounded-md py-2 font-medium disabled:opacity-50"
+                className="flex-1 bg-[var(--amber)] text-[var(--navy)] rounded-lg py-3 font-bold text-sm disabled:opacity-40"
               >
                 Save and email quote
               </button>
             </div>
-            {saveMessage && <p className="text-sm text-neutral-600">{saveMessage}</p>}
-          </div>
+            {saveMessage && <p className="text-sm text-[var(--ink-soft)] mt-3">{saveMessage}</p>}
+          </SectionCard>
         </div>
       ) : (
-        <div>
-          <div className="bg-neutral-100 rounded-lg p-4 mb-4">
-            <p className="text-sm font-medium mb-1">Upload your supplier pricing</p>
-            <p className="text-xs text-neutral-500 mb-3">
-              CSV with columns: key,cost — keys must match the list below.
-            </p>
-            <div className="flex gap-2">
-              <input type="file" accept=".csv" onChange={handleCsvUpload} className="flex-1 text-sm" />
-              <button onClick={downloadTemplate} className="border rounded-md px-3 py-1 text-sm">
+        <div className="flex flex-col gap-4">
+          <SectionCard label="Pricing" title="Upload your supplier pricing" sub="CSV with columns: key,cost — use the template for the exact keys">
+            <div className="flex flex-wrap gap-2">
+              <input type="file" accept=".csv" onChange={handleCsvUpload} className="text-sm flex-1 min-w-[180px]" />
+              <button onClick={downloadTemplate} className="border-2 border-[var(--line)] rounded-lg px-4 py-2 text-sm font-semibold whitespace-nowrap">
                 Download template
               </button>
             </div>
-          </div>
-          <div className="divide-y">
-            <div className="grid grid-cols-[2fr_1fr_100px] text-xs text-neutral-500 font-medium py-2">
-              <span>Item</span>
-              <span>Key</span>
-              <span>Unit cost ($)</span>
-            </div>
-            {lib.map((m) => (
-              <div key={m.item_key} className="grid grid-cols-[2fr_1fr_100px] items-center py-2 text-sm">
-                <span>{m.label}</span>
-                <span className="text-xs font-mono text-neutral-400">{m.item_key}</span>
-                <input
-                  type="number"
-                  value={m.unit_cost}
-                  onChange={(e) => updateLibCost(m.item_key, Number(e.target.value))}
-                  className="border rounded-md px-2 py-1"
-                />
+          </SectionCard>
+
+          <SectionCard label="Library" title="Your prices">
+            <div className="divide-y divide-[var(--line)]">
+              <div className="grid grid-cols-[2fr_90px] text-[11px] uppercase tracking-wide text-[var(--ink-faint)] font-bold pb-2">
+                <span>Item</span>
+                <span className="text-right">Cost ($)</span>
               </div>
-            ))}
-          </div>
+              {lib.map((m) => (
+                <div key={m.item_key} className="grid grid-cols-[2fr_90px] items-center py-2.5 gap-2">
+                  <span className="text-[14px] text-[var(--ink)]">{m.label}</span>
+                  <input
+                    type="number"
+                    value={m.unit_cost}
+                    onChange={(e) => updateLibCost(m.item_key, Number(e.target.value))}
+                    className="app-field text-right py-2"
+                  />
+                </div>
+              ))}
+            </div>
+          </SectionCard>
         </div>
       )}
     </main>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function SectionCard({
+  label,
+  title,
+  sub,
+  children,
+}: {
+  label: string;
+  title: string;
+  sub?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="border-b py-4">
-      <p className="font-medium text-sm mb-3">{title}</p>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">{children}</div>
+    <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-4 sm:p-5">
+      <p className="text-[11px] tracking-[.12em] uppercase text-[var(--amber-deep)] font-bold mb-1">{label}</p>
+      <p className="font-semibold text-[var(--ink)] mb-1">{title}</p>
+      {sub && <p className="text-[12px] text-[var(--ink-faint)] mb-3">{sub}</p>}
+      <div className={sub ? "" : "mt-3"}>{children}</div>
     </div>
   );
 }
 
-function NumberField({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+function FieldGrid({ cols, className = "", children }: { cols: 1 | 2 | 3; className?: string; children: React.ReactNode }) {
+  const colClass = cols === 1 ? "grid-cols-1" : cols === 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3";
+  return <div className={`grid ${colClass} gap-3 ${className}`}>{children}</div>;
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="text-sm">
-      {label}
-      <input
-        type="number"
-        min={0}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full border rounded-md px-2 py-1 mt-1"
-      />
+    <label className="block">
+      <span className="block text-[12.5px] font-medium text-[var(--ink-soft)] mb-1.5">{label}</span>
+      {children}
     </label>
   );
 }
 
-function Checkbox({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+function NumInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   return (
-    <label className="flex items-center gap-2 text-sm">
+    <input
+      type="number"
+      inputMode="numeric"
+      min={0}
+      value={value}
+      onChange={(e) => onChange(Number(e.target.value))}
+      className="app-field"
+    />
+  );
+}
+
+function CheckRow({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <label className="flex items-center gap-2.5 py-2 cursor-pointer">
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      {label}
+      <span className="text-[14.5px] text-[var(--ink)]">{label}</span>
     </label>
   );
 }

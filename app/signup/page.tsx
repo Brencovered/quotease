@@ -21,9 +21,7 @@ export default function SignupPage() {
     e.preventDefault();
 
     if (!SUPABASE_CONFIGURED) {
-      setError(
-        "Signup isn't connected yet — this deployment doesn't have a real Supabase project configured."
-      );
+      setError("Signup isn't connected yet — this deployment doesn't have a real Supabase project configured.");
       return;
     }
 
@@ -32,11 +30,6 @@ export default function SignupPage() {
 
     try {
       const supabase = createClient();
-
-      // business_name travels in user metadata, not a separate insert -
-      // a database trigger creates the profile row from this on signup,
-      // since there's no logged-in session yet to satisfy RLS directly
-      // (Supabase withholds the session until the email is confirmed).
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -48,12 +41,9 @@ export default function SignupPage() {
       }
 
       if (data.session) {
-        // Email confirmation is off (or already satisfied) - go straight in.
         router.push("/onboarding");
         router.refresh();
       } else {
-        // Confirmation required - no session yet, so there's nowhere
-        // authenticated to send them until they click the email link.
         setCheckEmail(true);
       }
     } catch (err) {
@@ -66,10 +56,10 @@ export default function SignupPage() {
   if (checkEmail) {
     return (
       <main className="max-w-sm mx-auto px-6 py-20">
-        <h1 className="text-xl font-medium mb-2">Check your email</h1>
-        <p className="text-sm text-neutral-600">
-          We've sent a confirmation link to <strong>{email}</strong>. Click it, then come back and
-          log in.
+        <p className="font-display text-lg text-[var(--navy)] mb-6">QUOTEASE</p>
+        <h1 className="text-xl font-semibold text-[var(--ink)] mb-2">Check your email</h1>
+        <p className="text-sm text-[var(--ink-soft)]">
+          We&apos;ve sent a confirmation link to <strong>{email}</strong>. Click it, then come back and log in.
         </p>
       </main>
     );
@@ -77,13 +67,13 @@ export default function SignupPage() {
 
   return (
     <main className="max-w-sm mx-auto px-6 py-20">
-      <h1 className="text-xl font-medium mb-1">Create your account</h1>
-      <p className="text-sm text-neutral-500 mb-6">You'll pick your trades on the next step.</p>
+      <p className="font-display text-lg text-[var(--navy)] mb-6">QUOTEASE</p>
+      <h1 className="text-xl font-semibold text-[var(--ink)] mb-1">Create your account</h1>
+      <p className="text-sm text-[var(--ink-faint)] mb-6">You&apos;ll pick your trades on the next step.</p>
 
       {!SUPABASE_CONFIGURED && (
-        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mb-4">
-          This deployment isn't connected to a database yet, so signup won't actually work until
-          that's set up.
+        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
+          This deployment isn&apos;t connected to a database yet, so signup won&apos;t actually work until that&apos;s set up.
         </p>
       )}
 
@@ -94,7 +84,7 @@ export default function SignupPage() {
           value={businessName}
           onChange={(e) => setBusinessName(e.target.value)}
           required
-          className="w-full border rounded-md px-3 py-2"
+          className="app-field"
         />
         <input
           type="email"
@@ -102,7 +92,7 @@ export default function SignupPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          className="w-full border rounded-md px-3 py-2"
+          className="app-field"
         />
         <input
           type="password"
@@ -111,13 +101,13 @@ export default function SignupPage() {
           onChange={(e) => setPassword(e.target.value)}
           required
           minLength={6}
-          className="w-full border rounded-md px-3 py-2"
+          className="app-field"
         />
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-blue-600 text-white rounded-md py-2 font-medium disabled:opacity-50"
+          className="w-full bg-[var(--amber)] text-[var(--navy)] rounded-lg py-3 font-bold disabled:opacity-50"
         >
           {loading ? "Creating account..." : "Sign up"}
         </button>

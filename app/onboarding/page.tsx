@@ -43,9 +43,6 @@ export default function OnboardingPage() {
       return;
     }
 
-    // Seed the materials price book for any ready trade they picked.
-    // Electrician is the only one with real defaults right now — the rest
-    // get an empty library until that trade's calculator is built.
     if (selected.includes("electrician")) {
       const seedRows = ELECTRICIAN_DEFAULT_MATERIALS.map((m) => ({
         profile_id: userData.user!.id,
@@ -64,10 +61,9 @@ export default function OnboardingPage() {
 
   return (
     <main className="max-w-md mx-auto px-6 py-16">
-      <h1 className="text-xl font-medium mb-2">What trades do you do?</h1>
-      <p className="text-sm text-neutral-500 mb-6">
-        Pick as many as apply. You can add more later in Settings.
-      </p>
+      <p className="font-display text-lg text-[var(--navy)] mb-6">QUOTEASE</p>
+      <h1 className="text-xl font-semibold text-[var(--ink)] mb-2">What trades do you do?</h1>
+      <p className="text-sm text-[var(--ink-faint)] mb-6">Pick as many as apply. You can add more later in Settings.</p>
 
       <div className="grid grid-cols-2 gap-3 mb-6">
         {TRADES.map((t) => {
@@ -77,12 +73,14 @@ export default function OnboardingPage() {
               key={t.key}
               onClick={() => t.ready && toggle(t.key)}
               disabled={!t.ready}
-              className={`flex flex-col items-center gap-1 rounded-lg border-2 p-4 text-left disabled:opacity-40 disabled:cursor-not-allowed ${
-                isSelected ? "border-blue-500 bg-blue-50" : "border-neutral-200"
+              className={`flex flex-col items-center gap-1 rounded-xl border-2 p-4 text-center disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${
+                isSelected ? "border-[var(--navy)] bg-[var(--navy)]" : "border-[var(--line)] bg-[var(--surface)]"
               }`}
             >
-              <span className={`font-medium text-sm ${isSelected ? "text-blue-900" : ""}`}>{t.label}</span>
-              <span className="text-xs text-neutral-500">{t.ready ? "Ready now" : "Coming soon"}</span>
+              <span className={`font-semibold text-sm ${isSelected ? "text-white" : "text-[var(--ink)]"}`}>{t.label}</span>
+              <span className={`text-xs ${isSelected ? "text-[var(--steel-2)]" : "text-[var(--ink-faint)]"}`}>
+                {t.ready ? "Ready now" : "Coming soon"}
+              </span>
             </button>
           );
         })}
@@ -93,7 +91,7 @@ export default function OnboardingPage() {
       <button
         onClick={finish}
         disabled={saving || selected.length === 0}
-        className="w-full bg-blue-600 text-white rounded-md py-2 font-medium disabled:opacity-50"
+        className="w-full bg-[var(--amber)] text-[var(--navy)] rounded-lg py-3 font-bold disabled:opacity-50"
       >
         {saving ? "Setting up..." : "Continue"}
       </button>

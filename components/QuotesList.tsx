@@ -21,11 +21,11 @@ type Quote = {
 };
 
 const STATUS_STYLE: Record<string, string> = {
-  draft: "bg-neutral-100 text-neutral-600",
-  sent: "bg-blue-100 text-blue-700",
-  accepted: "bg-amber-100 text-amber-800",
-  declined: "bg-red-100 text-red-700",
-  paid: "bg-green-100 text-green-700",
+  draft: "bg-[var(--app-bg)] text-[var(--ink-soft)]",
+  sent: "bg-blue-50 text-blue-700",
+  accepted: "bg-amber-50 text-amber-800",
+  declined: "bg-red-50 text-red-700",
+  paid: "bg-green-50 text-green-700",
 };
 
 function statusLabel(q: Quote): string {
@@ -53,9 +53,7 @@ export default function QuotesList({ quotes: initialQuotes }: { quotes: Quote[] 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (res.ok) {
-      window.location.reload();
-    }
+    if (res.ok) window.location.reload();
     setBusyId(null);
   }
 
@@ -98,59 +96,62 @@ export default function QuotesList({ quotes: initialQuotes }: { quotes: Quote[] 
   }
 
   return (
-    <main className="max-w-2xl mx-auto px-6 py-10">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-medium">Quotes</h1>
-        <Link href="/electrician" className="text-sm text-blue-600">
+    <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 pb-16">
+      <div className="flex items-center justify-between mb-5">
+        <h1 className="font-display text-2xl text-[var(--ink)]">Quotes</h1>
+        <Link href="/electrician" className="bg-[var(--amber)] text-[var(--navy)] text-sm font-bold px-4 py-2 rounded-lg">
           New quote
         </Link>
       </div>
 
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
-        <p className="text-sm font-medium mb-1">Track in Xero</p>
-        <p className="text-xs text-neutral-600 mb-3">
+      <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-4 sm:p-5 mb-5">
+        <p className="text-[11px] tracking-[.12em] uppercase text-[var(--amber-deep)] font-bold mb-1">Xero</p>
+        <p className="font-semibold text-[var(--ink)] mb-1">Track in Xero</p>
+        <p className="text-[13px] text-[var(--ink-faint)] mb-3">
           {acceptedNotExported.length > 0
             ? `${acceptedNotExported.length} accepted quote(s) ready to export.`
             : "No accepted quotes waiting on export right now."}{" "}
-          Downloads a CSV you import directly in Xero — no Xero account connection needed.
+          Downloads a CSV you import directly in Xero — no account connection needed.
         </p>
         <button
           onClick={exportToXero}
           disabled={exporting || acceptedNotExported.length === 0}
-          className="bg-amber-600 text-white rounded-md px-4 py-2 text-sm font-medium disabled:opacity-40"
+          className="bg-[var(--navy)] text-white rounded-lg px-4 py-2.5 text-sm font-semibold disabled:opacity-40"
         >
           {exporting ? "Exporting..." : "Export accepted quotes to Xero CSV"}
         </button>
-        {exportMessage && <p className="text-xs text-neutral-600 mt-2">{exportMessage}</p>}
+        {exportMessage && <p className="text-[13px] text-[var(--ink-soft)] mt-2">{exportMessage}</p>}
       </div>
 
-      <div className="space-y-3">
-        {quotes.length === 0 && <p className="text-sm text-neutral-500">No quotes yet.</p>}
+      <div className="flex flex-col gap-3">
+        {quotes.length === 0 && (
+          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-8 text-center">
+            <p className="text-[var(--ink-faint)] text-sm">No quotes yet — build your first one.</p>
+          </div>
+        )}
         {quotes.map((q) => {
           const owing = (q.total_cost ?? 0) - (q.amount_paid ?? 0);
           return (
-            <div key={q.id} className="border rounded-lg p-4">
+            <div key={q.id} className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-4">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="font-medium text-sm">{q.client_name || "Unnamed client"}</p>
-                  <p className="text-xs text-neutral-500">{q.site_address}</p>
-                  {q.invoice_number && (
-                    <p className="text-xs text-neutral-400 font-mono mt-1">{q.invoice_number}</p>
-                  )}
+                  <p className="font-semibold text-[var(--ink)] text-[15px]">{q.client_name || "Unnamed client"}</p>
+                  <p className="text-[13px] text-[var(--ink-faint)]">{q.site_address}</p>
+                  {q.invoice_number && <p className="text-[11px] text-[var(--ink-faint)] font-mono mt-1">{q.invoice_number}</p>}
                 </div>
                 <div className="text-right">
-                  <p className="font-medium text-sm">${(q.total_cost ?? 0).toLocaleString()}</p>
+                  <p className="font-display text-lg text-[var(--ink)]">${(q.total_cost ?? 0).toLocaleString()}</p>
                   {(q.amount_paid ?? 0) > 0 && q.status !== "paid" && (
-                    <p className="text-xs text-neutral-500">paid ${q.amount_paid?.toLocaleString()}</p>
+                    <p className="text-[12px] text-[var(--ink-faint)]">paid ${q.amount_paid?.toLocaleString()}</p>
                   )}
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_STYLE[q.status] ?? ""}`}>
+                  <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${STATUS_STYLE[q.status] ?? ""}`}>
                     {statusLabel(q)}
                   </span>
                 </div>
               </div>
 
               {q.payment_terms && q.payment_terms.length > 0 && (
-                <div className="text-xs text-neutral-500 mt-2 space-y-0.5">
+                <div className="text-[12px] text-[var(--ink-faint)] mt-2 space-y-0.5">
                   {q.payment_terms.map((t, i) => (
                     <p key={i}>
                       {t.label}: {t.percent}% ({t.trigger.replace("_", " ")}, +{t.days}d)
@@ -164,7 +165,7 @@ export default function QuotesList({ quotes: initialQuotes }: { quotes: Quote[] 
                   <button
                     onClick={() => callUpdate({ quoteId: q.id, status: "accepted" })}
                     disabled={busyId === q.id}
-                    className="text-xs border rounded-md px-3 py-1 disabled:opacity-40"
+                    className="text-[13px] font-semibold border-2 border-[var(--line)] rounded-lg px-3 py-1.5 disabled:opacity-40"
                   >
                     Mark accepted
                   </button>
@@ -173,7 +174,7 @@ export default function QuotesList({ quotes: initialQuotes }: { quotes: Quote[] 
                   <button
                     onClick={() => callUpdate({ quoteId: q.id, completeJob: true })}
                     disabled={busyId === q.id}
-                    className="text-xs border rounded-md px-3 py-1 disabled:opacity-40"
+                    className="text-[13px] font-semibold border-2 border-[var(--line)] rounded-lg px-3 py-1.5 disabled:opacity-40"
                   >
                     Mark job complete
                   </button>
@@ -181,19 +182,19 @@ export default function QuotesList({ quotes: initialQuotes }: { quotes: Quote[] 
                 {q.status === "accepted" && owing > 0 && (
                   <>
                     {paymentInputId === q.id ? (
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1.5">
                         <input
                           type="number"
                           autoFocus
                           value={paymentValue}
                           onChange={(e) => setPaymentValue(e.target.value)}
                           placeholder={`up to ${owing}`}
-                          className="text-xs border rounded-md px-2 py-1 w-24"
+                          className="app-field text-[13px] py-1.5 w-28"
                         />
                         <button
                           onClick={() => recordPayment(q.id)}
                           disabled={busyId === q.id}
-                          className="text-xs bg-green-600 text-white rounded-md px-2 py-1 disabled:opacity-40"
+                          className="text-[13px] font-semibold bg-[var(--navy)] text-white rounded-lg px-3 py-1.5 disabled:opacity-40"
                         >
                           Save
                         </button>
@@ -204,7 +205,7 @@ export default function QuotesList({ quotes: initialQuotes }: { quotes: Quote[] 
                           setPaymentInputId(q.id);
                           setPaymentValue(String(owing));
                         }}
-                        className="text-xs border rounded-md px-3 py-1"
+                        className="text-[13px] font-semibold border-2 border-[var(--line)] rounded-lg px-3 py-1.5"
                       >
                         Record payment
                       </button>
@@ -215,7 +216,7 @@ export default function QuotesList({ quotes: initialQuotes }: { quotes: Quote[] 
                   <button
                     onClick={() => callUpdate({ quoteId: q.id, status: "declined" })}
                     disabled={busyId === q.id}
-                    className="text-xs border rounded-md px-3 py-1 text-red-600 disabled:opacity-40"
+                    className="text-[13px] font-semibold text-red-600 border-2 border-[var(--line)] rounded-lg px-3 py-1.5 disabled:opacity-40"
                   >
                     Mark declined
                   </button>

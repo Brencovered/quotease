@@ -1,24 +1,38 @@
 @import "tailwindcss";
 
 :root {
+  /* Brand (used for the marketing page, header bar, and accents in-app) */
   --navy: #0a1722;
   --navy-deep: #0c1e2e;
   --card: #0e2233;
   --amber: #ffb400;
   --amber-deep: #e89e00;
   --paper: #f6f9fb;
-  --ink: #0a1722;
+
+  /* App surfaces - light by design. Tradies use this outdoors on a phone;
+     a dark UI looks moody in a mockup but washes out badly in direct sun.
+     Light, high-contrast surfaces with the brand colour as accent is the
+     more usable choice for a tool used for hours on site, every day. */
+  --app-bg: #f4f5f7;
+  --surface: #ffffff;
+  --line: #e2e5ea;
+  --ink: #14202b;
+  --ink-soft: #5b6772;
+  --ink-faint: #8b96a1;
+
   --text: #eaf0f4;
   --steel-1: #a9bcc8;
   --steel-2: #92a6b3;
   --steel-3: #7e94a2;
   --steel-4: #6f8593;
-  --line: rgba(255, 255, 255, 0.08);
 }
 
+/* Default: light app theme. The marketing landing page opts into the dark
+   navy theme itself (it sets bg-[var(--navy)] on its own <main>), so this
+   default only affects screens that don't - i.e. every app screen. */
 body {
-  background: var(--navy);
-  color: var(--text);
+  background: var(--app-bg);
+  color: var(--ink);
   font-family: "Archivo", sans-serif;
 }
 
@@ -29,6 +43,39 @@ body {
 
 .tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/* Recolour native checkboxes/radios to brand amber instead of browser-default
+   blue, and make them big enough to actually tap accurately on a job site. */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--amber);
+  width: 19px;
+  height: 19px;
+  cursor: pointer;
+}
+
+/* Consistent, larger tap targets and visible focus state across every
+   text/number/select field in the app - this was previously left to bare
+   browser defaults, which is most of why the form looked broken. */
+.app-field {
+  width: 100%;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 11px 13px;
+  font-size: 15px;
+  font-family: "Archivo", sans-serif;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.app-field:focus {
+  outline: none;
+  border-color: var(--amber);
+  box-shadow: 0 0 0 3px rgba(255, 180, 0, 0.18);
+}
+.app-field::placeholder {
+  color: var(--ink-faint);
 }
 
 @keyframes qstamp {

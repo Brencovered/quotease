@@ -45,12 +45,12 @@ export default function LoginPage() {
 
   return (
     <main className="max-w-sm mx-auto px-6 py-20">
-      <h1 className="text-xl font-medium mb-6">Log in</h1>
+      <p className="font-display text-lg text-[var(--navy)] mb-6">QUOTEASE</p>
+      <h1 className="text-xl font-semibold text-[var(--ink)] mb-6">Log in</h1>
 
       {!SUPABASE_CONFIGURED && (
-        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mb-4">
-          This deployment isn't connected to a database yet, so login won't actually work until
-          that's set up.
+        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
+          This deployment isn&apos;t connected to a database yet, so login won&apos;t actually work until that&apos;s set up.
         </p>
       )}
 
@@ -61,7 +61,7 @@ export default function LoginPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          className="w-full border rounded-md px-3 py-2"
+          className="app-field"
         />
         <input
           type="password"
@@ -69,20 +69,20 @@ export default function LoginPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          className="w-full border rounded-md px-3 py-2"
+          className="app-field"
         />
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-blue-600 text-white rounded-md py-2 font-medium disabled:opacity-50"
+          className="w-full bg-[var(--amber)] text-[var(--navy)] rounded-lg py-3 font-bold disabled:opacity-50"
         >
           {loading ? "Logging in..." : "Log in"}
         </button>
       </form>
-      <p className="text-sm text-neutral-500 mt-4">
+      <p className="text-sm text-[var(--ink-faint)] mt-4">
         No account yet?{" "}
-        <Link href="/signup" className="text-blue-600">
+        <Link href="/signup" className="text-[var(--navy)] font-semibold">
           Sign up
         </Link>
       </p>

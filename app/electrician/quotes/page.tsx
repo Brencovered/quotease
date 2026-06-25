@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import QuotesList from "@/components/QuotesList";
+import AppHeader from "@/components/AppHeader";
 
 export default async function QuotesPage() {
   let quotes: Array<Record<string, unknown>> = [];
@@ -19,6 +20,11 @@ export default async function QuotesPage() {
     console.error("Quotes page: falling back to empty list —", err);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return <QuotesList quotes={quotes as any} />;
+  return (
+    <>
+      <AppHeader active="quotes" />
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      <QuotesList quotes={quotes as any} />
+    </>
+  );
 }

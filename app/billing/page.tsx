@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import BillingPanel from "@/components/BillingPanel";
+import AppHeader from "@/components/AppHeader";
 
 export default async function BillingPage() {
   let profile = null;
@@ -19,5 +20,10 @@ export default async function BillingPage() {
     console.error("Billing page: showing plan picker without profile data —", err);
   }
 
-  return <BillingPanel profile={profile} />;
+  return (
+    <>
+      <AppHeader />
+      <BillingPanel profile={profile} />
+    </>
+  );
 }

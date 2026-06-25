@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ELECTRICIAN_DEFAULT_MATERIALS } from "@/lib/calc";
 import QuoteBuilder from "@/components/QuoteBuilder";
+import AppHeader from "@/components/AppHeader";
 
 export default async function ElectricianPage() {
   let profile: { hourly_rate: number; materials_margin_pct: number; trades?: string[]; onboarded_at?: string | null } = {
@@ -47,5 +48,10 @@ export default async function ElectricianPage() {
     redirect("/onboarding");
   }
 
-  return <QuoteBuilder profile={profile} materials={materials} />;
+  return (
+    <>
+      <AppHeader />
+      <QuoteBuilder profile={profile} materials={materials} />
+    </>
+  );
 }
