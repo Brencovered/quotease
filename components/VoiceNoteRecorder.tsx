@@ -11,7 +11,7 @@ type SpeechRecognitionLike = {
   continuous: boolean;
   interimResults: boolean;
   lang: string;
-  onresult: ((event: { results: { [i: number]: { [j: number]: { transcript: string }; isFinal: boolean }; length: number } }) => void) | null;
+  onresult: ((event: { resultIndex: number; results: { [i: number]: { [j: number]: { transcript: string }; isFinal: boolean }; length: number } }) => void) | null;
   onerror: ((event: { error: string }) => void) | null;
   onend: (() => void) | null;
   start: () => void;
@@ -55,8 +55,13 @@ export default function VoiceNoteRecorder({
 
     let finalTranscript = transcript;
     recognition.onresult = (event) => {
+      // event.results contains every result since recognition started, not
+      // just what's new - looping the whole array on every event re-appends
+      // already-finalized segments again and again, which is exactly what
+      // produced the repeating-sentence transcript. event.resultIndex marks
+      // where the genuinely new results start.
       let interim = "";
-      for (let i = 0; i < event.results.length; i++) {
+      for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
         if (result.isFinal) finalTranscript += result[0].transcript + " ";
         else interim += result[0].transcript;
