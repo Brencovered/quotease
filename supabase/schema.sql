@@ -130,3 +130,38 @@ create policy "Own materials" on material_items
 
 create policy "Own quotes" on quotes
   for all using (auth.uid() = profile_id);
+
+-- Files attached to a job (drawings, plans, site photos), uploaded once a
+-- quote is accepted and becomes a job to actually complete.
+create table job_attachments (
+  id uuid primary key default uuid_generate_v4(),
+  quote_id uuid not null references quotes(id) on delete cascade,
+  profile_id uuid not null references profiles(id) on delete cascade,
+  file_name text not null,
+  storage_path text not null,
+  file_type text,
+  file_size integer,
+  created_at timestamptz not null default now()
+);
+alter table job_attachments enable row level security;
+create policy "Own job attachments" on job_attachments
+  for all using (auth.uid() = profile_id);
+
+-- Private bucket - these are site drawings/plans, not meant to be public
+-- like logos. Access goes through signed URLs the owning tradie generates,
+-- gated by the same folder-prefix-matches-auth.uid() pattern as logos.
+insert into storage.buckets (id, name, public)
+values ('job-files', 'job-files', false)
+on conflict (id) do nothing;
+
+create policy "Job file owner read"
+  on storage.objects for select
+  using (bucket_id = 'job-files' and (storage.foldername(name))[1] = auth.uid()::text);
+
+create policy "Job file owner write"
+  on storage.objects for insert
+  with check (bucket_id = 'job-files' and (storage.foldername(name))[1] = auth.uid()::text);
+
+create policy "Job file owner delete"
+  on storage.objects for delete
+  using (bucket_id = 'job-files' and (storage.foldername(name))[1] = auth.uid()::text);
