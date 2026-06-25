@@ -191,7 +191,7 @@ export default function QuoteBuilder({
   const stepId = STEPS[step].id;
 
   return (
-    <div className="page-wrap">
+    <div className="page-wrap-narrow">
 
       {/* ── Live total ─────────────────────────────── */}
       <div className="sticky top-12 sm:top-14 z-30 mb-4 -mx-4 sm:mx-0 px-4 sm:px-0">

@@ -152,10 +152,9 @@ input[type="radio"] {
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Page wrapper — accounts for fixed bottom nav on mobile */
+/* Page wrapper — full-width with comfortable padding, no max-width cap */
 .page-wrap {
-  max-width: 1040px;
-  margin: 0 auto;
+  width: 100%;
   padding: 16px 16px calc(var(--bottom-nav) + 24px);
 }
 
@@ -164,7 +163,23 @@ input[type="radio"] {
 }
 
 @media (min-width: 1024px) {
-  .page-wrap { padding: 32px 48px 48px; }
+  .page-wrap { padding: 28px 48px 48px; }
+}
+
+@media (min-width: 1280px) {
+  .page-wrap { padding: 32px 64px 48px; }
+}
+
+/* Form pages (quote builder, detail pages) cap at readable width */
+.page-wrap-narrow {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px 16px calc(var(--bottom-nav) + 24px);
+}
+
+@media (min-width: 640px) {
+  .page-wrap-narrow { padding: 24px 32px 40px; }
 }
 
 @keyframes reveal-up {
