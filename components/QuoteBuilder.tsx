@@ -56,8 +56,23 @@ export default function QuoteBuilder({
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [siteAddress, setSiteAddress] = useState("");
-  const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS>("full_on_completion");
-  const paymentTerms: PaymentTerm[] = PAYMENT_TERM_PRESETS[termsPreset];
+  const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">("full_on_completion");
+  const [customTerms, setCustomTerms] = useState<PaymentTerm[]>([
+    { label: "Deposit", percent: 50, trigger: "acceptance", days: 0 },
+    { label: "Final payment", percent: 50, trigger: "completion", days: 7 },
+  ]);
+  const paymentTerms: PaymentTerm[] = termsPreset === "custom" ? customTerms : PAYMENT_TERM_PRESETS[termsPreset];
+  const customTermsTotal = customTerms.reduce((sum, t) => sum + (Number(t.percent) || 0), 0);
+
+  function updateCustomTerm(index: number, patch: Partial<PaymentTerm>) {
+    setCustomTerms((prev) => prev.map((t, i) => (i === index ? { ...t, ...patch } : t)));
+  }
+  function addCustomTerm() {
+    setCustomTerms((prev) => [...prev, { label: "Payment", percent: 0, trigger: "completion", days: 7 }]);
+  }
+  function removeCustomTerm(index: number) {
+    setCustomTerms((prev) => prev.filter((_, i) => i !== index));
+  }
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
@@ -334,24 +349,88 @@ export default function QuoteBuilder({
           <SectionCard label="Payment" title="Payment terms">
             <select
               value={termsPreset}
-              onChange={(e) => setTermsPreset(e.target.value as keyof typeof PAYMENT_TERM_PRESETS)}
+              onChange={(e) => setTermsPreset(e.target.value as keyof typeof PAYMENT_TERM_PRESETS | "custom")}
               className="app-field mb-3"
             >
               <option value="full_on_completion">100% on completion (14 days)</option>
               <option value="deposit_50_50">50% deposit, 50% on completion</option>
               <option value="deposit_30_70">30% deposit, 70% on completion</option>
               <option value="due_on_invoice">100% due on invoice (7 days)</option>
+              <option value="custom">Custom — set your own split</option>
             </select>
-            <div className="bg-[var(--app-bg)] rounded-lg p-3 space-y-1">
-              {paymentTerms.map((t, i) => (
-                <p key={i} className="text-[13px] text-[var(--ink-soft)] flex justify-between">
-                  <span>{t.label}</span>
-                  <span className="font-semibold text-[var(--ink)] tabular">
-                    {t.percent}% — ${Math.round((result.totalCost * t.percent) / 100).toLocaleString()}
-                  </span>
-                </p>
-              ))}
-            </div>
+
+            {termsPreset === "custom" ? (
+              <div className="space-y-2">
+                {customTerms.map((t, i) => (
+                  <div key={i} className="bg-[var(--app-bg)] rounded-lg p-3 grid grid-cols-[1fr_70px_auto] gap-2 items-end">
+                    <label className="block">
+                      <span className="block text-[11px] font-medium text-[var(--ink-soft)] mb-1">Label</span>
+                      <input
+                        value={t.label}
+                        onChange={(e) => updateCustomTerm(i, { label: e.target.value })}
+                        className="app-field py-1.5 text-[13px]"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="block text-[11px] font-medium text-[var(--ink-soft)] mb-1">%</span>
+                      <input
+                        type="number"
+                        value={t.percent}
+                        onChange={(e) => updateCustomTerm(i, { percent: Number(e.target.value) })}
+                        className="app-field py-1.5 text-[13px]"
+                      />
+                    </label>
+                    <button
+                      onClick={() => removeCustomTerm(i)}
+                      disabled={customTerms.length <= 1}
+                      className="text-red-600 text-[13px] font-semibold px-2 py-1.5 disabled:opacity-30"
+                    >
+                      Remove
+                    </button>
+                    <label className="block col-span-2">
+                      <span className="block text-[11px] font-medium text-[var(--ink-soft)] mb-1">Due</span>
+                      <select
+                        value={t.trigger}
+                        onChange={(e) => updateCustomTerm(i, { trigger: e.target.value as PaymentTerm["trigger"] })}
+                        className="app-field py-1.5 text-[13px]"
+                      >
+                        <option value="acceptance">On acceptance</option>
+                        <option value="completion">On completion</option>
+                        <option value="invoice_date">On invoice date</option>
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="block text-[11px] font-medium text-[var(--ink-soft)] mb-1">+ days</span>
+                      <input
+                        type="number"
+                        value={t.days}
+                        onChange={(e) => updateCustomTerm(i, { days: Number(e.target.value) })}
+                        className="app-field py-1.5 text-[13px]"
+                      />
+                    </label>
+                  </div>
+                ))}
+                <button onClick={addCustomTerm} className="text-[13px] font-semibold text-[var(--navy)] border-2 border-[var(--line)] rounded-lg px-3 py-1.5">
+                  + Add payment term
+                </button>
+                {customTermsTotal !== 100 && (
+                  <p className="text-[12.5px] text-red-600 font-medium">
+                    These add up to {customTermsTotal}% — they should total 100%.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="bg-[var(--app-bg)] rounded-lg p-3 space-y-1">
+                {paymentTerms.map((t, i) => (
+                  <p key={i} className="text-[13px] text-[var(--ink-soft)] flex justify-between">
+                    <span>{t.label}</span>
+                    <span className="font-semibold text-[var(--ink)] tabular">
+                      {t.percent}% — ${Math.round((result.totalCost * t.percent) / 100).toLocaleString()}
+                    </span>
+                  </p>
+                ))}
+              </div>
+            )}
           </SectionCard>
 
           <SectionCard label="Send" title="Send to client">

@@ -19,7 +19,9 @@ export async function POST(request: Request) {
 
   const { data: quote, error: quoteError } = await supabase
     .from("quotes")
-    .select("*, profiles!quotes_profile_id_fkey(business_name, contact_email, contact_phone)")
+    .select(
+      "*, profiles!quotes_profile_id_fkey(business_name, contact_email, contact_phone, logo_url, abn, license_number, business_address, terms_and_conditions)"
+    )
     .eq("id", quoteId)
     .eq("profile_id", userData.user.id)
     .single();
@@ -51,7 +53,20 @@ export async function POST(request: Request) {
     )
     .join("");
 
+  const logoHtml = quote.profiles?.logo_url
+    ? `<img src="${quote.profiles.logo_url}" alt="${business}" style="max-height:56px;max-width:200px;margin-bottom:16px;" />`
+    : "";
+
+  const businessDetailLines = [
+    quote.profiles?.business_address,
+    quote.profiles?.abn ? `ABN ${quote.profiles.abn}` : null,
+    quote.profiles?.license_number ? `Licence ${quote.profiles.license_number}` : null,
+  ].filter(Boolean);
+
+  const tcText = quote.profiles?.terms_and_conditions;
+
   const html = `
+    ${logoHtml}
     <h2>Quote from ${business}</h2>
     <p>Hi ${quote.client_name ?? ""},</p>
     <p>Here's your quote for the job at ${quote.site_address ?? "the site you provided"}.</p>
@@ -65,7 +80,15 @@ export async function POST(request: Request) {
       ${termsRows}
     </table>
     <p>This quote is an estimate based on the details provided and may change once the job is reviewed on site.</p>
-    <p>${business}${quote.profiles?.contact_phone ? " — " + quote.profiles.contact_phone : ""}</p>
+    ${
+      tcText
+        ? `<p style="font-size:12px;color:#666;border-top:1px solid #eee;padding-top:12px;margin-top:20px;">${tcText}</p>`
+        : ""
+    }
+    <p style="font-size:13px;color:#444;margin-top:16px;">
+      ${business}${quote.profiles?.contact_phone ? " — " + quote.profiles.contact_phone : ""}
+      ${businessDetailLines.length ? "<br />" + businessDetailLines.join(" · ") : ""}
+    </p>
   `;
 
   const res = await fetch("https://api.resend.com/emails", {

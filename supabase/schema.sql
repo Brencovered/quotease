@@ -24,8 +24,36 @@ create table profiles (
   subscription_plan text,                            -- monthly, annual
   trial_ends_at timestamptz,
   current_period_end timestamptz,
+  logo_url text,
+  abn text,
+  license_number text,
+  business_address text,
+  terms_and_conditions text default 'Quote valid for 30 days. Materials and labour as listed above. Any variation to the scope of work will be quoted separately before proceeding. Payment due as per the terms stated on this quote.',
   created_at timestamptz not null default now()
 );
+
+-- Storage bucket for company logos. Public read (renders in quote emails
+-- without a signed URL), write restricted to the owning profile's own
+-- folder (path prefix = their user id) via the policies below.
+insert into storage.buckets (id, name, public)
+values ('logos', 'logos', true)
+on conflict (id) do nothing;
+
+create policy "Logo public read"
+  on storage.objects for select
+  using (bucket_id = 'logos');
+
+create policy "Logo owner write"
+  on storage.objects for insert
+  with check (bucket_id = 'logos' and (storage.foldername(name))[1] = auth.uid()::text);
+
+create policy "Logo owner update"
+  on storage.objects for update
+  using (bucket_id = 'logos' and (storage.foldername(name))[1] = auth.uid()::text);
+
+create policy "Logo owner delete"
+  on storage.objects for delete
+  using (bucket_id = 'logos' and (storage.foldername(name))[1] = auth.uid()::text);
 
 -- Per-tradie material price book. Seeded with placeholder defaults on signup,
 -- then overwritten by their own CSV upload or manual edits.
