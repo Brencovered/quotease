@@ -116,6 +116,14 @@ create table quotes (
   invoice_number text,          -- e.g. INV-0001, generated when first exported to Xero
   xero_exported_at timestamptz, -- set when included in a CSV export, so it isn't exported twice
   xero_invoice_id text,         -- only used if a tradie later connects full Xero OAuth
+  site_lat numeric,             -- geocoded once for the map view, cached so it's never repeated
+  site_lng numeric,
+  -- Job-execution info: what to know before turning up, when it's
+  -- scheduled, who's doing it, and what to buy.
+  site_notes text,
+  scheduled_date date,
+  assigned_to text,
+  materials_checklist jsonb not null default '[]',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

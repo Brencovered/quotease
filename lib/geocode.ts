@@ -8,7 +8,10 @@
 export async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
   if (!address?.trim()) return null;
   try {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`;
+    // countrycodes=au stops ambiguous Australian place names (Seaford exists
+    // in the UK and South Australia as well as Victoria, for example) from
+    // matching a result on the other side of the world.
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=au&q=${encodeURIComponent(address)}`;
     const res = await fetch(url, {
       headers: { "User-Agent": "Quotease (quoting software for trades) - contact via app" },
     });
