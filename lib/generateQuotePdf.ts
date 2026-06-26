@@ -1,7 +1,8 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import sharp from "sharp";
+import QRCode from "qrcode";
 import { termAmount, type PaymentTerm } from "./paymentTerms";
-import { INTAKE_FIELD_LABELS, INTAKE_VALUE_LABELS, INTAKE_UNITS, humanizeIntakePublic } from "./humanizeIntake";
+import { humanizeIntakePublic } from "./humanizeIntake";
 
 // Alias so the rest of this file doesn't need renaming
 const humanizeIntake = humanizeIntakePublic;
@@ -255,14 +256,62 @@ export async function generateQuotePdf(
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://quotease.vercel.app";
     const quoteUrl = `${appUrl}/q/${quote.public_token}`;
     rule();
-    newPageIfNeeded(70);
-    // Amber callout box
-    page.drawRectangle({ x: MARGIN, y: y - 52, width: PAGE_WIDTH - MARGIN * 2, height: 60, color: rgb(1, 0.96, 0.82), borderColor: AMBER, borderWidth: 1.5 });
-    page.drawText("TO ACCEPT THIS QUOTE", { x: MARGIN + 14, y: y - 14, size: 9, font: fontBold, color: AMBER_DEEP });
-    page.drawText("Open the link below on your phone or computer to accept, decline,", { x: MARGIN + 14, y: y - 27, size: 9, font, color: INK });
-    page.drawText("and choose your payment method:", { x: MARGIN + 14, y: y - 39, size: 9, font, color: INK });
-    page.drawText(quoteUrl, { x: MARGIN + 14, y: y - 51, size: 9, font: fontBold, color: rgb(0.12, 0.35, 0.70) });
-    y -= 68;
+    newPageIfNeeded(100);
+
+    const boxHeight = 88;
+    const qrSize    = 72;
+    const boxY      = y - boxHeight;
+    const textX     = MARGIN + qrSize + 28;
+
+    // Navy callout box
+    page.drawRectangle({
+      x: MARGIN, y: boxY,
+      width: PAGE_WIDTH - MARGIN * 2, height: boxHeight,
+      color: NAVY,
+    });
+
+    // Amber left accent bar
+    page.drawRectangle({ x: MARGIN, y: boxY, width: 4, height: boxHeight, color: AMBER });
+
+    // QR code
+    try {
+      const qrDataUrl = await QRCode.toDataURL(quoteUrl, {
+        width: 200, margin: 1,
+        color: { dark: "#0a1722", light: "#ffffff" },
+      });
+      const qrBase64 = qrDataUrl.replace(/^data:image\/png;base64,/, "");
+      const qrBytes  = Buffer.from(qrBase64, "base64");
+      const qrImage  = await pdfDoc.embedPng(qrBytes);
+      page.drawImage(qrImage, {
+        x: MARGIN + 12,
+        y: boxY + (boxHeight - qrSize) / 2,
+        width: qrSize, height: qrSize,
+      });
+    } catch {
+      // Skip QR if generation fails — text URL is still present
+    }
+
+    // Text content
+    page.drawText("ACCEPT THIS QUOTE", {
+      x: textX, y: boxY + 60,
+      size: 11, font: fontBold, color: AMBER,
+    });
+    page.drawText("Scan the QR code or open the link on your phone to", {
+      x: textX, y: boxY + 44,
+      size: 9, font, color: rgb(0.75, 0.82, 0.87),
+    });
+    page.drawText("accept, choose payment method, and get booked in.", {
+      x: textX, y: boxY + 32,
+      size: 9, font, color: rgb(0.75, 0.82, 0.87),
+    });
+    // Short URL — show domain/q/token trimmed for readability
+    const shortUrl = quoteUrl.replace("https://", "");
+    page.drawText(shortUrl, {
+      x: textX, y: boxY + 14,
+      size: 8.5, font: fontBold, color: rgb(0.55, 0.75, 1.0),
+    });
+
+    y = boxY - 16;
   }
 
   // --- Terms and conditions ---
