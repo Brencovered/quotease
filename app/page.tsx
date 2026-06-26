@@ -145,16 +145,16 @@ export default function Home() {
       </div>
 
       {/* TRADES STRIP */}
-      <div className="border-t border-b border-white/[0.08]">
+      <div className="bg-[#0c1e2e] border-t border-b border-white/[0.1]">
         <div className="max-w-7xl mx-auto px-6 py-0">
-          <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-white/[0.08]">
+          <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-white/[0.1]">
             {TRADES.map((t, i) => (
-              <div key={t.name} className="px-6 py-7">
-                <p className="text-[11px] font-bold tracking-[.14em] uppercase text-[#ffb400] mb-1.5">
+              <div key={t.name} className="px-6 py-8">
+                <p className="text-[11px] font-bold tracking-[.14em] uppercase text-[#ffb400] mb-2">
                   {String(i + 1).padStart(2, "0")}
                 </p>
-                <p className="font-extrabold text-white text-[15px] mb-1">{t.name}</p>
-                <p className="text-[12px] text-[#5a7082] leading-snug">{t.detail}</p>
+                <p className="font-extrabold text-white text-[15px] mb-1.5">{t.name}</p>
+                <p className="text-[12px] text-[#6a8294] leading-snug">{t.detail}</p>
               </div>
             ))}
           </div>
@@ -162,6 +162,7 @@ export default function Home() {
       </div>
 
       {/* WHAT QUOTEASE DOES */}
+      <div className="bg-[#0c1e2e] border-t border-white/[0.07]">
       <div className="max-w-7xl mx-auto px-6 py-24">
         <div className="grid lg:grid-cols-[1fr_2fr] gap-16 items-start">
           <div className="lg:sticky lg:top-24">
@@ -178,16 +179,17 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-px bg-white/[0.06] rounded-2xl overflow-hidden border border-white/[0.06]">
+          <div className="grid sm:grid-cols-2 gap-3">
             {FEATURES.map((f) => (
-              <div key={f.n} className="bg-[#0a1722] p-7 hover:bg-[#0e2233] transition-colors">
-                <p className="font-display text-[2.2rem] leading-none mb-4 text-[#ffb400]/20 select-none">{f.n}</p>
+              <div key={f.n} className="bg-[#0e2233] border border-white/[0.09] rounded-2xl p-7 hover:border-[#ffb400]/30 transition-colors">
+                <p className="font-display text-[1.6rem] leading-none mb-5 text-[#ffb400] select-none">{f.n}</p>
                 <h3 className="font-extrabold text-[15px] text-white mb-2 leading-snug">{f.title}</h3>
-                <p className="text-[13px] text-[#5a7082] leading-[1.65]">{f.body}</p>
+                <p className="text-[13px] text-[#7e94a2] leading-[1.65]">{f.body}</p>
               </div>
             ))}
           </div>
         </div>
+      </div>
       </div>
 
       {/* PHOTO BREAK — site photo */}
