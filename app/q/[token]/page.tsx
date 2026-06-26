@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { termAmount, type PaymentTerm } from "@/lib/paymentTerms";
 import QuoteResponseButtons from "@/components/QuoteResponseButtons";
+import { humanizeIntakePublic } from "@/lib/humanizeIntake";
 
 export default async function PublicQuotePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -35,16 +36,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
   ];
   const hasBankDetails = !!(profile.bank_bsb && profile.bank_account_number);
 
-  const scopeLines: string[] = [];
-  if (quote.intake_data && typeof quote.intake_data === "object") {
-    for (const [key, value] of Object.entries(quote.intake_data as Record<string, unknown>)) {
-      if (["jobType", "notes"].includes(key)) continue;
-      if (!value || value === 0) continue;
-      if (typeof value === "object") continue;
-      const label = key.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase()).trim();
-      scopeLines.push(typeof value === "boolean" ? label : `${label}: ${value}`);
-    }
-  }
+  const scopeLines = humanizeIntakePublic(quote.intake_data as Record<string, unknown> | null);
 
   return (
     <main className="min-h-screen bg-[var(--app-bg)] py-10 px-4">

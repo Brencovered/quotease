@@ -1,6 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import sharp from "sharp";
 import { termAmount, type PaymentTerm } from "./paymentTerms";
+import { INTAKE_FIELD_LABELS, INTAKE_VALUE_LABELS, INTAKE_UNITS } from "./humanizeIntake";
 
 export interface QuotePdfProfile {
   business_name?: string | null;
@@ -50,15 +51,20 @@ const LINE = rgb(0.89, 0.90, 0.92);
 
 function humanizeIntake(intake: Record<string, unknown> | null | undefined): string[] {
   if (!intake) return [];
-  const SKIP = new Set(["jobType", "notes"]);
+  const SKIP = new Set(["notes", "jobType"]);
   const lines: string[] = [];
   for (const [key, value] of Object.entries(intake)) {
     if (SKIP.has(key)) continue;
     if (value === null || value === undefined || value === "" || value === false) continue;
     if (typeof value === "number" && value === 0) continue;
     if (Array.isArray(value) || typeof value === "object") continue;
-    const label = key.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase()).trim();
-    lines.push(typeof value === "boolean" ? label : `${label}: ${value}`);
+    const label = INTAKE_FIELD_LABELS[key] ?? key.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase()).trim();
+    if (typeof value === "boolean") { lines.push(label); continue; }
+    const valueMap = INTAKE_VALUE_LABELS[key];
+    if (valueMap?.[String(value)]) { lines.push(`${label}: ${valueMap[String(value)]}`); continue; }
+    const unit = INTAKE_UNITS[key];
+    if (unit !== undefined) { lines.push(`${label}: ${value}${unit}`); continue; }
+    lines.push(`${label}: ${value}`);
   }
   return lines;
 }
