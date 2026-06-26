@@ -37,31 +37,98 @@ export async function POST(request: Request) {
   }
 
   const business = quote.profiles?.business_name ?? "Your tradie";
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
+  const appUrl   = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
   const quoteUrl = `${appUrl}/q/${quote.public_token}`;
-  const logoHtml = quote.profiles?.logo_url
-    ? `<img src="${quote.profiles.logo_url}" alt="${business}" style="max-height:48px;max-width:180px;margin-bottom:20px;" />`
-    : "";
 
-  // Short and branded - the full breakdown, accept/decline, and payment
-  // details live on the quote page itself, not crammed into the email body.
-  // That page is also the thing a client can actually act on (the email
-  // attachment-only version had no accept/decline mechanism at all).
-  const html = `
-    <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;">
-      ${logoHtml}
-      <h2 style="margin:0 0 8px;">Quote from ${business}</h2>
-      <p style="color:#333;">Hi ${quote.client_name ?? ""},</p>
-      <p style="color:#333;">Your quote for the job at ${quote.site_address ?? "the site you provided"} is ready to view.</p>
-      <p style="margin:28px 0;">
-        <a href="${quoteUrl}" style="background:#ffb400;color:#0a1722;font-weight:bold;text-decoration:none;padding:14px 28px;border-radius:8px;display:inline-block;">
-          View quote — $${(quote.total_cost ?? 0).toLocaleString()}
+  const logoHtml = quote.profiles?.logo_url
+    ? `<img src="${quote.profiles.logo_url}" alt="${business}" style="max-height:52px;max-width:200px;display:block;margin-bottom:4px;" />`
+    : `<div style="font-family:Arial Black,Arial,sans-serif;font-size:20px;font-weight:900;letter-spacing:2px;color:#ffffff;">${business.toUpperCase()}</div>`;
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
+<tr><td align="center">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+
+  <!-- Header -->
+  <tr><td style="background:#0a1722;border-radius:16px 16px 0 0;padding:28px 32px 24px;">
+    ${logoHtml}
+    <p style="color:#a9bcc8;font-size:12px;margin:6px 0 0;">${[quote.profiles?.contact_phone].filter(Boolean).join(" · ")}</p>
+  </td></tr>
+
+  <!-- Amber bar -->
+  <tr><td style="background:#ffb400;padding:12px 32px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td style="font-family:Arial Black,Arial,sans-serif;font-size:13px;font-weight:900;letter-spacing:2px;color:#0a1722;">QUOTE</td>
+      <td align="right" style="font-family:Arial Black,Arial,sans-serif;font-size:22px;font-weight:900;color:#0a1722;">$${(quote.total_cost ?? 0).toLocaleString()}</td>
+    </tr></table>
+  </td></tr>
+
+  <!-- Body -->
+  <tr><td style="background:#ffffff;padding:32px;">
+    <p style="font-size:15px;color:#334155;margin:0 0 6px;">Hi ${quote.client_name ?? "there"},</p>
+    <p style="font-size:14px;color:#64748b;margin:0 0 24px;">
+      ${business} has sent you a quote for the job at
+      <strong style="color:#0a1722;">${quote.site_address ?? "your property"}</strong>.
+    </p>
+
+    <!-- BIG ACCEPT BUTTON -->
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 16px;">
+      <tr><td align="center" style="border-radius:12px;background:#ffb400;">
+        <a href="${quoteUrl}"
+           style="display:block;padding:18px 32px;font-family:Arial Black,Arial,sans-serif;font-size:17px;font-weight:900;color:#0a1722;text-decoration:none;letter-spacing:0.5px;">
+          ✓ &nbsp;Accept quote &amp; choose payment
         </a>
-      </p>
-      <p style="color:#888;font-size:13px;">You can accept or decline, see full payment details, and download a PDF from that page.</p>
-      <p style="color:#888;font-size:12px;margin-top:24px;">${business}${quote.profiles?.contact_phone ? " — " + quote.profiles.contact_phone : ""}</p>
-    </div>
-  `;
+      </td></tr>
+    </table>
+
+    <p style="font-size:13px;color:#94a3b8;text-align:center;margin:0 0 28px;">
+      Tap the button to review the full quote, accept, and choose how you&apos;d like to pay.
+    </p>
+
+    <!-- Quote summary strip -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:24px;">
+      <tr style="background:#f8fafc;">
+        <td style="padding:10px 14px;font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#94a3b8;" colspan="2">Quote summary</td>
+      </tr>
+      <tr>
+        <td style="padding:10px 14px;font-size:13.5px;color:#475569;border-bottom:1px solid #e2e8f0;">Labour (${quote.labour_hours ?? 0} hrs)</td>
+        <td style="padding:10px 14px;font-size:13.5px;font-weight:700;color:#0a1722;text-align:right;border-bottom:1px solid #e2e8f0;">$${Math.round(((quote.total_cost ?? 0) - (quote.materials_cost ?? 0))).toLocaleString()}</td>
+      </tr>
+      <tr>
+        <td style="padding:10px 14px;font-size:13.5px;color:#475569;border-bottom:2px solid #0a1722;">Materials</td>
+        <td style="padding:10px 14px;font-size:13.5px;font-weight:700;color:#0a1722;text-align:right;border-bottom:2px solid #0a1722;">$${(quote.materials_cost ?? 0).toLocaleString()}</td>
+      </tr>
+      <tr style="background:#0a1722;">
+        <td style="padding:12px 14px;font-size:14px;font-weight:800;color:#ffffff;">Total</td>
+        <td style="padding:12px 14px;font-size:20px;font-weight:900;color:#ffb400;text-align:right;">$${(quote.total_cost ?? 0).toLocaleString()}</td>
+      </tr>
+    </table>
+
+    <!-- Second button — smaller -->
+    <table cellpadding="0" cellspacing="0" width="100%">
+      <tr><td align="center">
+        <a href="${quoteUrl}"
+           style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:700;color:#0a1722;background:#ffb400;text-decoration:none;border-radius:8px;">
+          View full quote, accept &amp; pay →
+        </a>
+      </td></tr>
+    </table>
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td style="background:#f8fafc;border-radius:0 0 16px 16px;padding:16px 32px;border-top:1px solid #e2e8f0;">
+    <p style="font-size:12px;color:#94a3b8;margin:0;text-align:center;">
+      This quote is valid for 30 days. Sent by ${business} via Quotease.
+    </p>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body></html>`;
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
