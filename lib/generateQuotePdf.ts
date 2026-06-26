@@ -1,10 +1,7 @@
 import { PDFDocument, PDFName, PDFString, PDFArray, PDFNumber, StandardFonts, rgb } from "pdf-lib";
-import Jimp from "jimp";
-import QRCode from "qrcode";
 import { termAmount, type PaymentTerm } from "./paymentTerms";
 import { humanizeIntakePublic } from "./humanizeIntake";
 
-// Alias so the rest of this file doesn't need renaming
 const humanizeIntake = humanizeIntakePublic;
 
 export interface QuotePdfProfile {
@@ -36,29 +33,22 @@ export interface QuotePdfQuote {
   payment_terms?: PaymentTerm[] | null;
   status?: string | null;
   created_at?: string | null;
-  accepted_at?: string | null;
-  completed_at?: string | null;
   public_token?: string | null;
 }
 
-// Brand palette - matches the navy/amber identity used everywhere else in
-// the app. The earlier version of this file used bare Helvetica on white
-// with grey hairlines, which is why it read as a generic Word document
-// rather than something from the same product as the branded UI.
-const NAVY = rgb(0.039, 0.090, 0.137); // #0A1722
-const AMBER = rgb(1, 0.706, 0); // #FFB400
-const AMBER_DEEP = rgb(0.91, 0.62, 0); // #E89E00
-const INK = rgb(0.078, 0.125, 0.169);
+const NAVY     = rgb(0.039, 0.090, 0.137);
+const AMBER    = rgb(1, 0.706, 0);
+const AMBER_DEEP = rgb(0.91, 0.62, 0);
+const INK      = rgb(0.078, 0.125, 0.169);
 const INK_SOFT = rgb(0.36, 0.40, 0.44);
 const INK_FAINT = rgb(0.55, 0.59, 0.63);
-const WHITE = rgb(1, 1, 1);
-const LINE = rgb(0.89, 0.90, 0.92);
+const WHITE    = rgb(1, 1, 1);
+const LINE     = rgb(0.89, 0.90, 0.92);
+const LINK_BLUE = rgb(0.12, 0.35, 0.70);
 
-
-
-const PAGE_WIDTH = 595.28;
+const PAGE_WIDTH  = 595.28;
 const PAGE_HEIGHT = 841.89;
-const MARGIN = 48;
+const MARGIN      = 48;
 const HEADER_HEIGHT = 110;
 
 export async function generateQuotePdf(
@@ -66,91 +56,80 @@ export async function generateQuotePdf(
   profile: QuotePdfProfile,
   logoBytes: Uint8Array | null
 ): Promise<Uint8Array> {
-  const pdfDoc = await PDFDocument.create();
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const pdfDoc  = await PDFDocument.create();
+  const font     = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
   let page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  let y = PAGE_HEIGHT - MARGIN;
+  let y    = PAGE_HEIGHT - MARGIN;
 
   function newPage() {
     page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-    y = PAGE_HEIGHT - MARGIN;
+    y    = PAGE_HEIGHT - MARGIN;
   }
-
-  function newPageIfNeeded(minSpace = 60) {
-    if (y < MARGIN + minSpace + 40) newPage();
+  function newPageIfNeeded(min = 60) {
+    if (y < MARGIN + min + 40) newPage();
   }
-
   function text(content: string, opts: { size?: number; bold?: boolean; color?: ReturnType<typeof rgb>; x?: number } = {}) {
-    const size = opts.size ?? 11;
-    const usedFont = opts.bold ? fontBold : font;
-    const color = opts.color ?? INK;
-    newPageIfNeeded(size + 8);
-    page.drawText(content, { x: opts.x ?? MARGIN, y, size, font: usedFont, color });
-    y -= size + 7;
+    const sz = opts.size ?? 11;
+    newPageIfNeeded(sz + 8);
+    page.drawText(content, { x: opts.x ?? MARGIN, y, size: sz, font: opts.bold ? fontBold : font, color: opts.color ?? INK });
+    y -= sz + 7;
   }
-
   function rule(color = LINE, thickness = 0.75) {
     newPageIfNeeded(16);
     page.drawLine({ start: { x: MARGIN, y }, end: { x: PAGE_WIDTH - MARGIN, y }, thickness, color });
     y -= 16;
   }
-
   function sectionLabel(label: string) {
     newPageIfNeeded(20);
     page.drawRectangle({ x: MARGIN, y: y - 2, width: 3, height: 12, color: AMBER });
-    page.drawText(label.toUpperCase(), {
-      x: MARGIN + 9,
-      y,
-      size: 10.5,
-      font: fontBold,
-      color: AMBER_DEEP,
-    });
+    page.drawText(label.toUpperCase(), { x: MARGIN + 9, y, size: 10.5, font: fontBold, color: AMBER_DEEP });
     y -= 22;
   }
-
   function drawRow(label: string, value: string, opts: { bold?: boolean; size?: number; color?: ReturnType<typeof rgb> } = {}) {
-    const size = opts.size ?? (opts.bold ? 13 : 11.5);
-    const usedFont = opts.bold ? fontBold : font;
-    const color = opts.color ?? INK;
-    newPageIfNeeded(size + 8);
-    page.drawText(label, { x: MARGIN, y, size, font: usedFont, color });
+    const sz   = opts.size ?? (opts.bold ? 13 : 11.5);
+    const used = opts.bold ? fontBold : font;
+    const col  = opts.color ?? INK;
+    newPageIfNeeded(sz + 8);
+    page.drawText(label, { x: MARGIN, y, size: sz, font: used, color: col });
     if (value) {
-      const width = usedFont.widthOfTextAtSize(value, size);
-      page.drawText(value, { x: PAGE_WIDTH - MARGIN - width, y, size, font: usedFont, color });
+      const w = used.widthOfTextAtSize(value, sz);
+      page.drawText(value, { x: PAGE_WIDTH - MARGIN - w, y, size: sz, font: used, color: col });
     }
-    y -= size + 8;
+    y -= sz + 8;
   }
 
-  // --- NAVY HEADER BAND ---
+  // ── HEADER ───────────────────────────────────────────────────────
   page.drawRectangle({ x: 0, y: PAGE_HEIGHT - HEADER_HEIGHT, width: PAGE_WIDTH, height: HEADER_HEIGHT, color: NAVY });
-  // Amber accent strip along the very top - a small echo of the docket
-  // "stamp" motif used in the landing page and app header.
   page.drawRectangle({ x: 0, y: PAGE_HEIGHT - 4, width: PAGE_WIDTH, height: 4, color: AMBER });
 
+  // Logo — try to embed but skip cleanly if anything fails
   let logoEmbedded = false;
   let logoDrawWidth = 0;
-  if (logoBytes) {
+  if (logoBytes && logoBytes.length > 0) {
     try {
-      const image = await Jimp.read(Buffer.from(logoBytes));
-      const pngBytes = await image.getBuffer("image/png");
-      const image = await pdfDoc.embedPng(pngBytes);
-      const maxH = 40;
-      const scale = Math.min(maxH / image.height, 140 / image.width);
-      logoDrawWidth = image.width * scale;
-      const padX = 10;
-      const cardY = PAGE_HEIGHT - 27 - maxH;
-      // White backing card - most real-world logos have an opaque white
-      // background (not transparency), so placing one directly on the navy
-      // band would otherwise show a jarring white box with no clean edge.
-      // A deliberate white card with a small margin looks intentional either
-      // way, transparent logo or not.
-      page.drawRectangle({ x: MARGIN - padX, y: cardY - 7, width: logoDrawWidth + padX * 2, height: maxH + 14, color: WHITE });
-      page.drawImage(image, { x: MARGIN, y: cardY, width: logoDrawWidth, height: image.height * scale });
-      logoEmbedded = true;
+      // Try PNG first, then JPEG — skip WebP/HEIC gracefully
+      let image;
+      const header = logoBytes.slice(0, 4);
+      const isPng  = header[0] === 0x89 && header[1] === 0x50;
+      const isJpg  = header[0] === 0xFF && header[1] === 0xD8;
+      if (isPng)       image = await pdfDoc.embedPng(logoBytes);
+      else if (isJpg)  image = await pdfDoc.embedJpg(logoBytes);
+      // Anything else (WebP, HEIC, etc.) is skipped
+
+      if (image) {
+        const maxH  = 40;
+        const scale = Math.min(maxH / image.height, 140 / image.width);
+        logoDrawWidth = image.width * scale;
+        const padX   = 10;
+        const cardY  = PAGE_HEIGHT - 27 - maxH;
+        page.drawRectangle({ x: MARGIN - padX, y: cardY - 7, width: logoDrawWidth + padX * 2, height: maxH + 14, color: WHITE });
+        page.drawImage(image, { x: MARGIN, y: cardY, width: logoDrawWidth, height: image.height * scale });
+        logoEmbedded = true;
+      }
     } catch {
-      // Skip the logo rather than failing the whole PDF over a cosmetic detail.
+      // Logo fails silently — rest of PDF continues
     }
   }
 
@@ -160,45 +139,28 @@ export async function generateQuotePdf(
     page.drawText(profile.business_name, { x: headerTextX, y: headerY, size: 16, font: fontBold, color: WHITE });
     headerY -= 20;
   }
-  const businessDetailLine = [
-    profile.business_address,
-    profile.abn ? `ABN ${profile.abn}` : null,
-    profile.license_number ? `Licence ${profile.license_number}` : null,
-  ]
-    .filter(Boolean)
-    .join("   ·   ");
-  if (businessDetailLine) {
-    page.drawText(businessDetailLine, { x: headerTextX, y: headerY, size: 9, font, color: rgb(0.66, 0.73, 0.79) });
-    headerY -= 14;
-  }
+  const detailLine = [profile.business_address, profile.abn ? `ABN ${profile.abn}` : null, profile.license_number ? `Licence ${profile.license_number}` : null].filter(Boolean).join("   ·   ");
+  if (detailLine) { page.drawText(detailLine, { x: headerTextX, y: headerY, size: 9, font, color: rgb(0.66, 0.73, 0.79) }); headerY -= 14; }
   const contactLine = [profile.contact_phone, profile.contact_email].filter(Boolean).join("   ·   ");
-  if (contactLine) {
-    page.drawText(contactLine, { x: headerTextX, y: headerY, size: 9, font, color: rgb(0.66, 0.73, 0.79) });
-  }
+  if (contactLine)  page.drawText(contactLine, { x: headerTextX, y: headerY, size: 9, font, color: rgb(0.66, 0.73, 0.79) });
 
   y = PAGE_HEIGHT - HEADER_HEIGHT - 32;
 
-  // --- QUOTE TITLE + TOTAL (amber highlight, mirrors the in-app docket total) ---
+  // ── QUOTE TITLE + TOTAL ──────────────────────────────────────────
   page.drawText(`QUOTE${quote.invoice_number ? " " + quote.invoice_number : ""}`, { x: MARGIN, y, size: 20, font: fontBold, color: INK });
   const totalLabel = `$${(quote.total_cost ?? 0).toLocaleString()}`;
-  const totalWidth = fontBold.widthOfTextAtSize(totalLabel, 22);
-  page.drawRectangle({ x: PAGE_WIDTH - MARGIN - totalWidth - 16, y: y - 6, width: totalWidth + 16, height: 28, color: AMBER });
-  page.drawText(totalLabel, { x: PAGE_WIDTH - MARGIN - totalWidth - 8, y: y, size: 22, font: fontBold, color: NAVY });
+  const totalW     = fontBold.widthOfTextAtSize(totalLabel, 22);
+  page.drawRectangle({ x: PAGE_WIDTH - MARGIN - totalW - 16, y: y - 6, width: totalW + 16, height: 28, color: AMBER });
+  page.drawText(totalLabel, { x: PAGE_WIDTH - MARGIN - totalW - 8, y, size: 22, font: fontBold, color: NAVY });
   y -= 32;
 
-  if (quote.client_name) text(`Client: ${quote.client_name}`, { size: 11.5, color: INK_SOFT });
-  if (quote.site_address) text(`Site: ${quote.site_address}`, { size: 11.5, color: INK_SOFT });
+  if (quote.client_name)  text(`Client: ${quote.client_name}`,  { size: 11.5, color: INK_SOFT });
+  if (quote.site_address) text(`Site: ${quote.site_address}`,   { size: 11.5, color: INK_SOFT });
   text(`Date: ${new Date(quote.created_at ?? Date.now()).toLocaleDateString("en-AU")}`, { size: 11.5, color: INK_SOFT });
-  if (quote.trade) {
-    text(`Trade: ${quote.trade.charAt(0).toUpperCase() + quote.trade.slice(1)}${quote.job_type ? " — " + quote.job_type : ""}`, {
-      size: 11.5,
-      color: INK_SOFT,
-    });
-  }
-  y -= 8;
-  rule();
+  if (quote.trade) text(`Trade: ${quote.trade.charAt(0).toUpperCase() + quote.trade.slice(1)}${quote.job_type ? " — " + quote.job_type : ""}`, { size: 11.5, color: INK_SOFT });
+  y -= 8; rule();
 
-  // --- Scope of works ---
+  // ── SCOPE ────────────────────────────────────────────────────────
   sectionLabel("Scope of works");
   const scopeLines = humanizeIntake(quote.intake_data);
   if (scopeLines.length === 0) {
@@ -211,150 +173,109 @@ export async function generateQuotePdf(
       y -= 17;
     }
   }
-  y -= 8;
-  rule();
+  y -= 8; rule();
 
-  // --- Quote summary ---
+  // ── SUMMARY ──────────────────────────────────────────────────────
   sectionLabel("Quote summary");
-  const labourCost = (quote.total_cost ?? 0) - (quote.materials_cost ?? 0);
-  drawRow(`Labour (${quote.labour_hours ?? 0} hrs)`, `$${labourCost.toLocaleString()}`);
+  drawRow(`Labour (${quote.labour_hours ?? 0} hrs)`, `$${((quote.total_cost ?? 0) - (quote.materials_cost ?? 0)).toLocaleString()}`);
   drawRow("Materials", `$${(quote.materials_cost ?? 0).toLocaleString()}`);
   newPageIfNeeded(24);
   page.drawLine({ start: { x: MARGIN, y: y + 6 }, end: { x: PAGE_WIDTH - MARGIN, y: y + 6 }, thickness: 1.5, color: NAVY });
   y -= 4;
   drawRow("Total", `$${(quote.total_cost ?? 0).toLocaleString()}`, { bold: true, size: 14, color: NAVY });
-  y -= 8;
-  rule();
+  y -= 8; rule();
 
-  // --- Payment terms ---
+  // ── PAYMENT TERMS ────────────────────────────────────────────────
   sectionLabel("Payment terms");
-  const terms: PaymentTerm[] = quote.payment_terms?.length
-    ? quote.payment_terms
-    : [{ label: "Payment due", percent: 100, trigger: "completion", days: 14 }];
-  for (const t of terms) {
-    drawRow(`${t.label} (${t.percent}%)`, `$${termAmount(t, quote.total_cost ?? 0).toLocaleString()}`);
-  }
+  const terms: PaymentTerm[] = quote.payment_terms?.length ? quote.payment_terms : [{ label: "Payment due", percent: 100, trigger: "completion", days: 14 }];
+  for (const t of terms) drawRow(`${t.label} (${t.percent}%)`, `$${termAmount(t, quote.total_cost ?? 0).toLocaleString()}`);
   y -= 8;
 
-  // --- How to pay ---
+  // ── HOW TO PAY ───────────────────────────────────────────────────
   const hasBankDetails = !!(profile.bank_bsb && profile.bank_account_number);
   if (hasBankDetails || profile.accepts_cash) {
-    rule();
-    sectionLabel("How to pay");
+    rule(); sectionLabel("How to pay");
     if (hasBankDetails) {
       text(`Bank transfer — ${profile.bank_account_name ?? profile.business_name ?? ""}`, { size: 10.5, bold: true });
       text(`BSB ${profile.bank_bsb}   ·   Account ${profile.bank_account_number}`, { size: 10.5, color: INK_SOFT });
       y -= 2;
     }
-    if (profile.accepts_cash) {
-      text("Cash accepted on completion of the job.", { size: 10.5, color: INK_SOFT });
-    }
+    if (profile.accepts_cash) text("Cash accepted on completion of the job.", { size: 10.5, color: INK_SOFT });
     y -= 4;
   }
 
-  // --- Accept this quote callout + clickable button ---
+  // ── ACCEPT CALLOUT WITH CLICKABLE LINK ───────────────────────────
   if (quote.public_token) {
     const appUrl   = process.env.NEXT_PUBLIC_APP_URL ?? "https://quotease.vercel.app";
     const quoteUrl = `${appUrl}/q/${quote.public_token}`;
     rule();
-    newPageIfNeeded(130);
+    newPageIfNeeded(90);
 
-    const qrSize    = 80;
-    const btnWidth  = PAGE_WIDTH - MARGIN * 2 - qrSize - 20;
-    const btnHeight = 38;
-    const boxHeight = 116;
-    const boxY      = y - boxHeight;
-    const textX     = MARGIN + qrSize + 20;
-    const btnX      = textX;
-    const btnY      = boxY + 8;
+    const boxH  = 80;
+    const boxY  = y - boxH;
+    const btnH  = 32;
+    const btnW  = PAGE_WIDTH - MARGIN * 2 - 16;
+    const btnX  = MARGIN + 8;
+    const btnY  = boxY + 10;
 
-    // Navy background box
-    page.drawRectangle({ x: MARGIN, y: boxY, width: PAGE_WIDTH - MARGIN * 2, height: boxHeight, color: NAVY });
-    page.drawRectangle({ x: MARGIN, y: boxY, width: 4, height: boxHeight, color: AMBER });
+    // Navy box
+    page.drawRectangle({ x: MARGIN, y: boxY, width: PAGE_WIDTH - MARGIN * 2, height: boxH, color: NAVY });
+    page.drawRectangle({ x: MARGIN, y: boxY, width: 4, height: boxH, color: AMBER });
 
-    // QR code
+    // Heading
+    page.drawText("ACCEPT THIS QUOTE", { x: MARGIN + 14, y: boxY + 56, size: 11, font: fontBold, color: AMBER });
+    page.drawText("Click the button below to accept, choose payment and get booked in.", { x: MARGIN + 14, y: boxY + 40, size: 8.5, font, color: rgb(0.75, 0.82, 0.87) });
+
+    // Amber button
+    page.drawRectangle({ x: btnX, y: btnY, width: btnW, height: btnH, color: AMBER });
+    const btnLabel = "Accept & choose payment  \u2192";
+    const btnLabelW = fontBold.widthOfTextAtSize(btnLabel, 11);
+    page.drawText(btnLabel, { x: btnX + (btnW - btnLabelW) / 2, y: btnY + (btnH - 11) / 2, size: 11, font: fontBold, color: NAVY });
+
+    // PDF link annotation — makes button clickable
     try {
-      const qrDataUrl = await QRCode.toDataURL(quoteUrl, { width: 200, margin: 1, color: { dark: "#0a1722", light: "#ffffff" } });
-      const qrBytes   = Buffer.from(qrDataUrl.replace(/^data:image\/png;base64,/, ""), "base64");
-      const qrImage   = await pdfDoc.embedPng(qrBytes);
-      page.drawImage(qrImage, { x: MARGIN + 10, y: boxY + (boxHeight - qrSize) / 2, width: qrSize, height: qrSize });
-    } catch { /* skip QR on failure */ }
-
-    // Label + instructions
-    page.drawText("ACCEPT THIS QUOTE", { x: textX, y: boxY + 92, size: 11, font: fontBold, color: AMBER });
-    page.drawText("Click the button below or scan the QR code on your phone.", { x: textX, y: boxY + 76, size: 8.5, font, color: rgb(0.75, 0.82, 0.87) });
-
-    // Amber button shape
-    page.drawRectangle({ x: btnX, y: btnY, width: btnWidth, height: btnHeight, color: AMBER });
-
-    // Button label centered
-    const btnText  = "Accept & choose payment \u2192";
-    const btnTextW = fontBold.widthOfTextAtSize(btnText, 12);
-    page.drawText(btnText, {
-      x: btnX + (btnWidth - btnTextW) / 2,
-      y: btnY + (btnHeight - 12) / 2,
-      size: 12, font: fontBold, color: NAVY,
-    });
-
-    // Clickable link annotation over the button using pdf-lib's addLinkAnnotation helper
-    const { context } = pdfDoc;
-
-    const uriAction = context.obj({
-      Type: PDFName.of("Action"),
-      S:    PDFName.of("URI"),
-      URI:  PDFString.of(quoteUrl),
-    });
-    const uriActionRef = context.register(uriAction);
-
-    const linkAnnot = context.obj({
-      Type:    PDFName.of("Annot"),
-      Subtype: PDFName.of("Link"),
-      Rect:    context.obj([
-        PDFNumber.of(Math.round(btnX)),
-        PDFNumber.of(Math.round(btnY)),
-        PDFNumber.of(Math.round(btnX + btnWidth)),
-        PDFNumber.of(Math.round(btnY + btnHeight)),
-      ]),
-      Border:  context.obj([PDFNumber.of(0), PDFNumber.of(0), PDFNumber.of(0)]),
-      A:       uriActionRef,
-      F:       PDFNumber.of(4),
-    });
-    const linkAnnotRef = context.register(linkAnnot);
-
-    // Add to page's Annots array
-    const currentPage = pdfDoc.getPages().at(-1)!;
-    const annots      = currentPage.node.get(PDFName.of("Annots"));
-    if (annots instanceof PDFArray) {
-      annots.push(linkAnnotRef);
-    } else {
-      currentPage.node.set(PDFName.of("Annots"), context.obj([linkAnnotRef]));
-    }
+      const { context } = pdfDoc;
+      const uriActionRef = context.register(context.obj({
+        Type: PDFName.of("Action"),
+        S:    PDFName.of("URI"),
+        URI:  PDFString.of(quoteUrl),
+      }));
+      const annotRef = context.register(context.obj({
+        Type:    PDFName.of("Annot"),
+        Subtype: PDFName.of("Link"),
+        Rect:    context.obj([PDFNumber.of(btnX), PDFNumber.of(btnY), PDFNumber.of(btnX + btnW), PDFNumber.of(btnY + btnH)]),
+        Border:  context.obj([PDFNumber.of(0), PDFNumber.of(0), PDFNumber.of(0)]),
+        A:       uriActionRef,
+        F:       PDFNumber.of(4),
+      }));
+      const currentPage = pdfDoc.getPages().at(-1)!;
+      const existing = currentPage.node.get(PDFName.of("Annots"));
+      if (existing instanceof PDFArray) {
+        existing.push(annotRef);
+      } else {
+        currentPage.node.set(PDFName.of("Annots"), context.obj([annotRef]));
+      }
+    } catch { /* annotation fails silently — button still visible */ }
 
     y = boxY - 16;
   }
 
-  // --- Terms and conditions ---
+  // ── T&C ──────────────────────────────────────────────────────────
   if (profile.terms_and_conditions) {
-    rule();
-    sectionLabel("Terms and conditions");
-    const words = profile.terms_and_conditions.split(/\s+/);
+    rule(); sectionLabel("Terms and conditions");
+    const words  = profile.terms_and_conditions.split(/\s+/);
     let line = "";
-    const maxWidth = PAGE_WIDTH - MARGIN * 2;
+    const maxW   = PAGE_WIDTH - MARGIN * 2;
     for (const word of words) {
       const candidate = line ? `${line} ${word}` : word;
-      if (font.widthOfTextAtSize(candidate, 9.5) > maxWidth) {
-        text(line, { size: 9.5, color: INK_FAINT });
-        line = word;
-      } else {
-        line = candidate;
-      }
+      if (font.widthOfTextAtSize(candidate, 9.5) > maxW) { text(line, { size: 9.5, color: INK_FAINT }); line = word; }
+      else line = candidate;
     }
     if (line) text(line, { size: 9.5, color: INK_FAINT });
   }
 
-  // --- Footer band on every page ---
-  const pages = pdfDoc.getPages();
-  for (const p of pages) {
+  // ── FOOTER ───────────────────────────────────────────────────────
+  for (const p of pdfDoc.getPages()) {
     p.drawRectangle({ x: 0, y: 0, width: PAGE_WIDTH, height: 26, color: NAVY });
     p.drawText("Quoting by Quotease", { x: MARGIN, y: 9, size: 8, font, color: rgb(0.55, 0.62, 0.69) });
   }

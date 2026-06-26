@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["pdf-lib", "qrcode", "jimp"],
+  serverExternalPackages: ["pdf-lib"],
 };
 
 export default nextConfig;
