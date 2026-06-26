@@ -1,7 +1,10 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import sharp from "sharp";
 import { termAmount, type PaymentTerm } from "./paymentTerms";
-import { INTAKE_FIELD_LABELS, INTAKE_VALUE_LABELS, INTAKE_UNITS } from "./humanizeIntake";
+import { INTAKE_FIELD_LABELS, INTAKE_VALUE_LABELS, INTAKE_UNITS, humanizeIntakePublic } from "./humanizeIntake";
+
+// Alias so the rest of this file doesn't need renaming
+const humanizeIntake = humanizeIntakePublic;
 
 export interface QuotePdfProfile {
   business_name?: string | null;
@@ -34,6 +37,7 @@ export interface QuotePdfQuote {
   created_at?: string | null;
   accepted_at?: string | null;
   completed_at?: string | null;
+  public_token?: string | null;
 }
 
 // Brand palette - matches the navy/amber identity used everywhere else in
@@ -49,25 +53,7 @@ const INK_FAINT = rgb(0.55, 0.59, 0.63);
 const WHITE = rgb(1, 1, 1);
 const LINE = rgb(0.89, 0.90, 0.92);
 
-function humanizeIntake(intake: Record<string, unknown> | null | undefined): string[] {
-  if (!intake) return [];
-  const SKIP = new Set(["notes", "jobType"]);
-  const lines: string[] = [];
-  for (const [key, value] of Object.entries(intake)) {
-    if (SKIP.has(key)) continue;
-    if (value === null || value === undefined || value === "" || value === false) continue;
-    if (typeof value === "number" && value === 0) continue;
-    if (Array.isArray(value) || typeof value === "object") continue;
-    const label = INTAKE_FIELD_LABELS[key] ?? key.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase()).trim();
-    if (typeof value === "boolean") { lines.push(label); continue; }
-    const valueMap = INTAKE_VALUE_LABELS[key];
-    if (valueMap?.[String(value)]) { lines.push(`${label}: ${valueMap[String(value)]}`); continue; }
-    const unit = INTAKE_UNITS[key];
-    if (unit !== undefined) { lines.push(`${label}: ${value}${unit}`); continue; }
-    lines.push(`${label}: ${value}`);
-  }
-  return lines;
-}
+
 
 const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
@@ -262,6 +248,21 @@ export async function generateQuotePdf(
       text("Cash accepted on completion of the job.", { size: 10.5, color: INK_SOFT });
     }
     y -= 4;
+  }
+
+  // --- Accept this quote callout ---
+  if (quote.public_token) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://quotease.vercel.app";
+    const quoteUrl = `${appUrl}/q/${quote.public_token}`;
+    rule();
+    newPageIfNeeded(70);
+    // Amber callout box
+    page.drawRectangle({ x: MARGIN, y: y - 52, width: PAGE_WIDTH - MARGIN * 2, height: 60, color: rgb(1, 0.96, 0.82), borderColor: AMBER, borderWidth: 1.5 });
+    page.drawText("TO ACCEPT THIS QUOTE", { x: MARGIN + 14, y: y - 14, size: 9, font: fontBold, color: AMBER_DEEP });
+    page.drawText("Open the link below on your phone or computer to accept, decline,", { x: MARGIN + 14, y: y - 27, size: 9, font, color: INK });
+    page.drawText("and choose your payment method:", { x: MARGIN + 14, y: y - 39, size: 9, font, color: INK });
+    page.drawText(quoteUrl, { x: MARGIN + 14, y: y - 51, size: 9, font: fontBold, color: rgb(0.12, 0.35, 0.70) });
+    y -= 68;
   }
 
   // --- Terms and conditions ---

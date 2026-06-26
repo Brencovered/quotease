@@ -61,6 +61,22 @@ export const INTAKE_UNITS: Record<string, string> = {
   scaffoldDays: " days", newWallFrames: " walls", plywoodSheets: " sheets",
 };
 
+// Fields that are dependent on other fields being non-zero
+// e.g. downlightGrade only shows if downlights > 0
+const DEPENDENT_FIELDS: Record<string, { parent: string; nonZero?: boolean }> = {
+  downlightGrade: { parent: "downlights", nonZero: true },
+  hwuType:        { parent: "hwuReplacement" },
+  roofType:       { parent: "roofSqm", nonZero: true },
+};
+
+// Values that mean "nothing selected / default" and should be suppressed
+const SUPPRESS_VALUES: Record<string, Set<string>> = {
+  roofAccess:     new Set(["1"]),    // "No roof work"
+  subfloorAccess: new Set(["1"]),    // "No subfloor work"
+  siteAccess:     new Set(["easy"]), // easy is the default, only show if moderate/difficult
+  ceilingType:    new Set(["unknown"]), // unknown = not assessed, don't show
+};
+
 export function humanizeIntakePublic(intake: Record<string, unknown> | null | undefined): string[] {
   if (!intake) return [];
   const SKIP = new Set(["notes", "jobType"]);
@@ -70,6 +86,19 @@ export function humanizeIntakePublic(intake: Record<string, unknown> | null | un
     if (value === null || value === undefined || value === "" || value === false) continue;
     if (typeof value === "number" && value === 0) continue;
     if (Array.isArray(value) || typeof value === "object") continue;
+
+    // Suppress default/no-op values
+    const suppressSet = SUPPRESS_VALUES[key];
+    if (suppressSet?.has(String(value))) continue;
+
+    // Suppress dependent fields when parent is falsy/zero
+    const dep = DEPENDENT_FIELDS[key];
+    if (dep) {
+      const parentVal = intake[dep.parent];
+      if (!parentVal || parentVal === false) continue;
+      if (dep.nonZero && (typeof parentVal === "number" && parentVal === 0)) continue;
+    }
+
     const label = INTAKE_FIELD_LABELS[key] ?? key.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase()).trim();
     if (typeof value === "boolean") { lines.push(label); continue; }
     const valueMap = INTAKE_VALUE_LABELS[key];
