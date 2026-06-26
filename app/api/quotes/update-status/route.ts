@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { pushQuoteToXero } from "@/lib/xero";
 
 const ALLOWED_STATUSES = ["draft", "sent", "accepted", "declined", "paid"];
 
@@ -61,5 +62,27 @@ export async function POST(request: Request) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-  return NextResponse.json({ ok: true });
+
+  // Push to Xero the moment a quote is won - that's the point it actually
+  // needs invoicing, not just whenever someone happens to export a CSV.
+  // Best-effort: a Xero failure shouldn't block the accept action itself,
+  // since the tradie's quote is still genuinely accepted either way.
+  let xeroResult: { ok: boolean; error?: string } | null = null;
+  if (status === "accepted") {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id, xero_connected, xero_tenant_id, xero_access_token, xero_refresh_token, xero_token_expires_at")
+      .eq("id", userData.user.id)
+      .single();
+    const { data: quote } = await supabase
+      .from("quotes")
+      .select("id, client_name, client_email, total_cost, invoice_number")
+      .eq("id", quoteId)
+      .single();
+    if (profile?.xero_connected && quote) {
+      xeroResult = await pushQuoteToXero(quote, profile);
+    }
+  }
+
+  return NextResponse.json({ ok: true, xero: xeroResult });
 }

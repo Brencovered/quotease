@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { pushQuoteToXero } from "@/lib/xero";
 
 export async function POST(request: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -12,7 +13,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
 
   const { data: quote, error } = await supabase
     .from("quotes")
-    .select("id, profile_id, client_name, total_cost, status, profiles!quotes_profile_id_fkey(business_name, contact_email)")
+    .select("id, profile_id, client_name, client_email, total_cost, invoice_number, status, profiles!quotes_profile_id_fkey(business_name, contact_email)")
     .eq("public_token", token)
     .single();
 
@@ -28,6 +29,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
   if (action === "accept") update.accepted_at = new Date().toISOString();
 
   await supabase.from("quotes").update(update).eq("id", quote.id);
+
+  if (action === "accept") {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id, xero_connected, xero_tenant_id, xero_access_token, xero_refresh_token, xero_token_expires_at")
+      .eq("id", quote.profile_id)
+      .single();
+    if (profile?.xero_connected) {
+      // Best-effort - a Xero hiccup shouldn't block the client's acceptance.
+      await pushQuoteToXero(quote, profile).catch(() => null);
+    }
+  }
 
   // The "win" moment - tell the tradie the moment it happens, not just a
   // colour change next time they happen to open the app. Best-effort: if

@@ -3,9 +3,10 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
-import { AlertTriangle, Paperclip, X, Sparkles, ChevronRight, ChevronLeft, Check } from "lucide-react";
+import { AlertTriangle, Paperclip, X, Sparkles, ChevronRight, ChevronLeft, Check, Upload } from "lucide-react";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import VoiceNoteRecorder from "./VoiceNoteRecorder";
+import ClientPicker from "./ClientPicker";
 import {
   calcElectricianQuote,
   ELECTRICIAN_DEFAULT_MATERIALS,
@@ -184,6 +185,28 @@ export default function QuoteBuilder({
     const supabase = createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) { setSaveMessage("Not logged in"); setSaving(false); return; }
+
+    // Keep the client list growing automatically rather than requiring an
+    // explicit "add customer" step - if this name doesn't already exist,
+    // create it; if it does, this is a no-op (ON CONFLICT DO NOTHING relies
+    // on a name match, which is approximate but good enough to avoid
+    // forcing a separate "is this a new or existing customer" decision).
+    if (clientName.trim()) {
+      const { data: existingClient } = await supabase
+        .from("clients")
+        .select("id")
+        .eq("profile_id", userData.user.id)
+        .ilike("name", clientName.trim())
+        .maybeSingle();
+      if (!existingClient) {
+        await supabase.from("clients").insert({
+          profile_id: userData.user.id,
+          name: clientName.trim(),
+          email: clientEmail.trim() || null,
+          billing_address: siteAddress.trim() || null,
+        });
+      }
+    }
 
     for (const m of lib) {
       await supabase.from("material_items").upsert(
@@ -489,9 +512,58 @@ function StepElectrical({ intake, set, lib, setLib }: {
   setLib: React.Dispatch<React.SetStateAction<MaterialRow[]>>;
 }) {
   const [showLib, setShowLib] = useState(false);
+  const [csvMessage, setCsvMessage] = useState<string | null>(null);
 
   function updateLibCost(item_key: string, value: number) {
     setLib((prev) => prev.map((m) => m.item_key === item_key ? { ...m, unit_cost: value } : m));
+  }
+
+  function downloadCsvTemplate() {
+    const rows = ["item_key,label,unit_cost", ...lib.map((m) => `${m.item_key},"${m.label}",${m.unit_cost}`)];
+    const blob = new Blob([rows.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "quotease-price-template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleCsvUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result ?? "");
+      const lines = text.split(/\r?\n/).filter((l) => l.trim());
+      const header = lines[0]?.toLowerCase().split(",") ?? [];
+      const keyIdx = header.findIndex((h) => h.includes("key") || h.includes("item"));
+      const costIdx = header.findIndex((h) => h.includes("cost") || h.includes("price"));
+      if (keyIdx === -1 || costIdx === -1) {
+        setCsvMessage("Couldn't find item and cost columns in that file - try the template instead.");
+        return;
+      }
+      let matched = 0;
+      const updates = new Map<string, number>();
+      for (const line of lines.slice(1)) {
+        const cols = line.split(",");
+        const key = cols[keyIdx]?.trim().replace(/^"|"$/g, "");
+        const cost = parseFloat(cols[costIdx]?.replace(/[^0-9.]/g, "") ?? "");
+        if (key && !isNaN(cost)) updates.set(key, cost);
+      }
+      setLib((prev) =>
+        prev.map((m) => {
+          if (updates.has(m.item_key)) {
+            matched++;
+            return { ...m, unit_cost: updates.get(m.item_key)! };
+          }
+          return m;
+        })
+      );
+      setCsvMessage(matched > 0 ? `Updated ${matched} price${matched === 1 ? "" : "s"}.` : "No matching items found in that file.");
+      e.target.value = "";
+    };
+    reader.readAsText(file);
   }
 
   return (
@@ -573,7 +645,21 @@ function StepElectrical({ intake, set, lib, setLib }: {
       </button>
       {showLib && (
         <div className="card">
-          <p className="section-tag mb-3">Your prices</p>
+          <p className="section-tag mb-1">Your prices</p>
+          <p className="text-[12px] text-[var(--ink-faint)] mb-3">
+            Most suppliers (Middys, Rexel, Tradelink) let you export your trade pricing from their account
+            portal. Download that as a CSV and upload it here — every quote will use those real prices.
+          </p>
+          <div className="flex flex-wrap gap-2 mb-4">
+            <label className="btn-secondary text-[12.5px] py-2 px-3 cursor-pointer">
+              <Upload size={13} /> Upload supplier price CSV
+              <input type="file" accept=".csv" className="hidden" onChange={handleCsvUpload} />
+            </label>
+            <button onClick={downloadCsvTemplate} className="text-[12.5px] font-semibold text-[var(--navy)] underline px-2">
+              Download a template
+            </button>
+          </div>
+          {csvMessage && <p className="text-[12.5px] text-[var(--ink-soft)] mb-3">{csvMessage}</p>}
           <div className="divide-y divide-[var(--line-subtle)]">
             {lib.map((m) => (
               <div key={m.item_key} className="flex items-center justify-between py-2.5 gap-3">
@@ -707,7 +793,15 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
         <p className="section-tag mb-3">Client details</p>
         <div className="space-y-3">
           <Field label="Client name">
-            <input value={clientName} onChange={(e) => setClientName(e.target.value)} className="app-field" placeholder="Jane Smith" />
+            <ClientPicker
+              value={clientName}
+              onChange={setClientName}
+              onSelectClient={(c) => {
+                setClientName(c.name);
+                if (c.email) setClientEmail(c.email);
+                if (c.billing_address && !siteAddress) setSiteAddress(c.billing_address);
+              }}
+            />
           </Field>
           <Field label="Client email">
             <input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className="app-field" placeholder="jane@email.com" />
