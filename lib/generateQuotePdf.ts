@@ -1,4 +1,4 @@
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, PDFName, PDFString, PDFArray, PDFNumber, StandardFonts, rgb } from "pdf-lib";
 import sharp from "sharp";
 import QRCode from "qrcode";
 import { termAmount, type PaymentTerm } from "./paymentTerms";
@@ -295,9 +295,7 @@ export async function generateQuotePdf(
     page.drawText(btnText, { x: btnTextX, y: btnTextY, size: 12, font: fontBold, color: NAVY });
 
     // PDF link annotation — makes the button actually clickable in any PDF reader
-    const { PDFDict, PDFName, PDFString, PDFArray, PDFNumber, PDFRef } = await import("pdf-lib");
     const context = pdfDoc.context;
-    const pageRef  = pdfDoc.getPages().at(-1)!.ref;
 
     const uriActionRef = context.register(
       context.obj({
