@@ -314,6 +314,7 @@ export default function QuoteBuilder({
           clientEmail={clientEmail} setClientEmail={setClientEmail}
           siteAddress={siteAddress} setSiteAddress={setSiteAddress}
           saving={saving} saveMessage={saveMessage} savedQuoteId={savedQuoteId} onSave={saveAndSend}
+          onCeilingHint={(hint) => set("ceilingType", hint as ElectricianIntake["ceilingType"])}
         />
       )}
 
@@ -643,7 +644,7 @@ function StepSite({ intake, set }: {
 /* ─── Step: Send ────────────────────────────────────────────────── */
 function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTerms, setCustomTerms, customTermsTotal,
   clientName, setClientName, clientEmail, setClientEmail, siteAddress, setSiteAddress,
-  saving, saveMessage, savedQuoteId, onSave }: {
+  saving, saveMessage, savedQuoteId, onSave, onCeilingHint }: {
   intake: ElectricianIntake;
   result: { labourHours: number; materialsCost: number; totalCost: number };
   paymentTerms: PaymentTerm[];
@@ -655,7 +656,31 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
   siteAddress: string; setSiteAddress: (v: string) => void;
   saving: boolean; saveMessage: string | null; savedQuoteId: string | null;
   onSave: (send: boolean) => void;
+  onCeilingHint?: (hint: string) => void;
 }) {
+  const [propChecking, setPropChecking] = useState(false);
+  const [propResult,   setPropResult]   = useState<{
+    found: boolean; reason?: string; heritageOverlay?: boolean; bushfireOverlay?: boolean;
+    zoneLabel?: string | null; ceilingHint?: string | null;
+    flags?: Array<{ type: string; severity: string; label: string; detail: string | null }>;
+  } | null>(null);
+
+  const isVic = siteAddress.trim().length > 8 && (
+    /\bVIC\b/i.test(siteAddress) || /\b3\d{3}\b/.test(siteAddress)
+  );
+
+  async function checkProperty() {
+    setPropChecking(true); setPropResult(null);
+    try {
+      const res  = await fetch(`/api/property-check?address=${encodeURIComponent(siteAddress)}`);
+      const data = await res.json();
+      setPropResult(data);
+      if (data.found && data.ceilingHint && onCeilingHint) onCeilingHint(data.ceilingHint);
+    } catch {
+      setPropResult({ found: false, reason: "Could not reach the property lookup service." });
+    } finally { setPropChecking(false); }
+  }
+
   return (
     <div className="space-y-4">
       {/* Quote summary */}
@@ -687,9 +712,40 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
           <Field label="Client email">
             <input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className="app-field" placeholder="jane@email.com" />
           </Field>
-          <Field label="Site address">
-            <input value={siteAddress} onChange={(e) => setSiteAddress(e.target.value)} className="app-field" placeholder="123 Main St, Suburb" />
-          </Field>
+          <div>
+            <Field label="Site address">
+              <input value={siteAddress} onChange={(e) => { setSiteAddress(e.target.value); setPropResult(null); }}
+                className="app-field" placeholder="123 Main St, Suburb VIC 3000" />
+            </Field>
+            {isVic && (
+              <button onClick={checkProperty} disabled={propChecking}
+                className="mt-2 inline-flex items-center gap-1.5 text-[12.5px] font-bold text-[var(--navy)] border-2 border-[var(--navy)]/20 bg-[var(--navy)]/5 rounded-lg px-3 py-1.5 hover:bg-[var(--navy)]/10 transition-colors disabled:opacity-50">
+                🏛️ {propChecking ? "Checking planning overlays..." : "Check property overlays (VIC)"}
+              </button>
+            )}
+            {propResult && (
+              <div className="mt-2 space-y-2">
+                {!propResult.found ? (
+                  <p className="text-[12.5px] text-[var(--ink-faint)] bg-[var(--app-bg)] rounded-lg px-3 py-2">{propResult.reason}</p>
+                ) : propResult.flags?.length === 0 ? (
+                  <div className="bg-[var(--green-bg)] border border-green-200 rounded-xl px-3 py-2.5 text-[13px] text-[var(--green)] font-semibold flex items-center gap-2">
+                    ✓ No Heritage or Bushfire overlays{propResult.zoneLabel ? ` · ${propResult.zoneLabel}` : ""}
+                  </div>
+                ) : (
+                  propResult.flags?.map((flag) => (
+                    <div key={flag.type} className={`rounded-xl px-3 py-3 flex items-start gap-2.5 ${flag.severity === "warning" ? "bg-amber-50 border border-amber-200" : "bg-[var(--blue-bg)] border border-blue-100"}`}>
+                      <span className="text-lg shrink-0">{flag.type === "heritage" ? "🏛️" : flag.type === "bushfire" ? "🔥" : "📍"}</span>
+                      <div>
+                        <p className={`font-bold text-[13px] ${flag.severity === "warning" ? "text-amber-800" : "text-[var(--blue)]"}`}>{flag.label}</p>
+                        {flag.detail && <p className={`text-[12px] mt-0.5 leading-snug ${flag.severity === "warning" ? "text-amber-700" : "text-[var(--blue)]"}`}>{flag.detail}</p>}
+                        {flag.type === "heritage" && <p className="text-[11.5px] font-bold text-amber-700 mt-1">⚠️ Ceiling type set to Heritage Timber — labour estimate updated</p>}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
