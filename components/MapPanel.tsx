@@ -96,7 +96,7 @@ export default function MapPanel({ jobs }: { jobs: Job[] }) {
             {jobs.map((j) => (
               <Link
                 key={j.id}
-                href={`/electrician/quotes/${j.id}`}
+                href={`/electrician/jobs/${j.id}`}
                 className="flex items-center justify-between bg-[var(--surface)] border border-[var(--line)] rounded-lg px-3 py-2.5 text-[13px]"
               >
                 <span className="text-[var(--ink)] font-medium truncate">{j.client_name ?? "Unnamed"}</span>

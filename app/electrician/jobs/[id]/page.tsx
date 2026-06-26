@@ -3,17 +3,16 @@ import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { loadJobDetailData } from "@/lib/jobDetail";
 import AppHeader from "@/components/AppHeader";
-import FollowUpPanel from "@/components/FollowUpPanel";
+import VariationsPanel from "@/components/VariationsPanel";
+import JobCostingPanel from "@/components/JobCostingPanel";
+import CompliancePanel from "@/components/CompliancePanel";
 import JobFilesPanel from "@/components/JobFilesPanel";
+import JobBriefPanel from "@/components/JobBriefPanel";
+import MaterialsChecklistPanel from "@/components/MaterialsChecklistPanel";
 import JobActionsBar from "@/components/JobActionsBar";
 import { humanizeIntake } from "@/lib/scopeOfWorks";
 
-// This route is for a quote that hasn't been won yet - draft, sent, or
-// declined. The moment a client accepts, it stops being a quote you're
-// chasing and becomes a job you're running - that's a different page
-// with different concerns (see /electrician/jobs/[id]), not just a
-// different badge colour on the same page.
-export default async function QuoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
@@ -21,20 +20,16 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
 
   const data = await loadJobDetailData(supabase, id, userData.user.id);
   if (!data) notFound();
-  const { quote, followUps, attachmentsWithUrls } = data;
+  const { quote, variations, actuals, certsWithUrls, attachmentsWithUrls, hourlyRate, marginPct } = data;
 
-  if (quote.status === "accepted" || quote.status === "paid") {
-    redirect(`/electrician/jobs/${id}`);
+  // A quote that hasn't been won yet has no business living at a job URL -
+  // send it back to where it actually belongs.
+  if (quote.status !== "accepted" && quote.status !== "paid") {
+    redirect(`/electrician/quotes/${id}`);
   }
 
   const scopeLines = humanizeIntake(quote.intake_data);
   const labourCost = (quote.total_cost ?? 0) - (quote.materials_cost ?? 0);
-
-  const statusColor: Record<string, string> = {
-    draft: "bg-[var(--app-bg)] text-[var(--ink-soft)]",
-    sent: "bg-blue-50 text-blue-700",
-    declined: "bg-red-50 text-red-700",
-  };
 
   return (
     <>
@@ -42,16 +37,32 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
       <main className="page-wrap-narrow">
         <div className="flex items-start justify-between gap-3 mb-4">
           <div>
-            <p className="text-[12px] text-[var(--ink-faint)] mb-1"><Link href="/electrician/quotes" className="hover:underline">Quotes</Link> / {id.slice(0, 8)}</p>
+            <p className="text-[12px] text-[var(--ink-faint)] mb-1"><Link href="/electrician/jobs" className="hover:underline">Jobs</Link> / {quote.invoice_number ?? id.slice(0, 8)}</p>
             <h1 className="font-display text-2xl text-[var(--ink)]">{quote.client_name || "Unnamed client"}</h1>
             {quote.site_address && <p className="text-[13px] text-[var(--ink-faint)] mt-0.5">{quote.site_address}</p>}
           </div>
           <div className="text-right shrink-0">
             <p className="font-display text-2xl text-[var(--ink)]">${(quote.total_cost ?? 0).toLocaleString()}</p>
-            <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold inline-block mt-1 ${statusColor[quote.status] ?? ""}`}>{quote.status}</span>
+            <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold inline-block mt-1 ${quote.status === "paid" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-800"}`}>
+              {quote.status === "paid" ? "paid" : "active job"}
+            </span>
             <a href={`/api/quotes/${quote.id}/pdf`} target="_blank" rel="noopener noreferrer" className="block text-[12.5px] font-semibold text-[var(--navy)] underline mt-2">
               Download PDF
             </a>
+          </div>
+        </div>
+
+        <div className="bg-[var(--navy)] rounded-xl px-4 py-3 mb-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] tracking-[.1em] uppercase text-[var(--steel-3)] font-bold">
+              {quote.status === "paid" ? "Job complete & paid" : quote.completed_at ? "Job complete — awaiting payment" : "Active job"}
+            </p>
+            {quote.scheduled_date && (
+              <p className="text-[13px] text-[var(--steel-1)] mt-0.5">
+                Scheduled {new Date(quote.scheduled_date).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}
+                {quote.assigned_to ? ` — ${quote.assigned_to}` : ""}
+              </p>
+            )}
           </div>
         </div>
 
@@ -92,11 +103,20 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
             completedAt={quote.completed_at}
           />
 
-          {quote.status === "sent" && (
-            <FollowUpPanel quoteId={quote.id} followUps={followUps} followUpAt={quote.follow_up_at} expiresAt={quote.quote_expires_at} />
-          )}
-
+          <JobBriefPanel quoteId={quote.id} siteNotes={quote.site_notes} scheduledDate={quote.scheduled_date} assignedTo={quote.assigned_to} />
+          <MaterialsChecklistPanel quoteId={quote.id} initialChecklist={quote.materials_checklist ?? []} scopeLines={scopeLines} />
           <JobFilesPanel quoteId={quote.id} attachments={attachmentsWithUrls} />
+          <VariationsPanel quoteId={quote.id} hourlyRate={hourlyRate} margin={marginPct} variations={variations} quoteTotalCost={quote.total_cost ?? 0} />
+          <JobCostingPanel
+            quoteId={quote.id}
+            quotedHours={quote.labour_hours ?? 0}
+            quotedMaterials={quote.materials_cost ?? 0}
+            quotedTotal={quote.total_cost ?? 0}
+            hourlyRate={hourlyRate}
+            actuals={actuals}
+            intakeData={quote.intake_data}
+          />
+          <CompliancePanel quoteId={quote.id} certs={certsWithUrls as never} />
         </div>
       </main>
     </>

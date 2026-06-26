@@ -207,7 +207,7 @@ export default function JobsPanel({ jobs: initialJobs }: { jobs: Job[] }) {
 
               {/* Actions */}
               <div className="flex gap-2 flex-wrap">
-                <Link href={`/electrician/quotes/${j.id}`} className="btn-secondary text-[12.5px] py-1.5 px-3">Open →</Link>
+                <Link href={`/electrician/jobs/${j.id}`} className="btn-secondary text-[12.5px] py-1.5 px-3">Open →</Link>
                 {!j.completed_at && (
                   <button onClick={() => callUpdate({ quoteId: j.id, completeJob: true })} disabled={busyId === j.id} className="btn-secondary text-[12.5px] py-1.5 px-3">Mark complete</button>
                 )}

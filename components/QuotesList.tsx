@@ -163,7 +163,10 @@ export default function QuotesList({ quotes: initial }: { quotes: Quote[] }) {
             <div key={q.id} className="card">
               <div className="flex items-start gap-3">
                 <div className="flex-1 min-w-0">
-                  <Link href={`/electrician/quotes/${q.id}`} className="font-bold text-[15px] text-[var(--ink)] hover:underline block truncate">
+                  <Link
+                    href={q.status === "accepted" || q.status === "paid" ? `/electrician/jobs/${q.id}` : `/electrician/quotes/${q.id}`}
+                    className="font-bold text-[15px] text-[var(--ink)] hover:underline block truncate"
+                  >
                     {q.client_name || "Unnamed client"}
                   </Link>
                   {q.site_address && <p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5 truncate">{q.site_address}</p>}
@@ -188,7 +191,10 @@ export default function QuotesList({ quotes: initial }: { quotes: Quote[] }) {
 
               {/* Actions */}
               <div className="flex gap-2 mt-3 flex-wrap items-center">
-                <Link href={`/electrician/quotes/${q.id}`} className="btn-secondary text-[12.5px] py-1.5 px-3">
+                <Link
+                  href={q.status === "accepted" || q.status === "paid" ? `/electrician/jobs/${q.id}` : `/electrician/quotes/${q.id}`}
+                  className="btn-secondary text-[12.5px] py-1.5 px-3"
+                >
                   Open →
                 </Link>
                 {q.status === "sent" && (
