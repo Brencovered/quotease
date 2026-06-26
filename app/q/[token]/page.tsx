@@ -130,7 +130,18 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
               Download PDF
             </a>
 
-            <QuoteResponseButtons token={token} status={quote.status} />
+            <QuoteResponseButtons
+              token={token}
+              status={quote.status}
+              totalCost={quote.total_cost ?? 0}
+              paymentTerms={terms}
+              hasBankDetails={hasBankDetails}
+              bankName={profile.bank_account_name}
+              bankBsb={profile.bank_bsb}
+              bankAccount={profile.bank_account_number}
+              acceptsCash={profile.accepts_cash}
+              businessName={profile.business_name}
+            />
           </div>
         </div>
         <p className="text-center text-[11.5px] text-[var(--ink-faint)] mt-4">Quoting by Quotease</p>
