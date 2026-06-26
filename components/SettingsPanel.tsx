@@ -32,6 +32,8 @@ type Profile = {
   ai_addon_status?: string; ai_addon_period?: string | null; ai_addon_analyses_used?: number;
   bank_account_name?: string | null; bank_bsb?: string | null; bank_account_number?: string | null;
   accepts_cash?: boolean;
+  default_deposit_pct?: number | null;
+  default_expiry_days?: number;
 } | null;
 
 export default function SettingsPanel({ profile }: { profile: Profile }) {
@@ -47,6 +49,8 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
   const [bankBsb,          setBankBsb]          = useState(profile?.bank_bsb ?? "");
   const [bankAccountNumber, setBankAccountNumber] = useState(profile?.bank_account_number ?? "");
   const [acceptsCash,      setAcceptsCash]      = useState(profile?.accepts_cash ?? true);
+  const [defaultDepositPct, setDefaultDepositPct] = useState<number | null>(profile?.default_deposit_pct ?? null);
+  const [defaultExpiryDays, setDefaultExpiryDays] = useState(profile?.default_expiry_days ?? 30);
   const [logoPreview,    setLogoPreview]    = useState<string | null>(profile?.logo_url ?? null);
   const [logoFile,       setLogoFile]       = useState<File | null>(null);
   const [companySaving,  setCompanySaving]  = useState(false);
@@ -120,6 +124,7 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
       business_address: businessAddress || null, terms_and_conditions: terms,
       bank_account_name: bankAccountName || null, bank_bsb: bankBsb || null,
       bank_account_number: bankAccountNumber || null, accepts_cash: acceptsCash,
+      default_deposit_pct: defaultDepositPct, default_expiry_days: defaultExpiryDays,
       ...(logoUrl ? { logo_url: logoUrl } : {}),
     }).eq("id", user.id);
 
@@ -220,6 +225,30 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
             <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Quote terms and conditions</label>
             <textarea value={terms} onChange={(e) => setTerms(e.target.value)} rows={4} className="app-field text-[13px]" />
             <p className="text-[11.5px] text-[var(--ink-faint)] mt-1">Sent at the bottom of every quote email.</p>
+          </div>
+
+          <div className="border-t border-[var(--line)] pt-3 mt-1">
+            <p className="text-[12.5px] font-semibold text-[var(--ink-soft)] mb-2">Quoting defaults</p>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className="block text-[11.5px] text-[var(--ink-faint)] mb-1">Default deposit</span>
+                <select value={defaultDepositPct ?? ""} onChange={(e) => setDefaultDepositPct(e.target.value ? Number(e.target.value) : null)} className="app-field text-[13px]">
+                  <option value="">None — full on completion</option>
+                  <option value="30">30% deposit</option>
+                  <option value="50">50% deposit</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="block text-[11.5px] text-[var(--ink-faint)] mb-1">Quote expires after</span>
+                <select value={defaultExpiryDays} onChange={(e) => setDefaultExpiryDays(Number(e.target.value))} className="app-field text-[13px]">
+                  <option value={14}>14 days</option>
+                  <option value={30}>30 days</option>
+                  <option value={60}>60 days</option>
+                  <option value={90}>90 days</option>
+                </select>
+              </label>
+            </div>
+            <p className="text-[11.5px] text-[var(--ink-faint)] mt-1.5">Applied to every new quote automatically — still editable per quote if needed.</p>
           </div>
 
           <div className="border-t border-[var(--line)] pt-3 mt-1">

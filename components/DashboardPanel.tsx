@@ -144,28 +144,27 @@ export default function DashboardPanel({ stats, profit }: { stats: DashboardStat
           {stats.totalQuotes > 0 && (
             <div className="card">
               <p className="section-tag mb-1">Pipeline</p>
-              <p className="font-semibold text-[var(--ink)] mb-4">Quotes by status</p>
-              <div className="flex h-2 rounded-full overflow-hidden bg-[var(--app-bg)] mb-4">
-                {STATUS_ORDER.map((s) =>
-                  stats.byStatus[s] > 0 ? (
-                    <div key={s} style={{ width: `${(stats.byStatus[s]/stats.totalQuotes)*100}%` }}
-                      className={`${STATUS_META[s].bg}`} />
-                  ) : null
-                )}
-              </div>
-              <div className="space-y-2.5">
+              <p className="font-semibold text-[var(--ink)] mb-4">Quotes by status — click to open</p>
+              <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
                 {STATUS_ORDER.map((s) => {
-                  const Icon  = STATUS_META[s].icon;
+                  const Icon = STATUS_META[s].icon;
                   const count = stats.byStatus[s];
-                  if (!count) return null;
+                  const value = stats.byStatusValue[s] ?? 0;
                   return (
-                    <div key={s} className="flex items-center gap-2.5">
-                      <span className={`pill ${STATUS_META[s].bg} ${STATUS_META[s].text}`}><Icon size={11}/>{STATUS_META[s].label}</span>
-                      <div className="flex-1 h-1.5 bg-[var(--app-bg)] rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full ${STATUS_META[s].bg}`} style={{ width: `${(count/stats.totalQuotes)*100}%` }} />
-                      </div>
-                      <span className="text-[13px] font-bold text-[var(--ink)] tabular w-5 text-right">{count}</span>
-                    </div>
+                    <Link
+                      key={s}
+                      href={`/electrician/quotes?status=${s}`}
+                      className={`flex flex-col items-center justify-end h-24 sm:h-28 rounded-lg p-2 transition-opacity hover:opacity-80 ${count > 0 ? STATUS_META[s].bg : "bg-[var(--app-bg)]"}`}
+                    >
+                      <Icon size={13} className={count > 0 ? STATUS_META[s].text : "text-[var(--ink-faint)]"} />
+                      <span className={`text-[20px] font-display leading-tight mt-1 ${count > 0 ? STATUS_META[s].text : "text-[var(--ink-faint)]"}`}>
+                        {count}
+                      </span>
+                      <span className="text-[10px] text-[var(--ink-faint)] font-semibold mt-0.5 text-center leading-tight">
+                        {STATUS_META[s].label}
+                      </span>
+                      {value > 0 && <span className="text-[10px] font-bold text-[var(--ink-soft)] mt-0.5">${value >= 1000 ? `${Math.round(value / 1000)}k` : value}</span>}
+                    </Link>
                   );
                 })}
               </div>

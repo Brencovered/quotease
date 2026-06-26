@@ -62,6 +62,7 @@ export interface QuoteForStats {
 export interface DashboardStats {
   totalQuotes: number;
   byStatus: Record<string, number>;
+  byStatusValue: Record<string, number>;
   totalQuotedValue: number;
   totalWonValue: number;
   totalOutstanding: number;
@@ -83,6 +84,7 @@ function daysUntil(dateStr: string | null | undefined): number | null {
 
 export function computeDashboardStats(quotes: QuoteForStats[]): DashboardStats {
   const byStatus: Record<string, number> = { draft: 0, sent: 0, accepted: 0, declined: 0, paid: 0 };
+  const byStatusValue: Record<string, number> = { draft: 0, sent: 0, accepted: 0, declined: 0, paid: 0 };
   let totalQuotedValue = 0, totalWonValue = 0, totalOutstanding = 0, totalCollected = 0;
   let decidedCount = 0, wonCount = 0, activeJobsCount = 0, activeJobsValue = 0;
   let overdueFollowUps = 0, expiredQuotes = 0;
@@ -91,6 +93,7 @@ export function computeDashboardStats(quotes: QuoteForStats[]): DashboardStats {
   for (const q of quotes) {
     const status = q.status in byStatus ? q.status : "draft";
     byStatus[status] = (byStatus[status] ?? 0) + 1;
+    byStatusValue[status] = (byStatusValue[status] ?? 0) + (q.total_cost ?? 0);
     const cost = q.total_cost ?? 0;
     const paid = q.amount_paid ?? 0;
     totalCollected += paid;
@@ -125,5 +128,5 @@ export function computeDashboardStats(quotes: QuoteForStats[]): DashboardStats {
     if (month) { month.count++; month.value += q.total_cost ?? 0; }
   }
 
-  return { totalQuotes: quotes.length, byStatus, totalQuotedValue, totalWonValue, totalOutstanding, totalCollected, winRate, avgJobValue, activeJobsCount, activeJobsValue, monthly: months.map(({ label, count, value }) => ({ label, count, value })), overdueFollowUps, expiredQuotes, avgLabourHours };
+  return { totalQuotes: quotes.length, byStatus, byStatusValue, totalQuotedValue, totalWonValue, totalOutstanding, totalCollected, winRate, avgJobValue, activeJobsCount, activeJobsValue, monthly: months.map(({ label, count, value }) => ({ label, count, value })), overdueFollowUps, expiredQuotes, avgLabourHours };
 }

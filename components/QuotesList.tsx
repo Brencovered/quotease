@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Bell, AlertTriangle, ChevronRight, Plus, FileText, Send, CheckCircle2, BadgeCheck, XCircle } from "lucide-react";
 import WinCelebration from "./WinCelebration";
@@ -30,7 +31,9 @@ function daysAgo(d: string | null)   { if (!d) return null; return Math.floor((D
 
 export default function QuotesList({ quotes: initial }: { quotes: Quote[] }) {
   const [quotes]  = useState(initial);
-  const [filter,  setFilter]  = useState("all");
+  const searchParams = useSearchParams();
+  const initialFilter = searchParams.get("status");
+  const [filter,  setFilter]  = useState(initialFilter && FILTERS.includes(initialFilter) ? initialFilter : "all");
   const [busyId,  setBusyId]  = useState<string | null>(null);
   const [payId,   setPayId]   = useState<string | null>(null);
   const [payVal,  setPayVal]  = useState("");

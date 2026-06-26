@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import QuotesList from "@/components/QuotesList";
 import AppHeader from "@/components/AppHeader";
@@ -23,8 +24,10 @@ export default async function QuotesPage() {
   return (
     <>
       <AppHeader />
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      <QuotesList quotes={quotes as any} />
+      <Suspense>
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        <QuotesList quotes={quotes as any} />
+      </Suspense>
     </>
   );
 }

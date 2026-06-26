@@ -41,7 +41,7 @@ const STEPS = [
 export default function QuoteBuilder({
   profile, materials,
 }: {
-  profile: { hourly_rate: number; materials_margin_pct: number };
+  profile: { hourly_rate: number; materials_margin_pct: number; default_deposit_pct?: number | null; default_expiry_days?: number };
   materials: MaterialRow[];
 }) {
   const [step, setStep]     = useState(0);
@@ -56,8 +56,17 @@ export default function QuoteBuilder({
   const [clientEmail, setClientEmail] = useState("");
   const [siteAddress, setSiteAddress] = useState("");
 
-  const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">("full_on_completion");
-  const [customTerms, setCustomTerms] = useState<PaymentTerm[]>([
+  const initialDeposit = profile.default_deposit_pct;
+  const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">(
+    initialDeposit === 50 ? "deposit_50_50" : initialDeposit === 30 ? "deposit_30_70" : initialDeposit ? "custom" : "full_on_completion"
+  );
+  const [customTerms, setCustomTerms] = useState<PaymentTerm[]>(
+    initialDeposit && initialDeposit !== 50 && initialDeposit !== 30
+      ? [
+          { label: "Deposit", percent: initialDeposit, trigger: "acceptance", days: 0 },
+          { label: "Final payment", percent: 100 - initialDeposit, trigger: "completion", days: 7 },
+        ]
+      : [
     { label: "Deposit", percent: 50, trigger: "acceptance", days: 0 },
     { label: "Final", percent: 50, trigger: "completion", days: 7 },
   ]);
@@ -220,6 +229,7 @@ export default function QuoteBuilder({
       site_address: siteAddress, trade: "electrician", job_type: intake.jobType,
       intake_data: intake, labour_hours: result.labourHours, materials_cost: result.materialsCost,
       total_cost: result.totalCost, payment_terms: paymentTerms,
+      quote_expires_at: new Date(Date.now() + (profile.default_expiry_days ?? 30) * 86400000).toISOString(),
       status: sendEmail ? "sent" : "draft",
     }).select().single();
 
