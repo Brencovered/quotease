@@ -1,5 +1,5 @@
 import { PDFDocument, PDFName, PDFString, PDFArray, PDFNumber, StandardFonts, rgb } from "pdf-lib";
-import sharp from "sharp";
+import Jimp from "jimp";
 import QRCode from "qrcode";
 import { termAmount, type PaymentTerm } from "./paymentTerms";
 import { humanizeIntakePublic } from "./humanizeIntake";
@@ -133,7 +133,8 @@ export async function generateQuotePdf(
   let logoDrawWidth = 0;
   if (logoBytes) {
     try {
-      const pngBytes = await sharp(logoBytes).png().toBuffer();
+      const image = await Jimp.read(Buffer.from(logoBytes));
+      const pngBytes = await image.getBuffer("image/png");
       const image = await pdfDoc.embedPng(pngBytes);
       const maxH = 40;
       const scale = Math.min(maxH / image.height, 140 / image.width);
