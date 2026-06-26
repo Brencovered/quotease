@@ -1,67 +1,67 @@
 import Link from "next/link";
 import Image from "next/image";
 
-// Real Spark Ease job site photography
-const HERO_IMG    = "https://images.squarespace-cdn.com/content/v1/6848e6851124a2687a93a35f/6a54c626-1153-4fd3-8d44-289447b3988d/residential-electrician-melbourne.jpg";
-const KITCHEN_IMG = "https://images.squarespace-cdn.com/content/v1/6848e6851124a2687a93a35f/7d6b3d49-33db-4ddc-840a-30002549ed61/residential-electrician-melbourne-kitchen.jpg";
-const LOUNGE_IMG  = "https://images.squarespace-cdn.com/content/v1/6848e6851124a2687a93a35f/ea135f61-ba35-4cdd-a281-ffcab6e07c5e/residential-electrician-melbourne-lounge+room.jpg";
+// High quality Unsplash images — reliable CDN, no auth needed
+const HERO_IMG    = "https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=1800&q=85&auto=format&fit=crop";  // electrician working on switchboard
+const SITE_IMG    = "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1400&q=85&auto=format&fit=crop";  // tradie on site construction
+const PHONE_IMG   = "https://images.unsplash.com/photo-1556761175-b413da4baf72?w=1400&q=85&auto=format&fit=crop";  // person on phone professional
 
 const FEATURES = [
   {
-    emoji: "📋",
-    title: "Quote on site in 4 minutes",
-    body: "Trade-specific fields built around what you actually see on the job. Fill in what's in front of you — the number calculates live as you go.",
+    n: "01",
+    title: "Quote in 4 minutes on site",
+    body: "Trade-specific fields built around what you actually see on the job. Fill in what is in front of you — the number calculates live as you go.",
   },
   {
-    emoji: "📧",
+    n: "02",
     title: "Send before you leave the driveway",
-    body: "Hit send from your phone. The client gets a professional branded quote in their inbox while you're still on site.",
+    body: "Hit send from your phone. The client gets a professional branded quote in their inbox while you are still on site.",
   },
   {
-    emoji: "✅",
-    title: "Client accepts online",
-    body: "One tap to accept, tick the terms, choose payment method — bank transfer, cash or card. No back-and-forth, no paperwork.",
+    n: "03",
+    title: "Client accepts and pays online",
+    body: "One tap to accept, tick the terms, choose how to pay — bank transfer, cash or card. No back-and-forth, no paperwork.",
   },
   {
-    emoji: "🗓️",
+    n: "04",
     title: "Quote becomes a job automatically",
     body: "Accepted quotes flip to jobs. Schedule the start date, upload drawings, track materials and log actuals against what you quoted.",
   },
   {
-    emoji: "💰",
+    n: "05",
     title: "Know if you made money",
-    body: "Job costing tracks actual hours and materials vs what you quoted. See your real margin on every job — not just revenue.",
+    body: "Job costing tracks actual hours and materials vs what you quoted. See your real margin on every job, not just revenue.",
   },
   {
-    emoji: "📄",
+    n: "06",
     title: "Variations in writing, always",
-    body: "Client wants to add scope mid-job? Raise a variation order with one tap. Gets signed off before you touch it.",
+    body: "Client wants to add scope mid-job? Raise a variation order in one tap. Gets signed off before you touch it.",
   },
   {
-    emoji: "🔔",
+    n: "07",
     title: "Follow-up reminders built in",
-    body: "Quotes going quiet? Automatic follow-up reminders so nothing falls through the cracks while you're on the tools.",
+    body: "Quotes going quiet? Automatic follow-up reminders so nothing falls through the cracks while you are on the tools.",
   },
   {
-    emoji: "🏛️",
-    title: "Heritage & planning overlays (VIC)",
-    body: "Type in the site address and Quotease checks VicPlan automatically. Heritage overlay? Labour estimate updates instantly.",
+    n: "08",
+    title: "VIC planning overlay checks",
+    body: "Type in the address and Quotease checks VicPlan automatically. Heritage overlay detected? Labour estimate updates on the spot.",
   },
 ];
 
 const TRADES = [
-  { emoji: "⚡", name: "Electricians",  desc: "Powerpoints, switchboards, downlights, solar, certs" },
-  { emoji: "🔧", name: "Plumbers",      desc: "Tapware, hot water, rough-ins, gas, drainage" },
-  { emoji: "🪚", name: "Carpenters",    desc: "Doors, framing, decking, fitout, skirting" },
-  { emoji: "🏠", name: "Roofers",       desc: "Colorbond, tiles, gutters, skylights, scaffold" },
+  { name: "Electricians",  detail: "Powerpoints, switchboards, downlights, solar, compliance certs" },
+  { name: "Plumbers",      detail: "Tapware, hot water, rough-ins, gas fitting, drainage" },
+  { name: "Carpenters",    detail: "Doors, framing, decking, fitout, skirting, architrave" },
+  { name: "Roofers",       detail: "Colorbond, terracotta, gutters, skylights, scaffold" },
 ];
 
 const PAIN_POINTS = [
-  { x: "Quoting on a Word doc at 10pm",       y: "Built in 4 min on your phone, on site" },
-  { x: "Losing jobs to the tradie who quoted first",  y: "Send before you reverse out of the driveway" },
-  { x: "Scope creep with nothing in writing", y: "Variation orders signed off before you start" },
-  { x: "No idea if the job made money",       y: "Job costing — actual vs quoted, every time" },
-  { x: "Chasing invoices for weeks",          y: "Client accepts and pays online, same day" },
+  { x: "Quoting on a Word doc at 10pm",            y: "Built in 4 min on your phone, on site" },
+  { x: "Losing jobs to whoever quoted first",       y: "Send before you reverse out of the driveway" },
+  { x: "Scope creep with nothing in writing",       y: "Variation orders signed off before you start" },
+  { x: "No idea if the job actually made money",    y: "Job costing — actual vs quoted, every time" },
+  { x: "Chasing invoices for weeks",                y: "Client accepts and pays online, same day" },
 ];
 
 export default function Home() {
@@ -69,135 +69,146 @@ export default function Home() {
     <main className="bg-[#0a1722] text-white overflow-hidden">
 
       {/* NAV */}
-      <div className="relative z-20 max-w-7xl mx-auto px-6 pt-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="font-display text-xl tracking-wide text-white">QUOTEASE</span>
-          <span className="hidden sm:block text-[10px] font-bold tracking-[.15em] uppercase text-[#ffb400] bg-[#ffb400]/10 px-2 py-1 rounded-md border border-[#ffb400]/20">
-            Built by tradies
-          </span>
-        </div>
+      <div className="absolute top-0 left-0 right-0 z-30 max-w-7xl mx-auto px-6 pt-6 flex items-center justify-between">
+        <span className="font-display text-xl tracking-wide text-white drop-shadow-lg">QUOTEASE</span>
         <div className="flex items-center gap-4">
-          <Link href="/login" className="text-[#a9bcc8] hover:text-white font-semibold text-sm transition-colors hidden sm:block">Log in</Link>
+          <Link href="/login" className="text-white/80 hover:text-white font-semibold text-sm transition-colors hidden sm:block drop-shadow">
+            Log in
+          </Link>
           <Link href="/signup" className="bg-[#ffb400] text-[#0a1722] font-extrabold text-sm px-5 py-2.5 rounded-xl hover:bg-[#e89e00] transition-colors">
             Start free trial
           </Link>
         </div>
       </div>
 
-      {/* HERO — full-bleed image with overlay */}
-      <div className="relative min-h-[92vh] flex items-end">
-        {/* Background image */}
+      {/* HERO */}
+      <div className="relative h-screen min-h-[700px] max-h-[960px] flex items-end">
         <div className="absolute inset-0 z-0">
           <Image
             src={HERO_IMG}
-            alt="Residential electrical work — Spark Ease Electrical, Melbourne"
+            alt="Electrician working on residential switchboard"
             fill
             className="object-cover object-center"
             priority
             unoptimized
           />
-          {/* Dark gradient overlay — heavy at bottom, lighter at top */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#0a1722]/60 via-[#0a1722]/40 to-[#0a1722]/95" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0a1722] via-[#0a1722]/50 to-[#0a1722]/20" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0a1722]/60 to-transparent" />
         </div>
 
-        {/* Hero text — sits over image */}
-        <div className="relative z-10 max-w-7xl mx-auto px-6 pb-20 pt-32 w-full">
-          <div className="max-w-[720px]">
-            <div className="inline-flex items-center gap-2.5 mb-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2">
-              <span className="w-2 h-2 rounded-full bg-[#ffb400] animate-pulse" />
-              <span className="text-[13px] font-semibold text-white/90">
-                Quote it. Send it. Win it — before they call the next tradie.
-              </span>
+        <div className="relative z-10 max-w-7xl mx-auto px-6 pb-24 w-full">
+          <div className="max-w-[680px]">
+            <div className="inline-flex items-center gap-2 mb-6 bg-[#ffb400]/15 border border-[#ffb400]/30 rounded-full px-4 py-2 backdrop-blur-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#ffb400]" />
+              <span className="text-[12.5px] font-bold text-[#ffb400] tracking-wide uppercase">Built by a sparkie. For tradies.</span>
             </div>
 
-            <h1 className="font-display uppercase leading-[0.9] mb-7 text-white">
-              <span className="block text-[3rem] sm:text-[5rem] lg:text-[5.5rem]">Stop losing jobs</span>
-              <span className="block text-[3rem] sm:text-[5rem] lg:text-[5.5rem]">to the tradie who</span>
-              <span className="block text-[3rem] sm:text-[5rem] lg:text-[5.5rem] text-[#ffb400]">quoted faster.</span>
+            <h1 className="font-display uppercase leading-[0.88] mb-8">
+              <span className="block text-[3.2rem] sm:text-[5rem] lg:text-[6rem] text-white">Quote it.</span>
+              <span className="block text-[3.2rem] sm:text-[5rem] lg:text-[6rem] text-white">Send it.</span>
+              <span className="block text-[3.2rem] sm:text-[5rem] lg:text-[6rem] text-[#ffb400]">Win the job.</span>
             </h1>
 
-            <p className="text-[17px] sm:text-[19px] leading-[1.6] text-[#d5e0e7] max-w-[540px] mb-10">
-              Quotease is quoting and job management built for residential tradies.
-              Fill in what you see on site, get a real number, send it professionally —
-              all before you have left the driveway.
+            <p className="text-[17px] sm:text-[18px] leading-[1.65] text-[#c8d8e4] max-w-[520px] mb-10">
+              Stop writing quotes on Word docs at 10pm. Quotease gets you
+              a professional quote built and sent from your phone before you
+              leave the driveway — while the other tradie is still working out their price.
             </p>
 
             <div className="flex flex-wrap gap-4 mb-8">
               <Link href="/signup"
-                className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[16px] px-8 py-4 rounded-xl hover:bg-[#e89e00] transition-colors"
-                style={{ boxShadow: "0 12px 32px rgba(255,180,0,.28)" }}>
+                className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[16px] px-8 py-4 rounded-xl hover:bg-[#e89e00] transition-colors"
+                style={{ boxShadow: "0 12px 32px rgba(255,180,0,.3)" }}>
                 Start free — 7 days, no card
               </Link>
               <Link href="/login"
-                className="inline-flex items-center gap-2 text-white font-bold text-[16px] px-6 py-4 rounded-xl border border-white/30 hover:border-white/60 transition-colors backdrop-blur-sm">
+                className="text-white font-bold text-[16px] px-6 py-4 rounded-xl border border-white/25 hover:border-white/50 transition-colors backdrop-blur-sm">
                 Log in
               </Link>
             </div>
 
-            <div className="flex flex-wrap gap-5 text-[13px] font-semibold text-[#a9bcc8]">
-              <span className="flex items-center gap-2"><span className="text-[#ffb400]">✓</span> 7-day free trial</span>
-              <span className="flex items-center gap-2"><span className="text-[#ffb400]">✓</span> $40/mo flat, unlimited users</span>
-              <span className="flex items-center gap-2"><span className="text-[#ffb400]">✓</span> All 4 trades included</span>
+            <div className="flex flex-wrap gap-6 text-[13px] font-semibold text-[#8aa4b4]">
+              <span>7-day free trial</span>
+              <span className="text-[#2a3a47]">|</span>
+              <span>$40/mo flat — unlimited users</span>
+              <span className="text-[#2a3a47]">|</span>
+              <span>All 4 trades included</span>
             </div>
           </div>
+        </div>
+
+        {/* Scroll indicator */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 opacity-50">
+          <span className="text-[11px] font-bold tracking-[.2em] uppercase text-white">Scroll</span>
+          <div className="w-px h-8 bg-white/40" />
         </div>
       </div>
 
       {/* TRADES STRIP */}
-      <div className="border-t border-b border-white/[0.07] bg-[#0c1e2e]">
-        <div className="max-w-7xl mx-auto px-6 py-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {TRADES.map((t) => (
-            <div key={t.name} className="flex items-start gap-3">
-              <span className="text-2xl shrink-0 mt-0.5">{t.emoji}</span>
-              <div>
-                <p className="font-bold text-white text-[14px]">{t.name}</p>
-                <p className="text-[12px] text-[#7e94a2] leading-snug mt-0.5">{t.desc}</p>
+      <div className="border-t border-b border-white/[0.08]">
+        <div className="max-w-7xl mx-auto px-6 py-0">
+          <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-white/[0.08]">
+            {TRADES.map((t, i) => (
+              <div key={t.name} className="px-6 py-7">
+                <p className="text-[11px] font-bold tracking-[.14em] uppercase text-[#ffb400] mb-1.5">
+                  {String(i + 1).padStart(2, "0")}
+                </p>
+                <p className="font-extrabold text-white text-[15px] mb-1">{t.name}</p>
+                <p className="text-[12px] text-[#5a7082] leading-snug">{t.detail}</p>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
       {/* WHAT QUOTEASE DOES */}
       <div className="max-w-7xl mx-auto px-6 py-24">
-        <div className="mb-14">
-          <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">Everything in one place</span>
-          <h2 className="font-display uppercase text-[2.2rem] sm:text-[3rem] leading-[0.93] mt-3 text-white max-w-[680px]">
-            From first call to final payment.<br className="hidden sm:block" />
-            <span className="text-[#ffb400]">One tool. No fuss.</span>
-          </h2>
-        </div>
+        <div className="grid lg:grid-cols-[1fr_2fr] gap-16 items-start">
+          <div className="lg:sticky lg:top-24">
+            <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">The full toolkit</span>
+            <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.93] mt-3 mb-6 text-white">
+              Everything from quote<br />to paid.
+            </h2>
+            <p className="text-[15px] text-[#7e94a2] leading-[1.7] mb-8">
+              Most quoting tools stop at the quote. Quotease covers the whole job —
+              from the first number on site to the final payment cleared.
+            </p>
+            <Link href="/signup" className="inline-flex bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-6 py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors">
+              Start free trial
+            </Link>
+          </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {FEATURES.map((f) => (
-            <div key={f.title} className="bg-[#0e2233] border border-white/[0.07] rounded-2xl p-6 hover:border-[#ffb400]/30 transition-colors">
-              <span className="text-3xl block mb-4">{f.emoji}</span>
-              <h3 className="font-extrabold text-[15px] text-white mb-2 leading-snug">{f.title}</h3>
-              <p className="text-[13px] text-[#7e94a2] leading-[1.6]">{f.body}</p>
-            </div>
-          ))}
+          <div className="grid sm:grid-cols-2 gap-px bg-white/[0.06] rounded-2xl overflow-hidden border border-white/[0.06]">
+            {FEATURES.map((f) => (
+              <div key={f.n} className="bg-[#0a1722] p-7 hover:bg-[#0e2233] transition-colors">
+                <p className="font-display text-[2.2rem] leading-none mb-4 text-[#ffb400]/20 select-none">{f.n}</p>
+                <h3 className="font-extrabold text-[15px] text-white mb-2 leading-snug">{f.title}</h3>
+                <p className="text-[13px] text-[#5a7082] leading-[1.65]">{f.body}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* JOB SITE PHOTO BREAK */}
-      <div className="relative h-[50vh] overflow-hidden">
+      {/* PHOTO BREAK — site photo */}
+      <div className="relative h-[55vh] min-h-[380px] overflow-hidden">
         <Image
-          src={KITCHEN_IMG}
-          alt="High-spec residential kitchen electrical install — Spark Ease Electrical"
+          src={SITE_IMG}
+          alt="Tradies on a residential job site"
           fill
           className="object-cover object-center"
           unoptimized
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0a1722]/90 via-[#0a1722]/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#0a1722]/95 via-[#0a1722]/70 to-[#0a1722]/20" />
         <div className="absolute inset-0 flex items-center">
           <div className="max-w-7xl mx-auto px-6">
-            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">The problem we solved</p>
-            <h2 className="font-display uppercase text-[2rem] sm:text-[2.8rem] leading-[0.95] text-white max-w-[500px]">
-              Most tradies quote too slow<br />and lose the job.
+            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-4">The problem we solved</p>
+            <h2 className="font-display uppercase text-[2.2rem] sm:text-[3.2rem] leading-[0.93] text-white max-w-[540px] mb-5">
+              54% of clients go with<br />the first quote they get.
             </h2>
-            <p className="text-[15px] text-[#a9bcc8] mt-4 max-w-[420px]">
-              54% of clients go with the first quote they receive.<br />
-              Quotease gets you there first, every time.
+            <p className="text-[16px] text-[#a9bcc8] max-w-[420px] leading-[1.6]">
+              Speed wins the job. Quotease gets you there first — every time,
+              from every site.
             </p>
           </div>
         </div>
@@ -208,20 +219,19 @@ export default function Home() {
         <div className="mb-12">
           <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">Sound familiar?</span>
           <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.93] mt-3 text-white">
-            Every problem has a fix built in.
+            Every problem.<br />Already fixed.
           </h2>
         </div>
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col divide-y divide-white/[0.06]">
           {PAIN_POINTS.map((p, i) => (
-            <div key={i} className="grid sm:grid-cols-[1fr_40px_1fr] gap-3 sm:gap-4 items-center bg-[#0e2233] border border-white/[0.07] rounded-2xl px-5 sm:px-7 py-4">
-              <div className="flex items-center gap-3">
-                <span className="text-red-400 text-lg shrink-0">✗</span>
-                <span className="text-[14px] text-[#7e94a2] font-semibold">{p.x}</span>
+            <div key={i} className="grid sm:grid-cols-[1fr_1fr] gap-0 py-5 items-center">
+              <div className="flex items-center gap-4 pr-8 pb-3 sm:pb-0">
+                <span className="text-[11px] font-bold text-[#2a3a47] tabular w-5 shrink-0">{String(i + 1).padStart(2, "0")}</span>
+                <span className="text-[15px] text-[#4a6070] font-semibold line-through decoration-[#2a3a47]">{p.x}</span>
               </div>
-              <span className="hidden sm:block text-[#2a3a47] text-2xl text-center">›</span>
-              <div className="flex items-center gap-3">
-                <span className="text-[#ffb400] text-lg shrink-0">✓</span>
-                <span className="text-[14px] text-white font-semibold">{p.y}</span>
+              <div className="flex items-center gap-4 sm:border-l border-white/[0.06] sm:pl-8">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#ffb400] shrink-0" />
+                <span className="text-[15px] text-white font-semibold">{p.y}</span>
               </div>
             </div>
           ))}
@@ -229,125 +239,124 @@ export default function Home() {
       </div>
 
       {/* BUILT BY A TRADIE */}
-      <div className="bg-[#0c1e2e] border-t border-white/[0.07]">
+      <div className="border-t border-white/[0.07]">
         <div className="max-w-7xl mx-auto px-6 py-24 grid lg:grid-cols-2 gap-16 items-center">
-          <div>
-            <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">Why it exists</span>
-            <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.95] mt-4 mb-6 text-white">
-              Built by a sparkie.<br />Not a software company.
-            </h2>
-            <p className="text-[15.5px] text-[#a9bcc8] leading-[1.7] mb-5">
-              Nick has been running Spark Ease Electrical in Melbourne since 2013 — Bayside,
-              Mornington Peninsula, inner suburbs. He built Quotease because Fergus took three weeks
-              to set up and Tradify was built for teams of 20, not sole traders.
-            </p>
-            <p className="text-[15.5px] text-[#a9bcc8] leading-[1.7] mb-8">
-              Quotease does what a tradie actually needs: quote fast, send professionally,
-              get the job accepted, track it to completion, get paid. Nothing more.
-            </p>
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-[#ffb400] flex items-center justify-center font-display text-xl text-[#0a1722]">N</div>
-              <div>
-                <p className="font-bold text-white text-[14px]">Nick</p>
-                <p className="text-[12.5px] text-[#7e94a2]">Spark Ease Electrical · Melbourne · REC 23538</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Real lounge room photo */}
-          <div className="relative rounded-2xl overflow-hidden aspect-[4/3]">
+          <div className="relative rounded-2xl overflow-hidden aspect-[4/3] order-2 lg:order-1">
             <Image
-              src={LOUNGE_IMG}
-              alt="High-spec residential lounge electrical install — Spark Ease Electrical"
+              src="https://images.squarespace-cdn.com/content/v1/6848e6851124a2687a93a35f/ea135f61-ba35-4cdd-a281-ffcab6e07c5e/residential-electrician-melbourne-lounge+room.jpg"
+              alt="High-spec residential electrical install — Spark Ease Electrical, Melbourne"
               fill
               className="object-cover"
               unoptimized
             />
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#0a1722]/80 to-transparent p-5">
-              <p className="text-[11px] text-[#a9bcc8]">Builder: Tykon · Photographer: Dan Preston</p>
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-5">
+              <p className="text-[11px] text-white/60">Spark Ease Electrical, Melbourne. Builder: Tykon. Photographer: Dan Preston</p>
+            </div>
+          </div>
+
+          <div className="order-1 lg:order-2">
+            <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">Who built this</span>
+            <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.93] mt-3 mb-6 text-white">
+              A sparkie who got sick<br />of bad software.
+            </h2>
+            <p className="text-[15.5px] text-[#a9bcc8] leading-[1.7] mb-5">
+              Nick has been running Spark Ease Electrical across Melbourne since 2013.
+              Bayside, Mornington Peninsula, inner suburbs. High-spec residential builds,
+              renovations, commercial fitouts.
+            </p>
+            <p className="text-[15.5px] text-[#a9bcc8] leading-[1.7] mb-8">
+              He built Quotease because every piece of software he tried was either
+              built by people who had never held a cable puller, or so bloated
+              it took three weeks to set up. Quotease does what a tradie
+              actually needs. Nothing more.
+            </p>
+
+            <div className="flex items-center gap-4 p-4 bg-[#0e2233] border border-white/[0.07] rounded-2xl">
+              <div className="w-12 h-12 rounded-full bg-[#ffb400] flex items-center justify-center font-display text-xl text-[#0a1722] shrink-0">N</div>
+              <div>
+                <p className="font-bold text-white text-[14px]">Nick</p>
+                <p className="text-[12.5px] text-[#7e94a2]">Spark Ease Electrical Services</p>
+                <p className="text-[12px] text-[#4a5d6a]">Melbourne, VIC  ·  REC 23538  ·  Since 2013</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* VS COMPETITORS */}
-      <div className="max-w-7xl mx-auto px-6 py-24">
-        <div className="bg-[#0e2233] border border-white/[0.08] rounded-3xl overflow-hidden">
-          <div className="p-8 sm:p-10 lg:p-14">
-            <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">vs Fergus and Tradify</span>
-            <h2 className="font-display uppercase text-[2rem] sm:text-[2.5rem] leading-[0.95] mt-4 mb-8 text-white">
-              Why not just use what everyone else uses?
+      <div className="border-t border-white/[0.07] bg-[#0c1e2e]">
+        <div className="max-w-7xl mx-auto px-6 py-24">
+          <div className="mb-12">
+            <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">Why not just use Fergus?</span>
+            <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.93] mt-3 text-white">
+              Built for a crew of 20.<br />You have got a ute.
             </h2>
-            <div className="grid sm:grid-cols-2 gap-4">
-              {[
-                { them: "3 weeks to set up properly",        us: "Quoting on day one" },
-                { them: "Built for teams of 10+",            us: "Sole traders and small crews" },
-                { them: "$40 per user per month",            us: "$40 flat — unlimited users" },
-                { them: "SWMS, HR, POs, scheduling, procurement", us: "Quote. Job. Invoice. Paid." },
-              ].map((r, i) => (
-                <div key={i} className="grid grid-cols-2 gap-3 text-[13px]">
-                  <div className="flex items-start gap-2 bg-white/[0.03] rounded-xl px-3 py-3">
-                    <span className="text-red-400 shrink-0">✗</span>
-                    <span className="text-[#7e94a2]">{r.them}</span>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { label: "Setup time",    them: "3 weeks",        us: "Day one" },
+              { label: "Built for",     them: "Teams of 10+",   us: "Sole traders" },
+              { label: "Price",         them: "$40/user/month", us: "$40 flat" },
+              { label: "Scope",         them: "HR, SWMS, POs",  us: "Quote. Job. Paid." },
+            ].map((r) => (
+              <div key={r.label} className="bg-[#0a1722] border border-white/[0.07] rounded-2xl p-6">
+                <p className="text-[11px] font-bold tracking-[.14em] uppercase text-[#ffb400] mb-4">{r.label}</p>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-5 h-5 rounded-full bg-red-500/15 flex items-center justify-center text-[10px] text-red-400 font-bold shrink-0">x</span>
+                    <span className="text-[13px] text-[#4a6070]">{r.them}</span>
                   </div>
-                  <div className="flex items-start gap-2 bg-[#ffb400]/[0.07] border border-[#ffb400]/20 rounded-xl px-3 py-3">
-                    <span className="text-[#ffb400] shrink-0">✓</span>
-                    <span className="text-white font-semibold">{r.us}</span>
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-5 h-5 rounded-full bg-[#ffb400]/15 flex items-center justify-center text-[10px] text-[#ffb400] font-bold shrink-0">✓</span>
+                    <span className="text-[13px] text-white font-semibold">{r.us}</span>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
       {/* PRICING */}
-      <div className="bg-[#0c1e2e] border-t border-white/[0.07]">
-        <div className="max-w-7xl mx-auto px-6 py-24 grid lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">Pricing</span>
-            <h2 className="font-display uppercase text-[2.5rem] sm:text-[3.2rem] leading-[0.93] mt-3 mb-6 text-white">
-              One price.<br />No surprises.
-            </h2>
-            <div className="flex flex-col gap-3 mb-6">
-              {[
-                "7-day free trial — no credit card",
-                "Unlimited users, unlimited quotes",
-                "All 4 trades included",
-                "VIC planning overlay checks built in",
-                "Xero CSV export included",
-                "Cancel any time, no lock-in",
-              ].map((f) => (
-                <div key={f} className="flex items-center gap-3 text-[14.5px] text-[#d5e0e7] font-semibold">
-                  <span className="text-[#ffb400]">✓</span> {f}
-                </div>
-              ))}
-            </div>
-            <p className="text-[13px] text-[#7e94a2]">
-              Fergus charges $40/user/month. Three of you costs $120.<br />
-              Quotease is $40 flat. Full stop.
-            </p>
-          </div>
-
-          <div className="bg-[#0a1722] border border-white/[0.1] rounded-3xl overflow-hidden"
-            style={{ boxShadow: "0 24px 64px rgba(0,0,0,.4)" }}>
-            <div className="h-3" style={{ background: "repeating-linear-gradient(135deg,#FFB400 0 14px,#E89E00 14px 28px)" }} />
-            <div className="p-10 text-center">
-              <p className="text-[13px] font-bold tracking-[.15em] uppercase text-[#7e94a2] mb-3">Monthly subscription</p>
-              <div className="flex items-end justify-center gap-1.5 mb-2">
-                <span className="font-display text-[5.5rem] leading-[0.85] text-[#ffb400]">$40</span>
-                <span className="font-extrabold text-xl text-[#7e94a2] pb-3">/mo</span>
+      <div className="max-w-7xl mx-auto px-6 py-24 grid lg:grid-cols-2 gap-12 items-center">
+        <div>
+          <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">Pricing</span>
+          <h2 className="font-display uppercase text-[2.5rem] sm:text-[3.2rem] leading-[0.93] mt-3 mb-8 text-white">
+            One price.<br />No surprises.
+          </h2>
+          <div className="flex flex-col divide-y divide-white/[0.06]">
+            {[
+              "7-day free trial, no credit card needed",
+              "Unlimited users, unlimited quotes",
+              "All 4 trades included from day one",
+              "VIC planning overlay checks built in",
+              "Xero CSV export included",
+              "Cancel any time, zero lock-in",
+            ].map((f) => (
+              <div key={f} className="flex items-center gap-3 py-3.5 text-[14.5px] text-[#c8d8e4] font-semibold">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#ffb400] shrink-0" />
+                {f}
               </div>
-              <p className="text-[#7e94a2] font-semibold text-[14px] mb-2">flat — unlimited users</p>
-              <p className="text-[12.5px] text-[#4a5d6a] mb-8">First 7 days free. Then $40/mo. Cancel anytime.</p>
-              <Link href="/signup"
-                className="block bg-[#ffb400] text-[#0a1722] font-extrabold text-[17px] py-4 rounded-xl mb-3 hover:bg-[#e89e00] transition-colors">
-                Start your free trial
-              </Link>
-              <Link href="/login" className="block text-[#7e94a2] font-semibold text-[14px] hover:text-white transition-colors">
-                Already have an account? Log in
-              </Link>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-[#0e2233] border border-white/[0.1] rounded-3xl overflow-hidden" style={{ boxShadow: "0 24px 64px rgba(0,0,0,.4)" }}>
+          <div className="h-3" style={{ background: "repeating-linear-gradient(135deg,#FFB400 0 14px,#E89E00 14px 28px)" }} />
+          <div className="p-10 text-center">
+            <p className="text-[12px] font-bold tracking-[.2em] uppercase text-[#7e94a2] mb-4">Monthly subscription</p>
+            <div className="flex items-end justify-center gap-2 mb-2">
+              <span className="font-display text-[6rem] leading-[0.85] text-[#ffb400]">$40</span>
+              <span className="font-extrabold text-xl text-[#7e94a2] pb-4">/mo</span>
             </div>
+            <p className="text-[#7e94a2] text-[14px] mb-1">flat rate — unlimited users</p>
+            <p className="text-[12px] text-[#3a4f5e] mb-8">First 7 days free. Cancel anytime.</p>
+            <Link href="/signup" className="block bg-[#ffb400] text-[#0a1722] font-extrabold text-[17px] py-4 rounded-xl mb-3 hover:bg-[#e89e00] transition-colors">
+              Start your free trial
+            </Link>
+            <Link href="/login" className="block text-[#7e94a2] text-[14px] hover:text-white transition-colors">
+              Already have an account? Log in
+            </Link>
           </div>
         </div>
       </div>
@@ -359,20 +368,18 @@ export default function Home() {
             <h2 className="font-display uppercase text-[2.8rem] sm:text-[3.5rem] leading-[0.92] mb-3 text-[#0a1722]">
               The other tradie just<br />sent their quote.
             </h2>
-            <p className="font-bold text-[16px] text-[#0a1722]/70">How long does yours take?</p>
+            <p className="font-bold text-[16px] text-[#0a1722]/60">How long does yours take?</p>
           </div>
           <Link href="/signup"
-            className="bg-[#0a1722] text-[#ffb400] font-extrabold text-[17px] px-10 py-5 rounded-xl whitespace-nowrap hover:bg-[#0e2233] transition-colors inline-block text-center">
+            className="bg-[#0a1722] text-[#ffb400] font-extrabold text-[17px] px-10 py-5 rounded-xl hover:bg-[#0e2233] transition-colors whitespace-nowrap">
             Start quoting today
           </Link>
         </div>
-        <div className="border-t border-black/[0.15]">
-          <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-3">
-              <span className="font-display text-lg text-[#0a1722]">QUOTEASE</span>
-              <span className="text-[11px] font-bold text-[#0a1722]/50">Built by Spark Ease Electrical, Melbourne</span>
-            </div>
-            <div className="flex gap-6 text-[12.5px] font-semibold text-[#0a1722]/60">
+        <div className="border-t border-black/[0.12]">
+          <div className="max-w-7xl mx-auto px-6 py-5 flex flex-wrap items-center justify-between gap-4">
+            <span className="font-display text-lg text-[#0a1722]">QUOTEASE</span>
+            <span className="text-[12px] font-semibold text-[#0a1722]/50">Built by Spark Ease Electrical, Melbourne</span>
+            <div className="flex gap-6 text-[12.5px] font-semibold text-[#0a1722]/50">
               <Link href="/login" className="hover:text-[#0a1722] transition-colors">Log in</Link>
               <Link href="/signup" className="hover:text-[#0a1722] transition-colors">Sign up</Link>
             </div>
