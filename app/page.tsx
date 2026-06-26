@@ -47,16 +47,6 @@ const FEATURES = [
     title: "VIC planning overlay checks",
     body: "Type in the address and Quotease checks VicPlan automatically. Heritage overlay detected? Labour estimate updates on the spot.",
   },
-  {
-    n: "09",
-    title: "Quotes priced off what you actually pay",
-    body: "Upload your supplier's price list once. Every quote after that calculates real costs, not a generic estimate that's already wrong by the time your wholesaler updates prices.",
-  },
-  {
-    n: "10",
-    title: "Snap a photo, or just talk it through",
-    body: "Photograph the plan or record a voice note walking the site. AI drafts the scope and pre-fills the quote — you check it and adjust before anything gets sent.",
-  },
 ];
 
 const TRADES = [
@@ -200,6 +190,73 @@ export default function Home() {
           </div>
         </div>
       </div>
+      </div>
+
+      {/* ── PRICING & AI SHOWCASE ───────────────────────────────────── */}
+      <div className="border-t border-white/[0.07] bg-[#0c1e2e]">
+        <div className="max-w-7xl mx-auto px-6 py-24">
+          <div className="mb-14 max-w-[640px]">
+            <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">Why quoting is actually fast</span>
+            <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.93] mt-3 text-white">
+              The numbers are yours.<br />The typing isn&apos;t.
+            </h2>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* Supplier pricing mockup */}
+            <div className="bg-[#0a1722] border border-white/[0.09] rounded-3xl p-8 sm:p-9">
+              <p className="text-[11px] font-bold tracking-[.14em] uppercase text-[#ffb400] mb-3">Your real prices</p>
+              <h3 className="font-extrabold text-[20px] text-white mb-3 leading-snug">Upload your supplier&apos;s price list once</h3>
+              <p className="text-[14px] text-[#7e94a2] leading-[1.65] mb-7">
+                Every quote after that calculates off what you actually pay — not a generic estimate that&apos;s already wrong by the time your wholesaler updates prices.
+              </p>
+              <div className="bg-[#0e2233] border border-white/[0.08] rounded-2xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[11px] font-bold text-white/70 uppercase tracking-wide">Materials library</span>
+                  <span className="text-[10.5px] font-bold text-[#ffb400] bg-[#ffb400]/10 border border-[#ffb400]/20 px-2 py-1 rounded-full">CSV imported</span>
+                </div>
+                {[
+                  { item: "20mm conduit (per m)", cost: "$2.40" },
+                  { item: "GPO double, white", cost: "$8.90" },
+                  { item: "RCBO 20A", cost: "$34.50" },
+                  { item: "LED downlight 10W", cost: "$11.20" },
+                ].map((row) => (
+                  <div key={row.item} className="flex items-center justify-between py-2 border-t border-white/[0.06] first:border-t-0">
+                    <span className="text-[13px] text-[#c8d8e4]">{row.item}</span>
+                    <span className="text-[13px] font-bold text-white tabular">{row.cost}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* AI quoting mockup */}
+            <div className="bg-[#0a1722] border border-white/[0.09] rounded-3xl p-8 sm:p-9">
+              <p className="text-[11px] font-bold tracking-[.14em] uppercase text-[#ffb400] mb-3">AI does the first pass</p>
+              <h3 className="font-extrabold text-[20px] text-white mb-3 leading-snug">Snap the plan. Talk through the job.</h3>
+              <p className="text-[14px] text-[#7e94a2] leading-[1.65] mb-7">
+                Photograph the floor plan or record yourself walking the site. AI reads it and drafts the scope — you check it and adjust before anything gets sent.
+              </p>
+              <div className="bg-[#0e2233] border border-white/[0.08] rounded-2xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[11px] font-bold text-white/70 uppercase tracking-wide">Drawing read</span>
+                  <span className="text-[10.5px] font-bold text-amber-300 bg-amber-400/10 border border-amber-400/20 px-2 py-1 rounded-full">Medium confidence</span>
+                </div>
+                {[
+                  { item: "Power points", val: "8" },
+                  { item: "Light points", val: "6" },
+                  { item: "Switchboard upgrade", val: "Yes" },
+                  { item: "Downlights", val: "10" },
+                ].map((row) => (
+                  <div key={row.item} className="flex items-center justify-between py-2 border-t border-white/[0.06] first:border-t-0">
+                    <span className="text-[13px] text-[#c8d8e4]">{row.item}</span>
+                    <span className="text-[13px] font-bold text-white tabular">{row.val}</span>
+                  </div>
+                ))}
+                <p className="text-[11px] text-[#5a7385] mt-3 leading-snug">Review every field before sending — AI drafts, you decide.</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* PHOTO BREAK — site photo */}
