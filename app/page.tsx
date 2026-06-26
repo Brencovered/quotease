@@ -47,6 +47,16 @@ const FEATURES = [
     title: "VIC planning overlay checks",
     body: "Type in the address and Quotease checks VicPlan automatically. Heritage overlay detected? Labour estimate updates on the spot.",
   },
+  {
+    n: "09",
+    title: "Quotes priced off what you actually pay",
+    body: "Upload your supplier's price list once. Every quote after that calculates real costs, not a generic estimate that's already wrong by the time your wholesaler updates prices.",
+  },
+  {
+    n: "10",
+    title: "Snap a photo, or just talk it through",
+    body: "Photograph the plan or record a voice note walking the site. AI drafts the scope and pre-fills the quote — you check it and adjust before anything gets sent.",
+  },
 ];
 
 const TRADES = [
