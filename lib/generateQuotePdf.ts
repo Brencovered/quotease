@@ -253,7 +253,7 @@ export async function generateQuotePdf(
 
   // --- Accept this quote callout + clickable button ---
   if (quote.public_token) {
-    const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? "https://quotease.vercel.app";
+    const appUrl   = process.env.NEXT_PUBLIC_APP_URL ?? "https://quotease.vercel.app";
     const quoteUrl = `${appUrl}/q/${quote.public_token}`;
     rule();
     newPageIfNeeded(130);
@@ -269,65 +269,64 @@ export async function generateQuotePdf(
 
     // Navy background box
     page.drawRectangle({ x: MARGIN, y: boxY, width: PAGE_WIDTH - MARGIN * 2, height: boxHeight, color: NAVY });
-    // Amber left bar
     page.drawRectangle({ x: MARGIN, y: boxY, width: 4, height: boxHeight, color: AMBER });
 
-    // QR code (scannable from printed copy)
+    // QR code
     try {
       const qrDataUrl = await QRCode.toDataURL(quoteUrl, { width: 200, margin: 1, color: { dark: "#0a1722", light: "#ffffff" } });
-      const qrBytes  = Buffer.from(qrDataUrl.replace(/^data:image\/png;base64,/, ""), "base64");
-      const qrImage  = await pdfDoc.embedPng(qrBytes);
+      const qrBytes   = Buffer.from(qrDataUrl.replace(/^data:image\/png;base64,/, ""), "base64");
+      const qrImage   = await pdfDoc.embedPng(qrBytes);
       page.drawImage(qrImage, { x: MARGIN + 10, y: boxY + (boxHeight - qrSize) / 2, width: qrSize, height: qrSize });
     } catch { /* skip QR on failure */ }
 
-    // Label
+    // Label + instructions
     page.drawText("ACCEPT THIS QUOTE", { x: textX, y: boxY + 92, size: 11, font: fontBold, color: AMBER });
     page.drawText("Click the button below or scan the QR code on your phone.", { x: textX, y: boxY + 76, size: 8.5, font, color: rgb(0.75, 0.82, 0.87) });
 
-    // Amber button rectangle
+    // Amber button shape
     page.drawRectangle({ x: btnX, y: btnY, width: btnWidth, height: btnHeight, color: AMBER });
 
-    // Button label
+    // Button label centered
     const btnText  = "Accept & choose payment \u2192";
     const btnTextW = fontBold.widthOfTextAtSize(btnText, 12);
-    const btnTextX = btnX + (btnWidth - btnTextW) / 2;
-    const btnTextY = btnY + (btnHeight - 12) / 2;
-    page.drawText(btnText, { x: btnTextX, y: btnTextY, size: 12, font: fontBold, color: NAVY });
+    page.drawText(btnText, {
+      x: btnX + (btnWidth - btnTextW) / 2,
+      y: btnY + (btnHeight - 12) / 2,
+      size: 12, font: fontBold, color: NAVY,
+    });
 
-    // PDF link annotation — makes the button actually clickable in any PDF reader
-    const context = pdfDoc.context;
+    // Clickable link annotation over the button using pdf-lib's addLinkAnnotation helper
+    const { context } = pdfDoc;
 
-    const uriActionRef = context.register(
-      context.obj({
-        Type: PDFName.of("Action"),
-        S:    PDFName.of("URI"),
-        URI:  PDFString.of(quoteUrl),
-      })
-    );
+    const uriAction = context.obj({
+      Type: PDFName.of("Action"),
+      S:    PDFName.of("URI"),
+      URI:  PDFString.of(quoteUrl),
+    });
+    const uriActionRef = context.register(uriAction);
 
-    const annotRef = context.register(
-      context.obj({
-        Type:    PDFName.of("Annot"),
-        Subtype: PDFName.of("Link"),
-        Rect:    context.obj([
-          PDFNumber.of(btnX),
-          PDFNumber.of(btnY),
-          PDFNumber.of(btnX + btnWidth),
-          PDFNumber.of(btnY + btnHeight),
-        ]),
-        Border:  context.obj([PDFNumber.of(0), PDFNumber.of(0), PDFNumber.of(0)]),
-        A:       uriActionRef,
-        F:       PDFNumber.of(4),
-      })
-    );
+    const linkAnnot = context.obj({
+      Type:    PDFName.of("Annot"),
+      Subtype: PDFName.of("Link"),
+      Rect:    context.obj([
+        PDFNumber.of(Math.round(btnX)),
+        PDFNumber.of(Math.round(btnY)),
+        PDFNumber.of(Math.round(btnX + btnWidth)),
+        PDFNumber.of(Math.round(btnY + btnHeight)),
+      ]),
+      Border:  context.obj([PDFNumber.of(0), PDFNumber.of(0), PDFNumber.of(0)]),
+      A:       uriActionRef,
+      F:       PDFNumber.of(4),
+    });
+    const linkAnnotRef = context.register(linkAnnot);
 
-    // Attach annotation to the page
-    const rawPage = pdfDoc.getPages().at(-1)!.node;
-    const existing = rawPage.get(PDFName.of("Annots"));
-    if (existing instanceof PDFArray) {
-      existing.push(annotRef);
+    // Add to page's Annots array
+    const currentPage = pdfDoc.getPages().at(-1)!;
+    const annots      = currentPage.node.get(PDFName.of("Annots"));
+    if (annots instanceof PDFArray) {
+      annots.push(linkAnnotRef);
     } else {
-      rawPage.set(PDFName.of("Annots"), context.obj([annotRef]));
+      currentPage.node.set(PDFName.of("Annots"), context.obj([linkAnnotRef]));
     }
 
     y = boxY - 16;
