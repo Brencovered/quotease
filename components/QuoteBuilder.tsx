@@ -662,7 +662,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
   const [propResult,   setPropResult]   = useState<{
     found: boolean; reason?: string; heritageOverlay?: boolean; bushfireOverlay?: boolean;
     zoneLabel?: string | null; ceilingHint?: string | null;
-    flags?: Array<{ type: string; severity: string; label: string; detail: string | null }>;
+    flags?: Array<{ type: string; severity: string; label: string; detail: string | null; verifyUrl?: string; verifyLabel?: string }>;
   } | null>(null);
 
   const isVic = siteAddress.trim().length > 8 && (
@@ -735,10 +735,16 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
                   propResult.flags?.map((flag) => (
                     <div key={flag.type} className={`rounded-xl px-3 py-3 flex items-start gap-2.5 ${flag.severity === "warning" ? "bg-amber-50 border border-amber-200" : "bg-[var(--blue-bg)] border border-blue-100"}`}>
                       <span className="text-lg shrink-0">{flag.type === "heritage" ? "🏛️" : flag.type === "bushfire" ? "🔥" : "📍"}</span>
-                      <div>
+                      <div className="flex-1 min-w-0">
                         <p className={`font-bold text-[13px] ${flag.severity === "warning" ? "text-amber-800" : "text-[var(--blue)]"}`}>{flag.label}</p>
                         {flag.detail && <p className={`text-[12px] mt-0.5 leading-snug ${flag.severity === "warning" ? "text-amber-700" : "text-[var(--blue)]"}`}>{flag.detail}</p>}
                         {flag.type === "heritage" && <p className="text-[11.5px] font-bold text-amber-700 mt-1">⚠️ Ceiling type set to Heritage Timber — labour estimate updated</p>}
+                        {flag.verifyUrl && (
+                          <a href={flag.verifyUrl} target="_blank" rel="noopener noreferrer"
+                            className={`inline-flex items-center gap-1 text-[12px] font-bold mt-2 underline underline-offset-2 ${flag.severity === "warning" ? "text-amber-700 hover:text-amber-900" : "text-[var(--blue)] hover:text-blue-800"}`}>
+                            {flag.verifyLabel ?? "Verify on VicPlan →"}
+                          </a>
+                        )}
                       </div>
                     </div>
                   ))

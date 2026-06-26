@@ -75,29 +75,54 @@ export async function GET(request: Request) {
 
   const zoneLabel = zones[0]
     ? zones[0]
-        .replace(/^GRZ\d*/i, "General Residential Zone")
-        .replace(/^NRZ\d*/i, "Neighbourhood Residential Zone")
-        .replace(/^MUZ/i,    "Mixed Use Zone")
-        .replace(/^LDRZ/i,   "Low Density Residential Zone")
-        .replace(/^RGZ/i,    "Residential Growth Zone")
-        .replace(/^TZ/i,     "Township Zone")
-        .replace(/^RUZ/i,    "Rural Zone")
-        .replace(/^C1Z/i,    "Commercial Zone")
-        .replace(/^IN1Z/i,   "Industrial Zone")
+        .replace(/^GRZ\d*/i,  "General Residential Zone")
+        .replace(/^NRZ\d*/i,  "Neighbourhood Residential Zone")
+        .replace(/^MUZ\d*/i,  "Mixed Use Zone")
+        .replace(/^LDRZ\d*/i, "Low Density Residential Zone")
+        .replace(/^RGZ\d*/i,  "Residential Growth Zone")
+        .replace(/^TZ\d*/i,   "Township Zone")
+        .replace(/^RUZ\d*/i,  "Rural Zone")
+        .replace(/^RCZ\d*/i,  "Rural Conservation Zone")
+        .replace(/^RURFLZ\d*/i,"Rural Floodway Zone")
+        .replace(/^C1Z\d*/i,  "Commercial 1 Zone")
+        .replace(/^C2Z\d*/i,  "Commercial 2 Zone")
+        .replace(/^IN1Z\d*/i, "Industrial 1 Zone")
+        .replace(/^IN2Z\d*/i, "Industrial 2 Zone")
+        .replace(/^IN3Z\d*/i, "Industrial 3 Zone")
+        .replace(/^PUZ\d*/i,  "Public Use Zone")
+        .replace(/^PCRZ\d*/i, "Public Conservation & Resource Zone")
+        .replace(/^RDZ\d*/i,  "Road Zone")
+        .replace(/^CDZ\d*/i,  "Comprehensive Development Zone")
+        .replace(/^DZ\d*/i,   "Development Zone")
+        .replace(/^UFZ\d*/i,  "Urban Floodway Zone")
+        .replace(/^ZN\d*/i,   "Unclassified Zone (verify on VicPlan)")
     : null;
+
+  // VicPlan public viewer URL for this address
+  const vicplanUrl = `https://mapshare.vic.gov.au/vicplan/?query=${encodeURIComponent(address)}`;
 
   const flags = [
     heritageOverlay ? {
       type: "heritage", severity: "warning",
       label: "Heritage Overlay",
       detail: "This property is under a Heritage Overlay. Expect restricted access, heritage-compliant materials, and possible council approvals. Labour costs will be significantly higher.",
+      verifyUrl: vicplanUrl,
+      verifyLabel: "Verify on VicPlan →",
     } : null,
     bushfireOverlay ? {
       type: "bushfire", severity: "warning",
       label: "Bushfire Management Overlay",
       detail: "Bushfire Prone Area applies. BAL rating may affect materials and compliance requirements. Confirm with local council before finalising the quote.",
+      verifyUrl: vicplanUrl,
+      verifyLabel: "Verify on VicPlan →",
     } : null,
-    zoneLabel ? { type: "zone", severity: "info", label: zoneLabel, detail: null } : null,
+    zoneLabel ? {
+      type: "zone", severity: "info",
+      label: zoneLabel,
+      detail: null,
+      verifyUrl: vicplanUrl,
+      verifyLabel: "View on VicPlan →",
+    } : null,
   ].filter(Boolean);
 
   return NextResponse.json({
