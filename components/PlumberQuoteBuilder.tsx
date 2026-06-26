@@ -37,7 +37,7 @@ export default function PlumberQuoteBuilder({ profile, materials }: {
   const [intake, setIntake] = useState<PlumberIntake>(DEFAULT_INTAKE);
   const [rate,   setRate]   = useState(profile.hourly_rate ?? 95);
   const [margin, setMargin] = useState(profile.materials_margin_pct ?? 20);
-  const [lib, _setLib] = useState<MaterialRow[]>(
+  const [lib] = useState<MaterialRow[]>(
     materials.length > 0 ? materials : PLUMBER_DEFAULT_MATERIALS.map((m) => ({ ...m }))
   );
 
