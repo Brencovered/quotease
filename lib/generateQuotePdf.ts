@@ -251,65 +251,86 @@ export async function generateQuotePdf(
     y -= 4;
   }
 
-  // --- Accept this quote callout ---
+  // --- Accept this quote callout + clickable button ---
   if (quote.public_token) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://quotease.vercel.app";
+    const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? "https://quotease.vercel.app";
     const quoteUrl = `${appUrl}/q/${quote.public_token}`;
     rule();
-    newPageIfNeeded(100);
+    newPageIfNeeded(130);
 
-    const boxHeight = 88;
-    const qrSize    = 72;
+    const qrSize    = 80;
+    const btnWidth  = PAGE_WIDTH - MARGIN * 2 - qrSize - 20;
+    const btnHeight = 38;
+    const boxHeight = 116;
     const boxY      = y - boxHeight;
-    const textX     = MARGIN + qrSize + 28;
+    const textX     = MARGIN + qrSize + 20;
+    const btnX      = textX;
+    const btnY      = boxY + 8;
 
-    // Navy callout box
-    page.drawRectangle({
-      x: MARGIN, y: boxY,
-      width: PAGE_WIDTH - MARGIN * 2, height: boxHeight,
-      color: NAVY,
-    });
-
-    // Amber left accent bar
+    // Navy background box
+    page.drawRectangle({ x: MARGIN, y: boxY, width: PAGE_WIDTH - MARGIN * 2, height: boxHeight, color: NAVY });
+    // Amber left bar
     page.drawRectangle({ x: MARGIN, y: boxY, width: 4, height: boxHeight, color: AMBER });
 
-    // QR code
+    // QR code (scannable from printed copy)
     try {
-      const qrDataUrl = await QRCode.toDataURL(quoteUrl, {
-        width: 200, margin: 1,
-        color: { dark: "#0a1722", light: "#ffffff" },
-      });
-      const qrBase64 = qrDataUrl.replace(/^data:image\/png;base64,/, "");
-      const qrBytes  = Buffer.from(qrBase64, "base64");
+      const qrDataUrl = await QRCode.toDataURL(quoteUrl, { width: 200, margin: 1, color: { dark: "#0a1722", light: "#ffffff" } });
+      const qrBytes  = Buffer.from(qrDataUrl.replace(/^data:image\/png;base64,/, ""), "base64");
       const qrImage  = await pdfDoc.embedPng(qrBytes);
-      page.drawImage(qrImage, {
-        x: MARGIN + 12,
-        y: boxY + (boxHeight - qrSize) / 2,
-        width: qrSize, height: qrSize,
-      });
-    } catch {
-      // Skip QR if generation fails — text URL is still present
-    }
+      page.drawImage(qrImage, { x: MARGIN + 10, y: boxY + (boxHeight - qrSize) / 2, width: qrSize, height: qrSize });
+    } catch { /* skip QR on failure */ }
 
-    // Text content
-    page.drawText("ACCEPT THIS QUOTE", {
-      x: textX, y: boxY + 60,
-      size: 11, font: fontBold, color: AMBER,
-    });
-    page.drawText("Scan the QR code or open the link on your phone to", {
-      x: textX, y: boxY + 44,
-      size: 9, font, color: rgb(0.75, 0.82, 0.87),
-    });
-    page.drawText("accept, choose payment method, and get booked in.", {
-      x: textX, y: boxY + 32,
-      size: 9, font, color: rgb(0.75, 0.82, 0.87),
-    });
-    // Short URL — show domain/q/token trimmed for readability
-    const shortUrl = quoteUrl.replace("https://", "");
-    page.drawText(shortUrl, {
-      x: textX, y: boxY + 14,
-      size: 8.5, font: fontBold, color: rgb(0.55, 0.75, 1.0),
-    });
+    // Label
+    page.drawText("ACCEPT THIS QUOTE", { x: textX, y: boxY + 92, size: 11, font: fontBold, color: AMBER });
+    page.drawText("Click the button below or scan the QR code on your phone.", { x: textX, y: boxY + 76, size: 8.5, font, color: rgb(0.75, 0.82, 0.87) });
+
+    // Amber button rectangle
+    page.drawRectangle({ x: btnX, y: btnY, width: btnWidth, height: btnHeight, color: AMBER });
+
+    // Button label
+    const btnText  = "Accept & choose payment \u2192";
+    const btnTextW = fontBold.widthOfTextAtSize(btnText, 12);
+    const btnTextX = btnX + (btnWidth - btnTextW) / 2;
+    const btnTextY = btnY + (btnHeight - 12) / 2;
+    page.drawText(btnText, { x: btnTextX, y: btnTextY, size: 12, font: fontBold, color: NAVY });
+
+    // PDF link annotation — makes the button actually clickable in any PDF reader
+    const { PDFDict, PDFName, PDFString, PDFArray, PDFNumber, PDFRef } = await import("pdf-lib");
+    const context = pdfDoc.context;
+    const pageRef  = pdfDoc.getPages().at(-1)!.ref;
+
+    const uriActionRef = context.register(
+      context.obj({
+        Type: PDFName.of("Action"),
+        S:    PDFName.of("URI"),
+        URI:  PDFString.of(quoteUrl),
+      })
+    );
+
+    const annotRef = context.register(
+      context.obj({
+        Type:    PDFName.of("Annot"),
+        Subtype: PDFName.of("Link"),
+        Rect:    context.obj([
+          PDFNumber.of(btnX),
+          PDFNumber.of(btnY),
+          PDFNumber.of(btnX + btnWidth),
+          PDFNumber.of(btnY + btnHeight),
+        ]),
+        Border:  context.obj([PDFNumber.of(0), PDFNumber.of(0), PDFNumber.of(0)]),
+        A:       uriActionRef,
+        F:       PDFNumber.of(4),
+      })
+    );
+
+    // Attach annotation to the page
+    const rawPage = pdfDoc.getPages().at(-1)!.node;
+    const existing = rawPage.get(PDFName.of("Annots"));
+    if (existing instanceof PDFArray) {
+      existing.push(annotRef);
+    } else {
+      rawPage.set(PDFName.of("Annots"), context.obj([annotRef]));
+    }
 
     y = boxY - 16;
   }
