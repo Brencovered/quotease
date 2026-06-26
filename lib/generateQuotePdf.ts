@@ -191,73 +191,62 @@ export async function generateQuotePdf(
   for (const t of terms) drawRow(`${t.label} (${t.percent}%)`, `$${termAmount(t, quote.total_cost ?? 0).toLocaleString()}`);
   y -= 8;
 
-  // ── HOW TO PAY ───────────────────────────────────────────────────
-  const hasBankDetails = !!(profile.bank_bsb && profile.bank_account_number);
-  if (hasBankDetails || profile.accepts_cash) {
-    rule(); sectionLabel("How to pay");
-    if (hasBankDetails) {
-      text(`Bank transfer - ${profile.bank_account_name ?? profile.business_name ?? ""}`, { size: 10.5, bold: true });
-      text(`BSB ${profile.bank_bsb}   .   Account ${profile.bank_account_number}`, { size: 10.5, color: INK_SOFT });
-      y -= 2;
-    }
-    if (profile.accepts_cash) text("Cash accepted on completion of the job.", { size: 10.5, color: INK_SOFT });
-    y -= 4;
-  }
-
-  // ── ACCEPT CALLOUT WITH CLICKABLE LINK ───────────────────────────
+  // ── ACCEPT CALLOUT ────────────────────────────────────────────────
+  // Bank details removed from PDF - client chooses payment method
+  // (bank, cash or card) on the accept page after clicking the button.
   if (quote.public_token) {
     const appUrl   = process.env.NEXT_PUBLIC_APP_URL ?? "https://quotease.vercel.app";
     const quoteUrl = `${appUrl}/q/${quote.public_token}`;
     rule();
-    newPageIfNeeded(90);
+    newPageIfNeeded(72);
 
-    const boxH  = 80;
-    const boxY  = y - boxH;
-    const btnH  = 32;
-    const btnW  = PAGE_WIDTH - MARGIN * 2 - 16;
-    const btnX  = MARGIN + 8;
-    const btnY  = boxY + 10;
+    const boxH = 68;
+    const boxY = y - boxH;
+    const btnH = 30;
+    const btnW = PAGE_WIDTH - MARGIN * 2 - 24;
+    const btnX = MARGIN + 12;
+    const btnY = boxY + 9;
 
-    // Navy box
+    // Navy background
     page.drawRectangle({ x: MARGIN, y: boxY, width: PAGE_WIDTH - MARGIN * 2, height: boxH, color: NAVY });
+    // Amber left accent
     page.drawRectangle({ x: MARGIN, y: boxY, width: 4, height: boxH, color: AMBER });
 
-    // Heading
-    page.drawText("ACCEPT THIS QUOTE", { x: MARGIN + 14, y: boxY + 56, size: 11, font: fontBold, color: AMBER });
-    page.drawText("Click the button below to accept, choose payment and get booked in.", { x: MARGIN + 14, y: boxY + 40, size: 8.5, font, color: rgb(0.75, 0.82, 0.87) });
+    // Heading + subtext
+    page.drawText("ACCEPT THIS QUOTE", { x: MARGIN + 14, y: boxY + 47, size: 10.5, font: fontBold, color: AMBER });
+    page.drawText("Click the button to review, accept and choose how you would like to pay.", {
+      x: MARGIN + 14, y: boxY + 32, size: 8, font, color: rgb(0.75, 0.82, 0.87),
+    });
 
-    // Amber button
+    // Amber clickable button
     page.drawRectangle({ x: btnX, y: btnY, width: btnW, height: btnH, color: AMBER });
-    const btnLabel = "Accept & choose payment  >>";
+    const btnLabel  = "Accept & choose payment  >>";
     const btnLabelW = fontBold.widthOfTextAtSize(btnLabel, 11);
-    page.drawText(btnLabel, { x: btnX + (btnW - btnLabelW) / 2, y: btnY + (btnH - 11) / 2, size: 11, font: fontBold, color: NAVY });
+    page.drawText(btnLabel, {
+      x: btnX + (btnW - btnLabelW) / 2,
+      y: btnY + (btnH - 11) / 2 + 1,
+      size: 11, font: fontBold, color: NAVY,
+    });
 
-    // PDF link annotation - makes button clickable
+    // Clickable link annotation
     try {
       const { context } = pdfDoc;
       const uriActionRef = context.register(context.obj({
-        Type: PDFName.of("Action"),
-        S:    PDFName.of("URI"),
-        URI:  PDFString.of(quoteUrl),
+        Type: PDFName.of("Action"), S: PDFName.of("URI"), URI: PDFString.of(quoteUrl),
       }));
       const annotRef = context.register(context.obj({
-        Type:    PDFName.of("Annot"),
-        Subtype: PDFName.of("Link"),
-        Rect:    context.obj([PDFNumber.of(btnX), PDFNumber.of(btnY), PDFNumber.of(btnX + btnW), PDFNumber.of(btnY + btnH)]),
-        Border:  context.obj([PDFNumber.of(0), PDFNumber.of(0), PDFNumber.of(0)]),
-        A:       uriActionRef,
-        F:       PDFNumber.of(4),
+        Type: PDFName.of("Annot"), Subtype: PDFName.of("Link"),
+        Rect: context.obj([PDFNumber.of(btnX), PDFNumber.of(btnY), PDFNumber.of(btnX + btnW), PDFNumber.of(btnY + btnH)]),
+        Border: context.obj([PDFNumber.of(0), PDFNumber.of(0), PDFNumber.of(0)]),
+        A: uriActionRef, F: PDFNumber.of(4),
       }));
       const currentPage = pdfDoc.getPages().at(-1)!;
       const existing = currentPage.node.get(PDFName.of("Annots"));
-      if (existing instanceof PDFArray) {
-        existing.push(annotRef);
-      } else {
-        currentPage.node.set(PDFName.of("Annots"), context.obj([annotRef]));
-      }
-    } catch { /* annotation fails silently - button still visible */ }
+      if (existing instanceof PDFArray) { existing.push(annotRef); }
+      else { currentPage.node.set(PDFName.of("Annots"), context.obj([annotRef])); }
+    } catch { /* silent */ }
 
-    y = boxY - 16;
+    y = boxY - 12;
   }
 
   // ── T&C ──────────────────────────────────────────────────────────
