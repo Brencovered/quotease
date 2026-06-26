@@ -104,12 +104,12 @@ export async function generateQuotePdf(
   page.drawRectangle({ x: 0, y: PAGE_HEIGHT - HEADER_HEIGHT, width: PAGE_WIDTH, height: HEADER_HEIGHT, color: NAVY });
   page.drawRectangle({ x: 0, y: PAGE_HEIGHT - 4, width: PAGE_WIDTH, height: 4, color: AMBER });
 
-  // Logo — try to embed but skip cleanly if anything fails
+  // Logo - try to embed but skip cleanly if anything fails
   let logoEmbedded = false;
   let logoDrawWidth = 0;
   if (logoBytes && logoBytes.length > 0) {
     try {
-      // Try PNG first, then JPEG — skip WebP/HEIC gracefully
+      // Try PNG first, then JPEG - skip WebP/HEIC gracefully
       let image;
       const header = logoBytes.slice(0, 4);
       const isPng  = header[0] === 0x89 && header[1] === 0x50;
@@ -129,7 +129,7 @@ export async function generateQuotePdf(
         logoEmbedded = true;
       }
     } catch {
-      // Logo fails silently — rest of PDF continues
+      // Logo fails silently - rest of PDF continues
     }
   }
 
@@ -139,9 +139,9 @@ export async function generateQuotePdf(
     page.drawText(profile.business_name, { x: headerTextX, y: headerY, size: 16, font: fontBold, color: WHITE });
     headerY -= 20;
   }
-  const detailLine = [profile.business_address, profile.abn ? `ABN ${profile.abn}` : null, profile.license_number ? `Licence ${profile.license_number}` : null].filter(Boolean).join("   ·   ");
+  const detailLine = [profile.business_address, profile.abn ? `ABN ${profile.abn}` : null, profile.license_number ? `Licence ${profile.license_number}` : null].filter(Boolean).join("   .   ");
   if (detailLine) { page.drawText(detailLine, { x: headerTextX, y: headerY, size: 9, font, color: rgb(0.66, 0.73, 0.79) }); headerY -= 14; }
-  const contactLine = [profile.contact_phone, profile.contact_email].filter(Boolean).join("   ·   ");
+  const contactLine = [profile.contact_phone, profile.contact_email].filter(Boolean).join("   .   ");
   if (contactLine)  page.drawText(contactLine, { x: headerTextX, y: headerY, size: 9, font, color: rgb(0.66, 0.73, 0.79) });
 
   y = PAGE_HEIGHT - HEADER_HEIGHT - 32;
@@ -157,7 +157,7 @@ export async function generateQuotePdf(
   if (quote.client_name)  text(`Client: ${quote.client_name}`,  { size: 11.5, color: INK_SOFT });
   if (quote.site_address) text(`Site: ${quote.site_address}`,   { size: 11.5, color: INK_SOFT });
   text(`Date: ${new Date(quote.created_at ?? Date.now()).toLocaleDateString("en-AU")}`, { size: 11.5, color: INK_SOFT });
-  if (quote.trade) text(`Trade: ${quote.trade.charAt(0).toUpperCase() + quote.trade.slice(1)}${quote.job_type ? " — " + quote.job_type : ""}`, { size: 11.5, color: INK_SOFT });
+  if (quote.trade) text(`Trade: ${quote.trade.charAt(0).toUpperCase() + quote.trade.slice(1)}${quote.job_type ? " - " + quote.job_type : ""}`, { size: 11.5, color: INK_SOFT });
   y -= 8; rule();
 
   // ── SCOPE ────────────────────────────────────────────────────────
@@ -196,8 +196,8 @@ export async function generateQuotePdf(
   if (hasBankDetails || profile.accepts_cash) {
     rule(); sectionLabel("How to pay");
     if (hasBankDetails) {
-      text(`Bank transfer — ${profile.bank_account_name ?? profile.business_name ?? ""}`, { size: 10.5, bold: true });
-      text(`BSB ${profile.bank_bsb}   ·   Account ${profile.bank_account_number}`, { size: 10.5, color: INK_SOFT });
+      text(`Bank transfer - ${profile.bank_account_name ?? profile.business_name ?? ""}`, { size: 10.5, bold: true });
+      text(`BSB ${profile.bank_bsb}   .   Account ${profile.bank_account_number}`, { size: 10.5, color: INK_SOFT });
       y -= 2;
     }
     if (profile.accepts_cash) text("Cash accepted on completion of the job.", { size: 10.5, color: INK_SOFT });
@@ -228,11 +228,11 @@ export async function generateQuotePdf(
 
     // Amber button
     page.drawRectangle({ x: btnX, y: btnY, width: btnW, height: btnH, color: AMBER });
-    const btnLabel = "Accept & choose payment  \u2192";
+    const btnLabel = "Accept & choose payment  >>";
     const btnLabelW = fontBold.widthOfTextAtSize(btnLabel, 11);
     page.drawText(btnLabel, { x: btnX + (btnW - btnLabelW) / 2, y: btnY + (btnH - 11) / 2, size: 11, font: fontBold, color: NAVY });
 
-    // PDF link annotation — makes button clickable
+    // PDF link annotation - makes button clickable
     try {
       const { context } = pdfDoc;
       const uriActionRef = context.register(context.obj({
@@ -255,7 +255,7 @@ export async function generateQuotePdf(
       } else {
         currentPage.node.set(PDFName.of("Annots"), context.obj([annotRef]));
       }
-    } catch { /* annotation fails silently — button still visible */ }
+    } catch { /* annotation fails silently - button still visible */ }
 
     y = boxY - 16;
   }
