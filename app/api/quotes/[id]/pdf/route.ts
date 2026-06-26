@@ -39,7 +39,15 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }
   }
 
-  const pdfBytes = await generateQuotePdf(quote, profile ?? {}, logoBytes);
+  let pdfBytes: Uint8Array;
+  try {
+    pdfBytes = await generateQuotePdf(quote, profile ?? {}, logoBytes);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    const stack   = err instanceof Error ? err.stack : "";
+    console.error("PDF generation failed:", message, stack);
+    return NextResponse.json({ error: "PDF generation failed", detail: message }, { status: 500 });
+  }
 
   const filename = `Quote${quote.invoice_number ? "-" + quote.invoice_number : ""}-${(quote.client_name ?? "client").replace(/[^a-zA-Z0-9]/g, "-")}.pdf`;
 
