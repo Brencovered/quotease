@@ -70,7 +70,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: process.env.RESEND_FROM_EMAIL ?? "quotes@yourdomain.com",
+          from: `Quotease <${process.env.RESEND_FROM_EMAIL ?? "quotes@yourdomain.com"}>`,
           to: profile.contact_email,
           subject,
           html,

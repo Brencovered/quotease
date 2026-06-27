@@ -137,7 +137,9 @@ export async function POST(request: Request) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: process.env.RESEND_FROM_EMAIL ?? "quotes@yourdomain.com",
+      // Resend supports "Display Name <address>" - the client should see the
+      // tradie's business name as the sender, not "Quotease" or a bare address.
+      from: `${business} <${process.env.RESEND_FROM_EMAIL ?? "quotes@yourdomain.com"}>`,
       to: quote.client_email,
       subject: `Quote from ${business} — $${(quote.total_cost ?? 0).toLocaleString()}`,
       html,
