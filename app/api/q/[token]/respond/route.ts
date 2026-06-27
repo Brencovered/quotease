@@ -52,14 +52,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
     try {
       const subject =
         action === "accept"
-          ? `🎉 ${quote.client_name ?? "A client"} accepted your quote — $${(quote.total_cost ?? 0).toLocaleString()}`
+          ? `🎉 ${quote.client_name ?? "A client"} accepted your quote - $${(quote.total_cost ?? 0).toLocaleString()}`
           : `${quote.client_name ?? "A client"} declined your quote`;
       const html =
         action === "accept"
           ? `<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;">
                <h2 style="color:#0a1722;">You just won a job 🎉</h2>
                <p>${quote.client_name ?? "Your client"} accepted the quote worth <strong>$${(quote.total_cost ?? 0).toLocaleString()}</strong>.</p>
-               <p>It's now showing as an active job in Quotease — head to the Jobs tab to get it scheduled.</p>
+               <p>It's now showing as an active job in Quotease - head to the Jobs tab to get it scheduled.</p>
              </div>`
           : `<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;">
                <h2>Quote declined</h2>

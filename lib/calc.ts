@@ -1,5 +1,5 @@
 // Default material items seeded for a new electrician profile.
-// These are placeholder costs only — every tradie overwrites them via
+// These are placeholder costs only - every tradie overwrites them via
 // the materials library screen or a CSV upload from their own supplier.
 export const ELECTRICIAN_DEFAULT_MATERIALS = [
   { item_key: "pp", label: "Power point", unit_cost: 12 },
@@ -68,7 +68,7 @@ export interface QuoteResult {
   totalCost: number;
 }
 
-// Ceiling type multiplier on wiring labour — heritage/slab installs take significantly longer
+// Ceiling type multiplier on wiring labour - heritage/slab installs take significantly longer
 function ceilingMultiplier(t: ElectricianIntake["ceilingType"]): number {
   switch (t) {
     case "standard_plasterboard": return 1.0;

@@ -5,29 +5,29 @@ import { checkUsage, currentPeriod, type UsageProfile } from "@/lib/aiUsage";
 // Requires an ANTHROPIC_API_KEY env var (console.anthropic.com -> API Keys).
 const SYSTEM_PROMPT_BASE = `You are helping an electrician estimate a residential job from a floor plan or electrical drawing.
 
-STEP 1 — Classify the drawing:
-A) "electrical" — drawing contains standard AS/NZS electrical symbols (GPO outlets, light point circles, switch symbols, etc.)
-B) "architectural" — drawing is a floor plan or building plan with ROOMS but NO electrical symbols
-C) "other" — site photo, unclear image, or something else entirely
+STEP 1 - Classify the drawing:
+A) "electrical" - drawing contains standard AS/NZS electrical symbols (GPO outlets, light point circles, switch symbols, etc.)
+B) "architectural" - drawing is a floor plan or building plan with ROOMS but NO electrical symbols
+C) "other" - site photo, unclear image, or something else entirely
 
-STEP 2 — Extract data based on type:
+STEP 2 - Extract data based on type:
 
 If type A (electrical drawing): count symbols directly.
 
-If type B (architectural floor plan — no electrical symbols): do NOT return all zeros. Instead:
-- Count total distinct rooms/spaces across ALL floors (bedrooms, living, kitchen, bathrooms, hallways, laundry, garage — every defined space)
+If type B (architectural floor plan - no electrical symbols): do NOT return all zeros. Instead:
+- Count total distinct rooms/spaces across ALL floors (bedrooms, living, kitchen, bathrooms, hallways, laundry, garage - every defined space)
 - Estimate downlights as rooms × 3 (typical new install density for Australian residential)
 - Estimate switches as rooms × 1
-- Estimate smoke_alarms as rooms × 1 (per AS 3786 — one interconnected photoelectric per room/zone)
+- Estimate smoke_alarms as rooms × 1 (per AS 3786 - one interconnected photoelectric per room/zone)
 - Estimate exhaust_fans: count wet areas (bathrooms, laundry, kitchen) × 1
 - Estimate cable_metres: rooms × 15 as a rough new-install cabling estimate
-- Set power_points to 0 (cannot determine without symbols — tradie assesses on site)
+- Set power_points to 0 (cannot determine without symbols - tradie assesses on site)
 - Set light_points to 0
-- Set switchboard_upgrade to false (unknown — tradie must check switchboard capacity)
+- Set switchboard_upgrade to false (unknown - tradie must check switchboard capacity)
 - Set three_phase to false (unknown)
 - Set data_points to 0
 
-Ceiling type assessment — look for clues in the drawing:
+Ceiling type assessment - look for clues in the drawing:
 - If the drawing shows "heritage", "period home", "colonial", "federation", "1900s–1960s" or visible exposed beams/rafters, set ceiling_type to "heritage_timber"
 - If notes say "concrete", "slab ceiling", or it appears to be a multi-storey apartment, set to "concrete_slab"
 - If it's a modern skillion or cathedral ceiling, set to "skillion"
@@ -100,7 +100,7 @@ export async function POST(request: Request) {
   if (!isPdf && !SUPPORTED_IMAGE_TYPES.includes(file.type)) {
     return NextResponse.json(
       {
-        error: `Unsupported file format (${file.type || "unknown"}). Use a JPEG, PNG, GIF, WebP, or PDF — HEIC photos from an iPhone aren't supported.`,
+        error: `Unsupported file format (${file.type || "unknown"}). Use a JPEG, PNG, GIF, WebP, or PDF - HEIC photos from an iPhone aren't supported.`,
       },
       { status: 400 }
     );
@@ -111,7 +111,7 @@ export async function POST(request: Request) {
     : { type: "image", source: { type: "base64", media_type: file.type || "image/png", data: base64 } };
 
   const systemPrompt = instructions
-    ? `${SYSTEM_PROMPT_BASE}\n\nThe tradie who uploaded this drawing gave these additional instructions — follow them, they know their own job better than a generic reading of the symbols:\n"${instructions}"`
+    ? `${SYSTEM_PROMPT_BASE}\n\nThe tradie who uploaded this drawing gave these additional instructions - follow them, they know their own job better than a generic reading of the symbols:\n"${instructions}"`
     : SYSTEM_PROMPT_BASE;
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {

@@ -85,7 +85,7 @@ export default function JobFilesPanel({ quoteId, attachments: initial }: { quote
         {uploading ? <><Upload size={14} className="animate-bounce" />Uploading...</> : <><Paperclip size={14} />Add files</>}
         <input type="file" accept="image/*,application/pdf" multiple className="hidden" disabled={uploading} onChange={handleUpload} />
       </label>
-      <p className="text-[11px] text-[var(--ink-faint)] mt-1.5">Photos, drawings, PDFs — accessible to you on site via mobile</p>
+      <p className="text-[11px] text-[var(--ink-faint)] mt-1.5">Photos, drawings, PDFs - accessible to you on site via mobile</p>
     </div>
   );
 }

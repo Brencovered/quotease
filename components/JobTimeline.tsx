@@ -29,7 +29,7 @@ export default function JobTimeline({
 }) {
   const events: Event[] = [];
 
-  if (acceptedAt) events.push({ date: acceptedAt, icon: CheckCircle2, color: "#16A34A", text: "Quote accepted — job won" });
+  if (acceptedAt) events.push({ date: acceptedAt, icon: CheckCircle2, color: "#16A34A", text: "Quote accepted - job won" });
 
   for (const v of variations) {
     events.push({
@@ -45,7 +45,7 @@ export default function JobTimeline({
       date: a.recorded_at,
       icon: Hammer,
       color: "#3B82F6",
-      text: `Logged ${a.actual_hours} hrs${a.actual_materials_cost ? `, $${a.actual_materials_cost.toLocaleString()} materials` : ""}${a.notes ? ` — ${a.notes}` : ""}`,
+      text: `Logged ${a.actual_hours} hrs${a.actual_materials_cost ? `, $${a.actual_materials_cost.toLocaleString()} materials` : ""}${a.notes ? ` - ${a.notes}` : ""}`,
     });
   }
 

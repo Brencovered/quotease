@@ -106,7 +106,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
                 <p className="text-[11px] tracking-[.1em] uppercase text-[var(--amber-deep)] font-bold mb-2">How to pay</p>
                 {hasBankDetails && (
                   <p className="text-[12.5px] text-[var(--ink-soft)] mb-1">
-                    Bank transfer: {profile.bank_account_name ?? profile.business_name} — BSB {profile.bank_bsb}, Acc {profile.bank_account_number}
+                    Bank transfer: {profile.bank_account_name ?? profile.business_name} - BSB {profile.bank_bsb}, Acc {profile.bank_account_number}
                   </p>
                 )}
                 {profile.accepts_cash && <p className="text-[12.5px] text-[var(--ink-soft)]">Cash accepted on completion.</p>}

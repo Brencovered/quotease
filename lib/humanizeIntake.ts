@@ -42,7 +42,7 @@ export const INTAKE_FIELD_LABELS: Record<string, string> = {
 };
 
 export const INTAKE_VALUE_LABELS: Record<string, Record<string, string>> = {
-  ceilingType:    { standard_plasterboard: "Standard plasterboard", concrete_slab: "Concrete slab", heritage_timber: "Heritage / period timber", skillion: "Skillion / cathedral", unknown: "Unknown — assess on site" },
+  ceilingType:    { standard_plasterboard: "Standard plasterboard", concrete_slab: "Concrete slab", heritage_timber: "Heritage / period timber", skillion: "Skillion / cathedral", unknown: "Unknown - assess on site" },
   roofAccess:     { "1": "No roof work", "1.3": "Easy access", "1.7": "Tight crawl", "2.3": "Extreme" },
   subfloorAccess: { "1": "No subfloor work", "1.3": "Easy crawl", "1.8": "Tight crawl", "2.4": "Wet / very low" },
   siteAccess:     { easy: "Easy", moderate: "Moderate", difficult: "Difficult" },

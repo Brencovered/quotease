@@ -63,7 +63,7 @@ export default async function NewQuotePage({ searchParams }: { searchParams: Pro
   return (
     <>
       <AppHeader />
-      {/* Trade switcher — only show if user has multiple trades */}
+      {/* Trade switcher - only show if user has multiple trades */}
       {activeTrades.length > 1 && (
         <div className="bg-[var(--surface)] border-b border-[var(--line)]">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-2 overflow-x-auto hide-scrollbar">

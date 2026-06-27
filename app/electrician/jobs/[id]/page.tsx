@@ -66,13 +66,13 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         <div className="bg-[var(--navy)] rounded-xl px-4 py-3 mb-4 flex items-center justify-between gap-3">
           <div>
             <p className="text-[11px] tracking-[.1em] uppercase text-[var(--steel-3)] font-bold">
-              {quote.status === "paid" ? "Job complete & paid" : quote.completed_at ? "Job complete — awaiting payment" : "Active job"}
+              {quote.status === "paid" ? "Job complete & paid" : quote.completed_at ? "Job complete - awaiting payment" : "Active job"}
             </p>
             {quote.scheduled_start && (
               <p className="text-[13px] text-[var(--steel-1)] mt-0.5">
                 Scheduled {new Date(quote.scheduled_start).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}
                 {quote.estimated_days > 1 ? ` (${quote.estimated_days} days)` : ""}
-                {quote.assigned_to ? ` — ${quote.assigned_to}` : ""}
+                {quote.assigned_to ? ` - ${quote.assigned_to}` : ""}
               </p>
             )}
           </div>

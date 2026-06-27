@@ -153,7 +153,7 @@ export default function VoiceNoteRecorder({
           <AlertTriangle size={14} className={`mt-0.5 shrink-0 ${analysisResult.confidence === "low" ? "text-[var(--red)]" : "text-amber-600"}`} />
           <div>
             <p className={`text-[13px] font-semibold ${analysisResult.confidence === "low" ? "text-[var(--red)]" : "text-amber-800"}`}>
-              Fields pre-filled ({analysisResult.confidence} confidence) — review before saving
+              Fields pre-filled ({analysisResult.confidence} confidence) - review before saving
             </p>
             {analysisResult.notes && (
               <p className={`text-[12.5px] mt-1 ${analysisResult.confidence === "low" ? "text-red-500" : "text-amber-700"}`}>{analysisResult.notes}</p>

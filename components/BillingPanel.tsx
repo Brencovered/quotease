@@ -7,7 +7,7 @@ export default function BillingPanel() {
         no trial countdown, nothing to manage here.
       </p>
       <p className="text-[13px] text-[var(--ink-faint)] leading-relaxed">
-        In exchange, we&apos;ll be reaching out for feedback from time to time — and if it&apos;s working
+        In exchange, we&apos;ll be reaching out for feedback from time to time - and if it&apos;s working
         well for you, we&apos;d love a testimonial down the track.
       </p>
     </main>

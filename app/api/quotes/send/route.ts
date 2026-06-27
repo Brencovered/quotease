@@ -107,7 +107,7 @@ export async function POST(request: Request) {
       </tr>
     </table>
 
-    <!-- Second button — smaller -->
+    <!-- Second button - smaller -->
     <table cellpadding="0" cellspacing="0" width="100%">
       <tr><td align="center">
         <a href="${quoteUrl}"
@@ -145,7 +145,7 @@ export async function POST(request: Request) {
       // tradie, not Quotease's own inbox - hence reply_to.
       ...(quote.profiles?.contact_email ? { reply_to: quote.profiles.contact_email } : {}),
       to: quote.client_email,
-      subject: `Quote from ${business} — $${(quote.total_cost ?? 0).toLocaleString()}`,
+      subject: `Quote from ${business} - $${(quote.total_cost ?? 0).toLocaleString()}`,
       html,
     }),
   });

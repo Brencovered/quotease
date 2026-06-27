@@ -243,7 +243,7 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
               <label className="block">
                 <span className="block text-[11.5px] text-[var(--ink-faint)] mb-1">Default deposit</span>
                 <select value={defaultDepositPct ?? ""} onChange={(e) => setDefaultDepositPct(e.target.value ? Number(e.target.value) : null)} className="app-field text-[13px]">
-                  <option value="">None — full on completion</option>
+                  <option value="">None - full on completion</option>
                   <option value="30">30% deposit</option>
                   <option value="50">50% deposit</option>
                 </select>
@@ -258,7 +258,7 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
                 </select>
               </label>
             </div>
-            <p className="text-[11.5px] text-[var(--ink-faint)] mt-1.5">Applied to every new quote automatically — still editable per quote if needed.</p>
+            <p className="text-[11.5px] text-[var(--ink-faint)] mt-1.5">Applied to every new quote automatically - still editable per quote if needed.</p>
           </div>
 
           <div className="border-t border-[var(--line)] pt-3 mt-1">
@@ -272,7 +272,7 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
               <input type="checkbox" checked={acceptsCash} onChange={(e) => setAcceptsCash(e.target.checked)} />
               Accept cash on completion
             </label>
-            <p className="text-[11.5px] text-[var(--ink-faint)] mt-1">Shown to clients on the quote page and PDF. Card payments need Stripe Connect — ask if you want that built next.</p>
+            <p className="text-[11.5px] text-[var(--ink-faint)] mt-1">Shown to clients on the quote page and PDF. Card payments need Stripe Connect - ask if you want that built next.</p>
           </div>
         </div>
 
@@ -343,7 +343,7 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
         )}
       </div>
 
-      {/* AI addon — lower priority */}
+      {/* AI addon - lower priority */}
       <div className="card mb-4">
         <p className="section-tag mb-1">AI drawing analysis</p>
         <p className="font-semibold text-[var(--ink)] mb-1">Auto-fill from plans</p>

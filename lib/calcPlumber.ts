@@ -74,7 +74,7 @@ export function calcPlumberQuote(
   let labour = 0;
   let materials = 0;
 
-  // Tapware — 45 min each to replace, 1.5h new rough-in included below
+  // Tapware - 45 min each to replace, 1.5h new rough-in included below
   labour    += intake.basinTaps    * 0.75;
   materials += intake.basinTaps    * (costs.basin_tap    ?? 0);
   materials += intake.basinTaps    * (costs.flexi_hose   ?? 0);
@@ -100,7 +100,7 @@ export function calcPlumberQuote(
     materials += costs[hwKey] ?? 0;
   }
 
-  // Rough-in (new bathrooms, kitchen, laundry — each is a half-day minimum)
+  // Rough-in (new bathrooms, kitchen, laundry - each is a half-day minimum)
   if (intake.newBathroomRoughin) { labour += 6; materials += (costs.copper_m ?? 0) * 8 + (costs.drainage_m ?? 0) * 6; }
   if (intake.newKitchenRoughin)  { labour += 4; materials += (costs.copper_m ?? 0) * 5 + (costs.drainage_m ?? 0) * 4; }
   if (intake.newLaundryRoughin)  { labour += 3; materials += (costs.pex_m    ?? 0) * 6 + (costs.drainage_m ?? 0) * 3; }

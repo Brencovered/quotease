@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 // Requires XERO_CLIENT_ID, XERO_REDIRECT_URI set to this app's
 // /api/xero/callback URL, registered at https://developer.xero.com/app/manage.
-// This is a per-business app registration — Brendan registers one Xero
+// This is a per-business app registration - Brendan registers one Xero
 // developer app for this product, and every tradie connects their own
 // Xero org through it via this OAuth flow.
 export async function GET() {

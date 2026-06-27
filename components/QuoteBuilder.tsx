@@ -253,7 +253,7 @@ export default function QuoteBuilder({
       const res = await fetch("/api/quotes/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quoteId: quote.id }) });
       if (!res.ok) {
         const b = await res.json().catch(() => ({}));
-        setSaveMessage(`Saved — but sending failed: ${b.error ?? res.statusText}`);
+        setSaveMessage(`Saved - but sending failed: ${b.error ?? res.statusText}`);
         setSaving(false);
         return;
       }
@@ -389,7 +389,7 @@ function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions
       <div className="card">
         <p className="section-tag mb-1">Step 1</p>
         <p className="font-semibold text-[var(--ink)] text-[17px] mb-1">Upload drawings</p>
-        <p className="text-[13px] text-[var(--ink-faint)] mb-4">Floor plans, site photos, electrical drawings — uploaded now, saved to the job. AI reading is optional.</p>
+        <p className="text-[13px] text-[var(--ink-faint)] mb-4">Floor plans, site photos, electrical drawings - uploaded now, saved to the job. AI reading is optional.</p>
 
         <label className="flex items-center justify-center gap-2 border-2 border-dashed border-[var(--line)] rounded-xl py-8 cursor-pointer hover:border-[var(--amber)] transition-colors bg-[var(--app-bg)]">
           <Paperclip size={18} className="text-[var(--ink-faint)]" />
@@ -427,7 +427,7 @@ function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions
             <Sparkles size={18} className="text-[var(--amber-deep)] mt-0.5 shrink-0" />
             <div>
               <p className="font-semibold text-[var(--ink)]">AI field pre-fill</p>
-              <p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5">Optional — AI reads the first drawing and estimates quantities. You review everything before saving.</p>
+              <p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5">Optional - AI reads the first drawing and estimates quantities. You review everything before saving.</p>
             </div>
           </div>
           <textarea
@@ -458,7 +458,7 @@ function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions
               <AlertTriangle size={14} className={`mt-0.5 shrink-0 ${analysisResult.confidence === "low" ? "text-[var(--red)]" : "text-amber-600"}`} />
               <div>
                 <p className={`text-[13px] font-semibold ${analysisResult.confidence === "low" ? "text-[var(--red)]" : "text-amber-800"}`}>
-                  Fields pre-filled ({analysisResult.confidence} confidence) — review before saving
+                  Fields pre-filled ({analysisResult.confidence} confidence) - review before saving
                 </p>
                 {analysisResult.notes && <p className={`text-[12.5px] mt-1 ${analysisResult.confidence === "low" ? "text-red-500" : "text-amber-700"}`}>{analysisResult.notes}</p>}
               </div>
@@ -491,7 +491,7 @@ function StepJob({ intake, rate, margin, set, setRate, setMargin }: {
           </Field>
           <Field label="Ceiling type" className="col-span-2">
             <select value={intake.ceilingType} onChange={(e) => set("ceilingType", e.target.value as ElectricianIntake["ceilingType"])} className="app-field">
-              <option value="unknown">Unknown — check on site</option>
+              <option value="unknown">Unknown - check on site</option>
               <option value="standard_plasterboard">Standard plasterboard</option>
               <option value="skillion">Skillion / cathedral</option>
               <option value="concrete_slab">Concrete slab</option>
@@ -665,7 +665,7 @@ function StepElectrical({ intake, set, lib, setLib }: {
           <p className="section-tag mb-1">Your prices</p>
           <p className="text-[12px] text-[var(--ink-faint)] mb-3">
             Most suppliers (Middys, Rexel, Tradelink) let you export your trade pricing from their account
-            portal. Download that as a CSV and upload it here — every quote will use those real prices.
+            portal. Download that as a CSV and upload it here - every quote will use those real prices.
           </p>
           <div className="flex flex-wrap gap-2 mb-4">
             <label className="btn-secondary text-[12.5px] py-2 px-3 cursor-pointer">
@@ -710,7 +710,7 @@ function StepSite({ intake, set }: {
               <option value={1}>No roof work needed</option>
               <option value={1.3}>Easy access</option>
               <option value={1.7}>Tight crawl</option>
-              <option value={2.3}>Extreme — very difficult</option>
+              <option value={2.3}>Extreme - very difficult</option>
             </select>
           </Field>
           <Field label="Subfloor access">
@@ -824,7 +824,7 @@ function StepCustomer({ clientName, setClientName, clientEmail, setClientEmail, 
                       <div className="flex-1 min-w-0">
                         <p className={`font-bold text-[13px] ${flag.severity === "warning" ? "text-amber-800" : "text-[var(--blue)]"}`}>{flag.label}</p>
                         {flag.detail && <p className={`text-[12px] mt-0.5 leading-snug ${flag.severity === "warning" ? "text-amber-700" : "text-[var(--blue)]"}`}>{flag.detail}</p>}
-                        {flag.type === "heritage" && <p className="text-[11.5px] font-bold text-amber-700 mt-1">⚠️ Ceiling type set to Heritage Timber — labour estimate updated</p>}
+                        {flag.type === "heritage" && <p className="text-[11.5px] font-bold text-amber-700 mt-1">⚠️ Ceiling type set to Heritage Timber - labour estimate updated</p>}
                         {flag.verifyUrl && (
                           <a href={flag.verifyUrl} target="_blank" rel="noopener noreferrer"
                             className={`inline-flex items-center gap-1 text-[12px] font-bold mt-2 underline underline-offset-2 ${flag.severity === "warning" ? "text-amber-700 hover:text-amber-900" : "text-[var(--blue)] hover:text-blue-800"}`}>
@@ -882,7 +882,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
       <div className="card">
         <p className="section-tag mb-1">Sending to</p>
         <p className="font-semibold text-[var(--ink)]">{clientName || "No client name set"}</p>
-        <p className="text-[13px] text-[var(--ink-faint)]">{clientEmail || "No email set — can still save as draft"}</p>
+        <p className="text-[13px] text-[var(--ink-faint)]">{clientEmail || "No email set - can still save as draft"}</p>
         <p className="text-[13px] text-[var(--ink-faint)]">{siteAddress || "No site address set"}</p>
       </div>
 
@@ -903,7 +903,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
               <div key={i} className="flex justify-between text-[13.5px]">
                 <span className="text-[var(--ink-soft)]">{t.label}</span>
                 <span className="font-bold text-[var(--ink)] tabular">
-                  {t.percent}% — ${Math.round((result.totalCost * t.percent) / 100).toLocaleString()}
+                  {t.percent}% - ${Math.round((result.totalCost * t.percent) / 100).toLocaleString()}
                 </span>
               </div>
             ))}
@@ -916,7 +916,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
                 <input type="number" value={t.percent} onChange={(e) => setCustomTerms((p) => p.map((x, j) => j === i ? { ...x, percent: Number(e.target.value) } : x))} className="app-field py-2 text-[13px] text-center" />
               </div>
             ))}
-            {customTermsTotal !== 100 && <p className="text-[12.5px] text-[var(--red)] font-semibold">Adds up to {customTermsTotal}% — must total 100%</p>}
+            {customTermsTotal !== 100 && <p className="text-[12.5px] text-[var(--red)] font-semibold">Adds up to {customTermsTotal}% - must total 100%</p>}
             <button onClick={() => setCustomTerms((p) => [...p, { label: "Payment", percent: 0, trigger: "completion", days: 7 }])} className="btn-secondary text-[13px] py-2">+ Add term</button>
           </div>
         )}

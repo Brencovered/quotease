@@ -131,7 +131,7 @@ export async function GET(request: Request) {
   const zoneLabel = zoneDecoded && zoneDecoded !== zoneRaw
     ? zoneDecoded
     : zoneRaw
-      ? `${zoneRaw} — verify on VicPlan`
+      ? `${zoneRaw} - verify on VicPlan`
       : null;
 
   const vicplanUrl = `https://mapshare.vic.gov.au/vicplan/?query=${encodeURIComponent(address)}`;

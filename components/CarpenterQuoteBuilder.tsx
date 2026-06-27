@@ -74,7 +74,7 @@ export default function CarpenterQuoteBuilder({ profile, materials }: {
     }
     if (sendEmail) {
       const res = await fetch("/api/quotes/send", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ quoteId: quote.id }) });
-      if (!res.ok) { const b = await res.json().catch(()=>({})); setSaveMessage(`Saved — sending failed: ${b.error ?? res.statusText}`); setSaving(false); return; }
+      if (!res.ok) { const b = await res.json().catch(()=>({})); setSaveMessage(`Saved - sending failed: ${b.error ?? res.statusText}`); setSaving(false); return; }
       setSaveMessage(`Sent to ${clientEmail}`);
     } else { setSaveMessage("Saved as draft"); }
     setSaving(false);
@@ -206,9 +206,9 @@ export default function CarpenterQuoteBuilder({ profile, materials }: {
               <option value="custom">Custom split</option>
             </select>
             <div className="bg-[var(--app-bg)] rounded-xl p-3 space-y-1.5">
-              {paymentTerms.map((t,i) => <div key={i} className="flex justify-between text-[13.5px]"><span className="text-[var(--ink-soft)]">{t.label}</span><span className="font-bold tabular">{t.percent}% — ${Math.round(result.totalCost*t.percent/100).toLocaleString()}</span></div>)}
+              {paymentTerms.map((t,i) => <div key={i} className="flex justify-between text-[13.5px]"><span className="text-[var(--ink-soft)]">{t.label}</span><span className="font-bold tabular">{t.percent}% - ${Math.round(result.totalCost*t.percent/100).toLocaleString()}</span></div>)}
             </div>
-            {termsPreset === "custom" && customTermsTotal !== 100 && <p className="text-[12.5px] text-[var(--red)] font-semibold mt-1">Adds up to {customTermsTotal}% — must total 100%</p>}
+            {termsPreset === "custom" && customTermsTotal !== 100 && <p className="text-[12.5px] text-[var(--red)] font-semibold mt-1">Adds up to {customTermsTotal}% - must total 100%</p>}
           </div>
           <div className="space-y-3">
             <button onClick={() => saveAndSend(true)} disabled={saving||!clientEmail} className="btn-primary">{saving ? "Sending..." : "Send quote to client"}</button>

@@ -22,7 +22,7 @@ export default async function SettingsPage() {
       profile = data;
     }
   } catch (err) {
-    console.error("Settings page: continuing without profile data —", err);
+    console.error("Settings page: continuing without profile data -", err);
   }
 
   return (

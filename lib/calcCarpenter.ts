@@ -61,7 +61,7 @@ export function calcCarpenterQuote(
   let labour = 0;
   let materials = 0;
 
-  // Doors — hang + hardware: 1.5h per internal, 2.5h per external
+  // Doors - hang + hardware: 1.5h per internal, 2.5h per external
   labour    += intake.internalDoors * 1.5;
   materials += intake.internalDoors * ((costs.door_internal ?? 0) + (costs.door_hardware ?? 0));
 
@@ -82,7 +82,7 @@ export function calcCarpenterQuote(
   materials += intake.plywoodSheets   * (costs.sheet_ply  ?? 0);
   materials += intake.newWallFrames   * (costs.fixings    ?? 0);
 
-  // Decking — supply + lay: 1h per sqm, plus bearer framing
+  // Decking - supply + lay: 1h per sqm, plus bearer framing
   labour    += intake.deckingSqm    * 1;
   materials += intake.deckingSqm    * (costs.decking_lm     ?? 0) * 1.1; // 10% waste
   labour    += intake.deckingBeamLm * 0.25;

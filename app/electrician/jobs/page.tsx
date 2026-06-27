@@ -18,7 +18,7 @@ export default async function JobsPage() {
       if (data) jobs = data;
     }
   } catch (err) {
-    console.error("Jobs page: falling back to empty list —", err);
+    console.error("Jobs page: falling back to empty list -", err);
   }
 
   return (

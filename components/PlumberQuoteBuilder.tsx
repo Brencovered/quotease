@@ -106,7 +106,7 @@ export default function PlumberQuoteBuilder({ profile, materials }: {
     }
     if (sendEmail) {
       const res = await fetch("/api/quotes/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quoteId: quote.id }) });
-      if (!res.ok) { const b = await res.json().catch(()=>({})); setSaveMessage(`Saved — sending failed: ${b.error ?? res.statusText}`); setSaving(false); return; }
+      if (!res.ok) { const b = await res.json().catch(()=>({})); setSaveMessage(`Saved - sending failed: ${b.error ?? res.statusText}`); setSaving(false); return; }
       setSaveMessage(`Sent to ${clientEmail}`);
     } else { setSaveMessage("Saved as draft"); }
     setSaving(false);
@@ -155,7 +155,7 @@ export default function PlumberQuoteBuilder({ profile, materials }: {
               <div className="flex items-start gap-3 mb-3"><Sparkles size={18} className="text-[var(--amber-deep)] mt-0.5 shrink-0" /><div><p className="font-semibold">AI field pre-fill (optional)</p><p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5">AI reads the drawing and notes what it can. You review everything.</p></div></div>
               <button onClick={runAiAnalysis} disabled={analyzing} className="btn-secondary w-full justify-center"><Sparkles size={15} className="text-[var(--amber-deep)]" />{analyzing ? "Reading..." : "Analyse with AI"}</button>
               {analysisError && <p className="text-[13px] text-[var(--red)] mt-2">{analysisError}</p>}
-              {analysisResult && <div className={`mt-3 rounded-lg px-3 py-2.5 flex items-start gap-2 ${analysisResult.confidence === "low" ? "bg-[var(--red-bg)]" : "bg-amber-50"}`}><AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-600" /><div><p className="text-[13px] font-semibold text-amber-800">Fields noted ({analysisResult.confidence} confidence) — review before saving</p>{analysisResult.notes && <p className="text-[12.5px] mt-1 text-amber-700">{analysisResult.notes}</p>}</div></div>}
+              {analysisResult && <div className={`mt-3 rounded-lg px-3 py-2.5 flex items-start gap-2 ${analysisResult.confidence === "low" ? "bg-[var(--red-bg)]" : "bg-amber-50"}`}><AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-600" /><div><p className="text-[13px] font-semibold text-amber-800">Fields noted ({analysisResult.confidence} confidence) - review before saving</p>{analysisResult.notes && <p className="text-[12.5px] mt-1 text-amber-700">{analysisResult.notes}</p>}</div></div>}
             </div>
           )}
         </div>
@@ -275,12 +275,12 @@ export default function PlumberQuoteBuilder({ profile, materials }: {
             </select>
             {termsPreset !== "custom" ? (
               <div className="bg-[var(--app-bg)] rounded-xl p-3 space-y-1.5">
-                {paymentTerms.map((t, i) => <div key={i} className="flex justify-between text-[13.5px]"><span className="text-[var(--ink-soft)]">{t.label}</span><span className="font-bold tabular">{t.percent}% — ${Math.round(result.totalCost * t.percent / 100).toLocaleString()}</span></div>)}
+                {paymentTerms.map((t, i) => <div key={i} className="flex justify-between text-[13.5px]"><span className="text-[var(--ink-soft)]">{t.label}</span><span className="font-bold tabular">{t.percent}% - ${Math.round(result.totalCost * t.percent / 100).toLocaleString()}</span></div>)}
               </div>
             ) : (
               <div className="space-y-2">
                 {customTerms.map((t, i) => <div key={i} className="grid grid-cols-[1fr_60px] gap-2 bg-[var(--app-bg)] rounded-xl p-3"><input value={t.label} onChange={(e) => setCustomTerms((p) => p.map((x,j) => j===i ? {...x,label:e.target.value} : x))} className="app-field py-2 text-[13px]" /><input type="number" value={t.percent} onChange={(e) => setCustomTerms((p) => p.map((x,j) => j===i ? {...x,percent:Number(e.target.value)} : x))} className="app-field py-2 text-[13px] text-center" /></div>)}
-                {customTermsTotal !== 100 && <p className="text-[12.5px] text-[var(--red)] font-semibold">Adds up to {customTermsTotal}% — must total 100%</p>}
+                {customTermsTotal !== 100 && <p className="text-[12.5px] text-[var(--red)] font-semibold">Adds up to {customTermsTotal}% - must total 100%</p>}
               </div>
             )}
           </div>

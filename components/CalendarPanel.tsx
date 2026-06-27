@@ -126,7 +126,7 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
           <div className="bg-[var(--surface)] rounded-2xl p-5 w-full max-w-sm shadow-2xl">
             <p className="font-bold text-[var(--ink)] text-[17px] mb-0.5">Schedule job</p>
-            <p className="text-[13px] text-[var(--ink-faint)] mb-4">{scheduling.client_name} — {scheduling.site_address}</p>
+            <p className="text-[13px] text-[var(--ink-faint)] mb-4">{scheduling.client_name} - {scheduling.site_address}</p>
             <div className="space-y-3">
               <label className="block"><span className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Start date *</span>
                 <input type="date" value={schedForm.start} onChange={(e) => setSchedForm(f=>({...f,start:e.target.value}))} className="app-field" />
@@ -252,7 +252,7 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
                 <p className="text-[13px] text-[var(--ink-soft)] mt-2 flex gap-1.5 items-center">
                   <CalendarDays size={13} className="text-[var(--amber-deep)]" />
                   {new Date(j.scheduled_start).toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"})}
-                  {j.scheduled_end && j.scheduled_end!==j.scheduled_start && ` — ${new Date(j.scheduled_end).toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"})}`}
+                  {j.scheduled_end && j.scheduled_end!==j.scheduled_start && ` - ${new Date(j.scheduled_end).toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"})}`}
                   {j.estimated_days && <span className="text-[var(--ink-faint)] ml-1">({j.estimated_days}d)</span>}
                 </p>
               ) : (

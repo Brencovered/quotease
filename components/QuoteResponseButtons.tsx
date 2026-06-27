@@ -77,13 +77,13 @@ export default function QuoteResponseButtons({
       return;
     }
     setCardBusy(true); setError(null);
-    // Mock delay — replace with real Stripe PaymentIntent call
+    // Mock delay - replace with real Stripe PaymentIntent call
     await new Promise((r) => setTimeout(r, 1800));
     setCardBusy(false);
     setStep("done_card");
   }
 
-  // ── Idle state — main buttons ────────────────────────────
+  // ── Idle state - main buttons ────────────────────────────
   if (step === "idle") {
     return (
       <div className="space-y-3">
@@ -149,7 +149,7 @@ export default function QuoteResponseButtons({
     const methods = [
       hasBankDetails  && { id: "bank", icon: Building2,  label: "Bank transfer",  sub: `BSB ${bankBsb} · Acc ${bankAccount}` },
       acceptsCash     && { id: "cash", icon: Banknote,   label: "Cash on completion", sub: "Pay when the job is done" },
-      { id: "card",   icon: CreditCard, label: "Pay by card",    sub: "Visa, Mastercard — secure payment" },
+      { id: "card",   icon: CreditCard, label: "Pay by card",    sub: "Visa, Mastercard - secure payment" },
     ].filter(Boolean) as { id: string; icon: typeof Building2; label: string; sub: string }[];
 
     return (
@@ -215,7 +215,7 @@ export default function QuoteResponseButtons({
       <div className="space-y-4 text-center">
         <div className="bg-[var(--green-bg)] border border-green-200 rounded-xl p-5">
           <CheckCircle2 size={32} className="mx-auto mb-2 text-[var(--green)]" />
-          <p className="font-bold text-[var(--green)] text-[16px]">Quote accepted — cash on completion</p>
+          <p className="font-bold text-[var(--green)] text-[16px]">Quote accepted - cash on completion</p>
           <p className="text-[13.5px] text-green-700 mt-2">
             Payment of <strong>${totalCost.toLocaleString()}</strong> is due on completion of the job.{" "}
             {businessName ?? "The tradie"} will be in touch to schedule.
@@ -326,7 +326,7 @@ export default function QuoteResponseButtons({
     return (
       <div className="text-center py-4">
         <CheckCircle2 size={36} className="mx-auto text-green-600 mb-2" />
-        <p className="font-bold text-[var(--ink)]">Quote accepted — cash on completion</p>
+        <p className="font-bold text-[var(--ink)]">Quote accepted - cash on completion</p>
       </div>
     );
   }
@@ -337,7 +337,7 @@ export default function QuoteResponseButtons({
       <div className="text-center py-4">
         <X size={28} className="mx-auto text-[var(--ink-faint)] mb-2" />
         <p className="font-semibold text-[var(--ink)]">Quote declined</p>
-        <p className="text-[13px] text-[var(--ink-faint)] mt-1">No worries — get in touch if anything changes.</p>
+        <p className="text-[13px] text-[var(--ink-faint)] mt-1">No worries - get in touch if anything changes.</p>
       </div>
     );
   }

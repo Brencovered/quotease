@@ -25,7 +25,7 @@ export function generateCostingInsight(
 
   const overText = `Ran ${Math.round(pctOver)}% over on labour`;
   if (reasons.length > 0) {
-    return `${overText} — likely the ${reasons.join(" and ")} on this one. Worth bumping that multiplier slightly next time you quote similar conditions.`;
+    return `${overText} - likely the ${reasons.join(" and ")} on this one. Worth bumping that multiplier slightly next time you quote similar conditions.`;
   }
   return `${overText} than quoted. Worth a quick note on what made this one slower, so future quotes for similar jobs land closer to reality.`;
 }

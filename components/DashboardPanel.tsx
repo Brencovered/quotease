@@ -49,7 +49,7 @@ export default function DashboardPanel({ stats, profit }: { stats: DashboardStat
               <AlertTriangle size={16} className="text-amber-600 shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-[13.5px] font-bold text-amber-700">{stats.expiredQuotes} expired quote{stats.expiredQuotes !== 1 ? "s" : ""}</p>
-                <p className="text-[12px] text-amber-500">Prices may have changed — resend</p>
+                <p className="text-[12px] text-amber-500">Prices may have changed - resend</p>
               </div>
               <ChevronRight size={15} className="text-amber-300 shrink-0" />
             </Link>
@@ -115,7 +115,7 @@ export default function DashboardPanel({ stats, profit }: { stats: DashboardStat
           {stats.totalQuotes > 0 && (
             <div className="card">
               <p className="section-tag mb-1">Revenue trend</p>
-              <p className="font-semibold text-[var(--ink)] mb-4">Quoted value — last 6 months</p>
+              <p className="font-semibold text-[var(--ink)] mb-4">Quoted value - last 6 months</p>
               <div className="flex items-end gap-2 h-32">
                 {stats.monthly.map((m) => (
                   <div key={m.label} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
@@ -144,7 +144,7 @@ export default function DashboardPanel({ stats, profit }: { stats: DashboardStat
           {stats.totalQuotes > 0 && (
             <div className="card">
               <p className="section-tag mb-1">Pipeline</p>
-              <p className="font-semibold text-[var(--ink)] mb-4">Quotes by status — click to open</p>
+              <p className="font-semibold text-[var(--ink)] mb-4">Quotes by status - click to open</p>
               <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
                 {STATUS_ORDER.map((s) => {
                   const Icon = STATUS_META[s].icon;
@@ -195,8 +195,8 @@ export default function DashboardPanel({ stats, profit }: { stats: DashboardStat
           <div className="card">
             <p className="section-tag mb-3">Performance</p>
             <div className="space-y-3">
-              <StatRow icon={Target}     label="Win rate"      value={stats.winRate !== null ? `${stats.winRate}%` : "—"} />
-              <StatRow icon={TrendingUp} label="Avg job value" value={stats.avgJobValue !== null ? `$${stats.avgJobValue.toLocaleString()}` : "—"} />
+              <StatRow icon={Target}     label="Win rate"      value={stats.winRate !== null ? `${stats.winRate}%` : "-"} />
+              <StatRow icon={TrendingUp} label="Avg job value" value={stats.avgJobValue !== null ? `$${stats.avgJobValue.toLocaleString()}` : "-"} />
               <StatRow icon={DollarSign} label="Won this year" value={`$${stats.totalWonValue.toLocaleString()}`} accent />
               <StatRow icon={Wallet}     label="Collected"     value={`$${stats.totalCollected.toLocaleString()}`} success />
               {stats.avgLabourHours !== null && <StatRow icon={Briefcase} label="Avg labour" value={`${stats.avgLabourHours}h`} />}

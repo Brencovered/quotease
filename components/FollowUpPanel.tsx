@@ -71,7 +71,7 @@ export default function FollowUpPanel({ quoteId, followUps: initial, followUpAt,
       )}
       {expired && (
         <div className="bg-red-50 text-red-700 rounded-lg px-3 py-2 text-[13px] font-semibold mb-3 flex items-center gap-2">
-          <Bell size={14} /> Quote expired {Math.abs(daysUntilExpiry!)} day{Math.abs(daysUntilExpiry!) !== 1 ? "s" : ""} ago — resend with updated pricing
+          <Bell size={14} /> Quote expired {Math.abs(daysUntilExpiry!)} day{Math.abs(daysUntilExpiry!) !== 1 ? "s" : ""} ago - resend with updated pricing
         </div>
       )}
       {!overdue && daysUntilFollowUp !== null && daysUntilFollowUp <= 3 && daysUntilFollowUp >= 0 && (

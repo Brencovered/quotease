@@ -70,7 +70,7 @@ export default function RooferQuoteBuilder({ profile, materials }: {
     }
     if (sendEmail) {
       const res = await fetch("/api/quotes/send", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ quoteId: quote.id }) });
-      if (!res.ok) { const b = await res.json().catch(()=>({})); setSaveMessage(`Saved — sending failed: ${b.error ?? res.statusText}`); setSaving(false); return; }
+      if (!res.ok) { const b = await res.json().catch(()=>({})); setSaveMessage(`Saved - sending failed: ${b.error ?? res.statusText}`); setSaving(false); return; }
       setSaveMessage(`Sent to ${clientEmail}`);
     } else { setSaveMessage("Saved as draft"); }
     setSaving(false);

@@ -1,6 +1,6 @@
 // Builds a CSV matching Xero's "Import sales invoices" template
 // (Business menu > Invoices > Import in Xero). The tradie downloads this
-// and imports it themselves — no API connection, no OAuth, no per-connection
+// and imports it themselves - no API connection, no OAuth, no per-connection
 // cost, and it works identically whether you have 10 customers or 10,000.
 //
 // Xero's required/expected columns for this template, in order:
@@ -62,7 +62,7 @@ const HEADER = [
 ];
 
 // AccountCode 200 is Xero's default "Sales" revenue account on most AU charts
-// of accounts — the tradie can remap this in Xero if their chart differs.
+// of accounts - the tradie can remap this in Xero if their chart differs.
 // TaxType "OUTPUT" is the standard AU GST-on-income tax type.
 //
 // A quote with split payment terms (e.g. 30% deposit / 70% on completion)
@@ -96,7 +96,7 @@ export function buildXeroInvoiceCsv(
         ? `${q.invoiceNumber}-${String.fromCharCode(65 + i)}`
         : q.invoiceNumber;
 
-      const description = `Electrical work${q.jobType ? " — " + q.jobType : ""}${
+      const description = `Electrical work${q.jobType ? " - " + q.jobType : ""}${
         q.siteAddress ? " at " + q.siteAddress : ""
       }${multiTerm ? ` (${term.label})` : ""}`;
 

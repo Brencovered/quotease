@@ -78,7 +78,7 @@ export default function MapPanel({ jobs }: { jobs: Job[] }) {
       {jobs.length === 0 ? (
         <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-8 text-center">
           <p className="text-[var(--ink-faint)] text-sm">
-            No accepted jobs with a site address yet — they&apos;ll show up here once you&apos;ve got some.
+            No accepted jobs with a site address yet - they&apos;ll show up here once you&apos;ve got some.
           </p>
         </div>
       ) : (

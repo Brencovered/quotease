@@ -72,7 +72,7 @@ export default function VariationsPanel({ quoteId, hourlyRate, margin, variation
 
       {approvedTotal > 0 && (
         <div className="bg-green-50 text-green-800 rounded-lg px-3 py-2 text-[13px] font-semibold mb-3">
-          Approved variations add ${approvedTotal.toLocaleString()} — revised job total: ${(quoteTotalCost + approvedTotal).toLocaleString()}
+          Approved variations add ${approvedTotal.toLocaleString()} - revised job total: ${(quoteTotalCost + approvedTotal).toLocaleString()}
         </div>
       )}
 

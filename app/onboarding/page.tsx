@@ -73,7 +73,7 @@ export default function OnboardingPage() {
     router.refresh();
   }
 
-  // Step 1 — pick trades
+  // Step 1 - pick trades
   if (step === 1) {
     return (
       <div className="min-h-screen bg-[var(--app-bg)] flex flex-col">
@@ -126,7 +126,7 @@ export default function OnboardingPage() {
     );
   }
 
-  // Step 2 — minimal company details, skip-friendly
+  // Step 2 - minimal company details, skip-friendly
   return (
     <div className="min-h-screen bg-[var(--app-bg)] flex flex-col">
       <div className="bg-[var(--navy)] px-6 py-4 flex items-center justify-between">
@@ -138,7 +138,7 @@ export default function OnboardingPage() {
         <div className="w-full max-w-md">
           <h1 className="font-display text-[28px] text-[var(--ink)] mb-1">Almost there</h1>
           <p className="text-[14px] text-[var(--ink-faint)] mb-6">
-            These show up on your quotes. Business name&apos;s the only one we need now — the rest can wait.
+            These show up on your quotes. Business name&apos;s the only one we need now - the rest can wait.
           </p>
 
           <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-5 mb-4 space-y-3">
@@ -163,7 +163,7 @@ export default function OnboardingPage() {
           <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
             <p className="text-[13px] text-amber-900 font-semibold">Free during early access</p>
             <p className="text-[12.5px] text-amber-800 mt-0.5">
-              No charge while we&apos;re building this out. In return, we&apos;ll reach out for feedback now and then — and if it&apos;s working for you, we&apos;d love a testimonial down the track.
+              No charge while we&apos;re building this out. In return, we&apos;ll reach out for feedback now and then - and if it&apos;s working for you, we&apos;d love a testimonial down the track.
             </p>
           </div>
 

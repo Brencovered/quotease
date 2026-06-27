@@ -11,7 +11,7 @@ export async function GET() {
   const profileId = userData.user.id;
 
   // Only quotes the client has accepted, and not already pulled into a
-  // previous CSV export — this is what stops a tradie double-invoicing
+  // previous CSV export - this is what stops a tradie double-invoicing
   // the same job if they export twice.
   const { data: quotes, error } = await supabase
     .from("quotes")

@@ -226,7 +226,7 @@ export default function ClientsPanel({ clients: initial }: { clients: Client[] }
           <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-10 text-center">
             <User size={26} className="mx-auto mb-3 text-[var(--ink-faint)]" />
             <p className="text-[var(--ink-faint)] text-sm">
-              {search ? "No clients match that search." : "No clients yet — add your first one above."}
+              {search ? "No clients match that search." : "No clients yet - add your first one above."}
             </p>
           </div>
         )}
