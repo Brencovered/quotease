@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 
   const { data: quote, error: quoteError } = await supabase
     .from("quotes")
-    .select("*, profiles!quotes_profile_id_fkey(business_name, contact_phone, logo_url)")
+    .select("*, profiles!quotes_profile_id_fkey(business_name, contact_email, contact_phone, logo_url)")
     .eq("id", quoteId)
     .eq("profile_id", userData.user.id)
     .single();
@@ -140,6 +140,10 @@ export async function POST(request: Request) {
       // Resend supports "Display Name <address>" - the client should see the
       // tradie's business name as the sender, not "Quotease" or a bare address.
       from: `${business} <${process.env.RESEND_FROM_EMAIL ?? "quotes@yourdomain.com"}>`,
+      // The send address belongs to Quotease's domain (needed for SPF/DKIM
+      // to pass), but if the client hits Reply, that needs to reach the
+      // tradie, not Quotease's own inbox - hence reply_to.
+      ...(quote.profiles?.contact_email ? { reply_to: quote.profiles.contact_email } : {}),
       to: quote.client_email,
       subject: `Quote from ${business} — $${(quote.total_cost ?? 0).toLocaleString()}`,
       html,
