@@ -61,6 +61,8 @@ function RateSaveButton() {
     </button>
   );
 }
+
+export default function SettingsPanel({ profile }: { profile: Profile }) {
   const [trades,         setTrades]         = useState<string[]>(profile?.trades ?? []);
   const [tradeSaving,    setTradeSaving]    = useState(false);
   const [tradeSaved,     setTradeSaved]     = useState(false);
