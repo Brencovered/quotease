@@ -4,19 +4,26 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { CalendarDays, Check } from "lucide-react";
 
+// Writes to scheduled_start/estimated_days - the same columns the Schedule
+// calendar reads from. An earlier version of this panel wrote to a
+// separate scheduled_date column that the calendar never looked at, so
+// setting a date here silently never appeared anywhere else.
 export default function JobBriefPanel({
   quoteId,
   siteNotes: initialNotes,
-  scheduledDate: initialDate,
+  scheduledStart: initialStart,
+  estimatedDays: initialDays,
   assignedTo: initialAssigned,
 }: {
   quoteId: string;
   siteNotes: string | null;
-  scheduledDate: string | null;
+  scheduledStart: string | null;
+  estimatedDays: number | null;
   assignedTo: string | null;
 }) {
   const [siteNotes, setSiteNotes] = useState(initialNotes ?? "");
-  const [scheduledDate, setScheduledDate] = useState(initialDate ?? "");
+  const [scheduledStart, setScheduledStart] = useState(initialStart ? initialStart.slice(0, 10) : "");
+  const [estimatedDays, setEstimatedDays] = useState(initialDays ? String(initialDays) : "");
   const [assignedTo, setAssignedTo] = useState(initialAssigned ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -25,11 +32,16 @@ export default function JobBriefPanel({
     setSaving(true);
     setSaved(false);
     const supabase = createClient();
+    const days = estimatedDays ? Number(estimatedDays) : null;
+    const start = scheduledStart ? new Date(scheduledStart).toISOString() : null;
+    const end = start && days && days > 1 ? new Date(new Date(start).getTime() + (days - 1) * 86400000).toISOString() : start;
     await supabase
       .from("quotes")
       .update({
         site_notes: siteNotes || null,
-        scheduled_date: scheduledDate || null,
+        scheduled_start: start,
+        scheduled_end: end,
+        estimated_days: days,
         assigned_to: assignedTo || null,
       })
       .eq("id", quoteId);
@@ -43,12 +55,23 @@ export default function JobBriefPanel({
       <p className="font-semibold text-[var(--ink)] mb-1">What to know before you turn up</p>
       <p className="text-[12.5px] text-[var(--ink-faint)] mb-4">Gate codes, dogs, parking, access notes, anything site-specific.</p>
 
-      <div className="grid sm:grid-cols-2 gap-3 mb-3">
+      <div className="grid sm:grid-cols-3 gap-3 mb-3">
         <label className="block">
           <span className="flex items-center gap-1.5 text-[12px] font-medium text-[var(--ink-soft)] mb-1.5">
-            <CalendarDays size={13} /> Scheduled date
+            <CalendarDays size={13} /> Start date
           </span>
-          <input type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} className="app-field" />
+          <input type="date" value={scheduledStart} onChange={(e) => setScheduledStart(e.target.value)} className="app-field" />
+        </label>
+        <label className="block">
+          <span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1.5">Days on site</span>
+          <input
+            type="number"
+            min={1}
+            value={estimatedDays}
+            onChange={(e) => setEstimatedDays(e.target.value)}
+            placeholder="1"
+            className="app-field"
+          />
         </label>
         <label className="block">
           <span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1.5">Assigned to</span>
@@ -60,6 +83,7 @@ export default function JobBriefPanel({
           />
         </label>
       </div>
+      <p className="text-[11px] text-[var(--ink-faint)] mb-3">This appears on your Schedule calendar automatically.</p>
 
       <label className="block mb-3">
         <span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1.5">Site access notes</span>

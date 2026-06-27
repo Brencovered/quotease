@@ -9,6 +9,7 @@ import CompliancePanel from "@/components/CompliancePanel";
 import JobFilesPanel from "@/components/JobFilesPanel";
 import JobBriefPanel from "@/components/JobBriefPanel";
 import MaterialsChecklistPanel from "@/components/MaterialsChecklistPanel";
+import JobTimeline from "@/components/JobTimeline";
 import JobActionsBar from "@/components/JobActionsBar";
 import { humanizeIntake } from "@/lib/scopeOfWorks";
 
@@ -20,7 +21,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
 
   const data = await loadJobDetailData(supabase, id, userData.user.id);
   if (!data) notFound();
-  const { quote, variations, actuals, certsWithUrls, attachmentsWithUrls, hourlyRate, marginPct } = data;
+  const { quote, variations, actuals, certsWithUrls, attachmentsWithUrls, payments, hourlyRate, marginPct } = data;
 
   // A quote that hasn't been won yet has no business living at a job URL -
   // send it back to where it actually belongs.
@@ -30,6 +31,13 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
 
   const scopeLines = humanizeIntake(quote.intake_data);
   const labourCost = (quote.total_cost ?? 0) - (quote.materials_cost ?? 0);
+  // Approved variations are extra work the client agreed to, but until now
+  // nothing actually added them to what's owed - Record Payment, the PDF,
+  // and the Xero invoice all silently used only the original quoted total.
+  const approvedVariationsTotal = variations
+    .filter((v: { status: string; total_cost: number }) => v.status === "approved")
+    .reduce((sum: number, v: { total_cost: number }) => sum + (v.total_cost ?? 0), 0);
+  const effectiveTotal = (quote.total_cost ?? 0) + approvedVariationsTotal;
 
   return (
     <>
@@ -42,7 +50,10 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             {quote.site_address && <p className="text-[13px] text-[var(--ink-faint)] mt-0.5">{quote.site_address}</p>}
           </div>
           <div className="text-right shrink-0">
-            <p className="font-display text-2xl text-[var(--ink)]">${(quote.total_cost ?? 0).toLocaleString()}</p>
+            <p className="font-display text-2xl text-[var(--ink)]">${effectiveTotal.toLocaleString()}</p>
+            {approvedVariationsTotal > 0 && (
+              <p className="text-[11px] text-[var(--amber-deep)] font-semibold">incl. ${approvedVariationsTotal.toLocaleString()} approved variations</p>
+            )}
             <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold inline-block mt-1 ${quote.status === "paid" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-800"}`}>
               {quote.status === "paid" ? "paid" : "active job"}
             </span>
@@ -57,9 +68,10 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             <p className="text-[11px] tracking-[.1em] uppercase text-[var(--steel-3)] font-bold">
               {quote.status === "paid" ? "Job complete & paid" : quote.completed_at ? "Job complete — awaiting payment" : "Active job"}
             </p>
-            {quote.scheduled_date && (
+            {quote.scheduled_start && (
               <p className="text-[13px] text-[var(--steel-1)] mt-0.5">
-                Scheduled {new Date(quote.scheduled_date).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}
+                Scheduled {new Date(quote.scheduled_start).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}
+                {quote.estimated_days > 1 ? ` (${quote.estimated_days} days)` : ""}
                 {quote.assigned_to ? ` — ${quote.assigned_to}` : ""}
               </p>
             )}
@@ -88,8 +100,13 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             </div>
             <div className="flex justify-between text-[14.5px] pt-1 border-t border-[var(--line)]">
               <span className="font-bold text-[var(--ink)]">Total</span>
-              <span className="font-display text-lg text-[var(--ink)]">${(quote.total_cost ?? 0).toLocaleString()}</span>
+              <span className="font-display text-lg text-[var(--ink)]">${effectiveTotal.toLocaleString()}</span>
             </div>
+            {approvedVariationsTotal > 0 && (
+              <p className="text-[11.5px] text-[var(--ink-faint)] text-right">
+                ${(quote.total_cost ?? 0).toLocaleString()} quoted + ${approvedVariationsTotal.toLocaleString()} approved variations
+              </p>
+            )}
           </div>
         </div>
 
@@ -97,13 +114,31 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           <JobActionsBar
             quoteId={quote.id}
             status={quote.status}
-            totalCost={quote.total_cost ?? 0}
+            totalCost={effectiveTotal}
             amountPaid={quote.amount_paid ?? 0}
             hasClientEmail={!!quote.client_email}
             completedAt={quote.completed_at}
           />
 
-          <JobBriefPanel quoteId={quote.id} siteNotes={quote.site_notes} scheduledDate={quote.scheduled_date} assignedTo={quote.assigned_to} />
+          <JobBriefPanel
+            quoteId={quote.id}
+            siteNotes={quote.site_notes}
+            scheduledStart={quote.scheduled_start}
+            estimatedDays={quote.estimated_days}
+            assignedTo={quote.assigned_to}
+          />
+
+          <JobTimeline
+            acceptedAt={quote.accepted_at}
+            completedAt={quote.completed_at}
+            paidAt={quote.paid_at}
+            variations={variations}
+            actuals={actuals}
+            attachments={attachmentsWithUrls}
+            certs={certsWithUrls as never}
+            payments={payments}
+          />
+
           <MaterialsChecklistPanel quoteId={quote.id} initialChecklist={quote.materials_checklist ?? []} scopeLines={scopeLines} />
           <JobFilesPanel quoteId={quote.id} attachments={attachmentsWithUrls} />
           <VariationsPanel quoteId={quote.id} hourlyRate={hourlyRate} margin={marginPct} variations={variations} quoteTotalCost={quote.total_cost ?? 0} />

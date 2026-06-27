@@ -34,22 +34,24 @@ export async function POST(request: Request) {
 
   // Recording a payment: fetch the current quote first so we can add to
   // amount_paid rather than overwrite it, and flip to "paid" once the
-  // running total covers the full quote.
+  // running total covers the full amount owed - including approved
+  // variations, which previously weren't counted here at all.
   if (typeof paymentAmount === "number" && paymentAmount > 0) {
-    const { data: existing } = await supabase
-      .from("quotes")
-      .select("amount_paid, total_cost")
-      .eq("id", quoteId)
-      .eq("profile_id", userData.user.id)
-      .single();
+    const [{ data: existing }, { data: approvedVariations }] = await Promise.all([
+      supabase.from("quotes").select("amount_paid, total_cost").eq("id", quoteId).eq("profile_id", userData.user.id).single(),
+      supabase.from("variations").select("total_cost").eq("quote_id", quoteId).eq("status", "approved"),
+    ]);
 
     if (existing) {
+      const variationsTotal = (approvedVariations ?? []).reduce((sum, v) => sum + (v.total_cost ?? 0), 0);
+      const effectiveTotal = (existing.total_cost ?? 0) + variationsTotal;
       const newAmountPaid = (existing.amount_paid ?? 0) + paymentAmount;
       update.amount_paid = newAmountPaid;
-      if (newAmountPaid >= (existing.total_cost ?? 0)) {
+      if (newAmountPaid >= effectiveTotal) {
         update.status = "paid";
         update.paid_at = new Date().toISOString();
       }
+      await supabase.from("payments").insert({ quote_id: quoteId, profile_id: userData.user.id, amount: paymentAmount });
     }
   }
 

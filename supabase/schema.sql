@@ -128,6 +128,19 @@ create table quotes (
   updated_at timestamptz not null default now()
 );
 
+-- Individual payment records - amount_paid on the quote itself is a running
+-- total, but until this table existed there was no history of when each
+-- payment actually came in, which the job timeline needs.
+create table payments (
+  id uuid primary key default uuid_generate_v4(),
+  quote_id uuid not null references quotes(id) on delete cascade,
+  profile_id uuid not null references profiles(id) on delete cascade,
+  amount numeric not null,
+  recorded_at timestamptz not null default now()
+);
+alter table payments enable row level security;
+create policy "Own payments" on payments for all using (auth.uid() = profile_id);
+
 -- Per-tradie running invoice number counter, so invoice numbers are
 -- sequential per business rather than global across all tradies
 create table invoice_counters (

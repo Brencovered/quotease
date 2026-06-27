@@ -4,13 +4,14 @@ export async function loadJobDetailData(supabase: SupabaseClient, id: string, pr
   const { data: quote } = await supabase.from("quotes").select("*").eq("id", id).eq("profile_id", profileId).single();
   if (!quote) return null;
 
-  const [{ data: variations }, { data: actuals }, { data: certs }, { data: followUps }, { data: attachments }, { data: profile }] = await Promise.all([
+  const [{ data: variations }, { data: actuals }, { data: certs }, { data: followUps }, { data: attachments }, { data: profile }, { data: payments }] = await Promise.all([
     supabase.from("variations").select("*").eq("quote_id", id).order("created_at"),
     supabase.from("job_actuals").select("*").eq("quote_id", id).order("recorded_at"),
     supabase.from("compliance_certs").select("*").eq("quote_id", id).order("created_at"),
     supabase.from("follow_up_log").select("*").eq("quote_id", id).order("followed_up_at", { ascending: false }),
     supabase.from("job_attachments").select("*").eq("quote_id", id).order("created_at"),
     supabase.from("profiles").select("hourly_rate, materials_margin_pct").eq("id", profileId).single(),
+    supabase.from("payments").select("*").eq("quote_id", id).order("recorded_at"),
   ]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -36,6 +37,7 @@ export async function loadJobDetailData(supabase: SupabaseClient, id: string, pr
     certsWithUrls,
     followUps: followUps ?? [],
     attachmentsWithUrls,
+    payments: payments ?? [],
     hourlyRate: (profile as { hourly_rate: number } | null)?.hourly_rate ?? 95,
     marginPct: (profile as { materials_margin_pct: number } | null)?.materials_margin_pct ?? 20,
   };
