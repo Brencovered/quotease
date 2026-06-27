@@ -361,7 +361,7 @@ export default function OnboardingPage() {
               )}
 
               <p className="text-[12px] text-[var(--ink-faint)]">
-                You can add, remove and edit items any time from Settings > Material Pricing.
+                You can add, remove and edit items any time from Settings &gt; Material Pricing.
               </p>
             </>
           )}
