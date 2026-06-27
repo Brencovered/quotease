@@ -356,7 +356,7 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
             {freeLeft > 0
               ? `${freeLeft} free analysis${freeLeft !== 1 ? "es" : ""} remaining for now.`
               : `You've used your ${FREE_ANALYSES_LIMIT} free analyses for now.`}{" "}
-            Free during early access — more capacity is coming.
+            Free during early access - more capacity is coming.
           </p>
         )}
       </div>
