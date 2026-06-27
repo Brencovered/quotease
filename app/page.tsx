@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 
-// High quality Unsplash images — reliable CDN, no auth needed
+// High quality Unsplash images - reliable CDN, no auth needed
 const HERO_IMG    = "https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=1800&q=85&auto=format&fit=crop";  // electrician working on switchboard
 const SITE_IMG    = "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1400&q=85&auto=format&fit=crop";  // tradie on site construction
 const PHONE_IMG   = "https://images.unsplash.com/photo-1556761175-b413da4baf72?w=1400&q=85&auto=format&fit=crop";  // person on phone professional
@@ -10,7 +10,7 @@ const FEATURES = [
   {
     n: "01",
     title: "Quote in 4 minutes on site",
-    body: "Trade-specific fields built around what you actually see on the job. Fill in what is in front of you — the number calculates live as you go.",
+    body: "Trade-specific fields built around what you actually see on the job. Fill in what is in front of you - the number calculates live as you go.",
   },
   {
     n: "02",
@@ -20,7 +20,7 @@ const FEATURES = [
   {
     n: "03",
     title: "Client accepts and pays online",
-    body: "One tap to accept, tick the terms, choose how to pay — bank transfer, cash or card. No back-and-forth, no paperwork.",
+    body: "One tap to accept, tick the terms, choose how to pay - bank transfer, cash or card. No back-and-forth, no paperwork.",
   },
   {
     n: "04",
@@ -50,17 +50,25 @@ const FEATURES = [
 ];
 
 const TRADES = [
-  { name: "Electricians",  detail: "Powerpoints, switchboards, downlights, solar, compliance certs" },
-  { name: "Plumbers",      detail: "Tapware, hot water, rough-ins, gas fitting, drainage" },
-  { name: "Carpenters",    detail: "Doors, framing, decking, fitout, skirting, architrave" },
-  { name: "Roofers",       detail: "Colorbond, terracotta, gutters, skylights, scaffold" },
+  { name: "Electricians",     detail: "Powerpoints, switchboards, downlights, solar, certs" },
+  { name: "Plumbers",         detail: "Tapware, hot water, rough-ins, gas fitting, drainage" },
+  { name: "Carpenters",       detail: "Framing, doors, decking, fitout, skirting" },
+  { name: "Roofers",          detail: "Colorbond, terracotta, gutters, skylights, scaffold" },
+  { name: "Painters",         detail: "Interior, exterior, prep, feature walls, trim" },
+  { name: "Tilers",           detail: "Floor, wall, wet areas, outdoor, grouting" },
+  { name: "Landscapers",      detail: "Retaining walls, paving, turf, irrigation" },
+  { name: "Arborists",        detail: "Tree removal, pruning, stump grinding, reports" },
+  { name: "Concreters",       detail: "Slabs, driveways, pathways, exposed aggregate" },
+  { name: "Fencers",          detail: "Colorbond, timber, retaining, pool fencing" },
+  { name: "Air conditioning", detail: "Split systems, ducted, service, compliance" },
+  { name: "Surveyors",        detail: "Feature, boundary, construction, peg out" },
 ];
 
 const PAIN_POINTS = [
   { x: "Quoting on a Word doc at 10pm",            y: "Built in 4 min on your phone, on site" },
   { x: "Losing jobs to whoever quoted first",       y: "Send before you reverse out of the driveway" },
   { x: "Scope creep with nothing in writing",       y: "Variation orders signed off before you start" },
-  { x: "No idea if the job actually made money",    y: "Job costing — actual vs quoted, every time" },
+  { x: "No idea if the job actually made money",    y: "Job costing - actual vs quoted, every time" },
   { x: "Chasing invoices for weeks",                y: "Client accepts and pays online, same day" },
 ];
 
@@ -98,10 +106,6 @@ export default function Home() {
 
         <div className="relative z-10 max-w-7xl mx-auto px-6 pb-24 w-full">
           <div className="max-w-[680px]">
-            <div className="inline-flex items-center gap-2 mb-6 bg-[#ffb400]/15 border border-[#ffb400]/30 rounded-full px-4 py-2 backdrop-blur-sm">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#ffb400]" />
-              <span className="text-[12.5px] font-bold text-[#ffb400] tracking-wide uppercase">Built by a sparkie. For tradies.</span>
-            </div>
 
             <h1 className="font-display uppercase leading-[0.88] mb-8">
               <span className="block text-[3.2rem] sm:text-[5rem] lg:text-[6rem] text-white">Quote it.</span>
@@ -112,14 +116,14 @@ export default function Home() {
             <p className="text-[17px] sm:text-[18px] leading-[1.65] text-[#c8d8e4] max-w-[520px] mb-10">
               Stop writing quotes on Word docs at 10pm. Quotease gets you
               a professional quote built and sent from your phone before you
-              leave the driveway — while the other tradie is still working out their price.
+              leave the driveway - while the other tradie is still working out their price.
             </p>
 
             <div className="flex flex-wrap gap-4 mb-8">
               <Link href="/signup"
                 className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[16px] px-8 py-4 rounded-xl hover:bg-[#e89e00] transition-colors"
                 style={{ boxShadow: "0 12px 32px rgba(255,180,0,.3)" }}>
-                Sign up free — no card needed
+                Sign up free - no card needed
               </Link>
               <Link href="/login"
                 className="text-white font-bold text-[16px] px-6 py-4 rounded-xl border border-white/25 hover:border-white/50 transition-colors backdrop-blur-sm">
@@ -147,7 +151,7 @@ export default function Home() {
       {/* TRADES STRIP */}
       <div className="bg-[#0c1e2e] border-t border-b border-white/[0.1]">
         <div className="max-w-7xl mx-auto px-6 py-0">
-          <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-white/[0.1]">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 divide-x divide-y divide-white/[0.08]">
             {TRADES.map((t, i) => (
               <div key={t.name} className="px-6 py-8">
                 <p className="text-[11px] font-bold tracking-[.14em] uppercase text-[#ffb400] mb-2">
@@ -171,7 +175,7 @@ export default function Home() {
               Everything from quote<br />to paid.
             </h2>
             <p className="text-[15px] text-[#7e94a2] leading-[1.7] mb-8">
-              Most quoting tools stop at the quote. Quotease covers the whole job —
+              Most quoting tools stop at the quote. Quotease covers the whole job -
               from the first number on site to the final payment cleared.
             </p>
             <Link href="/signup" className="inline-flex bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-6 py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors">
@@ -208,7 +212,7 @@ export default function Home() {
               <p className="text-[11px] font-bold tracking-[.14em] uppercase text-[#ffb400] mb-3">Your real prices</p>
               <h3 className="font-extrabold text-[20px] text-white mb-3 leading-snug">Upload your supplier&apos;s price list once</h3>
               <p className="text-[14px] text-[#7e94a2] leading-[1.65] mb-7">
-                Every quote after that calculates off what you actually pay — not a generic estimate that&apos;s already wrong by the time your wholesaler updates prices.
+                Every quote after that calculates off what you actually pay - not a generic estimate that&apos;s already wrong by the time your wholesaler updates prices.
               </p>
               <div className="bg-[#0e2233] border border-white/[0.08] rounded-2xl p-4">
                 <div className="flex items-center justify-between mb-3">
@@ -234,7 +238,7 @@ export default function Home() {
               <p className="text-[11px] font-bold tracking-[.14em] uppercase text-[#ffb400] mb-3">AI does the first pass</p>
               <h3 className="font-extrabold text-[20px] text-white mb-3 leading-snug">Snap the plan. Talk through the job.</h3>
               <p className="text-[14px] text-[#7e94a2] leading-[1.65] mb-7">
-                Photograph the floor plan or record yourself walking the site. AI reads it and drafts the scope — you check it and adjust before anything gets sent.
+                Photograph the floor plan or record yourself walking the site. AI reads it and drafts the scope - you check it and adjust before anything gets sent.
               </p>
               <div className="bg-[#0e2233] border border-white/[0.08] rounded-2xl p-4">
                 <div className="flex items-center justify-between mb-3">
@@ -252,14 +256,14 @@ export default function Home() {
                     <span className="text-[13px] font-bold text-white tabular">{row.val}</span>
                   </div>
                 ))}
-                <p className="text-[11px] text-[#5a7385] mt-3 leading-snug">Review every field before sending — AI drafts, you decide.</p>
+                <p className="text-[11px] text-[#5a7385] mt-3 leading-snug">Review every field before sending - AI drafts, you decide.</p>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* PHOTO BREAK — site photo */}
+      {/* PHOTO BREAK - site photo */}
       <div className="relative h-[55vh] min-h-[380px] overflow-hidden">
         <Image
           src={SITE_IMG}
@@ -276,7 +280,7 @@ export default function Home() {
               54% of clients go with<br />the first quote they get.
             </h2>
             <p className="text-[16px] text-[#a9bcc8] max-w-[420px] leading-[1.6]">
-              Speed wins the job. Quotease gets you there first — every time,
+              Speed wins the job. Quotease gets you there first - every time,
               from every site.
             </p>
           </div>
@@ -313,7 +317,7 @@ export default function Home() {
           <div className="relative rounded-2xl overflow-hidden aspect-[4/3] order-2 lg:order-1">
             <Image
               src="https://images.squarespace-cdn.com/content/v1/6848e6851124a2687a93a35f/ea135f61-ba35-4cdd-a281-ffcab6e07c5e/residential-electrician-melbourne-lounge+room.jpg"
-              alt="High-spec residential electrical install — Spark Ease Electrical, Melbourne"
+              alt="High-spec residential electrical install - Spark Ease Electrical, Melbourne"
               fill
               className="object-cover"
               unoptimized
@@ -395,7 +399,7 @@ export default function Home() {
           </h2>
           <div className="flex flex-col divide-y divide-white/[0.06]">
             {[
-              "Free during early access — no credit card, ever",
+              "Free during early access - no credit card, ever",
               "Unlimited users, unlimited quotes",
               "All 4 trades included from day one",
               "VIC planning overlay checks built in",
@@ -418,7 +422,7 @@ export default function Home() {
               <span className="font-display text-[6rem] leading-[0.85] text-[#ffb400]">$0</span>
             </div>
             <p className="text-[#7e94a2] text-[14px] mb-1">free while we&apos;re building this out</p>
-            <p className="text-[12px] text-[#3a4f5e] mb-8">In exchange, we&apos;ll ask for your feedback — and hope to earn a testimonial along the way.</p>
+            <p className="text-[12px] text-[#3a4f5e] mb-8">In exchange, we&apos;ll ask for your feedback - and hope to earn a testimonial along the way.</p>
             <Link href="/signup" className="block bg-[#ffb400] text-[#0a1722] font-extrabold text-[17px] py-4 rounded-xl mb-3 hover:bg-[#e89e00] transition-colors">
               Sign up free
             </Link>
