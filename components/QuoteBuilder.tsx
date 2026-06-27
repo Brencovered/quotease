@@ -31,11 +31,12 @@ const DEFAULT_INTAKE: ElectricianIntake = {
 };
 
 const STEPS = [
+  { id: "customer",   label: "Customer" },
+  { id: "drawing",    label: "Files" },
   { id: "job",        label: "Job" },
   { id: "electrical", label: "Electrical" },
   { id: "site",       label: "Site" },
   { id: "send",       label: "Send" },
-  { id: "drawing",    label: "Files" },
 ];
 
 export default function QuoteBuilder({
@@ -338,16 +339,22 @@ export default function QuoteBuilder({
         <StepSite intake={intake} set={set} />
       )}
 
+      {stepId === "customer" && (
+        <StepCustomer
+          clientName={clientName} setClientName={setClientName}
+          clientEmail={clientEmail} setClientEmail={setClientEmail}
+          siteAddress={siteAddress} setSiteAddress={setSiteAddress}
+          onCeilingHint={(hint) => set("ceilingType", hint as ElectricianIntake["ceilingType"])}
+        />
+      )}
+
       {stepId === "send" && (
         <StepSend
           intake={intake} result={result} paymentTerms={paymentTerms}
           termsPreset={termsPreset} setTermsPreset={setTermsPreset}
           customTerms={customTerms} setCustomTerms={setCustomTerms} customTermsTotal={customTermsTotal}
-          clientName={clientName} setClientName={setClientName}
-          clientEmail={clientEmail} setClientEmail={setClientEmail}
-          siteAddress={siteAddress} setSiteAddress={setSiteAddress}
+          clientName={clientName} clientEmail={clientEmail} siteAddress={siteAddress}
           saving={saving} saveMessage={saveMessage} savedQuoteId={savedQuoteId} onSave={saveAndSend}
-          onCeilingHint={(hint) => set("ceilingType", hint as ElectricianIntake["ceilingType"])}
         />
       )}
 
@@ -738,20 +745,10 @@ function StepSite({ intake, set }: {
 }
 
 /* ─── Step: Send ────────────────────────────────────────────────── */
-function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTerms, setCustomTerms, customTermsTotal,
-  clientName, setClientName, clientEmail, setClientEmail, siteAddress, setSiteAddress,
-  saving, saveMessage, savedQuoteId, onSave, onCeilingHint }: {
-  intake: ElectricianIntake;
-  result: { labourHours: number; materialsCost: number; totalCost: number };
-  paymentTerms: PaymentTerm[];
-  termsPreset: string; setTermsPreset: (v: string) => void;
-  customTerms: PaymentTerm[]; setCustomTerms: React.Dispatch<React.SetStateAction<PaymentTerm[]>>;
-  customTermsTotal: number;
+function StepCustomer({ clientName, setClientName, clientEmail, setClientEmail, siteAddress, setSiteAddress, onCeilingHint }: {
   clientName: string; setClientName: (v: string) => void;
   clientEmail: string; setClientEmail: (v: string) => void;
   siteAddress: string; setSiteAddress: (v: string) => void;
-  saving: boolean; saveMessage: string | null; savedQuoteId: string | null;
-  onSave: (send: boolean) => void;
   onCeilingHint?: (hint: string) => void;
 }) {
   const [propChecking, setPropChecking] = useState(false);
@@ -761,6 +758,10 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
     flags?: Array<{ type: string; severity: string; label: string; detail: string | null; verifyUrl?: string; verifyLabel?: string }>;
   } | null>(null);
 
+  // Running this here, before the manual entry steps, means a heritage/
+  // bushfire overlay hit can actually inform the ceiling type and labour
+  // estimate later in the flow - running it at the end (where it used to
+  // live) meant the hint arrived after those fields were already filled in.
   const isVic = siteAddress.trim().length > 8 && (
     /\bVIC\b/i.test(siteAddress) || /\b3\d{3}\b/.test(siteAddress)
   );
@@ -779,28 +780,9 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
 
   return (
     <div className="space-y-4">
-      {/* Quote summary */}
-      <div className="bg-[var(--navy)] rounded-2xl p-5">
-        <p className="text-[11px] text-[var(--steel-3)] font-bold uppercase tracking-wider mb-3">Quote summary</p>
-        <div className="space-y-2">
-          <div className="flex justify-between text-[14px]">
-            <span className="text-[var(--steel-2)]">Labour ({result.labourHours}h)</span>
-            <span className="text-white font-semibold tabular">${Math.round(result.labourHours * 95).toLocaleString()}</span>
-          </div>
-          <div className="flex justify-between text-[14px]">
-            <span className="text-[var(--steel-2)]">Materials</span>
-            <span className="text-white font-semibold tabular">${result.materialsCost.toLocaleString()}</span>
-          </div>
-          <div className="border-t border-white/10 pt-2 flex justify-between">
-            <span className="text-white font-bold text-[15px]">Total</span>
-            <span className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${result.totalCost.toLocaleString()}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Client details */}
       <div className="card">
-        <p className="section-tag mb-3">Client details</p>
+        <p className="section-tag mb-1">Customer & site</p>
+        <p className="font-semibold text-[var(--ink)] mb-3">Who&apos;s this for, and where?</p>
         <div className="space-y-3">
           <Field label="Client name">
             <ClientPicker
@@ -857,6 +839,51 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
             )}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTerms, setCustomTerms, customTermsTotal,
+  clientName, clientEmail, siteAddress,
+  saving, saveMessage, savedQuoteId, onSave }: {
+  intake: ElectricianIntake;
+  result: { labourHours: number; materialsCost: number; totalCost: number };
+  paymentTerms: PaymentTerm[];
+  termsPreset: string; setTermsPreset: (v: string) => void;
+  customTerms: PaymentTerm[]; setCustomTerms: React.Dispatch<React.SetStateAction<PaymentTerm[]>>;
+  customTermsTotal: number;
+  clientName: string; clientEmail: string; siteAddress: string;
+  saving: boolean; saveMessage: string | null; savedQuoteId: string | null;
+  onSave: (send: boolean) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      {/* Quote summary */}
+      <div className="bg-[var(--navy)] rounded-2xl p-5">
+        <p className="text-[11px] text-[var(--steel-3)] font-bold uppercase tracking-wider mb-3">Quote summary</p>
+        <div className="space-y-2">
+          <div className="flex justify-between text-[14px]">
+            <span className="text-[var(--steel-2)]">Labour ({result.labourHours}h)</span>
+            <span className="text-white font-semibold tabular">${Math.round(result.labourHours * 95).toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between text-[14px]">
+            <span className="text-[var(--steel-2)]">Materials</span>
+            <span className="text-white font-semibold tabular">${result.materialsCost.toLocaleString()}</span>
+          </div>
+          <div className="border-t border-white/10 pt-2 flex justify-between">
+            <span className="text-white font-bold text-[15px]">Total</span>
+            <span className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${result.totalCost.toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Who it's going to - confirmation only, edited back in the Customer step */}
+      <div className="card">
+        <p className="section-tag mb-1">Sending to</p>
+        <p className="font-semibold text-[var(--ink)]">{clientName || "No client name set"}</p>
+        <p className="text-[13px] text-[var(--ink-faint)]">{clientEmail || "No email set — can still save as draft"}</p>
+        <p className="text-[13px] text-[var(--ink-faint)]">{siteAddress || "No site address set"}</p>
       </div>
 
       {/* Payment terms */}
