@@ -6,6 +6,7 @@ import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
 import { AlertTriangle, Paperclip, X, Sparkles, ChevronRight, ChevronLeft, Check } from "lucide-react";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import { calcPlumberQuote, PLUMBER_DEFAULT_MATERIALS, type PlumberIntake } from "@/lib/calcPlumber";
+import MaterialsEditor from "@/components/MaterialsEditor";
 
 type MaterialRow = { item_key: string; label: string; unit_cost: number };
 
@@ -22,11 +23,12 @@ const DEFAULT_INTAKE: PlumberIntake = {
 };
 
 const STEPS = [
-  { id: "job",      label: "Job"      },
-  { id: "fixtures", label: "Fixtures" },
-  { id: "pipework", label: "Pipework" },
-  { id: "send",     label: "Send"     },
-  { id: "drawing",  label: "Files"    },
+  { id: "job",       label: "Job"       },
+  { id: "fixtures",  label: "Fixtures"  },
+  { id: "pipework",  label: "Pipework"  },
+  { id: "materials", label: "Materials" },
+  { id: "send",      label: "Send"      },
+  { id: "drawing",   label: "Files"     },
 ];
 
 export default function PlumberQuoteBuilder({ profile, materials }: {
@@ -37,7 +39,7 @@ export default function PlumberQuoteBuilder({ profile, materials }: {
   const [intake, setIntake] = useState<PlumberIntake>(DEFAULT_INTAKE);
   const [rate,   setRate]   = useState(profile.hourly_rate ?? 95);
   const [margin, setMargin] = useState(profile.materials_margin_pct ?? 20);
-  const [lib] = useState<MaterialRow[]>(
+  const [lib, setLib] = useState<MaterialRow[]>(
     materials.length > 0 ? materials : PLUMBER_DEFAULT_MATERIALS.map((m) => ({ ...m }))
   );
 
@@ -245,6 +247,8 @@ export default function PlumberQuoteBuilder({ profile, materials }: {
           </div>
         </div>
       )}
+
+      {stepId === "materials" && <MaterialsEditor lib={lib} setLib={setLib} />}
 
       {stepId === "send" && (
         <div className="space-y-4">

@@ -7,6 +7,7 @@ import { AlertTriangle, Paperclip, X, Sparkles, ChevronRight, ChevronLeft, Check
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import ClientPicker from "./ClientPicker";
+import MaterialsEditor from "@/components/MaterialsEditor";
 import {
   calcElectricianQuote,
   ELECTRICIAN_DEFAULT_MATERIALS,
@@ -532,10 +533,6 @@ function StepElectrical({ intake, set, lib, setLib }: {
   const [showLib, setShowLib] = useState(false);
   const [csvMessage, setCsvMessage] = useState<string | null>(null);
 
-  function updateLibCost(item_key: string, value: number) {
-    setLib((prev) => prev.map((m) => m.item_key === item_key ? { ...m, unit_cost: value } : m));
-  }
-
   function downloadCsvTemplate() {
     const rows = ["item_key,label,unit_cost", ...lib.map((m) => `${m.item_key},"${m.label}",${m.unit_cost}`)];
     const blob = new Blob([rows.join("\n")], { type: "text/csv" });
@@ -662,35 +659,26 @@ function StepElectrical({ intake, set, lib, setLib }: {
         <ChevronRight size={15} className={`transition-transform ${showLib ? "rotate-90" : ""}`} />
       </button>
       {showLib && (
-        <div className="card">
-          <p className="section-tag mb-1">Your prices</p>
-          <p className="text-[12px] text-[var(--ink-faint)] mb-3">
-            Most suppliers (Middys, Rexel, Tradelink) let you export your trade pricing from their account
-            portal. Download that as a CSV and upload it here - every quote will use those real prices.
-          </p>
-          <div className="flex flex-wrap gap-2 mb-4">
-            <label className="btn-secondary text-[12.5px] py-2 px-3 cursor-pointer">
-              <Upload size={13} /> Upload supplier price CSV
-              <input type="file" accept=".csv" className="hidden" onChange={handleCsvUpload} />
-            </label>
-            <button onClick={downloadCsvTemplate} className="text-[12.5px] font-semibold text-[var(--navy)] underline px-2">
-              Download a template
-            </button>
+        <>
+          <div className="card">
+            <p className="section-tag mb-1">Sync from your supplier</p>
+            <p className="text-[12px] text-[var(--ink-faint)] mb-3">
+              Most suppliers (Middys, Rexel, Tradelink) let you export your trade pricing from their account
+              portal. Download that as a CSV and upload it here, and every quote will use those real prices.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <label className="btn-secondary text-[12.5px] py-2 px-3 cursor-pointer">
+                <Upload size={13} /> Upload supplier price CSV
+                <input type="file" accept=".csv" className="hidden" onChange={handleCsvUpload} />
+              </label>
+              <button onClick={downloadCsvTemplate} className="text-[12.5px] font-semibold text-[var(--navy)] underline px-2">
+                Download a template
+              </button>
+            </div>
+            {csvMessage && <p className="text-[12.5px] text-[var(--ink-soft)] mt-3">{csvMessage}</p>}
           </div>
-          {csvMessage && <p className="text-[12.5px] text-[var(--ink-soft)] mb-3">{csvMessage}</p>}
-          <div className="divide-y divide-[var(--line-subtle)]">
-            {lib.map((m) => (
-              <div key={m.item_key} className="flex items-center justify-between py-2.5 gap-3">
-                <span className="text-[13.5px] text-[var(--ink)] flex-1">{m.label}</span>
-                <div className="flex items-center gap-1">
-                  <span className="text-[13px] text-[var(--ink-faint)]">$</span>
-                  <input type="number" value={m.unit_cost} onChange={(e) => updateLibCost(m.item_key, Number(e.target.value))}
-                    className="app-field text-right py-1.5 w-20 text-[13px]" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+          <MaterialsEditor lib={lib} setLib={setLib} />
+        </>
       )}
     </div>
   );

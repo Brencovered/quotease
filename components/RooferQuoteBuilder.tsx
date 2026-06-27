@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
 import { Paperclip, X, ChevronRight, ChevronLeft, Check } from "lucide-react";
 import { calcRooferQuote, ROOFER_DEFAULT_MATERIALS, type RooferIntake } from "@/lib/calcRoofer";
+import MaterialsEditor from "@/components/MaterialsEditor";
 
 type MaterialRow = { item_key: string; label: string; unit_cost: number };
 
@@ -16,11 +17,12 @@ const DEFAULT_INTAKE: RooferIntake = {
 };
 
 const STEPS = [
-  { id: "job",     label: "Job"     },
-  { id: "roof",    label: "Roof"    },
-  { id: "extras",  label: "Extras"  },
-  { id: "send",    label: "Send"    },
-  { id: "drawing", label: "Files"   },
+  { id: "job",       label: "Job"       },
+  { id: "roof",      label: "Roof"      },
+  { id: "extras",    label: "Extras"    },
+  { id: "materials", label: "Materials" },
+  { id: "send",      label: "Send"      },
+  { id: "drawing",   label: "Files"     },
 ];
 
 export default function RooferQuoteBuilder({ profile, materials }: {
@@ -31,7 +33,7 @@ export default function RooferQuoteBuilder({ profile, materials }: {
   const [intake, setIntake] = useState<RooferIntake>(DEFAULT_INTAKE);
   const [rate, setRate]     = useState(profile.hourly_rate ?? 90);
   const [margin, setMargin] = useState(profile.materials_margin_pct ?? 20);
-  const [lib]       = useState<MaterialRow[]>(
+  const [lib, setLib] = useState<MaterialRow[]>(
     materials.length > 0 ? materials : ROOFER_DEFAULT_MATERIALS.map((m) => ({ ...m }))
   );
   const [clientName, setClientName]   = useState("");
@@ -167,6 +169,8 @@ export default function RooferQuoteBuilder({ profile, materials }: {
           </div>
         </div>
       )}
+
+      {stepId === "materials" && <MaterialsEditor lib={lib} setLib={setLib} />}
 
       {stepId === "send" && (
         <div className="space-y-4">

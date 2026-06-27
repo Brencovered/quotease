@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
 import { Paperclip, X, ChevronRight, ChevronLeft, Check } from "lucide-react";
 import { calcCarpenterQuote, CARPENTER_DEFAULT_MATERIALS, type CarpenterIntake } from "@/lib/calcCarpenter";
+import MaterialsEditor from "@/components/MaterialsEditor";
 
 type MaterialRow = { item_key: string; label: string; unit_cost: number };
 
@@ -19,11 +20,12 @@ const DEFAULT_INTAKE: CarpenterIntake = {
 };
 
 const STEPS = [
-  { id: "job",     label: "Job"      },
-  { id: "doors",   label: "Doors"    },
-  { id: "timber",  label: "Timber"   },
-  { id: "send",    label: "Send"     },
-  { id: "drawing", label: "Files"    },
+  { id: "job",       label: "Job"       },
+  { id: "doors",     label: "Doors"     },
+  { id: "timber",    label: "Timber"    },
+  { id: "materials", label: "Materials" },
+  { id: "send",      label: "Send"      },
+  { id: "drawing",   label: "Files"     },
 ];
 
 export default function CarpenterQuoteBuilder({ profile, materials }: {
@@ -34,7 +36,7 @@ export default function CarpenterQuoteBuilder({ profile, materials }: {
   const [intake, setIntake] = useState<CarpenterIntake>(DEFAULT_INTAKE);
   const [rate,   setRate]   = useState(profile.hourly_rate ?? 85);
   const [margin, setMargin] = useState(profile.materials_margin_pct ?? 20);
-  const [lib] = useState<MaterialRow[]>(
+  const [lib, setLib] = useState<MaterialRow[]>(
     materials.length > 0 ? materials : CARPENTER_DEFAULT_MATERIALS.map((m) => ({ ...m }))
   );
   const [clientName, setClientName] = useState("");
@@ -177,6 +179,8 @@ export default function CarpenterQuoteBuilder({ profile, materials }: {
           </div>
         </div>
       )}
+
+      {stepId === "materials" && <MaterialsEditor lib={lib} setLib={setLib} />}
 
       {stepId === "send" && (
         <div className="space-y-4">
