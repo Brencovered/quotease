@@ -10,10 +10,19 @@ import { ROOFER_DEFAULT_MATERIALS } from "@/lib/calcRoofer";
 import { Check } from "lucide-react";
 
 const TRADES = [
-  { key: "electrician", label: "Electrician", emoji: "⚡", desc: "Residential & commercial electrical" },
-  { key: "plumber",     label: "Plumber",     emoji: "🔧", desc: "Plumbing, drainage & gas fitting" },
-  { key: "carpenter",   label: "Carpenter",   emoji: "🪚", desc: "Framing, fitout, decking & more" },
-  { key: "roofer",      label: "Roofer",      emoji: "🏠", desc: "Roofing, gutters & flashings" },
+  { key: "electrician", label: "Electrician",     desc: "Powerpoints, switchboards, solar" },
+  { key: "plumber",     label: "Plumber",          desc: "Tapware, HWU, rough-ins, gas" },
+  { key: "carpenter",   label: "Carpenter",        desc: "Framing, doors, decking, fitout" },
+  { key: "roofer",      label: "Roofer",           desc: "Colorbond, tiles, gutters, skylights" },
+  { key: "painter",     label: "Painter",          desc: "Interior, exterior, feature walls" },
+  { key: "tiler",       label: "Tiler",            desc: "Floor, wall, wet areas, outdoor" },
+  { key: "landscaper",  label: "Landscaper",       desc: "Paving, turf, retaining, irrigation" },
+  { key: "arborist",    label: "Arborist",         desc: "Tree removal, pruning, grinding" },
+  { key: "concreter",   label: "Concreter",        desc: "Slabs, driveways, pathways" },
+  { key: "fencer",      label: "Fencer",           desc: "Colorbond, timber, pool fencing" },
+  { key: "aircon",      label: "Air conditioning", desc: "Split systems, ducted, service" },
+  { key: "surveyor",    label: "Surveyor",         desc: "Feature, boundary, construction" },
+  { key: "custom",      label: "Custom",           desc: "Build your own quote template" },
 ];
 
 const TRADE_SEED: Record<string, readonly { item_key: string; label: string; unit_cost: number }[]> = {
@@ -87,7 +96,7 @@ export default function OnboardingPage() {
             <h1 className="font-display text-[28px] text-[var(--ink)] mb-1">What trades do you do?</h1>
             <p className="text-[14px] text-[var(--ink-faint)] mb-6">Pick all that apply. You can add more in Settings later.</p>
 
-            <div className="grid grid-cols-2 gap-3 mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
               {TRADES.map((t) => {
                 const on = selected.includes(t.key);
                 return (
@@ -97,15 +106,14 @@ export default function OnboardingPage() {
                       : "border-[var(--line)] bg-[var(--surface)] hover:border-[var(--navy)]/40"
                     }`}>
                     <div className="flex items-start justify-between mb-2">
-                      <span className="text-2xl">{t.emoji}</span>
                       {on && (
-                        <span className="w-5 h-5 rounded-full bg-[var(--amber)] flex items-center justify-center">
+                        <span className="w-5 h-5 rounded-full bg-[var(--amber)] flex items-center justify-center ml-auto">
                           <Check size={11} className="text-[var(--navy)]" strokeWidth={3} />
                         </span>
                       )}
                     </div>
-                    <p className={`font-bold text-[14px] mb-0.5 ${on ? "text-white" : "text-[var(--ink)]"}`}>{t.label}</p>
-                    <p className={`text-[11.5px] leading-snug ${on ? "text-[var(--steel-2)]" : "text-[var(--ink-faint)]"}`}>{t.desc}</p>
+                    <p className={`font-bold text-[13px] mb-0.5 ${on ? "text-white" : "text-[var(--ink)]"}`}>{t.label}</p>
+                    <p className={`text-[11px] leading-snug ${on ? "text-[var(--steel-2)]" : "text-[var(--ink-faint)]"}`}>{t.desc}</p>
                   </button>
                 );
               })}

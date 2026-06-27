@@ -18,10 +18,19 @@ const TRADE_SEED: Record<string, readonly { item_key: string; label: string; uni
 };
 
 const TRADES = [
-  { key: "electrician", label: "Electrician", emoji: "⚡" },
-  { key: "plumber",     label: "Plumber",     emoji: "🔧" },
-  { key: "carpenter",   label: "Carpenter",   emoji: "🪚" },
-  { key: "roofer",      label: "Roofer",      emoji: "🏠" },
+  { key: "electrician", label: "Electrician",     badge: "Full" },
+  { key: "plumber",     label: "Plumber",          badge: "Full" },
+  { key: "carpenter",   label: "Carpenter",        badge: "Full" },
+  { key: "roofer",      label: "Roofer",           badge: "Full" },
+  { key: "painter",     label: "Painter",          badge: "" },
+  { key: "tiler",       label: "Tiler",            badge: "" },
+  { key: "landscaper",  label: "Landscaper",       badge: "" },
+  { key: "arborist",    label: "Arborist",         badge: "" },
+  { key: "concreter",   label: "Concreter",        badge: "" },
+  { key: "fencer",      label: "Fencer",           badge: "" },
+  { key: "aircon",      label: "Air conditioning", badge: "" },
+  { key: "surveyor",    label: "Surveyor",         badge: "" },
+  { key: "custom",      label: "Custom",           badge: "" },
 ];
 
 type Profile = {
@@ -172,17 +181,17 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
         </div>
         <p className="font-semibold text-[var(--ink)] mb-1">Your active trades</p>
         <p className="text-[13px] text-[var(--ink-faint)] mb-3">Toggle trades on or off. Default material prices are loaded automatically.</p>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {TRADES.map((t) => {
             const on = trades.includes(t.key);
             return (
               <button key={t.key} onClick={() => !tradeSaving && toggle(t.key)} disabled={tradeSaving}
-                className={`flex items-center gap-2.5 rounded-xl border-2 px-3 py-3 font-semibold transition-colors ${
+                className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 font-semibold transition-colors text-left ${
                   on ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] text-[var(--ink)] hover:border-[var(--navy)]/40"
                 }`}>
-                <span className="text-xl">{t.emoji}</span>
-                <span className="text-[14px]">{t.label}</span>
-                {on && <Check size={13} className="ml-auto text-[var(--amber)]" />}
+                <span className="text-[13px] flex-1">{t.label}</span>
+                {t.badge && <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${on ? "bg-[var(--amber)] text-[var(--navy)]" : "bg-[var(--amber-light)] text-[var(--amber-deep)]"}`}>{t.badge}</span>}
+                {on && !t.badge && <Check size={12} className="text-[var(--amber)] shrink-0" />}
               </button>
             );
           })}
