@@ -76,7 +76,7 @@ export default function Home() {
             Log in
           </Link>
           <Link href="/signup" className="bg-[#ffb400] text-[#0a1722] font-extrabold text-sm px-5 py-2.5 rounded-xl hover:bg-[#e89e00] transition-colors">
-            Start free trial
+            Sign up free
           </Link>
         </div>
       </div>
@@ -128,9 +128,9 @@ export default function Home() {
             </div>
 
             <div className="flex flex-wrap gap-6 text-[13px] font-semibold text-[#8aa4b4]">
-              <span>7-day free trial</span>
+              <span>Free during early access</span>
               <span className="text-[#2a3a47]">|</span>
-              <span>$40/mo flat — unlimited users</span>
+              <span>Unlimited users</span>
               <span className="text-[#2a3a47]">|</span>
               <span>All 4 trades included</span>
             </div>
@@ -175,7 +175,7 @@ export default function Home() {
               from the first number on site to the final payment cleared.
             </p>
             <Link href="/signup" className="inline-flex bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-6 py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors">
-              Start free trial
+              Sign up free
             </Link>
           </div>
 
@@ -365,7 +365,7 @@ export default function Home() {
             {[
               { label: "Setup time",    them: "3 weeks",        us: "Day one" },
               { label: "Built for",     them: "Teams of 10+",   us: "Sole traders" },
-              { label: "Price",         them: "$40/user/month", us: "$40 flat" },
+              { label: "Price",         them: "$40+/user/month", us: "Free right now" },
               { label: "Scope",         them: "HR, SWMS, POs",  us: "Quote. Job. Paid." },
             ].map((r) => (
               <div key={r.label} className="bg-[#0a1722] border border-white/[0.07] rounded-2xl p-6">
@@ -391,16 +391,16 @@ export default function Home() {
         <div>
           <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">Pricing</span>
           <h2 className="font-display uppercase text-[2.5rem] sm:text-[3.2rem] leading-[0.93] mt-3 mb-8 text-white">
-            One price.<br />No surprises.
+            Free right now.<br />No catch.
           </h2>
           <div className="flex flex-col divide-y divide-white/[0.06]">
             {[
-              "7-day free trial, no credit card needed",
+              "Free during early access — no credit card, ever",
               "Unlimited users, unlimited quotes",
               "All 4 trades included from day one",
               "VIC planning overlay checks built in",
               "Xero CSV export included",
-              "Cancel any time, zero lock-in",
+              "We'll ask for feedback as we build this out",
             ].map((f) => (
               <div key={f} className="flex items-center gap-3 py-3.5 text-[14.5px] text-[#c8d8e4] font-semibold">
                 <div className="w-1.5 h-1.5 rounded-full bg-[#ffb400] shrink-0" />
@@ -413,15 +413,14 @@ export default function Home() {
         <div className="bg-[#0e2233] border border-white/[0.1] rounded-3xl overflow-hidden" style={{ boxShadow: "0 24px 64px rgba(0,0,0,.4)" }}>
           <div className="h-3" style={{ background: "repeating-linear-gradient(135deg,#FFB400 0 14px,#E89E00 14px 28px)" }} />
           <div className="p-10 text-center">
-            <p className="text-[12px] font-bold tracking-[.2em] uppercase text-[#7e94a2] mb-4">Monthly subscription</p>
+            <p className="text-[12px] font-bold tracking-[.2em] uppercase text-[#7e94a2] mb-4">Early access</p>
             <div className="flex items-end justify-center gap-2 mb-2">
-              <span className="font-display text-[6rem] leading-[0.85] text-[#ffb400]">$40</span>
-              <span className="font-extrabold text-xl text-[#7e94a2] pb-4">/mo</span>
+              <span className="font-display text-[6rem] leading-[0.85] text-[#ffb400]">$0</span>
             </div>
-            <p className="text-[#7e94a2] text-[14px] mb-1">flat rate — unlimited users</p>
-            <p className="text-[12px] text-[#3a4f5e] mb-8">First 7 days free. Cancel anytime.</p>
+            <p className="text-[#7e94a2] text-[14px] mb-1">free while we&apos;re building this out</p>
+            <p className="text-[12px] text-[#3a4f5e] mb-8">In exchange, we&apos;ll ask for your feedback — and hope to earn a testimonial along the way.</p>
             <Link href="/signup" className="block bg-[#ffb400] text-[#0a1722] font-extrabold text-[17px] py-4 rounded-xl mb-3 hover:bg-[#e89e00] transition-colors">
-              Start your free trial
+              Sign up free
             </Link>
             <Link href="/login" className="block text-[#7e94a2] text-[14px] hover:text-white transition-colors">
               Already have an account? Log in

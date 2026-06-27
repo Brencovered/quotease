@@ -30,8 +30,10 @@ export default function OnboardingPage() {
   const router = useRouter();
   const [step,     setStep]     = useState<1 | 2>(1);
   const [selected, setSelected] = useState<string[]>([]);
+  const [businessName, setBusinessName] = useState("");
   const [abn,      setAbn]      = useState("");
   const [licence,  setLicence]  = useState("");
+  const [businessAddress, setBusinessAddress] = useState("");
   const [saving,   setSaving]   = useState(false);
   const [error,    setError]    = useState<string | null>(null);
 
@@ -40,6 +42,7 @@ export default function OnboardingPage() {
   }
 
   async function finish() {
+    if (!businessName.trim()) { setError("Add your business name - it goes on every quote."); return; }
     setSaving(true); setError(null);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -48,8 +51,10 @@ export default function OnboardingPage() {
     const { error: updateError } = await supabase.from("profiles").update({
       trades: selected,
       onboarded_at: new Date().toISOString(),
+      business_name: businessName.trim(),
       abn: abn || null,
       license_number: licence || null,
+      business_address: businessAddress || null,
       terms_and_conditions: DEFAULT_TERMS,
     }).eq("id", user.id);
 
@@ -133,10 +138,14 @@ export default function OnboardingPage() {
         <div className="w-full max-w-md">
           <h1 className="font-display text-[28px] text-[var(--ink)] mb-1">Almost there</h1>
           <p className="text-[14px] text-[var(--ink-faint)] mb-6">
-            These show up on your quotes. Both optional — you can fill them in from Settings any time.
+            These show up on your quotes. Business name&apos;s the only one we need now — the rest can wait.
           </p>
 
           <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-5 mb-4 space-y-3">
+            <div>
+              <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Business name</label>
+              <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} className="app-field" placeholder="Spark Ease Electrical Services" />
+            </div>
             <div>
               <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">ABN <span className="text-[var(--ink-faint)] font-normal">(optional)</span></label>
               <input value={abn} onChange={(e) => setAbn(e.target.value)} className="app-field" placeholder="11 222 333 444" />
@@ -145,6 +154,17 @@ export default function OnboardingPage() {
               <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Licence number <span className="text-[var(--ink-faint)] font-normal">(optional)</span></label>
               <input value={licence} onChange={(e) => setLicence(e.target.value)} className="app-field" placeholder="e.g. REC 23538" />
             </div>
+            <div>
+              <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Business address <span className="text-[var(--ink-faint)] font-normal">(optional)</span></label>
+              <input value={businessAddress} onChange={(e) => setBusinessAddress(e.target.value)} className="app-field" placeholder="Suburb, State" />
+            </div>
+          </div>
+
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
+            <p className="text-[13px] text-amber-900 font-semibold">Free during early access</p>
+            <p className="text-[12.5px] text-amber-800 mt-0.5">
+              No charge while we&apos;re building this out. In return, we&apos;ll reach out for feedback now and then — and if it&apos;s working for you, we&apos;d love a testimonial down the track.
+            </p>
           </div>
 
           {error && (

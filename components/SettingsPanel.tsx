@@ -56,22 +56,6 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
   const [companySaving,  setCompanySaving]  = useState(false);
   const [companySaved,   setCompanySaved]   = useState(false);
   const [companyError,   setCompanyError]   = useState<string | null>(null);
-  const [addonLoading,   setAddonLoading]   = useState(false);
-
-  async function subscribeToAddon() {
-    setAddonLoading(true);
-    const res = await fetch("/api/stripe/addon-checkout", { method: "POST" });
-    const data = await res.json();
-    if (data.url) window.location.href = data.url;
-    setAddonLoading(false);
-  }
-  async function manageAddon() {
-    setAddonLoading(true);
-    const res = await fetch("/api/stripe/portal", { method: "POST" });
-    const data = await res.json();
-    if (data.url) window.location.href = data.url;
-    setAddonLoading(false);
-  }
 
   async function toggle(key: string) {
     const adding = !trades.includes(key);
@@ -301,26 +285,16 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
         <p className="section-tag mb-1">AI drawing analysis</p>
         <p className="font-semibold text-[var(--ink)] mb-1">Auto-fill from plans</p>
         {addonActive ? (
-          <>
-            <p className="text-[13px] text-[var(--ink-faint)] mb-3">
-              {addonUsed} of {ADDON_MONTHLY_LIMIT} analyses used this month.
-            </p>
-            <button onClick={manageAddon} disabled={addonLoading} className="btn-secondary text-[13px] py-2">
-              {addonLoading ? "Opening..." : "Manage subscription"}
-            </button>
-          </>
+          <p className="text-[13px] text-[var(--ink-faint)]">
+            {addonUsed} of {ADDON_MONTHLY_LIMIT} analyses used this month.
+          </p>
         ) : (
-          <>
-            <p className="text-[13px] text-[var(--ink-faint)] mb-3">
-              {freeLeft > 0
-                ? `${freeLeft} free analysis${freeLeft !== 1 ? "es" : ""} remaining.`
-                : `All ${FREE_ANALYSES_LIMIT} free analyses used.`}{" "}
-              Upgrade for {ADDON_MONTHLY_LIMIT} per month.
-            </p>
-            <button onClick={subscribeToAddon} disabled={addonLoading} className="btn-secondary text-[13px] py-2">
-              {addonLoading ? "Redirecting..." : "Upgrade — $10/mo"}
-            </button>
-          </>
+          <p className="text-[13px] text-[var(--ink-faint)]">
+            {freeLeft > 0
+              ? `${freeLeft} free analysis${freeLeft !== 1 ? "es" : ""} remaining for now.`
+              : `You've used your ${FREE_ANALYSES_LIMIT} free analyses for now.`}{" "}
+            Free during early access — more capacity is coming.
+          </p>
         )}
       </div>
     </div>
