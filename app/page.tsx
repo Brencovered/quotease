@@ -119,7 +119,7 @@ export default function Home() {
               <Link href="/signup"
                 className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[16px] px-8 py-4 rounded-xl hover:bg-[#e89e00] transition-colors"
                 style={{ boxShadow: "0 12px 32px rgba(255,180,0,.3)" }}>
-                Start free — 7 days, no card
+                Sign up free — no card needed
               </Link>
               <Link href="/login"
                 className="text-white font-bold text-[16px] px-6 py-4 rounded-xl border border-white/25 hover:border-white/50 transition-colors backdrop-blur-sm">
