@@ -7,17 +7,17 @@ import {
   LayoutDashboard,
   FileText,
   CalendarDays,
-  Users,
   Plus,
   Settings,
+  Briefcase,
 } from "lucide-react";
 
 const NAV = [
   { href: "/electrician/dashboard", icon: LayoutDashboard, label: "Home" },
-  { href: "/electrician/quotes",    icon: FileText,         label: "Quotes" },
+  { href: "/electrician/jobs",      icon: Briefcase,        label: "Jobs" },
   { href: "/electrician",           icon: Plus,             label: "Quote",  fab: true },
+  { href: "/electrician/quotes",    icon: FileText,         label: "Quotes" },
   { href: "/electrician/schedule",  icon: CalendarDays,     label: "Schedule" },
-  { href: "/electrician/clients",   icon: Users,            label: "Clients" },
 ];
 
 export default function AppHeader() {
@@ -54,6 +54,9 @@ export default function AppHeader() {
                 {n.label}
               </Link>
             ))}
+            <Link href="/electrician/clients" className={isActive("/electrician/clients") ? "text-[var(--amber)]" : "text-[var(--steel-1)] hover:text-white transition-colors"}>
+              Clients
+            </Link>
             <Link href="/electrician/map" className={isActive("/electrician/map") ? "text-[var(--amber)]" : "text-[var(--steel-1)] hover:text-white transition-colors"}>
               Map
             </Link>
