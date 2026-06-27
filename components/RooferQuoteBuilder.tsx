@@ -59,7 +59,7 @@ export default function RooferQuoteBuilder({ profile, materials }: {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaveMessage("Not logged in"); setSaving(false); return; }
     for (const m of lib) await supabase.from("material_items").upsert({ profile_id: user.id, trade: "roofer", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost }, { onConflict: "profile_id,item_key" });
-    const { data: quote, error } = await supabase.from("quotes").insert({ profile_id: user.id, client_name: clientName, client_email: clientEmail, site_address: siteAddress, trade: "roofer", job_type: intake.jobType, intake_data: intake, labour_hours: result.labourHours, materials_cost: result.materialsCost, total_cost: result.totalCost, payment_terms: paymentTerms, status: sendEmail ? "sent" : "draft" }).select().single();
+    const { data: quote, error } = await supabase.from("quotes").insert({ profile_id: user.id, client_name: clientName, client_email: clientEmail, site_address: siteAddress, trade: "roofer", job_type: intake.jobType, intake_data: intake, labour_hours: result.labourHours, materials_cost: result.materialsCost, total_cost: result.totalCost, payment_terms: paymentTerms, status: sendEmail ? "sent" : "draft", sent_at: sendEmail ? new Date().toISOString() : null }).select().single();
     if (error) { setSaveMessage(error.message); setSaving(false); return; }
     setSavedQuoteId(quote.id);
     setSavedQuoteId(quote.id);

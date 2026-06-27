@@ -86,6 +86,7 @@ export default function GenericQuoteBuilder({
       total_cost:    result.totalCost,
       payment_terms: paymentTerms,
       status:        sendEmail ? "sent" : "draft",
+      sent_at:       sendEmail ? new Date().toISOString() : null,
     }).select().single();
 
     if (error) { setSaveMessage(error.message); setSaving(false); return; }

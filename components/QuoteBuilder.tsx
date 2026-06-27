@@ -232,6 +232,7 @@ export default function QuoteBuilder({
       total_cost: result.totalCost, payment_terms: paymentTerms,
       quote_expires_at: new Date(Date.now() + (profile.default_expiry_days ?? 30) * 86400000).toISOString(),
       status: sendEmail ? "sent" : "draft",
+      sent_at: sendEmail ? new Date().toISOString() : null,
     }).select().single();
 
     if (error) { setSaveMessage(error.message); setSaving(false); return; }

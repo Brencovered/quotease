@@ -75,6 +75,10 @@ export interface DashboardStats {
   overdueFollowUps: number;
   expiredQuotes: number;
   avgLabourHours: number | null;
+  // Time tracking
+  avgQuoteTimeMinutes: number | null;  // avg time from quote created to sent
+  timeSavedMinutes: number | null;     // vs 45 min manual baseline x quotes sent
+  quotesTimedCount: number;            // how many quotes have both created_at and sent_at
 }
 
 function daysUntil(dateStr: string | null | undefined): number | null {
@@ -89,6 +93,8 @@ export function computeDashboardStats(quotes: QuoteForStats[]): DashboardStats {
   let decidedCount = 0, wonCount = 0, activeJobsCount = 0, activeJobsValue = 0;
   let overdueFollowUps = 0, expiredQuotes = 0;
   let totalLabourHours = 0, labourCount = 0;
+  let totalQuoteTimeMs = 0, quotesTimedCount = 0;
+  const MANUAL_BASELINE_MINS = 45; // conservative estimate for manual quoting
 
   for (const q of quotes) {
     const status = q.status in byStatus ? q.status : "draft";
@@ -109,7 +115,19 @@ export function computeDashboardStats(quotes: QuoteForStats[]): DashboardStats {
       if (q.quote_expires_at && daysUntil(q.quote_expires_at)! < 0) expiredQuotes++;
     }
     if (q.labour_hours) { totalLabourHours += q.labour_hours; labourCount++; }
+    // Time from created to sent - only count if sent within 24 hours (avoids draft->sent days later skewing)
+    if (q.sent_at && q.created_at) {
+      const ms = new Date(q.sent_at).getTime() - new Date(q.created_at).getTime();
+      if (ms > 0 && ms < 86400000) { totalQuoteTimeMs += ms; quotesTimedCount++; }
+    }
   }
+
+  const avgQuoteTimeMinutes = quotesTimedCount > 0
+    ? Math.round(totalQuoteTimeMs / quotesTimedCount / 60000)
+    : null;
+  const timeSavedMinutes = avgQuoteTimeMinutes !== null && quotesTimedCount > 0
+    ? Math.round((MANUAL_BASELINE_MINS - avgQuoteTimeMinutes) * quotesTimedCount)
+    : null;
 
   const winRate = decidedCount > 0 ? Math.round((wonCount / decidedCount) * 1000) / 10 : null;
   const avgJobValue = wonCount > 0 ? Math.round(totalWonValue / wonCount) : null;
@@ -128,5 +146,5 @@ export function computeDashboardStats(quotes: QuoteForStats[]): DashboardStats {
     if (month) { month.count++; month.value += q.total_cost ?? 0; }
   }
 
-  return { totalQuotes: quotes.length, byStatus, byStatusValue, totalQuotedValue, totalWonValue, totalOutstanding, totalCollected, winRate, avgJobValue, activeJobsCount, activeJobsValue, monthly: months.map(({ label, count, value }) => ({ label, count, value })), overdueFollowUps, expiredQuotes, avgLabourHours };
+  return { totalQuotes: quotes.length, byStatus, byStatusValue, totalQuotedValue, totalWonValue, totalOutstanding, totalCollected, winRate, avgJobValue, activeJobsCount, activeJobsValue, monthly: months.map(({ label, count, value }) => ({ label, count, value })), overdueFollowUps, expiredQuotes, avgLabourHours, avgQuoteTimeMinutes, timeSavedMinutes, quotesTimedCount };
 }

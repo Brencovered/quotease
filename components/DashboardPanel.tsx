@@ -191,6 +191,36 @@ export default function DashboardPanel({ stats, profit }: { stats: DashboardStat
             </div>
           </div>
 
+          {/* Time saved card - the hero metric */}
+          {stats.avgQuoteTimeMinutes !== null && stats.quotesTimedCount >= 1 && (
+            <div className="card border-2 border-[var(--amber)]/30 bg-gradient-to-br from-[var(--amber-light)] to-white">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--amber-deep)] mb-3">Quotease is saving you time</p>
+              <div className="flex items-end gap-3 mb-3">
+                <div>
+                  <p className="font-display text-[3.2rem] leading-none text-[var(--navy)]">
+                    {stats.avgQuoteTimeMinutes}
+                    <span className="text-[1.4rem] font-bold"> min</span>
+                  </p>
+                  <p className="text-[12.5px] text-[var(--ink-soft)] mt-1">avg quote to send</p>
+                </div>
+                {stats.timeSavedMinutes !== null && stats.timeSavedMinutes > 0 && (
+                  <div className="border-l border-[var(--amber)]/30 pl-3 pb-1">
+                    <p className="font-display text-[2rem] leading-none text-[var(--green)]">
+                      {stats.timeSavedMinutes >= 60
+                        ? `${Math.round(stats.timeSavedMinutes / 60)}h`
+                        : `${stats.timeSavedMinutes}m`}
+                    </p>
+                    <p className="text-[12px] text-[var(--ink-soft)] mt-0.5">saved vs manual</p>
+                  </div>
+                )}
+              </div>
+              <p className="text-[12px] text-[var(--ink-soft)] leading-snug">
+                Based on {stats.quotesTimedCount} quote{stats.quotesTimedCount !== 1 ? "s" : ""} sent.
+                Manual quoting baseline: 45 min.
+              </p>
+            </div>
+          )}
+
           {/* Stats */}
           <div className="card">
             <p className="section-tag mb-3">Performance</p>
@@ -200,6 +230,9 @@ export default function DashboardPanel({ stats, profit }: { stats: DashboardStat
               <StatRow icon={DollarSign} label="Won this year" value={`$${stats.totalWonValue.toLocaleString()}`} accent />
               <StatRow icon={Wallet}     label="Collected"     value={`$${stats.totalCollected.toLocaleString()}`} success />
               {stats.avgLabourHours !== null && <StatRow icon={Briefcase} label="Avg labour" value={`${stats.avgLabourHours}h`} />}
+              {stats.avgQuoteTimeMinutes !== null && (
+                <StatRow icon={Briefcase} label="Avg quote time" value={`${stats.avgQuoteTimeMinutes} min`} />
+              )}
             </div>
           </div>
         </div>
