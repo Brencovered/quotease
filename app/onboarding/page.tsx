@@ -69,7 +69,7 @@ export default function OnboardingPage() {
       );
     }
 
-    router.push("/electrician/dashboard");
+    router.push("/settings/materials");
     router.refresh();
   }
 
@@ -174,15 +174,15 @@ export default function OnboardingPage() {
           )}
 
           <button onClick={finish} disabled={saving} className="btn-primary mb-3">
-            {saving ? "Setting up your account..." : "Start quoting →"}
+            {saving ? "Setting up your account..." : "Next: set your material prices"}
           </button>
 
           <button onClick={() => setStep(1)} className="btn-secondary w-full justify-center">
-            ← Back
+            Back
           </button>
 
           <p className="text-center text-[12px] text-[var(--ink-faint)] mt-4">
-            You can add your logo, terms, and full company details in Settings
+            After this you will set your supplier prices - then you are ready to quote
           </p>
         </div>
       </div>

@@ -7,7 +7,7 @@ import { ELECTRICIAN_DEFAULT_MATERIALS } from "@/lib/calc";
 import { PLUMBER_DEFAULT_MATERIALS } from "@/lib/calcPlumber";
 import { CARPENTER_DEFAULT_MATERIALS } from "@/lib/calcCarpenter";
 import { ROOFER_DEFAULT_MATERIALS } from "@/lib/calcRoofer";
-import { Check, Upload } from "lucide-react";
+import { Check, Upload, Save } from "lucide-react";
 import { normalizeToPng } from "@/lib/imageNormalize";
 
 const TRADE_SEED: Record<string, readonly { item_key: string; label: string; unit_cost: number }[]> = {
@@ -31,12 +31,36 @@ type Profile = {
   terms_and_conditions?: string | null; ai_free_analyses_used?: number;
   ai_addon_status?: string; ai_addon_period?: string | null; ai_addon_analyses_used?: number;
   bank_account_name?: string | null; bank_bsb?: string | null; bank_account_number?: string | null;
-  accepts_cash?: boolean;
-  default_deposit_pct?: number | null;
-  default_expiry_days?: number;
+  accepts_cash?: boolean; default_deposit_pct?: number | null; default_expiry_days?: number;
+  hourly_rate?: number | null; materials_margin_pct?: number | null;
 } | null;
 
-export default function SettingsPanel({ profile }: { profile: Profile }) {
+function RateSaveButton() {
+  const [saving, setSaving] = useState(false);
+  const [saved,  setSaved]  = useState(false);
+  async function save() {
+    setSaving(true);
+    const rateInput   = document.getElementById("hourly-rate-input") as HTMLInputElement | null;
+    const marginInput = document.getElementById("margin-pct-input")  as HTMLInputElement | null;
+    const rate   = parseFloat(rateInput?.value   ?? "95");
+    const margin = parseFloat(marginInput?.value ?? "20");
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from("profiles").update({
+        hourly_rate: isNaN(rate)   ? 95 : rate,
+        materials_margin_pct: isNaN(margin) ? 20 : margin,
+      }).eq("id", user.id);
+    }
+    setSaving(false); setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  }
+  return (
+    <button onClick={save} disabled={saving} className="btn-secondary text-[13px] py-2 flex items-center gap-1.5">
+      {saving ? "Saving..." : saved ? <><Check size={13} className="text-[var(--green)]" /> Saved</> : <><Save size={13} /> Save rates</>}
+    </button>
+  );
+}
   const [trades,         setTrades]         = useState<string[]>(profile?.trades ?? []);
   const [tradeSaving,    setTradeSaving]    = useState(false);
   const [tradeSaved,     setTradeSaved]     = useState(false);
@@ -260,8 +284,45 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
         </div>
       </div>
 
-      {/* Xero */}
+      {/* Materials pricing - prominent link */}
       <div className="card mb-4">
+        <p className="section-tag mb-1">Pricing</p>
+        <p className="font-semibold text-[var(--ink)] mb-1">Rates and material pricing</p>
+        <p className="text-[13px] text-[var(--ink-faint)] mb-3">
+          Your hourly rate and margin apply to every new quote. Set your actual supplier costs
+          per item on the materials page.
+        </p>
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <label className="block text-[12px] font-bold uppercase tracking-wider text-[var(--ink-faint)] mb-1.5">Hourly rate ($/hr)</label>
+            <input
+              type="number" min={0} step={5}
+              defaultValue={profile?.hourly_rate ?? 95}
+              id="hourly-rate-input"
+              className="app-field font-semibold"
+            />
+          </div>
+          <div>
+            <label className="block text-[12px] font-bold uppercase tracking-wider text-[var(--ink-faint)] mb-1.5">Materials margin (%)</label>
+            <input
+              type="number" min={0} max={100} step={1}
+              defaultValue={profile?.materials_margin_pct ?? 20}
+              id="margin-pct-input"
+              className="app-field font-semibold"
+            />
+          </div>
+        </div>
+        <RateSaveButton />
+        <div className="border-t border-[var(--line-subtle)] mt-4 pt-4">
+          <a href="/settings/materials" className="btn-secondary w-full justify-center text-center text-[13.5px]">
+            Manage material prices per item
+          </a>
+          <p className="text-[12px] text-[var(--ink-faint)] mt-2 text-center">
+            Set supplier costs for every line item - downlights, pipe, timber, etc.
+          </p>
+        </div>
+      </div>
+
         <p className="section-tag mb-1">Accounting</p>
         <p className="font-semibold text-[var(--ink)] mb-1">Xero integration</p>
         {profile?.xero_connected ? (
