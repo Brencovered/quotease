@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Download, Upload, Save, RotateCcw, Check, AlertCircle } from "lucide-react";
+import { Download, Upload, Save, RotateCcw, Check, AlertCircle, Plus, Trash2 } from "lucide-react";
 import { ELECTRICIAN_DEFAULT_MATERIALS } from "@/lib/calc";
 import { PLUMBER_DEFAULT_MATERIALS } from "@/lib/calcPlumber";
 import { CARPENTER_DEFAULT_MATERIALS } from "@/lib/calcCarpenter";
 import { ROOFER_DEFAULT_MATERIALS } from "@/lib/calcRoofer";
 
-type MaterialRow = { item_key: string; label: string; unit_cost: number; trade: string };
+type Row = { item_key: string; label: string; unit_cost: number; trade: string; isNew?: boolean };
 
 const TRADE_DEFAULTS: Record<string, readonly { item_key: string; label: string; unit_cost: number }[]> = {
   electrician: ELECTRICIAN_DEFAULT_MATERIALS,
@@ -18,170 +18,140 @@ const TRADE_DEFAULTS: Record<string, readonly { item_key: string; label: string;
 };
 
 const TRADE_LABELS: Record<string, string> = {
-  electrician: "Electrician",
-  plumber:     "Plumber",
-  carpenter:   "Carpenter",
-  roofer:      "Roofer",
+  electrician: "Electrician", plumber: "Plumber", carpenter: "Carpenter", roofer: "Roofer",
+  painter: "Painter", tiler: "Tiler", landscaper: "Landscaper", arborist: "Arborist",
+  concreter: "Concreter", fencer: "Fencer", aircon: "Air conditioning", surveyor: "Surveyor", custom: "Custom",
 };
 
-export default function MaterialPricingPanel({ trades }: { trades: string[] }) {
-  const [activeTrade, setActiveTrade]   = useState(trades[0] ?? "electrician");
-  const [materials,   setMaterials]     = useState<MaterialRow[]>([]);
-  const [loading,     setLoading]       = useState(true);
-  const [saving,      setSaving]        = useState(false);
-  const [saved,       setSaved]         = useState(false);
-  const [error,       setError]         = useState<string | null>(null);
-  const [csvError,    setCsvError]      = useState<string | null>(null);
-  const [csvSuccess,  setCsvSuccess]    = useState<string | null>(null);
+let rowId = 0;
+function newKey() { return `new_${++rowId}_${Date.now()}`; }
 
-  const loadMaterials = useCallback(async (trade: string) => {
+export default function MaterialPricingPanel({ trades }: { trades: string[] }) {
+  const [activeTrade, setActiveTrade] = useState(trades[0] ?? "electrician");
+  const [rows,        setRows]        = useState<Row[]>([]);
+  const [loading,     setLoading]     = useState(true);
+  const [saving,      setSaving]      = useState(false);
+  const [saved,       setSaved]       = useState(false);
+  const [error,       setError]       = useState<string | null>(null);
+  const [csvMsg,      setCsvMsg]      = useState<{ type: "ok" | "err"; text: string } | null>(null);
+
+  const load = useCallback(async (trade: string) => {
     setLoading(true); setError(null);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
-
     const { data } = await supabase
-      .from("material_items")
-      .select("item_key, label, unit_cost, trade")
-      .eq("profile_id", user.id)
-      .eq("trade", trade)
-      .order("label");
-
+      .from("material_items").select("item_key,label,unit_cost,trade")
+      .eq("profile_id", user.id).eq("trade", trade).order("label");
     if (data && data.length > 0) {
-      setMaterials(data);
+      setRows(data.map((r) => ({ ...r })));
     } else {
-      // Seed defaults if nothing in DB yet
-      const defaults = TRADE_DEFAULTS[trade] ?? [];
-      setMaterials(defaults.map((m) => ({ ...m, trade })));
+      const defs = TRADE_DEFAULTS[trade] ?? [];
+      setRows(defs.map((m) => ({ ...m, trade })));
     }
     setLoading(false);
   }, []);
 
-  useEffect(() => { loadMaterials(activeTrade); }, [activeTrade, loadMaterials]);
+  useEffect(() => { load(activeTrade); }, [activeTrade, load]);
 
-  function updateRow(item_key: string, field: "label" | "unit_cost", value: string) {
-    setMaterials((prev) => prev.map((m) =>
-      m.item_key === item_key
-        ? { ...m, [field]: field === "unit_cost" ? parseFloat(value) || 0 : value }
-        : m
-    ));
+  function update(key: string, field: "label" | "unit_cost", val: string) {
+    setRows((p) => p.map((r) => r.item_key === key ? { ...r, [field]: field === "unit_cost" ? parseFloat(val) || 0 : val } : r));
   }
 
-  async function saveAll() {
+  function addRow() {
+    const key = newKey();
+    setRows((p) => [...p, { item_key: key, label: "", unit_cost: 0, trade: activeTrade, isNew: true }]);
+    // Scroll to bottom after render
+    setTimeout(() => document.getElementById("mat-table-bottom")?.scrollIntoView({ behavior: "smooth" }), 50);
+  }
+
+  function removeRow(key: string) {
+    setRows((p) => p.filter((r) => r.item_key !== key));
+  }
+
+  async function save() {
     setSaving(true); setSaved(false); setError(null);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setError("Not signed in"); setSaving(false); return; }
 
-    const rows = materials.map((m) => ({
-      profile_id: user.id,
-      trade: activeTrade,
-      item_key: m.item_key,
-      label: m.label,
-      unit_cost: m.unit_cost,
-    }));
+    // Filter out blank rows
+    const valid = rows.filter((r) => r.label.trim());
 
-    const { error: upsertError } = await supabase
-      .from("material_items")
-      .upsert(rows, { onConflict: "profile_id,item_key" });
+    // Delete all existing for this trade then re-insert
+    await supabase.from("material_items").delete().eq("profile_id", user.id).eq("trade", activeTrade);
+    if (valid.length > 0) {
+      const { error: insertErr } = await supabase.from("material_items").insert(
+        valid.map((r) => ({ profile_id: user.id, trade: activeTrade, item_key: r.item_key, label: r.label, unit_cost: r.unit_cost }))
+      );
+      if (insertErr) { setError(insertErr.message); setSaving(false); return; }
+    }
 
-    if (upsertError) { setError(upsertError.message); }
-    else { setSaved(true); setTimeout(() => setSaved(false), 2500); }
+    // Reload clean from DB
+    await load(activeTrade);
+    setSaved(true); setTimeout(() => setSaved(false), 2500);
     setSaving(false);
   }
 
-  async function resetToDefaults() {
-    const defaults = TRADE_DEFAULTS[activeTrade] ?? [];
-    setMaterials(defaults.map((m) => ({ ...m, trade: activeTrade })));
+  function resetToDefaults() {
+    const defs = TRADE_DEFAULTS[activeTrade] ?? [];
+    setRows(defs.map((m) => ({ ...m, trade: activeTrade })));
+    setCsvMsg(null);
+  }
+
+  function exportCsv() {
+    const csv = ["item_key,label,unit_cost", ...rows.map((r) => `${r.item_key},"${r.label}",${r.unit_cost}`)].join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    a.download = `quotease-materials-${activeTrade}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
   }
 
   function downloadTemplate() {
-    const defaults = TRADE_DEFAULTS[activeTrade] ?? [];
-    const rows = [
-      "item_key,label,unit_cost",
-      ...defaults.map((m) => `${m.item_key},"${m.label}",${m.unit_cost}`),
-    ].join("\n");
-    const blob = new Blob([rows], { type: "text/csv" });
+    const defs = TRADE_DEFAULTS[activeTrade] ?? [];
+    const csv  = ["item_key,label,unit_cost", ...defs.map((m) => `${m.item_key},"${m.label}",${m.unit_cost}`)].join("\n");
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `quotease-materials-${activeTrade}.csv`;
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    a.download = `quotease-template-${activeTrade}.csv`;
     a.click();
   }
 
-  function downloadCurrent() {
-    const rows = [
-      "item_key,label,unit_cost",
-      ...materials.map((m) => `${m.item_key},"${m.label}",${m.unit_cost}`),
-    ].join("\n");
-    const blob = new Blob([rows], { type: "text/csv" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `quotease-materials-${activeTrade}-${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-  }
-
-  async function handleCsvUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setCsvError(null); setCsvSuccess(null);
-
-    const text = await file.text();
+  async function importCsv(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; if (!file) return;
+    setCsvMsg(null);
+    const text  = await file.text();
     const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-    if (lines.length < 2) { setCsvError("CSV is empty or has no data rows."); return; }
-
+    if (lines.length < 2) { setCsvMsg({ type: "err", text: "CSV is empty or has no data rows." }); return; }
     const header = lines[0].toLowerCase().split(",").map((h) => h.replace(/"/g, "").trim());
-    const labelIdx    = header.indexOf("label");
-    const costIdx     = header.indexOf("unit_cost");
-    const keyIdx      = header.indexOf("item_key");
-
-    if (labelIdx === -1 || costIdx === -1) {
-      setCsvError('CSV must have "label" and "unit_cost" columns. Download the template above to see the format.');
-      return;
-    }
-
-    const parsed: MaterialRow[] = [];
+    const li = header.indexOf("label"), ci = header.indexOf("unit_cost"), ki = header.indexOf("item_key");
+    if (li === -1 || ci === -1) { setCsvMsg({ type: "err", text: 'CSV needs "label" and "unit_cost" columns. Download the template for the correct format.' }); return; }
+    const parsed: Row[] = [];
     for (const line of lines.slice(1)) {
-      // Handle quoted CSV fields
-      const cols: string[] = [];
-      let inQuote = false, cur = "";
-      for (const ch of line) {
-        if (ch === '"') { inQuote = !inQuote; }
-        else if (ch === "," && !inQuote) { cols.push(cur.trim()); cur = ""; }
-        else { cur += ch; }
-      }
+      const cols: string[] = []; let inQ = false, cur = "";
+      for (const ch of line) { if (ch === '"') inQ = !inQ; else if (ch === "," && !inQ) { cols.push(cur.trim()); cur = ""; } else cur += ch; }
       cols.push(cur.trim());
-
-      const label    = cols[labelIdx]?.replace(/"/g, "").trim();
-      const costRaw  = cols[costIdx]?.replace(/[^0-9.]/g, "");
-      const cost     = parseFloat(costRaw);
-      const key      = keyIdx >= 0 ? (cols[keyIdx]?.replace(/"/g, "").trim() || label?.toLowerCase().replace(/\s+/g, "_")) : label?.toLowerCase().replace(/\s+/g, "_");
-
-      if (!label || isNaN(cost)) continue;
-      parsed.push({ item_key: key!, label, unit_cost: cost, trade: activeTrade });
+      const label = cols[li]?.replace(/"/g, "").trim(); if (!label) continue;
+      const cost  = parseFloat(cols[ci]?.replace(/[^0-9.]/g, "") ?? ""); if (isNaN(cost)) continue;
+      const key   = ki >= 0 ? (cols[ki]?.replace(/"/g, "").trim() || label.toLowerCase().replace(/\W+/g, "_")) : label.toLowerCase().replace(/\W+/g, "_");
+      parsed.push({ item_key: key, label, unit_cost: cost, trade: activeTrade });
     }
-
-    if (parsed.length === 0) { setCsvError("No valid rows found. Check the CSV format."); return; }
-
-    setMaterials(parsed);
-    setCsvSuccess(`${parsed.length} items loaded from CSV. Review the prices below, then click Save.`);
+    if (!parsed.length) { setCsvMsg({ type: "err", text: "No valid rows found. Check the CSV format." }); return; }
+    setRows(parsed);
+    setCsvMsg({ type: "ok", text: `${parsed.length} items loaded. Review below then click Save.` });
     e.target.value = "";
   }
 
-  const avgCost = materials.length > 0
-    ? (materials.reduce((s, m) => s + m.unit_cost, 0) / materials.length).toFixed(2)
-    : "0";
+  const avgCost = rows.length ? (rows.reduce((s, r) => s + r.unit_cost, 0) / rows.length).toFixed(2) : "0";
 
   return (
     <div>
       {/* Trade tabs */}
       {trades.length > 1 && (
-        <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
+        <div className="flex gap-2 mb-5 overflow-x-auto pb-1 hide-scrollbar">
           {trades.map((t) => (
             <button key={t} onClick={() => setActiveTrade(t)}
-              className={`px-4 py-2 rounded-lg text-[13px] font-bold whitespace-nowrap transition-colors ${
-                activeTrade === t
-                  ? "bg-[var(--navy)] text-white"
-                  : "bg-[var(--app-bg)] text-[var(--ink-soft)] border border-[var(--line)] hover:border-[var(--navy)]/40"
+              className={`px-4 py-2 rounded-lg text-[13px] font-bold whitespace-nowrap transition-colors border-2 ${
+                activeTrade === t ? "bg-[var(--navy)] text-white border-[var(--navy)]" : "border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--navy)]/40"
               }`}>
               {TRADE_LABELS[t] ?? t}
             </button>
@@ -191,120 +161,123 @@ export default function MaterialPricingPanel({ trades }: { trades: string[] }) {
 
       {/* Explainer */}
       <div className="bg-[var(--amber-light)] border border-[var(--amber)]/30 rounded-xl px-4 py-3 mb-5">
-        <p className="text-[13.5px] font-bold text-[var(--amber-deep)] mb-1">How material pricing works</p>
+        <p className="text-[13.5px] font-bold text-[var(--amber-deep)] mb-1">Your supplier costs</p>
         <p className="text-[13px] text-[var(--amber-deep)]/80 leading-snug">
-          These are your supplier costs for each item. When you build a quote, Quotease adds your
-          materials margin on top (set in Settings). Keep these updated and every quote
-          calculates off what you actually pay - not a guess.
+          Enter what you actually pay per item ex-GST. Your materials margin ({" "}
+          <strong>set in Settings</strong>) is added on top when quoting.
+          Edit any row directly, add new items, or import from a CSV.
         </p>
       </div>
 
-      {/* CSV actions */}
-      <div className="flex flex-wrap items-center gap-3 mb-5">
+      {/* CSV bar */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
         <label className="btn-secondary text-[13px] py-2 cursor-pointer">
           <Upload size={14} /> Import CSV
-          <input type="file" accept=".csv,text/csv" className="hidden" onChange={handleCsvUpload} />
+          <input type="file" accept=".csv,text/csv" className="hidden" onChange={importCsv} />
         </label>
-        <button onClick={downloadCurrent} className="btn-secondary text-[13px] py-2">
-          <Download size={14} /> Export current
+        <button onClick={exportCsv} className="btn-secondary text-[13px] py-2">
+          <Download size={14} /> Export
         </button>
-        <button onClick={downloadTemplate} className="text-[12.5px] font-semibold text-[var(--ink-faint)] hover:text-[var(--ink)] flex items-center gap-1.5 transition-colors">
-          <Download size={12} /> Download blank template
+        <button onClick={downloadTemplate} className="text-[12.5px] font-semibold text-[var(--ink-faint)] hover:text-[var(--ink)] flex items-center gap-1 transition-colors">
+          <Download size={12} /> Download template
         </button>
       </div>
 
-      {/* CSV format hint */}
-      <div className="bg-[var(--app-bg)] border border-[var(--line)] rounded-xl px-4 py-3 mb-5 text-[12.5px] text-[var(--ink-soft)]">
-        <p className="font-bold mb-1">CSV format:</p>
-        <code className="text-[11.5px] bg-white border border-[var(--line)] rounded px-2 py-0.5 font-mono">
-          item_key, label, unit_cost
-        </code>
-        <p className="mt-1.5 text-[var(--ink-faint)]">
-          item_key = short unique ID (e.g. <code className="font-mono">dl_builder</code>).
-          label = what shows on the quote.
-          unit_cost = your cost ex-GST in dollars.
-          Download the template above for the full list with pre-filled defaults.
-        </p>
+      {csvMsg && (
+        <div className={`flex items-start gap-2.5 rounded-xl px-4 py-3 mb-4 text-[13px] font-semibold ${csvMsg.type === "ok" ? "bg-[var(--green-bg)] border border-green-200 text-[var(--green)]" : "bg-[var(--red-bg)] border border-red-200 text-[var(--red)]"}`}>
+          {csvMsg.type === "ok" ? <Check size={15} className="shrink-0 mt-0.5" /> : <AlertCircle size={15} className="shrink-0 mt-0.5" />}
+          {csvMsg.text}
+        </div>
+      )}
+
+      {/* Stats + add button */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex gap-4 text-[13px] text-[var(--ink-faint)]">
+          {!loading && <span><strong className="text-[var(--ink)]">{rows.length}</strong> items</span>}
+          {!loading && <span>Avg cost: <strong className="text-[var(--ink)]">${avgCost}</strong></span>}
+        </div>
+        <button onClick={addRow}
+          className="inline-flex items-center gap-1.5 bg-[var(--navy)] text-white text-[13px] font-bold px-3 py-2 rounded-lg hover:bg-[#0e2233] transition-colors">
+          <Plus size={14} /> Add item
+        </button>
       </div>
-
-      {/* Feedback */}
-      {csvError && (
-        <div className="flex items-start gap-2.5 bg-[var(--red-bg)] border border-red-200 rounded-xl px-4 py-3 mb-4 text-[13px] text-[var(--red)]">
-          <AlertCircle size={15} className="shrink-0 mt-0.5" />
-          <span className="font-semibold">{csvError}</span>
-        </div>
-      )}
-      {csvSuccess && (
-        <div className="flex items-start gap-2.5 bg-[var(--green-bg)] border border-green-200 rounded-xl px-4 py-3 mb-4 text-[13px] text-[var(--green)]">
-          <Check size={15} className="shrink-0 mt-0.5" />
-          <span className="font-semibold">{csvSuccess}</span>
-        </div>
-      )}
-
-      {/* Stats */}
-      {!loading && (
-        <div className="flex items-center gap-6 mb-4 text-[13px] text-[var(--ink-faint)]">
-          <span><strong className="text-[var(--ink)]">{materials.length}</strong> items</span>
-          <span>Avg cost: <strong className="text-[var(--ink)]">${avgCost}</strong></span>
-        </div>
-      )}
 
       {/* Table */}
       {loading ? (
-        <div className="text-center py-12 text-[var(--ink-faint)] text-[14px]">Loading...</div>
+        <div className="text-center py-10 text-[var(--ink-faint)] text-[14px]">Loading...</div>
       ) : (
         <div className="border border-[var(--line)] rounded-2xl overflow-hidden mb-4">
           {/* Header */}
-          <div className="grid grid-cols-[1fr_auto_140px] gap-0 bg-[var(--app-bg)] border-b border-[var(--line)] px-4 py-2.5">
+          <div className="grid grid-cols-[1fr_120px_44px] bg-[var(--app-bg)] border-b border-[var(--line)] px-4 py-2.5">
             <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-faint)]">Item name</span>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-faint)] w-24 text-right">Your cost</span>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-faint)] text-right">Key</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-faint)] text-right">Your cost (ex-GST)</span>
+            <span />
           </div>
+
           {/* Rows */}
-          <div className="divide-y divide-[var(--line-subtle)] max-h-[480px] overflow-y-auto">
-            {materials.map((m) => (
-              <div key={m.item_key} className="grid grid-cols-[1fr_auto_140px] gap-0 px-4 py-2 items-center hover:bg-[var(--app-bg)]">
+          <div className="divide-y divide-[var(--line-subtle)] max-h-[520px] overflow-y-auto">
+            {rows.length === 0 && (
+              <div className="py-10 text-center">
+                <p className="text-[var(--ink-faint)] text-[14px] mb-3">No items yet.</p>
+                <button onClick={addRow} className="btn-primary inline-flex px-5 text-[14px]">
+                  <Plus size={15} /> Add your first item
+                </button>
+              </div>
+            )}
+            {rows.map((r) => (
+              <div key={r.item_key} className={`grid grid-cols-[1fr_120px_44px] items-center px-4 py-2.5 hover:bg-[var(--app-bg)] ${r.isNew ? "bg-[var(--amber-light)]/30" : ""}`}>
                 <input
-                  value={m.label}
-                  onChange={(e) => updateRow(m.item_key, "label", e.target.value)}
-                  className="text-[13.5px] text-[var(--ink)] bg-transparent border-0 outline-none focus:bg-white focus:border focus:border-[var(--amber)] rounded px-1 py-0.5 w-full"
+                  value={r.label}
+                  onChange={(e) => update(r.item_key, "label", e.target.value)}
+                  placeholder="Item name (e.g. LED downlight 10W)"
+                  className="text-[13.5px] text-[var(--ink)] bg-transparent border-0 outline-none focus:bg-white focus:border focus:border-[var(--amber)] rounded px-1.5 py-1 w-full"
                 />
-                <div className="flex items-center gap-1 w-28">
+                <div className="flex items-center gap-1 justify-end">
                   <span className="text-[var(--ink-faint)] text-[13px]">$</span>
                   <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={m.unit_cost}
-                    onChange={(e) => updateRow(m.item_key, "unit_cost", e.target.value)}
-                    className="text-[13.5px] font-semibold text-[var(--ink)] bg-transparent border-0 outline-none focus:bg-white focus:border focus:border-[var(--amber)] rounded px-1 py-0.5 w-full text-right"
+                    type="number" min={0} step={0.01}
+                    value={r.unit_cost || ""}
+                    placeholder="0.00"
+                    onChange={(e) => update(r.item_key, "unit_cost", e.target.value)}
+                    className="text-[13.5px] font-semibold text-[var(--ink)] bg-transparent border-0 outline-none focus:bg-white focus:border focus:border-[var(--amber)] rounded px-1.5 py-1 w-20 text-right"
                   />
                 </div>
-                <span className="text-[11px] text-[var(--ink-faint)] font-mono truncate text-right pl-4">{m.item_key}</span>
+                <button onClick={() => removeRow(r.item_key)}
+                  className="flex items-center justify-center w-8 h-8 rounded-lg text-[var(--ink-faint)] hover:text-[var(--red)] hover:bg-[var(--red-bg)] transition-colors mx-auto">
+                  <Trash2 size={14} />
+                </button>
               </div>
             ))}
           </div>
+
+          {/* Add row inline at bottom */}
+          {rows.length > 0 && (
+            <div className="border-t border-[var(--line)] px-4 py-2.5 bg-[var(--app-bg)]">
+              <button onClick={addRow}
+                className="flex items-center gap-2 text-[13px] font-semibold text-[var(--ink-faint)] hover:text-[var(--navy)] transition-colors w-full">
+                <Plus size={14} /> Add another item
+              </button>
+            </div>
+          )}
         </div>
       )}
 
+      <div id="mat-table-bottom" />
+
       {/* Actions */}
       <div className="flex items-center gap-3 flex-wrap">
-        <button onClick={saveAll} disabled={saving || loading} className="btn-primary">
-          {saving ? "Saving..." : <><Save size={14} /> Save prices</>}
+        <button onClick={save} disabled={saving || loading} className="btn-primary">
+          {saving ? "Saving..." : <><Save size={14} /> Save all prices</>}
         </button>
         <button onClick={resetToDefaults} className="btn-secondary text-[13px] py-2">
           <RotateCcw size={13} /> Reset to defaults
         </button>
-        {saved && (
-          <span className="text-[13px] text-[var(--green)] font-semibold flex items-center gap-1.5">
-            <Check size={14} /> Saved
-          </span>
-        )}
-        {error && <span className="text-[13px] text-[var(--red)] font-semibold">{error}</span>}
+        {saved  && <span className="text-[13px] text-[var(--green)] font-semibold flex items-center gap-1.5"><Check size={14} /> Saved</span>}
+        {error  && <span className="text-[13px] text-[var(--red)] font-semibold">{error}</span>}
       </div>
 
       <p className="text-[12px] text-[var(--ink-faint)] mt-3">
-        Changes take effect on your next new quote. Existing saved quotes are not affected.
+        Changes take effect on your next new quote. Existing quotes are not affected.
       </p>
     </div>
   );
