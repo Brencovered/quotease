@@ -325,6 +325,8 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
         </div>
       </div>
 
+      {/* Xero */}
+      <div className="card mb-4">
         <p className="section-tag mb-1">Accounting</p>
         <p className="font-semibold text-[var(--ink)] mb-1">Xero integration</p>
         {profile?.xero_connected ? (
