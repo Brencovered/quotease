@@ -185,7 +185,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             payments={payments}
           />
 
-          <MaterialsChecklistPanel quoteId={quote.id} initialChecklist={quote.materials_checklist ?? []} scopeLines={scopeLines} />
+          <MaterialsChecklistPanel quoteId={quote.id} initialChecklist={quote.materials_checklist ?? []} scopeLines={scopeLines} clientName={quote.client_name} />
           <JobFilesPanel quoteId={quote.id} attachments={attachmentsWithUrls} />
           <VariationsPanel quoteId={quote.id} hourlyRate={hourlyRate} margin={marginPct} variations={variations} quoteTotalCost={quote.total_cost ?? 0} />
           <JobCostingPanel

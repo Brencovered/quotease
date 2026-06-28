@@ -6,7 +6,7 @@ import PlanMarkup, { type PlanShape, type CalibrationLine, type MaterialItem } f
 import { Upload, X, Plus, FileText, ChevronRight, Check, User } from "lucide-react";
 
 type Client = { id: string; name: string; billing_address: string | null };
-type Plan   = { id: string; client_id: string; file_name: string; storage_path: string; shapes: PlanShape[]; calibration: CalibrationLine | null; signedUrl: string | null };
+type Plan   = { id: string; client_id: string; file_name: string; label: string | null; storage_path: string; shapes: PlanShape[]; calibration: CalibrationLine | null; signedUrl: string | null };
 type Quote  = { id: string; client_id: string | null; client_name: string | null; site_address: string | null; status: string; total_cost: number | null; trade: string | null };
 type MatWithTrade = MaterialItem & { trade: string };
 
@@ -43,6 +43,7 @@ export default function PlansPageClient({
   const [newClientAddr, setNewClientAddr] = useState("");
   const [selectedClientId, setSelectedClientId] = useState<string>("__new__");
   const [uploadFile,   setUploadFile]   = useState<File | null>(null);
+  const [newPlanLabel, setNewPlanLabel] = useState("");
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   const openPlan = plans.find(p => p.id === openPlanId);
@@ -75,7 +76,7 @@ export default function PlansPageClient({
     if (storageErr) { setUploadError(storageErr.message); setUploadSaving(false); return; }
 
     const { data: plan, error: planErr } = await supabase.from("client_plans")
-      .insert({ client_id: clientId, profile_id: user.id, file_name: uploadFile.name, storage_path: path })
+      .insert({ client_id: clientId, profile_id: user.id, file_name: uploadFile.name, storage_path: path, label: newPlanLabel.trim() || null })
       .select().single();
     if (planErr || !plan) { setUploadError(planErr?.message ?? "Failed to save plan"); setUploadSaving(false); return; }
 
@@ -84,7 +85,7 @@ export default function PlansPageClient({
     setPlans(prev => [newPlan, ...prev]);
     setOpenPlanId(newPlan.id);
     setUploadSaving(false); setShowUpload(false);
-    setUploadFile(null); setNewClientName(""); setNewClientAddr(""); setSelectedClientId("__new__");
+    setUploadFile(null); setNewPlanLabel(""); setNewClientName(""); setNewClientAddr(""); setSelectedClientId("__new__");
   }
 
   async function saveShapes(planId: string, shapes: PlanShape[], calibration: CalibrationLine | null) {
@@ -153,6 +154,12 @@ export default function PlansPageClient({
               <input type="file" accept="image/*,application/pdf" className="hidden"
                 onChange={e => setUploadFile(e.target.files?.[0] ?? null)} />
             </label>
+          </div>
+
+          {/* Sheet label - lets a client have multiple plans, each named (floor plan, elevation, electrical layout etc.) */}
+          <div className="mb-3">
+            <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Sheet name <span className="text-[var(--ink-faint)] font-normal">(optional)</span></label>
+            <input value={newPlanLabel} onChange={e => setNewPlanLabel(e.target.value)} className="app-field" placeholder="e.g. Floor plan, Electrical layout, Elevation" />
           </div>
 
           {/* Client */}
@@ -246,7 +253,7 @@ export default function PlansPageClient({
                     </span>
                   )}
                   <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-1.5 py-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <p className="text-[9px] text-white truncate">{p.file_name}</p>
+                    <p className="text-[9px] text-white truncate">{p.label || p.file_name}</p>
                   </div>
                 </button>
               ))}
@@ -268,7 +275,7 @@ export default function PlansPageClient({
 
             <div className="flex items-center justify-between p-4 border-b border-[var(--line)]">
               <div>
-                <p className="font-bold text-[var(--ink)]">{openPlan.file_name}</p>
+                <p className="font-bold text-[var(--ink)]">{openPlan.label || openPlan.file_name}</p>
                 <p className="text-[12px] text-[var(--ink-faint)]">{clients.find(c => c.id === openPlan.client_id)?.name}</p>
               </div>
               <button onClick={() => setOpenPlanId(null)} className="text-[var(--ink-faint)] ml-2"><X size={18} /></button>

@@ -18,7 +18,7 @@ export default async function PlansPage() {
   // All plans for this user's clients
   const { data: plans } = await supabase
     .from("client_plans")
-    .select("id, client_id, file_name, storage_path, shapes, calibration, created_at")
+    .select("id, client_id, file_name, label, storage_path, shapes, calibration, created_at")
     .eq("profile_id", user.id)
     .order("created_at", { ascending: false });
 

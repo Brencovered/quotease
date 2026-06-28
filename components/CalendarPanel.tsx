@@ -66,6 +66,32 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
     }
   }
 
+  const [dragJob, setDragJob] = useState<{ jobId: string; fromDate: string } | null>(null);
+  const [rescheduling, setRescheduling] = useState(false);
+
+  // Dragging any day within a multi-day job's block and dropping it on a
+  // new day shifts the whole span by that many days - not just the start,
+  // so a 3-day job stays a 3-day job, just moved.
+  async function rescheduleJob(jobId: string, fromDateStr: string, toDateStr: string) {
+    const job = jobs.find((j) => j.id === jobId);
+    if (!job || !job.scheduled_start) return;
+    const deltaMs = new Date(toDateStr).getTime() - new Date(fromDateStr).getTime();
+    if (deltaMs === 0) return;
+    const newStart = new Date(new Date(job.scheduled_start).getTime() + deltaMs);
+    const newEnd = job.scheduled_end ? new Date(new Date(job.scheduled_end).getTime() + deltaMs) : null;
+
+    setRescheduling(true);
+    setJobs((prev) => prev.map((j) => j.id === jobId
+      ? { ...j, scheduled_start: newStart.toISOString(), scheduled_end: newEnd ? newEnd.toISOString() : null }
+      : j));
+    const supabase = createClient();
+    await supabase.from("quotes").update({
+      scheduled_start: newStart.toISOString(),
+      scheduled_end: newEnd ? newEnd.toISOString() : null,
+    }).eq("id", jobId);
+    setRescheduling(false);
+  }
+
   function eventsForDay(day: number): CalEvent[] {
     const dateStr = `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
     return events.filter((e) => e.date === dateStr);
@@ -114,12 +140,13 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-3 mb-4 text-[11.5px] font-semibold">
+      <div className="flex flex-wrap gap-3 mb-1 text-[11.5px] font-semibold">
         <span className="flex items-center gap-1.5 text-[var(--navy)]"><span className="w-3 h-3 rounded-sm bg-[var(--amber)]/40 border-l-2 border-[var(--amber)]" />Scheduled job</span>
         <span className="flex items-center gap-1.5 text-[var(--blue)]"><span className="w-3 h-3 rounded-sm bg-[var(--blue-bg)] border-l-2 border-[var(--blue)]" />Follow-up due</span>
         <span className="flex items-center gap-1.5 text-[var(--red)]"><span className="w-3 h-3 rounded-sm bg-[var(--red-bg)] border-l-2 border-[var(--red)]" />Quote expires</span>
         <span className="flex items-center gap-1.5 text-[var(--green)]"><span className="w-3 h-3 rounded-sm bg-[var(--green-bg)] border-l-2 border-[var(--green)]" />Quote sent</span>
       </div>
+      <p className="text-[11.5px] text-[var(--ink-faint)] mb-4">Drag a scheduled job onto a different day to reschedule it.</p>
 
       {/* Schedule modal */}
       {scheduling && (
@@ -193,12 +220,19 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
                 const day = i+1;
                 const dayEvs = eventsForDay(day);
                 const isToday = today.getFullYear()===year && today.getMonth()===month && today.getDate()===day;
+                const cellDateStr = `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
                 return (
                   <div key={day} onClick={() => dayEvs.length > 0 && setSelectedEvents(dayEvs)}
-                    className={`h-20 sm:h-24 border-r border-b border-[var(--line-subtle)] p-1 overflow-hidden transition-colors ${dayEvs.length > 0 ? "cursor-pointer hover:bg-[var(--app-bg)]" : ""}`}>
+                    onDragOver={(e) => { if (dragJob) e.preventDefault(); }}
+                    onDrop={(e) => { e.preventDefault(); if (dragJob) { rescheduleJob(dragJob.jobId, dragJob.fromDate, cellDateStr); setDragJob(null); } }}
+                    className={`h-20 sm:h-24 border-r border-b border-[var(--line-subtle)] p-1 overflow-hidden transition-colors ${dayEvs.length > 0 ? "cursor-pointer hover:bg-[var(--app-bg)]" : ""} ${dragJob ? "hover:bg-[var(--amber-light)]" : ""}`}>
                     <span className={`text-[12px] font-bold w-6 h-6 flex items-center justify-center rounded-full mb-0.5 ${isToday ? "bg-[var(--navy)] text-white" : "text-[var(--ink-soft)]"}`}>{day}</span>
                     {dayEvs.slice(0,3).map((ev) => (
-                      <div key={ev.id} className={`rounded px-1 py-0.5 text-[9.5px] font-bold truncate mb-0.5 ${EVENT_STYLE[ev.type]}`}>
+                      <div key={ev.id}
+                        draggable={ev.type === "job"}
+                        onDragStart={(e) => { e.stopPropagation(); setDragJob({ jobId: ev.jobId, fromDate: ev.date }); }}
+                        onClick={(e) => ev.type === "job" && e.stopPropagation()}
+                        className={`rounded px-1 py-0.5 text-[9.5px] font-bold truncate mb-0.5 ${EVENT_STYLE[ev.type]} ${ev.type === "job" ? "cursor-grab active:cursor-grabbing" : ""}`}>
                         {ev.label}
                       </div>
                     ))}

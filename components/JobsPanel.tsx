@@ -13,11 +13,13 @@ type Job = {
   payment_terms: PaymentTerm[] | null; invoice_number: string | null;
   xero_exported_at: string | null; completed_at: string | null;
   accepted_at: string | null; scheduled_start: string | null;
+  assigned_to: string | null;
 };
 type Attachment = { id: string; file_name: string; storage_path: string; file_type: string | null; signedUrl?: string };
 
 export default function JobsPanel({ jobs: initialJobs }: { jobs: Job[] }) {
   const [jobs]         = useState(initialJobs);
+  const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
   const [busyId,       setBusyId]       = useState<string | null>(null);
   const [payId,        setPayId]        = useState<string | null>(null);
   const [payVal,       setPayVal]       = useState("");
@@ -28,8 +30,10 @@ export default function JobsPanel({ jobs: initialJobs }: { jobs: Job[] }) {
   const [attError,     setAttError]     = useState<string | null>(null);
 
   const notExported = jobs.filter((j) => !j.xero_exported_at);
-  const totalValue  = jobs.reduce((s, j) => s + (j.total_cost ?? 0), 0);
-  const totalOwing  = jobs.reduce((s, j) => s + Math.max((j.total_cost ?? 0) - (j.amount_paid ?? 0), 0), 0);
+  const assignees = Array.from(new Set(jobs.map((j) => j.assigned_to).filter((a): a is string => !!a)));
+  const filteredJobs = assigneeFilter === "all" ? jobs : jobs.filter((j) => j.assigned_to === assigneeFilter);
+  const totalValue  = filteredJobs.reduce((s, j) => s + (j.total_cost ?? 0), 0);
+  const totalOwing  = filteredJobs.reduce((s, j) => s + Math.max((j.total_cost ?? 0) - (j.amount_paid ?? 0), 0), 0);
 
   useEffect(() => {
     if (!jobs.length) return;
@@ -135,16 +139,26 @@ export default function JobsPanel({ jobs: initialJobs }: { jobs: Job[] }) {
 
       {attError && <p className="text-[13px] text-[var(--red)] mb-3">{attError}</p>}
 
+      {assignees.length > 0 && (
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-[12.5px] font-semibold text-[var(--ink-faint)]">Assigned to:</span>
+          <select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)} className="app-field py-1.5 text-[13px] w-auto">
+            <option value="all">Everyone</option>
+            {assignees.map((a) => <option key={a} value={a}>{a}</option>)}
+          </select>
+        </div>
+      )}
+
       {/* Jobs */}
       <div className="space-y-3">
-        {jobs.length === 0 && (
+        {filteredJobs.length === 0 && (
           <div className="card text-center py-12">
             <Briefcase size={28} className="mx-auto mb-3 text-[var(--ink-faint)]" />
             <p className="font-semibold text-[var(--ink)] mb-1">No active jobs</p>
             <p className="text-[13px] text-[var(--ink-faint)]">Accepted quotes land here automatically.</p>
           </div>
         )}
-        {jobs.map((j) => {
+        {filteredJobs.map((j) => {
           const owing = (j.total_cost ?? 0) - (j.amount_paid ?? 0);
           const stage = !j.completed_at ? "In progress" : owing > 0 ? "Awaiting payment" : "Complete";
           const StageIcon = !j.completed_at ? Hammer : owing > 0 ? Wallet : CheckCircle2;

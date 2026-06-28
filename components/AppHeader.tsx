@@ -16,6 +16,7 @@ import {
   Menu,
   X,
   FolderOpen,
+  TrendingUp,
 } from "lucide-react";
 
 const NAV = [
@@ -89,6 +90,15 @@ export default function AppHeader() {
             Plans
           </Link>
           <Link
+            href="/electrician/margins"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
+              isActive("/electrician/margins") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
+            }`}
+          >
+            <TrendingUp size={17} strokeWidth={isActive("/electrician/margins") ? 2.2 : 1.8} />
+            Margins
+          </Link>
+          <Link
             href="/electrician/clients"
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
               isActive("/electrician/clients") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
@@ -142,6 +152,12 @@ export default function AppHeader() {
             <div className="absolute top-12 right-4 z-50 bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-lg overflow-hidden w-48">
               <Link href="/electrician/clients" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <Users size={15} className="text-[var(--ink-faint)]" /> Clients
+              </Link>
+              <Link href="/electrician/plans" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
+                <FolderOpen size={15} className="text-[var(--ink-faint)]" /> Plans
+              </Link>
+              <Link href="/electrician/margins" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
+                <TrendingUp size={15} className="text-[var(--ink-faint)]" /> Margins
               </Link>
               <Link href="/electrician/map" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <MapPin size={15} className="text-[var(--ink-faint)]" /> Map

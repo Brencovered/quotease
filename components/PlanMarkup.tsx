@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { X, Trash2, Ruler, Check, AlertCircle, ChevronDown, ChevronUp, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
+import { X, Trash2, Ruler, Check, AlertCircle, ChevronDown, ChevronUp, ZoomIn, ZoomOut, Maximize2, Copy } from "lucide-react";
 
 export type ShapeType = "pin" | "line" | "area" | "freehand";
 export interface ShapePoint { x: number; y: number; }
@@ -308,12 +308,29 @@ export default function PlanMarkup({
     else setDraftPts([]);
   }
 
+  // Cheapest valuable version of "saved takeoff templates" - remember the
+  // last material/cost picked for each tool (keyed by trade + lineStyle),
+  // so the next cable run, conduit run etc. on any future job starts
+  // pre-filled instead of blank. No explicit save step, no new table.
+  function templateKey(lineStyle: string) { return `swiftscope_shape_template_${trade ?? "generic"}_${lineStyle}`; }
+  function loadTemplate(lineStyle: string): { material_key: string | null; material_label: string; unit_cost: number } | null {
+    try { const raw = localStorage.getItem(templateKey(lineStyle)); return raw ? JSON.parse(raw) : null; } catch { return null; }
+  }
+  function saveTemplate(lineStyle: string, material_key: string | null, material_label: string, unit_cost: number) {
+    if (!material_label) return;
+    try { localStorage.setItem(templateKey(lineStyle), JSON.stringify({ material_key, material_label, unit_cost })); } catch { /* ignore */ }
+  }
+
   function finishShape(def: ToolDef, pts: ShapePoint[]) {
     const id = `shape_${Date.now()}`;
+    const remembered = loadTemplate(def.lineStyle);
     const s: PlanShape = {
       id, type: def.type, lineStyle: def.lineStyle, points: pts,
-      label: def.label, material_key: null, material_label: "",
-      unit_cost: 0, margin_pct: marginPct, qty: 0, unit: def.unit, note: "",
+      label: def.label,
+      material_key: remembered?.material_key ?? null,
+      material_label: remembered?.material_label ?? "",
+      unit_cost: remembered?.unit_cost ?? 0,
+      margin_pct: marginPct, qty: 0, unit: def.unit, note: "",
     };
     const m = measuredQty(s, calibration);
     if (m) { s.qty=m.qty; s.unit=m.unit; } else if(def.type==="pin") s.qty=1;
@@ -321,7 +338,26 @@ export default function PlanMarkup({
     setOpenId(id); setDraftPts([]); setIsDrawing(false);
   }
 
-  function updateShape(id: string, patch: Partial<PlanShape>) { onShapesChange(shapes.map(s=>s.id===id?{...s,...patch}:s)); }
+  function updateShape(id: string, patch: Partial<PlanShape>) {
+    onShapesChange(shapes.map(s=>s.id===id?{...s,...patch}:s));
+    if (patch.material_label !== undefined || patch.unit_cost !== undefined || patch.material_key !== undefined) {
+      const s = shapes.find(x => x.id === id);
+      if (s) saveTemplate(s.lineStyle, patch.material_key ?? s.material_key, patch.material_label ?? s.material_label, patch.unit_cost ?? s.unit_cost);
+    }
+  }
+
+  // One-tap duplicate, same material/cost/qty pre-filled - for placing
+  // several of the same fixture quickly without re-picking the tool or
+  // material each time. Offsets slightly so it doesn't sit exactly on top.
+  function duplicateShape(id: string) {
+    const s = shapes.find(x => x.id === id);
+    if (!s) return;
+    const newId = `shape_${Date.now()}`;
+    const offset = (p: ShapePoint) => ({ x: Math.min(96, p.x + 4), y: Math.min(96, p.y + 4) });
+    const clone: PlanShape = { ...s, id: newId, points: s.points.map(offset) };
+    onShapesChange([...shapes, clone]);
+    setOpenId(newId);
+  }
   function removeShape(id: string) { onShapesChange(shapes.filter(s=>s.id!==id)); if(openId===id) setOpenId(null); }
 
   // Convert 0-100% coords to SVG px relative to the img element
@@ -523,6 +559,9 @@ export default function PlanMarkup({
               <span className="text-[13px] text-[var(--steel-2)]">Line total</span>
               <span className="font-display text-[20px] text-[var(--amber)]">${shapeCost(openShape).toLocaleString()}</span>
             </div>
+            <button onClick={()=>duplicateShape(openShape.id)} className="col-span-2 btn-secondary text-[12.5px] py-2 justify-center">
+              <Copy size={13} /> Duplicate (same material &amp; cost)
+            </button>
           </div>
         </div>
       )}
