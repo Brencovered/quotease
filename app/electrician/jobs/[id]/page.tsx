@@ -82,10 +82,6 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             <p className="text-[11px] text-[var(--ink-faint)]">Original: ${(quote.total_cost ?? 0).toLocaleString()}</p>
             {approvedVariationsTotal > 0 && <p className="text-[11px] text-[var(--green)]">+${approvedVariationsTotal.toLocaleString()} variations</p>}
             {markupMaterials > 0 && <p className="text-[11px] text-[var(--amber-deep)]">+${markupMaterials.toLocaleString()} from drawings</p>}
-          </div>
-            {approvedVariationsTotal > 0 && (
-              <p className="text-[11px] text-[var(--amber-deep)] font-semibold">incl. ${approvedVariationsTotal.toLocaleString()} approved variations</p>
-            )}
             <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold inline-block mt-1 ${quote.status === "paid" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-800"}`}>
               {quote.status === "paid" ? "paid" : "active job"}
             </span>
