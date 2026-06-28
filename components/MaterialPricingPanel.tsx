@@ -171,7 +171,7 @@ export default function MaterialPricingPanel({ trades }: { trades: string[] }) {
 
       {/* CSV bar */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        <label className="btn-secondary text-[13px] py-2 cursor-pointer">
+        <label className="btn-primary text-[13px] py-2 cursor-pointer">
           <Upload size={14} /> Import CSV
           <input type="file" accept=".csv,text/csv" className="hidden" onChange={importCsv} />
         </label>

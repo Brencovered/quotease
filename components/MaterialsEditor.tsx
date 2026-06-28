@@ -78,7 +78,7 @@ export default function MaterialsEditor({
           placeholder="0"
           className="app-field text-[13px] w-20 bg-[var(--surface)]"
         />
-        <button onClick={addCustom} disabled={!newLabel.trim()} className="btn-secondary text-[12.5px] py-2 px-3 shrink-0">
+        <button onClick={addCustom} disabled={!newLabel.trim()} className="btn-primary text-[12.5px] py-2 px-3 shrink-0">
           <Plus size={13} /> Add
         </button>
       </div>

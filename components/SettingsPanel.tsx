@@ -65,7 +65,7 @@ function RateSaveButton() {
     setTimeout(() => setSaved(false), 2500);
   }
   return (
-    <button onClick={save} disabled={saving} className="btn-secondary text-[13px] py-2 flex items-center gap-1.5">
+    <button onClick={save} disabled={saving} className="btn-primary text-[13px] py-2 flex items-center gap-1.5">
       {saving ? "Saving..." : saved ? <><Check size={13} className="text-[var(--green)]" /> Saved</> : <><Save size={13} /> Save rates</>}
     </button>
   );
@@ -218,7 +218,7 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
                   <Upload size={18} />
                 </div>
               )}
-              <label className="btn-secondary text-[13px] py-2 cursor-pointer">
+              <label className="btn-primary text-[13px] py-2 cursor-pointer">
                 {logoPreview ? "Change logo" : "Upload logo"}
                 <input type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
               </label>
@@ -331,7 +331,7 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
         </div>
         <RateSaveButton />
         <div className="border-t border-[var(--line-subtle)] mt-4 pt-4">
-          <a href="/settings/materials" className="btn-secondary w-full justify-center text-center text-[13.5px]">
+          <a href="/settings/materials" className="btn-primary w-full justify-center text-center text-[13.5px]">
             Manage material prices per item
           </a>
           <p className="text-[12px] text-[var(--ink-faint)] mt-2 text-center">
@@ -353,7 +353,7 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
             <p className="text-[13px] text-[var(--ink-faint)] mb-3">
               Most tradies use the free CSV export on the Quotes page. Only connect this for automatic invoice sync.
             </p>
-            <a href="/api/xero/connect" className="btn-secondary inline-flex text-[13px] py-2">
+            <a href="/api/xero/connect" className="btn-primary inline-flex text-[13px] py-2">
               Connect Xero
             </a>
           </>
