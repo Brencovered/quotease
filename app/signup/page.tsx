@@ -67,7 +67,7 @@ export default function SignupPage() {
             <>
               <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-8 shadow-sm">
                 <h1 className="font-display text-[26px] text-[var(--ink)] mb-1">Sign up free</h1>
-                <p className="text-[13.5px] text-[var(--ink-faint)] mb-6">Free during early access. No credit card needed.</p>
+                <p className="text-[13.5px] text-[var(--ink-faint)] mb-6">3-day free trial. $39/month after that. No credit card needed.</p>
 
                 <form onSubmit={handleSubmit} className="space-y-3">
                   <div>
@@ -109,7 +109,7 @@ export default function SignupPage() {
               </div>
 
               <p className="text-center text-[12px] text-[var(--ink-faint)] mt-4">
-                Free during early access · we&apos;ll ask for feedback as we go
+                3 days free · $39/month · unlimited everything
               </p>
             </>
           )}

@@ -81,7 +81,7 @@ export default function Home() {
               </Link>
             </div>
             <div className="flex flex-wrap gap-6 text-[13px] font-semibold text-[#8aa4b4]">
-              <span>Free during early access</span>
+              <span>3-day free trial — then $39/month</span>
               <span className="text-[#2a3a47]">|</span>
               <span>Unlimited users</span>
               <span className="text-[#2a3a47]">|</span>
@@ -220,37 +220,300 @@ export default function Home() {
         </div>
       </div>
 
+      {/* PLATFORM CONSOLIDATION */}
+      <div className="bg-[#f8f9fa] border-t border-[#e8ecef]">
+        <div className="max-w-7xl mx-auto px-6 py-24">
+          <div className="mb-12">
+            <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">Platform overload</span>
+            <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.93] mt-3 text-[#0a1722]">
+              How many tools are you<br />paying for right now?
+            </h2>
+            <p className="text-[15px] text-[#5a7080] leading-[1.7] mt-4 max-w-[540px]">
+              The average sole trader runs four or five separate platforms before they send their first invoice.
+              Each one costs money. None of them talk to each other. Swiftscope consolidates the ones that matter into one tool.
+            </p>
+          </div>
+
+          {/* Stack comparison */}
+          <div className="grid lg:grid-cols-2 gap-8 items-start">
+
+            {/* Before */}
+            <div>
+              <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#8a9ba8] mb-4">What most tradies run today</p>
+              <div className="space-y-2">
+                {[
+                  { tool: "Word or Excel",          use: "Writing up quotes",                cost: "Free but slow",       replaced: true },
+                  { tool: "Fergus / ServiceM8",      use: "Job management",                  cost: "$40-60/mo",           replaced: true },
+                  { tool: "GroundPlan / PlanSwift",  use: "Drawing takeoffs and markup",     cost: "$60-100/mo",          replaced: true },
+                  { tool: "Google Calendar",         use: "Scheduling jobs",                 cost: "Free",                replaced: true },
+                  { tool: "Quote follow-up emails",  use: "Chasing clients manually",        cost: "Your time",           replaced: true },
+                  { tool: "Xero / MYOB",             use: "Accounting — export from Swiftscope in one click", cost: "$30-50/mo", replaced: false },
+                ].map((r) => (
+                  <div key={r.tool} className={`flex items-center gap-4 px-5 py-3.5 rounded-xl border transition-all ${
+                    r.replaced
+                      ? "bg-red-50/60 border-red-100 opacity-70"
+                      : "bg-white border-[#e8ecef]"
+                  }`}>
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold ${
+                      r.replaced ? "bg-red-100 text-red-400" : "bg-[#e8ecef] text-[#8a9ba8]"
+                    }`}>
+                      {r.replaced ? "×" : "·"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`font-bold text-[14px] ${r.replaced ? "line-through text-[#8a9ba8]" : "text-[#0a1722]"}`}>{r.tool}</p>
+                      <p className="text-[12px] text-[#8a9ba8]">{r.use}</p>
+                    </div>
+                    <span className={`text-[12px] font-semibold shrink-0 ${r.replaced ? "text-red-400" : "text-[#8a9ba8]"}`}>{r.cost}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[12.5px] text-[#8a9ba8] mt-3 font-semibold">
+                Up to $200/month in subscriptions. Five logins. Nothing connected.
+              </p>
+            </div>
+
+            {/* After */}
+            <div>
+              <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-4">What you need with Swiftscope</p>
+              <div className="space-y-2">
+                {[
+                  { tool: "Swiftscope",   use: "Quote, job management, drawings, schedule, follow-ups", highlight: true },
+                  { tool: "Xero / MYOB",  use: "Accounting — export from Swiftscope in one click", highlight: false },
+                ].map((r) => (
+                  <div key={r.tool} className={`flex items-center gap-4 px-5 py-4 rounded-xl border ${
+                    r.highlight
+                      ? "bg-[#0a1722] border-[#0a1722]"
+                      : "bg-white border-[#e8ecef]"
+                  }`}>
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold ${
+                      r.highlight ? "bg-[#ffb400] text-[#0a1722]" : "bg-[#e8ecef] text-[#8a9ba8]"
+                    }`}>
+                      {r.highlight ? "✓" : "·"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`font-bold text-[14px] ${r.highlight ? "text-white" : "text-[#0a1722]"}`}>{r.tool}</p>
+                      <p className={`text-[12px] ${r.highlight ? "text-[#7e94a2]" : "text-[#8a9ba8]"}`}>{r.use}</p>
+                    </div>
+                    {r.highlight && (
+                      <span className="text-[12px] font-bold text-[#ffb400] shrink-0">Free now</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Savings callout */}
+              <div className="mt-6 bg-[#0a1722] rounded-2xl p-6">
+                <div className="grid grid-cols-3 gap-4 mb-5">
+                  {[
+                    { n: "4-5",    label: "Platforms replaced" },
+                    { n: "$100+",  label: "Monthly saving vs Fergus + GroundPlan" },
+                    { n: "1",      label: "Login to remember" },
+                  ].map((s) => (
+                    <div key={s.label} className="text-center">
+                      <p className="font-display text-[2rem] leading-tight text-[#ffb400]">{s.n}</p>
+                      <p className="text-[11px] text-[#4a6070] font-semibold mt-1 leading-snug">{s.label}</p>
+                    </div>
+                  ))}
+                </div>
+                <a href="/signup" className="block text-center bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors">
+                  Replace the stack for $39/month
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* VS COMPETITORS */}
       <div className="bg-white border-t border-[#e8ecef]">
         <div className="max-w-7xl mx-auto px-6 py-24">
-          <div className="mb-12">
-            <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">Why not just use Fergus?</span>
+          <div className="mb-10">
+            <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">How we stack up</span>
             <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.93] mt-3 text-[#0a1722]">
-              Built for a crew of 20.<br />You have got a ute.
+              Fergus. ServiceM8. Tradify.<br />Here is the honest comparison.
             </h2>
+            <p className="text-[15px] text-[#5a7080] mt-4 max-w-[540px] leading-[1.7]">
+              All three are solid platforms. But they are priced per user, built for teams, and take weeks to set up.
+              If you are a sole trader or small crew who wants to quote fast and get paid — the maths does not add up.
+            </p>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { label: "Setup time", them: "3 weeks",         us: "Day one" },
-              { label: "Built for",  them: "Teams of 10+",    us: "Sole traders" },
-              { label: "Price",      them: "$40+/user/month", us: "Free right now" },
-              { label: "Scope",      them: "HR, SWMS, POs",   us: "Quote. Job. Paid." },
-            ].map((r) => (
-              <div key={r.label} className="bg-[#f8f9fa] border border-[#e8ecef] rounded-2xl p-6">
-                <p className="text-[11px] font-bold tracking-[.14em] uppercase text-[#ffb400] mb-4">{r.label}</p>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-[10px] text-red-500 font-bold shrink-0">x</span>
-                    <span className="text-[13px] text-[#8a9ba8]">{r.them}</span>
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-5 h-5 rounded-full bg-[#ffb400]/15 flex items-center justify-center text-[10px] text-[#e89e00] font-bold shrink-0">v</span>
-                    <span className="text-[13px] text-[#0a1722] font-semibold">{r.us}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+
+          {/* Feature matrix */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[640px]">
+              <thead>
+                <tr className="border-b-2 border-[#e8ecef]">
+                  <th className="pb-4 pr-6 text-[12px] font-bold uppercase tracking-wider text-[#8a9ba8] w-[32%]"></th>
+                  {[
+                    { name: "Swiftscope",  highlight: true  },
+                    { name: "Fergus",      highlight: false },
+                    { name: "ServiceM8",   highlight: false },
+                    { name: "Tradify",     highlight: false },
+                  ].map(c => (
+                    <th key={c.name} className={`pb-4 px-4 text-center text-[13px] font-extrabold ${c.highlight ? "text-[#0a1722]" : "text-[#8a9ba8]"}`}>
+                      {c.highlight ? (
+                        <span className="inline-flex flex-col items-center gap-1">
+                          {c.name}
+                          <span className="text-[10px] bg-[#ffb400] text-[#0a1722] px-2 py-0.5 rounded-full font-bold tracking-wide uppercase">Us</span>
+                        </span>
+                      ) : c.name}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#f0f2f4]">
+                {[
+                  {
+                    feature: "Pricing",
+                    sub: "Monthly cost",
+                    us:    "$39/month flat",
+                    fergus: "~$40/user/month",
+                    sm8:   "$29-$349/month\n(per job volume)",
+                    tradify:"$48-$62/user/month",
+                    usBest: true,
+                  },
+                  {
+                    feature: "Unlimited seats",
+                    sub: "Add staff for free",
+                    us:    "✓ Always",
+                    fergus: "✗ Pay per user",
+                    sm8:   "✓ Unlimited logins",
+                    tradify:"✗ Pay per user",
+                    usBest: true,
+                  },
+                  {
+                    feature: "Android support",
+                    sub: "Full app on Android",
+                    us:    "✓ iOS + Android",
+                    fergus: "✓ iOS + Android",
+                    sm8:   "✗ iOS only\n(Android lite)",
+                    tradify:"✓ iOS + Android",
+                    usBest: false,
+                  },
+                  {
+                    feature: "Setup time",
+                    sub: "From signup to first quote",
+                    us:    "Same day",
+                    fergus: "Days to weeks",
+                    sm8:   "1-2 days",
+                    tradify:"Half day to 1 day",
+                    usBest: true,
+                  },
+                  {
+                    feature: "Drawing markup",
+                    sub: "Mark up site plans, link costs to quote",
+                    us:    "✓ Built in",
+                    fergus: "✗ Need GroundPlan\n($60-100/mo extra)",
+                    sm8:   "✗ Basic photo\nannotation only",
+                    tradify:"✗ Not available",
+                    usBest: true,
+                  },
+                  {
+                    feature: "Quote from phone on site",
+                    sub: "Full quote builder on mobile",
+                    us:    "✓ Built for it",
+                    fergus: "✓ Yes",
+                    sm8:   "✓ Yes",
+                    tradify:"✓ Yes",
+                    usBest: false,
+                  },
+                  {
+                    feature: "Client accepts online",
+                    sub: "One tap to accept + pay",
+                    us:    "✓ Yes",
+                    fergus: "✓ Yes",
+                    sm8:   "✓ Yes",
+                    tradify:"✓ Yes",
+                    usBest: false,
+                  },
+                  {
+                    feature: "Job costing",
+                    sub: "Actual vs quoted margin",
+                    us:    "✓ Built in",
+                    fergus: "✓ Yes",
+                    sm8:   "✓ Add-on cost",
+                    tradify:"✓ Yes",
+                    usBest: false,
+                  },
+                  {
+                    feature: "Variation orders",
+                    sub: "Signed off before you start",
+                    us:    "✓ Built in",
+                    fergus: "✓ Yes",
+                    sm8:   "✓ Yes",
+                    tradify:"✓ Yes",
+                    usBest: false,
+                  },
+                  {
+                    feature: "Xero / MYOB export",
+                    sub: "Push invoices to accounting",
+                    us:    "✓ CSV export",
+                    fergus: "✓ Live sync",
+                    sm8:   "✓ Live sync",
+                    tradify:"✓ Live sync",
+                    usBest: false,
+                  },
+                  {
+                    feature: "Supplier price books",
+                    sub: "Auto-pull live material prices",
+                    us:    "✗ Manual entry",
+                    fergus: "✓ 100+ suppliers",
+                    sm8:   "✓ Yes",
+                    tradify:"~ CSV import only",
+                    usBest: false,
+                  },
+                  {
+                    feature: "Compliance certs",
+                    sub: "Cert tracking per job",
+                    us:    "✓ Basic",
+                    fergus: "✓ Full SWMS/H&S",
+                    sm8:   "✓ Full forms",
+                    tradify:"✓ Yes",
+                    usBest: false,
+                  },
+                  {
+                    feature: "13 trades supported",
+                    sub: "All trades, one platform",
+                    us:    "✓ All 13",
+                    fergus: "✓ Multi-trade",
+                    sm8:   "✓ Multi-trade",
+                    tradify:"✓ Multi-trade",
+                    usBest: false,
+                  },
+                  {
+                    feature: "3-day free trial",
+                    sub: "No card needed",
+                    us:    "✓ 3 business days",
+                    fergus: "✓ 14 days",
+                    sm8:   "✓ 14 days",
+                    tradify:"✓ 14 days",
+                    usBest: false,
+                  },
+                ].map((row) => (
+                  <tr key={row.feature} className="hover:bg-[#fafbfc]">
+                    <td className="py-3.5 pr-6">
+                      <p className="text-[13.5px] font-semibold text-[#0a1722]">{row.feature}</p>
+                      <p className="text-[11.5px] text-[#8a9ba8]">{row.sub}</p>
+                    </td>
+                    <td className={`py-3.5 px-4 text-center rounded-sm ${row.usBest ? "bg-[#fffbf0]" : ""}`}>
+                      <span className={`text-[12.5px] font-bold leading-snug whitespace-pre-line ${row.usBest ? "text-[#e89e00]" : "text-[#0a1722]"}`}>
+                        {row.us}
+                      </span>
+                    </td>
+                    {[row.fergus, row.sm8, row.tradify].map((val, i) => (
+                      <td key={i} className="py-3.5 px-4 text-center">
+                        <span className="text-[12px] text-[#8a9ba8] leading-snug whitespace-pre-line">{val}</span>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
+
+          <p className="text-[11.5px] text-[#b0bec5] mt-6">
+            Pricing sourced from vendor websites, June 2026. AUD pricing. Supplier price book and Xero live sync on our roadmap.
+          </p>
         </div>
       </div>
 
@@ -260,16 +523,17 @@ export default function Home() {
           <div>
             <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">Pricing</span>
             <h2 className="font-display uppercase text-[2.5rem] sm:text-[3.2rem] leading-[0.93] mt-3 mb-8 text-[#0a1722]">
-              Free right now.<br />No catch.
+              $39/month.<br />Unlimited everything.
             </h2>
             <div className="flex flex-col divide-y divide-[#e8ecef]">
               {[
-                "Free during early access - no credit card, ever",
-                "Unlimited users, unlimited quotes",
-                "Works for any trade",
-                "Mark up drawings and link to quotes",
+                "3-day free trial — no credit card needed",
+                "$39/month after that — unlimited seats, quotes, and jobs",
+                "No per-user fees, ever",
+                "All 13 trades supported out of the box",
+                "Drawing markup linked directly to quotes",
+                "Job costing - actual vs quoted on every job",
                 "Xero CSV export included",
-                "We will ask for your feedback as we build",
               ].map((f) => (
                 <div key={f} className="flex items-center gap-3 py-3.5 text-[14.5px] text-[#0a1722] font-semibold">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#ffb400] shrink-0" />
@@ -281,14 +545,15 @@ export default function Home() {
           <div className="bg-[#0a1722] rounded-3xl overflow-hidden shadow-2xl">
             <div className="h-3" style={{ background: "repeating-linear-gradient(135deg,#FFB400 0 14px,#E89E00 14px 28px)" }} />
             <div className="p-10 text-center">
-              <p className="text-[12px] font-bold tracking-[.2em] uppercase text-[#7e94a2] mb-4">Early access</p>
-              <div className="flex items-end justify-center gap-2 mb-3">
-                <span className="font-display text-[6rem] leading-[0.85] text-[#ffb400]">$0</span>
+              <p className="text-[12px] font-bold tracking-[.2em] uppercase text-[#7e94a2] mb-4">3-day free trial. No card needed.</p>
+              <div className="flex items-end justify-center gap-2 mb-1">
+                <span className="font-display text-[6rem] leading-[0.85] text-[#ffb400]">$39</span>
+                <span className="text-[#7e94a2] text-[18px] font-bold mb-4">/mo</span>
               </div>
-              <p className="text-[#7e94a2] text-[14px] mb-1">free while we are building this out</p>
-              <p className="text-[12px] text-[#3a4f5e] mb-8">In exchange we will ask for your feedback and hope to earn a testimonial along the way.</p>
+              <p className="text-[#7e94a2] text-[14px] mb-1">Unlimited seats, quotes and jobs</p>
+              <p className="text-[12px] text-[#3a4f5e] mb-8">3 business days to decide. If it&apos;s not worth $39/month you&apos;ll know by day two. No credit card until you&apos;re ready.</p>
               <Link href="/signup" className="block bg-[#ffb400] text-[#0a1722] font-extrabold text-[17px] py-4 rounded-xl mb-3 hover:bg-[#e89e00] transition-colors">
-                Sign up free
+                Start your free trial
               </Link>
               <Link href="/login" className="block text-[#7e94a2] text-[14px] hover:text-white transition-colors">
                 Already have an account? Log in
