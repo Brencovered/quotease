@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import PlanMarkup, { type PlanShape, type CalibrationLine, type MaterialItem } from "./PlanMarkup";
 import { Upload, X, Plus, FileText, ChevronRight, Check, User } from "lucide-react";
 
-type Client = { id: string; name: string; address: string | null };
+type Client = { id: string; name: string; billing_address: string | null };
 type Plan   = { id: string; client_id: string; file_name: string; storage_path: string; shapes: PlanShape[]; calibration: CalibrationLine | null; signedUrl: string | null };
 type Quote  = { id: string; client_id: string | null; client_name: string | null; site_address: string | null; status: string; total_cost: number | null; trade: string | null };
 
@@ -34,7 +34,7 @@ export default function PlansPageClient({
   const [newClientAddr, setNewClientAddr] = useState("");
   const [selectedClientId, setSelectedClientId] = useState<string>("__new__");
   const [uploadFile,   setUploadFile]   = useState<File | null>(null);
-  const [uploadSaving, setUploadSaving] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const openPlan = plans.find(p => p.id === openPlanId);
   const planCost = openPlanId ? (totalCost[openPlanId] ?? 0) : 0;
@@ -42,48 +42,39 @@ export default function PlansPageClient({
 
   async function submitUpload() {
     if (!uploadFile) return;
-    setUploadSaving(true);
+    setUploadSaving(true); setUploadError(null);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setUploadSaving(false); return; }
+    if (!user) { setUploadError("Not signed in"); setUploadSaving(false); return; }
 
-    // Create client if new
     let clientId = selectedClientId;
     if (selectedClientId === "__new__") {
-      if (!newClientName.trim()) { setUploadSaving(false); return; }
-      const { data: newClient } = await supabase
+      if (!newClientName.trim()) { setUploadError("Enter a client name"); setUploadSaving(false); return; }
+      const { data: newClient, error: clientErr } = await supabase
         .from("clients")
-        .insert({ profile_id: user.id, name: newClientName.trim(), address: newClientAddr.trim() || null })
+        .insert({ profile_id: user.id, name: newClientName.trim(), billing_address: newClientAddr.trim() || null })
         .select().single();
-      if (!newClient) { setUploadSaving(false); return; }
+      if (clientErr || !newClient) { setUploadError(clientErr?.message ?? "Failed to create client"); setUploadSaving(false); return; }
       clientId = newClient.id;
       setClients(prev => [...prev, newClient]);
     }
 
-    // Upload file
     const safeName = uploadFile.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
     const path = `${user.id}/plans/${clientId}/${Date.now()}-${safeName}`;
-    const { error } = await supabase.storage.from("job-files").upload(path, uploadFile);
-    if (error) { setUploadSaving(false); return; }
+    const { error: storageErr } = await supabase.storage.from("job-files").upload(path, uploadFile);
+    if (storageErr) { setUploadError(storageErr.message); setUploadSaving(false); return; }
 
-    const { data: plan } = await supabase.from("client_plans")
+    const { data: plan, error: planErr } = await supabase.from("client_plans")
       .insert({ client_id: clientId, profile_id: user.id, file_name: uploadFile.name, storage_path: path })
       .select().single();
+    if (planErr || !plan) { setUploadError(planErr?.message ?? "Failed to save plan"); setUploadSaving(false); return; }
 
-    if (plan) {
-      const { data: signed } = await supabase.storage.from("job-files").createSignedUrl(path, 3600 * 24);
-      const newPlan = { ...plan, shapes: [], calibration: null, signedUrl: signed?.signedUrl ?? null };
-      setPlans(prev => [newPlan, ...prev]);
-      setOpenPlanId(newPlan.id);
-    }
-
-    // Reset
-    setUploadSaving(false);
-    setShowUpload(false);
-    setUploadFile(null);
-    setNewClientName("");
-    setNewClientAddr("");
-    setSelectedClientId("__new__");
+    const { data: signed } = await supabase.storage.from("job-files").createSignedUrl(path, 3600 * 24);
+    const newPlan = { ...plan, shapes: [], calibration: null, signedUrl: signed?.signedUrl ?? null };
+    setPlans(prev => [newPlan, ...prev]);
+    setOpenPlanId(newPlan.id);
+    setUploadSaving(false); setShowUpload(false);
+    setUploadFile(null); setNewClientName(""); setNewClientAddr(""); setSelectedClientId("__new__");
   }
 
   async function saveShapes(planId: string, shapes: PlanShape[], calibration: CalibrationLine | null) {
@@ -155,7 +146,13 @@ export default function PlansPageClient({
               <input value={newClientName} onChange={e => setNewClientName(e.target.value)}
                 className="app-field" placeholder="Client name (required)" />
               <input value={newClientAddr} onChange={e => setNewClientAddr(e.target.value)}
-                className="app-field" placeholder="Address (optional)" />
+                className="app-field" placeholder="Address (optional - shows on quotes)" />
+            </div>
+          )}
+
+          {uploadError && (
+            <div className="mb-3 bg-[var(--red-bg)] border border-red-200 rounded-xl px-4 py-3 text-[13px] text-[var(--red)] font-semibold">
+              {uploadError}
             </div>
           )}
 
@@ -176,7 +173,7 @@ export default function PlansPageClient({
             <div className="flex items-center justify-between mb-3">
               <div>
                 <p className="font-bold text-[15px] text-[var(--ink)]">{client?.name ?? "Unknown client"}</p>
-                {client?.address && <p className="text-[12px] text-[var(--ink-faint)]">{client.address}</p>}
+                {client?.billing_address && <p className="text-[12px] text-[var(--ink-faint)]">{client.billing_address}</p>}
               </div>
               <label className="btn-secondary text-[12px] py-1.5 cursor-pointer">
                 <Upload size={12} /> Add plan

@@ -11,7 +11,7 @@ export default async function PlansPage() {
   // All clients for this user (for grouping plans by client)
   const { data: clients } = await supabase
     .from("clients")
-    .select("id, name, address")
+    .select("id, name, billing_address")
     .eq("profile_id", user.id)
     .order("name");
 
