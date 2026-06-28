@@ -156,7 +156,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             assignedTo={quote.assigned_to}
           />
 
-          <JobPlansPanel quoteId={quote.id} clientId={quote.client_id} plans={jobPlans as never} materials={tradeMaterials} marginPct={marginPct} />
+          <JobPlansPanel quoteId={quote.id} clientId={quote.client_id} plans={jobPlans as never} materials={tradeMaterials} marginPct={marginPct} trade={quote.trade ?? "electrician"} />
 
           <JobTimeline
             acceptedAt={quote.accepted_at}

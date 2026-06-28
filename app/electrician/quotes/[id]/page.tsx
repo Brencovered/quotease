@@ -123,7 +123,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
             <FollowUpPanel quoteId={quote.id} followUps={followUps} followUpAt={quote.follow_up_at} expiresAt={quote.quote_expires_at} />
           )}
 
-          <JobPlansPanel quoteId={quote.id} clientId={quote.client_id} plans={quotePlans as never} materials={tradeMaterials} marginPct={marginPct ?? 20} />
+          <JobPlansPanel quoteId={quote.id} clientId={quote.client_id} plans={quotePlans as never} materials={tradeMaterials} marginPct={marginPct ?? 20} trade={quote.trade ?? "electrician"} />
 
           <JobFilesPanel quoteId={quote.id} attachments={attachmentsWithUrls} />
         </div>

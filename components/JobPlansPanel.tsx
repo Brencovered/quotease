@@ -25,6 +25,7 @@ export default function JobPlansPanel({
   plans: Plan[];
   materials: MaterialItem[];
   marginPct: number;
+  trade?: string;
 }) {
   const [plans,       setPlans]       = useState<Plan[]>(initial);
   const [openPlanId,  setOpenPlanId]  = useState<string | null>(null);
@@ -111,6 +112,7 @@ export default function JobPlansPanel({
               onCalibrationChange={(cal) => handleShapesChange(openPlan.id, openPlan.shapes, cal)}
               materials={materials}
               marginPct={marginPct}
+              trade={trade}
             />
           </div>
         </div>
