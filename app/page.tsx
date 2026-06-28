@@ -327,34 +327,193 @@ export default function Home() {
       {/* VS COMPETITORS */}
       <div className="bg-white border-t border-[#e8ecef]">
         <div className="max-w-7xl mx-auto px-6 py-24">
-          <div className="mb-12">
-            <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">Why not just use Fergus?</span>
+          <div className="mb-10">
+            <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">How we stack up</span>
             <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.93] mt-3 text-[#0a1722]">
-              Built for a crew of 20.<br />You have got a ute.
+              Fergus. ServiceM8. Tradify.<br />Here is the honest comparison.
             </h2>
+            <p className="text-[15px] text-[#5a7080] mt-4 max-w-[540px] leading-[1.7]">
+              All three are solid platforms. But they are priced per user, built for teams, and take weeks to set up.
+              If you are a sole trader or small crew who wants to quote fast and get paid — the maths does not add up.
+            </p>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { label: "Setup time", them: "3 weeks",         us: "Day one" },
-              { label: "Built for",  them: "Teams of 10+",    us: "Sole traders" },
-              { label: "Price",      them: "$40-60/user/month", us: "$39/month flat" },
-              { label: "Scope",      them: "HR, SWMS, POs",   us: "Quote. Job. Paid." },
-            ].map((r) => (
-              <div key={r.label} className="bg-[#f8f9fa] border border-[#e8ecef] rounded-2xl p-6">
-                <p className="text-[11px] font-bold tracking-[.14em] uppercase text-[#ffb400] mb-4">{r.label}</p>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-[10px] text-red-500 font-bold shrink-0">x</span>
-                    <span className="text-[13px] text-[#8a9ba8]">{r.them}</span>
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-5 h-5 rounded-full bg-[#ffb400]/15 flex items-center justify-center text-[10px] text-[#e89e00] font-bold shrink-0">v</span>
-                    <span className="text-[13px] text-[#0a1722] font-semibold">{r.us}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+
+          {/* Feature matrix */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[640px]">
+              <thead>
+                <tr className="border-b-2 border-[#e8ecef]">
+                  <th className="pb-4 pr-6 text-[12px] font-bold uppercase tracking-wider text-[#8a9ba8] w-[32%]"></th>
+                  {[
+                    { name: "Swiftscope",  highlight: true  },
+                    { name: "Fergus",      highlight: false },
+                    { name: "ServiceM8",   highlight: false },
+                    { name: "Tradify",     highlight: false },
+                  ].map(c => (
+                    <th key={c.name} className={`pb-4 px-4 text-center text-[13px] font-extrabold ${c.highlight ? "text-[#0a1722]" : "text-[#8a9ba8]"}`}>
+                      {c.highlight ? (
+                        <span className="inline-flex flex-col items-center gap-1">
+                          {c.name}
+                          <span className="text-[10px] bg-[#ffb400] text-[#0a1722] px-2 py-0.5 rounded-full font-bold tracking-wide uppercase">Us</span>
+                        </span>
+                      ) : c.name}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#f0f2f4]">
+                {[
+                  {
+                    feature: "Pricing",
+                    sub: "Monthly cost",
+                    us:    "$39/month flat",
+                    fergus: "~$40/user/month",
+                    sm8:   "$29-$349/month\n(per job volume)",
+                    tradify:"$48-$62/user/month",
+                    usBest: true,
+                  },
+                  {
+                    feature: "Unlimited seats",
+                    sub: "Add staff for free",
+                    us:    "✓ Always",
+                    fergus: "✗ Pay per user",
+                    sm8:   "✓ Unlimited logins",
+                    tradify:"✗ Pay per user",
+                    usBest: true,
+                  },
+                  {
+                    feature: "Android support",
+                    sub: "Full app on Android",
+                    us:    "✓ iOS + Android",
+                    fergus: "✓ iOS + Android",
+                    sm8:   "✗ iOS only\n(Android lite)",
+                    tradify:"✓ iOS + Android",
+                    usBest: false,
+                  },
+                  {
+                    feature: "Setup time",
+                    sub: "From signup to first quote",
+                    us:    "Same day",
+                    fergus: "Days to weeks",
+                    sm8:   "1-2 days",
+                    tradify:"Half day to 1 day",
+                    usBest: true,
+                  },
+                  {
+                    feature: "Drawing markup",
+                    sub: "Mark up site plans, link costs to quote",
+                    us:    "✓ Built in",
+                    fergus: "✗ Need GroundPlan\n($60-100/mo extra)",
+                    sm8:   "✗ Basic photo\nannotation only",
+                    tradify:"✗ Not available",
+                    usBest: true,
+                  },
+                  {
+                    feature: "Quote from phone on site",
+                    sub: "Full quote builder on mobile",
+                    us:    "✓ Built for it",
+                    fergus: "✓ Yes",
+                    sm8:   "✓ Yes",
+                    tradify:"✓ Yes",
+                    usBest: false,
+                  },
+                  {
+                    feature: "Client accepts online",
+                    sub: "One tap to accept + pay",
+                    us:    "✓ Yes",
+                    fergus: "✓ Yes",
+                    sm8:   "✓ Yes",
+                    tradify:"✓ Yes",
+                    usBest: false,
+                  },
+                  {
+                    feature: "Job costing",
+                    sub: "Actual vs quoted margin",
+                    us:    "✓ Built in",
+                    fergus: "✓ Yes",
+                    sm8:   "✓ Add-on cost",
+                    tradify:"✓ Yes",
+                    usBest: false,
+                  },
+                  {
+                    feature: "Variation orders",
+                    sub: "Signed off before you start",
+                    us:    "✓ Built in",
+                    fergus: "✓ Yes",
+                    sm8:   "✓ Yes",
+                    tradify:"✓ Yes",
+                    usBest: false,
+                  },
+                  {
+                    feature: "Xero / MYOB export",
+                    sub: "Push invoices to accounting",
+                    us:    "✓ CSV export",
+                    fergus: "✓ Live sync",
+                    sm8:   "✓ Live sync",
+                    tradify:"✓ Live sync",
+                    usBest: false,
+                  },
+                  {
+                    feature: "Supplier price books",
+                    sub: "Auto-pull live material prices",
+                    us:    "✗ Manual entry",
+                    fergus: "✓ 100+ suppliers",
+                    sm8:   "✓ Yes",
+                    tradify:"~ CSV import only",
+                    usBest: false,
+                  },
+                  {
+                    feature: "Compliance certs",
+                    sub: "Cert tracking per job",
+                    us:    "✓ Basic",
+                    fergus: "✓ Full SWMS/H&S",
+                    sm8:   "✓ Full forms",
+                    tradify:"✓ Yes",
+                    usBest: false,
+                  },
+                  {
+                    feature: "13 trades supported",
+                    sub: "All trades, one platform",
+                    us:    "✓ All 13",
+                    fergus: "✓ Multi-trade",
+                    sm8:   "✓ Multi-trade",
+                    tradify:"✓ Multi-trade",
+                    usBest: false,
+                  },
+                  {
+                    feature: "3-day free trial",
+                    sub: "No card needed",
+                    us:    "✓ 3 business days",
+                    fergus: "✓ 14 days",
+                    sm8:   "✓ 14 days",
+                    tradify:"✓ 14 days",
+                    usBest: false,
+                  },
+                ].map((row) => (
+                  <tr key={row.feature} className="hover:bg-[#fafbfc]">
+                    <td className="py-3.5 pr-6">
+                      <p className="text-[13.5px] font-semibold text-[#0a1722]">{row.feature}</p>
+                      <p className="text-[11.5px] text-[#8a9ba8]">{row.sub}</p>
+                    </td>
+                    <td className={`py-3.5 px-4 text-center rounded-sm ${row.usBest ? "bg-[#fffbf0]" : ""}`}>
+                      <span className={`text-[12.5px] font-bold leading-snug whitespace-pre-line ${row.usBest ? "text-[#e89e00]" : "text-[#0a1722]"}`}>
+                        {row.us}
+                      </span>
+                    </td>
+                    {[row.fergus, row.sm8, row.tradify].map((val, i) => (
+                      <td key={i} className="py-3.5 px-4 text-center">
+                        <span className="text-[12px] text-[#8a9ba8] leading-snug whitespace-pre-line">{val}</span>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
+
+          <p className="text-[11.5px] text-[#b0bec5] mt-6">
+            Pricing sourced from vendor websites, June 2026. AUD pricing. Supplier price book and Xero live sync on our roadmap.
+          </p>
         </div>
       </div>
 
