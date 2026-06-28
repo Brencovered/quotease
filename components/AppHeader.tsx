@@ -44,40 +44,78 @@ export default function AppHeader() {
 
   return (
     <>
-      {/* ── Desktop top bar (hidden on mobile) ───────────────────── */}
-      <header className="hidden sm:flex bg-[var(--navy)] sticky top-0 z-40 h-14 items-center">
-        <div className="max-w-5xl mx-auto w-full px-6 flex items-center justify-between">
-          <Link href="/electrician/dashboard" className="font-display text-[15px] tracking-widest text-white">
-            SWIFTSCOPE
+      {/* ── Desktop sidebar (hidden on mobile) ───────────────────── */}
+      <aside
+        className="hidden sm:flex flex-col fixed top-0 left-0 bottom-0 z-40 bg-[var(--navy)] border-r border-white/[0.06]"
+        style={{ width: "var(--sidebar-width)" }}
+      >
+        <Link href="/electrician/dashboard" className="font-display text-[15px] tracking-widest text-white px-6 pt-6 pb-5">
+          SWIFTSCOPE
+        </Link>
+
+        <div className="px-4 pb-4">
+          <Link
+            href="/electrician"
+            className="flex items-center justify-center gap-1.5 bg-[var(--amber)] text-[var(--navy)] font-extrabold text-[13px] py-2.5 rounded-xl hover:bg-[var(--amber-deep)] transition-colors"
+          >
+            <Plus size={15} strokeWidth={3} /> New quote
           </Link>
-          <nav className="flex items-center gap-5 text-[13px] font-semibold">
-            {NAV.filter((n) => !n.fab).map((n) => (
+        </div>
+
+        <nav className="flex-1 flex flex-col gap-0.5 px-3 overflow-y-auto">
+          {NAV.filter((n) => !n.fab).map((n) => {
+            const active = isActive(n.href);
+            return (
               <Link
                 key={n.href}
                 href={n.href}
-                className={isActive(n.href) ? "text-[var(--amber)]" : "text-[var(--steel-1)] hover:text-white transition-colors"}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
+                  active ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
+                }`}
               >
+                <n.icon size={17} strokeWidth={active ? 2.2 : 1.8} />
                 {n.label}
               </Link>
-            ))}
-            <Link href="/electrician/clients" className={isActive("/electrician/clients") ? "text-[var(--amber)]" : "text-[var(--steel-1)] hover:text-white transition-colors"}>
-              Clients
-            </Link>
-            <Link href="/electrician/map" className={isActive("/electrician/map") ? "text-[var(--amber)]" : "text-[var(--steel-1)] hover:text-white transition-colors"}>
-              Map
-            </Link>
-            <Link href="/electrician" className="bg-[var(--amber)] text-[var(--navy)] font-extrabold text-[12px] px-4 py-1.5 rounded-lg">
-              + New quote
-            </Link>
-            <Link href="/settings" className={`${isActive("/settings") ? "text-[var(--amber)]" : "text-[var(--steel-1)] hover:text-white"} transition-colors`}>
-              <Settings size={16} />
-            </Link>
-            <button onClick={logOut} className="text-[var(--steel-3)] font-medium text-[12px]">
-              Log out
-            </button>
-          </nav>
+            );
+          })}
+          <Link
+            href="/electrician/clients"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
+              isActive("/electrician/clients") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
+            }`}
+          >
+            <Users size={17} strokeWidth={isActive("/electrician/clients") ? 2.2 : 1.8} />
+            Clients
+          </Link>
+          <Link
+            href="/electrician/map"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
+              isActive("/electrician/map") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
+            }`}
+          >
+            <MapPin size={17} strokeWidth={isActive("/electrician/map") ? 2.2 : 1.8} />
+            Map
+          </Link>
+        </nav>
+
+        <div className="px-3 pb-4 pt-2 border-t border-white/[0.06] flex flex-col gap-0.5">
+          <Link
+            href="/settings"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
+              isActive("/settings") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
+            }`}
+          >
+            <Settings size={17} strokeWidth={isActive("/settings") ? 2.2 : 1.8} />
+            Settings
+          </Link>
+          <button
+            onClick={logOut}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold text-[var(--steel-3)] hover:bg-white/[0.06] hover:text-white transition-colors text-left"
+          >
+            Log out
+          </button>
         </div>
-      </header>
+      </aside>
 
       {/* ── Mobile top bar (logo + more menu) ────────────────────── */}
       <header className="sm:hidden bg-[var(--navy)] sticky top-0 z-40 h-12 flex items-center justify-between px-4 relative">

@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  --sidebar-width: 232px;
   --navy: #0a1722;
   --navy-mid: #0e2030;
   --card: #0e2233;
@@ -159,7 +160,7 @@ input[type="radio"] {
 }
 
 @media (min-width: 640px) {
-  .page-wrap { padding: 24px 32px 40px; }
+  .page-wrap { padding: 24px 32px 40px; margin-left: var(--sidebar-width); }
 }
 
 @media (min-width: 1024px) {
@@ -179,7 +180,15 @@ input[type="radio"] {
 }
 
 @media (min-width: 640px) {
-  .page-wrap-narrow { padding: 24px 32px 40px; }
+  .page-wrap-narrow { padding: 24px 32px 40px; margin-left: var(--sidebar-width); }
+}
+
+/* The few pages with a custom main wrapper instead of page-wrap still need
+   the sidebar offset, just applied as margin rather than baked into mx-auto
+   centering. */
+@media (min-width: 640px) {
+  .map-page-wrap { margin-left: var(--sidebar-width); }
+  .billing-page-wrap { margin-left: var(--sidebar-width); }
 }
 
 @keyframes reveal-up {

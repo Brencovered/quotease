@@ -72,7 +72,7 @@ export default function MapPanel({ jobs }: { jobs: Job[] }) {
   }, []);
 
   return (
-    <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-16">
+    <main className="map-page-wrap max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-16">
       <h1 className="font-display text-2xl text-[var(--ink)] mb-4">Job map</h1>
 
       {jobs.length === 0 ? (
