@@ -24,6 +24,8 @@ export default function GenericQuoteBuilder({
 }: {
   tradeKey: string;
   profile: { hourly_rate: number; materials_margin_pct: number };
+  preClientId?: string;
+  preMarkupMaterials?: number;
 }) {
   const template = GENERIC_TRADE_TEMPLATES[tradeKey] ?? GENERIC_TRADE_TEMPLATES.custom;
   const margin   = profile.materials_margin_pct ?? 20;

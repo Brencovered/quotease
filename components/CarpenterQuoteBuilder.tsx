@@ -34,10 +34,9 @@ const STEPS = [
 export default function CarpenterQuoteBuilder({ profile, materials, preClientId, preMarkupMaterials, }: {
   profile: { hourly_rate: number; materials_margin_pct: number };
   materials: MaterialRow[];
-}
   preClientId?: string;
   preMarkupMaterials?: number;
-) {
+}) {
   const [step,   setStep]   = useState(0);
   const [intake, setIntake] = useState<CarpenterIntake>(DEFAULT_INTAKE);
   const [rate,   setRate]   = useState(profile.hourly_rate ?? 85);
