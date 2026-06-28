@@ -280,30 +280,29 @@ export default function PlanMarkup({
         className="relative w-full rounded-xl overflow-hidden border border-[var(--line)] bg-[#1a1a1a]"
         style={{ height: "60vh", cursor: panning?"grabbing": activeTool?"crosshair":"default" }}
         onWheel={handleWheel}
-        onClick={handleClick}
-        onDoubleClick={handleDblClick}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
       >
         {/* Zoomable/pannable inner container */}
         <div className="absolute inset-0 flex items-center justify-center"
           style={{ transform: `translate(${pan.x}px,${pan.y}px) scale(${zoom})`, transformOrigin:"center center", transition: panning?"none":"transform 0.1s ease" }}>
+
+          {/* Image + SVG wrapped together so they share exact coordinate space */}
+          <div className="relative inline-block"
+            onClick={handleClick}
+            onDoubleClick={handleDblClick}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+          >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img ref={imgRef} src={imageUrl} alt="Plan"
-            className="max-w-full max-h-full block pointer-events-none select-none"
-            style={{ maxHeight: "60vh" }}
+            className="block pointer-events-none select-none"
+            style={{ maxHeight: "58vh", maxWidth: "100%" }}
             draggable={false}
-            onLoad={e => {
-              const i = e.currentTarget;
-              // Force a re-render so toD() picks up real dimensions
-              i.style.display="block";
-            }}
           />
 
-          {/* SVG overlay -- same size as img, sits on top */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+          {/* SVG overlay -- exactly the same size as the img */}
+          <svg className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-visible">
             {/* Calibration */}
             {calibration&&(()=>{const p1=toD(calibration.p1),p2=toD(calibration.p2);return<g><line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#a855f7" strokeWidth="2" strokeDasharray="5 3"/><circle cx={p1.x} cy={p1.y} r="4" fill="#a855f7"/><circle cx={p2.x} cy={p2.y} r="4" fill="#a855f7"/></g>;})()}
             {calDraft&&(()=>{const p=toD(calDraft);return<circle cx={p.x} cy={p.y} r="5" fill="#a855f7" opacity=".8"/>;})()}
@@ -364,8 +363,9 @@ export default function PlanMarkup({
               </div>
             );
           })}
-        </div>
-      </div>
+          </div> {/* end image+SVG wrapper */}
+        </div> {/* end zoom/pan container */}
+      </div> {/* end canvas outer */}
 
       {/* Inspector */}
       {openShape&&(
