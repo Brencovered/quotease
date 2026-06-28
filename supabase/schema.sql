@@ -124,6 +124,7 @@ create table quotes (
   scheduled_date date,
   assigned_to text,
   materials_checklist jsonb not null default '[]',
+  markup_materials integer not null default 0,  -- total cost from drawing markup shapes
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

@@ -33,7 +33,17 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   const scopeLines = humanizeIntake(quote.intake_data);
   const labourCost = (quote.total_cost ?? 0) - (quote.materials_cost ?? 0);
 
-  let jobPlans: Array<{ id: string; file_name: string; annotations: unknown[]; signedUrl?: string }> = [];
+  // Load trade materials for markup panel
+  let tradeMaterials: Array<{ item_key: string; label: string; unit_cost: number }> = [];
+  const { data: matRows } = await supabase
+    .from("material_items")
+    .select("item_key, label, unit_cost")
+    .eq("profile_id", userData.user.id)
+    .eq("trade", quote.trade ?? "electrician")
+    .order("label");
+  if (matRows?.length) tradeMaterials = matRows;
+
+  let jobPlans: Array<{ id: string; file_name: string; shapes: unknown[]; calibration: unknown; signedUrl?: string }> = [];
   if (quote.client_id) {
     const { data: plans } = await supabase
       .from("client_plans")
@@ -51,10 +61,11 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   // Approved variations are extra work the client agreed to, but until now
   // nothing actually added them to what's owed - Record Payment, the PDF,
   // and the Xero invoice all silently used only the original quoted total.
+  const markupMaterials = quote.markup_materials ?? 0;
   const approvedVariationsTotal = variations
     .filter((v: { status: string; total_cost: number }) => v.status === "approved")
     .reduce((sum: number, v: { total_cost: number }) => sum + (v.total_cost ?? 0), 0);
-  const effectiveTotal = (quote.total_cost ?? 0) + approvedVariationsTotal;
+  const effectiveTotal = (quote.total_cost ?? 0) + approvedVariationsTotal + markupMaterials;
 
   return (
     <>
@@ -68,6 +79,10 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           </div>
           <div className="text-right shrink-0">
             <p className="font-display text-2xl text-[var(--ink)]">${effectiveTotal.toLocaleString()}</p>
+            <p className="text-[11px] text-[var(--ink-faint)]">Original: ${(quote.total_cost ?? 0).toLocaleString()}</p>
+            {approvedVariationsTotal > 0 && <p className="text-[11px] text-[var(--green)]">+${approvedVariationsTotal.toLocaleString()} variations</p>}
+            {markupMaterials > 0 && <p className="text-[11px] text-[var(--amber-deep)]">+${markupMaterials.toLocaleString()} from drawings</p>}
+          </div>
             {approvedVariationsTotal > 0 && (
               <p className="text-[11px] text-[var(--amber-deep)] font-semibold">incl. ${approvedVariationsTotal.toLocaleString()} approved variations</p>
             )}
@@ -145,7 +160,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             assignedTo={quote.assigned_to}
           />
 
-          <JobPlansPanel quoteId={quote.id} clientId={quote.client_id} plans={jobPlans as never} />
+          <JobPlansPanel quoteId={quote.id} clientId={quote.client_id} plans={jobPlans as never} materials={tradeMaterials} marginPct={marginPct} />
 
           <JobTimeline
             acceptedAt={quote.accepted_at}

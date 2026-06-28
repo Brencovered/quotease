@@ -87,3 +87,10 @@ create table if not exists follow_up_log (
 );
 alter table follow_up_log enable row level security;
 create policy "Own follow up log" on follow_up_log for all using (auth.uid() = profile_id);
+
+-- Add markup_materials to quotes (drawing markup cost total)
+alter table quotes add column if not exists markup_materials integer not null default 0;
+
+-- Add calibration + shapes (jsonb) to client_plans (replaces legacy annotations)
+alter table client_plans add column if not exists shapes jsonb not null default '[]';
+alter table client_plans add column if not exists calibration jsonb;

@@ -1,31 +1,54 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { X, FileImage } from "lucide-react";
-import PlanMarkup, { type PlanAnnotation } from "./PlanMarkup";
+import { X, FileImage, Check } from "lucide-react";
+import PlanMarkup, { type PlanShape, type CalibrationLine, type MaterialItem } from "./PlanMarkup";
 
-type Plan = { id: string; file_name: string; annotations: PlanAnnotation[]; signedUrl?: string };
+type Plan = {
+  id: string;
+  file_name: string;
+  shapes: PlanShape[];
+  calibration: CalibrationLine | null;
+  signedUrl?: string;
+};
 
-export default function JobPlansPanel({ quoteId, clientId, plans: initial }: { quoteId: string; clientId: string | null; plans: Plan[] }) {
-  const [plans, setPlans] = useState<Plan[]>(initial);
-  const [openPlanId, setOpenPlanId] = useState<string | null>(null);
-  const [addedMessage, setAddedMessage] = useState<string | null>(null);
+export default function JobPlansPanel({
+  quoteId,
+  clientId,
+  plans: initial,
+  materials,
+  marginPct,
+}: {
+  quoteId: string;
+  clientId: string | null;
+  plans: Plan[];
+  materials: MaterialItem[];
+  marginPct: number;
+}) {
+  const [plans,       setPlans]       = useState<Plan[]>(initial);
+  const [openPlanId,  setOpenPlanId]  = useState<string | null>(null);
+  const [savedMsg,    setSavedMsg]    = useState<string | null>(null);
 
-  async function updateAnnotations(planId: string, annotations: PlanAnnotation[]) {
-    setPlans((prev) => prev.map((p) => (p.id === planId ? { ...p, annotations } : p)));
+  const save = useCallback(async (planId: string, shapes: PlanShape[], calibration: CalibrationLine | null) => {
     const supabase = createClient();
-    await supabase.from("client_plans").update({ annotations }).eq("id", planId);
-  }
+    await supabase.from("client_plans")
+      .update({ annotations: shapes, calibration })
+      .eq("id", planId);
+  }, []);
 
-  async function addToChecklist(text: string) {
+  async function handleShapesChange(planId: string, shapes: PlanShape[], cal: CalibrationLine | null) {
+    // Update local state
+    setPlans((prev) => prev.map((p) => p.id === planId ? { ...p, shapes, calibration: cal } : p));
+    // Persist shapes to plan
+    await save(planId, shapes, cal);
+    // Roll up total across all plans and push to quote
+    const allShapes = plans.map((p) => p.id === planId ? { ...p, shapes } : p).flatMap(p => p.shapes);
+    const total = allShapes.reduce((s, sh) => s + Math.round(sh.qty * sh.unit_cost * (1 + sh.margin_pct / 100)), 0);
     const supabase = createClient();
-    const { data: quote } = await supabase.from("quotes").select("materials_checklist").eq("id", quoteId).single();
-    const current = (quote?.materials_checklist as Array<{ label: string; checked: boolean }>) ?? [];
-    const next = [...current, { label: text, checked: false }];
-    await supabase.from("quotes").update({ materials_checklist: next }).eq("id", quoteId);
-    setAddedMessage(`Added "${text}" to materials checklist`);
-    setTimeout(() => setAddedMessage(null), 3000);
+    await supabase.from("quotes").update({ markup_materials: total }).eq("id", quoteId);
+    setSavedMsg(`Drawing costs updated: $${total.toLocaleString()}`);
+    setTimeout(() => setSavedMsg(null), 3000);
   }
 
   if (!clientId) return null;
@@ -34,9 +57,9 @@ export default function JobPlansPanel({ quoteId, clientId, plans: initial }: { q
   return (
     <div className="card">
       <p className="section-tag mb-1">Site plans</p>
-      <p className="font-semibold text-[var(--ink)] mb-1">From this client&apos;s plan library</p>
+      <p className="font-semibold text-[var(--ink)] mb-1">Mark up drawings and build your materials list</p>
       <p className="text-[12.5px] text-[var(--ink-faint)] mb-3">
-        Mark up a plan and add notes straight into this job&apos;s materials checklist - no need to leave the page.
+        Drop pins, trace cable runs or outline areas. Link each shape to a material from your library and the cost feeds into this quote automatically.
       </p>
 
       {plans.length === 0 ? (
@@ -46,36 +69,48 @@ export default function JobPlansPanel({ quoteId, clientId, plans: initial }: { q
       ) : (
         <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
           {plans.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => setOpenPlanId(p.id)}
-              className="aspect-square rounded-lg overflow-hidden border border-[var(--line)] relative bg-[var(--app-bg)]"
-            >
+            <button key={p.id} onClick={() => setOpenPlanId(p.id)}
+              className="aspect-square rounded-lg overflow-hidden border-2 border-[var(--line)] relative bg-[var(--app-bg)] hover:border-[var(--navy)] transition-colors">
               {p.signedUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={p.signedUrl} alt={p.file_name} className="w-full h-full object-cover" />
+              )}
+              {p.shapes.length > 0 && (
+                <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-[var(--amber)] text-[var(--navy)] text-[9px] font-bold flex items-center justify-center">
+                  {p.shapes.length}
+                </div>
               )}
             </button>
           ))}
         </div>
       )}
 
-      {addedMessage && (
-        <p className="text-[12.5px] text-[var(--green)] font-semibold mt-3">{addedMessage}</p>
+      {savedMsg && (
+        <p className="text-[12.5px] text-[var(--green)] font-semibold mt-3 flex items-center gap-1.5">
+          <Check size={13} /> {savedMsg}
+        </p>
       )}
 
+      {/* Markup modal */}
       {openPlan && openPlan.signedUrl && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setOpenPlanId(null)}>
-          <div className="bg-[var(--surface)] rounded-2xl p-4 max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-start justify-center p-3 overflow-y-auto"
+          onClick={() => setOpenPlanId(null)}>
+          <div className="bg-[var(--surface)] rounded-2xl p-4 w-full max-w-2xl my-4"
+            onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
               <p className="font-semibold text-[var(--ink)] truncate">{openPlan.file_name}</p>
-              <button onClick={() => setOpenPlanId(null)} className="text-[var(--ink-faint)] shrink-0"><X size={18} /></button>
+              <button onClick={() => setOpenPlanId(null)} className="text-[var(--ink-faint)] shrink-0 ml-2">
+                <X size={18} />
+              </button>
             </div>
             <PlanMarkup
               imageUrl={openPlan.signedUrl}
-              annotations={openPlan.annotations}
-              onAnnotationsChange={(next) => updateAnnotations(openPlan.id, next)}
-              onAddToChecklist={addToChecklist}
+              shapes={openPlan.shapes}
+              calibration={openPlan.calibration}
+              onShapesChange={(shapes) => handleShapesChange(openPlan.id, shapes, openPlan.calibration)}
+              onCalibrationChange={(cal) => handleShapesChange(openPlan.id, openPlan.shapes, cal)}
+              materials={materials}
+              marginPct={marginPct}
             />
           </div>
         </div>
