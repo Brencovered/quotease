@@ -220,6 +220,110 @@ export default function Home() {
         </div>
       </div>
 
+      {/* PLATFORM CONSOLIDATION */}
+      <div className="bg-[#f8f9fa] border-t border-[#e8ecef]">
+        <div className="max-w-7xl mx-auto px-6 py-24">
+          <div className="mb-12">
+            <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">Platform overload</span>
+            <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.93] mt-3 text-[#0a1722]">
+              How many tools are you<br />paying for right now?
+            </h2>
+            <p className="text-[15px] text-[#5a7080] leading-[1.7] mt-4 max-w-[540px]">
+              The average sole trader runs four separate platforms before they send their first invoice.
+              Each one costs money. None of them talk to each other. Swiftscope consolidates the ones that matter.
+            </p>
+          </div>
+
+          {/* Stack comparison */}
+          <div className="grid lg:grid-cols-2 gap-8 items-start">
+
+            {/* Before */}
+            <div>
+              <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#8a9ba8] mb-4">What most tradies run today</p>
+              <div className="space-y-2">
+                {[
+                  { tool: "Word or Excel",          use: "Writing up quotes",                cost: "Free but slow",       replaced: true },
+                  { tool: "Fergus / ServiceM8",      use: "Job management",                  cost: "$40-60/mo",           replaced: true },
+                  { tool: "GroundPlan / PlanSwift",  use: "Drawing takeoffs and markup",     cost: "$60-100/mo",          replaced: true },
+                  { tool: "Google Calendar",         use: "Scheduling jobs",                 cost: "Free",                replaced: true },
+                  { tool: "Xero / MYOB",             use: "Invoicing and accounting",        cost: "$30-50/mo",           replaced: false },
+                  { tool: "WhatsApp / Email",        use: "Client communication",            cost: "Free",                replaced: false },
+                ].map((r) => (
+                  <div key={r.tool} className={`flex items-center gap-4 px-5 py-3.5 rounded-xl border transition-all ${
+                    r.replaced
+                      ? "bg-red-50/60 border-red-100 opacity-70"
+                      : "bg-white border-[#e8ecef]"
+                  }`}>
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold ${
+                      r.replaced ? "bg-red-100 text-red-400" : "bg-[#e8ecef] text-[#8a9ba8]"
+                    }`}>
+                      {r.replaced ? "×" : "·"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`font-bold text-[14px] ${r.replaced ? "line-through text-[#8a9ba8]" : "text-[#0a1722]"}`}>{r.tool}</p>
+                      <p className="text-[12px] text-[#8a9ba8]">{r.use}</p>
+                    </div>
+                    <span className={`text-[12px] font-semibold shrink-0 ${r.replaced ? "text-red-400" : "text-[#8a9ba8]"}`}>{r.cost}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[12.5px] text-[#8a9ba8] mt-3 font-semibold">
+                Up to $200/month. Four logins. Nothing connected.
+              </p>
+            </div>
+
+            {/* After */}
+            <div>
+              <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-4">What you need with Swiftscope</p>
+              <div className="space-y-2">
+                {[
+                  { tool: "Swiftscope",   use: "Quote, job management, drawings, schedule", highlight: true },
+                  { tool: "Xero / MYOB",  use: "Accounting — export from Swiftscope in one click", highlight: false },
+                ].map((r) => (
+                  <div key={r.tool} className={`flex items-center gap-4 px-5 py-4 rounded-xl border ${
+                    r.highlight
+                      ? "bg-[#0a1722] border-[#0a1722]"
+                      : "bg-white border-[#e8ecef]"
+                  }`}>
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold ${
+                      r.highlight ? "bg-[#ffb400] text-[#0a1722]" : "bg-[#e8ecef] text-[#8a9ba8]"
+                    }`}>
+                      {r.highlight ? "✓" : "·"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`font-bold text-[14px] ${r.highlight ? "text-white" : "text-[#0a1722]"}`}>{r.tool}</p>
+                      <p className={`text-[12px] ${r.highlight ? "text-[#7e94a2]" : "text-[#8a9ba8]"}`}>{r.use}</p>
+                    </div>
+                    {r.highlight && (
+                      <span className="text-[12px] font-bold text-[#ffb400] shrink-0">Free now</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Savings callout */}
+              <div className="mt-6 bg-[#0a1722] rounded-2xl p-6">
+                <div className="grid grid-cols-3 gap-4 mb-5">
+                  {[
+                    { n: "3-4",    label: "Platforms replaced" },
+                    { n: "$150+",  label: "Monthly saving" },
+                    { n: "1",      label: "Login to remember" },
+                  ].map((s) => (
+                    <div key={s.label} className="text-center">
+                      <p className="font-display text-[2rem] leading-tight text-[#ffb400]">{s.n}</p>
+                      <p className="text-[11px] text-[#4a6070] font-semibold mt-1 leading-snug">{s.label}</p>
+                    </div>
+                  ))}
+                </div>
+                <a href="/signup" className="block text-center bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors">
+                  Replace the stack for free
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* VS COMPETITORS */}
       <div className="bg-white border-t border-[#e8ecef]">
         <div className="max-w-7xl mx-auto px-6 py-24">
