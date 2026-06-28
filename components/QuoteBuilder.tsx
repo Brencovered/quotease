@@ -7,7 +7,7 @@ import { AlertTriangle, Paperclip, X, Sparkles, ChevronRight, ChevronLeft, Check
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import StepCustomer from "./StepCustomer";
-import ExtraJobLines, { type ExtraLine, extraLinesTotals } from "./ExtraJobLines";
+import ExtraJobLines, { extraLinesTotals } from "./ExtraJobLines";
 import { resolveClientId } from "@/lib/resolveClientId";
 import MaterialsEditor from "@/components/MaterialsEditor";
 import {
@@ -43,7 +43,7 @@ const STEPS = [
 ];
 
 export default function QuoteBuilder({
-  profile, materials, preClientId, preMarkupMaterials = 0,
+  profile, materials, preClientId, _preMarkupMaterials = 0,
 }: {
   profile: { hourly_rate: number; materials_margin_pct: number; default_deposit_pct?: number | null; default_expiry_days?: number };
   materials: MaterialRow[];

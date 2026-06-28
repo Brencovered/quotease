@@ -7,7 +7,7 @@ import { Paperclip, X, ChevronRight, ChevronLeft, Check } from "lucide-react";
 import { calcRooferQuote, ROOFER_DEFAULT_MATERIALS, type RooferIntake } from "@/lib/calcRoofer";
 import MaterialsEditor from "@/components/MaterialsEditor";
 import StepCustomer from "./StepCustomer";
-import ExtraJobLines, { type ExtraLine, extraLinesTotals } from "./ExtraJobLines";
+import ExtraJobLines, { extraLinesTotals } from "./ExtraJobLines";
 import { resolveClientId } from "@/lib/resolveClientId";
 
 type MaterialRow = { item_key: string; label: string; unit_cost: number };
@@ -69,7 +69,7 @@ export default function RooferQuoteBuilder({ profile, materials, preClientId, pr
     if (!user) { setSaveMessage("Not logged in"); setSaving(false); return; }
     const resolvedClientId = await resolveClientId(supabase, user.id, clientId, clientName, clientEmail, siteAddress);
     for (const m of lib) await supabase.from("material_items").upsert({ profile_id: user.id, trade: "roofer", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost }, { onConflict: "profile_id,item_key" });
-    const { data: quote, error } = await supabase.from("quotes").insert({ profile_id: user.id, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail, site_address: siteAddress, trade: "roofer", job_type: intake.jobType, intake_data: intake, labour_hours: result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0), materials_cost: result.materialsCost + extraLinesTotals(extraLines, rate, margin).materials, total_cost: result.totalCost + extraLinesTotals(extraLines, rate, margin).total, payment_terms: paymentTerms, status: sendEmail ? "sent" : "draft", sent_at: sendEmail ? new Date().toISOString() : null }).select().single();
+    const { data: quote, error } = await supabase.from("quotes").insert({ profile_id: user.id, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail, site_address: siteAddress, trade: "roofer", job_type: intake.jobType, intake_data: intake, labour_hours: result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0), materials_cost: result.materialsCost + extraLinesTotals(extraLines, rate, margin).materials, total_cost: result.totalCost + extraLinesTotals(extraLines, rate, margin).total, payment_terms: paymentTerms, status: sendEmail ? "sent" : "draft", sent_at: sendEmail ? new Date().toISOString() : null, markup_materials: preMarkupMaterials ?? 0 }).select().single();
     if (error) { setSaveMessage(error.message); setSaving(false); return; }
     setSavedQuoteId(quote.id);
     setSavedQuoteId(quote.id);

@@ -94,7 +94,7 @@ export default function GenericQuoteBuilder({
       job_type:      jobType,
       intake_data:   intakeData,
       labour_hours:  result.labourHours,
-      materials_cost: result.materialsCost + extraLinesTotals(extraLines, rate, margin).materials,
+      materials_cost: result.materialsCost + extraLinesTotals(extraLines, profile.hourly_rate ?? 85, profile.materials_margin_pct ?? 20).materials,
       total_cost:    result.totalCost,
       payment_terms: paymentTerms,
       markup_materials: preMarkupMaterials ?? 0,
@@ -286,8 +286,8 @@ export default function GenericQuoteBuilder({
           <ExtraJobLines
             lines={extraLines}
             onChange={setExtraLines}
-            hourlyRate={rate}
-            marginPct={margin}
+            hourlyRate={profile.hourly_rate ?? 85}
+            marginPct={profile.materials_margin_pct ?? 20}
           />
                     <div className="card">
             <p className="section-tag mb-3">Payment terms</p>
