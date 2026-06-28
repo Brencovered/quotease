@@ -160,7 +160,7 @@ input[type="radio"] {
 }
 
 @media (min-width: 640px) {
-  .page-wrap { padding: 24px 32px 40px; margin-left: var(--sidebar-width); }
+  .page-wrap { padding: 24px 32px 40px; margin-left: var(--sidebar-width); width: calc(100% - var(--sidebar-width)); }
 }
 
 @media (min-width: 1024px) {
@@ -180,7 +180,7 @@ input[type="radio"] {
 }
 
 @media (min-width: 640px) {
-  .page-wrap-narrow { padding: 24px 32px 40px; margin-left: var(--sidebar-width); }
+  .page-wrap-narrow { padding: 24px 32px 40px; margin-left: var(--sidebar-width); width: calc(100% - var(--sidebar-width)); }
 }
 
 /* The few pages with a custom main wrapper instead of page-wrap still need
