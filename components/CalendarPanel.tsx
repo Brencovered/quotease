@@ -67,7 +67,7 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
   }
 
   const [dragJob, setDragJob] = useState<{ jobId: string; fromDate: string } | null>(null);
-  const [, setRescheduling] = useState(false);
+  const [rescheduling, setRescheduling] = useState(false);
 
   // Dragging any day within a multi-day job's block and dropping it on a
   // new day shifts the whole span by that many days - not just the start,
