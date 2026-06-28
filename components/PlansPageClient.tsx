@@ -23,7 +23,7 @@ export default function PlansPageClient({
   const [plans,        setPlans]        = useState<Plan[]>(initial);
   const [clients,      setClients]      = useState<Client[]>(initialClients);
   const [openPlanId,   setOpenPlanId]   = useState<string | null>(null);
-  const [uploading,    setUploading]    = useState(false);
+
   const [linking,      setLinking]      = useState(false);
   const [linkedMsg,    setLinkedMsg]    = useState<string | null>(null);
   const [totalCost,    setTotalCost]    = useState<Record<string, number>>({});
@@ -209,6 +209,7 @@ export default function PlansPageClient({
                 <button key={p.id} onClick={() => setOpenPlanId(p.id)}
                   className="aspect-square rounded-xl overflow-hidden border-2 border-[var(--line)] relative bg-[var(--app-bg)] hover:border-[var(--navy)] transition-colors group">
                   {p.signedUrl
+                    // eslint-disable-next-line @next/next/no-img-element
                     ? <img src={p.signedUrl} alt={p.file_name} className="w-full h-full object-cover" />
                     : <div className="w-full h-full flex items-center justify-center text-[var(--ink-faint)]"><FileText size={20} /></div>
                   }
