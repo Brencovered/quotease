@@ -160,14 +160,18 @@ export default function ExportPanel({
     if (!rows.length) return;
     setExporting(true);
 
-    const csv = format === "xero" ? buildXeroCSV(rows) : buildMYOBCSV(rows);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const csv  = format === "xero" ? buildXeroCSV(rows) : buildMYOBCSV(rows);
+    // BOM ensures Excel opens with correct encoding
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement("a");
     a.href     = url;
-    a.download = `swiftscope-${format}-export-${new Date().toISOString().slice(0,10)}.csv`;
+    a.download = `swiftscope-${format}-export-${new Date().toISOString().slice(0, 10)}.csv`;
+    // Must append to DOM for Firefox compatibility
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
 
     // Mark as exported in DB
     const supabase = createClient();
