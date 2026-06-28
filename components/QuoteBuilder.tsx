@@ -349,6 +349,7 @@ export default function QuoteBuilder({
           customTerms={customTerms} setCustomTerms={setCustomTerms} customTermsTotal={customTermsTotal}
           clientName={clientName} clientEmail={clientEmail} siteAddress={siteAddress}
           saving={saving} saveMessage={saveMessage} savedQuoteId={savedQuoteId} onSave={saveAndSend}
+          extraLines={extraLines} setExtraLines={setExtraLines} rate={rate} margin={margin}
         />
       )}
 
@@ -729,7 +730,8 @@ function StepSite({ intake, set }: {
 
 function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTerms, setCustomTerms, customTermsTotal,
   clientName, clientEmail, siteAddress,
-  saving, saveMessage, savedQuoteId, onSave }: {
+  saving, saveMessage, savedQuoteId, onSave,
+  extraLines, setExtraLines, rate, margin }: {
   intake: ElectricianIntake;
   result: { labourHours: number; materialsCost: number; totalCost: number };
   paymentTerms: PaymentTerm[];
@@ -739,6 +741,9 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
   clientName: string; clientEmail: string; siteAddress: string;
   saving: boolean; saveMessage: string | null; savedQuoteId: string | null;
   onSave: (send: boolean) => void;
+  extraLines: {id:string;label:string;hours:number;materialsCost:number;note:string}[];
+  setExtraLines: React.Dispatch<React.SetStateAction<{id:string;label:string;hours:number;materialsCost:number;note:string}[]>>;
+  rate: number; margin: number;
 }) {
   return (
     <div className="space-y-4">
