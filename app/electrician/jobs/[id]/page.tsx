@@ -61,7 +61,10 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   // Approved variations are extra work the client agreed to, but until now
   // nothing actually added them to what's owed - Record Payment, the PDF,
   // and the Xero invoice all silently used only the original quoted total.
-  const markupMaterials = quote.markup_materials ?? 0;
+  // Materials added via plan markup carry a real cost and add to what's
+  // owed, same as approved variations - markup_materials is an array of
+  // costed items, not a bare number.
+  const markupMaterials = ((quote.markup_materials as Array<{ totalCost: number }>) ?? []).reduce((sum, m) => sum + (m.totalCost ?? 0), 0);
   const approvedVariationsTotal = variations
     .filter((v: { status: string; total_cost: number }) => v.status === "approved")
     .reduce((sum: number, v: { total_cost: number }) => sum + (v.total_cost ?? 0), 0);

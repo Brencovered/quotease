@@ -31,6 +31,11 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
   const scopeLines = humanizeIntake(quote.intake_data);
   const labourCost = (quote.total_cost ?? 0) - (quote.materials_cost ?? 0);
 
+  // Materials added via plan markup carry a real cost and add to what's
+  // owed - same pattern used on the job page, just not yet applied here.
+  const markupMaterialsTotal = ((quote.markup_materials as Array<{ totalCost: number }>) ?? []).reduce((sum, m) => sum + (m.totalCost ?? 0), 0);
+  const effectiveTotal = (quote.total_cost ?? 0) + markupMaterialsTotal;
+
   // Load trade materials for markup panel
   let tradeMaterials: Array<{ item_key: string; label: string; unit_cost: number }> = [];
   const { data: matRows } = await supabase
@@ -74,7 +79,8 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
             {quote.site_address && <p className="text-[13px] text-[var(--ink-faint)] mt-0.5">{quote.site_address}</p>}
           </div>
           <div className="text-right shrink-0">
-            <p className="font-display text-2xl text-[var(--ink)]">${(quote.total_cost ?? 0).toLocaleString()}</p>
+            <p className="font-display text-2xl text-[var(--ink)]">${effectiveTotal.toLocaleString()}</p>
+            {markupMaterialsTotal > 0 && <p className="text-[11px] text-[var(--green)]">+${markupMaterialsTotal.toLocaleString()} from plans</p>}
             <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold inline-block mt-1 ${statusColor[quote.status] ?? ""}`}>{quote.status}</span>
             <a href={`/api/quotes/${quote.id}/pdf`} target="_blank" rel="noopener noreferrer" className="block text-[12.5px] font-semibold text-[var(--navy)] underline mt-2">
               Download PDF
@@ -104,8 +110,13 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
             </div>
             <div className="flex justify-between text-[14.5px] pt-1 border-t border-[var(--line)]">
               <span className="font-bold text-[var(--ink)]">Total</span>
-              <span className="font-display text-lg text-[var(--ink)]">${(quote.total_cost ?? 0).toLocaleString()}</span>
+              <span className="font-display text-lg text-[var(--ink)]">${effectiveTotal.toLocaleString()}</span>
             </div>
+            {markupMaterialsTotal > 0 && (
+              <p className="text-[11.5px] text-[var(--ink-faint)] text-right">
+                ${(quote.total_cost ?? 0).toLocaleString()} quoted + ${markupMaterialsTotal.toLocaleString()} from plans
+              </p>
+            )}
           </div>
         </div>
 
@@ -113,7 +124,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
           <JobActionsBar
             quoteId={quote.id}
             status={quote.status}
-            totalCost={quote.total_cost ?? 0}
+            totalCost={effectiveTotal}
             amountPaid={quote.amount_paid ?? 0}
             hasClientEmail={!!quote.client_email}
             completedAt={quote.completed_at}

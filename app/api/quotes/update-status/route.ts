@@ -38,13 +38,14 @@ export async function POST(request: Request) {
   // variations, which previously weren't counted here at all.
   if (typeof paymentAmount === "number" && paymentAmount > 0) {
     const [{ data: existing }, { data: approvedVariations }] = await Promise.all([
-      supabase.from("quotes").select("amount_paid, total_cost").eq("id", quoteId).eq("profile_id", userData.user.id).single(),
+      supabase.from("quotes").select("amount_paid, total_cost, markup_materials").eq("id", quoteId).eq("profile_id", userData.user.id).single(),
       supabase.from("variations").select("total_cost").eq("quote_id", quoteId).eq("status", "approved"),
     ]);
 
     if (existing) {
       const variationsTotal = (approvedVariations ?? []).reduce((sum, v) => sum + (v.total_cost ?? 0), 0);
-      const effectiveTotal = (existing.total_cost ?? 0) + variationsTotal;
+      const markupMaterialsTotal = ((existing.markup_materials as Array<{ totalCost: number }>) ?? []).reduce((sum, m) => sum + (m.totalCost ?? 0), 0);
+      const effectiveTotal = (existing.total_cost ?? 0) + variationsTotal + markupMaterialsTotal;
       const newAmountPaid = (existing.amount_paid ?? 0) + paymentAmount;
       update.amount_paid = newAmountPaid;
       if (newAmountPaid >= effectiveTotal) {
