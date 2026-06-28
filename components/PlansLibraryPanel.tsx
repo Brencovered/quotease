@@ -3,13 +3,21 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Upload, X } from "lucide-react";
-import PlanMarkup, { type PlanAnnotation } from "./PlanMarkup";
+import PlanMarkup, { type PlanShape, type CalibrationLine } from "./PlanMarkup";
 
-type Plan = { id: string; file_name: string; storage_path: string; label: string | null; annotations: PlanAnnotation[]; signedUrl?: string };
+type Plan = {
+  id: string;
+  file_name: string;
+  storage_path: string;
+  label: string | null;
+  shapes: PlanShape[];
+  calibration: CalibrationLine | null;
+  signedUrl?: string;
+};
 
 export default function PlansLibraryPanel({ clientId, plans: initial }: { clientId: string; plans: Plan[] }) {
-  const [plans, setPlans] = useState<Plan[]>(initial);
-  const [uploading, setUploading] = useState(false);
+  const [plans,      setPlans]      = useState<Plan[]>(initial);
+  const [uploading,  setUploading]  = useState(false);
   const [openPlanId, setOpenPlanId] = useState<string | null>(null);
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -33,16 +41,16 @@ export default function PlansLibraryPanel({ clientId, plans: initial }: { client
 
     if (plan) {
       const { data: signed } = await supabase.storage.from("job-files").createSignedUrl(path, 3600 * 24 * 7);
-      setPlans((prev) => [{ ...plan, signedUrl: signed?.signedUrl }, ...prev]);
+      setPlans((prev) => [{ ...plan, shapes: [], calibration: null, signedUrl: signed?.signedUrl }, ...prev]);
     }
     setUploading(false);
     e.target.value = "";
   }
 
-  async function updateAnnotations(planId: string, annotations: PlanAnnotation[]) {
-    setPlans((prev) => prev.map((p) => (p.id === planId ? { ...p, annotations } : p)));
+  async function handleShapesChange(planId: string, shapes: PlanShape[], calibration: CalibrationLine | null) {
+    setPlans((prev) => prev.map((p) => p.id === planId ? { ...p, shapes, calibration } : p));
     const supabase = createClient();
-    await supabase.from("client_plans").update({ annotations }).eq("id", planId);
+    await supabase.from("client_plans").update({ shapes, calibration }).eq("id", planId);
   }
 
   const openPlan = plans.find((p) => p.id === openPlanId);
@@ -65,18 +73,15 @@ export default function PlansLibraryPanel({ clientId, plans: initial }: { client
       ) : (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {plans.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => setOpenPlanId(p.id)}
-              className="aspect-square rounded-lg overflow-hidden border border-[var(--line)] relative bg-[var(--app-bg)]"
-            >
+            <button key={p.id} onClick={() => setOpenPlanId(p.id)}
+              className="aspect-square rounded-lg overflow-hidden border border-[var(--line)] relative bg-[var(--app-bg)] hover:border-[var(--navy)] transition-colors">
               {p.signedUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={p.signedUrl} alt={p.file_name} className="w-full h-full object-cover" />
               )}
-              {p.annotations.length > 0 && (
+              {p.shapes.length > 0 && (
                 <span className="absolute top-1 right-1 bg-[var(--amber)] text-[var(--navy)] text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                  {p.annotations.length}
+                  {p.shapes.length}
                 </span>
               )}
             </button>
@@ -85,16 +90,20 @@ export default function PlansLibraryPanel({ clientId, plans: initial }: { client
       )}
 
       {openPlan && openPlan.signedUrl && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setOpenPlanId(null)}>
-          <div className="bg-[var(--surface)] rounded-2xl p-4 max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-start justify-center p-3 overflow-y-auto" onClick={() => setOpenPlanId(null)}>
+          <div className="bg-[var(--surface)] rounded-2xl p-4 w-full max-w-2xl my-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
               <p className="font-semibold text-[var(--ink)] truncate">{openPlan.file_name}</p>
-              <button onClick={() => setOpenPlanId(null)} className="text-[var(--ink-faint)] shrink-0"><X size={18} /></button>
+              <button onClick={() => setOpenPlanId(null)} className="text-[var(--ink-faint)] shrink-0 ml-2"><X size={18} /></button>
             </div>
             <PlanMarkup
               imageUrl={openPlan.signedUrl}
-              annotations={openPlan.annotations}
-              onAnnotationsChange={(next) => updateAnnotations(openPlan.id, next)}
+              shapes={openPlan.shapes}
+              calibration={openPlan.calibration}
+              onShapesChange={(shapes) => handleShapesChange(openPlan.id, shapes, openPlan.calibration)}
+              onCalibrationChange={(cal) => handleShapesChange(openPlan.id, openPlan.shapes, cal)}
+              materials={[]}
+              marginPct={20}
             />
           </div>
         </div>
