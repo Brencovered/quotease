@@ -21,6 +21,8 @@ function uid() { return `item_${nextId++}`; }
 export default function GenericQuoteBuilder({
   tradeKey,
   profile,
+  preClientId,
+  preMarkupMaterials,
 }: {
   tradeKey: string;
   profile: { hourly_rate: number; materials_margin_pct: number };

@@ -42,7 +42,7 @@ const STEPS = [
 ];
 
 export default function QuoteBuilder({
-  profile, materials, preClientId, preMarkupMaterials,
+  profile, materials, preClientId, preMarkupMaterials = 0,
 }: {
   profile: { hourly_rate: number; materials_margin_pct: number; default_deposit_pct?: number | null; default_expiry_days?: number };
   materials: MaterialRow[];

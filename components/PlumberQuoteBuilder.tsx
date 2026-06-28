@@ -34,7 +34,7 @@ const STEPS = [
   { id: "send",      label: "Send"      },
 ];
 
-export default function PlumberQuoteBuilder({ profile, materials, preClientId, preMarkupMaterials, }: {
+export default function PlumberQuoteBuilder({ profile, materials, preClientId, preMarkupMaterials = 0, }: {
   profile: { hourly_rate: number; materials_margin_pct: number };
   materials: MaterialRow[];
   preClientId?: string;
