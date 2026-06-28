@@ -6,7 +6,7 @@ import {
   Briefcase, DollarSign, TrendingUp, Target,
   Bell, AlertTriangle, ChevronRight,
   CheckCircle2, Send, FileText,
-  BadgeCheck, XCircle, Wallet, CalendarDays, Users,
+  BadgeCheck, XCircle, Wallet, CalendarDays, Users, Download,
 } from "lucide-react";
 
 const STATUS_META: Record<string, { label: string; bg: string; text: string; icon: typeof FileText }> = {
@@ -187,6 +187,9 @@ export default function DashboardPanel({ stats, profit }: { stats: DashboardStat
               </Link>
               <Link href="/electrician/clients" className="flex items-center gap-3 bg-[var(--app-bg)] rounded-xl px-4 py-3 font-semibold text-[14px] text-[var(--ink)]">
                 <Users size={16} className="text-[var(--ink-faint)]" /> Clients
+              </Link>
+              <Link href="/electrician/export" className="flex items-center gap-3 bg-[var(--app-bg)] rounded-xl px-4 py-3 font-semibold text-[14px] text-[var(--ink)] border border-[var(--line)]">
+                <Download size={16} className="text-[var(--ink-faint)]" /> Export to Xero / MYOB
               </Link>
             </div>
           </div>

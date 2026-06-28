@@ -17,6 +17,7 @@ import {
   X,
   FolderOpen,
   TrendingUp,
+  Download,
 } from "lucide-react";
 
 const NAV = [
@@ -99,6 +100,15 @@ export default function AppHeader() {
             Margins
           </Link>
           <Link
+            href="/electrician/export"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
+              isActive("/electrician/export") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
+            }`}
+          >
+            <Download size={17} strokeWidth={isActive("/electrician/export") ? 2.2 : 1.8} />
+            Export
+          </Link>
+          <Link
             href="/electrician/clients"
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
               isActive("/electrician/clients") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
@@ -158,6 +168,9 @@ export default function AppHeader() {
               </Link>
               <Link href="/electrician/margins" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <TrendingUp size={15} className="text-[var(--ink-faint)]" /> Margins
+              </Link>
+              <Link href="/electrician/export" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
+                <Download size={15} className="text-[var(--ink-faint)]" /> Export to Xero / MYOB
               </Link>
               <Link href="/electrician/map" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <MapPin size={15} className="text-[var(--ink-faint)]" /> Map
