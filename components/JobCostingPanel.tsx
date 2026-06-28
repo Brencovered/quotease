@@ -9,6 +9,7 @@ type Actuals = {
   id: string;
   actual_hours: number;
   actual_materials_cost: number;
+  unexpected_costs: number;
   notes: string | null;
   recorded_at: string;
 };
@@ -24,14 +25,15 @@ export default function JobCostingPanel({ quoteId, quotedHours, quotedMaterials,
 }) {
   const [actuals, setActuals] = useState(initial);
   const [showForm, setShowForm] = useState(actuals.length === 0);
-  const [form, setForm] = useState({ hours: "", materials: "", notes: "" });
+  const [form, setForm] = useState({ hours: "", materials: "", unexpected: "", notes: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Sum all actuals entries
   const totalActualHours = actuals.reduce((s, a) => s + a.actual_hours, 0);
   const totalActualMaterials = actuals.reduce((s, a) => s + a.actual_materials_cost, 0);
-  const totalActualCost = totalActualHours * hourlyRate + totalActualMaterials;
+  const totalUnexpected = actuals.reduce((s, a) => s + (a.unexpected_costs ?? 0), 0);
+  const totalActualCost = totalActualHours * hourlyRate + totalActualMaterials + totalUnexpected;
   const margin = quotedTotal - totalActualCost;
   const marginPct = quotedTotal > 0 ? Math.round((margin / quotedTotal) * 100) : 0;
 
@@ -40,7 +42,7 @@ export default function JobCostingPanel({ quoteId, quotedHours, quotedMaterials,
   const insight = actuals.length > 0 ? generateCostingInsight(hoursVar, quotedHours, intakeData) : null;
 
   async function saveActuals() {
-    if (!form.hours && !form.materials) { setError("Enter at least hours or materials"); return; }
+    if (!form.hours && !form.materials && !form.unexpected) { setError("Enter at least hours, materials, or an unexpected cost"); return; }
     setSaving(true);
     setError(null);
     const supabase = createClient();
@@ -48,12 +50,12 @@ export default function JobCostingPanel({ quoteId, quotedHours, quotedMaterials,
     if (!userData.user) { setError("Not signed in"); setSaving(false); return; }
     const { data, error: err } = await supabase
       .from("job_actuals")
-      .insert({ quote_id: quoteId, profile_id: userData.user.id, actual_hours: Number(form.hours) || 0, actual_materials_cost: Number(form.materials) || 0, notes: form.notes || null })
+      .insert({ quote_id: quoteId, profile_id: userData.user.id, actual_hours: Number(form.hours) || 0, actual_materials_cost: Number(form.materials) || 0, unexpected_costs: Number(form.unexpected) || 0, notes: form.notes || null })
       .select().single();
     if (err) { setError(err.message); setSaving(false); return; }
     setActuals((prev) => [...prev, data]);
     setShowForm(false);
-    setForm({ hours: "", materials: "", notes: "" });
+    setForm({ hours: "", materials: "", unexpected: "", notes: "" });
     setSaving(false);
   }
 
@@ -76,7 +78,7 @@ export default function JobCostingPanel({ quoteId, quotedHours, quotedMaterials,
       {actuals.length > 0 && (
         <>
           {/* Summary */}
-          <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
             <div className="bg-[var(--app-bg)] rounded-lg p-3">
               <p className="text-[11px] text-[var(--ink-faint)] font-semibold mb-1">Labour hours</p>
               <p className="font-display text-xl text-[var(--ink)]">{totalActualHours.toFixed(1)}h</p>
@@ -88,6 +90,11 @@ export default function JobCostingPanel({ quoteId, quotedHours, quotedMaterials,
               <p className="font-display text-xl text-[var(--ink)]">${totalActualMaterials.toLocaleString()}</p>
               <p className="text-[11px] mt-0.5 text-[var(--ink-faint)]">quoted ${quotedMaterials.toLocaleString()}</p>
               <div className="text-[12px] mt-1"><Var value={matVar} unit="$" /></div>
+            </div>
+            <div className={`rounded-lg p-3 ${totalUnexpected > 0 ? "bg-amber-50" : "bg-[var(--app-bg)]"}`}>
+              <p className="text-[11px] text-[var(--ink-faint)] font-semibold mb-1">Unexpected</p>
+              <p className={`font-display text-xl ${totalUnexpected > 0 ? "text-amber-700" : "text-[var(--ink)]"}`}>${totalUnexpected.toLocaleString()}</p>
+              <p className="text-[11px] mt-0.5 text-[var(--ink-faint)]">not quoted for</p>
             </div>
             <div className={`rounded-lg p-3 ${margin >= 0 ? "bg-green-50" : "bg-red-50"}`}>
               <p className="text-[11px] text-[var(--ink-faint)] font-semibold mb-1">Margin</p>
@@ -111,6 +118,7 @@ export default function JobCostingPanel({ quoteId, quotedHours, quotedMaterials,
                   <span className="text-[var(--ink-faint)]">{new Date(a.recorded_at).toLocaleDateString("en-AU")}</span>
                   <span>{a.actual_hours}h</span>
                   <span>${a.actual_materials_cost.toLocaleString()}</span>
+                  {a.unexpected_costs > 0 && <span className="text-amber-700 font-semibold">+${a.unexpected_costs.toLocaleString()} unexpected</span>}
                   {a.notes && <span className="text-[var(--ink-faint)] truncate">{a.notes}</span>}
                 </div>
               ))}
@@ -129,6 +137,9 @@ export default function JobCostingPanel({ quoteId, quotedHours, quotedMaterials,
               <input type="number" min={0} value={form.materials} onChange={(e) => setForm(f => ({ ...f, materials: e.target.value }))} className="app-field" placeholder="0" />
             </label>
           </div>
+          <label className="block"><span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1">Unexpected costs ($) <span className="text-[var(--ink-faint)] font-normal">- broken tool, extra trip, anything not in the quote</span></span>
+            <input type="number" min={0} value={form.unexpected} onChange={(e) => setForm(f => ({ ...f, unexpected: e.target.value }))} className="app-field" placeholder="0" />
+          </label>
           <label className="block"><span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1">Notes</span>
             <input value={form.notes} onChange={(e) => setForm(f => ({ ...f, notes: e.target.value }))} className="app-field" placeholder="e.g. extra hour finding the fault, cable cost more than quoted" />
           </label>

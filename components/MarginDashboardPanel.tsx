@@ -6,23 +6,23 @@ import { TrendingDown, TrendingUp, ArrowUpDown } from "lucide-react";
 
 type Row = {
   id: string; client_name: string | null; trade: string | null;
-  total_cost: number; quotedHours: number; actualHours: number; actualMaterials: number;
+  total_cost: number; quotedHours: number; actualHours: number; actualMaterials: number; unexpectedCosts: number;
 };
 
 export default function MarginDashboardPanel({ rows, hourlyRate }: { rows: Row[]; hourlyRate: number }) {
   const [sortAsc, setSortAsc] = useState(true);
 
   const withMargin = rows
-    .filter((r) => r.actualHours > 0 || r.actualMaterials > 0)
+    .filter((r) => r.actualHours > 0 || r.actualMaterials > 0 || r.unexpectedCosts > 0)
     .map((r) => {
-      const actualCost = r.actualHours * hourlyRate + r.actualMaterials;
+      const actualCost = r.actualHours * hourlyRate + r.actualMaterials + r.unexpectedCosts;
       const margin = r.total_cost - actualCost;
       const marginPct = r.total_cost > 0 ? Math.round((margin / r.total_cost) * 100) : 0;
       return { ...r, actualCost, margin, marginPct };
     })
     .sort((a, b) => sortAsc ? a.marginPct - b.marginPct : b.marginPct - a.marginPct);
 
-  const notLogged = rows.filter((r) => r.actualHours === 0 && r.actualMaterials === 0);
+  const notLogged = rows.filter((r) => r.actualHours === 0 && r.actualMaterials === 0 && r.unexpectedCosts === 0);
   const avgMargin = withMargin.length > 0 ? Math.round(withMargin.reduce((s, r) => s + r.marginPct, 0) / withMargin.length) : null;
 
   return (
@@ -58,7 +58,10 @@ export default function MarginDashboardPanel({ rows, hourlyRate }: { rows: Row[]
                 className="flex items-center justify-between gap-3 px-4 py-3 border-b border-[var(--line-subtle)] last:border-0 hover:bg-[var(--app-bg)] transition-colors">
                 <div className="min-w-0">
                   <p className="text-[14px] font-semibold text-[var(--ink)] truncate">{r.client_name || "Unnamed client"}</p>
-                  <p className="text-[12px] text-[var(--ink-faint)] capitalize">{r.trade} - quoted ${r.total_cost.toLocaleString()}, actual ${Math.round(r.actualCost).toLocaleString()}</p>
+                  <p className="text-[12px] text-[var(--ink-faint)] capitalize">
+                    {r.trade} - quoted ${r.total_cost.toLocaleString()}, actual ${Math.round(r.actualCost).toLocaleString()}
+                    {r.unexpectedCosts > 0 && <span className="text-amber-700 font-semibold"> (incl. ${r.unexpectedCosts.toLocaleString()} unexpected)</span>}
+                  </p>
                 </div>
                 <div className={`flex items-center gap-1.5 shrink-0 font-display text-[18px] ${r.marginPct >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
                   {r.marginPct >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}

@@ -2,6 +2,7 @@ export interface JobActualForStats {
   quote_id: string;
   actual_hours: number | null;
   actual_materials_cost: number | null;
+  unexpected_costs?: number | null;
 }
 
 export interface ProfitStats {
@@ -21,11 +22,12 @@ export function computeProfitStats(
   actuals: JobActualForStats[],
   hourlyRate: number
 ): ProfitStats {
-  const actualsByQuote = new Map<string, { hours: number; materials: number }>();
+  const actualsByQuote = new Map<string, { hours: number; materials: number; unexpected: number }>();
   for (const a of actuals) {
-    const existing = actualsByQuote.get(a.quote_id) ?? { hours: 0, materials: 0 };
+    const existing = actualsByQuote.get(a.quote_id) ?? { hours: 0, materials: 0, unexpected: 0 };
     existing.hours += a.actual_hours ?? 0;
     existing.materials += a.actual_materials_cost ?? 0;
+    existing.unexpected += a.unexpected_costs ?? 0;
     actualsByQuote.set(a.quote_id, existing);
   }
 
@@ -34,7 +36,7 @@ export function computeProfitStats(
     const actual = actualsByQuote.get(q.id);
     if (!actual) continue;
     const quotedTotal = q.total_cost ?? 0;
-    const actualCost = actual.hours * hourlyRate + actual.materials;
+    const actualCost = actual.hours * hourlyRate + actual.materials + actual.unexpected;
     const profit = quotedTotal - actualCost;
     const marginPct = quotedTotal > 0 ? Math.round((profit / quotedTotal) * 1000) / 10 : 0;
     jobs.push({ quoteId: q.id, quotedTotal, actualCost, profit, marginPct });

@@ -5,7 +5,7 @@ import MarginDashboardPanel from "@/components/MarginDashboardPanel";
 export default async function MarginsPage() {
   let rows: Array<{
     id: string; client_name: string | null; trade: string | null;
-    total_cost: number; quotedHours: number; actualHours: number; actualMaterials: number;
+    total_cost: number; quotedHours: number; actualHours: number; actualMaterials: number; unexpectedCosts: number;
   }> = [];
   let hourlyRate = 95;
 
@@ -25,7 +25,7 @@ export default async function MarginsPage() {
       if (jobs && jobs.length > 0) {
         const { data: actuals } = await supabase
           .from("job_actuals")
-          .select("quote_id, actual_hours, actual_materials_cost")
+          .select("quote_id, actual_hours, actual_materials_cost, unexpected_costs")
           .in("quote_id", jobs.map((j) => j.id));
 
         rows = jobs.map((j) => {
@@ -38,6 +38,7 @@ export default async function MarginsPage() {
             quotedHours: j.labour_hours ?? 0,
             actualHours: jobActuals.reduce((s, a) => s + (a.actual_hours ?? 0), 0),
             actualMaterials: jobActuals.reduce((s, a) => s + (a.actual_materials_cost ?? 0), 0),
+            unexpectedCosts: jobActuals.reduce((s, a) => s + (a.unexpected_costs ?? 0), 0),
           };
         });
       }

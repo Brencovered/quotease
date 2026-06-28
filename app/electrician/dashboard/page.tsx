@@ -16,7 +16,7 @@ export default async function DashboardPage() {
           .from("quotes")
           .select("id, status, total_cost, amount_paid, created_at, follow_up_at, quote_expires_at, sent_at, labour_hours, materials_cost")
           .eq("profile_id", userData.user.id),
-        supabase.from("job_actuals").select("quote_id, actual_hours, actual_materials_cost").eq("profile_id", userData.user.id),
+        supabase.from("job_actuals").select("quote_id, actual_hours, actual_materials_cost, unexpected_costs").eq("profile_id", userData.user.id),
         supabase.from("profiles").select("hourly_rate").eq("id", userData.user.id).single(),
       ]);
       if (quotes) {
