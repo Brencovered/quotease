@@ -75,7 +75,7 @@ export default function CarpenterQuoteBuilder({ profile, materials, preClientId,
     const resolvedClientId = await resolveClientId(supabase, user.id, clientId, clientName, clientEmail, siteAddress);
     for (const m of lib) await supabase.from("material_items").upsert({ profile_id: user.id, trade: "carpenter", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost }, { onConflict: "profile_id,item_key" });
     const { data: quote, error } = await supabase.from("quotes").insert({ profile_id: user.id, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail, site_address: siteAddress, trade: "carpenter", job_type: intake.jobType, intake_data: intake, labour_hours: result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0), materials_cost: result.materialsCost + extraLinesTotals(extraLines, rate, margin).materials, total_cost: result.totalCost + extraLinesTotals(extraLines, rate, margin).total, payment_terms: paymentTerms,
-      markup_materials: preMarkupMaterials, status: sendEmail ? "sent" : "draft", sent_at: sendEmail ? new Date().toISOString() : null }).select().single();
+      markup_materials: preMarkupMaterials ? [{ label: "Materials from plan markup", quantity: 1, unit: "lot", unitCost: preMarkupMaterials, totalCost: preMarkupMaterials }] : [], status: sendEmail ? "sent" : "draft", sent_at: sendEmail ? new Date().toISOString() : null }).select().single();
     if (error) { setSaveMessage(error.message); setSaving(false); return; }
     setSavedQuoteId(quote.id);
     setSavedQuoteId(quote.id);

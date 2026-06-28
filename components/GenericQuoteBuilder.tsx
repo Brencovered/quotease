@@ -97,7 +97,7 @@ export default function GenericQuoteBuilder({
       materials_cost: result.materialsCost + extraLinesTotals(extraLines, profile.hourly_rate ?? 85, profile.materials_margin_pct ?? 20).materials,
       total_cost:    result.totalCost,
       payment_terms: paymentTerms,
-      markup_materials: preMarkupMaterials ?? 0,
+      markup_materials: preMarkupMaterials ? [{ label: "Materials from plan markup", quantity: 1, unit: "lot", unitCost: preMarkupMaterials, totalCost: preMarkupMaterials }] : [],
       status:        sendEmail ? "sent" : "draft",
       sent_at:       sendEmail ? new Date().toISOString() : null,
     }).select().single();

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import PlanMarkup, { type PlanShape, type CalibrationLine, type MaterialItem } from "./PlanMarkup";
 import { Upload, X, Plus, FileText, ChevronRight, Check, User } from "lucide-react";
@@ -28,7 +27,6 @@ export default function PlansPageClient({
   openQuotes: Quote[];
   trades: string[];
 }) {
-  const router = useRouter();
   const [plans,        setPlans]        = useState<Plan[]>(initial);
   const [clients,      setClients]      = useState<Client[]>(initialClients);
   const [openPlanId,   setOpenPlanId]   = useState<string | null>(null);
@@ -98,7 +96,10 @@ export default function PlansPageClient({
   async function addToQuote(quoteId: string, cost: number) {
     setLinking(true);
     const supabase = createClient();
-    await supabase.from("quotes").update({ markup_materials: cost }).eq("id", quoteId);
+    const { data: existing } = await supabase.from("quotes").select("markup_materials").eq("id", quoteId).single();
+    const current = (existing?.markup_materials as Array<{ totalCost: number }>) ?? (typeof existing?.markup_materials === "number" ? [] : []);
+    const next = [...current, { label: "Materials from plan markup", quantity: 1, unit: "lot", unitCost: cost, totalCost: cost }];
+    await supabase.from("quotes").update({ markup_materials: next }).eq("id", quoteId);
     setLinkedMsg(`Drawing costs ($${cost.toLocaleString()}) added to quote`);
     setLinking(false);
     setTimeout(() => setLinkedMsg(null), 3000);
@@ -315,7 +316,7 @@ export default function PlansPageClient({
 
               {/* Raise new quote */}
               <button
-                onClick={() => router.push(`/electrician?client_id=${openPlan.client_id}&markup_materials=${planCost}`)}
+                onClick={() => { window.location.href = `/electrician?client_id=${openPlan.client_id}&markup_materials=${planCost}`; }}
                 className="btn-primary w-full justify-center">
                 <Plus size={15} /> Raise a new quote from this plan
               </button>

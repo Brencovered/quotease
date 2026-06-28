@@ -224,7 +224,7 @@ export default function QuoteBuilder({
       quote_expires_at: new Date(Date.now() + (profile.default_expiry_days ?? 30) * 86400000).toISOString(),
       status: sendEmail ? "sent" : "draft",
       sent_at: sendEmail ? new Date().toISOString() : null,
-      markup_materials: preMarkupMaterials,
+      markup_materials: preMarkupMaterials ? [{ label: "Materials from plan markup", quantity: 1, unit: "lot", unitCost: preMarkupMaterials, totalCost: preMarkupMaterials }] : [],
     }).select().single();
 
     if (error) { setSaveMessage(error.message); setSaving(false); return; }
