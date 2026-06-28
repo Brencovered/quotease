@@ -300,7 +300,7 @@ export default function PlanMarkup({
     const pt = getPoint(e); if (!pt) return;
     setDraftPts(p => [...p, pt]);
   }
-  function handleMouseUp(_mu: React.MouseEvent) {
+  function handleMouseUp(/* _e */) {
     handlePanEnd();
     if (!isDrawing || !activeDef) return;
     setIsDrawing(false);
