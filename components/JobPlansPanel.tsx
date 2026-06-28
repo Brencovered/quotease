@@ -19,6 +19,7 @@ export default function JobPlansPanel({
   plans: initial,
   materials,
   marginPct,
+  trade,
 }: {
   quoteId: string;
   clientId: string | null;

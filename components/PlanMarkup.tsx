@@ -387,7 +387,7 @@ export default function PlanMarkup({
         </svg>
 
         {/* Pin markers */}
-        {shapes.filter(s => s.type === "pin").map((s, i) => {
+        {shapes.filter(s => s.type === "pin").map((s) => {
           const def  = tools.find(t => t.lineStyle === s.lineStyle);
           const col  = def?.color ?? "#ffb400";
           const pt   = s.points[0];
