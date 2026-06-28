@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     customer: customerId,
     line_items: [{ price: STRIPE_PRICE_IDS[plan as "monthly" | "annual"], quantity: 1 }],
     subscription_data: {
-      trial_period_days: TRIAL_DAYS,
+      ...(TRIAL_DAYS > 0 ? { trial_period_days: TRIAL_DAYS } : {}),
       metadata: { profile_id: userData.user.id, plan },
     },
     success_url: `${appUrl}/billing?success=1`,
