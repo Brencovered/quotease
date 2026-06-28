@@ -42,11 +42,14 @@ const STEPS = [
 ];
 
 export default function QuoteBuilder({
-  profile, materials,
+  profile, materials, preClientId, preMarkupMaterials,
 }: {
   profile: { hourly_rate: number; materials_margin_pct: number; default_deposit_pct?: number | null; default_expiry_days?: number };
   materials: MaterialRow[];
-}) {
+}
+  preClientId?: string;
+  preMarkupMaterials?: number;
+) {
   const [step, setStep]     = useState(0);
   const [intake, setIntake] = useState<ElectricianIntake>(DEFAULT_INTAKE);
   const [rate, setRate]     = useState(profile.hourly_rate ?? 95);
@@ -58,7 +61,7 @@ export default function QuoteBuilder({
   const [clientName, setClientName]   = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [siteAddress, setSiteAddress] = useState("");
-  const [clientId, setClientId] = useState<string | null>(null);
+  const [clientId, setClientId] = useState<string | null>(preClientId ?? null);
 
   const initialDeposit = profile.default_deposit_pct;
   const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">(

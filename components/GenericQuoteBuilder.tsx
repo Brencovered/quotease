@@ -39,7 +39,7 @@ export default function GenericQuoteBuilder({
   const [clientName,  setClientName]  = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [siteAddress, setSiteAddress] = useState("");
-  const [clientId, setClientId] = useState<string | null>(null);
+  const [clientId, setClientId] = useState<string | null>(preClientId ?? null);
   const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">("full_on_completion");
   const [saving,      setSaving]      = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -91,6 +91,7 @@ export default function GenericQuoteBuilder({
       materials_cost: result.materialsCost,
       total_cost:    result.totalCost,
       payment_terms: paymentTerms,
+      markup_materials: preMarkupMaterials ?? 0,
       status:        sendEmail ? "sent" : "draft",
       sent_at:       sendEmail ? new Date().toISOString() : null,
     }).select().single();

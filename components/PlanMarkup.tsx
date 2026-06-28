@@ -21,52 +21,161 @@ interface ToolDef {
 }
 
 const TRADE_TOOLS: Record<string, ToolDef[]> = {
+  // ── ELECTRICIAN ───────────────────────────────────────────────────────────
+  // Key measurements: cable run metres, conduit metres, count of outlets/lights
   electrician: [
-    { id: "cable",   label: "Cable run",    type: "freehand", lineStyle: "cable",   color: "#ef4444", dash: "",      unit: "m",   hint: "Click to add points. Double-click to finish. Or hold and drag." },
-    { id: "conduit", label: "Conduit",      type: "freehand", lineStyle: "conduit", color: "#f97316", dash: "6 3",   unit: "m",   hint: "Click to add points. Double-click to finish. Or hold and drag." },
-    { id: "circuit", label: "Circuit",      type: "line",     lineStyle: "circuit", color: "#8b5cf6", dash: "8 4",   unit: "m",   hint: "Click to add points. Double-click to finish." },
-    { id: "gpo",     label: "GPO",          type: "pin",      lineStyle: "gpo",     color: "#ffb400", dash: "",      unit: "ea",  hint: "Click to place." },
-    { id: "light",   label: "Light",        type: "pin",      lineStyle: "light",   color: "#fbbf24", dash: "",      unit: "ea",  hint: "Click to place." },
-    { id: "board",   label: "Board",        type: "pin",      lineStyle: "board",   color: "#0a1722", dash: "",      unit: "ea",  hint: "Click to place." },
-    { id: "zone",    label: "Zone",         type: "area",     lineStyle: "area",    color: "#3b82f6", dash: "",      unit: "sqm", hint: "Click corners. Double-click to close." },
+    { id: "cable",    label: "Cable run",      type: "freehand", lineStyle: "cable",    color: "#ef4444", dash: "",       unit: "m",   hint: "Draw cable runs. Click points or hold and drag." },
+    { id: "conduit",  label: "Conduit",        type: "freehand", lineStyle: "conduit",  color: "#f97316", dash: "6 3",    unit: "m",   hint: "Draw conduit runs. Click points or hold and drag." },
+    { id: "circuit",  label: "Circuit / sub",  type: "line",     lineStyle: "circuit",  color: "#8b5cf6", dash: "8 4",    unit: "m",   hint: "Click points for a sub-circuit run. Double-click to finish." },
+    { id: "gpo",      label: "GPO / outlet",   type: "pin",      lineStyle: "gpo",      color: "#ffb400", dash: "",       unit: "ea",  hint: "Click to place a power outlet." },
+    { id: "light",    label: "Light point",    type: "pin",      lineStyle: "light",    color: "#fbbf24", dash: "",       unit: "ea",  hint: "Click to place a light point." },
+    { id: "downlight",label: "Downlight",      type: "pin",      lineStyle: "downlight",color: "#fde68a", dash: "",       unit: "ea",  hint: "Click to place a downlight." },
+    { id: "board",    label: "Switchboard",    type: "pin",      lineStyle: "board",    color: "#1e3a5f", dash: "",       unit: "ea",  hint: "Click to mark switchboard location." },
+    { id: "el_area",  label: "Zone / area",    type: "area",     lineStyle: "area",     color: "#3b82f6", dash: "",       unit: "sqm", hint: "Click corners to mark a zone. Double-click to close." },
   ],
+
+  // ── PLUMBER ───────────────────────────────────────────────────────────────
+  // Key measurements: pipe run metres (hot/cold separate), drain metres,
+  // fixture count, wet area sqm
   plumber: [
-    { id: "hotpipe",  label: "Hot pipe",   type: "freehand", lineStyle: "hotpipe",  color: "#ef4444", dash: "",     unit: "m",   hint: "Click to add points. Double-click to finish. Or hold and drag." },
-    { id: "coldpipe", label: "Cold pipe",  type: "freehand", lineStyle: "coldpipe", color: "#3b82f6", dash: "",     unit: "m",   hint: "Click to add points. Double-click to finish. Or hold and drag." },
-    { id: "drain",    label: "Drain",      type: "freehand", lineStyle: "drain",    color: "#78716c", dash: "8 4",  unit: "m",   hint: "Click to add points. Double-click to finish. Or hold and drag." },
-    { id: "gas",      label: "Gas line",   type: "freehand", lineStyle: "gas",      color: "#f59e0b", dash: "10 5", unit: "m",   hint: "Click to add points. Double-click to finish. Or hold and drag." },
-    { id: "fixture",  label: "Fixture",    type: "pin",      lineStyle: "fixture",  color: "#22c55e", dash: "",     unit: "ea",  hint: "Click to place." },
-    { id: "wetarea",  label: "Wet area",   type: "area",     lineStyle: "area",     color: "#06b6d4", dash: "",     unit: "sqm", hint: "Click corners. Double-click to close." },
+    { id: "hotpipe",  label: "Hot water pipe", type: "freehand", lineStyle: "hotpipe",  color: "#ef4444", dash: "",       unit: "m",   hint: "Draw hot water pipe runs. Click points or hold and drag." },
+    { id: "coldpipe", label: "Cold water pipe",type: "freehand", lineStyle: "coldpipe", color: "#3b82f6", dash: "",       unit: "m",   hint: "Draw cold water pipe runs. Click points or hold and drag." },
+    { id: "drain",    label: "Drain / sewer",  type: "freehand", lineStyle: "drain",    color: "#78716c", dash: "8 4",    unit: "m",   hint: "Draw drain lines. Click points or hold and drag." },
+    { id: "gas",      label: "Gas line",       type: "freehand", lineStyle: "gas",      color: "#f59e0b", dash: "10 5",   unit: "m",   hint: "Draw gas pipe runs. Click points or hold and drag." },
+    { id: "fixture",  label: "Fixture / tap",  type: "pin",      lineStyle: "fixture",  color: "#22c55e", dash: "",       unit: "ea",  hint: "Click to place a fixture (tap, basin, shower, toilet)." },
+    { id: "hwu",      label: "Hot water unit", type: "pin",      lineStyle: "hwu",      color: "#f97316", dash: "",       unit: "ea",  hint: "Click to mark hot water unit location." },
+    { id: "wetarea",  label: "Wet area",       type: "area",     lineStyle: "area",     color: "#06b6d4", dash: "",       unit: "sqm", hint: "Click corners to mark a wet area. Double-click to close." },
   ],
+
+  // ── CARPENTER ─────────────────────────────────────────────────────────────
+  // Key measurements: wall/frame metres, skirting/architrave metres,
+  // decking sqm, door/opening count
   carpenter: [
-    { id: "wall",     label: "New wall",   type: "line",     lineStyle: "wall",     color: "#0a1722", dash: "",     unit: "m",   hint: "Click to add points. Double-click to finish." },
-    { id: "timber",   label: "Timber",     type: "freehand", lineStyle: "timber",   color: "#92400e", dash: "",     unit: "m",   hint: "Click to add points. Double-click to finish. Or hold and drag." },
-    { id: "deck",     label: "Decking",    type: "area",     lineStyle: "area",     color: "#78350f", dash: "",     unit: "sqm", hint: "Click corners. Double-click to close." },
-    { id: "door",     label: "Door",       type: "pin",      lineStyle: "door",     color: "#d97706", dash: "",     unit: "ea",  hint: "Click to place." },
-    { id: "skirting", label: "Skirting",   type: "freehand", lineStyle: "skirting", color: "#b45309", dash: "4 2", unit: "m",   hint: "Click to add points. Double-click to finish. Or hold and drag." },
+    { id: "frame",    label: "Wall framing",   type: "line",     lineStyle: "frame",    color: "#0a1722", dash: "",       unit: "m",   hint: "Click points to mark new wall lines. Double-click to finish." },
+    { id: "skirting", label: "Skirting board", type: "freehand", lineStyle: "skirting", color: "#92400e", dash: "4 2",    unit: "m",   hint: "Draw skirting runs. Click points or hold and drag." },
+    { id: "architrave",label:"Architrave",     type: "freehand", lineStyle: "archit",   color: "#a16207", dash: "4 2",    unit: "m",   hint: "Draw architrave runs. Click points or hold and drag." },
+    { id: "deck",     label: "Decking area",   type: "area",     lineStyle: "deck",     color: "#78350f", dash: "",       unit: "sqm", hint: "Click corners to mark decking area. Double-click to close." },
+    { id: "door",     label: "Door / opening", type: "pin",      lineStyle: "door",     color: "#d97706", dash: "",       unit: "ea",  hint: "Click to mark a door or opening." },
+    { id: "room",     label: "Room area",      type: "area",     lineStyle: "area",     color: "#b45309", dash: "",       unit: "sqm", hint: "Click corners to mark a room for flooring etc. Double-click to close." },
   ],
+
+  // ── ROOFER ────────────────────────────────────────────────────────────────
+  // Key measurements: roof area sqm (main + each section separately),
+  // ridge/hip/valley metres, gutter metres, downpipe count, skylight count
   roofer: [
-    { id: "ridge",    label: "Ridge",      type: "line",     lineStyle: "ridge",    color: "#7c3aed", dash: "",     unit: "m",   hint: "Click to add points. Double-click to finish." },
-    { id: "gutter",   label: "Gutter",     type: "freehand", lineStyle: "gutter",   color: "#0891b2", dash: "",     unit: "m",   hint: "Click to add points. Double-click to finish. Or hold and drag." },
-    { id: "valley",   label: "Valley",     type: "freehand", lineStyle: "valley",   color: "#0e7490", dash: "6 3",  unit: "m",   hint: "Click to add points. Double-click to finish. Or hold and drag." },
-    { id: "roofarea", label: "Roof area",  type: "area",     lineStyle: "area",     color: "#6d28d9", dash: "",     unit: "sqm", hint: "Click corners. Double-click to close." },
-    { id: "skylight", label: "Skylight",   type: "pin",      lineStyle: "skylight", color: "#fbbf24", dash: "",     unit: "ea",  hint: "Click to place." },
+    { id: "roofarea", label: "Roof area",      type: "area",     lineStyle: "roofarea", color: "#7c3aed", dash: "",       unit: "sqm", hint: "Click corners to mark a roof section. Double-click to close." },
+    { id: "ridge",    label: "Ridge / hip",    type: "line",     lineStyle: "ridge",    color: "#6d28d9", dash: "",       unit: "m",   hint: "Click points along ridge or hip lines. Double-click to finish." },
+    { id: "valley",   label: "Valley",         type: "line",     lineStyle: "valley",   color: "#4c1d95", dash: "6 3",    unit: "m",   hint: "Click points along valley lines. Double-click to finish." },
+    { id: "gutter",   label: "Gutter run",     type: "freehand", lineStyle: "gutter",   color: "#0891b2", dash: "",       unit: "m",   hint: "Draw gutter runs. Click points or hold and drag." },
+    { id: "downpipe", label: "Downpipe",       type: "pin",      lineStyle: "downpipe", color: "#0e7490", dash: "",       unit: "ea",  hint: "Click to mark a downpipe location." },
+    { id: "skylight", label: "Skylight",       type: "pin",      lineStyle: "skylight", color: "#fbbf24", dash: "",       unit: "ea",  hint: "Click to mark a skylight position." },
+    { id: "fascia",   label: "Fascia / barge", type: "freehand", lineStyle: "fascia",   color: "#0284c7", dash: "4 2",    unit: "m",   hint: "Draw fascia or barge board runs. Click points or hold and drag." },
   ],
+
+  // ── PAINTER ───────────────────────────────────────────────────────────────
+  // Key measurements: wall area sqm, ceiling area sqm, door/window count
+  painter: [
+    { id: "wallarea", label: "Wall area",      type: "area",     lineStyle: "wallarea", color: "#ec4899", dash: "",       unit: "sqm", hint: "Click corners to mark a wall area. Double-click to close." },
+    { id: "ceiling",  label: "Ceiling area",   type: "area",     lineStyle: "ceiling",  color: "#db2777", dash: "",       unit: "sqm", hint: "Click corners to mark a ceiling. Double-click to close." },
+    { id: "exterior", label: "Exterior area",  type: "area",     lineStyle: "exterior", color: "#be185d", dash: "",       unit: "sqm", hint: "Click corners to mark exterior surfaces. Double-click to close." },
+    { id: "door_p",   label: "Door / window",  type: "pin",      lineStyle: "door_p",   color: "#f472b6", dash: "",       unit: "ea",  hint: "Click to count doors/windows (to deduct or add)." },
+    { id: "feature",  label: "Feature wall",   type: "area",     lineStyle: "feature",  color: "#a21caf", dash: "",       unit: "sqm", hint: "Click corners to mark a feature wall. Double-click to close." },
+  ],
+
+  // ── TILER ─────────────────────────────────────────────────────────────────
+  // Key measurements: floor sqm, wall sqm per room, cut allowance
+  tiler: [
+    { id: "floor",    label: "Floor area",     type: "area",     lineStyle: "floor",    color: "#0891b2", dash: "",       unit: "sqm", hint: "Click corners to mark a floor area. Double-click to close." },
+    { id: "wall_t",   label: "Wall area",      type: "area",     lineStyle: "wall_t",   color: "#0e7490", dash: "",       unit: "sqm", hint: "Click corners to mark a tiled wall area. Double-click to close." },
+    { id: "splashbk", label: "Splashback",     type: "area",     lineStyle: "splashbk", color: "#164e63", dash: "",       unit: "sqm", hint: "Click corners to mark a splashback area. Double-click to close." },
+    { id: "tile_run", label: "Tile run / cut", type: "line",     lineStyle: "tile_run", color: "#06b6d4", dash: "4 2",    unit: "m",   hint: "Mark cut lines or perimeter runs. Double-click to finish." },
+  ],
+
+  // ── LANDSCAPER ────────────────────────────────────────────────────────────
+  // Key measurements: turf/paving sqm, garden bed sqm, retaining wall metres
+  landscaper: [
+    { id: "turf",     label: "Turf area",      type: "area",     lineStyle: "turf",     color: "#16a34a", dash: "",       unit: "sqm", hint: "Click corners to mark turf area. Double-click to close." },
+    { id: "paving",   label: "Paving area",    type: "area",     lineStyle: "paving",   color: "#4ade80", dash: "",       unit: "sqm", hint: "Click corners to mark paving area. Double-click to close." },
+    { id: "garden",   label: "Garden bed",     type: "area",     lineStyle: "garden",   color: "#166534", dash: "",       unit: "sqm", hint: "Click corners to mark garden beds. Double-click to close." },
+    { id: "retaining",label: "Retaining wall", type: "line",     lineStyle: "retaining",color: "#854d0e", dash: "",       unit: "m",   hint: "Click points along retaining wall line. Double-click to finish." },
+    { id: "irrigation",label:"Irrigation run", type: "freehand", lineStyle: "irrig",    color: "#22d3ee", dash: "6 3",    unit: "m",   hint: "Draw irrigation pipe runs. Click points or hold and drag." },
+    { id: "tree",     label: "Tree / plant",   type: "pin",      lineStyle: "tree",     color: "#15803d", dash: "",       unit: "ea",  hint: "Click to mark a tree or plant location." },
+  ],
+
+  // ── ARBORIST ──────────────────────────────────────────────────────────────
+  // Key measurements: tree count, canopy area, access difficulty
+  arborist: [
+    { id: "tree_rm",  label: "Tree - remove",  type: "pin",      lineStyle: "tree_rm",  color: "#ef4444", dash: "",       unit: "ea",  hint: "Click to mark a tree for removal." },
+    { id: "tree_prn", label: "Tree - prune",   type: "pin",      lineStyle: "tree_prn", color: "#f97316", dash: "",       unit: "ea",  hint: "Click to mark a tree for pruning." },
+    { id: "stump",    label: "Stump grind",    type: "pin",      lineStyle: "stump",    color: "#92400e", dash: "",       unit: "ea",  hint: "Click to mark a stump for grinding." },
+    { id: "canopy",   label: "Canopy area",    type: "area",     lineStyle: "canopy",   color: "#16a34a", dash: "",       unit: "sqm", hint: "Click corners to mark canopy/clearance area. Double-click to close." },
+    { id: "access",   label: "Access path",    type: "line",     lineStyle: "access",   color: "#ca8a04", dash: "6 3",    unit: "m",   hint: "Mark access / equipment path. Double-click to finish." },
+  ],
+
+  // ── CONCRETER ─────────────────────────────────────────────────────────────
+  // Key measurements: slab sqm, formwork metres, pump required
+  concreter: [
+    { id: "slab",     label: "Slab area",      type: "area",     lineStyle: "slab",     color: "#6b7280", dash: "",       unit: "sqm", hint: "Click corners to mark a slab area. Double-click to close." },
+    { id: "driveway", label: "Driveway area",  type: "area",     lineStyle: "driveway", color: "#9ca3af", dash: "",       unit: "sqm", hint: "Click corners to mark driveway area. Double-click to close." },
+    { id: "path",     label: "Pathway",        type: "freehand", lineStyle: "path",     color: "#d1d5db", dash: "",       unit: "m",   hint: "Draw pathway centre line. Click points or hold and drag." },
+    { id: "formwork", label: "Formwork",       type: "line",     lineStyle: "formwork", color: "#374151", dash: "6 3",    unit: "m",   hint: "Mark formwork perimeter. Double-click to finish." },
+    { id: "pump",     label: "Pump location",  type: "pin",      lineStyle: "pump",     color: "#1f2937", dash: "",       unit: "ea",  hint: "Click to mark pump/chute location." },
+  ],
+
+  // ── FENCER ────────────────────────────────────────────────────────────────
+  // Key measurements: fence run metres, gate count, post count
+  fencer: [
+    { id: "fence",    label: "Fence line",     type: "line",     lineStyle: "fence",    color: "#78350f", dash: "",       unit: "m",   hint: "Click points along fence line. Double-click to finish." },
+    { id: "pool_fnc", label: "Pool fence",     type: "line",     lineStyle: "pool_fnc", color: "#0891b2", dash: "5 3",    unit: "m",   hint: "Click points along pool fence line. Double-click to finish." },
+    { id: "gate",     label: "Gate",           type: "pin",      lineStyle: "gate",     color: "#d97706", dash: "",       unit: "ea",  hint: "Click to mark a gate location." },
+    { id: "post",     label: "Post location",  type: "pin",      lineStyle: "post",     color: "#92400e", dash: "",       unit: "ea",  hint: "Click to mark individual post locations." },
+    { id: "retaining_f",label:"Retaining wall",type: "line",     lineStyle: "retaining",color: "#1c1917", dash: "",       unit: "m",   hint: "Click points along retaining wall. Double-click to finish." },
+  ],
+
+  // ── AIR CONDITIONING ──────────────────────────────────────────────────────
+  // Key measurements: indoor/outdoor unit locations, pipe run metres
+  aircon: [
+    { id: "pipe_ac",  label: "Pipe / line set",type: "freehand", lineStyle: "pipe_ac",  color: "#6366f1", dash: "",       unit: "m",   hint: "Draw refrigerant line set runs. Click points or hold and drag." },
+    { id: "drain_ac", label: "Drain line",     type: "freehand", lineStyle: "drain_ac", color: "#8b5cf6", dash: "6 3",    unit: "m",   hint: "Draw condensate drain runs. Click points or hold and drag." },
+    { id: "indoor",   label: "Indoor unit",    type: "pin",      lineStyle: "indoor",   color: "#3b82f6", dash: "",       unit: "ea",  hint: "Click to mark indoor unit location." },
+    { id: "outdoor",  label: "Outdoor unit",   type: "pin",      lineStyle: "outdoor",  color: "#1d4ed8", dash: "",       unit: "ea",  hint: "Click to mark outdoor unit location." },
+    { id: "zone_ac",  label: "Zone / room",    type: "area",     lineStyle: "area",     color: "#93c5fd", dash: "",       unit: "sqm", hint: "Click corners to mark a zone/room. Double-click to close." },
+  ],
+
+  // ── SURVEYOR ──────────────────────────────────────────────────────────────
+  // Key measurements: boundary lines, setback distances, feature points
+  surveyor: [
+    { id: "boundary", label: "Boundary line",  type: "line",     lineStyle: "boundary", color: "#dc2626", dash: "",       unit: "m",   hint: "Click points along boundary line. Double-click to finish." },
+    { id: "setback",  label: "Setback line",   type: "line",     lineStyle: "setback",  color: "#f97316", dash: "8 4",    unit: "m",   hint: "Mark setback lines. Double-click to finish." },
+    { id: "easement", label: "Easement",       type: "area",     lineStyle: "easement", color: "#fbbf24", dash: "",       unit: "sqm", hint: "Click corners to mark an easement. Double-click to close." },
+    { id: "feature",  label: "Feature point",  type: "pin",      lineStyle: "feature",  color: "#0a1722", dash: "",       unit: "ea",  hint: "Click to mark a survey feature point." },
+    { id: "site",     label: "Site area",      type: "area",     lineStyle: "site",     color: "#16a34a", dash: "",       unit: "sqm", hint: "Click corners to mark the full site area. Double-click to close." },
+  ],
+
+  // ── DEFAULT (custom / generic) ────────────────────────────────────────────
   default: [
-    { id: "run",     label: "Run / line",  type: "freehand", lineStyle: "generic",  color: "#3b82f6", dash: "",     unit: "m",   hint: "Click to add points. Double-click to finish. Or hold and drag." },
-    { id: "measure", label: "Measure",     type: "line",     lineStyle: "generic",  color: "#8b5cf6", dash: "6 3",  unit: "m",   hint: "Click to add points. Double-click to finish." },
-    { id: "item",    label: "Item / pin",  type: "pin",      lineStyle: "generic",  color: "#ffb400", dash: "",     unit: "ea",  hint: "Click to place." },
-    { id: "zone",    label: "Zone",        type: "area",     lineStyle: "area",     color: "#22c55e", dash: "",     unit: "sqm", hint: "Click corners. Double-click to close." },
+    { id: "run",     label: "Run / line",      type: "freehand", lineStyle: "generic",  color: "#3b82f6", dash: "",       unit: "m",   hint: "Click points or hold and drag." },
+    { id: "measure", label: "Measure",         type: "line",     lineStyle: "generic",  color: "#8b5cf6", dash: "6 3",    unit: "m",   hint: "Click points to measure. Double-click to finish." },
+    { id: "item",    label: "Item / pin",      type: "pin",      lineStyle: "generic",  color: "#ffb400", dash: "",       unit: "ea",  hint: "Click to place an item." },
+    { id: "zone",    label: "Zone / area",     type: "area",     lineStyle: "area",     color: "#22c55e", dash: "",       unit: "sqm", hint: "Click corners to mark an area. Double-click to close." },
   ],
 };
 
 function getTools(trade?: string): ToolDef[] {
   if (!trade) return TRADE_TOOLS.default;
-  const k = trade.toLowerCase();
-  if (k.includes("electric")) return TRADE_TOOLS.electrician;
-  if (k.includes("plumb"))    return TRADE_TOOLS.plumber;
-  if (k.includes("carpent"))  return TRADE_TOOLS.carpenter;
-  if (k.includes("roof"))     return TRADE_TOOLS.roofer;
+  const k = trade.toLowerCase().replace(/[\s_-]+/g, "");
+  if (k.includes("electric"))  return TRADE_TOOLS.electrician;
+  if (k.includes("plumb"))     return TRADE_TOOLS.plumber;
+  if (k.includes("carpent"))   return TRADE_TOOLS.carpenter;
+  if (k.includes("roof"))      return TRADE_TOOLS.roofer;
+  if (k.includes("paint"))     return TRADE_TOOLS.painter;
+  if (k.includes("til"))       return TRADE_TOOLS.tiler;
+  if (k.includes("landscap"))  return TRADE_TOOLS.landscaper;
+  if (k.includes("arborist"))  return TRADE_TOOLS.arborist;
+  if (k.includes("concret"))   return TRADE_TOOLS.concreter;
+  if (k.includes("fenc"))      return TRADE_TOOLS.fencer;
+  if (k.includes("aircon") || k.includes("aircond") || k.includes("hvac")) return TRADE_TOOLS.aircon;
+  if (k.includes("survey"))    return TRADE_TOOLS.surveyor;
   return TRADE_TOOLS.default;
 }
 

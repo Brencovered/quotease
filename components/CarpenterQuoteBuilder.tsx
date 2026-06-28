@@ -31,10 +31,13 @@ const STEPS = [
   { id: "send",      label: "Send"      },
 ];
 
-export default function CarpenterQuoteBuilder({ profile, materials }: {
+export default function CarpenterQuoteBuilder({ profile, materials, preClientId, preMarkupMaterials, }: {
   profile: { hourly_rate: number; materials_margin_pct: number };
   materials: MaterialRow[];
-}) {
+}
+  preClientId?: string;
+  preMarkupMaterials?: number;
+) {
   const [step,   setStep]   = useState(0);
   const [intake, setIntake] = useState<CarpenterIntake>(DEFAULT_INTAKE);
   const [rate,   setRate]   = useState(profile.hourly_rate ?? 85);
@@ -45,7 +48,7 @@ export default function CarpenterQuoteBuilder({ profile, materials }: {
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [siteAddress, setSiteAddress] = useState("");
-  const [clientId, setClientId] = useState<string | null>(null);
+  const [clientId, setClientId] = useState<string | null>(preClientId ?? null);
   const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">("full_on_completion");
   const [customTerms] = useState<PaymentTerm[]>([
     { label: "Deposit", percent: 50, trigger: "acceptance", days: 0 },

@@ -22,8 +22,8 @@ const DEDICATED_DEFAULTS: Record<string, readonly { item_key: string; label: str
 
 const DEDICATED = ["electrician", "plumber", "carpenter", "roofer"];
 
-export default async function NewQuotePage({ searchParams }: { searchParams: Promise<{ trade?: string }> }) {
-  const { trade: tradeParm } = await searchParams;
+export default async function NewQuotePage({ searchParams }: { searchParams: Promise<{ trade?: string; client_id?: string; markup_materials?: string }> }) {
+  const { trade: tradeParm, client_id: preClientId, markup_materials: preMarkup } = await searchParams;
 
   let profile: { hourly_rate: number; materials_margin_pct: number; trades?: string[]; onboarded_at?: string | null } = {
     hourly_rate: 95, materials_margin_pct: 20,
@@ -83,12 +83,12 @@ export default async function NewQuotePage({ searchParams }: { searchParams: Pro
       )}
 
       {/* Route to correct builder */}
-      {selectedTrade === "electrician" && <QuoteBuilder profile={profile} materials={materials} />}
-      {selectedTrade === "plumber"     && <PlumberQuoteBuilder profile={profile} materials={materials} />}
-      {selectedTrade === "carpenter"   && <CarpenterQuoteBuilder profile={profile} materials={materials} />}
-      {selectedTrade === "roofer"      && <RooferQuoteBuilder profile={profile} materials={materials} />}
+      {selectedTrade === "electrician" && <QuoteBuilder profile={profile} materials={materials} preClientId={preClientId} preMarkupMaterials={preMarkup ? parseInt(preMarkup) : undefined} />}
+      {selectedTrade === "plumber"     && <PlumberQuoteBuilder profile={profile} materials={materials} preClientId={preClientId} preMarkupMaterials={preMarkup ? parseInt(preMarkup) : undefined} />}
+      {selectedTrade === "carpenter"   && <CarpenterQuoteBuilder profile={profile} materials={materials} preClientId={preClientId} preMarkupMaterials={preMarkup ? parseInt(preMarkup) : undefined} />}
+      {selectedTrade === "roofer"      && <RooferQuoteBuilder profile={profile} materials={materials} preClientId={preClientId} preMarkupMaterials={preMarkup ? parseInt(preMarkup) : undefined} />}
       {!DEDICATED.includes(selectedTrade) && (
-        <GenericQuoteBuilder tradeKey={selectedTrade} profile={profile} />
+        <GenericQuoteBuilder tradeKey={selectedTrade} profile={profile} preClientId={preClientId} preMarkupMaterials={preMarkup ? parseInt(preMarkup) : undefined} />
       )}
     </>
   );
