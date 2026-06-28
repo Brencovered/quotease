@@ -44,7 +44,6 @@ const INK_SOFT = rgb(0.36, 0.40, 0.44);
 const INK_FAINT = rgb(0.55, 0.59, 0.63);
 const WHITE    = rgb(1, 1, 1);
 const LINE     = rgb(0.89, 0.90, 0.92);
-const LINK_BLUE = rgb(0.12, 0.35, 0.70);
 
 const PAGE_WIDTH  = 595.28;
 const PAGE_HEIGHT = 841.89;

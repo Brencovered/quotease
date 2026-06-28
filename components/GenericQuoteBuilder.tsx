@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
+import { PAYMENT_TERM_PRESETS } from "@/lib/paymentTerms";
 import { ChevronRight, ChevronLeft, Check, Plus, Trash2 } from "lucide-react";
 import { calcGenericQuote, GENERIC_TRADE_TEMPLATES, type GenericLineItem, type GenericIntake } from "@/lib/genericTrades";
 import StepCustomer from "./StepCustomer";

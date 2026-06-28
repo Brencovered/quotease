@@ -137,7 +137,6 @@ export default function PlanMarkup({
   const [draftPoints, setDraftPoints]     = useState<ShapePoint[]>([]);
   const [calDraftP1,  setCalDraftP1]      = useState<ShapePoint | null>(null);
   const [openShapeId, setOpenShapeId]     = useState<string | null>(null);
-  const [calInput,    setCalInput]        = useState("");
   const [imgNatural,  setImgNatural]      = useState<{ w: number; h: number } | null>(null);
 
   // Get point in natural-image-% coords, invariant to display zoom
@@ -384,7 +383,7 @@ export default function PlanMarkup({
         </svg>
 
         {/* Pin markers */}
-        {shapes.filter(s => s.type === "pin").map((s, i) => {
+        {shapes.filter(s => s.type === "pin").map((s) => {
           const img = imgRef.current;
           if (!img) return null;
           const pt = s.points[0];

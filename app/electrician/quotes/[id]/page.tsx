@@ -22,7 +22,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
 
   const data = await loadJobDetailData(supabase, id, userData.user.id);
   if (!data) notFound();
-  const { quote, followUps, attachmentsWithUrls } = data;
+  const { quote, followUps, attachmentsWithUrls, marginPct } = data;
 
   if (quote.status === "accepted" || quote.status === "paid") {
     redirect(`/electrician/jobs/${id}`);
@@ -31,7 +31,17 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
   const scopeLines = humanizeIntake(quote.intake_data);
   const labourCost = (quote.total_cost ?? 0) - (quote.materials_cost ?? 0);
 
-  let quotePlans: Array<{ id: string; file_name: string; annotations: unknown[]; signedUrl?: string }> = [];
+  // Load trade materials for markup panel
+  let tradeMaterials: Array<{ item_key: string; label: string; unit_cost: number }> = [];
+  const { data: matRows } = await supabase
+    .from("material_items")
+    .select("item_key, label, unit_cost")
+    .eq("profile_id", userData.user.id)
+    .eq("trade", quote.trade ?? "electrician")
+    .order("label");
+  if (matRows?.length) tradeMaterials = matRows;
+
+  let quotePlans: Array<{ id: string; file_name: string; shapes: unknown[]; calibration: unknown; signedUrl?: string }> = [];
   if (quote.client_id) {
     const { data: plans } = await supabase
       .from("client_plans")
@@ -113,7 +123,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
             <FollowUpPanel quoteId={quote.id} followUps={followUps} followUpAt={quote.follow_up_at} expiresAt={quote.quote_expires_at} />
           )}
 
-          <JobPlansPanel quoteId={quote.id} clientId={quote.client_id} plans={quotePlans as never} />
+          <JobPlansPanel quoteId={quote.id} clientId={quote.client_id} plans={quotePlans as never} materials={tradeMaterials} marginPct={marginPct ?? 20} />
 
           <JobFilesPanel quoteId={quote.id} attachments={attachmentsWithUrls} />
         </div>
