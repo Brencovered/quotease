@@ -8,7 +8,7 @@ import { PLUMBER_DEFAULT_MATERIALS } from "@/lib/calcPlumber";
 import { CARPENTER_DEFAULT_MATERIALS } from "@/lib/calcCarpenter";
 import { ROOFER_DEFAULT_MATERIALS } from "@/lib/calcRoofer";
 import { GENERIC_TRADE_TEMPLATES } from "@/lib/genericTrades";
-import { Check, ChevronRight, ChevronLeft } from "lucide-react";
+import { Check, ChevronRight, ChevronLeft, Upload, Download } from "lucide-react";
 
 const TRADES = [
   { key: "electrician", label: "Electrician",      desc: "Powerpoints, switchboards, solar" },
@@ -93,6 +93,55 @@ export default function OnboardingPage() {
         r.item_key === key ? { ...r, [field]: field === "unit_cost" ? parseFloat(val) || 0 : val } : r
       ),
     }));
+  }
+
+  const [csvMessage, setCsvMessage] = useState<string | null>(null);
+
+  function downloadCsvTemplate(trade: string) {
+    const rows = matsByTrade[trade] ?? [];
+    const lines = ["item_key,label,unit_cost", ...rows.map((m) => `${m.item_key},"${m.label}",${m.unit_cost}`)];
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `swiftscope-${trade}-prices-template.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleCsvUpload(trade: string, e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result ?? "");
+      const lines = text.split(/\r?\n/).filter((l) => l.trim());
+      const header = lines[0]?.toLowerCase().split(",") ?? [];
+      const keyIdx = header.findIndex((h) => h.includes("key") || h.includes("item"));
+      const costIdx = header.findIndex((h) => h.includes("cost") || h.includes("price"));
+      if (keyIdx === -1 || costIdx === -1) {
+        setCsvMessage("Couldn't find item and cost columns in that file - try the template instead.");
+        return;
+      }
+      const updates = new Map<string, number>();
+      for (const line of lines.slice(1)) {
+        const cols = line.split(",");
+        const key = cols[keyIdx]?.trim().replace(/^"|"$/g, "");
+        const cost = parseFloat(cols[costIdx]?.replace(/[^0-9.]/g, "") ?? "");
+        if (key && !isNaN(cost)) updates.set(key, cost);
+      }
+      let matched = 0;
+      setMatsByTrade((p) => ({
+        ...p,
+        [trade]: (p[trade] ?? []).map((r) => {
+          if (updates.has(r.item_key)) { matched++; return { ...r, unit_cost: updates.get(r.item_key)! }; }
+          return r;
+        }),
+      }));
+      setCsvMessage(matched > 0 ? `Updated ${matched} price${matched === 1 ? "" : "s"}.` : "No matching items found in that file.");
+      e.target.value = "";
+    };
+    reader.readAsText(file);
   }
 
   async function finish() {
@@ -250,13 +299,14 @@ export default function OnboardingPage() {
                     Hourly labour rate ($/hr)
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] font-semibold">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] font-semibold pointer-events-none">$</span>
                     <input
                       type="number" min={0} step={5} value={hourlyRate}
                       onChange={(e) => setHourlyRate(parseFloat(e.target.value) || 0)}
-                      className="app-field pl-7 font-display text-[20px]"
+                      className="app-field font-display text-[20px]"
+                      style={{ paddingLeft: "30px", paddingRight: "44px" }}
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] text-[13px]">/hr</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] text-[13px] pointer-events-none">/hr</span>
                   </div>
                   <p className="text-[12px] text-[var(--ink-faint)] mt-1.5">
                     What you charge for your time. Tradies typically charge $75-$150/hr depending on trade and area.
@@ -272,8 +322,9 @@ export default function OnboardingPage() {
                       type="number" min={0} max={100} step={5} value={marginPct}
                       onChange={(e) => setMarginPct(parseFloat(e.target.value) || 0)}
                       className="app-field font-display text-[20px]"
+                      style={{ paddingRight: "36px" }}
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] text-[13px]">%</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] text-[13px] pointer-events-none">%</span>
                   </div>
                   <p className="text-[12px] text-[var(--ink-faint)] mt-1.5">
                     Added on top of your supplier cost. Most tradies charge 15-25%. Covers handling, waste, and your time to source.
@@ -334,6 +385,20 @@ export default function OnboardingPage() {
                 </div>
               )}
 
+              {/* CSV import - bulk-set prices from a supplier export, or fill in the template once */}
+              {activeTradeMat && (
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                  <label className="btn-secondary text-[12.5px] py-2 px-3 cursor-pointer">
+                    <Upload size={13} /> Upload price CSV
+                    <input type="file" accept=".csv" className="hidden" onChange={(e) => handleCsvUpload(activeTradeMat, e)} />
+                  </label>
+                  <button onClick={() => downloadCsvTemplate(activeTradeMat)} className="btn-secondary text-[12.5px] py-2 px-3">
+                    <Download size={13} /> Download template
+                  </button>
+                  {csvMessage && <span className="text-[12.5px] text-[var(--ink-soft)]">{csvMessage}</span>}
+                </div>
+              )}
+
               {/* Material table for active trade */}
               {activeTradeMat && matsByTrade[activeTradeMat] && (
                 <div className="border border-[var(--line)] rounded-2xl overflow-hidden mb-4">
@@ -351,7 +416,7 @@ export default function OnboardingPage() {
                             type="number" min={0} step={0.01}
                             value={r.unit_cost || ""}
                             onChange={(e) => updateMat(activeTradeMat, r.item_key, "unit_cost", e.target.value)}
-                            className="w-20 text-right text-[13.5px] font-semibold text-[var(--ink)] bg-transparent border-0 outline-none focus:bg-white focus:border focus:border-[var(--amber)] rounded px-1.5 py-1"
+                            className="app-field w-24 text-right text-[13.5px] font-semibold text-[var(--ink)] py-1.5 px-2"
                           />
                         </div>
                       </div>

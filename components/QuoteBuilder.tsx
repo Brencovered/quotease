@@ -272,7 +272,7 @@ export default function QuoteBuilder({
     <div className="page-wrap-narrow">
 
       {/* ── Live total ─────────────────────────────── */}
-      <div className="sticky top-12 sm:top-14 z-30 mb-4 -mx-4 sm:mx-0 px-4 sm:px-0">
+      <div className="sticky top-12 sm:top-0 z-30 mb-4 -mx-4 sm:mx-0 px-4 sm:px-0">
         <div className="bg-[var(--navy)] rounded-none sm:rounded-2xl px-5 py-3 flex items-center justify-between gap-4"
              style={{ boxShadow: "0 4px 20px rgba(10,23,34,.18)" }}>
           <div className="flex gap-5">

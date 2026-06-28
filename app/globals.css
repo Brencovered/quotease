@@ -82,6 +82,18 @@ input[type="radio"] {
   border-color: var(--amber);
   box-shadow: 0 0 0 3px rgba(255,180,0,0.15);
 }
+
+/* Native number-input spinner arrows collide with any absolutely-positioned
+   suffix label (%, /hr, $) - hide them everywhere rather than patch each
+   occurrence individually. */
+.app-field[type="number"]::-webkit-inner-spin-button,
+.app-field[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.app-field[type="number"] {
+  -moz-appearance: textfield;
+}
 .app-field::placeholder { color: var(--ink-faint); }
 
 /* Card */

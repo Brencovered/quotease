@@ -82,7 +82,7 @@ export default function RooferQuoteBuilder({ profile, materials }: {
 
   return (
     <div className="page-wrap-narrow">
-      <div className="sticky top-12 sm:top-14 z-30 mb-4 -mx-4 sm:mx-0 px-4 sm:px-0">
+      <div className="sticky top-12 sm:top-0 z-30 mb-4 -mx-4 sm:mx-0 px-4 sm:px-0">
         <div className="bg-[var(--navy)] rounded-none sm:rounded-2xl px-5 py-3 flex items-center justify-between" style={{boxShadow:"0 4px 20px rgba(10,23,34,.18)"}}>
           <div className="flex gap-5">
             <div><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Labour</p><p className="font-display text-[18px] text-white leading-tight">{result.labourHours}h</p></div>
