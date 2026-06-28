@@ -25,6 +25,7 @@ export default function PlansPageClient({
   const [openPlanId,   setOpenPlanId]   = useState<string | null>(null);
 
   const [linking,      setLinking]      = useState(false);
+  const [uploadSaving, setUploadSaving] = useState(false);
   const [linkedMsg,    setLinkedMsg]    = useState<string | null>(null);
   const [totalCost,    setTotalCost]    = useState<Record<string, number>>({});
 
