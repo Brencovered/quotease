@@ -63,6 +63,7 @@ export default function GenericQuoteBuilder({
   }), [jobType, description, items, siteAccess]);
 
   const result = useMemo(() => calcGenericQuote(intake, margin), [intake, margin]);
+  const markupTotal = (preMarkupMaterials ?? []).reduce((s, m) => s + (m.totalCost ?? 0), 0);
   const paymentTerms = termsPreset === "custom" ? [] : PAYMENT_TERM_PRESETS[termsPreset];
 
   function addItem(isLabour: boolean) {
@@ -182,12 +183,12 @@ export default function GenericQuoteBuilder({
             </div>
             <div>
               <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Materials</p>
-              <p className="font-display text-[18px] text-white leading-tight">${result.materialsCost.toLocaleString()}</p>
+              <p className="font-display text-[18px] text-white leading-tight">${(result.materialsCost + markupTotal).toLocaleString()}</p>
             </div>
           </div>
           <div className="text-right">
             <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Total</p>
-            <p className="font-display text-[24px] text-[var(--amber)] leading-tight">${result.totalCost.toLocaleString()}</p>
+            <p className="font-display text-[24px] text-[var(--amber)] leading-tight">${(result.totalCost + markupTotal).toLocaleString()}</p>
           </div>
         </div>
       </div>
@@ -325,11 +326,11 @@ export default function GenericQuoteBuilder({
               </div>
               <div className="flex justify-between text-[13.5px] mb-3">
                 <span className="text-[var(--steel-2)]">Materials + {margin}% margin</span>
-                <span className="text-white font-semibold tabular">${result.materialsCost.toLocaleString()}</span>
+                <span className="text-white font-semibold tabular">${(result.materialsCost + markupTotal).toLocaleString()}</span>
               </div>
               <div className="flex justify-between border-t border-white/10 pt-3">
                 <span className="text-white font-bold">Total</span>
-                <span className="font-display text-[22px] text-[var(--amber)] tabular">${result.totalCost.toLocaleString()}</span>
+                <span className="font-display text-[22px] text-[var(--amber)] tabular">${(result.totalCost + markupTotal).toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -348,11 +349,11 @@ export default function GenericQuoteBuilder({
               </div>
               <div className="flex justify-between text-[14px]">
                 <span className="text-[var(--steel-2)]">Materials</span>
-                <span className="text-white font-semibold tabular">${result.materialsCost.toLocaleString()}</span>
+                <span className="text-white font-semibold tabular">${(result.materialsCost + markupTotal).toLocaleString()}</span>
               </div>
               <div className="border-t border-white/10 pt-2 flex justify-between">
                 <span className="text-white font-bold text-[15px]">Total</span>
-                <span className="font-display text-[24px] text-[var(--amber)] tabular">${result.totalCost.toLocaleString()}</span>
+                <span className="font-display text-[24px] text-[var(--amber)] tabular">${(result.totalCost + markupTotal).toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -383,7 +384,7 @@ export default function GenericQuoteBuilder({
                 {paymentTerms.map((t, i) => (
                   <div key={i} className="flex justify-between text-[13.5px]">
                     <span className="text-[var(--ink-soft)]">{t.label}</span>
-                    <span className="font-bold tabular">{t.percent}% - ${Math.round(result.totalCost * t.percent / 100).toLocaleString()}</span>
+                    <span className="font-bold tabular">{t.percent}% - ${Math.round((result.totalCost + markupTotal) * t.percent / 100).toLocaleString()}</span>
                   </div>
                 ))}
               </div>

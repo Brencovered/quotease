@@ -74,6 +74,7 @@ export default function PlumberQuoteBuilder({ profile, materials, preClientId, p
 
   const costs = useMemo(() => { const m: Record<string,number> = {}; lib.forEach((r) => (m[r.item_key] = Number(r.unit_cost)||0)); return m; }, [lib]);
   const result = useMemo(() => calcPlumberQuote(intake, costs, rate, margin), [intake, costs, rate, margin]);
+  const markupTotal = (preMarkupMaterials ?? []).reduce((s, m) => s + (m.totalCost ?? 0), 0);
 
   function set<K extends keyof PlumberIntake>(k: K, v: PlumberIntake[K]) { setIntake((p) => ({ ...p, [k]: v })); }
 
@@ -149,9 +150,9 @@ export default function PlumberQuoteBuilder({ profile, materials, preClientId, p
         <div className="bg-[var(--navy)] rounded-none sm:rounded-2xl px-5 py-3 flex items-center justify-between" style={{ boxShadow:"0 4px 20px rgba(10,23,34,.18)" }}>
           <div className="flex gap-5">
             <div><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Labour</p><p className="font-display text-[18px] text-white leading-tight">{result.labourHours}h</p></div>
-            <div><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Materials</p><p className="font-display text-[18px] text-white leading-tight">${result.materialsCost.toLocaleString()}</p></div>
+            <div><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Materials</p><p className="font-display text-[18px] text-white leading-tight">${(result.materialsCost + markupTotal).toLocaleString()}</p></div>
           </div>
-          <div className="text-right"><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Total</p><p className="font-display text-[24px] text-[var(--amber)] leading-tight">${result.totalCost.toLocaleString()}</p></div>
+          <div className="text-right"><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Total</p><p className="font-display text-[24px] text-[var(--amber)] leading-tight">${(result.totalCost + markupTotal).toLocaleString()}</p></div>
         </div>
       </div>
 
@@ -300,8 +301,8 @@ export default function PlumberQuoteBuilder({ profile, materials, preClientId, p
             <p className="text-[11px] text-[var(--steel-3)] font-bold uppercase tracking-wider mb-3">Quote summary</p>
             <div className="space-y-2">
               <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Labour ({result.labourHours}h)</span><span className="text-white font-semibold tabular">${Math.round(result.labourHours * rate).toLocaleString()}</span></div>
-              <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Materials</span><span className="text-white font-semibold tabular">${result.materialsCost.toLocaleString()}</span></div>
-              <div className="border-t border-white/10 pt-2 flex justify-between"><span className="text-white font-bold text-[15px]">Total</span><span className="font-display text-[24px] text-[var(--amber)] tabular">${result.totalCost.toLocaleString()}</span></div>
+              <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Materials</span><span className="text-white font-semibold tabular">${(result.materialsCost + markupTotal).toLocaleString()}</span></div>
+              <div className="border-t border-white/10 pt-2 flex justify-between"><span className="text-white font-bold text-[15px]">Total</span><span className="font-display text-[24px] text-[var(--amber)] tabular">${(result.totalCost + markupTotal).toLocaleString()}</span></div>
             </div>
           </div>
           <div className="card">
@@ -327,7 +328,7 @@ export default function PlumberQuoteBuilder({ profile, materials, preClientId, p
             </select>
             {termsPreset !== "custom" ? (
               <div className="bg-[var(--app-bg)] rounded-xl p-3 space-y-1.5">
-                {paymentTerms.map((t, i) => <div key={i} className="flex justify-between text-[13.5px]"><span className="text-[var(--ink-soft)]">{t.label}</span><span className="font-bold tabular">{t.percent}% - ${Math.round(result.totalCost * t.percent / 100).toLocaleString()}</span></div>)}
+                {paymentTerms.map((t, i) => <div key={i} className="flex justify-between text-[13.5px]"><span className="text-[var(--ink-soft)]">{t.label}</span><span className="font-bold tabular">{t.percent}% - ${Math.round((result.totalCost + markupTotal) * t.percent / 100).toLocaleString()}</span></div>)}
               </div>
             ) : (
               <div className="space-y-2">

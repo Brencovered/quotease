@@ -99,6 +99,10 @@ export default function QuoteBuilder({
   }, [lib]);
 
   const result = useMemo(() => calcElectricianQuote(intake, costs, rate, margin), [intake, costs, rate, margin]);
+  // The wizard's running total needs to include this too, not just the
+  // saved record - otherwise raising a quote from a $244 plan shows $0
+  // the whole time you're filling it in, which looks broken.
+  const markupTotal = (preMarkupMaterials ?? []).reduce((s, m) => s + (m.totalCost ?? 0), 0);
 
   function set<K extends keyof ElectricianIntake>(key: K, value: ElectricianIntake[K]) {
     setIntake((prev) => ({ ...prev, [key]: value }));
@@ -273,12 +277,12 @@ export default function QuoteBuilder({
             </div>
             <div>
               <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Materials</p>
-              <p className="font-display text-[18px] text-white leading-tight">${result.materialsCost.toLocaleString()}</p>
+              <p className="font-display text-[18px] text-white leading-tight">${(result.materialsCost + markupTotal).toLocaleString()}</p>
             </div>
           </div>
           <div className="text-right">
             <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Total</p>
-            <p className="font-display text-[24px] text-[var(--amber)] leading-tight">${result.totalCost.toLocaleString()}</p>
+            <p className="font-display text-[24px] text-[var(--amber)] leading-tight">${(result.totalCost + markupTotal).toLocaleString()}</p>
           </div>
         </div>
       </div>
@@ -350,6 +354,7 @@ export default function QuoteBuilder({
           clientName={clientName} clientEmail={clientEmail} siteAddress={siteAddress}
           saving={saving} saveMessage={saveMessage} savedQuoteId={savedQuoteId} onSave={saveAndSend}
           extraLines={extraLines} setExtraLines={setExtraLines} rate={rate} margin={margin}
+          markupTotal={markupTotal}
         />
       )}
 
@@ -731,7 +736,7 @@ function StepSite({ intake, set }: {
 function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTerms, setCustomTerms, customTermsTotal,
   clientName, clientEmail, siteAddress,
   saving, saveMessage, savedQuoteId, onSave,
-  extraLines, setExtraLines, rate, margin }: {
+  extraLines, setExtraLines, rate, margin, markupTotal }: {
   intake: ElectricianIntake;
   result: { labourHours: number; materialsCost: number; totalCost: number };
   paymentTerms: PaymentTerm[];
@@ -743,7 +748,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
   onSave: (send: boolean) => void;
   extraLines: {id:string;label:string;hours:number;materialsCost:number;note:string}[];
   setExtraLines: React.Dispatch<React.SetStateAction<{id:string;label:string;hours:number;materialsCost:number;note:string}[]>>;
-  rate: number; margin: number;
+  rate: number; margin: number; markupTotal: number;
 }) {
   return (
     <div className="space-y-4">
@@ -757,11 +762,16 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
           </div>
           <div className="flex justify-between text-[14px]">
             <span className="text-[var(--steel-2)]">Materials</span>
-            <span className="text-white font-semibold tabular">${result.materialsCost.toLocaleString()}</span>
+            <span className="text-white font-semibold tabular">${(result.materialsCost + markupTotal).toLocaleString()}</span>
           </div>
+          {markupTotal > 0 && (
+            <div className="flex justify-between text-[12.5px]">
+              <span className="text-[var(--steel-3)]">incl. ${markupTotal.toLocaleString()} from site plans</span>
+            </div>
+          )}
           <div className="border-t border-white/10 pt-2 flex justify-between">
             <span className="text-white font-bold text-[15px]">Total</span>
-            <span className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${result.totalCost.toLocaleString()}</span>
+            <span className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + markupTotal).toLocaleString()}</span>
           </div>
         </div>
       </div>
@@ -799,7 +809,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
               <div key={i} className="flex justify-between text-[13.5px]">
                 <span className="text-[var(--ink-soft)]">{t.label}</span>
                 <span className="font-bold text-[var(--ink)] tabular">
-                  {t.percent}% - ${Math.round((result.totalCost * t.percent) / 100).toLocaleString()}
+                  {t.percent}% - ${Math.round(((result.totalCost + markupTotal) * t.percent) / 100).toLocaleString()}
                 </span>
               </div>
             ))}
