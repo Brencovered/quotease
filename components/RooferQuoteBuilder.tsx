@@ -52,6 +52,7 @@ export default function RooferQuoteBuilder({ profile, materials, preClientId, pr
     { label: "Final",   percent: 70, trigger: "completion",  days: 7 },
   ]);
   const paymentTerms = termsPreset === "custom" ? customTerms : PAYMENT_TERM_PRESETS[termsPreset];
+  const [extraLines, setExtraLines] = useState<{id:string;label:string;hours:number;materialsCost:number;note:string}[]>([]);
   const [saving, setSaving]         = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [savedQuoteId, setSavedQuoteId] = useState<string | null>(null);
