@@ -195,7 +195,7 @@ export async function generateQuotePdf(
   // Bank details removed from PDF - client chooses payment method
   // (bank, cash or card) on the accept page after clicking the button.
   if (quote.public_token) {
-    const appUrl   = process.env.NEXT_PUBLIC_APP_URL ?? "https://quotease.vercel.app";
+    const appUrl   = process.env.NEXT_PUBLIC_APP_URL ?? "https://swiftscope.vercel.app";
     const quoteUrl = `${appUrl}/q/${quote.public_token}`;
     rule();
     newPageIfNeeded(72);
@@ -266,7 +266,7 @@ export async function generateQuotePdf(
   // ── FOOTER ───────────────────────────────────────────────────────
   for (const p of pdfDoc.getPages()) {
     p.drawRectangle({ x: 0, y: 0, width: PAGE_WIDTH, height: 26, color: NAVY });
-    p.drawText("Quoting by Quotease", { x: MARGIN, y: 9, size: 8, font, color: rgb(0.55, 0.62, 0.69) });
+    p.drawText("Quoting by Swiftscope", { x: MARGIN, y: 9, size: 8, font, color: rgb(0.55, 0.62, 0.69) });
   }
 
   return pdfDoc.save();

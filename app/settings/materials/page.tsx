@@ -38,7 +38,7 @@ export default async function MaterialsPage() {
         <div className="mb-6">
           <h1 className="font-display text-[28px] text-[var(--ink)] mb-1">Material Pricing</h1>
           <p className="text-[14px] text-[var(--ink-faint)]">
-            Set your supplier costs for every line item. Quotease uses these to calculate
+            Set your supplier costs for every line item. Swiftscope uses these to calculate
             quote totals - your margin is added on top automatically.
           </p>
         </div>

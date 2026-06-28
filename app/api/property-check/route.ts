@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 const HEADERS = {
-  "User-Agent": "quotease-tradie-tool/1.0 (contact: hello@quotease.com.au)",
+  "User-Agent": "swiftscope-tradie-tool/1.0 (contact: hello@swiftscope.com.au)",
 };
 
 const VICPLAN = {

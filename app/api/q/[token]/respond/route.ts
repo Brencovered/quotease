@@ -59,7 +59,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
           ? `<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;">
                <h2 style="color:#0a1722;">You just won a job 🎉</h2>
                <p>${quote.client_name ?? "Your client"} accepted the quote worth <strong>$${(quote.total_cost ?? 0).toLocaleString()}</strong>.</p>
-               <p>It's now showing as an active job in Quotease - head to the Jobs tab to get it scheduled.</p>
+               <p>It's now showing as an active job in Swiftscope - head to the Jobs tab to get it scheduled.</p>
              </div>`
           : `<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;">
                <h2>Quote declined</h2>
@@ -70,7 +70,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: `Quotease <${process.env.RESEND_FROM_EMAIL ?? "quotes@yourdomain.com"}>`,
+          from: `Swiftscope <${process.env.RESEND_FROM_EMAIL ?? "quotes@yourdomain.com"}>`,
           to: profile.contact_email,
           subject,
           html,

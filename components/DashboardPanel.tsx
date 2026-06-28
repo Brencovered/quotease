@@ -194,7 +194,7 @@ export default function DashboardPanel({ stats, profit }: { stats: DashboardStat
           {/* Time saved card - the hero metric */}
           {stats.avgQuoteTimeMinutes !== null && stats.quotesTimedCount >= 1 && (
             <div className="card border-2 border-[var(--amber)]/30 bg-gradient-to-br from-[var(--amber-light)] to-white">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--amber-deep)] mb-3">Quotease is saving you time</p>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--amber-deep)] mb-3">Swiftscope is saving you time</p>
               <div className="flex items-end gap-3 mb-3">
                 <div>
                   <p className="font-display text-[3.2rem] leading-none text-[var(--navy)]">

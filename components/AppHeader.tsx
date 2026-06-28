@@ -48,7 +48,7 @@ export default function AppHeader() {
       <header className="hidden sm:flex bg-[var(--navy)] sticky top-0 z-40 h-14 items-center">
         <div className="max-w-5xl mx-auto w-full px-6 flex items-center justify-between">
           <Link href="/electrician/dashboard" className="font-display text-[15px] tracking-widest text-white">
-            QUOTEASE
+            SWIFTSCOPE
           </Link>
           <nav className="flex items-center gap-5 text-[13px] font-semibold">
             {NAV.filter((n) => !n.fab).map((n) => (
@@ -82,7 +82,7 @@ export default function AppHeader() {
       {/* ── Mobile top bar (logo + more menu) ────────────────────── */}
       <header className="sm:hidden bg-[var(--navy)] sticky top-0 z-40 h-12 flex items-center justify-between px-4 relative">
         <Link href="/electrician/dashboard" className="font-display text-[14px] tracking-widest text-white">
-          QUOTEASE
+          SWIFTSCOPE
         </Link>
         <button onClick={() => setMoreOpen((v) => !v)} className="text-[var(--steel-2)] p-1" aria-label="More">
           {moreOpen ? <X size={18} /> : <Menu size={18} />}

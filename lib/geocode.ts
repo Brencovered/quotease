@@ -13,7 +13,7 @@ export async function geocodeAddress(address: string): Promise<{ lat: number; ln
     // matching a result on the other side of the world.
     const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=au&q=${encodeURIComponent(address)}`;
     const res = await fetch(url, {
-      headers: { "User-Agent": "Quotease (quoting software for trades) - contact via app" },
+      headers: { "User-Agent": "Swiftscope (quoting software for trades) - contact via app" },
     });
     if (!res.ok) return null;
     const results = await res.json();

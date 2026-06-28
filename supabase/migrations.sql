@@ -1,5 +1,5 @@
 -- ============================================================
--- QUOTEASE v2 MIGRATION
+-- SWIFTSCOPE v2 MIGRATION
 -- Run in Supabase SQL editor after the initial schema.sql
 -- ============================================================
 

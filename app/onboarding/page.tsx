@@ -140,7 +140,7 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-[var(--app-bg)] flex flex-col">
       {/* Header */}
       <div className="bg-[var(--navy)] px-6 py-4 flex items-center justify-between shrink-0">
-        <span className="font-display text-[15px] tracking-widest text-white">QUOTEASE</span>
+        <span className="font-display text-[15px] tracking-widest text-white">SWIFTSCOPE</span>
         <span className="text-[12px] text-[var(--steel-3)] font-semibold">Step {step} of {STEPS.length}</span>
       </div>
 

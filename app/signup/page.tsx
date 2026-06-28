@@ -39,7 +39,7 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen bg-[var(--app-bg)] flex flex-col">
       <div className="bg-[var(--navy)] px-6 py-4">
-        <Link href="/" className="font-display text-[15px] tracking-widest text-white">QUOTEASE</Link>
+        <Link href="/" className="font-display text-[15px] tracking-widest text-white">SWIFTSCOPE</Link>
       </div>
 
       <div className="flex-1 flex items-center justify-center px-4 py-12">

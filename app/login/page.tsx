@@ -35,7 +35,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[var(--app-bg)] flex flex-col">
       {/* Header strip */}
       <div className="bg-[var(--navy)] px-6 py-4">
-        <Link href="/" className="font-display text-[15px] tracking-widest text-white">QUOTEASE</Link>
+        <Link href="/" className="font-display text-[15px] tracking-widest text-white">SWIFTSCOPE</Link>
       </div>
 
       <div className="flex-1 flex items-center justify-center px-4 py-12">
@@ -43,7 +43,7 @@ export default function LoginPage() {
           {/* Card */}
           <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-8 shadow-sm">
             <h1 className="font-display text-[26px] text-[var(--ink)] mb-1">Welcome back</h1>
-            <p className="text-[13.5px] text-[var(--ink-faint)] mb-6">Log in to your Quotease account</p>
+            <p className="text-[13.5px] text-[var(--ink-faint)] mb-6">Log in to your Swiftscope account</p>
 
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>

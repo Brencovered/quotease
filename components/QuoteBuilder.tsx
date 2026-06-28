@@ -539,7 +539,7 @@ function StepElectrical({ intake, set, lib, setLib }: {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "quotease-price-template.csv";
+    a.download = "swiftscope-price-template.csv";
     a.click();
     URL.revokeObjectURL(url);
   }

@@ -136,7 +136,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
             />
           </div>
         </div>
-        <p className="text-center text-[11.5px] text-[var(--ink-faint)] mt-4">Quoting by Quotease</p>
+        <p className="text-center text-[11.5px] text-[var(--ink-faint)] mt-4">Quoting by Swiftscope</p>
       </div>
     </main>
   );

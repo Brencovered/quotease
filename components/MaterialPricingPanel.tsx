@@ -103,7 +103,7 @@ export default function MaterialPricingPanel({ trades }: { trades: string[] }) {
     const csv = ["item_key,label,unit_cost", ...rows.map((r) => `${r.item_key},"${r.label}",${r.unit_cost}`)].join("\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-    a.download = `quotease-materials-${activeTrade}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `swiftscope-materials-${activeTrade}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
   }
 
@@ -112,7 +112,7 @@ export default function MaterialPricingPanel({ trades }: { trades: string[] }) {
     const csv  = ["item_key,label,unit_cost", ...defs.map((m) => `${m.item_key},"${m.label}",${m.unit_cost}`)].join("\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-    a.download = `quotease-template-${activeTrade}.csv`;
+    a.download = `swiftscope-template-${activeTrade}.csv`;
     a.click();
   }
 

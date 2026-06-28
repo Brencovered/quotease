@@ -12,7 +12,7 @@ const FEATURES = [
   { n: "05", title: "Know if you made money",              body: "Job costing tracks actual hours and materials vs what you quoted. See your real margin on every job, not just revenue." },
   { n: "06", title: "Variations in writing, always",       body: "Client wants to add scope mid-job? Raise a variation order in one tap. Gets signed off before you touch it." },
   { n: "07", title: "Follow-up reminders built in",        body: "Quotes going quiet? Automatic follow-up reminders so nothing falls through the cracks while you are on the tools." },
-  { n: "08", title: "VIC planning overlay checks",         body: "Type in the address and Quotease checks VicPlan automatically. Heritage overlay detected? Labour estimate updates on the spot." },
+  { n: "08", title: "VIC planning overlay checks",         body: "Type in the address and Swiftscope checks VicPlan automatically. Heritage overlay detected? Labour estimate updates on the spot." },
 ];
 
 const TRADES = [
@@ -44,7 +44,7 @@ export default function Home() {
 
       {/* NAV */}
       <div className="absolute top-0 left-0 right-0 z-30 max-w-7xl mx-auto px-6 pt-6 flex items-center justify-between">
-        <span className="font-display text-xl tracking-wide text-white drop-shadow-lg">QUOTEASE</span>
+        <span className="font-display text-xl tracking-wide text-white drop-shadow-lg">SWIFTSCOPE</span>
         <div className="flex items-center gap-4">
           <Link href="/login" className="text-white/80 hover:text-white font-semibold text-sm transition-colors hidden sm:block drop-shadow">Log in</Link>
           <Link href="/signup" className="bg-[#ffb400] text-[#0a1722] font-extrabold text-sm px-5 py-2.5 rounded-xl hover:bg-[#e89e00] transition-colors">
@@ -68,7 +68,7 @@ export default function Home() {
               <span className="block text-[3.2rem] sm:text-[5rem] lg:text-[6rem] text-[#ffb400]">Win the job.</span>
             </h1>
             <p className="text-[17px] sm:text-[18px] leading-[1.65] text-[#c8d8e4] max-w-[520px] mb-10">
-              Stop writing quotes on Word docs at 10pm. Quotease gets you a professional
+              Stop writing quotes on Word docs at 10pm. Swiftscope gets you a professional
               quote built and sent from your phone before you leave the driveway - while
               the other tradie is still working out their price.
             </p>
@@ -121,7 +121,7 @@ export default function Home() {
                 Everything from<br />quote to paid.
               </h2>
               <p className="text-[15px] text-[#5a7080] leading-[1.7] mb-8">
-                Most quoting tools stop at the quote. Quotease covers the whole job -
+                Most quoting tools stop at the quote. Swiftscope covers the whole job -
                 from the first number on site to the final payment cleared.
               </p>
               <Link href="/signup" className="inline-flex bg-[#0a1722] text-white font-extrabold text-[15px] px-6 py-3.5 rounded-xl hover:bg-[#0e2233] transition-colors">
@@ -217,7 +217,7 @@ export default function Home() {
               54% of clients go with<br />the first quote they get.
             </h2>
             <p className="text-[16px] text-[#a9bcc8] max-w-[420px] leading-[1.6]">
-              Speed wins the job. Quotease gets you there first - every time, from every site.
+              Speed wins the job. Swiftscope gets you there first - every time, from every site.
             </p>
           </div>
         </div>
@@ -273,9 +273,9 @@ export default function Home() {
               renovations, commercial fitouts.
             </p>
             <p className="text-[15.5px] text-[#3a5060] leading-[1.7] mb-8">
-              He built Quotease because every piece of software he tried was either
+              He built Swiftscope because every piece of software he tried was either
               built by people who had never held a cable puller, or so bloated
-              it took three weeks to set up. Quotease does what a tradie
+              it took three weeks to set up. Swiftscope does what a tradie
               actually needs. Nothing more.
             </p>
             <div className="flex items-center gap-4 p-4 bg-white border border-[#e8ecef] rounded-2xl shadow-sm">
@@ -383,7 +383,7 @@ export default function Home() {
         </div>
         <div className="border-t border-white/[0.08]">
           <div className="max-w-7xl mx-auto px-6 py-5 flex flex-wrap items-center justify-between gap-4">
-            <span className="font-display text-lg text-white">QUOTEASE</span>
+            <span className="font-display text-lg text-white">SWIFTSCOPE</span>
             <span className="text-[12px] font-semibold text-white/30">Built by Spark Ease Electrical, Melbourne</span>
             <div className="flex gap-6 text-[12.5px] font-semibold text-white/40">
               <Link href="/login" className="hover:text-white transition-colors">Log in</Link>

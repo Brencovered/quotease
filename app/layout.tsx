@@ -8,7 +8,7 @@ import "@fontsource/archivo/800.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Quotease - quoting software built by tradies, for tradies",
+  title: "Swiftscope - quoting software built by tradies, for tradies",
   description: "Quote the job before you've left the driveway.",
 };
 
