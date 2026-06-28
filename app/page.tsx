@@ -229,8 +229,8 @@ export default function Home() {
               How many tools are you<br />paying for right now?
             </h2>
             <p className="text-[15px] text-[#5a7080] leading-[1.7] mt-4 max-w-[540px]">
-              The average sole trader runs four separate platforms before they send their first invoice.
-              Each one costs money. None of them talk to each other. Swiftscope consolidates the ones that matter.
+              The average sole trader runs four or five separate platforms before they send their first invoice.
+              Each one costs money. None of them talk to each other. Swiftscope consolidates the ones that matter into one tool.
             </p>
           </div>
 
@@ -246,8 +246,8 @@ export default function Home() {
                   { tool: "Fergus / ServiceM8",      use: "Job management",                  cost: "$40-60/mo",           replaced: true },
                   { tool: "GroundPlan / PlanSwift",  use: "Drawing takeoffs and markup",     cost: "$60-100/mo",          replaced: true },
                   { tool: "Google Calendar",         use: "Scheduling jobs",                 cost: "Free",                replaced: true },
-                  { tool: "Xero / MYOB",             use: "Invoicing and accounting",        cost: "$30-50/mo",           replaced: false },
-                  { tool: "WhatsApp / Email",        use: "Client communication",            cost: "Free",                replaced: false },
+                  { tool: "Quote follow-up emails",  use: "Chasing clients manually",        cost: "Your time",           replaced: true },
+                  { tool: "Xero / MYOB",             use: "Accounting — export from Swiftscope in one click", cost: "$30-50/mo", replaced: false },
                 ].map((r) => (
                   <div key={r.tool} className={`flex items-center gap-4 px-5 py-3.5 rounded-xl border transition-all ${
                     r.replaced
@@ -268,7 +268,7 @@ export default function Home() {
                 ))}
               </div>
               <p className="text-[12.5px] text-[#8a9ba8] mt-3 font-semibold">
-                Up to $200/month. Four logins. Nothing connected.
+                Up to $200/month in subscriptions. Five logins. Nothing connected.
               </p>
             </div>
 
@@ -277,7 +277,7 @@ export default function Home() {
               <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-4">What you need with Swiftscope</p>
               <div className="space-y-2">
                 {[
-                  { tool: "Swiftscope",   use: "Quote, job management, drawings, schedule", highlight: true },
+                  { tool: "Swiftscope",   use: "Quote, job management, drawings, schedule, follow-ups", highlight: true },
                   { tool: "Xero / MYOB",  use: "Accounting — export from Swiftscope in one click", highlight: false },
                 ].map((r) => (
                   <div key={r.tool} className={`flex items-center gap-4 px-5 py-4 rounded-xl border ${
@@ -305,8 +305,8 @@ export default function Home() {
               <div className="mt-6 bg-[#0a1722] rounded-2xl p-6">
                 <div className="grid grid-cols-3 gap-4 mb-5">
                   {[
-                    { n: "3-4",    label: "Platforms replaced" },
-                    { n: "$150+",  label: "Monthly saving" },
+                    { n: "4-5",    label: "Platforms replaced" },
+                    { n: "$200+",  label: "Monthly saving" },
                     { n: "1",      label: "Login to remember" },
                   ].map((s) => (
                     <div key={s.label} className="text-center">
