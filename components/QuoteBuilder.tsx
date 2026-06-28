@@ -870,3 +870,4 @@ function Check2({ checked, onChange, label }: { checked: boolean; onChange: (v: 
 function Row({ children }: { children: React.ReactNode }) {
   return <div className="divide-y divide-[var(--line-subtle)]">{children}</div>;
 }
+// build Sun Jun 28 04:25:11 UTC 2026
