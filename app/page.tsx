@@ -81,7 +81,7 @@ export default function Home() {
               </Link>
             </div>
             <div className="flex flex-wrap gap-6 text-[13px] font-semibold text-[#8aa4b4]">
-              <span>$39/month - unlimited everything</span>
+              <span>3-day free trial — then $39/month</span>
               <span className="text-[#2a3a47]">|</span>
               <span>Unlimited users</span>
               <span className="text-[#2a3a47]">|</span>
@@ -368,7 +368,8 @@ export default function Home() {
             </h2>
             <div className="flex flex-col divide-y divide-[#e8ecef]">
               {[
-                "$39/month - unlimited seats, quotes, and jobs",
+                "3-day free trial — no credit card needed",
+                "$39/month after that — unlimited seats, quotes, and jobs",
                 "No per-user fees, ever",
                 "All 13 trades supported out of the box",
                 "Drawing markup linked directly to quotes",
@@ -385,13 +386,13 @@ export default function Home() {
           <div className="bg-[#0a1722] rounded-3xl overflow-hidden shadow-2xl">
             <div className="h-3" style={{ background: "repeating-linear-gradient(135deg,#FFB400 0 14px,#E89E00 14px 28px)" }} />
             <div className="p-10 text-center">
-              <p className="text-[12px] font-bold tracking-[.2em] uppercase text-[#7e94a2] mb-4">One plan. Everything included.</p>
+              <p className="text-[12px] font-bold tracking-[.2em] uppercase text-[#7e94a2] mb-4">3-day free trial. No card needed.</p>
               <div className="flex items-end justify-center gap-2 mb-1">
                 <span className="font-display text-[6rem] leading-[0.85] text-[#ffb400]">$39</span>
                 <span className="text-[#7e94a2] text-[18px] font-bold mb-4">/mo</span>
               </div>
               <p className="text-[#7e94a2] text-[14px] mb-1">Unlimited seats, quotes and jobs</p>
-              <p className="text-[12px] text-[#3a4f5e] mb-8">No per-user fees. No hidden limits. One flat price for the whole business.</p>
+              <p className="text-[12px] text-[#3a4f5e] mb-8">3 business days to decide. If it's not worth $39/month you'll know by day two. No credit card until you're ready.</p>
               <Link href="/signup" className="block bg-[#ffb400] text-[#0a1722] font-extrabold text-[17px] py-4 rounded-xl mb-3 hover:bg-[#e89e00] transition-colors">
                 Start your free trial
               </Link>
