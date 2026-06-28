@@ -155,7 +155,7 @@ export default function PlanMarkup({
   onCostChange?: (total: number) => void;
 }) {
   const imgRef      = useRef<HTMLImageElement>(null);
-  const [imgNatural, setImgNatural] = useState<{w:number;h:number}|null>(null);
+  const [, setImgNatural] = useState<{w:number;h:number}|null>(null);
   const [activeTool, setActiveTool] = useState<string | "calibrate" | null>(null);
   const [draftPts,   setDraftPts]   = useState<ShapePoint[]>([]);
   const [calDraft,   setCalDraft]   = useState<ShapePoint|null>(null);
@@ -165,14 +165,12 @@ export default function PlanMarkup({
 
   const tools = getTools(trade);
 
-  const getPoint = useCallback((e: React.MouseEvent | React.Touch): ShapePoint | null => {
+  const getPoint = useCallback((e: React.MouseEvent): ShapePoint | null => {
     const img = imgRef.current; if (!img) return null;
     const rect = img.getBoundingClientRect();
-    const cx = "clientX" in e ? e.clientX : e.clientX;
-    const cy = "clientY" in e ? e.clientY : e.clientY;
     return {
-      x: Math.max(0, Math.min(100, ((cx - rect.left) / rect.width)  * 100)),
-      y: Math.max(0, Math.min(100, ((cy - rect.top)  / rect.height) * 100)),
+      x: Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width)  * 100)),
+      y: Math.max(0, Math.min(100, ((e.clientY - rect.top)  / rect.height) * 100)),
     };
   }, []);
 
