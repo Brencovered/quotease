@@ -58,7 +58,7 @@ export default function DashboardPanel({ stats, profit }: { stats: DashboardStat
       )}
 
       {/* ── Profit ─── */}
-      <div className="bg-[var(--navy)] rounded-xl p-4 sm:p-5 mb-5 flex items-center justify-between gap-4">
+      <Link href="/electrician/margins" className="bg-[var(--navy)] rounded-xl p-4 sm:p-5 mb-5 flex items-center justify-between gap-4 hover:bg-[#0e2233] transition-colors">
         <div>
           <p className="text-[11px] tracking-[.1em] uppercase text-[var(--steel-3)] font-bold mb-1">Profit</p>
           {profit.jobsTracked > 0 ? (
@@ -70,7 +70,7 @@ export default function DashboardPanel({ stats, profit }: { stats: DashboardStat
                 </span>
               </p>
               <p className="text-[12px] text-[var(--steel-2)] mt-0.5">
-                Based on actuals logged for {profit.jobsTracked} job{profit.jobsTracked !== 1 ? "s" : ""}
+                Based on actuals logged for {profit.jobsTracked} job{profit.jobsTracked !== 1 ? "s" : ""} - tap to see the breakdown
               </p>
             </>
           ) : (
@@ -79,7 +79,7 @@ export default function DashboardPanel({ stats, profit }: { stats: DashboardStat
             </p>
           )}
         </div>
-      </div>
+      </Link>
 
       {/* ── Two-column layout on desktop ─── */}
       <div className="grid lg:grid-cols-[1fr_340px] gap-5 items-start">

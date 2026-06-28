@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { TrendingUp, TrendingDown, Minus, Lightbulb } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Lightbulb, ArrowRight } from "lucide-react";
 import { generateCostingInsight } from "@/lib/jobInsights";
 
 type Actuals = {
@@ -109,6 +110,10 @@ export default function JobCostingPanel({ quoteId, quotedHours, quotedMaterials,
               <p>{insight}</p>
             </div>
           )}
+
+          <Link href="/electrician/margins" className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--navy)] mb-4">
+            See how this compares across all your jobs <ArrowRight size={13} />
+          </Link>
 
           {/* Actuals history */}
           {actuals.length > 1 && (
