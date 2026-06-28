@@ -5,8 +5,10 @@ import { createClient } from "@/lib/supabase/client";
 import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
 import { ChevronRight, ChevronLeft, Check, Plus, Trash2 } from "lucide-react";
 import { calcGenericQuote, GENERIC_TRADE_TEMPLATES, type GenericLineItem, type GenericIntake } from "@/lib/genericTrades";
+import StepCustomer from "./StepCustomer";
 
 const STEPS = [
+  { id: "customer", label: "Customer" },
   { id: "job",     label: "Job" },
   { id: "items",   label: "Items" },
   { id: "send",    label: "Send" },
@@ -150,6 +152,14 @@ export default function GenericQuoteBuilder({
       </div>
 
       {/* Step: Job */}
+      {stepId === "customer" && (
+        <StepCustomer
+          clientName={clientName} setClientName={setClientName}
+          clientEmail={clientEmail} setClientEmail={setClientEmail}
+          siteAddress={siteAddress} setSiteAddress={setSiteAddress}
+        />
+      )}
+
       {stepId === "job" && (
         <div className="space-y-4">
           <div className="card">
@@ -255,18 +265,10 @@ export default function GenericQuoteBuilder({
           </div>
 
           <div className="card">
-            <p className="section-tag mb-3">Client details</p>
-            <div className="space-y-3">
-              <Field label="Client name">
-                <input value={clientName} onChange={(e) => setClientName(e.target.value)} className="app-field" placeholder="Jane Smith" />
-              </Field>
-              <Field label="Client email">
-                <input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className="app-field" placeholder="jane@email.com" />
-              </Field>
-              <Field label="Site address">
-                <input value={siteAddress} onChange={(e) => setSiteAddress(e.target.value)} className="app-field" placeholder="123 Main St, Suburb" />
-              </Field>
-            </div>
+            <p className="section-tag mb-1">Sending to</p>
+            <p className="font-semibold text-[var(--ink)]">{clientName || "No client name set"}</p>
+            <p className="text-[13px] text-[var(--ink-faint)]">{clientEmail || "No email set - can still save as draft"}</p>
+            <p className="text-[13px] text-[var(--ink-faint)]">{siteAddress || "No site address set"}</p>
           </div>
 
           <div className="card">

@@ -6,6 +6,7 @@ import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
 import { Paperclip, X, ChevronRight, ChevronLeft, Check } from "lucide-react";
 import { calcRooferQuote, ROOFER_DEFAULT_MATERIALS, type RooferIntake } from "@/lib/calcRoofer";
 import MaterialsEditor from "@/components/MaterialsEditor";
+import StepCustomer from "./StepCustomer";
 
 type MaterialRow = { item_key: string; label: string; unit_cost: number };
 
@@ -17,12 +18,13 @@ const DEFAULT_INTAKE: RooferIntake = {
 };
 
 const STEPS = [
+  { id: "customer",  label: "Customer"  },
+  { id: "drawing",   label: "Files"     },
   { id: "job",       label: "Job"       },
   { id: "roof",      label: "Roof"      },
   { id: "extras",    label: "Extras"    },
   { id: "materials", label: "Materials" },
   { id: "send",      label: "Send"      },
-  { id: "drawing",   label: "Files"     },
 ];
 
 export default function RooferQuoteBuilder({ profile, materials }: {
@@ -94,6 +96,14 @@ export default function RooferQuoteBuilder({ profile, materials }: {
       <div className="flex items-center gap-1 mb-5 overflow-x-auto hide-scrollbar pb-1">
         {STEPS.map((s,i) => <button key={s.id} onClick={() => setStep(i)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12.5px] font-bold whitespace-nowrap ${i===step ? "bg-[var(--navy)] text-white" : i<step ? "bg-[var(--amber-light)] text-[var(--amber-deep)]" : "bg-[var(--surface)] text-[var(--ink-faint)] border border-[var(--line)]"}`}>{i<step && <Check size={11}/>}{s.label}</button>)}
       </div>
+
+      {stepId === "customer" && (
+        <StepCustomer
+          clientName={clientName} setClientName={setClientName}
+          clientEmail={clientEmail} setClientEmail={setClientEmail}
+          siteAddress={siteAddress} setSiteAddress={setSiteAddress}
+        />
+      )}
 
       {stepId === "drawing" && (
         <div className="card">
@@ -183,12 +193,10 @@ export default function RooferQuoteBuilder({ profile, materials }: {
             </div>
           </div>
           <div className="card">
-            <p className="section-tag mb-3">Client details</p>
-            <div className="space-y-3">
-              <Field label="Client name"><input value={clientName} onChange={(e) => setClientName(e.target.value)} className="app-field" placeholder="Jane Smith"/></Field>
-              <Field label="Client email"><input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className="app-field" placeholder="jane@email.com"/></Field>
-              <Field label="Site address"><input value={siteAddress} onChange={(e) => setSiteAddress(e.target.value)} className="app-field" placeholder="123 Main St"/></Field>
-            </div>
+            <p className="section-tag mb-1">Sending to</p>
+            <p className="font-semibold text-[var(--ink)]">{clientName || "No client name set"}</p>
+            <p className="text-[13px] text-[var(--ink-faint)]">{clientEmail || "No email set - can still save as draft"}</p>
+            <p className="text-[13px] text-[var(--ink-faint)]">{siteAddress || "No site address set"}</p>
           </div>
           <div className="card">
             <p className="section-tag mb-3">Payment terms</p>

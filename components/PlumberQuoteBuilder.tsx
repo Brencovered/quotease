@@ -7,6 +7,7 @@ import { AlertTriangle, Paperclip, X, Sparkles, ChevronRight, ChevronLeft, Check
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import { calcPlumberQuote, PLUMBER_DEFAULT_MATERIALS, type PlumberIntake } from "@/lib/calcPlumber";
 import MaterialsEditor from "@/components/MaterialsEditor";
+import StepCustomer from "./StepCustomer";
 
 type MaterialRow = { item_key: string; label: string; unit_cost: number };
 
@@ -23,12 +24,13 @@ const DEFAULT_INTAKE: PlumberIntake = {
 };
 
 const STEPS = [
+  { id: "customer",  label: "Customer"  },
+  { id: "drawing",   label: "Files"     },
   { id: "job",       label: "Job"       },
   { id: "fixtures",  label: "Fixtures"  },
   { id: "pipework",  label: "Pipework"  },
   { id: "materials", label: "Materials" },
   { id: "send",      label: "Send"      },
-  { id: "drawing",   label: "Files"     },
 ];
 
 export default function PlumberQuoteBuilder({ profile, materials }: {
@@ -139,6 +141,14 @@ export default function PlumberQuoteBuilder({ profile, materials }: {
       </div>
 
       {/* Step content */}
+      {stepId === "customer" && (
+        <StepCustomer
+          clientName={clientName} setClientName={setClientName}
+          clientEmail={clientEmail} setClientEmail={setClientEmail}
+          siteAddress={siteAddress} setSiteAddress={setSiteAddress}
+        />
+      )}
+
       {stepId === "drawing" && (
         <div className="space-y-4">
           <div className="card">
@@ -261,12 +271,10 @@ export default function PlumberQuoteBuilder({ profile, materials }: {
             </div>
           </div>
           <div className="card">
-            <p className="section-tag mb-3">Client details</p>
-            <div className="space-y-3">
-              <Field label="Client name"><input value={clientName} onChange={(e) => setClientName(e.target.value)} className="app-field" placeholder="Jane Smith" /></Field>
-              <Field label="Client email"><input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className="app-field" placeholder="jane@email.com" /></Field>
-              <Field label="Site address"><input value={siteAddress} onChange={(e) => setSiteAddress(e.target.value)} className="app-field" placeholder="123 Main St" /></Field>
-            </div>
+            <p className="section-tag mb-1">Sending to</p>
+            <p className="font-semibold text-[var(--ink)]">{clientName || "No client name set"}</p>
+            <p className="text-[13px] text-[var(--ink-faint)]">{clientEmail || "No email set - can still save as draft"}</p>
+            <p className="text-[13px] text-[var(--ink-faint)]">{siteAddress || "No site address set"}</p>
           </div>
           <div className="card">
             <p className="section-tag mb-3">Payment terms</p>
