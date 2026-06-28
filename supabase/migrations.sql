@@ -94,3 +94,34 @@ alter table quotes add column if not exists markup_materials integer not null de
 -- Add calibration + shapes (jsonb) to client_plans (replaces legacy annotations)
 alter table client_plans add column if not exists shapes jsonb not null default '[]';
 alter table client_plans add column if not exists calibration jsonb;
+
+-- ── Supplier price book ──────────────────────────────────────────────────────
+-- Stores items imported from supplier CSV files (Reece, Tradelink, Middy's etc)
+-- Separate from material_items which stores the tradie's own custom pricing
+
+create table if not exists price_book_items (
+  id           uuid primary key default uuid_generate_v4(),
+  profile_id   uuid not null references profiles(id) on delete cascade,
+  supplier     text not null,                    -- e.g. 'reece', 'tradelink', 'middys'
+  sku          text,                             -- supplier part number
+  description  text not null,
+  unit         text not null default 'ea',       -- ea, m, sqm, L, kg etc
+  cost_price   numeric not null default 0,       -- ex GST supplier cost
+  trade        text,                             -- optional trade tag
+  imported_at  timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+alter table price_book_items enable row level security;
+create policy "Own price book" on price_book_items for all using (auth.uid() = profile_id);
+create index if not exists price_book_items_profile_search on price_book_items(profile_id, supplier);
+
+-- ── Xero OAuth tokens ────────────────────────────────────────────────────────
+alter table profiles
+  add column if not exists xero_tenant_id        text,
+  add column if not exists xero_access_token      text,
+  add column if not exists xero_refresh_token     text,
+  add column if not exists xero_token_expires_at  timestamptz,
+  add column if not exists xero_connected_at      timestamptz;
+
+-- Track which quotes have been pushed to Xero (xero_invoice_id already exists)
+-- xero_exported_at already exists too - we reuse those columns

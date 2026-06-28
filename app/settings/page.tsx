@@ -1,12 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
 import SettingsPanel from "@/components/SettingsPanel";
+import XeroConnectPanel from "@/components/XeroConnectPanel";
 import AppHeader from "@/components/AppHeader";
+import Link from "next/link";
+import { BookOpen } from "lucide-react";
 
 export default async function SettingsPage() {
   let profile: {
     business_name?: string;
     contact_email?: string;
     xero_connected?: boolean;
+    xero_connected_at?: string | null;
+    xero_tenant_id?: string | null;
     trades?: string[];
     ai_free_analyses_used?: number;
     ai_addon_status?: string;
@@ -25,10 +30,34 @@ export default async function SettingsPage() {
     console.error("Settings page: continuing without profile data -", err);
   }
 
+  const xeroConnected = !!(profile as Record<string, unknown>)?.xero_tenant_id;
+
   return (
     <>
       <AppHeader />
       <SettingsPanel profile={profile} />
+
+      {/* Supplier price book */}
+      <div className="page-wrap-narrow pb-0 pt-0">
+        <div className="card mt-0 mb-4">
+          <p className="section-tag mb-1">Supplier price books</p>
+          <p className="font-semibold text-[var(--ink)] mb-1">Auto-fill material prices when quoting</p>
+          <p className="text-[13px] text-[var(--ink-faint)] mb-3">
+            Import CSVs from Reece, Tradelink, Middy&apos;s and others.
+            Prices appear as you type when building a quote.
+          </p>
+          <Link href="/settings/pricebook" className="btn-secondary inline-flex">
+            <BookOpen size={14} /> Manage price books
+          </Link>
+        </div>
+
+        {/* Xero */}
+        <XeroConnectPanel
+          connected={xeroConnected}
+          connectedAt={(profile as Record<string, unknown>)?.xero_connected_at as string | null ?? null}
+          tenantId={(profile as Record<string, unknown>)?.xero_tenant_id as string | null ?? null}
+        />
+      </div>
     </>
   );
 }
