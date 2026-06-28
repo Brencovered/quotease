@@ -6,6 +6,7 @@ import { PAYMENT_TERM_PRESETS } from "@/lib/paymentTerms";
 import { ChevronRight, ChevronLeft, Check, Plus, Trash2 } from "lucide-react";
 import { calcGenericQuote, GENERIC_TRADE_TEMPLATES, type GenericLineItem, type GenericIntake } from "@/lib/genericTrades";
 import StepCustomer from "./StepCustomer";
+import ExtraJobLines, { type ExtraLine, extraLinesTotals } from "./ExtraJobLines";
 import { resolveClientId } from "@/lib/resolveClientId";
 
 const STEPS = [
@@ -45,6 +46,7 @@ export default function GenericQuoteBuilder({
   const [siteAddress, setSiteAddress] = useState("");
   const [clientId, setClientId] = useState<string | null>(preClientId ?? null);
   const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">("full_on_completion");
+  const [extraLines, setExtraLines]   = useState<ExtraLine[]>([]);
   const [saving,      setSaving]      = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
@@ -92,7 +94,7 @@ export default function GenericQuoteBuilder({
       job_type:      jobType,
       intake_data:   intakeData,
       labour_hours:  result.labourHours,
-      materials_cost: result.materialsCost,
+      materials_cost: result.materialsCost + extraLinesTotals(extraLines, rate, margin).materials,
       total_cost:    result.totalCost,
       payment_terms: paymentTerms,
       markup_materials: preMarkupMaterials ?? 0,
@@ -281,7 +283,13 @@ export default function GenericQuoteBuilder({
             <p className="text-[13px] text-[var(--ink-faint)]">{siteAddress || "No site address set"}</p>
           </div>
 
-          <div className="card">
+          <ExtraJobLines
+            lines={extraLines}
+            onChange={setExtraLines}
+            hourlyRate={rate}
+            marginPct={margin}
+          />
+                    <div className="card">
             <p className="section-tag mb-3">Payment terms</p>
             <select value={termsPreset} onChange={(e) => setTermsPreset(e.target.value as keyof typeof PAYMENT_TERM_PRESETS | "custom")} className="app-field mb-3">
               <option value="full_on_completion">100% on completion (14 days)</option>

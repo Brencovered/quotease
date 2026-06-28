@@ -7,6 +7,7 @@ import { AlertTriangle, Paperclip, X, Sparkles, ChevronRight, ChevronLeft, Check
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import StepCustomer from "./StepCustomer";
+import ExtraJobLines, { type ExtraLine, extraLinesTotals } from "./ExtraJobLines";
 import { resolveClientId } from "@/lib/resolveClientId";
 import MaterialsEditor from "@/components/MaterialsEditor";
 import {
@@ -217,8 +218,8 @@ export default function QuoteBuilder({
     const { data: quote, error } = await supabase.from("quotes").insert({
       profile_id: userData.user.id, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail,
       site_address: siteAddress, trade: "electrician", job_type: intake.jobType,
-      intake_data: intake, labour_hours: result.labourHours, materials_cost: result.materialsCost,
-      total_cost: result.totalCost, payment_terms: paymentTerms,
+      intake_data: intake, labour_hours: result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0), materials_cost: result.materialsCost + extraLinesTotals(extraLines, rate, margin).materials,
+      total_cost: result.totalCost + extraLinesTotals(extraLines, rate, margin).total, payment_terms: paymentTerms,
       quote_expires_at: new Date(Date.now() + (profile.default_expiry_days ?? 30) * 86400000).toISOString(),
       status: sendEmail ? "sent" : "draft",
       sent_at: sendEmail ? new Date().toISOString() : null,
@@ -765,6 +766,14 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
         <p className="text-[13px] text-[var(--ink-faint)]">{clientEmail || "No email set - can still save as draft"}</p>
         <p className="text-[13px] text-[var(--ink-faint)]">{siteAddress || "No site address set"}</p>
       </div>
+
+      {/* Extra job lines */}
+      <ExtraJobLines
+        lines={extraLines}
+        onChange={setExtraLines}
+        hourlyRate={rate}
+        marginPct={margin}
+      />
 
       {/* Payment terms */}
       <div className="card">

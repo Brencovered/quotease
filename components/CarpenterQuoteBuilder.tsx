@@ -7,6 +7,7 @@ import { Paperclip, X, ChevronRight, ChevronLeft, Check } from "lucide-react";
 import { calcCarpenterQuote, CARPENTER_DEFAULT_MATERIALS, type CarpenterIntake } from "@/lib/calcCarpenter";
 import MaterialsEditor from "@/components/MaterialsEditor";
 import StepCustomer from "./StepCustomer";
+import ExtraJobLines, { type ExtraLine, extraLinesTotals } from "./ExtraJobLines";
 import { resolveClientId } from "@/lib/resolveClientId";
 
 type MaterialRow = { item_key: string; label: string; unit_cost: number };
@@ -55,6 +56,7 @@ export default function CarpenterQuoteBuilder({ profile, materials, preClientId,
   ]);
   const paymentTerms = termsPreset === "custom" ? customTerms : PAYMENT_TERM_PRESETS[termsPreset];
   const customTermsTotal = customTerms.reduce((s, t) => s + (Number(t.percent)||0), 0);
+  const [extraLines, setExtraLines] = useState<ExtraLine[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [savedQuoteId, setSavedQuoteId] = useState<string | null>(null);
@@ -72,7 +74,7 @@ export default function CarpenterQuoteBuilder({ profile, materials, preClientId,
     if (!user) { setSaveMessage("Not logged in"); setSaving(false); return; }
     const resolvedClientId = await resolveClientId(supabase, user.id, clientId, clientName, clientEmail, siteAddress);
     for (const m of lib) await supabase.from("material_items").upsert({ profile_id: user.id, trade: "carpenter", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost }, { onConflict: "profile_id,item_key" });
-    const { data: quote, error } = await supabase.from("quotes").insert({ profile_id: user.id, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail, site_address: siteAddress, trade: "carpenter", job_type: intake.jobType, intake_data: intake, labour_hours: result.labourHours, materials_cost: result.materialsCost, total_cost: result.totalCost, payment_terms: paymentTerms, status: sendEmail ? "sent" : "draft", sent_at: sendEmail ? new Date().toISOString() : null }).select().single();
+    const { data: quote, error } = await supabase.from("quotes").insert({ profile_id: user.id, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail, site_address: siteAddress, trade: "carpenter", job_type: intake.jobType, intake_data: intake, labour_hours: result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0), materials_cost: result.materialsCost + extraLinesTotals(extraLines, rate, margin).materials, total_cost: result.totalCost + extraLinesTotals(extraLines, rate, margin).total, payment_terms: paymentTerms, status: sendEmail ? "sent" : "draft", sent_at: sendEmail ? new Date().toISOString() : null }).select().single();
     if (error) { setSaveMessage(error.message); setSaving(false); return; }
     setSavedQuoteId(quote.id);
     setSavedQuoteId(quote.id);
@@ -214,7 +216,13 @@ export default function CarpenterQuoteBuilder({ profile, materials, preClientId,
             <p className="text-[13px] text-[var(--ink-faint)]">{clientEmail || "No email set - can still save as draft"}</p>
             <p className="text-[13px] text-[var(--ink-faint)]">{siteAddress || "No site address set"}</p>
           </div>
-          <div className="card">
+          <ExtraJobLines
+            lines={extraLines}
+            onChange={setExtraLines}
+            hourlyRate={rate}
+            marginPct={margin}
+          />
+                    <div className="card">
             <p className="section-tag mb-3">Payment terms</p>
             <select value={termsPreset} onChange={(e) => setTermsPreset(e.target.value as keyof typeof PAYMENT_TERM_PRESETS | "custom")} className="app-field mb-3">
               <option value="full_on_completion">100% on completion (14 days)</option>
