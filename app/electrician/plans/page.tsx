@@ -39,12 +39,13 @@ export default async function PlansPage() {
     .eq("id", user.id)
     .single();
 
-  const primaryTrade = profile?.trades?.[0] ?? "electrician";
+  // Load materials for all trades
+  const allTrades = profile?.trades ?? ["electrician"];
   const { data: materials } = await supabase
     .from("material_items")
-    .select("item_key, label, unit_cost")
+    .select("item_key, label, unit_cost, trade")
     .eq("profile_id", user.id)
-    .eq("trade", primaryTrade)
+    .in("trade", allTrades)
     .order("label");
 
   // Open quotes/jobs to attach markup costs to
@@ -74,6 +75,7 @@ export default async function PlansPage() {
           materials={materials ?? []}
           marginPct={profile?.materials_margin_pct ?? 20}
           openQuotes={openQuotes ?? []}
+          trades={allTrades}
         />
       </div>
     </>

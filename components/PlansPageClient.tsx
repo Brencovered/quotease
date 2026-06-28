@@ -9,15 +9,24 @@ import { Upload, X, Plus, FileText, ChevronRight, Check, User } from "lucide-rea
 type Client = { id: string; name: string; billing_address: string | null };
 type Plan   = { id: string; client_id: string; file_name: string; storage_path: string; shapes: PlanShape[]; calibration: CalibrationLine | null; signedUrl: string | null };
 type Quote  = { id: string; client_id: string | null; client_name: string | null; site_address: string | null; status: string; total_cost: number | null; trade: string | null };
+type MatWithTrade = MaterialItem & { trade: string };
+
+const TRADE_LABELS: Record<string, string> = {
+  electrician: "Electrician", plumber: "Plumber", carpenter: "Carpenter",
+  roofer: "Roofer", painter: "Painter", tiler: "Tiler", landscaper: "Landscaper",
+  arborist: "Arborist", concreter: "Concreter", fencer: "Fencer",
+  aircon: "Air conditioning", surveyor: "Surveyor", custom: "Custom",
+};
 
 export default function PlansPageClient({
-  clients: initialClients, plans: initial, materials, marginPct, openQuotes,
+  clients: initialClients, plans: initial, materials: allMaterials, marginPct, openQuotes, trades,
 }: {
   clients: Client[];
   plans: Plan[];
-  materials: MaterialItem[];
+  materials: MatWithTrade[];
   marginPct: number;
   openQuotes: Quote[];
+  trades: string[];
 }) {
   const router = useRouter();
   const [plans,        setPlans]        = useState<Plan[]>(initial);
@@ -28,6 +37,7 @@ export default function PlansPageClient({
   const [uploadSaving, setUploadSaving] = useState(false);
   const [linkedMsg,    setLinkedMsg]    = useState<string | null>(null);
   const [totalCost,    setTotalCost]    = useState<Record<string, number>>({});
+  const [activeTrade,  setActiveTrade]  = useState<string>(trades[0] ?? 'electrician');
 
   // Quick upload flow state
   const [showUpload,   setShowUpload]   = useState(false);
@@ -40,6 +50,7 @@ export default function PlansPageClient({
   const openPlan = plans.find(p => p.id === openPlanId);
   const planCost = openPlanId ? (totalCost[openPlanId] ?? 0) : 0;
   const clientQuotes = openPlan ? openQuotes.filter(q => q.client_id === openPlan.client_id) : [];
+  const tradeMaterials = allMaterials.filter(m => m.trade === activeTrade);
 
   async function submitUpload() {
     if (!uploadFile) return;
@@ -249,14 +260,29 @@ export default function PlansPageClient({
             </div>
 
             <div className="p-4">
+              {/* Trade selector */}
+              {trades.length > 1 && (
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  <span className="text-[11.5px] font-semibold text-[var(--ink-soft)]">Drawing as:</span>
+                  {trades.map(t => (
+                    <button key={t} onClick={() => setActiveTrade(t)}
+                      className={`px-3 py-1 rounded-lg text-[12px] font-bold border transition-colors ${
+                        activeTrade === t ? "bg-[var(--navy)] text-white border-[var(--navy)]" : "border-[var(--line)] text-[var(--ink-soft)]"
+                      }`}>
+                      {TRADE_LABELS[t] ?? t}
+                    </button>
+                  ))}
+                </div>
+              )}
               <PlanMarkup
                 imageUrl={openPlan.signedUrl}
                 shapes={openPlan.shapes}
                 calibration={openPlan.calibration}
                 onShapesChange={(shapes) => saveShapes(openPlan.id, shapes, openPlan.calibration)}
                 onCalibrationChange={(cal) => saveShapes(openPlan.id, openPlan.shapes, cal)}
-                materials={materials}
+                materials={tradeMaterials}
                 marginPct={marginPct}
+                trade={activeTrade}
                 onCostChange={(cost) => setTotalCost(prev => ({ ...prev, [openPlan.id]: cost }))}
               />
             </div>
