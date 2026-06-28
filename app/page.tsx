@@ -392,7 +392,7 @@ export default function Home() {
                 <span className="text-[#7e94a2] text-[18px] font-bold mb-4">/mo</span>
               </div>
               <p className="text-[#7e94a2] text-[14px] mb-1">Unlimited seats, quotes and jobs</p>
-              <p className="text-[12px] text-[#3a4f5e] mb-8">3 business days to decide. If it's not worth $39/month you'll know by day two. No credit card until you're ready.</p>
+              <p className="text-[12px] text-[#3a4f5e] mb-8">3 business days to decide. If it&apos;s not worth $39/month you&apos;ll know by day two. No credit card until you&apos;re ready.</p>
               <Link href="/signup" className="block bg-[#ffb400] text-[#0a1722] font-extrabold text-[17px] py-4 rounded-xl mb-3 hover:bg-[#e89e00] transition-colors">
                 Start your free trial
               </Link>
