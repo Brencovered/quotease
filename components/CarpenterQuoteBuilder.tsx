@@ -7,6 +7,7 @@ import { Paperclip, X, ChevronRight, ChevronLeft, Check } from "lucide-react";
 import { calcCarpenterQuote, CARPENTER_DEFAULT_MATERIALS, type CarpenterIntake } from "@/lib/calcCarpenter";
 import MaterialsEditor from "@/components/MaterialsEditor";
 import StepCustomer from "./StepCustomer";
+import { resolveClientId } from "@/lib/resolveClientId";
 
 type MaterialRow = { item_key: string; label: string; unit_cost: number };
 
@@ -44,6 +45,7 @@ export default function CarpenterQuoteBuilder({ profile, materials }: {
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [siteAddress, setSiteAddress] = useState("");
+  const [clientId, setClientId] = useState<string | null>(null);
   const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">("full_on_completion");
   const [customTerms] = useState<PaymentTerm[]>([
     { label: "Deposit", percent: 50, trigger: "acceptance", days: 0 },
@@ -66,8 +68,9 @@ export default function CarpenterQuoteBuilder({ profile, materials }: {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaveMessage("Not logged in"); setSaving(false); return; }
+    const resolvedClientId = await resolveClientId(supabase, user.id, clientId, clientName, clientEmail, siteAddress);
     for (const m of lib) await supabase.from("material_items").upsert({ profile_id: user.id, trade: "carpenter", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost }, { onConflict: "profile_id,item_key" });
-    const { data: quote, error } = await supabase.from("quotes").insert({ profile_id: user.id, client_name: clientName, client_email: clientEmail, site_address: siteAddress, trade: "carpenter", job_type: intake.jobType, intake_data: intake, labour_hours: result.labourHours, materials_cost: result.materialsCost, total_cost: result.totalCost, payment_terms: paymentTerms, status: sendEmail ? "sent" : "draft", sent_at: sendEmail ? new Date().toISOString() : null }).select().single();
+    const { data: quote, error } = await supabase.from("quotes").insert({ profile_id: user.id, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail, site_address: siteAddress, trade: "carpenter", job_type: intake.jobType, intake_data: intake, labour_hours: result.labourHours, materials_cost: result.materialsCost, total_cost: result.totalCost, payment_terms: paymentTerms, status: sendEmail ? "sent" : "draft", sent_at: sendEmail ? new Date().toISOString() : null }).select().single();
     if (error) { setSaveMessage(error.message); setSaving(false); return; }
     setSavedQuoteId(quote.id);
     setSavedQuoteId(quote.id);
@@ -106,6 +109,7 @@ export default function CarpenterQuoteBuilder({ profile, materials }: {
           clientName={clientName} setClientName={setClientName}
           clientEmail={clientEmail} setClientEmail={setClientEmail}
           siteAddress={siteAddress} setSiteAddress={setSiteAddress}
+          setClientId={setClientId}
         />
       )}
 

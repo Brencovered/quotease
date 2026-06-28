@@ -7,6 +7,7 @@ import { AlertTriangle, Paperclip, X, Sparkles, ChevronRight, ChevronLeft, Check
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import StepCustomer from "./StepCustomer";
+import { resolveClientId } from "@/lib/resolveClientId";
 import MaterialsEditor from "@/components/MaterialsEditor";
 import {
   calcElectricianQuote,
@@ -57,6 +58,7 @@ export default function QuoteBuilder({
   const [clientName, setClientName]   = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [siteAddress, setSiteAddress] = useState("");
+  const [clientId, setClientId] = useState<string | null>(null);
 
   const initialDeposit = profile.default_deposit_pct;
   const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">(
@@ -198,26 +200,10 @@ export default function QuoteBuilder({
     if (!userData.user) { setSaveMessage("Not logged in"); setSaving(false); return; }
 
     // Keep the client list growing automatically rather than requiring an
-    // explicit "add customer" step - if this name doesn't already exist,
-    // create it; if it does, this is a no-op (ON CONFLICT DO NOTHING relies
-    // on a name match, which is approximate but good enough to avoid
-    // forcing a separate "is this a new or existing customer" decision).
-    if (clientName.trim()) {
-      const { data: existingClient } = await supabase
-        .from("clients")
-        .select("id")
-        .eq("profile_id", userData.user.id)
-        .ilike("name", clientName.trim())
-        .maybeSingle();
-      if (!existingClient) {
-        await supabase.from("clients").insert({
-          profile_id: userData.user.id,
-          name: clientName.trim(),
-          email: clientEmail.trim() || null,
-          billing_address: siteAddress.trim() || null,
-        });
-      }
-    }
+    // explicit "add customer" step - resolves to a real client_id either
+    // way, which is what lets saved plans/drawings for that client surface
+    // on this job later.
+    const resolvedClientId = await resolveClientId(supabase, userData.user.id, clientId, clientName, clientEmail, siteAddress);
 
     for (const m of lib) {
       await supabase.from("material_items").upsert(
@@ -227,7 +213,7 @@ export default function QuoteBuilder({
     }
 
     const { data: quote, error } = await supabase.from("quotes").insert({
-      profile_id: userData.user.id, client_name: clientName, client_email: clientEmail,
+      profile_id: userData.user.id, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail,
       site_address: siteAddress, trade: "electrician", job_type: intake.jobType,
       intake_data: intake, labour_hours: result.labourHours, materials_cost: result.materialsCost,
       total_cost: result.totalCost, payment_terms: paymentTerms,
@@ -347,6 +333,7 @@ export default function QuoteBuilder({
           clientEmail={clientEmail} setClientEmail={setClientEmail}
           siteAddress={siteAddress} setSiteAddress={setSiteAddress}
           onCeilingHint={(hint) => set("ceilingType", hint as ElectricianIntake["ceilingType"])}
+          setClientId={setClientId}
         />
       )}
 

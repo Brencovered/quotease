@@ -6,6 +6,7 @@ import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
 import { ChevronRight, ChevronLeft, Check, Plus, Trash2 } from "lucide-react";
 import { calcGenericQuote, GENERIC_TRADE_TEMPLATES, type GenericLineItem, type GenericIntake } from "@/lib/genericTrades";
 import StepCustomer from "./StepCustomer";
+import { resolveClientId } from "@/lib/resolveClientId";
 
 const STEPS = [
   { id: "customer", label: "Customer" },
@@ -38,6 +39,7 @@ export default function GenericQuoteBuilder({
   const [clientName,  setClientName]  = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [siteAddress, setSiteAddress] = useState("");
+  const [clientId, setClientId] = useState<string | null>(null);
   const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">("full_on_completion");
   const [saving,      setSaving]      = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -74,9 +76,11 @@ export default function GenericQuoteBuilder({
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaveMessage("Not logged in"); setSaving(false); return; }
 
+    const resolvedClientId = await resolveClientId(supabase, user.id, clientId, clientName, clientEmail, siteAddress);
     const intakeData = { ...intake, tradeKey };
     const { data: quote, error } = await supabase.from("quotes").insert({
       profile_id:    user.id,
+      client_id:     resolvedClientId,
       client_name:   clientName,
       client_email:  clientEmail,
       site_address:  siteAddress,
@@ -157,6 +161,7 @@ export default function GenericQuoteBuilder({
           clientName={clientName} setClientName={setClientName}
           clientEmail={clientEmail} setClientEmail={setClientEmail}
           siteAddress={siteAddress} setSiteAddress={setSiteAddress}
+          setClientId={setClientId}
         />
       )}
 

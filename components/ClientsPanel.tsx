@@ -270,6 +270,9 @@ export default function ClientsPanel({ clients: initial }: { clients: Client[] }
                     <button onClick={() => openEdit(c)} className="inline-flex items-center gap-1 text-[13px] font-semibold text-[var(--navy)] border-2 border-[var(--line)] rounded-lg px-3 py-1.5">
                       <Pencil size={12} /> Edit
                     </button>
+                    <a href={`/electrician/clients/${c.id}`} className="inline-flex items-center gap-1 text-[13px] font-semibold text-[var(--navy)] border-2 border-[var(--line)] rounded-lg px-3 py-1.5">
+                      Plans &amp; jobs
+                    </a>
                     <a href={`/electrician?client=${c.id}`} className="inline-flex items-center gap-1 text-[13px] font-semibold bg-[var(--amber)] text-[var(--navy)] rounded-lg px-3 py-1.5">
                       New quote
                     </a>

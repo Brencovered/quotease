@@ -12,11 +12,12 @@ function Field({ label, children, className = "" }: { label: string; children: R
   );
 }
 
-export default function StepCustomer({ clientName, setClientName, clientEmail, setClientEmail, siteAddress, setSiteAddress, onCeilingHint }: {
+export default function StepCustomer({ clientName, setClientName, clientEmail, setClientEmail, siteAddress, setSiteAddress, onCeilingHint, setClientId }: {
   clientName: string; setClientName: (v: string) => void;
   clientEmail: string; setClientEmail: (v: string) => void;
   siteAddress: string; setSiteAddress: (v: string) => void;
   onCeilingHint?: (hint: string) => void;
+  setClientId?: (id: string | null) => void;
 }) {
   const [propChecking, setPropChecking] = useState(false);
   const [propResult,   setPropResult]   = useState<{
@@ -54,9 +55,10 @@ export default function StepCustomer({ clientName, setClientName, clientEmail, s
           <Field label="Client name">
             <ClientPicker
               value={clientName}
-              onChange={setClientName}
+              onChange={(v) => { setClientName(v); setClientId?.(null); }}
               onSelectClient={(c) => {
                 setClientName(c.name);
+                setClientId?.(c.id);
                 if (c.email) setClientEmail(c.email);
                 if (c.billing_address && !siteAddress) setSiteAddress(c.billing_address);
               }}

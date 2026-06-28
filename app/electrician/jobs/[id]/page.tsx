@@ -10,6 +10,7 @@ import JobFilesPanel from "@/components/JobFilesPanel";
 import JobBriefPanel from "@/components/JobBriefPanel";
 import MaterialsChecklistPanel from "@/components/MaterialsChecklistPanel";
 import JobTimeline from "@/components/JobTimeline";
+import JobPlansPanel from "@/components/JobPlansPanel";
 import JobActionsBar from "@/components/JobActionsBar";
 import { humanizeIntake } from "@/lib/scopeOfWorks";
 
@@ -31,6 +32,22 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
 
   const scopeLines = humanizeIntake(quote.intake_data);
   const labourCost = (quote.total_cost ?? 0) - (quote.materials_cost ?? 0);
+
+  let jobPlans: Array<{ id: string; file_name: string; annotations: unknown[]; signedUrl?: string }> = [];
+  if (quote.client_id) {
+    const { data: plans } = await supabase
+      .from("client_plans")
+      .select("*")
+      .eq("client_id", quote.client_id)
+      .order("created_at", { ascending: false });
+    jobPlans = await Promise.all(
+      (plans ?? []).map(async (p) => {
+        const { data: signed } = await supabase.storage.from("job-files").createSignedUrl(p.storage_path, 3600 * 24);
+        return { ...p, signedUrl: signed?.signedUrl };
+      })
+    );
+  }
+
   // Approved variations are extra work the client agreed to, but until now
   // nothing actually added them to what's owed - Record Payment, the PDF,
   // and the Xero invoice all silently used only the original quoted total.
@@ -127,6 +144,8 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             estimatedDays={quote.estimated_days}
             assignedTo={quote.assigned_to}
           />
+
+          <JobPlansPanel quoteId={quote.id} clientId={quote.client_id} plans={jobPlans as never} />
 
           <JobTimeline
             acceptedAt={quote.accepted_at}

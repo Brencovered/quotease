@@ -6,6 +6,7 @@ import AppHeader from "@/components/AppHeader";
 import FollowUpPanel from "@/components/FollowUpPanel";
 import JobFilesPanel from "@/components/JobFilesPanel";
 import JobActionsBar from "@/components/JobActionsBar";
+import JobPlansPanel from "@/components/JobPlansPanel";
 import { humanizeIntake } from "@/lib/scopeOfWorks";
 
 // This route is for a quote that hasn't been won yet - draft, sent, or
@@ -29,6 +30,22 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
 
   const scopeLines = humanizeIntake(quote.intake_data);
   const labourCost = (quote.total_cost ?? 0) - (quote.materials_cost ?? 0);
+
+  let quotePlans: Array<{ id: string; file_name: string; annotations: unknown[]; signedUrl?: string }> = [];
+  if (quote.client_id) {
+    const { data: plans } = await supabase
+      .from("client_plans")
+      .select("*")
+      .eq("client_id", quote.client_id)
+      .order("created_at", { ascending: false });
+    quotePlans = await Promise.all(
+      (plans ?? []).map(async (p) => {
+        const { data: signed } = await supabase.storage.from("job-files").createSignedUrl(p.storage_path, 3600 * 24);
+        return { ...p, signedUrl: signed?.signedUrl };
+      })
+    );
+  }
+
 
   const statusColor: Record<string, string> = {
     draft: "bg-[var(--app-bg)] text-[var(--ink-soft)]",
@@ -95,6 +112,8 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
           {quote.status === "sent" && (
             <FollowUpPanel quoteId={quote.id} followUps={followUps} followUpAt={quote.follow_up_at} expiresAt={quote.quote_expires_at} />
           )}
+
+          <JobPlansPanel quoteId={quote.id} clientId={quote.client_id} plans={quotePlans as never} />
 
           <JobFilesPanel quoteId={quote.id} attachments={attachmentsWithUrls} />
         </div>
