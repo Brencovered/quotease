@@ -31,11 +31,11 @@ const STEPS = [
   { id: "send",      label: "Send"      },
 ];
 
-export default function RooferQuoteBuilder({ profile, materials, preClientId, preMarkupMaterials = 0, }: {
+export default function RooferQuoteBuilder({ profile, materials, preClientId, preMarkupMaterials, }: {
   profile: { hourly_rate: number; materials_margin_pct: number };
   materials: MaterialRow[];
   preClientId?: string;
-  preMarkupMaterials?: number;
+  preMarkupMaterials?: Array<{ label: string; quantity: number; unit: string; unitCost: number; totalCost: number }>;
 }) {
   const [step, setStep]     = useState(0);
   const [intake, setIntake] = useState<RooferIntake>(DEFAULT_INTAKE);
@@ -110,7 +110,7 @@ export default function RooferQuoteBuilder({ profile, materials, preClientId, pr
     if (!user) { setSaveMessage("Not logged in"); setSaving(false); return; }
     const resolvedClientId = await resolveClientId(supabase, user.id, clientId, clientName, clientEmail, siteAddress);
     for (const m of lib) await supabase.from("material_items").upsert({ profile_id: user.id, trade: "roofer", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost }, { onConflict: "profile_id,item_key" });
-    const { data: quote, error } = await supabase.from("quotes").insert({ profile_id: user.id, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail, site_address: siteAddress, trade: "roofer", job_type: intake.jobType, intake_data: intake, labour_hours: result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0), materials_cost: result.materialsCost + extraLinesTotals(extraLines, rate, margin).materials, total_cost: result.totalCost + extraLinesTotals(extraLines, rate, margin).total, payment_terms: paymentTerms, status: sendEmail ? "sent" : "draft", sent_at: sendEmail ? new Date().toISOString() : null, markup_materials: preMarkupMaterials ? [{ label: "Materials from plan markup", quantity: 1, unit: "lot", unitCost: preMarkupMaterials, totalCost: preMarkupMaterials }] : [] }).select().single();
+    const { data: quote, error } = await supabase.from("quotes").insert({ profile_id: user.id, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail, site_address: siteAddress, trade: "roofer", job_type: intake.jobType, intake_data: intake, labour_hours: result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0), materials_cost: result.materialsCost + extraLinesTotals(extraLines, rate, margin).materials, total_cost: result.totalCost + extraLinesTotals(extraLines, rate, margin).total, payment_terms: paymentTerms, status: sendEmail ? "sent" : "draft", sent_at: sendEmail ? new Date().toISOString() : null, markup_materials: preMarkupMaterials ?? [] }).select().single();
     if (error) { setSaveMessage(error.message); setSaving(false); return; }
     setSavedQuoteId(quote.id);
     setSavedQuoteId(quote.id);

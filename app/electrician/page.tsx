@@ -22,8 +22,8 @@ const DEDICATED_DEFAULTS: Record<string, readonly { item_key: string; label: str
 
 const DEDICATED = ["electrician", "plumber", "carpenter", "roofer"];
 
-export default async function NewQuotePage({ searchParams }: { searchParams: Promise<{ trade?: string; client_id?: string; markup_materials?: string }> }) {
-  const { trade: tradeParm, client_id: preClientId, markup_materials: preMarkup } = await searchParams;
+export default async function NewQuotePage({ searchParams }: { searchParams: Promise<{ trade?: string; client_id?: string; markup_materials?: string; plan_id?: string }> }) {
+  const { trade: tradeParm, client_id: preClientId, markup_materials: preMarkup, plan_id: planId } = await searchParams;
 
   let profile: { hourly_rate: number; materials_margin_pct: number; trades?: string[]; onboarded_at?: string | null } = {
     hourly_rate: 95, materials_margin_pct: 20,
@@ -31,6 +31,7 @@ export default async function NewQuotePage({ searchParams }: { searchParams: Pro
   let materials: { item_key: string; label: string; unit_cost: number }[] = [];
   let activeTrades: string[] = [];
   let needsOnboarding = false;
+  let preMarkupMaterials: Array<{ label: string; quantity: number; unit: string; unitCost: number; totalCost: number }> = [];
 
   try {
     const supabase = await createClient();
@@ -49,6 +50,26 @@ export default async function NewQuotePage({ searchParams }: { searchParams: Pro
           const defaults = DEDICATED_DEFAULTS[tradeParm];
           if (defaults) materials = defaults.map((m) => ({ ...m }));
         }
+      }
+      // Raising a quote from a marked-up plan - pull the actual shapes
+      // (each with its own material, quantity and cost) rather than just
+      // a lump total, so the new quote gets real line items.
+      if (planId) {
+        const { data: plan } = await supabase.from("client_plans").select("shapes").eq("id", planId).eq("profile_id", userData.user.id).single();
+        const shapes = (plan?.shapes as Array<{ label: string; material_label: string; unit_cost: number; margin_pct: number; qty: number; unit: string }>) ?? [];
+        preMarkupMaterials = shapes
+          .filter((s) => s.material_label || s.label)
+          .map((s) => ({
+            label: s.material_label || s.label,
+            quantity: s.qty,
+            unit: s.unit,
+            unitCost: +(s.unit_cost * (1 + s.margin_pct / 100)).toFixed(2),
+            totalCost: Math.round(s.qty * s.unit_cost * (1 + s.margin_pct / 100)),
+          }));
+      } else if (preMarkup) {
+        // Fallback for any older link that only passed a lump total.
+        const lump = parseInt(preMarkup);
+        if (lump) preMarkupMaterials = [{ label: "Materials from plan markup", quantity: 1, unit: "lot", unitCost: lump, totalCost: lump }];
       }
     }
   } catch (err) {
@@ -83,12 +104,12 @@ export default async function NewQuotePage({ searchParams }: { searchParams: Pro
       )}
 
       {/* Route to correct builder */}
-      {selectedTrade === "electrician" && <QuoteBuilder profile={profile} materials={materials} preClientId={preClientId} preMarkupMaterials={preMarkup ? parseInt(preMarkup) : undefined} />}
-      {selectedTrade === "plumber"     && <PlumberQuoteBuilder profile={profile} materials={materials} preClientId={preClientId} preMarkupMaterials={preMarkup ? parseInt(preMarkup) : undefined} />}
-      {selectedTrade === "carpenter"   && <CarpenterQuoteBuilder profile={profile} materials={materials} preClientId={preClientId} preMarkupMaterials={preMarkup ? parseInt(preMarkup) : undefined} />}
-      {selectedTrade === "roofer"      && <RooferQuoteBuilder profile={profile} materials={materials} preClientId={preClientId} preMarkupMaterials={preMarkup ? parseInt(preMarkup) : undefined} />}
+      {selectedTrade === "electrician" && <QuoteBuilder profile={profile} materials={materials} preClientId={preClientId} preMarkupMaterials={preMarkupMaterials} />}
+      {selectedTrade === "plumber"     && <PlumberQuoteBuilder profile={profile} materials={materials} preClientId={preClientId} preMarkupMaterials={preMarkupMaterials} />}
+      {selectedTrade === "carpenter"   && <CarpenterQuoteBuilder profile={profile} materials={materials} preClientId={preClientId} preMarkupMaterials={preMarkupMaterials} />}
+      {selectedTrade === "roofer"      && <RooferQuoteBuilder profile={profile} materials={materials} preClientId={preClientId} preMarkupMaterials={preMarkupMaterials} />}
       {!DEDICATED.includes(selectedTrade) && (
-        <GenericQuoteBuilder tradeKey={selectedTrade} profile={profile} preClientId={preClientId} preMarkupMaterials={preMarkup ? parseInt(preMarkup) : undefined} />
+        <GenericQuoteBuilder tradeKey={selectedTrade} profile={profile} preClientId={preClientId} preMarkupMaterials={preMarkupMaterials} />
       )}
     </>
   );

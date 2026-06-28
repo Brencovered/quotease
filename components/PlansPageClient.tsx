@@ -93,14 +93,28 @@ export default function PlansPageClient({
     await supabase.from("client_plans").update({ shapes, calibration }).eq("id", planId);
   }
 
-  async function addToQuote(quoteId: string, cost: number) {
+  function shapesToMarkupItems(shapes: PlanShape[]) {
+    return shapes
+      .filter((s) => s.material_label || s.label)
+      .map((s) => ({
+        label: s.material_label || s.label,
+        quantity: s.qty,
+        unit: s.unit,
+        unitCost: +(s.unit_cost * (1 + s.margin_pct / 100)).toFixed(2),
+        totalCost: Math.round(s.qty * s.unit_cost * (1 + s.margin_pct / 100)),
+      }));
+  }
+
+  async function addToQuote(quoteId: string, shapes: PlanShape[]) {
     setLinking(true);
     const supabase = createClient();
     const { data: existing } = await supabase.from("quotes").select("markup_materials").eq("id", quoteId).single();
-    const current = (existing?.markup_materials as Array<{ totalCost: number }>) ?? (typeof existing?.markup_materials === "number" ? [] : []);
-    const next = [...current, { label: "Materials from plan markup", quantity: 1, unit: "lot", unitCost: cost, totalCost: cost }];
+    const current = Array.isArray(existing?.markup_materials) ? existing.markup_materials : [];
+    const newItems = shapesToMarkupItems(shapes);
+    const next = [...current, ...newItems];
     await supabase.from("quotes").update({ markup_materials: next }).eq("id", quoteId);
-    setLinkedMsg(`Drawing costs ($${cost.toLocaleString()}) added to quote`);
+    const total = newItems.reduce((s, i) => s + i.totalCost, 0);
+    setLinkedMsg(`${newItems.length} item${newItems.length === 1 ? "" : "s"} ($${total.toLocaleString()}) added to quote`);
     setLinking(false);
     setTimeout(() => setLinkedMsg(null), 3000);
   }
@@ -301,7 +315,7 @@ export default function PlansPageClient({
                   <p className="text-[12px] font-semibold text-[var(--ink-soft)] mb-2">Add to existing quote or job:</p>
                   {clientQuotes.map(q => (
                     <button key={q.id}
-                      onClick={() => planCost > 0 && addToQuote(q.id, planCost)}
+                      onClick={() => planCost > 0 && addToQuote(q.id, openPlan!.shapes)}
                       disabled={planCost === 0 || linking}
                       className="w-full flex items-center justify-between gap-3 p-3 rounded-xl border border-[var(--line)] hover:border-[var(--navy)] bg-white disabled:opacity-40 transition-colors mb-2 text-left">
                       <div>
@@ -316,7 +330,7 @@ export default function PlansPageClient({
 
               {/* Raise new quote */}
               <button
-                onClick={() => { window.location.href = `/electrician?client_id=${openPlan.client_id}&markup_materials=${planCost}`; }}
+                onClick={() => { window.location.href = `/electrician?client_id=${openPlan.client_id}&plan_id=${openPlan.id}`; }}
                 className="btn-primary w-full justify-center">
                 <Plus size={15} /> Raise a new quote from this plan
               </button>

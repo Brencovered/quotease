@@ -31,7 +31,7 @@ export default function GenericQuoteBuilder({
   tradeKey: string;
   profile: { hourly_rate: number; materials_margin_pct: number };
   preClientId?: string;
-  preMarkupMaterials?: number;
+  preMarkupMaterials?: Array<{ label: string; quantity: number; unit: string; unitCost: number; totalCost: number }>;
 }) {
   const template = GENERIC_TRADE_TEMPLATES[tradeKey] ?? GENERIC_TRADE_TEMPLATES.custom;
   const margin   = profile.materials_margin_pct ?? 20;
@@ -141,7 +141,7 @@ export default function GenericQuoteBuilder({
       materials_cost: result.materialsCost + extraLinesTotals(extraLines, profile.hourly_rate ?? 85, profile.materials_margin_pct ?? 20).materials,
       total_cost:    result.totalCost,
       payment_terms: paymentTerms,
-      markup_materials: preMarkupMaterials ? [{ label: "Materials from plan markup", quantity: 1, unit: "lot", unitCost: preMarkupMaterials, totalCost: preMarkupMaterials }] : [],
+      markup_materials: preMarkupMaterials ?? [],
       status:        sendEmail ? "sent" : "draft",
       sent_at:       sendEmail ? new Date().toISOString() : null,
     }).select().single();

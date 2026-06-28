@@ -43,12 +43,12 @@ const STEPS = [
 ];
 
 export default function QuoteBuilder({
-  profile, materials, preClientId, preMarkupMaterials = 0,
+  profile, materials, preClientId, preMarkupMaterials,
 }: {
   profile: { hourly_rate: number; materials_margin_pct: number; default_deposit_pct?: number | null; default_expiry_days?: number };
   materials: MaterialRow[];
   preClientId?: string;
-  preMarkupMaterials?: number;
+  preMarkupMaterials?: Array<{ label: string; quantity: number; unit: string; unitCost: number; totalCost: number }>;
 }) {
   const [step, setStep]     = useState(0);
   const [intake, setIntake] = useState<ElectricianIntake>(DEFAULT_INTAKE);
@@ -224,7 +224,7 @@ export default function QuoteBuilder({
       quote_expires_at: new Date(Date.now() + (profile.default_expiry_days ?? 30) * 86400000).toISOString(),
       status: sendEmail ? "sent" : "draft",
       sent_at: sendEmail ? new Date().toISOString() : null,
-      markup_materials: preMarkupMaterials ? [{ label: "Materials from plan markup", quantity: 1, unit: "lot", unitCost: preMarkupMaterials, totalCost: preMarkupMaterials }] : [],
+      markup_materials: preMarkupMaterials ?? [],
     }).select().single();
 
     if (error) { setSaveMessage(error.message); setSaving(false); return; }
