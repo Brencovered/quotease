@@ -39,7 +39,7 @@ export default function MaterialsEditor({
       <p className="section-tag mb-1">Materials</p>
       <p className="font-semibold text-[var(--ink)] mb-1">Prices for this quote</p>
       <p className="text-[12.5px] text-[var(--ink-faint)] mb-3">
-        Adjust any price, remove what doesn&apos;t apply, or add something missing — right here, no need to leave the quote.
+        Adjust any price, remove what doesn&apos;t apply, or add something missing - right here, no need to leave the quote.
       </p>
 
       <div className="divide-y divide-[var(--line-subtle)] mb-3">

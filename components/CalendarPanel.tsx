@@ -146,7 +146,10 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
         <span className="flex items-center gap-1.5 text-[var(--red)]"><span className="w-3 h-3 rounded-sm bg-[var(--red-bg)] border-l-2 border-[var(--red)]" />Quote expires</span>
         <span className="flex items-center gap-1.5 text-[var(--green)]"><span className="w-3 h-3 rounded-sm bg-[var(--green-bg)] border-l-2 border-[var(--green)]" />Quote sent</span>
       </div>
-      <p className="text-[11.5px] text-[var(--ink-faint)] mb-4">Drag a scheduled job onto a different day to reschedule it.</p>
+      <p className="text-[11.5px] text-[var(--ink-faint)] mb-4">
+        Drag a scheduled job onto a different day to reschedule it.
+        {rescheduling && <span className="text-[var(--amber-deep)] font-semibold ml-2">Saving...</span>}
+      </p>
 
       {/* Schedule modal */}
       {scheduling && (
