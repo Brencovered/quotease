@@ -3,10 +3,12 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
-import { Paperclip, X, ChevronRight, ChevronLeft, Check } from "lucide-react";
+import { Paperclip, X, ChevronRight, ChevronLeft, Check, Sparkles, AlertTriangle } from "lucide-react";
 import { calcRooferQuote, ROOFER_DEFAULT_MATERIALS, type RooferIntake } from "@/lib/calcRoofer";
 import MaterialsEditor from "@/components/MaterialsEditor";
 import StepCustomer from "./StepCustomer";
+import VoiceNoteRecorder from "./VoiceNoteRecorder";
+import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import ExtraJobLines, { extraLinesTotals } from "./ExtraJobLines";
 import { resolveClientId } from "@/lib/resolveClientId";
 
@@ -57,11 +59,49 @@ export default function RooferQuoteBuilder({ profile, materials, preClientId, pr
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [savedQuoteId, setSavedQuoteId] = useState<string | null>(null);
   const [drawingFiles, setDrawingFiles] = useState<File[]>([]);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<{ confidence: string; notes: string } | null>(null);
+  const [usageLimitReached, setUsageLimitReached] = useState(false);
 
   const costs  = useMemo(() => { const m: Record<string,number> = {}; lib.forEach((r) => (m[r.item_key] = Number(r.unit_cost)||0)); return m; }, [lib]);
   const result = useMemo(() => calcRooferQuote(intake, costs, rate, margin), [intake, costs, rate, margin]);
 
   function set<K extends keyof RooferIntake>(k: K, v: RooferIntake[K]) { setIntake((p) => ({...p,[k]:v})); }
+
+  // Backend prompt is electrical-specific - show notes/confidence as a
+  // read-only hint rather than force-mapping mismatched fields, same
+  // pattern Plumber already uses for its drawing analysis.
+  async function runAiAnalysis() {
+    if (!drawingFiles.length) return;
+    setAnalyzing(true); setAnalysisError(null); setAnalysisResult(null);
+    try {
+      const fd = new FormData();
+      const fileForAnalysis = await normalizeForAnalysis(drawingFiles[0]);
+      fd.append("file", fileForAnalysis);
+      fd.append("instructions", "This is a roofing job. Focus on roof area, pitch, materials, and flashing/gutter runs.");
+      const res = await fetch("/api/quotes/analyze-drawing", { method: "POST", body: fd });
+      const body = await res.json();
+      if (!res.ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
+      setAnalysisResult({ confidence: body.result?.confidence ?? "low", notes: body.result?.notes ?? "" });
+    } catch (err) { setAnalysisError(err instanceof Error ? err.message : "Could not reach analysis service."); }
+    finally { setAnalyzing(false); }
+  }
+
+  async function onVoiceTranscript(transcript: string) {
+    setAnalyzing(true); setAnalysisError(null); setAnalysisResult(null); setUsageLimitReached(false);
+    try {
+      const res = await fetch("/api/quotes/analyze-voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcript, instructions: "This is a roofing job. Focus on roof area, pitch, materials, and flashing/gutter runs." }),
+      });
+      const body = await res.json();
+      if (!res.ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
+      setAnalysisResult({ confidence: body.result?.confidence ?? "low", notes: body.result?.notes ?? "" });
+    } catch (err) { setAnalysisError(err instanceof Error ? err.message : "Could not reach analysis service."); }
+    finally { setAnalyzing(false); }
+  }
 
   async function saveAndSend(sendEmail: boolean) {
     setSaving(true); setSaveMessage(null);
@@ -114,14 +154,39 @@ export default function RooferQuoteBuilder({ profile, materials, preClientId, pr
       )}
 
       {stepId === "drawing" && (
-        <div className="card">
-          <p className="section-tag mb-1">Step 1</p>
-          <p className="font-semibold text-[17px] mb-4">Upload photos or roof plans</p>
-          <label className="flex items-center justify-center gap-2 border-2 border-dashed border-[var(--line)] rounded-xl py-8 cursor-pointer hover:border-[var(--amber)] bg-[var(--app-bg)]">
-            <Paperclip size={18} className="text-[var(--ink-faint)]"/><span className="text-[14px] font-semibold text-[var(--ink-soft)]">Add site photos or plans</span>
-            <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={(e) => { const f = Array.from(e.target.files??[]); setDrawingFiles((p) => [...p,...f.filter((x) => !p.some((y) => y.name===x.name))]); e.target.value=""; }}/>
-          </label>
-          {drawingFiles.map((f) => <div key={f.name} className="flex items-center gap-3 bg-[var(--app-bg)] rounded-lg px-3 py-2.5 mt-2"><Paperclip size={14} className="text-[var(--ink-faint)] shrink-0"/><span className="text-[13.5px] flex-1 truncate">{f.name}</span><button onClick={() => setDrawingFiles((p) => p.filter((x) => x.name!==f.name))}><X size={14} className="text-[var(--ink-faint)]"/></button></div>)}
+        <div className="space-y-4">
+          <div className="card">
+            <p className="section-tag mb-1">Step 1</p>
+            <p className="font-semibold text-[17px] mb-4">Upload photos or roof plans</p>
+            <label className="flex items-center justify-center gap-2 border-2 border-dashed border-[var(--line)] rounded-xl py-8 cursor-pointer hover:border-[var(--amber)] bg-[var(--app-bg)]">
+              <Paperclip size={18} className="text-[var(--ink-faint)]"/><span className="text-[14px] font-semibold text-[var(--ink-soft)]">Add site photos or plans</span>
+              <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={(e) => { const f = Array.from(e.target.files??[]); setDrawingFiles((p) => [...p,...f.filter((x) => !p.some((y) => y.name===x.name))]); e.target.value=""; }}/>
+            </label>
+            {drawingFiles.map((f) => <div key={f.name} className="flex items-center gap-3 bg-[var(--app-bg)] rounded-lg px-3 py-2.5 mt-2"><Paperclip size={14} className="text-[var(--ink-faint)] shrink-0"/><span className="text-[13.5px] flex-1 truncate">{f.name}</span><button onClick={() => setDrawingFiles((p) => p.filter((x) => x.name!==f.name))}><X size={14} className="text-[var(--ink-faint)]"/></button></div>)}
+          </div>
+
+          <VoiceNoteRecorder
+            onTranscriptReady={onVoiceTranscript}
+            analyzing={analyzing}
+            analysisError={analysisError}
+            analysisResult={analysisResult}
+            usageLimitReached={usageLimitReached}
+          />
+
+          {drawingFiles.length > 0 && (
+            <div className="card border-2 border-[var(--amber-light)]">
+              <div className="flex items-start gap-3 mb-3">
+                <Sparkles size={18} className="text-[var(--amber-deep)] mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-semibold">AI field pre-fill (optional)</p>
+                  <p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5">AI reads the drawing and notes what it can. You review everything.</p>
+                </div>
+              </div>
+              <button onClick={runAiAnalysis} disabled={analyzing} className="btn-secondary w-full justify-center"><Sparkles size={15} className="text-[var(--amber-deep)]" />{analyzing ? "Reading..." : "Analyse with AI"}</button>
+              {analysisError && <p className="text-[13px] text-[var(--red)] mt-2">{analysisError}</p>}
+              {analysisResult && <div className={`mt-3 rounded-lg px-3 py-2.5 flex items-start gap-2 ${analysisResult.confidence === "low" ? "bg-[var(--red-bg)]" : "bg-amber-50"}`}><AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-600" /><div><p className="text-[13px] font-semibold text-amber-800">Fields noted ({analysisResult.confidence} confidence) - review before saving</p>{analysisResult.notes && <p className="text-[12.5px] mt-1 text-amber-700">{analysisResult.notes}</p>}</div></div>}
+            </div>
+          )}
         </div>
       )}
 

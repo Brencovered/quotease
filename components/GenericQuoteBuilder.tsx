@@ -3,14 +3,17 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PAYMENT_TERM_PRESETS } from "@/lib/paymentTerms";
-import { ChevronRight, ChevronLeft, Check, Plus, Trash2 } from "lucide-react";
+import { ChevronRight, ChevronLeft, Check, Plus, Trash2, Paperclip, X, Sparkles, AlertTriangle } from "lucide-react";
 import { calcGenericQuote, GENERIC_TRADE_TEMPLATES, type GenericLineItem, type GenericIntake } from "@/lib/genericTrades";
 import StepCustomer from "./StepCustomer";
+import VoiceNoteRecorder from "./VoiceNoteRecorder";
+import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import ExtraJobLines, { type ExtraLine, extraLinesTotals } from "./ExtraJobLines";
 import { resolveClientId } from "@/lib/resolveClientId";
 
 const STEPS = [
   { id: "customer", label: "Customer" },
+  { id: "drawing",  label: "Files" },
   { id: "job",     label: "Job" },
   { id: "items",   label: "Items" },
   { id: "send",    label: "Send" },
@@ -45,6 +48,11 @@ export default function GenericQuoteBuilder({
   const [clientEmail, setClientEmail] = useState("");
   const [siteAddress, setSiteAddress] = useState("");
   const [clientId, setClientId] = useState<string | null>(preClientId ?? null);
+  const [drawingFiles, setDrawingFiles] = useState<File[]>([]);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<{ confidence: string; notes: string } | null>(null);
+  const [usageLimitReached, setUsageLimitReached] = useState(false);
   const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">("full_on_completion");
   const [extraLines, setExtraLines]   = useState<ExtraLine[]>([]);
   const [saving,      setSaving]      = useState(false);
@@ -74,6 +82,42 @@ export default function GenericQuoteBuilder({
 
   function removeItem(id: string) {
     setItems((p) => p.filter((it) => it.id !== id));
+  }
+
+  // Backend prompt is electrical-specific - rather than force-mapping
+  // mismatched fields onto whichever of the 9 trades this is, surface the
+  // AI's notes/confidence as a read-only hint, same pattern the dedicated
+  // builders use. The trade name is at least passed through so the AI's
+  // framing is relevant even if the structured fields aren't.
+  async function runAiAnalysis() {
+    if (!drawingFiles.length) return;
+    setAnalyzing(true); setAnalysisError(null); setAnalysisResult(null);
+    try {
+      const fd = new FormData();
+      const fileForAnalysis = await normalizeForAnalysis(drawingFiles[0]);
+      fd.append("file", fileForAnalysis);
+      fd.append("instructions", `This is a ${template.label.toLowerCase()} job. Focus on what a ${template.label.toLowerCase()} would need to quote from this.`);
+      const res = await fetch("/api/quotes/analyze-drawing", { method: "POST", body: fd });
+      const body = await res.json();
+      if (!res.ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
+      setAnalysisResult({ confidence: body.result?.confidence ?? "low", notes: body.result?.notes ?? "" });
+    } catch (err) { setAnalysisError(err instanceof Error ? err.message : "Could not reach analysis service."); }
+    finally { setAnalyzing(false); }
+  }
+
+  async function onVoiceTranscript(transcript: string) {
+    setAnalyzing(true); setAnalysisError(null); setAnalysisResult(null); setUsageLimitReached(false);
+    try {
+      const res = await fetch("/api/quotes/analyze-voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcript, instructions: `This is a ${template.label.toLowerCase()} job. Focus on what a ${template.label.toLowerCase()} would need to quote from this.` }),
+      });
+      const body = await res.json();
+      if (!res.ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
+      setAnalysisResult({ confidence: body.result?.confidence ?? "low", notes: body.result?.notes ?? "" });
+    } catch (err) { setAnalysisError(err instanceof Error ? err.message : "Could not reach analysis service."); }
+    finally { setAnalyzing(false); }
   }
 
   async function saveAndSend(sendEmail: boolean) {
@@ -170,6 +214,43 @@ export default function GenericQuoteBuilder({
           siteAddress={siteAddress} setSiteAddress={setSiteAddress}
           setClientId={setClientId}
         />
+      )}
+
+      {stepId === "drawing" && (
+        <div className="space-y-4">
+          <div className="card">
+            <p className="section-tag mb-1">Step 1</p>
+            <p className="font-semibold text-[17px] mb-4">Upload drawings or site photos</p>
+            <label className="flex items-center justify-center gap-2 border-2 border-dashed border-[var(--line)] rounded-xl py-8 cursor-pointer hover:border-[var(--amber)] bg-[var(--app-bg)]">
+              <Paperclip size={18} className="text-[var(--ink-faint)]"/><span className="text-[14px] font-semibold text-[var(--ink-soft)]">Add files</span>
+              <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={(e) => { const f = Array.from(e.target.files??[]); setDrawingFiles((p) => [...p, ...f.filter((x) => !p.some((y) => y.name===x.name))]); e.target.value=""; }} />
+            </label>
+            {drawingFiles.map((f) => <div key={f.name} className="flex items-center gap-3 bg-[var(--app-bg)] rounded-lg px-3 py-2.5 mt-2"><Paperclip size={14} className="text-[var(--ink-faint)] shrink-0"/><span className="text-[13.5px] flex-1 truncate">{f.name}</span><button onClick={() => setDrawingFiles((p) => p.filter((x) => x.name!==f.name))}><X size={14} className="text-[var(--ink-faint)]"/></button></div>)}
+          </div>
+
+          <VoiceNoteRecorder
+            onTranscriptReady={onVoiceTranscript}
+            analyzing={analyzing}
+            analysisError={analysisError}
+            analysisResult={analysisResult}
+            usageLimitReached={usageLimitReached}
+          />
+
+          {drawingFiles.length > 0 && (
+            <div className="card border-2 border-[var(--amber-light)]">
+              <div className="flex items-start gap-3 mb-3">
+                <Sparkles size={18} className="text-[var(--amber-deep)] mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-semibold">AI field pre-fill (optional)</p>
+                  <p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5">AI reads the drawing and notes what it can. You review everything.</p>
+                </div>
+              </div>
+              <button onClick={runAiAnalysis} disabled={analyzing} className="btn-secondary w-full justify-center"><Sparkles size={15} className="text-[var(--amber-deep)]" />{analyzing ? "Reading..." : "Analyse with AI"}</button>
+              {analysisError && <p className="text-[13px] text-[var(--red)] mt-2">{analysisError}</p>}
+              {analysisResult && <div className={`mt-3 rounded-lg px-3 py-2.5 flex items-start gap-2 ${analysisResult.confidence === "low" ? "bg-[var(--red-bg)]" : "bg-amber-50"}`}><AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-600" /><div><p className="text-[13px] font-semibold text-amber-800">Fields noted ({analysisResult.confidence} confidence) - review before saving</p>{analysisResult.notes && <p className="text-[12.5px] mt-1 text-amber-700">{analysisResult.notes}</p>}</div></div>}
+            </div>
+          )}
+        </div>
       )}
 
       {stepId === "job" && (

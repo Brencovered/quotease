@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
 import { AlertTriangle, Paperclip, X, Sparkles, ChevronRight, ChevronLeft, Check } from "lucide-react";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
+import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import { calcPlumberQuote, PLUMBER_DEFAULT_MATERIALS, type PlumberIntake } from "@/lib/calcPlumber";
 import MaterialsEditor from "@/components/MaterialsEditor";
 import StepCustomer from "./StepCustomer";
@@ -69,6 +70,7 @@ export default function PlumberQuoteBuilder({ profile, materials, preClientId, p
   const [analyzing,   setAnalyzing]   = useState(false);
   const [analysisResult, setAnalysisResult] = useState<{ confidence: string; notes: string } | null>(null);
   const [analysisError,  setAnalysisError]  = useState<string | null>(null);
+  const [usageLimitReached, setUsageLimitReached] = useState(false);
 
   const costs = useMemo(() => { const m: Record<string,number> = {}; lib.forEach((r) => (m[r.item_key] = Number(r.unit_cost)||0)); return m; }, [lib]);
   const result = useMemo(() => calcPlumberQuote(intake, costs, rate, margin), [intake, costs, rate, margin]);
@@ -92,7 +94,22 @@ export default function PlumberQuoteBuilder({ profile, materials, preClientId, p
       fd.append("instructions", "This is a plumbing job. Focus on wet areas, fixture counts, pipe runs.");
       const res  = await fetch("/api/quotes/analyze-drawing", { method: "POST", body: fd });
       const body = await res.json();
-      if (!res.ok) { setAnalysisError(body.error ?? "Analysis failed"); return; }
+      if (!res.ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
+      setAnalysisResult({ confidence: body.result?.confidence ?? "low", notes: body.result?.notes ?? "" });
+    } catch (err) { setAnalysisError(err instanceof Error ? err.message : "Could not reach analysis service."); }
+    finally { setAnalyzing(false); }
+  }
+
+  async function onVoiceTranscript(transcript: string) {
+    setAnalyzing(true); setAnalysisError(null); setAnalysisResult(null); setUsageLimitReached(false);
+    try {
+      const res = await fetch("/api/quotes/analyze-voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcript, instructions: "This is a plumbing job. Focus on wet areas, fixture counts, pipe runs." }),
+      });
+      const body = await res.json();
+      if (!res.ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
       setAnalysisResult({ confidence: body.result?.confidence ?? "low", notes: body.result?.notes ?? "" });
     } catch (err) { setAnalysisError(err instanceof Error ? err.message : "Could not reach analysis service."); }
     finally { setAnalyzing(false); }
@@ -170,6 +187,15 @@ export default function PlumberQuoteBuilder({ profile, materials, preClientId, p
             </label>
             {drawingFiles.length > 0 && <div className="mt-3 space-y-2">{drawingFiles.map((f) => <div key={f.name} className="flex items-center gap-3 bg-[var(--app-bg)] rounded-lg px-3 py-2.5"><Paperclip size={14} className="text-[var(--ink-faint)] shrink-0" /><span className="text-[13.5px] flex-1 truncate">{f.name}</span><button onClick={() => setDrawingFiles((p) => p.filter((x) => x.name !== f.name))}><X size={14} className="text-[var(--ink-faint)]" /></button></div>)}</div>}
           </div>
+
+          <VoiceNoteRecorder
+            onTranscriptReady={onVoiceTranscript}
+            analyzing={analyzing}
+            analysisError={analysisError}
+            analysisResult={analysisResult}
+            usageLimitReached={usageLimitReached}
+          />
+
           {drawingFiles.length > 0 && (
             <div className="card border-2 border-[var(--amber-light)]">
               <div className="flex items-start gap-3 mb-3"><Sparkles size={18} className="text-[var(--amber-deep)] mt-0.5 shrink-0" /><div><p className="font-semibold">AI field pre-fill (optional)</p><p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5">AI reads the drawing and notes what it can. You review everything.</p></div></div>
