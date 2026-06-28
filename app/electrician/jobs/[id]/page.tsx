@@ -139,6 +139,19 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               </p>
             )}
           </div>
+          {((quote.markup_materials as Array<{ label: string; quantity: number; unit: string; totalCost: number }>) ?? []).length > 0 && (
+            <div className="border-t border-[var(--line)] pt-3 mt-3">
+              <p className="text-[11px] font-bold text-[var(--ink-faint)] uppercase tracking-wide mb-2">From site plans</p>
+              <div className="space-y-1.5">
+                {(quote.markup_materials as Array<{ label: string; quantity: number; unit: string; totalCost: number }>).map((m, i) => (
+                  <div key={i} className="flex justify-between text-[13px]">
+                    <span className="text-[var(--ink-soft)]">{m.label} <span className="text-[var(--ink-faint)]">({m.quantity}{m.unit})</span></span>
+                    <span className="font-semibold text-[var(--ink)]">${m.totalCost.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-4">
