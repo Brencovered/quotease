@@ -39,7 +39,7 @@ type Profile = {
   license_number?: string | null; business_address?: string | null;
   terms_and_conditions?: string | null; ai_free_analyses_used?: number;
   ai_addon_status?: string; ai_addon_period?: string | null; ai_addon_analyses_used?: number;
-  bank_account_name?: string | null; bank_bsb?: string | null; bank_account_number?: string | null;
+  contact_phone?: string | null; bank_account_name?: string | null; bank_bsb?: string | null; bank_account_number?: string | null;
   accepts_cash?: boolean; default_deposit_pct?: number | null; default_expiry_days?: number;
   hourly_rate?: number | null; materials_margin_pct?: number | null;
 } | null;
@@ -79,6 +79,7 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
   const [abn,            setAbn]            = useState(profile?.abn ?? "");
   const [licenceNumber,  setLicenceNumber]  = useState(profile?.license_number ?? "");
   const [businessAddress,setBusinessAddress] = useState(profile?.business_address ?? "");
+  const [contactPhone,   setContactPhone]   = useState(profile?.contact_phone ?? "");
   const [terms,          setTerms]          = useState(profile?.terms_and_conditions ?? "");
   const [bankAccountName, setBankAccountName] = useState(profile?.bank_account_name ?? "");
   const [bankBsb,          setBankBsb]          = useState(profile?.bank_bsb ?? "");
@@ -140,7 +141,7 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
 
     const { error } = await supabase.from("profiles").update({
       abn: abn || null, license_number: licenceNumber || null,
-      business_address: businessAddress || null, terms_and_conditions: terms,
+      business_address: businessAddress || null, contact_phone: contactPhone || null, terms_and_conditions: terms,
       bank_account_name: bankAccountName || null, bank_bsb: bankBsb || null,
       bank_account_number: bankAccountNumber || null, accepts_cash: acceptsCash,
       default_deposit_pct: defaultDepositPct, default_expiry_days: defaultExpiryDays,
@@ -238,6 +239,11 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
           <div>
             <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Business address</label>
             <input value={businessAddress} onChange={(e) => setBusinessAddress(e.target.value)} className="app-field" placeholder="123 Main St, Suburb VIC 3000" />
+          </div>
+          <div>
+            <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Contact phone</label>
+            <input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className="app-field" placeholder="0400 000 000" />
+            <p className="text-[11.5px] text-[var(--ink-faint)] mt-1">Shown on quotes and the PDF header</p>
           </div>
 
           <div>

@@ -11,8 +11,8 @@ const FEATURES = [
   { n: "04", title: "Quote becomes a job automatically",   body: "Accepted quotes flip to jobs. Schedule the start date, upload drawings, track materials and log actuals against what you quoted." },
   { n: "05", title: "Know if you made money",              body: "Job costing tracks actual hours and materials vs what you quoted. See your real margin on every job, not just revenue." },
   { n: "06", title: "Variations in writing, always",       body: "Client wants to add scope mid-job? Raise a variation order in one tap. Gets signed off before you touch it." },
-  { n: "07", title: "Follow-up reminders built in",        body: "Quotes going quiet? Automatic follow-up reminders so nothing falls through the cracks while you are on the tools." },
-  { n: "08", title: "VIC planning overlay checks",         body: "Type in the address and Swiftscope checks VicPlan automatically. Heritage overlay detected? Labour estimate updates on the spot." },
+  { n: "07", title: "Mark up plans and drawings",          body: "Upload a site plan, draw cable runs, pipe routes, areas or count items directly on the drawing. Costs feed into the quote automatically." },
+  { n: "08", title: "Follow-up reminders built in",        body: "Quotes going quiet? Automatic follow-up reminders so nothing falls through the cracks while you are on the tools." },
 ];
 
 const TRADES = [
@@ -53,7 +53,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* HERO - dark because it sits on photo */}
+      {/* HERO */}
       <div className="relative h-screen min-h-[700px] max-h-[960px] flex items-end bg-[#0a1722]">
         <div className="absolute inset-0 z-0">
           <Image src={HERO_IMG} alt="Electrician working on residential switchboard" fill className="object-cover object-center" priority unoptimized />
@@ -67,10 +67,10 @@ export default function Home() {
               <span className="block text-[3.2rem] sm:text-[5rem] lg:text-[6rem] text-white">Send it.</span>
               <span className="block text-[3.2rem] sm:text-[5rem] lg:text-[6rem] text-[#ffb400]">Win the job.</span>
             </h1>
-            <p className="text-[17px] sm:text-[18px] leading-[1.65] text-[#c8d8e4] max-w-[520px] mb-10">
-              Stop writing quotes on Word docs at 10pm. Swiftscope gets you a professional
-              quote built and sent from your phone before you leave the driveway - while
-              the other tradie is still working out their price.
+            <p className="text-[17px] sm:text-[18px] leading-[1.65] text-[#c8d8e4] max-w-[540px] mb-10">
+              Swiftscope is quoting and job management built for residential tradies.
+              Get a professional quote built and sent from your phone before you leave the driveway -
+              while the other tradie is still working out their price.
             </p>
             <div className="flex flex-wrap gap-4 mb-8">
               <Link href="/signup" className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[16px] px-8 py-4 rounded-xl hover:bg-[#e89e00] transition-colors" style={{ boxShadow: "0 12px 32px rgba(255,180,0,.3)" }}>
@@ -95,7 +95,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* TRADES STRIP - light */}
+      {/* TRADES STRIP */}
       <div className="bg-[#f8f9fa] border-b border-[#e8ecef]">
         <div className="max-w-7xl mx-auto px-6">
           <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] pt-8 pb-4">Works for every trade</p>
@@ -111,14 +111,14 @@ export default function Home() {
         </div>
       </div>
 
-      {/* FEATURES - white bg */}
+      {/* FEATURES */}
       <div className="bg-white">
         <div className="max-w-7xl mx-auto px-6 py-24">
           <div className="grid lg:grid-cols-[1fr_2fr] gap-16 items-start">
             <div className="lg:sticky lg:top-24">
-              <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">The full toolkit</span>
+              <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">Everything in one place</span>
               <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.93] mt-3 mb-6 text-[#0a1722]">
-                Everything from<br />quote to paid.
+                From first call<br />to final payment.
               </h2>
               <p className="text-[15px] text-[#5a7080] leading-[1.7] mb-8">
                 Most quoting tools stop at the quote. Swiftscope covers the whole job -
@@ -141,71 +141,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* AI + SUPPLIER SECTION - light grey */}
-      <div className="bg-[#f8f9fa] border-t border-[#e8ecef]">
-        <div className="max-w-7xl mx-auto px-6 py-24">
-          <div className="mb-14 max-w-[640px]">
-            <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">Why quoting is actually fast</span>
-            <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.93] mt-3 text-[#0a1722]">
-              The numbers are yours.<br />The typing is not.
-            </h2>
-          </div>
-          <div className="grid lg:grid-cols-2 gap-6">
-            <div className="bg-white border border-[#e8ecef] rounded-3xl p-8 sm:p-9 shadow-sm">
-              <p className="text-[11px] font-bold tracking-[.14em] uppercase text-[#ffb400] mb-3">Your real prices</p>
-              <h3 className="font-extrabold text-[20px] text-[#0a1722] mb-3 leading-snug">Upload your supplier price list once</h3>
-              <p className="text-[14px] text-[#5a7080] leading-[1.65] mb-7">
-                Every quote after that calculates off what you actually pay - not a generic estimate
-                that is already wrong by the time your wholesaler updates prices.
-              </p>
-              <div className="bg-[#f8f9fa] border border-[#e8ecef] rounded-2xl p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-[11px] font-bold text-[#8a9ba8] uppercase tracking-wide">Materials library</span>
-                  <span className="text-[10.5px] font-bold text-[#ffb400] bg-[#ffb400]/10 border border-[#ffb400]/20 px-2 py-1 rounded-full">CSV imported</span>
-                </div>
-                {[
-                  { item: "20mm conduit (per m)", cost: "$2.40" },
-                  { item: "GPO double, white", cost: "$8.90" },
-                  { item: "RCBO 20A", cost: "$34.50" },
-                  { item: "LED downlight 10W", cost: "$11.20" },
-                ].map((row) => (
-                  <div key={row.item} className="flex items-center justify-between py-2.5 border-t border-[#e8ecef] first:border-t-0">
-                    <span className="text-[13px] text-[#334155]">{row.item}</span>
-                    <span className="text-[13px] font-bold text-[#0a1722] tabular">{row.cost}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="bg-white border border-[#e8ecef] rounded-3xl p-8 sm:p-9 shadow-sm">
-              <p className="text-[11px] font-bold tracking-[.14em] uppercase text-[#ffb400] mb-3">AI does the first pass</p>
-              <h3 className="font-extrabold text-[20px] text-[#0a1722] mb-3 leading-snug">Snap the plan. Talk through the job.</h3>
-              <p className="text-[14px] text-[#5a7080] leading-[1.65] mb-7">
-                Photograph the floor plan or record yourself walking the site. AI reads it and drafts
-                the scope - you check it and adjust before anything gets sent.
-              </p>
-              <div className="bg-[#f8f9fa] border border-[#e8ecef] rounded-2xl p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-[11px] font-bold text-[#8a9ba8] uppercase tracking-wide">Drawing read</span>
-                  <span className="text-[10.5px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full">Medium confidence</span>
-                </div>
-                {[
-                  { item: "Power points", val: "8" },
-                  { item: "Light points", val: "6" },
-                  { item: "Switchboard upgrade", val: "Yes" },
-                  { item: "Downlights", val: "10" },
-                ].map((row) => (
-                  <div key={row.item} className="flex items-center justify-between py-2.5 border-t border-[#e8ecef] first:border-t-0">
-                    <span className="text-[13px] text-[#334155]">{row.item}</span>
-                    <span className="text-[13px] font-bold text-[#0a1722] tabular">{row.val}</span>
-                  </div>
-                ))}
-                <p className="text-[11px] text-[#8a9ba8] mt-3 leading-snug">Review every field before sending - AI drafts, you decide.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* PHOTO BREAK */}
       <div className="relative h-[55vh] min-h-[380px] overflow-hidden">
         <Image src={SITE_IMG} alt="Tradies on a residential job site" fill className="object-cover object-center" unoptimized />
@@ -223,7 +158,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* PROBLEM / FIX - white */}
+      {/* PROBLEM / FIX */}
       <div className="bg-white">
         <div className="max-w-7xl mx-auto px-6 py-24">
           <div className="mb-12">
@@ -249,48 +184,43 @@ export default function Home() {
         </div>
       </div>
 
-      {/* BUILT BY A TRADIE - light grey */}
+      {/* WHY SWIFTSCOPE EXISTS - Nick's story, no Spark Ease business name */}
       <div className="bg-[#f8f9fa] border-t border-[#e8ecef]">
         <div className="max-w-7xl mx-auto px-6 py-24 grid lg:grid-cols-2 gap-16 items-center">
           <div className="relative rounded-2xl overflow-hidden aspect-[4/3] order-2 lg:order-1 shadow-lg">
             <Image
               src="https://images.squarespace-cdn.com/content/v1/6848e6851124a2687a93a35f/ea135f61-ba35-4cdd-a281-ffcab6e07c5e/residential-electrician-melbourne-lounge+room.jpg"
-              alt="High-spec residential electrical install - Spark Ease Electrical, Melbourne"
+              alt="High-spec residential electrical install, Melbourne"
               fill className="object-cover" unoptimized
             />
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-5">
-              <p className="text-[11px] text-white/60">Spark Ease Electrical, Melbourne. Builder: Tykon. Photographer: Dan Preston</p>
-            </div>
           </div>
           <div className="order-1 lg:order-2">
-            <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">Who built this</span>
+            <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">Why it exists</span>
             <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.93] mt-3 mb-6 text-[#0a1722]">
-              A sparkie who got sick<br />of bad software.
+              Built by someone who<br />actually does the work.
             </h2>
             <p className="text-[15.5px] text-[#3a5060] leading-[1.7] mb-5">
-              Nick has been running Spark Ease Electrical across Melbourne since 2013.
-              Bayside, Mornington Peninsula, inner suburbs. High-spec residential builds,
-              renovations, commercial fitouts.
+              Nick has been running a residential electrical business across Melbourne since 2013.
+              Bayside, Mornington Peninsula, inner suburbs. High-spec builds, renovations, commercial fitouts.
             </p>
             <p className="text-[15.5px] text-[#3a5060] leading-[1.7] mb-8">
-              He built Swiftscope because every piece of software he tried was either
-              built by people who had never held a cable puller, or so bloated
-              it took three weeks to set up. Swiftscope does what a tradie
-              actually needs. Nothing more.
+              He built Swiftscope because every tool he tried was either designed by someone who
+              had never held a cable puller, or so bloated it took three weeks to set up.
+              Swiftscope does exactly what a tradie actually needs. Nothing more.
             </p>
             <div className="flex items-center gap-4 p-4 bg-white border border-[#e8ecef] rounded-2xl shadow-sm">
               <div className="w-12 h-12 rounded-full bg-[#0a1722] flex items-center justify-center font-display text-xl text-[#ffb400] shrink-0">N</div>
               <div>
                 <p className="font-bold text-[#0a1722] text-[14px]">Nick</p>
-                <p className="text-[12.5px] text-[#5a7080]">Spark Ease Electrical Services</p>
-                <p className="text-[12px] text-[#8a9ba8]">Melbourne, VIC - REC 23538 - Since 2013</p>
+                <p className="text-[12.5px] text-[#5a7080]">Licensed electrician, Melbourne</p>
+                <p className="text-[12px] text-[#8a9ba8]">REC 23538 - in the trade since 2013</p>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* VS COMPETITORS - white */}
+      {/* VS COMPETITORS */}
       <div className="bg-white border-t border-[#e8ecef]">
         <div className="max-w-7xl mx-auto px-6 py-24">
           <div className="mb-12">
@@ -324,7 +254,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* PRICING - light grey */}
+      {/* PRICING */}
       <div className="bg-[#f8f9fa] border-t border-[#e8ecef]">
         <div className="max-w-7xl mx-auto px-6 py-24 grid lg:grid-cols-2 gap-12 items-center">
           <div>
@@ -337,9 +267,9 @@ export default function Home() {
                 "Free during early access - no credit card, ever",
                 "Unlimited users, unlimited quotes",
                 "Works for any trade",
-                "VIC planning overlay checks built in",
+                "Mark up drawings and link to quotes",
                 "Xero CSV export included",
-                "We will ask for feedback as we build this out",
+                "We will ask for your feedback as we build",
               ].map((f) => (
                 <div key={f} className="flex items-center gap-3 py-3.5 text-[14.5px] text-[#0a1722] font-semibold">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#ffb400] shrink-0" />
@@ -348,7 +278,7 @@ export default function Home() {
               ))}
             </div>
           </div>
-          <div className="bg-[#0a1722] border border-[#0a1722] rounded-3xl overflow-hidden shadow-2xl">
+          <div className="bg-[#0a1722] rounded-3xl overflow-hidden shadow-2xl">
             <div className="h-3" style={{ background: "repeating-linear-gradient(135deg,#FFB400 0 14px,#E89E00 14px 28px)" }} />
             <div className="p-10 text-center">
               <p className="text-[12px] font-bold tracking-[.2em] uppercase text-[#7e94a2] mb-4">Early access</p>
@@ -356,7 +286,7 @@ export default function Home() {
                 <span className="font-display text-[6rem] leading-[0.85] text-[#ffb400]">$0</span>
               </div>
               <p className="text-[#7e94a2] text-[14px] mb-1">free while we are building this out</p>
-              <p className="text-[12px] text-[#3a4f5e] mb-8">In exchange, we will ask for your feedback and hope to earn a testimonial along the way.</p>
+              <p className="text-[12px] text-[#3a4f5e] mb-8">In exchange we will ask for your feedback and hope to earn a testimonial along the way.</p>
               <Link href="/signup" className="block bg-[#ffb400] text-[#0a1722] font-extrabold text-[17px] py-4 rounded-xl mb-3 hover:bg-[#e89e00] transition-colors">
                 Sign up free
               </Link>
@@ -384,7 +314,6 @@ export default function Home() {
         <div className="border-t border-white/[0.08]">
           <div className="max-w-7xl mx-auto px-6 py-5 flex flex-wrap items-center justify-between gap-4">
             <span className="font-display text-lg text-white">SWIFTSCOPE</span>
-            <span className="text-[12px] font-semibold text-white/30">Built by Spark Ease Electrical, Melbourne</span>
             <div className="flex gap-6 text-[12.5px] font-semibold text-white/40">
               <Link href="/login" className="hover:text-white transition-colors">Log in</Link>
               <Link href="/signup" className="hover:text-white transition-colors">Sign up</Link>

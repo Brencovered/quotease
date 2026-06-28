@@ -73,7 +73,7 @@ export default function SignupPage() {
                   <div>
                     <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Business name</label>
                     <input type="text" value={businessName} onChange={(e) => setBusinessName(e.target.value)}
-                      required autoFocus className="app-field" placeholder="Spark Ease Electrical" />
+                      required autoFocus className="app-field" placeholder="e.g. Smith Electrical Services" />
                   </div>
                   <div>
                     <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Email</label>

@@ -23,7 +23,6 @@ const NAV = [
   { href: "/electrician/jobs",      icon: Briefcase,        label: "Jobs" },
   { href: "/electrician",           icon: Plus,             label: "Quote",   fab: true },
   { href: "/electrician/quotes",    icon: FileText,         label: "Quotes" },
-  { href: "/electrician/plans",     icon: FolderOpen,       label: "Plans" },
   { href: "/electrician/schedule",  icon: CalendarDays,     label: "Schedule" },
 ];
 
@@ -80,6 +79,15 @@ export default function AppHeader() {
               </Link>
             );
           })}
+          <Link
+            href="/electrician/plans"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
+              isActive("/electrician/plans") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
+            }`}
+          >
+            <FolderOpen size={17} strokeWidth={isActive("/electrician/plans") ? 2.2 : 1.8} />
+            Plans
+          </Link>
           <Link
             href="/electrician/clients"
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
