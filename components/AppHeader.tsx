@@ -15,13 +15,15 @@ import {
   MapPin,
   Menu,
   X,
+  FolderOpen,
 } from "lucide-react";
 
 const NAV = [
   { href: "/electrician/dashboard", icon: LayoutDashboard, label: "Home" },
   { href: "/electrician/jobs",      icon: Briefcase,        label: "Jobs" },
-  { href: "/electrician",           icon: Plus,             label: "Quote",  fab: true },
+  { href: "/electrician",           icon: Plus,             label: "Quote",   fab: true },
   { href: "/electrician/quotes",    icon: FileText,         label: "Quotes" },
+  { href: "/electrician/plans",     icon: FolderOpen,       label: "Plans" },
   { href: "/electrician/schedule",  icon: CalendarDays,     label: "Schedule" },
 ];
 
