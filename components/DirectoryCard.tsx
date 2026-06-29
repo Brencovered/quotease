@@ -65,6 +65,58 @@ function PhotoSlider({ refs, name }: { refs: string[]; name: string }) {
   );
 }
 
+// Extracts a bare domain from a stored website URL, e.g.
+// "https://www.acmeelectrical.com.au/contact" -> "acmeelectrical.com.au"
+function domainFromUrl(url: string): string | null {
+  try {
+    const host = new URL(url).hostname;
+    return host.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
+// Logo hero: tries to render the business's actual logo (sourced from their
+// own website's icon, since the free Clearbit Logo API that most projects
+// used for this was shut down in Dec 2025). Falls back through two no-key
+// favicon services, then to the photo slider, then to a plain letter tile.
+// Each stage only kicks in on a real load failure (onError), not preemptively.
+function LogoHero({ listing }: { listing: Listing }) {
+  const domain = listing.website_url ? domainFromUrl(listing.website_url) : null;
+  const photos = listing.photo_references?.filter(Boolean) ?? [];
+  const [stage, setStage] = useState<0 | 1 | 2>(0); // 0: DuckDuckGo icon, 1: Google favicon, 2: exhausted
+
+  if (!domain || stage === 2) {
+    // No website to source a logo from, or both logo services failed.
+    return photos.length > 0 ? (
+      <PhotoSlider refs={photos} name={listing.business_name} />
+    ) : (
+      <div className="h-36 bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center">
+        <span className="font-display text-[3.5rem] text-slate-300">
+          {listing.business_name.charAt(0)}
+        </span>
+      </div>
+    );
+  }
+
+  const src = stage === 0
+    ? `https://icons.duckduckgo.com/ip3/${domain}.ico`
+    : `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+
+  return (
+    <div className="h-36 bg-gradient-to-br from-slate-50 to-white flex items-center justify-center">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={listing.business_name}
+        loading="lazy"
+        onError={() => setStage(s => (s === 0 ? 1 : 2))}
+        className="max-h-20 max-w-[60%] object-contain"
+      />
+    </div>
+  );
+}
+
 function EnquiryModal({ listing, onClose }: { listing: Listing; onClose: () => void }) {
   const [name,    setName]    = useState("");
   const [email,   setEmail]   = useState("");
@@ -183,32 +235,14 @@ function EnquiryModal({ listing, onClose }: { listing: Listing; onClose: () => v
 
 export default function DirectoryCard({ listing }: { listing: Listing }) {
   const [showEnquiry, setShowEnquiry] = useState(false);
-  const photos = listing.photo_references?.filter(Boolean) ?? [];
 
   return (
     <>
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col">
 
-        {/* Photo / header area */}
-        <div className="relative">
-          {photos.length > 0 ? (
-            <PhotoSlider refs={photos} name={listing.business_name} />
-          ) : (
-            <div className="h-36 bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center">
-              <span className="font-display text-[3.5rem] text-slate-300">
-                {listing.business_name.charAt(0)}
-              </span>
-            </div>
-          )}
-
-          {/* Logo overlay */}
-          {listing.logo_url && (
-            <div className="absolute bottom-0 left-4 translate-y-1/2 w-14 h-14 rounded-xl bg-white border border-gray-100 shadow-md overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={listing.logo_url} alt={listing.business_name}
-                className="w-full h-full object-contain p-1" />
-            </div>
-          )}
+        {/* Logo / header area */}
+        <div className="relative border-b border-gray-50">
+          <LogoHero listing={listing} />
 
           {/* Trade badge */}
           {listing.trades?.length && (
@@ -221,7 +255,7 @@ export default function DirectoryCard({ listing }: { listing: Listing }) {
         </div>
 
         {/* Content */}
-        <div className={`p-4 flex flex-col flex-1 ${listing.logo_url ? "pt-8" : ""}`}>
+        <div className="p-4 flex flex-col flex-1">
 
           {/* Name + verified */}
           <div className="flex items-start gap-2 mb-1">
