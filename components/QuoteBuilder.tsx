@@ -979,26 +979,37 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
       {/* Quote summary */}
       <div className="bg-[var(--navy)] rounded-2xl p-5">
         <p className="text-[11px] text-[var(--steel-3)] font-bold uppercase tracking-wider mb-3">Quote summary</p>
-        <div className="space-y-2">
-          <div className="flex justify-between text-[14px]">
-            <span className="text-[var(--steel-2)]">Labour ({result.labourHours}h)</span>
-            <span className="text-white font-semibold tabular">${Math.round(result.labourHours * 95).toLocaleString()}</span>
-          </div>
-          <div className="flex justify-between text-[14px]">
-            <span className="text-[var(--steel-2)]">Materials</span>
-            <span className="text-white font-semibold tabular">${(result.materialsCost + markupTotal + extraLinesTotals(extraLines, rate, margin).materials + Math.round(siteMaterials)).toLocaleString()}</span>
-          </div>
-          {markupTotal > 0 && (
-            <div className="flex justify-between text-[12.5px]">
-              <span className="text-[var(--steel-3)]">incl. ${markupTotal.toLocaleString()} from site plans</span>
+        {(() => {
+          const sm = siteItems.reduce((s, i) => s + Math.round(i.materialsCost * (1 + margin / 100)), 0);
+          const sl = siteItems.reduce((s, i) => s + Math.round(i.labourHrs * rate), 0);
+          return (
+          <div className="space-y-2">
+            <div className="flex justify-between text-[14px]">
+              <span className="text-[var(--steel-2)]">Labour ({result.labourHours}h)</span>
+              <span className="text-white font-semibold tabular">${Math.round(result.labourHours * rate).toLocaleString()}</span>
             </div>
-          )}
-          <div className="border-t border-white/10 pt-2 flex justify-between">
-            <span className="text-white font-bold text-[15px]">Total</span>
-            <span className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, margin).total + (siteTotal ?? 0)).toLocaleString()}</span>
+            {sl > 0 && (
+              <div className="flex justify-between text-[14px]">
+                <span className="text-[var(--steel-2)]">Site annotation labour</span>
+                <span className="text-white font-semibold tabular">${sl.toLocaleString()}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-[14px]">
+              <span className="text-[var(--steel-2)]">Materials</span>
+              <span className="text-white font-semibold tabular">${(result.materialsCost + markupTotal + extraLinesTotals(extraLines, rate, margin).materials + sm).toLocaleString()}</span>
+            </div>
+            {markupTotal > 0 && (
+              <div className="flex justify-between text-[12.5px]">
+                <span className="text-[var(--steel-3)]">incl. ${markupTotal.toLocaleString()} from site plans</span>
+              </div>
+            )}
+            <div className="border-t border-white/10 pt-2 flex justify-between">
+              <span className="text-white font-bold text-[15px]">Total</span>
+              <span className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, margin).total + siteTotal).toLocaleString()}</span>
+            </div>
           </div>
-        </div>
-      </div>
+          );
+        })()}
 
       {/* Who it's going to - confirmation only, edited back in the Customer step */}
       <div className="card">
