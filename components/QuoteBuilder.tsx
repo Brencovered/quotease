@@ -10,6 +10,7 @@ import StepCustomer from "./StepCustomer";
 import ExtraJobLines, { extraLinesTotals } from "./ExtraJobLines";
 import { resolveClientId } from "@/lib/resolveClientId";
 import MaterialsEditor from "@/components/MaterialsEditor";
+import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import {
   calcElectricianQuote,
   ELECTRICIAN_DEFAULT_MATERIALS,
@@ -330,6 +331,18 @@ export default function QuoteBuilder({
           onRemove={(name) => { setDrawingFiles((p) => p.filter((f) => f.name !== name)); setAnalysisResult(null); }}
           onAnalyse={runAiAnalysis}
           onVoiceTranscript={runAiAnalysisFromVoice}
+          trade="electrician"
+          onAddLiveItems={(items) => {
+            items.forEach((item) => {
+              setExtraLines((prev) => [...prev, {
+                id: Math.random().toString(36).slice(2),
+                label: `${item.description}${item.notes ? ` — ${item.notes}` : ""}`,
+                hours: 0,
+                materialsCost: 0,
+                note: `${item.quantity} ${item.unit} · from live site annotation`,
+              }]);
+            });
+          }}
         />
       )}
 
@@ -385,16 +398,22 @@ export default function QuoteBuilder({
 }
 
 /* ─── Step: Drawing ─────────────────────────────────────────────── */
-function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions, analyzing, analysisResult, analysisError, usageLimitReached, onUpload, onRemove, onAnalyse, onVoiceTranscript }: {
+function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions, analyzing, analysisResult, analysisError, usageLimitReached, onUpload, onRemove, onAnalyse, onVoiceTranscript, trade, onAddLiveItems }: {
   drawingFiles: File[]; drawingInstructions: string; setDrawingInstructions: (v: string) => void;
   analyzing: boolean; analysisResult: { confidence: string; notes: string } | null;
   analysisError: string | null; usageLimitReached: boolean;
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRemove: (name: string) => void; onAnalyse: () => void;
   onVoiceTranscript: (transcript: string) => void;
+  trade: string;
+  onAddLiveItems: (items: { description: string; quantity: number; unit: string; notes: string }[]) => void;
 }) {
   return (
     <div className="space-y-4">
+
+      {/* Live site annotation */}
+      <LiveSiteAnnotation trade={trade} onAddLineItems={onAddLiveItems} />
+
       <div className="card">
         <p className="section-tag mb-1">Step 1</p>
         <p className="font-semibold text-[var(--ink)] text-[17px] mb-1">Upload drawings</p>
