@@ -185,3 +185,47 @@ create or replace view directory_public as
   from profiles
   where directory_enabled = true
     and business_name is not null;
+
+-- ── Admin dashboard ──────────────────────────────────────────────────────
+-- Audit trail for the admin "Access this account" feature (see
+-- app/api/admin/impersonate/route.ts). No RLS policies on purpose -- only
+-- ever touched by server code using the service-role client.
+
+create table if not exists admin_impersonation_log (
+  id uuid primary key default uuid_generate_v4(),
+  admin_email text not null,
+  target_profile_id uuid not null references profiles(id) on delete cascade,
+  reason text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists admin_impersonation_log_target_idx on admin_impersonation_log(target_profile_id);
+
+-- ── Harden signup trigger ────────────────────────────────────────────────
+-- Found a real orphaned account (auth.users row with no profiles row),
+-- which breaks every insert that references profile_id via FK. Added
+-- ON CONFLICT DO NOTHING (idempotent) and an exception handler so a
+-- profile-creation hiccup can never again silently lose a profile row.
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path to 'public'
+as $function$
+begin
+  insert into public.profiles (id, business_name, contact_email, trial_ends_at)
+  values (
+    new.id,
+    new.raw_user_meta_data->>'business_name',
+    new.email,
+    now() + interval '3 days'
+  )
+  on conflict (id) do nothing;
+  return new;
+exception
+  when others then
+    raise warning 'handle_new_user failed for %: %', new.id, sqlerrm;
+    return new;
+end;
+$function$;
