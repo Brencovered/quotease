@@ -80,5 +80,5 @@ export async function GET(req: NextRequest) {
     xero_tax_type:         xeroTaxType,
   }).eq("id", userId);
 
-  return NextResponse.redirect(`${APP_URL}/settings?xero=connected`);
+  return NextResponse.redirect(`${APP_URL}/settings?xero=connected&t=${Date.now()}`);
 }
