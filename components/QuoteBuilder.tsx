@@ -899,7 +899,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
           </div>
           <div className="flex justify-between text-[14px]">
             <span className="text-[var(--steel-2)]">Materials</span>
-            <span className="text-white font-semibold tabular">${(result.materialsCost + markupTotal).toLocaleString()}</span>
+            <span className="text-white font-semibold tabular">${(result.materialsCost + markupTotal + extraLinesTotals(extraLines, rate, margin).materials).toLocaleString()}</span>
           </div>
           {markupTotal > 0 && (
             <div className="flex justify-between text-[12.5px]">
@@ -908,7 +908,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
           )}
           <div className="border-t border-white/10 pt-2 flex justify-between">
             <span className="text-white font-bold text-[15px]">Total</span>
-            <span className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + markupTotal).toLocaleString()}</span>
+            <span className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, margin).total).toLocaleString()}</span>
           </div>
         </div>
       </div>
@@ -946,7 +946,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
               <div key={i} className="flex justify-between text-[13.5px]">
                 <span className="text-[var(--ink-soft)]">{t.label}</span>
                 <span className="font-bold text-[var(--ink)] tabular">
-                  {t.percent}% - ${Math.round(((result.totalCost + markupTotal) * t.percent) / 100).toLocaleString()}
+                  {t.percent}% - ${Math.round(((result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, margin).total) * t.percent) / 100).toLocaleString()}
                 </span>
               </div>
             ))}
