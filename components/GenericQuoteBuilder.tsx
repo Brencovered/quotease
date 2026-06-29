@@ -97,6 +97,7 @@ export default function GenericQuoteBuilder({
       const fd = new FormData();
       const fileForAnalysis = await normalizeForAnalysis(drawingFiles[0]);
       fd.append("file", fileForAnalysis);
+      fd.append("trade", trade ?? "default");
       fd.append("instructions", `This is a ${template.label.toLowerCase()} job. Focus on what a ${template.label.toLowerCase()} would need to quote from this.`);
       const res = await fetch("/api/quotes/analyze-drawing", { method: "POST", body: fd });
       const body = await res.json();

@@ -92,6 +92,7 @@ export default function PlumberQuoteBuilder({ profile, materials, preClientId, p
       const fd = new FormData();
       const fileForAnalysis = await normalizeForAnalysis(drawingFiles[0]);
       fd.append("file", fileForAnalysis);
+      fd.append("trade", "plumber");
       fd.append("instructions", "This is a plumbing job. Focus on wet areas, fixture counts, pipe runs.");
       const res  = await fetch("/api/quotes/analyze-drawing", { method: "POST", body: fd });
       const body = await res.json();

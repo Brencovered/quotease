@@ -130,6 +130,7 @@ export default function QuoteBuilder({
       const fd = new FormData();
       const fileForAnalysis = await normalizeForAnalysis(drawingFiles[0]);
       fd.append("file", fileForAnalysis);
+      fd.append("trade", "electrician");
       if (drawingInstructions.trim()) fd.append("instructions", drawingInstructions.trim());
       const res  = await fetch("/api/quotes/analyze-drawing", { method: "POST", body: fd });
       const body = await res.json();

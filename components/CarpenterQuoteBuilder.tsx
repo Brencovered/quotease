@@ -87,6 +87,7 @@ export default function CarpenterQuoteBuilder({ profile, materials, preClientId,
       const fd = new FormData();
       const fileForAnalysis = await normalizeForAnalysis(drawingFiles[0]);
       fd.append("file", fileForAnalysis);
+      fd.append("trade", "carpenter");
       fd.append("instructions", "This is a carpentry job. Focus on doors, framing, timber runs, and joinery.");
       const res = await fetch("/api/quotes/analyze-drawing", { method: "POST", body: fd });
       const body = await res.json();

@@ -80,6 +80,7 @@ export default function RooferQuoteBuilder({ profile, materials, preClientId, pr
       const fd = new FormData();
       const fileForAnalysis = await normalizeForAnalysis(drawingFiles[0]);
       fd.append("file", fileForAnalysis);
+      fd.append("trade", "roofer");
       fd.append("instructions", "This is a roofing job. Focus on roof area, pitch, materials, and flashing/gutter runs.");
       const res = await fetch("/api/quotes/analyze-drawing", { method: "POST", body: fd });
       const body = await res.json();
