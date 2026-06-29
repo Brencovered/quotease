@@ -154,3 +154,34 @@ alter table profiles
 -- Xero org-specific account code and tax type (read from org on connect)
 alter table profiles add column if not exists xero_account_code text default '200';
 alter table profiles add column if not exists xero_tax_type     text default 'OUTPUT';
+
+-- ── Directory ─────────────────────────────────────────────────────────────────
+-- Tradies opt in to the public directory via their settings.
+-- directory_public is a view that only exposes opted-in profiles.
+
+alter table profiles
+  add column if not exists directory_enabled   boolean not null default false,
+  add column if not exists directory_suburb    text,
+  add column if not exists directory_postcode  text,
+  add column if not exists directory_bio       text,
+  add column if not exists directory_website   text,
+  add column if not exists directory_phone     text,
+  add column if not exists directory_email     text;
+
+-- Public view -- only opted-in profiles, no sensitive data exposed
+create or replace view directory_public as
+  select
+    id,
+    business_name,
+    trades,
+    logo_url,
+    directory_suburb    as suburb,
+    directory_postcode  as postcode,
+    directory_bio       as bio,
+    directory_website   as website_url,
+    directory_phone     as phone,
+    directory_email     as email,
+    true                as is_claimed
+  from profiles
+  where directory_enabled = true
+    and business_name is not null;

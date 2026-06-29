@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import SettingsPanel from "@/components/SettingsPanel";
 import XeroConnectPanel from "@/components/XeroConnectPanel";
+import DirectoryPanel from "@/components/DirectoryPanel";
 import AppHeader from "@/components/AppHeader";
 import Link from "next/link";
 import { BookOpen } from "lucide-react";
@@ -23,7 +24,7 @@ export default async function SettingsPage() {
     const supabase = await createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (userData.user) {
-      const { data } = await supabase.from("profiles").select("*").eq("id", userData.user.id).single();
+      const { data } = await supabase.from("profiles").select("*, directory_enabled, directory_suburb, directory_postcode, directory_bio, directory_website, directory_phone, directory_email").eq("id", userData.user.id).single();
       profile = data;
     }
   } catch (err) {
@@ -52,6 +53,10 @@ export default async function SettingsPage() {
         </div>
 
         {/* Xero */}
+        <div className="page-wrap-narrow pb-0 pt-0">
+          <DirectoryPanel profile={profile as never} />
+        </div>
+
         <XeroConnectPanel
           connected={xeroConnected}
           connectedAt={(profile as Record<string, unknown>)?.xero_connected_at as string | null ?? null}

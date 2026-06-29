@@ -1,18 +1,25 @@
 import Link from "next/link";
-import { Globe, MapPin, BadgeCheck } from "lucide-react";
+import { Globe, MapPin, BadgeCheck, Phone, Mail, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import AppHeader from "@/components/AppHeader";
 
-const TRADES = ["electrician", "plumber", "roofer", "builder", "carpenter", "painter"];
+const ALL_TRADES = [
+  "electrician","plumber","carpenter","roofer","painter","tiler",
+  "landscaper","arborist","concreter","fencer","aircon","surveyor",
+];
 
-type DirectoryListing = {
-  id: string;
-  business_name: string;
-  trades: string[];
-  website_url: string | null;
-  suburb: string | null;
-  postcode: string | null;
-  is_claimed: boolean;
-  logo_url: string | null;
+const TRADE_LABELS: Record<string,string> = {
+  electrician:"Electrician", plumber:"Plumber", carpenter:"Carpenter",
+  roofer:"Roofer", painter:"Painter", tiler:"Tiler", landscaper:"Landscaper",
+  arborist:"Arborist", concreter:"Concreter", fencer:"Fencer",
+  aircon:"Air conditioning", surveyor:"Surveyor",
+};
+
+type Listing = {
+  id: string; business_name: string; trades: string[];
+  suburb: string | null; postcode: string | null; bio: string | null;
+  website_url: string | null; phone: string | null; email: string | null;
+  logo_url: string | null; is_claimed: boolean;
 };
 
 export default async function DirectoryPage({
@@ -21,7 +28,6 @@ export default async function DirectoryPage({
   searchParams: Promise<{ trade?: string; suburb?: string }>;
 }) {
   const { trade, suburb } = await searchParams;
-
   const supabase = await createClient();
 
   let query = supabase
@@ -29,144 +35,173 @@ export default async function DirectoryPage({
     .select("*")
     .order("business_name", { ascending: true });
 
-  if (trade) query = query.contains("trades", [trade]);
+  if (trade)  query = query.contains("trades", [trade]);
   if (suburb) query = query.ilike("suburb", `%${suburb}%`);
 
   const { data: listings, error } = await query;
 
   return (
-    <main className="min-h-screen" style={{ background: "var(--app-bg)" }}>
-      <div className="max-w-5xl mx-auto px-6 py-10">
-        <div className="mb-2 text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--amber-deep)" }}>
-          Internal preview — not linked publicly yet
+    <main className="min-h-screen bg-[var(--app-bg)]">
+      {/* Hero */}
+      <div className="bg-[var(--navy)] text-white">
+        <div className="max-w-5xl mx-auto px-6 py-14">
+          <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[var(--amber)] mb-3">
+            Swiftscope Directory
+          </p>
+          <h1 className="font-display text-[2.8rem] leading-tight mb-3">
+            Find a trusted local tradie
+          </h1>
+          <p className="text-[var(--steel-2)] text-[16px] max-w-xl">
+            Every tradie here runs their business on Swiftscope — they quote fast, communicate clearly, and get the job done.
+          </p>
         </div>
-        <h1 className="font-display text-3xl mb-1" style={{ color: "var(--ink)" }}>
-          Find a local tradie
-        </h1>
-        <p className="mb-8" style={{ color: "var(--ink-soft)" }}>
-          Browse tradies by trade and suburb across SwiftScope&apos;s directory.
-        </p>
+      </div>
 
-        <form
-          method="GET"
-          className="flex flex-wrap gap-3 mb-8 p-4 rounded-[var(--radius)]"
-          style={{ background: "var(--surface)", border: "1px solid var(--line)" }}
-        >
-          <select
-            name="trade"
-            defaultValue={trade ?? ""}
-            className="px-3 py-2 rounded-[var(--radius-sm)] text-sm"
-            style={{ border: "1px solid var(--line)", color: "var(--ink)" }}
-          >
-            <option value="">All trades</option>
-            {TRADES.map((t) => (
-              <option key={t} value={t}>
-                {t.charAt(0).toUpperCase() + t.slice(1)}
-              </option>
-            ))}
-          </select>
-
-          <input
-            type="text"
-            name="suburb"
-            placeholder="Suburb (e.g. Seaford)"
-            defaultValue={suburb ?? ""}
-            className="px-3 py-2 rounded-[var(--radius-sm)] text-sm flex-1 min-w-[180px]"
-            style={{ border: "1px solid var(--line)", color: "var(--ink)" }}
-          />
-
-          <button
-            type="submit"
-            className="px-4 py-2 rounded-[var(--radius-sm)] text-sm font-semibold"
-            style={{ background: "var(--amber)", color: "var(--navy)" }}
-          >
+      {/* Search */}
+      <div className="border-b border-[var(--line)] bg-white sticky top-0 z-10">
+        <form method="GET" className="max-w-5xl mx-auto px-6 py-3 flex flex-wrap gap-2 items-center">
+          <div className="relative">
+            <select
+              name="trade"
+              defaultValue={trade ?? ""}
+              className="app-field text-[13px] pr-8"
+            >
+              <option value="">All trades</option>
+              {ALL_TRADES.map(t => (
+                <option key={t} value={t}>{TRADE_LABELS[t]}</option>
+              ))}
+            </select>
+          </div>
+          <div className="relative flex-1 min-w-[180px]">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)]" />
+            <input
+              type="text"
+              name="suburb"
+              placeholder="Suburb or postcode..."
+              defaultValue={suburb ?? ""}
+              className="app-field pl-8 text-[13px] w-full"
+            />
+          </div>
+          <button type="submit" className="btn-primary text-[13px] py-2">
             Search
           </button>
-
           {(trade || suburb) && (
-            <Link
-              href="/directory"
-              className="px-4 py-2 rounded-[var(--radius-sm)] text-sm self-center"
-              style={{ color: "var(--ink-soft)" }}
-            >
+            <Link href="/directory" className="text-[13px] text-[var(--ink-faint)] hover:text-[var(--ink)]">
               Clear
             </Link>
           )}
+          <span className="text-[12px] text-[var(--ink-faint)] ml-auto">
+            {listings?.length ?? 0} tradie{listings?.length !== 1 ? "s" : ""}
+            {trade ? ` · ${TRADE_LABELS[trade] ?? trade}` : ""}
+            {suburb ? ` · ${suburb}` : ""}
+          </span>
         </form>
+      </div>
 
+      <div className="max-w-5xl mx-auto px-6 py-8">
         {error && (
-          <div
-            className="p-4 rounded-[var(--radius)] mb-6 text-sm"
-            style={{ background: "var(--red-bg)", color: "var(--red)" }}
-          >
-            Couldn&apos;t load listings: {error.message}
+          <div className="card bg-[var(--red-bg)] text-[var(--red)] text-[13px] mb-6">
+            Could not load directory: {error.message}
           </div>
         )}
 
         {!error && listings?.length === 0 && (
-          <div className="text-sm" style={{ color: "var(--ink-faint)" }}>
-            No tradies match that search yet.
+          <div className="card text-center py-16">
+            <p className="text-[32px] mb-3">🔍</p>
+            <p className="font-semibold text-[var(--ink)] mb-1">No tradies found</p>
+            <p className="text-[13.5px] text-[var(--ink-faint)] mb-5">
+              {trade || suburb ? "Try a different trade or suburb." : "No tradies have joined the directory yet."}
+            </p>
+            <Link href="/directory" className="btn-secondary inline-flex">Clear search</Link>
           </div>
         )}
 
-        <div className="grid gap-3">
-          {listings?.map((listing: DirectoryListing) => (
-            <div
-              key={listing.id}
-              className="p-5 rounded-[var(--radius)] flex items-start justify-between gap-4"
-              style={{ background: "var(--surface)", border: "1px solid var(--line)" }}
-            >
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h2 className="font-semibold text-base" style={{ color: "var(--ink)" }}>
-                    {listing.business_name}
-                  </h2>
-                  {listing.is_claimed && (
-                    <span
-                      className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
-                      style={{ background: "var(--green-bg)", color: "var(--green)" }}
-                    >
-                      <BadgeCheck size={12} /> Claimed
-                    </span>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {listings?.map((listing: Listing) => (
+            <div key={listing.id} className="card flex flex-col">
+              {/* Header */}
+              <div className="flex items-start gap-3 mb-3">
+                {listing.logo_url ? (
+                  <img src={listing.logo_url} alt={listing.business_name}
+                    className="w-12 h-12 rounded-xl object-cover shrink-0 border border-[var(--line)]" />
+                ) : (
+                  <div className="w-12 h-12 rounded-xl bg-[var(--amber-light)] flex items-center justify-center shrink-0 text-[var(--amber-deep)] font-display text-[20px]">
+                    {listing.business_name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <h2 className="font-bold text-[15px] text-[var(--ink)] truncate">
+                      {listing.business_name}
+                    </h2>
+                    {listing.is_claimed && (
+                      <span className="flex items-center gap-0.5 text-[10.5px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--green-bg)] text-[var(--green)] shrink-0">
+                        <BadgeCheck size={10} /> Verified
+                      </span>
+                    )}
+                  </div>
+                  {listing.suburb && (
+                    <p className="text-[12px] text-[var(--ink-faint)] flex items-center gap-1 mt-0.5">
+                      <MapPin size={11} /> {listing.suburb}{listing.postcode ? ` ${listing.postcode}` : ""}
+                    </p>
                   )}
-                </div>
-
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {listing.trades?.map((t) => (
-                    <span
-                      key={t}
-                      className="text-xs px-2 py-0.5 rounded-full capitalize"
-                      style={{ background: "var(--amber-light)", color: "var(--amber-deep)" }}
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-1 text-sm" style={{ color: "var(--ink-soft)" }}>
-                  <MapPin size={14} /> {listing.suburb ?? "Service area not set"}
                 </div>
               </div>
 
-              {listing.website_url && (
-                <a
-                  href={listing.website_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-[var(--radius-sm)] whitespace-nowrap"
-                  style={{ background: "var(--blue-bg)", color: "var(--blue)" }}
-                >
-                  <Globe size={14} /> Website
-                </a>
+              {/* Trades */}
+              <div className="flex flex-wrap gap-1 mb-3">
+                {listing.trades?.map(t => (
+                  <span key={t} className="text-[11px] px-2 py-0.5 rounded-full capitalize font-semibold bg-[var(--amber-light)] text-[var(--amber-deep)]">
+                    {TRADE_LABELS[t] ?? t}
+                  </span>
+                ))}
+              </div>
+
+              {/* Bio */}
+              {listing.bio && (
+                <p className="text-[12.5px] text-[var(--ink-soft)] leading-snug mb-3 flex-1 line-clamp-3">
+                  {listing.bio}
+                </p>
               )}
+
+              {/* Contact */}
+              <div className="mt-auto pt-3 border-t border-[var(--line-subtle)] flex flex-wrap gap-2">
+                {listing.phone && (
+                  <a href={`tel:${listing.phone}`}
+                    className="flex items-center gap-1 text-[12px] font-semibold text-[var(--navy)] hover:opacity-70">
+                    <Phone size={12} /> {listing.phone}
+                  </a>
+                )}
+                {listing.email && (
+                  <a href={`mailto:${listing.email}`}
+                    className="flex items-center gap-1 text-[12px] font-semibold text-[var(--navy)] hover:opacity-70">
+                    <Mail size={12} /> Email
+                  </a>
+                )}
+                {listing.website_url && (
+                  <a href={listing.website_url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-[12px] font-semibold text-[var(--blue)] hover:opacity-70 ml-auto">
+                    <Globe size={12} /> Website
+                  </a>
+                )}
+              </div>
             </div>
           ))}
         </div>
 
-        <p className="mt-8 text-xs" style={{ color: "var(--ink-faint)" }}>
-          {listings?.length ?? 0} tradies shown. Contact-via-SwiftScope and quote requests aren&apos;t wired up yet —
-          this is a browse-only preview of the directory data.
-        </p>
+        {/* CTA for tradies */}
+        <div className="mt-12 card bg-[var(--navy)] text-center py-10">
+          <p className="font-display text-[1.6rem] text-white mb-2">Are you a tradie?</p>
+          <p className="text-[var(--steel-2)] text-[14px] mb-5 max-w-md mx-auto">
+            Join the directory for free. Get your business in front of homeowners searching for your trade in your suburb.
+          </p>
+          <div className="flex gap-3 justify-center flex-wrap">
+            <Link href="/signup" className="btn-primary">Start free trial</Link>
+            <Link href="/login" className="btn-secondary text-white border-white/20">
+              Already a member? Log in
+            </Link>
+          </div>
+        </div>
       </div>
     </main>
   );
