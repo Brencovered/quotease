@@ -23,7 +23,7 @@ type AnnotationMeta = {
 
 export default function SiteAnnotationReport({
   annotations,
-  title = "Site annotation report",
+  title = "Site survey report",
 }: {
   annotations: AnnotationMeta[];
   title?:      string;
@@ -33,7 +33,7 @@ export default function SiteAnnotationReport({
   return (
     <div className="space-y-4">
       <div>
-        <p className="section-tag mb-1">Site report</p>
+        <p className="section-tag mb-1">Site survey</p>
         <h3 className="font-display text-[1.3rem] text-[var(--ink)]">{title}</h3>
         <p className="text-[12.5px] text-[var(--ink-faint)]">
           {annotations.length} annotated location{annotations.length !== 1 ? "s" : ""} captured on site
