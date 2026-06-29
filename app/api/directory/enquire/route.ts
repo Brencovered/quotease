@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const RESEND_API_KEY = process.env.RESEND_API_KEY!;
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -20,25 +19,38 @@ export async function POST(req: NextRequest) {
     ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ""}
     <hr/>
     <p><strong>Job:</strong> ${jobType}</p>
-    ${budget ? `<p><strong>Budget:</strong> ${budget}</p>` : ""}
-    ${stage ? `<p><strong>Stage:</strong> ${stage}</p>` : ""}
-    ${others ? `<p><strong>Other quotes:</strong> ${others}</p>` : ""}
-    ${message ? `<p><strong>Additional notes:</strong> ${message}</p>` : ""}
+    ${budget  ? `<p><strong>Budget:</strong> ${budget}</p>`  : ""}
+    ${stage   ? `<p><strong>Stage:</strong> ${stage}</p>`   : ""}
+    ${others  ? `<p><strong>Other quotes:</strong> ${others}</p>` : ""}
+    ${message ? `<p><strong>Notes:</strong> ${message}</p>` : ""}
     <hr/>
     <p style="color:#888;font-size:12px">Sent via Swiftscope Directory — swiftscope.com.au/directory</p>
   `;
 
-  // Send to the tradie if they have an email, otherwise log it
   const toAddress = to_email ?? "hello@swiftscope.com.au";
 
   try {
-    await resend.emails.send({
-      from:    "Swiftscope Directory <noreply@swiftscope.com.au>",
-      to:      toAddress,
-      replyTo: email,
-      subject: `Quote request from ${name} — Swiftscope`,
-      html,
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization:  `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from:     "Swiftscope Directory <noreply@swiftscope.com.au>",
+        to:       [toAddress],
+        reply_to: email,
+        subject:  `Quote request from ${name} — Swiftscope`,
+        html,
+      }),
     });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.error("Resend error:", err);
+      return NextResponse.json({ error: "Failed to send email" }, { status: 500 });
+    }
+
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Enquiry email error:", err);
