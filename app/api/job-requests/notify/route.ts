@@ -44,7 +44,14 @@ export async function POST(req: NextRequest) {
     .eq("monthly_fee_active", true)
     .contains("lead_temps_wanted", [request.lead_temperature]);
 
-  if (!settings?.length) return NextResponse.json({ ok: true, sent: 0 });
+  if (!settings?.length) {
+    // No tradies set up yet -- still notify team
+    await sendEmail("team@swiftscope.com.au",
+      `New ${request.trade} lead — ${request.suburb} (no matched tradies yet)`,
+      `<p>A new lead was submitted but no tradies matched yet.</p><p><strong>Trade:</strong> ${request.trade}</p><p><strong>Suburb:</strong> ${request.suburb}</p><p><strong>Job:</strong> ${request.description}</p>`
+    );
+    return NextResponse.json({ ok: true, sent: 0 });
+  }
 
   // Filter to tradies whose service suburbs include the request suburb
   // In wider radius mode we skip the suburb filter
