@@ -595,7 +595,7 @@ export default function LiveSiteAnnotation({
   const currentItem = items.find((i) => i.key === formItem);
 
   return (
-    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, background: "#000", touchAction: "none" }}>
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, background: "#000", touchAction: "none", paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
       {/* Hidden canvases */}
       <canvas ref={canvasRef} className="hidden" />
 
@@ -642,7 +642,7 @@ export default function LiveSiteAnnotation({
       </div>
 
       {/* Bottom toolbar */}
-      <div className="absolute bottom-0 left-0 right-0 px-3 py-3 bg-gradient-to-t from-black/80 to-transparent">
+      <div className="absolute bottom-0 left-0 right-0 px-3 pt-3 bg-gradient-to-t from-black/80 to-transparent" style={{ paddingBottom: "calc(12px + env(safe-area-inset-bottom))" }}>
         {/* Draw mode selector */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5">
