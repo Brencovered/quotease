@@ -955,14 +955,14 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
   return (
     <div className="space-y-4">
 
-      {/* Site annotation report -- photo evidence */}
+      {/* Site survey report -- photo evidence */}
       <SiteAnnotationReport annotations={annotationMeta} />
 
       {/* Site annotation items -- shown as proper line items */}
       {siteItems.length > 0 && (
         <div className="card">
           <div className="flex items-center justify-between mb-3">
-            <p className="section-tag">Site annotations</p>
+            <p className="section-tag">On-site items</p>
             <button onClick={() => setSiteItems([])} className="text-[11.5px] text-[var(--red)] font-semibold">Clear all</button>
           </div>
           <div className="space-y-2">
@@ -1002,7 +1002,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
           </div>
           {siteTotal > 0 && (
             <div className="flex justify-between text-[14px]">
-              <span className="text-[var(--steel-2)]">Site annotations</span>
+              <span className="text-[var(--steel-2)]">On-site items</span>
               <span className="text-white font-semibold tabular">${siteTotal.toLocaleString()}</span>
             </div>
           )}
