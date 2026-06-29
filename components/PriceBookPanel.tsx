@@ -3,7 +3,7 @@
 import { useState, useRef, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveBusinessId } from "@/lib/team";
-import { Upload, Trash2, Search, Check, AlertCircle, ChevronDown } from "lucide-react";
+import { Upload, Download, Trash2, Search, Check, AlertCircle, ChevronDown } from "lucide-react";
 
 type PriceBookItem = {
   id: string; supplier: string; sku: string | null;
@@ -206,6 +206,25 @@ export default function PriceBookPanel({
     setCounts(prev => { const n = {...prev}; delete n[sup]; return n; });
   }
 
+  function exportCsv(rowsToExport: PriceBookItem[], filenameSuffix: string) {
+    const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    const csv = [
+      "supplier,sku,description,unit,cost_price,trade",
+      ...rowsToExport.map((r) => [
+        esc(SUPPLIER_PRESETS[r.supplier]?.label ?? r.supplier),
+        esc(r.sku ?? ""),
+        esc(r.description),
+        esc(r.unit),
+        r.cost_price,
+        esc(r.trade ?? ""),
+      ].join(",")),
+    ].join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    a.download = `swiftscope-price-book-${filenameSuffix}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+  }
+
   const filtered = useMemo(() => {
     return items.filter(i => {
       if (supplier !== "all" && i.supplier !== supplier) return false;
@@ -362,8 +381,8 @@ export default function PriceBookPanel({
       {/* Search and filter */}
       {items.length > 0 && (
         <div className="card">
-          <div className="flex gap-2 mb-3">
-            <div className="flex-1 relative">
+          <div className="flex gap-2 mb-3 flex-wrap">
+            <div className="flex-1 relative min-w-[160px]">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)]" />
               <input value={search} onChange={e => setSearch(e.target.value)}
                 className="app-field pl-8 text-[13px]" placeholder="Search items..." />
@@ -372,6 +391,13 @@ export default function PriceBookPanel({
               <option value="all">All suppliers</option>
               {suppliers.map(s => <option key={s} value={s}>{SUPPLIER_PRESETS[s]?.label ?? s} ({counts[s]})</option>)}
             </select>
+            <button
+              onClick={() => exportCsv(filtered, supplier === "all" ? "all" : supplier)}
+              className="btn-secondary text-[12.5px] py-2 px-3 inline-flex items-center gap-1.5 whitespace-nowrap"
+              title="Export the items currently shown (respects search/supplier filter)"
+            >
+              <Download size={13} /> Export CSV
+            </button>
           </div>
 
           <p className="text-[12px] text-[var(--ink-faint)] mb-2">
