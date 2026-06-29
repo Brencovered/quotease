@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getActiveBusinessId } from "@/lib/team";
 import AppHeader from "@/components/AppHeader";
 import PlansLibraryPanel from "@/components/PlansLibraryPanel";
 
@@ -9,9 +10,10 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) notFound();
+  const businessId = await getActiveBusinessId(supabase, userData.user.id);
 
   const [{ data: client }, { data: plans }, { data: quotes }] = await Promise.all([
-    supabase.from("clients").select("*").eq("id", id).eq("profile_id", userData.user.id).single(),
+    supabase.from("clients").select("*").eq("id", id).eq("profile_id", businessId).single(),
     supabase.from("client_plans").select("*").eq("client_id", id).order("created_at", { ascending: false }),
     supabase.from("quotes").select("id, total_cost, status, created_at, trade").eq("client_id", id).order("created_at", { ascending: false }),
   ]);

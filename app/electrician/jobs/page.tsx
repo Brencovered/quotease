@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getActiveBusinessId } from "@/lib/team";
 import JobsPanel from "@/components/JobsPanel";
 import AppHeader from "@/components/AppHeader";
 
@@ -9,10 +10,11 @@ export default async function JobsPage() {
     const supabase = await createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (userData.user) {
+      const businessId = await getActiveBusinessId(supabase, userData.user.id);
       const { data } = await supabase
         .from("quotes")
         .select("*")
-        .eq("profile_id", userData.user.id)
+        .eq("profile_id", businessId)
         .eq("status", "accepted")
         .order("accepted_at", { ascending: true });
       if (data) jobs = data;

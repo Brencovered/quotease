@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { geocodeAddress } from "@/lib/geocode";
+import { getActiveBusinessId } from "@/lib/team";
 import AppHeader from "@/components/AppHeader";
 import MapPanel from "@/components/MapPanel";
 
@@ -18,10 +19,11 @@ export default async function MapPage() {
     const supabase = await createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (userData.user) {
+      const businessId = await getActiveBusinessId(supabase, userData.user.id);
       const { data } = await supabase
         .from("quotes")
         .select("id, client_name, site_address, status, total_cost, site_lat, site_lng")
-        .eq("profile_id", userData.user.id)
+        .eq("profile_id", businessId)
         .in("status", ["accepted", "paid"])
         .not("site_address", "is", null);
 

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getActiveBusinessId } from "@/lib/team";
 import AppHeader from "@/components/AppHeader";
 import PlansPageClient from "@/components/PlansPageClient";
 
@@ -7,19 +8,20 @@ export default async function PlansPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+  const businessId = await getActiveBusinessId(supabase, user.id);
 
-  // All clients for this user (for grouping plans by client)
+  // All clients for this business (for grouping plans by client)
   const { data: clients } = await supabase
     .from("clients")
     .select("id, name, billing_address")
-    .eq("profile_id", user.id)
+    .eq("profile_id", businessId)
     .order("name");
 
-  // All plans for this user's clients
+  // All plans for this business's clients
   const { data: plans } = await supabase
     .from("client_plans")
     .select("id, client_id, file_name, label, storage_path, shapes, calibration, created_at")
-    .eq("profile_id", user.id)
+    .eq("profile_id", businessId)
     .order("created_at", { ascending: false });
 
   // Sign URLs
@@ -36,7 +38,7 @@ export default async function PlansPage() {
   const { data: profile } = await supabase
     .from("profiles")
     .select("trades, hourly_rate, materials_margin_pct")
-    .eq("id", user.id)
+    .eq("id", businessId)
     .single();
 
   // Load materials for all trades
@@ -44,7 +46,7 @@ export default async function PlansPage() {
   const { data: materials } = await supabase
     .from("material_items")
     .select("item_key, label, unit_cost, trade")
-    .eq("profile_id", user.id)
+    .eq("profile_id", businessId)
     .in("trade", allTrades)
     .order("label");
 
@@ -52,7 +54,7 @@ export default async function PlansPage() {
   const { data: openQuotes } = await supabase
     .from("quotes")
     .select("id, client_id, client_name, site_address, status, total_cost, trade")
-    .eq("profile_id", user.id)
+    .eq("profile_id", businessId)
     .in("status", ["draft", "sent", "accepted"])
     .order("created_at", { ascending: false })
     .limit(50);

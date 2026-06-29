@@ -11,6 +11,7 @@ import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import ExtraJobLines, { type ExtraLine, extraLinesTotals } from "./ExtraJobLines";
 import { resolveClientId } from "@/lib/resolveClientId";
+import { getActiveBusinessId } from "@/lib/team";
 
 type MaterialRow = { item_key: string; label: string; unit_cost: number };
 
@@ -117,17 +118,18 @@ export default function CarpenterQuoteBuilder({ profile, materials, preClientId,
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaveMessage("Not logged in"); setSaving(false); return; }
-    const resolvedClientId = await resolveClientId(supabase, user.id, clientId, clientName, clientEmail, siteAddress);
-    for (const m of lib) await supabase.from("material_items").upsert({ profile_id: user.id, trade: "carpenter", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost }, { onConflict: "profile_id,item_key" });
-    const { data: quote, error } = await supabase.from("quotes").insert({ profile_id: user.id, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail, site_address: siteAddress, trade: "carpenter", job_type: intake.jobType, intake_data: intake, labour_hours: result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0), materials_cost: result.materialsCost + extraLinesTotals(extraLines, rate, margin).materials, total_cost: result.totalCost + extraLinesTotals(extraLines, rate, margin).total, payment_terms: paymentTerms,
+    const businessId = await getActiveBusinessId(supabase, user.id);
+    const resolvedClientId = await resolveClientId(supabase, businessId, clientId, clientName, clientEmail, siteAddress);
+    for (const m of lib) await supabase.from("material_items").upsert({ profile_id: businessId, trade: "carpenter", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost }, { onConflict: "profile_id,item_key" });
+    const { data: quote, error } = await supabase.from("quotes").insert({ profile_id: businessId, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail, site_address: siteAddress, trade: "carpenter", job_type: intake.jobType, intake_data: intake, labour_hours: result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0), materials_cost: result.materialsCost + extraLinesTotals(extraLines, rate, margin).materials, total_cost: result.totalCost + extraLinesTotals(extraLines, rate, margin).total, payment_terms: paymentTerms,
       markup_materials: preMarkupMaterials ?? [], status: sendEmail ? "sent" : "draft", sent_at: sendEmail ? new Date().toISOString() : null }).select().single();
     if (error) { setSaveMessage(error.message); setSaving(false); return; }
     setSavedQuoteId(quote.id);
     setSavedQuoteId(quote.id);
     for (const file of drawingFiles) {
       const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g,"_");
-      const { error: upErr } = await supabase.storage.from("job-files").upload(`${user.id}/${quote.id}/${Date.now()}-${safeName}`, file);
-      if (!upErr) await supabase.from("job_attachments").insert({ quote_id: quote.id, profile_id: user.id, file_name: file.name, storage_path: `${user.id}/${quote.id}/${Date.now()}-${safeName}`, file_type: file.type, file_size: file.size });
+      const { error: upErr } = await supabase.storage.from("job-files").upload(`${businessId}/${quote.id}/${Date.now()}-${safeName}`, file);
+      if (!upErr) await supabase.from("job_attachments").insert({ quote_id: quote.id, profile_id: businessId, file_name: file.name, storage_path: `${businessId}/${quote.id}/${Date.now()}-${safeName}`, file_type: file.type, file_size: file.size });
     }
     if (sendEmail) {
       const res = await fetch("/api/quotes/send", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ quoteId: quote.id }) });

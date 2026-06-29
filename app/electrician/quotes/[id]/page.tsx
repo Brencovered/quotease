@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { loadJobDetailData } from "@/lib/jobDetail";
+import { getActiveBusinessId } from "@/lib/team";
 import AppHeader from "@/components/AppHeader";
 import FollowUpPanel from "@/components/FollowUpPanel";
 import JobFilesPanel from "@/components/JobFilesPanel";
@@ -19,8 +20,9 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) notFound();
+  const businessId = await getActiveBusinessId(supabase, userData.user.id);
 
-  const data = await loadJobDetailData(supabase, id, userData.user.id);
+  const data = await loadJobDetailData(supabase, id, businessId);
   if (!data) notFound();
   const { quote, followUps, attachmentsWithUrls, marginPct } = data;
 
@@ -41,7 +43,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
   const { data: matRows } = await supabase
     .from("material_items")
     .select("item_key, label, unit_cost")
-    .eq("profile_id", userData.user.id)
+    .eq("profile_id", businessId)
     .eq("trade", quote.trade ?? "electrician")
     .order("label");
   if (matRows?.length) tradeMaterials = matRows;

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
@@ -9,8 +9,10 @@ const SUPABASE_CONFIGURED =
   !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
   !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder");
 
-export default function SignupPage() {
+function SignupForm() {
   const router  = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next");
   const [businessName, setBusinessName] = useState("");
   const [email,        setEmail]        = useState("");
   const [password,     setPassword]     = useState("");
@@ -26,10 +28,13 @@ export default function SignupPage() {
       const supabase = createClient();
       const { data, error: signUpError } = await supabase.auth.signUp({
         email, password,
-        options: { data: { business_name: businessName } },
+        options: {
+          data: { business_name: businessName },
+          emailRedirectTo: next ? `${window.location.origin}${next}` : undefined,
+        },
       });
       if (signUpError) { setError(signUpError.message); return; }
-      if (data.session) { router.push("/onboarding"); router.refresh(); }
+      if (data.session) { router.push(next && next.startsWith("/") ? next : "/onboarding"); router.refresh(); }
       else { setCheckEmail(true); }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not reach the server.");
@@ -56,7 +61,7 @@ export default function SignupPage() {
                 <strong className="text-[var(--ink)]">{email}</strong>.
                 Click it to verify your account, then log in.
               </p>
-              <Link href="/login" className="btn-primary inline-flex justify-center">
+              <Link href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"} className="btn-primary inline-flex justify-center">
                 Go to login →
               </Link>
               <p className="text-[12px] text-[var(--ink-faint)] mt-4">
@@ -97,7 +102,7 @@ export default function SignupPage() {
 
                 <p className="text-[13px] text-[var(--ink-faint)] mt-5 text-center">
                   Already have an account?{" "}
-                  <Link href="/login" className="text-[var(--navy)] font-bold hover:underline">Log in</Link>
+                  <Link href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"} className="text-[var(--navy)] font-bold hover:underline">Log in</Link>
                 </p>
               </div>
 
@@ -116,5 +121,13 @@ export default function SignupPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupForm />
+    </Suspense>
   );
 }

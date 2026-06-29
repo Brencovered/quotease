@@ -4,6 +4,12 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { CalendarDays, Check } from "lucide-react";
 
+interface TeamMemberOption {
+  id: string;
+  name: string | null;
+  email: string;
+}
+
 // Writes to scheduled_start/estimated_days - the same columns the Schedule
 // calendar reads from. An earlier version of this panel wrote to a
 // separate scheduled_date column that the calendar never looked at, so
@@ -14,19 +20,25 @@ export default function JobBriefPanel({
   scheduledStart: initialStart,
   estimatedDays: initialDays,
   assignedTo: initialAssigned,
+  assignedToMemberId: initialAssignedMemberId,
+  teamMembers,
 }: {
   quoteId: string;
   siteNotes: string | null;
   scheduledStart: string | null;
   estimatedDays: number | null;
   assignedTo: string | null;
+  assignedToMemberId?: string | null;
+  teamMembers?: TeamMemberOption[];
 }) {
   const [siteNotes, setSiteNotes] = useState(initialNotes ?? "");
   const [scheduledStart, setScheduledStart] = useState(initialStart ? initialStart.slice(0, 10) : "");
   const [estimatedDays, setEstimatedDays] = useState(initialDays ? String(initialDays) : "");
-  const [assignedTo, setAssignedTo] = useState(initialAssigned ?? "");
+  const [assignedToMemberId, setAssignedToMemberId] = useState(initialAssignedMemberId ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  const hasTeam = (teamMembers?.length ?? 0) > 0;
 
   async function save() {
     setSaving(true);
@@ -35,6 +47,7 @@ export default function JobBriefPanel({
     const days = estimatedDays ? Number(estimatedDays) : null;
     const start = scheduledStart ? new Date(scheduledStart).toISOString() : null;
     const end = start && days && days > 1 ? new Date(new Date(start).getTime() + (days - 1) * 86400000).toISOString() : start;
+    const assignedMember = teamMembers?.find((m) => m.id === assignedToMemberId);
     await supabase
       .from("quotes")
       .update({
@@ -42,7 +55,8 @@ export default function JobBriefPanel({
         scheduled_start: start,
         scheduled_end: end,
         estimated_days: days,
-        assigned_to: assignedTo || null,
+        assigned_to_member_id: assignedToMemberId || null,
+        assigned_to: assignedMember ? (assignedMember.name || assignedMember.email) : null,
       })
       .eq("id", quoteId);
     setSaving(false);
@@ -75,14 +89,23 @@ export default function JobBriefPanel({
         </label>
         <label className="block">
           <span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1.5">Assigned to</span>
-          <input
-            value={assignedTo}
-            onChange={(e) => setAssignedTo(e.target.value)}
-            placeholder="e.g. you, or an offsider's name"
-            className="app-field"
-          />
+          {hasTeam ? (
+            <select value={assignedToMemberId} onChange={(e) => setAssignedToMemberId(e.target.value)} className="app-field">
+              <option value="">Unassigned</option>
+              {teamMembers!.map((m) => (
+                <option key={m.id} value={m.id}>{m.name || m.email}</option>
+              ))}
+            </select>
+          ) : (
+            <input value={initialAssigned ?? ""} disabled placeholder="Add team members to assign jobs" className="app-field text-[var(--ink-faint)]" />
+          )}
         </label>
       </div>
+      {!hasTeam && (
+        <p className="text-[11px] text-[var(--ink-faint)] mb-3">
+          <a href="/settings/team" className="underline font-semibold">Add a team member</a> to assign this job to someone.
+        </p>
+      )}
       <p className="text-[11px] text-[var(--ink-faint)] mb-3">This appears on your Schedule calendar automatically.</p>
 
       <label className="block mb-3">

@@ -2,12 +2,14 @@ import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { loadJobDetailData } from "@/lib/jobDetail";
+import { getActiveBusinessId } from "@/lib/team";
 import AppHeader from "@/components/AppHeader";
 import VariationsPanel from "@/components/VariationsPanel";
 import JobCostingPanel from "@/components/JobCostingPanel";
 import CompliancePanel from "@/components/CompliancePanel";
 import JobFilesPanel from "@/components/JobFilesPanel";
 import JobBriefPanel from "@/components/JobBriefPanel";
+import JobTasksPanel from "@/components/JobTasksPanel";
 import MaterialsChecklistPanel from "@/components/MaterialsChecklistPanel";
 import JobTimeline from "@/components/JobTimeline";
 import JobPlansPanel from "@/components/JobPlansPanel";
@@ -20,7 +22,9 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) notFound();
 
-  const data = await loadJobDetailData(supabase, id, userData.user.id);
+  const businessId = await getActiveBusinessId(supabase, userData.user.id);
+
+  const data = await loadJobDetailData(supabase, id, businessId);
   if (!data) notFound();
   const { quote, variations, actuals, certsWithUrls, attachmentsWithUrls, payments, hourlyRate, marginPct } = data;
 
@@ -33,15 +37,14 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   const scopeLines = humanizeIntake(quote.intake_data);
   const labourCost = (quote.total_cost ?? 0) - (quote.materials_cost ?? 0);
 
-  // Load trade materials for markup panel
-  let tradeMaterials: Array<{ item_key: string; label: string; unit_cost: number }> = [];
-  const { data: matRows } = await supabase
-    .from("material_items")
-    .select("item_key, label, unit_cost")
-    .eq("profile_id", userData.user.id)
-    .eq("trade", quote.trade ?? "electrician")
-    .order("label");
-  if (matRows?.length) tradeMaterials = matRows;
+  const [{ data: matRows }, { data: teamRows }, { data: taskRows }] = await Promise.all([
+    supabase.from("material_items").select("item_key, label, unit_cost").eq("profile_id", businessId).eq("trade", quote.trade ?? "electrician").order("label"),
+    supabase.from("team_members").select("id, name, email").eq("owner_profile_id", businessId).eq("status", "active").order("name"),
+    supabase.from("job_tasks").select("*").eq("quote_id", id).order("created_at"),
+  ]);
+
+  const tradeMaterials: Array<{ item_key: string; label: string; unit_cost: number }> = matRows ?? [];
+  const teamMembers: Array<{ id: string; name: string | null; email: string }> = teamRows ?? [];
 
   let jobPlans: Array<{ id: string; file_name: string; shapes: unknown[]; calibration: unknown; signedUrl?: string }> = [];
   if (quote.client_id) {
@@ -170,7 +173,11 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             scheduledStart={quote.scheduled_start}
             estimatedDays={quote.estimated_days}
             assignedTo={quote.assigned_to}
+            assignedToMemberId={quote.assigned_to_member_id}
+            teamMembers={teamMembers}
           />
+
+          <JobTasksPanel quoteId={quote.id} profileId={businessId} initialTasks={taskRows ?? []} teamMembers={teamMembers} />
 
           <JobPlansPanel quoteId={quote.id} clientId={quote.client_id} plans={jobPlans as never} materials={tradeMaterials} marginPct={marginPct} trade={quote.trade ?? "electrician"} />
 

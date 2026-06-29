@@ -4,7 +4,7 @@ import XeroConnectPanel from "@/components/XeroConnectPanel";
 import DirectoryPanel from "@/components/DirectoryPanel";
 import AppHeader from "@/components/AppHeader";
 import Link from "next/link";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Users } from "lucide-react";
 
 // Always fetch fresh -- Xero OAuth redirect must see updated connection state
 export const dynamic = "force-dynamic";
@@ -41,6 +41,20 @@ export default async function SettingsPage() {
     <>
       <AppHeader />
       <SettingsPanel profile={profile} />
+
+      {/* Team */}
+      <div className="page-wrap-narrow pb-0 pt-0">
+        <div className="card mt-0 mb-4">
+          <p className="section-tag mb-1">Team</p>
+          <p className="font-semibold text-[var(--ink)] mb-1">Add people to your account</p>
+          <p className="text-[13px] text-[var(--ink-faint)] mb-3">
+            Invite team members to log in and work on your jobs, quotes, and clients.
+          </p>
+          <Link href="/settings/team" className="btn-secondary inline-flex">
+            <Users size={14} /> Manage team
+          </Link>
+        </div>
+      </div>
 
       {/* Supplier price book */}
       <div className="page-wrap-narrow pb-0 pt-0">

@@ -229,3 +229,130 @@ exception
     return new;
 end;
 $function$;
+
+-- ── Team management ─────────────────────────────────────────────────────
+-- Lets a business (a profiles row) invite other auth users to log in and
+-- work on its jobs/quotes/clients/materials. profile_id stays the single
+-- "which business" key everywhere else in the schema -- this does not
+-- introduce a separate businesses table, on purpose, to avoid touching
+-- every other table's FK. See lib/team.ts for the app-level resolver.
+
+create table if not exists team_members (
+  id uuid primary key default uuid_generate_v4(),
+  owner_profile_id uuid not null references profiles(id) on delete cascade,
+  member_user_id   uuid references auth.users(id) on delete cascade,
+  email            text not null,
+  name             text,
+  role             text not null default 'member' check (role in ('admin', 'member')),
+  status           text not null default 'invited' check (status in ('invited', 'active', 'removed')),
+  invite_token     uuid not null default uuid_generate_v4(),
+  invited_at       timestamptz not null default now(),
+  joined_at        timestamptz,
+  created_at       timestamptz not null default now(),
+  unique (owner_profile_id, email)
+);
+
+create index if not exists team_members_owner_idx on team_members(owner_profile_id);
+create index if not exists team_members_member_user_idx on team_members(member_user_id);
+create unique index if not exists team_members_invite_token_idx on team_members(invite_token);
+
+alter table team_members enable row level security;
+
+create policy "Owner manages team" on team_members
+  for all using (auth.uid() = owner_profile_id);
+
+create policy "Member sees own membership" on team_members
+  for select using (auth.uid() = member_user_id);
+
+create or replace function public.accessible_business_ids(uid uuid)
+returns setof uuid
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select uid
+  union
+  select owner_profile_id from team_members
+  where member_user_id = uid and status = 'active';
+$$;
+
+grant execute on function public.accessible_business_ids(uuid) to authenticated;
+
+-- Swap "auth.uid() = profile_id" for team-aware access on the tables a
+-- team actually works in day to day. Left owner-only on purpose: Xero
+-- mappings, directory/billing settings, admin tables.
+
+drop policy if exists "Own quotes" on quotes;
+create policy "Business quotes" on quotes
+  for all using (profile_id in (select accessible_business_ids(auth.uid())));
+
+drop policy if exists "Own clients" on clients;
+create policy "Business clients" on clients
+  for all using (profile_id in (select accessible_business_ids(auth.uid())));
+
+drop policy if exists "Own materials" on material_items;
+create policy "Business materials" on material_items
+  for all using (profile_id in (select accessible_business_ids(auth.uid())));
+
+drop policy if exists "Own variations" on variations;
+create policy "Business variations" on variations
+  for all using (profile_id in (select accessible_business_ids(auth.uid())));
+
+alter table job_attachments enable row level security;
+drop policy if exists "Own job attachments" on job_attachments;
+create policy "Business job attachments" on job_attachments
+  for all using (profile_id in (select accessible_business_ids(auth.uid())));
+
+alter table job_actuals enable row level security;
+drop policy if exists "Own job actuals" on job_actuals;
+create policy "Business job actuals" on job_actuals
+  for all using (profile_id in (select accessible_business_ids(auth.uid())));
+
+alter table client_plans enable row level security;
+drop policy if exists "Own client plans" on client_plans;
+create policy "Business client plans" on client_plans
+  for all using (profile_id in (select accessible_business_ids(auth.uid())));
+
+alter table compliance_certs enable row level security;
+drop policy if exists "Own compliance certs" on compliance_certs;
+create policy "Business compliance certs" on compliance_certs
+  for all using (profile_id in (select accessible_business_ids(auth.uid())));
+
+alter table payments enable row level security;
+drop policy if exists "Own payments" on payments;
+create policy "Business payments" on payments
+  for all using (profile_id in (select accessible_business_ids(auth.uid())));
+
+alter table follow_up_log enable row level security;
+drop policy if exists "Own follow up log" on follow_up_log;
+create policy "Business follow up log" on follow_up_log
+  for all using (profile_id in (select accessible_business_ids(auth.uid())));
+
+-- Real job/task assignment -- quotes.assigned_to was free text anyone could
+-- type, with no relation to an actual login. Add a proper FK alongside it;
+-- keep the text column too so already-assigned jobs don't lose their label.
+
+alter table quotes
+  add column if not exists assigned_to_member_id uuid references team_members(id) on delete set null;
+
+create index if not exists quotes_assigned_to_member_idx on quotes(assigned_to_member_id);
+
+create table if not exists job_tasks (
+  id uuid primary key default uuid_generate_v4(),
+  profile_id uuid not null references profiles(id) on delete cascade,
+  quote_id uuid not null references quotes(id) on delete cascade,
+  assigned_to_member_id uuid references team_members(id) on delete set null,
+  title text not null,
+  status text not null default 'todo' check (status in ('todo', 'done')),
+  due_date date,
+  created_at timestamptz not null default now(),
+  completed_at timestamptz
+);
+
+create index if not exists job_tasks_quote_idx on job_tasks(quote_id);
+create index if not exists job_tasks_profile_idx on job_tasks(profile_id);
+
+alter table job_tasks enable row level security;
+create policy "Business job tasks" on job_tasks
+  for all using (profile_id in (select accessible_business_ids(auth.uid())));

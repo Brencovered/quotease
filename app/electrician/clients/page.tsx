@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getActiveBusinessId } from "@/lib/team";
 import AppHeader from "@/components/AppHeader";
 import ClientsPanel from "@/components/ClientsPanel";
 import type { Client } from "@/lib/clients";
@@ -10,11 +11,12 @@ export default async function ClientsPage() {
     const supabase = await createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (userData.user) {
+      const businessId = await getActiveBusinessId(supabase, userData.user.id);
       // Fetch clients with aggregated job data
       const { data: rows } = await supabase
         .from("clients")
         .select("*, quotes(total_cost, created_at, status)")
-        .eq("profile_id", userData.user.id)
+        .eq("profile_id", businessId)
         .order("name");
 
       if (rows) {

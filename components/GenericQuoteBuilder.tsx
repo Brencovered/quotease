@@ -10,6 +10,7 @@ import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import ExtraJobLines, { type ExtraLine, extraLinesTotals } from "./ExtraJobLines";
 import { resolveClientId } from "@/lib/resolveClientId";
+import { getActiveBusinessId } from "@/lib/team";
 
 const STEPS = [
   { id: "customer", label: "Customer" },
@@ -128,11 +129,12 @@ export default function GenericQuoteBuilder({
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaveMessage("Not logged in"); setSaving(false); return; }
+    const businessId = await getActiveBusinessId(supabase, user.id);
 
-    const resolvedClientId = await resolveClientId(supabase, user.id, clientId, clientName, clientEmail, siteAddress);
+    const resolvedClientId = await resolveClientId(supabase, businessId, clientId, clientName, clientEmail, siteAddress);
     const intakeData = { ...intake, tradeKey };
     const { data: quote, error } = await supabase.from("quotes").insert({
-      profile_id:    user.id,
+      profile_id:    businessId,
       client_id:     resolvedClientId,
       client_name:   clientName,
       client_email:  clientEmail,

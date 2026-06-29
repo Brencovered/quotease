@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getActiveBusinessId } from "@/lib/team";
 import AppHeader from "@/components/AppHeader";
 import MarginDashboardPanel from "@/components/MarginDashboardPanel";
 
@@ -13,13 +14,14 @@ export default async function MarginsPage() {
     const supabase = await createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (userData.user) {
-      const { data: profile } = await supabase.from("profiles").select("hourly_rate").eq("id", userData.user.id).single();
+      const businessId = await getActiveBusinessId(supabase, userData.user.id);
+      const { data: profile } = await supabase.from("profiles").select("hourly_rate").eq("id", businessId).single();
       hourlyRate = profile?.hourly_rate ?? 95;
 
       const { data: jobs } = await supabase
         .from("quotes")
         .select("id, client_name, trade, total_cost, labour_hours")
-        .eq("profile_id", userData.user.id)
+        .eq("profile_id", businessId)
         .in("status", ["accepted", "paid"]);
 
       if (jobs && jobs.length > 0) {

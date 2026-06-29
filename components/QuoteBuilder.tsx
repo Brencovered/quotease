@@ -9,6 +9,7 @@ import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import StepCustomer from "./StepCustomer";
 import ExtraJobLines, { extraLinesTotals } from "./ExtraJobLines";
 import { resolveClientId } from "@/lib/resolveClientId";
+import { getActiveBusinessId } from "@/lib/team";
 import MaterialsEditor from "@/components/MaterialsEditor";
 import {
   calcElectricianQuote,
@@ -215,22 +216,23 @@ export default function QuoteBuilder({
     const supabase = createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) { setSaveMessage("Not logged in"); setSaving(false); return; }
+    const businessId = await getActiveBusinessId(supabase, userData.user.id);
 
     // Keep the client list growing automatically rather than requiring an
     // explicit "add customer" step - resolves to a real client_id either
     // way, which is what lets saved plans/drawings for that client surface
     // on this job later.
-    const resolvedClientId = await resolveClientId(supabase, userData.user.id, clientId, clientName, clientEmail, siteAddress);
+    const resolvedClientId = await resolveClientId(supabase, businessId, clientId, clientName, clientEmail, siteAddress);
 
     for (const m of lib) {
       await supabase.from("material_items").upsert(
-        { profile_id: userData.user.id, trade: "electrician", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost },
+        { profile_id: businessId, trade: "electrician", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost },
         { onConflict: "profile_id,item_key" }
       );
     }
 
     const { data: quote, error } = await supabase.from("quotes").insert({
-      profile_id: userData.user.id, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail,
+      profile_id: businessId, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail,
       site_address: siteAddress, trade: "electrician", job_type: intake.jobType,
       intake_data: intake, labour_hours: result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0), materials_cost: result.materialsCost + extraLinesTotals(extraLines, rate, margin).materials,
       total_cost: result.totalCost + extraLinesTotals(extraLines, rate, margin).total, payment_terms: paymentTerms,
@@ -245,11 +247,11 @@ export default function QuoteBuilder({
 
     for (const file of drawingFiles) {
       const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-      const path = `${userData.user.id}/${quote.id}/${Date.now()}-${safeName}`;
+      const path = `${businessId}/${quote.id}/${Date.now()}-${safeName}`;
       const { error: uploadError } = await supabase.storage.from("job-files").upload(path, file);
       if (!uploadError) {
         await supabase.from("job_attachments").insert({
-          quote_id: quote.id, profile_id: userData.user.id, file_name: file.name,
+          quote_id: quote.id, profile_id: businessId, file_name: file.name,
           storage_path: path, file_type: file.type, file_size: file.size,
         });
       }

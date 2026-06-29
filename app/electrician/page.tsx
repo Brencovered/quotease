@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getActiveBusinessId } from "@/lib/team";
 import { ELECTRICIAN_DEFAULT_MATERIALS } from "@/lib/calc";
 import { PLUMBER_DEFAULT_MATERIALS } from "@/lib/calcPlumber";
 import { CARPENTER_DEFAULT_MATERIALS } from "@/lib/calcCarpenter";
@@ -37,14 +38,19 @@ export default async function NewQuotePage({ searchParams }: { searchParams: Pro
     const supabase = await createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (userData.user) {
-      const { data: dbProfile } = await supabase.from("profiles").select("*").eq("id", userData.user.id).single();
+      const businessId = await getActiveBusinessId(supabase, userData.user.id);
+      const isTeamMember = businessId !== userData.user.id;
+      const { data: dbProfile } = await supabase.from("profiles").select("*").eq("id", businessId).single();
       if (dbProfile) {
-        if (!dbProfile.onboarded_at) { needsOnboarding = true; }
+        // Onboarding (picking trades) is a one-time business setup step done
+        // by the owner -- a team member joining an already-onboarded
+        // business should never be sent through it themselves.
+        if (!dbProfile.onboarded_at && !isTeamMember) { needsOnboarding = true; }
         else { profile = dbProfile; activeTrades = dbProfile.trades ?? []; }
       }
       // Load materials for dedicated trade builders
       if (tradeParm && DEDICATED.includes(tradeParm)) {
-        const tradeMats = await supabase.from("material_items").select("*").eq("profile_id", userData.user.id).eq("trade", tradeParm).order("label");
+        const tradeMats = await supabase.from("material_items").select("*").eq("profile_id", businessId).eq("trade", tradeParm).order("label");
         if (tradeMats.data && tradeMats.data.length > 0) materials = tradeMats.data;
         if (materials.length === 0) {
           const defaults = DEDICATED_DEFAULTS[tradeParm];
@@ -55,7 +61,7 @@ export default async function NewQuotePage({ searchParams }: { searchParams: Pro
       // (each with its own material, quantity and cost) rather than just
       // a lump total, so the new quote gets real line items.
       if (planId) {
-        const { data: plan } = await supabase.from("client_plans").select("shapes").eq("id", planId).eq("profile_id", userData.user.id).single();
+        const { data: plan } = await supabase.from("client_plans").select("shapes").eq("id", planId).eq("profile_id", businessId).single();
         const shapes = (plan?.shapes as Array<{ label: string; material_label: string; unit_cost: number; margin_pct: number; qty: number; unit: string }>) ?? [];
         preMarkupMaterials = shapes
           .filter((s) => s.material_label || s.label)

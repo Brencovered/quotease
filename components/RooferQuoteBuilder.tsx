@@ -11,6 +11,7 @@ import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import ExtraJobLines, { extraLinesTotals } from "./ExtraJobLines";
 import { resolveClientId } from "@/lib/resolveClientId";
+import { getActiveBusinessId } from "@/lib/team";
 
 type MaterialRow = { item_key: string; label: string; unit_cost: number };
 
@@ -110,15 +111,16 @@ export default function RooferQuoteBuilder({ profile, materials, preClientId, pr
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaveMessage("Not logged in"); setSaving(false); return; }
-    const resolvedClientId = await resolveClientId(supabase, user.id, clientId, clientName, clientEmail, siteAddress);
-    for (const m of lib) await supabase.from("material_items").upsert({ profile_id: user.id, trade: "roofer", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost }, { onConflict: "profile_id,item_key" });
-    const { data: quote, error } = await supabase.from("quotes").insert({ profile_id: user.id, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail, site_address: siteAddress, trade: "roofer", job_type: intake.jobType, intake_data: intake, labour_hours: result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0), materials_cost: result.materialsCost + extraLinesTotals(extraLines, rate, margin).materials, total_cost: result.totalCost + extraLinesTotals(extraLines, rate, margin).total, payment_terms: paymentTerms, status: sendEmail ? "sent" : "draft", sent_at: sendEmail ? new Date().toISOString() : null, markup_materials: preMarkupMaterials ?? [] }).select().single();
+    const businessId = await getActiveBusinessId(supabase, user.id);
+    const resolvedClientId = await resolveClientId(supabase, businessId, clientId, clientName, clientEmail, siteAddress);
+    for (const m of lib) await supabase.from("material_items").upsert({ profile_id: businessId, trade: "roofer", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost }, { onConflict: "profile_id,item_key" });
+    const { data: quote, error } = await supabase.from("quotes").insert({ profile_id: businessId, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail, site_address: siteAddress, trade: "roofer", job_type: intake.jobType, intake_data: intake, labour_hours: result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0), materials_cost: result.materialsCost + extraLinesTotals(extraLines, rate, margin).materials, total_cost: result.totalCost + extraLinesTotals(extraLines, rate, margin).total, payment_terms: paymentTerms, status: sendEmail ? "sent" : "draft", sent_at: sendEmail ? new Date().toISOString() : null, markup_materials: preMarkupMaterials ?? [] }).select().single();
     if (error) { setSaveMessage(error.message); setSaving(false); return; }
     setSavedQuoteId(quote.id);
     setSavedQuoteId(quote.id);
     for (const file of drawingFiles) {
       const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g,"_");
-      const path = `${user.id}/${quote.id}/${Date.now()}-${safeName}`;
+      const path = `${businessId}/${quote.id}/${Date.now()}-${safeName}`;
       await supabase.storage.from("job-files").upload(path, file);
     }
     if (sendEmail) {
