@@ -1,32 +1,34 @@
 /**
  * lib/ai/gateway.ts
  * -----------------
- * Vercel AI Gateway helpers for Swiftscope.
+ * All AI requests route through Vercel AI Gateway.
  *
- * Uses the Vercel AI SDK gateway syntax -- model strings are passed directly
- * as "{provider}/{model}" and the gateway handles routing, failover, and
- * cost tracking automatically.
+ * Auth:
+ *   - Production: Vercel injects OIDC token automatically -- no config needed
+ *   - Local dev:  Set AI_GATEWAY_API_KEY in .env.local (from Vercel dashboard
+ *                 under AI Gateway > API Keys)
  *
- * Per-customer spend tracking is handled via the AI_GATEWAY_METADATA env var
- * or by passing custom headers in the request.
+ * NO direct OpenAI or Anthropic keys -- everything goes through the gateway.
+ * Model strings like "openai/gpt-4o-mini" are resolved by the gateway.
  */
 
 import { generateText, generateObject, streamText } from "ai";
 import { type ZodSchema } from "zod";
 
-export const MODELS = {
-  // Fast + cheap -- text/voice quote parsing
-  TEXT_PRIMARY:  "openai/gpt-4o-mini",
-  TEXT_FALLBACK: "anthropic/claude-3-haiku",
+// Only used for local dev -- Vercel injects auth automatically in production
+if (process.env.AI_GATEWAY_API_KEY) {
+  process.env.AI_GATEWAY_API_KEY = process.env.AI_GATEWAY_API_KEY;
+}
 
-  // Vision -- drawing/blueprint analysis
+export const MODELS = {
+  TEXT_PRIMARY:    "openai/gpt-4o-mini",
+  TEXT_FALLBACK:   "anthropic/claude-3-haiku",
   VISION_PRIMARY:  "openai/gpt-4o",
   VISION_FALLBACK: "anthropic/claude-3-5-sonnet",
 } as const;
 
 /**
  * generateText with automatic fallback.
- * Tries primary model first, falls back on any error.
  */
 export async function generateWithFallback(opts: {
   primaryModel:  string;
@@ -84,7 +86,6 @@ export async function generateObjectWithFallback<T>(opts: {
 
 /**
  * streamText with automatic fallback.
- * Returns a streaming response -- use for real-time UI updates.
  */
 export async function streamWithFallback(opts: {
   primaryModel:  string;
