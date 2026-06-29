@@ -3,7 +3,7 @@ import Image from "next/image";
 import {
   Zap, Users, Smartphone, FileText, DollarSign, PenTool,
   Calendar, RefreshCw, MapPin, Star, CheckCircle, ArrowRight,
-  Briefcase, Home, ChevronDown,
+  Briefcase, Home as HomeIcon, ChevronDown,
 } from "lucide-react";
 
 const HERO_IMG = "https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=1800&q=85&auto=format&fit=crop";
@@ -82,7 +82,7 @@ export default function Home() {
           <div className="grid md:grid-cols-2 gap-6">
             <div className="bg-[#f8f9fa] rounded-3xl p-8 border border-[#e8ecef]">
               <div className="w-12 h-12 bg-[#0a1722] rounded-2xl flex items-center justify-center mb-5">
-                <Home size={22} className="text-[#ffb400]" />
+                <HomeIcon size={22} className="text-[#ffb400]" />
               </div>
               <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-2">Homeowners &amp; Builders</p>
               <h3 className="font-display text-[1.8rem] text-[#0a1722] mb-3">Find and hire the right tradie</h3>
