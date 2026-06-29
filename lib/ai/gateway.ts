@@ -35,7 +35,7 @@ export async function generateWithFallback(opts: {
   fallbackModel: string;
   system:        string;
   prompt:        string;
-  maxTokens?:    number;
+  maxTokens?: number;
 }) {
   for (const model of [opts.primaryModel, opts.fallbackModel]) {
     try {
@@ -43,7 +43,7 @@ export async function generateWithFallback(opts: {
         model,
         system:    opts.system,
         prompt:    opts.prompt,
-        maxTokens: opts.maxTokens ?? 1024,
+        maxOutputTokens: opts.maxTokens ?? 1024,
       });
       return { text: result.text, model, usage: result.usage };
     } catch (err) {
@@ -92,7 +92,7 @@ export async function streamWithFallback(opts: {
   fallbackModel: string;
   system:        string;
   prompt:        string;
-  maxTokens?:    number;
+  maxTokens?: number;
 }) {
   for (const model of [opts.primaryModel, opts.fallbackModel]) {
     try {
@@ -100,7 +100,7 @@ export async function streamWithFallback(opts: {
         model,
         system:    opts.system,
         prompt:    opts.prompt,
-        maxTokens: opts.maxTokens ?? 1024,
+        maxOutputTokens: opts.maxTokens ?? 1024,
       });
     } catch (err) {
       console.error(`[AI Gateway] ${model} failed:`, err);
