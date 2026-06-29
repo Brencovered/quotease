@@ -1018,6 +1018,11 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
         </div>
       </div>
 
+      {/* Who it's going to - confirmation only, edited back in the Customer step */}
+      <div className="card">
+        <p className="section-tag mb-1">Sending to</p>
+        <p className="font-semibold text-[var(--ink)]">{clientName || "No client name set"}</p>
+        <p className="text-[13px] text-[var(--ink-faint)]">{clientEmail || "No email set - can still save as draft"}</p>
         <p className="text-[13px] text-[var(--ink-faint)]">{siteAddress || "No site address set"}</p>
       </div>
 
