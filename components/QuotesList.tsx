@@ -72,7 +72,8 @@ export default function QuotesList({ quotes: initial, xeroConnected }: { quotes:
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) { setSyncMsg(data.error ?? "Sync failed"); setSyncing(false); return; }
-    setSyncMsg(`${data.succeeded} invoice${data.succeeded !== 1 ? "s" : ""} pushed to Xero.${data.failed > 0 ? ` ${data.failed} failed.` : ""}`);
+    const failedErrors = (data.results ?? []).filter((r: {error?: string}) => r.error).map((r: {error?: string}) => r.error).join(", ");
+    setSyncMsg(`${data.succeeded} invoice${data.succeeded !== 1 ? "s" : ""} pushed to Xero.${data.failed > 0 ? ` ${data.failed} failed: ${failedErrors}` : ""}`);
     setSyncing(false);
     setTimeout(() => window.location.reload(), 1500);
   }

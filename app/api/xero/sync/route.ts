@@ -126,8 +126,8 @@ export async function POST(req: NextRequest) {
   for (const quote of quotes) {
     try {
       const total       = (quote.total_cost ?? 0) + (quote.markup_materials ?? 0);
-      const clientEmail = quote.client_email ?? "";
-      const clientName  = quote.client_name  ?? "Unknown Client";
+      const clientEmail = quote.client_email?.trim() || `noemail+${quote.id}@swiftscope.com.au`;
+      const clientName  = quote.client_name?.trim()  || "Unknown Client";
 
       // Get or create the Xero contact -- never duplicates
       const xeroContactId = await getOrCreateXeroContact(
@@ -167,10 +167,13 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({ Invoices: [xeroInvoice] }),
       });
       const data = await res.json();
+      console.log("Xero invoice response:", JSON.stringify(data).slice(0, 500));
       const inv  = data?.Invoices?.[0];
 
       if (!res.ok || !inv?.InvoiceID) {
-        results.push({ quoteId: quote.id, error: data?.Detail ?? "Xero API error" });
+        const errMsg = data?.Detail ?? data?.Message ?? data?.Elements?.[0]?.ValidationErrors?.[0]?.Message ?? JSON.stringify(data).slice(0, 200);
+        console.error("Xero invoice error:", errMsg);
+        results.push({ quoteId: quote.id, error: errMsg });
         continue;
       }
 
