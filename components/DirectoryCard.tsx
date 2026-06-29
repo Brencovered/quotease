@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { MapPin, Star, Phone, Globe, Mail, ChevronLeft, ChevronRight, X, Send, Check, BadgeCheck, MessageSquare } from "lucide-react";
 
 const TRADE_LABELS: Record<string,string> = {
@@ -67,18 +67,23 @@ function RatingLink({ rating, count, placeId }: { rating: number; count: number 
   );
 }
 
-function PhotoSlider({ refs, name }: { refs: string[]; name: string }) {
+function PhotoSlider({ refs, name, onFirstLoad, onFirstError, visible = true }: {
+  refs: string[]; name: string;
+  onFirstLoad?: () => void; onFirstError?: () => void; visible?: boolean;
+}) {
   const [idx, setIdx] = useState(0);
   const photos = refs.slice(0, 3);
   return (
-    <div className="relative h-48 bg-gray-100 overflow-hidden group">
+    <div className="relative h-40 bg-gray-100 overflow-hidden group">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={`/api/places/photo?ref=${photos[idx]}&maxw=600`}
-        alt={name} loading="lazy"
-        className="w-full h-full object-cover"
+        alt={name}
+        onLoad={idx === 0 ? onFirstLoad : undefined}
+        onError={idx === 0 ? onFirstError : undefined}
+        className={`w-full h-full object-cover transition-opacity duration-300 ${visible ? "opacity-100" : "opacity-0"}`}
       />
-      {photos.length > 1 && (
+      {visible && photos.length > 1 && (
         <>
           <button onClick={e => { e.preventDefault(); setIdx((idx-1+photos.length)%photos.length); }}
             className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
@@ -117,57 +122,92 @@ function domainFromUrl(url: string): string | null {
 function SwiftscopeCover({ trade }: { trade?: string }) {
   const accent = (trade && TRADE_COLORS[trade]) || "#ffb400";
   return (
-    <div className="h-36 relative overflow-hidden flex items-center justify-center bg-[#0a1722]">
+    <div className="h-40 relative overflow-hidden flex items-center justify-center bg-[#0a1722]">
       <div className="absolute inset-0 opacity-[0.16]"
         style={{ backgroundImage: `radial-gradient(circle at 20% 25%, ${accent} 0%, transparent 45%), radial-gradient(circle at 85% 80%, ${accent} 0%, transparent 40%)` }} />
       <div className="absolute -right-6 -bottom-8 w-28 h-28 rounded-full border-[10px] border-white/[0.04]" />
-      <p className="relative font-display text-[1.5rem] text-[#ffb400] tracking-wide">Swiftscope</p>
+      <p className="relative font-display text-[1.6rem] text-[#ffb400] tracking-wide">Swiftscope</p>
     </div>
   );
 }
 
-// Logo hero: tries to render the business's actual logo (sourced from their
-// own website's icon, since the free Clearbit Logo API that most projects
-// used for this was shut down in Dec 2025), falling through two no-key
-// favicon services. A logo only counts if it loads AND isn't one of those
-// services' generic "no icon found" placeholders — those load successfully
-// (no onError) but are tiny (~16px), so naturalWidth is the real signal.
-// If no usable logo turns up: a real Google photo, then a branded
-// Swiftscope cover — never a bare initial letter.
+// Logo hero: works through a small ladder of attempts and always lands on
+// something — never a bare letter, never an indefinite spinner.
+//
+//   1. Google's favicon service (s2.favicons) — tried FIRST because Google's
+//      own domain is essentially never blocked by corporate firewalls,
+//      privacy extensions, or DNS filters, unlike step 2.
+//   2. DuckDuckGo's icon service — a good secondary source, but it turns out
+//      to be blocked outright on some networks. A blocked request often
+//      doesn't fire a clean onError either, so without a hard timeout the
+//      card would be stuck on a loading shimmer forever (this was the
+//      "grey circle with an arrow" — a Photoslider nav button left visible
+//      behind a hung, invisible image).
+//   3. A real Google Places photo, if one exists.
+//   4. A branded Swiftscope cover — guaranteed to render, no network call.
+//
+// A logo only "counts" if it loads AND isn't one of those services' tiny
+// (~16px) generic "no icon found" placeholders.
+type Attempt = { kind: "favicon"; src: string } | { kind: "photo" } | { kind: "cover" };
 const MIN_LOGO_PX = 32;
+const ATTEMPT_TIMEOUT_MS = 4000;
 
 function LogoHero({ listing }: { listing: Listing }) {
   const domain = listing.website_url ? domainFromUrl(listing.website_url) : null;
   const photos = listing.photo_references?.filter(Boolean) ?? [];
-  const [stage, setStage] = useState<0 | 1 | 2>(0); // 0: DuckDuckGo icon, 1: Google favicon, 2: exhausted
+
+  const attempts = useMemo<Attempt[]>(() => {
+    const list: Attempt[] = [];
+    if (domain) {
+      list.push({ kind: "favicon", src: `https://www.google.com/s2/favicons?domain=${domain}&sz=128` });
+      list.push({ kind: "favicon", src: `https://icons.duckduckgo.com/ip3/${domain}.ico` });
+    }
+    if (photos.length > 0) list.push({ kind: "photo" });
+    list.push({ kind: "cover" });
+    return list;
+  }, [domain, photos.length]);
+
+  const [stageIdx, setStageIdx] = useState(0);
   const [loaded, setLoaded] = useState(false);
+  const attempt = attempts[Math.min(stageIdx, attempts.length - 1)];
 
-  const fallback = photos.length > 0
-    ? <PhotoSlider refs={photos} name={listing.business_name} />
-    : <SwiftscopeCover trade={listing.trades?.[0]} />;
+  const advance = () => { setLoaded(false); setStageIdx(i => Math.min(i + 1, attempts.length - 1)); };
 
-  if (!domain || stage === 2) return fallback;
+  // Hard timeout safety net — see note above on why onError alone isn't
+  // trustworthy here. Re-armed on every stage change, cleared on success.
+  useEffect(() => {
+    if (attempt.kind === "cover" || loaded) return;
+    const t = setTimeout(advance, ATTEMPT_TIMEOUT_MS);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stageIdx, loaded]);
 
-  const src = stage === 0
-    ? `https://icons.duckduckgo.com/ip3/${domain}.ico`
-    : `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+  if (attempt.kind === "cover") return <SwiftscopeCover trade={listing.trades?.[0]} />;
+
+  if (attempt.kind === "photo") {
+    return (
+      <div className="relative">
+        {!loaded && <div className="absolute inset-0 shimmer z-10" />}
+        <PhotoSlider refs={photos} name={listing.business_name}
+          onFirstLoad={() => setLoaded(true)} onFirstError={advance} visible={loaded} />
+      </div>
+    );
+  }
 
   return (
-    <div className="h-36 bg-gradient-to-br from-slate-50 to-white flex items-center justify-center relative">
+    <div className="h-40 bg-gradient-to-br from-slate-50 to-white flex items-center justify-center relative">
       {!loaded && <div className="absolute inset-0 shimmer" />}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        key={src}
-        src={src}
+        key={attempt.src}
+        src={attempt.src}
         alt={listing.business_name}
-        loading="lazy"
-        onError={() => setStage(s => (s === 0 ? 1 : 2))}
+        onError={advance}
         onLoad={e => {
-          const img = e.currentTarget;
-          if (img.naturalWidth < MIN_LOGO_PX) setStage(s => (s === 0 ? 1 : 2));
+          if (e.currentTarget.naturalWidth < MIN_LOGO_PX) advance();
           else setLoaded(true);
         }}
-        className={`max-h-20 max-w-[60%] object-contain transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
+        className={`max-h-28 max-w-[72%] object-contain transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
       />
     </div>
   );

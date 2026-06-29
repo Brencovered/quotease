@@ -8,7 +8,22 @@ export async function GET(req: NextRequest) {
   if (!ref) return NextResponse.json({ error: "No ref" }, { status: 400 });
 
   const url = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxw}&photo_reference=${ref}&key=${API_KEY}`;
-  const res = await fetch(url);
+
+  // Without a timeout, a slow/hanging upstream response leaves this function
+  // (and the <img> waiting on it in the browser) hung indefinitely rather
+  // than failing cleanly, which is exactly what a client-side onError
+  // fallback needs to be able to react to.
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+
+  let res: Response;
+  try {
+    res = await fetch(url, { signal: controller.signal });
+  } catch {
+    return NextResponse.json({ error: "Photo fetch timed out" }, { status: 504 });
+  } finally {
+    clearTimeout(timeout);
+  }
   if (!res.ok) return NextResponse.json({ error: "Photo not found" }, { status: 404 });
 
   const blob    = await res.blob();
