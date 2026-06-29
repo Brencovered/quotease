@@ -172,6 +172,16 @@ export default function LiveSiteAnnotation({
     return () => stopCamera();
   }, []);
 
+  // Lock body scroll when camera is open
+  useEffect(() => {
+    if (mode === "camera") {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [mode]);
+
   // ── Canvas sizing ────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -182,8 +192,8 @@ export default function LiveSiteAnnotation({
 
     function resize() {
       if (!video || !overlay) return;
-      overlay.width  = video.clientWidth;
-      overlay.height = video.clientHeight;
+      overlay.width  = window.innerWidth;
+      overlay.height = window.innerHeight;
     }
 
     video.addEventListener("loadedmetadata", resize);
@@ -587,20 +597,20 @@ export default function LiveSiteAnnotation({
   const currentItem = items.find((i) => i.key === formItem);
 
   return (
-    <div className="relative w-full bg-black rounded-2xl overflow-hidden" style={{ aspectRatio: "16/9", maxHeight: "60vh" }}>
+    <div className="fixed inset-0 z-50 bg-black" style={{ touchAction: "none" }}>
       {/* Hidden canvases */}
       <canvas ref={canvasRef} className="hidden" />
 
       {/* Video feed */}
       <video
         ref={videoRef} autoPlay playsInline muted
-        className="absolute inset-0 w-full h-full object-cover"
+        className="absolute inset-0 w-full h-full object-cover" style={{ width: "100%", height: "100%" }}
       />
 
       {/* Drawing overlay */}
       <canvas
         ref={overlayRef}
-        className="absolute inset-0 w-full h-full touch-none"
+        className="absolute inset-0 w-full h-full touch-none" style={{ width: "100%", height: "100%" }}
         onMouseDown={handleStart} onMouseMove={handleMove} onMouseUp={handleEnd}
         onTouchStart={handleStart} onTouchMove={handleMove} onTouchEnd={handleEnd}
         style={{ cursor: drawMode === "point" ? "crosshair" : "crosshair" }}
