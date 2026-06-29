@@ -10,6 +10,15 @@ const TRADE_LABELS: Record<string,string> = {
   fencer:"Fencer", plasterer:"Plasterer", handyman:"Handyman",
 };
 
+// A small accent colour per trade so the grid doesn't read as one flat wall
+// of white cards — used for the top accent bar and the trade pill dot.
+const TRADE_COLORS: Record<string,string> = {
+  electrician:"#f59e0b", plumber:"#3b82f6", builder:"#64748b",
+  roofer:"#ef4444", painter:"#a855f7", carpenter:"#92400e",
+  tiler:"#06b6d4", landscaper:"#16a34a", concreter:"#71717a",
+  fencer:"#854d0e", plasterer:"#ec4899", handyman:"#0a1722",
+};
+
 type Listing = {
   id: string; business_name: string; trades: string[] | null;
   suburb: string | null; scraped_contact_phone: string | null;
@@ -29,6 +38,32 @@ function Stars({ rating }: { rating: number }) {
             "text-gray-200 fill-gray-200"} />
       ))}
     </span>
+  );
+}
+
+// Rating row doubles as a link straight to this business's Google reviews.
+// `search.google.com/local/reviews?placeid=` is the standard (if unofficial)
+// pattern for jumping to a reviews list rather than the write-a-review flow —
+// no API key needed, and it degrades gracefully to a normal Maps search if
+// Google ever changes the behaviour.
+function RatingLink({ rating, count, placeId }: { rating: number; count: number | null; placeId: string | null }) {
+  const inner = (
+    <>
+      <Stars rating={rating} />
+      <span className="text-[13px] font-bold text-gray-800">{rating.toFixed(1)}</span>
+      {count != null && (
+        <span className="text-[12px] text-gray-400 group-hover:text-gray-600 group-hover:underline">
+          ({count.toLocaleString()} reviews)
+        </span>
+      )}
+    </>
+  );
+  if (!placeId) return <div className="flex items-center gap-2 mb-3">{inner}</div>;
+  return (
+    <a href={`https://search.google.com/local/reviews?placeid=${placeId}`} target="_blank" rel="noopener noreferrer"
+      className="group flex items-center gap-2 mb-3 w-fit -ml-1 px-1 rounded-md hover:bg-amber-50/80 transition-colors">
+      {inner}
+    </a>
   );
 }
 
@@ -76,42 +111,63 @@ function domainFromUrl(url: string): string | null {
   }
 }
 
+// When neither the business's own logo nor a Google photo is available, show
+// a small branded Swiftscope cover instead of a bare initial letter — it
+// reads as "this listing is taken care of" rather than "something's missing".
+function SwiftscopeCover({ trade }: { trade?: string }) {
+  const accent = (trade && TRADE_COLORS[trade]) || "#ffb400";
+  return (
+    <div className="h-36 relative overflow-hidden flex items-center justify-center bg-[#0a1722]">
+      <div className="absolute inset-0 opacity-[0.16]"
+        style={{ backgroundImage: `radial-gradient(circle at 20% 25%, ${accent} 0%, transparent 45%), radial-gradient(circle at 85% 80%, ${accent} 0%, transparent 40%)` }} />
+      <div className="absolute -right-6 -bottom-8 w-28 h-28 rounded-full border-[10px] border-white/[0.04]" />
+      <p className="relative font-display text-[1.5rem] text-[#ffb400] tracking-wide">Swiftscope</p>
+    </div>
+  );
+}
+
 // Logo hero: tries to render the business's actual logo (sourced from their
 // own website's icon, since the free Clearbit Logo API that most projects
-// used for this was shut down in Dec 2025). Falls back through two no-key
-// favicon services, then to the photo slider, then to a plain letter tile.
-// Each stage only kicks in on a real load failure (onError), not preemptively.
+// used for this was shut down in Dec 2025), falling through two no-key
+// favicon services. A logo only counts if it loads AND isn't one of those
+// services' generic "no icon found" placeholders — those load successfully
+// (no onError) but are tiny (~16px), so naturalWidth is the real signal.
+// If no usable logo turns up: a real Google photo, then a branded
+// Swiftscope cover — never a bare initial letter.
+const MIN_LOGO_PX = 32;
+
 function LogoHero({ listing }: { listing: Listing }) {
   const domain = listing.website_url ? domainFromUrl(listing.website_url) : null;
   const photos = listing.photo_references?.filter(Boolean) ?? [];
   const [stage, setStage] = useState<0 | 1 | 2>(0); // 0: DuckDuckGo icon, 1: Google favicon, 2: exhausted
+  const [loaded, setLoaded] = useState(false);
 
-  if (!domain || stage === 2) {
-    // No website to source a logo from, or both logo services failed.
-    return photos.length > 0 ? (
-      <PhotoSlider refs={photos} name={listing.business_name} />
-    ) : (
-      <div className="h-36 bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center">
-        <span className="font-display text-[3.5rem] text-slate-300">
-          {listing.business_name.charAt(0)}
-        </span>
-      </div>
-    );
-  }
+  const fallback = photos.length > 0
+    ? <PhotoSlider refs={photos} name={listing.business_name} />
+    : <SwiftscopeCover trade={listing.trades?.[0]} />;
+
+  if (!domain || stage === 2) return fallback;
 
   const src = stage === 0
     ? `https://icons.duckduckgo.com/ip3/${domain}.ico`
     : `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
 
   return (
-    <div className="h-36 bg-gradient-to-br from-slate-50 to-white flex items-center justify-center">
+    <div className="h-36 bg-gradient-to-br from-slate-50 to-white flex items-center justify-center relative">
+      {!loaded && <div className="absolute inset-0 shimmer" />}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
+        key={src}
         src={src}
         alt={listing.business_name}
         loading="lazy"
         onError={() => setStage(s => (s === 0 ? 1 : 2))}
-        className="max-h-20 max-w-[60%] object-contain"
+        onLoad={e => {
+          const img = e.currentTarget;
+          if (img.naturalWidth < MIN_LOGO_PX) setStage(s => (s === 0 ? 1 : 2));
+          else setLoaded(true);
+        }}
+        className={`max-h-20 max-w-[60%] object-contain transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
       />
     </div>
   );
@@ -233,12 +289,19 @@ function EnquiryModal({ listing, onClose }: { listing: Listing; onClose: () => v
   );
 }
 
-export default function DirectoryCard({ listing }: { listing: Listing }) {
+export default function DirectoryCard({ listing, index = 0 }: { listing: Listing; index?: number }) {
   const [showEnquiry, setShowEnquiry] = useState(false);
+  const primaryTrade = listing.trades?.[0];
+  const accent = (primaryTrade && TRADE_COLORS[primaryTrade]) || "#0a1722";
 
   return (
     <>
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col">
+      <div
+        className="reveal bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-gray-200 transition-all duration-200 overflow-hidden flex flex-col"
+        style={{ animationDelay: `${Math.min(index, 8) * 45}ms` }}
+      >
+        {/* Trade accent bar */}
+        <div className="h-[3px] w-full" style={{ background: accent }} />
 
         {/* Logo / header area */}
         <div className="relative border-b border-gray-50">
@@ -247,7 +310,8 @@ export default function DirectoryCard({ listing }: { listing: Listing }) {
           {/* Trade badge */}
           {listing.trades?.length && (
             <div className="absolute top-3 right-3">
-              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-sm text-gray-700 shadow-sm capitalize">
+              <span className="flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-sm text-gray-700 shadow-sm capitalize">
+                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: accent }} />
                 {TRADE_LABELS[listing.trades[0]] ?? listing.trades[0]}
               </span>
             </div>
@@ -270,15 +334,9 @@ export default function DirectoryCard({ listing }: { listing: Listing }) {
             </p>
           )}
 
-          {/* Rating */}
+          {/* Rating — clickable through to Google reviews */}
           {listing.google_rating && (
-            <div className="flex items-center gap-2 mb-3">
-              <Stars rating={listing.google_rating} />
-              <span className="text-[13px] font-bold text-gray-800">{listing.google_rating.toFixed(1)}</span>
-              {listing.google_reviews_count != null && (
-                <span className="text-[12px] text-gray-400">({listing.google_reviews_count.toLocaleString()} reviews)</span>
-              )}
-            </div>
+            <RatingLink rating={listing.google_rating} count={listing.google_reviews_count} placeId={listing.place_id} />
           )}
 
           {/* Blurb */}
@@ -289,8 +347,8 @@ export default function DirectoryCard({ listing }: { listing: Listing }) {
           {/* Actions */}
           <div className="mt-auto space-y-2 pt-3 border-t border-gray-50">
             <button onClick={() => setShowEnquiry(true)}
-              className="w-full bg-[#0a1722] text-white font-bold text-[13.5px] py-3 rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
-              <MessageSquare size={14} /> Request a quote
+              className="group w-full bg-[#0a1722] text-white font-bold text-[13.5px] py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#132538] active:scale-[0.98] transition-all">
+              <MessageSquare size={14} className="group-hover:rotate-[-6deg] transition-transform" /> Request a quote
             </button>
 
             <div className="flex gap-2 justify-center flex-wrap">

@@ -215,6 +215,16 @@ input[type="radio"] {
 }
 .stamp-wobble { animation: qstamp 3.2s ease-in-out infinite; }
 
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, var(--line-subtle) 25%, #f5f7f9 37%, var(--line-subtle) 63%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .reveal, .stamp-wobble { animation: none; }
+  .reveal, .stamp-wobble, .shimmer { animation: none; }
 }

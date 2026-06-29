@@ -178,8 +178,8 @@ export default async function DirectoryPage({
           </div>
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {listings.map((listing: Listing) => (
-              <DirectoryCard key={listing.id} listing={listing} />
+            {listings.map((listing: Listing, i: number) => (
+              <DirectoryCard key={listing.id} listing={listing} index={i} />
             ))}
           </div>
         )}
