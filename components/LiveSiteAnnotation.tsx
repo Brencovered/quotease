@@ -602,16 +602,15 @@ export default function LiveSiteAnnotation({
       {/* Video feed */}
       <video
         ref={videoRef} autoPlay playsInline muted
-        className="absolute inset-0 w-full h-full object-cover" style={{ width: "100%", height: "100%" }}
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
       />
 
       {/* Drawing overlay */}
       <canvas
         ref={overlayRef}
-        className="absolute inset-0 w-full h-full touch-none" style={{ width: "100%", height: "100%" }}
         onMouseDown={handleStart} onMouseMove={handleMove} onMouseUp={handleEnd}
         onTouchStart={handleStart} onTouchMove={handleMove} onTouchEnd={handleEnd}
-        style={{ cursor: drawMode === "point" ? "crosshair" : "crosshair" }}
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", cursor: "crosshair", touchAction: "none" }}
       />
 
       {/* Top bar */}
