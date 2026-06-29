@@ -19,16 +19,17 @@ import { generateObject } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { MODELS } from "@/lib/ai/gateway";
+import { getTradeSystemPrompt } from "@/lib/ai/getTradeSystemPrompt";
 
 // ── Schema ─────────────────────────────────────────────────────────────────
 
 const DrawingSchema = z.object({
   rooms: z.array(z.string()).describe("List of rooms or zones identified in the drawing"),
   items: z.array(z.object({
-    name:  z.string().describe("Item type e.g. 'downlight', 'power point', 'smoke detector'"),
+    name:  z.string().describe("Item type e.g. 'downlight DL1', 'GPO-USB', 'WC-2'"),
     count: z.number().describe("Number of this item visible in the drawing"),
-    notes: z.string().describe("Location or specification notes"),
-  })).describe("All countable items found in the drawing"),
+    notes: z.string().describe("Location, spec code, or clarification notes"),
+  })).describe("All countable items found in the drawing, using exact legend codes"),
   line_items: z.array(z.object({
     description: z.string(),
     quantity:    z.number(),
@@ -36,24 +37,10 @@ const DrawingSchema = z.object({
     notes:       z.string(),
   })).describe("Suggested quote line items based on the drawing"),
   confidence: z.enum(["high","medium","low"]).describe("Confidence level of the analysis"),
-  notes: z.string().describe("Any caveats, assumptions, or things the tradie should verify on site"),
+  notes: z.string().describe("On-site verification warnings and caveats in trade vernacular"),
 });
 
 type DrawingOutput = z.infer<typeof DrawingSchema>;
-
-function buildSystemPrompt(trade: string, instructions?: string) {
-  return `You are an expert Australian ${trade} analysing a site plan or drawing.
-
-Your job is to:
-1. Identify all rooms and zones in the drawing
-2. Count all relevant ${trade} items (power points, lights, fixtures, etc.)
-3. Generate suggested quote line items based on what you see
-4. Flag anything that needs on-site verification
-
-Be conservative -- if you can't clearly see something, don't count it.
-Use Australian trade terminology.
-${instructions ? `\nAdditional instructions: ${instructions}` : ""}`;
-}
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -86,7 +73,7 @@ export async function POST(req: NextRequest) {
         messages: [
           {
             role: "system",
-            content: buildSystemPrompt(trade, instructions ?? undefined),
+            content: getTradeSystemPrompt(trade) + (instructions ? `\n\nAdditional instructions: ${instructions}` : ""),
           },
           {
             role: "user",
