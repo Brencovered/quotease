@@ -62,8 +62,8 @@ export default async function DirectoryPage({
   let query = supabase
     .from("directory_listing")
     .select("*", { count: "exact" })
-    .order("rating", { ascending: false, nullsFirst: false })
-    .order("review_count", { ascending: false, nullsFirst: false })
+    .order("google_rating", { ascending: false, nullsFirst: false })
+    .order("google_reviews_count", { ascending: false, nullsFirst: false })
     .range(from, to);
 
   if (trade)  query = query.eq("trade", trade);
