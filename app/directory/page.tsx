@@ -64,9 +64,17 @@ export default async function DirectoryPage({
             </div>
           </div>
           <h1 className="font-display text-[2.6rem] leading-tight mb-2">Find a trusted local tradie</h1>
-          <p className="text-[var(--steel-2)] text-[15px] max-w-xl">
+          <p className="text-[var(--steel-2)] text-[15px] max-w-xl mb-6">
             {count ?? 0} verified businesses across Melbourne&apos;s south east. Real ratings from Google Reviews.
           </p>
+          <div className="flex gap-3 flex-wrap">
+            <Link href="/get-quotes" className="bg-[var(--amber)] text-[var(--navy)] font-extrabold text-[15px] px-6 py-3 rounded-xl hover:opacity-90 transition-opacity">
+              Get quotes from local tradies →
+            </Link>
+            <Link href="#listings" className="text-white/70 hover:text-white font-semibold text-[14px] px-6 py-3 rounded-xl border border-white/20">
+              Browse directory
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -95,7 +103,7 @@ export default async function DirectoryPage({
         </form>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div id="listings" className="max-w-6xl mx-auto px-6 py-8">
         {error && (
           <div className="card bg-[var(--red-bg)] text-[var(--red)] text-[13px] mb-6">
             Could not load directory: {error.message}
