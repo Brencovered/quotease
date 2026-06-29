@@ -176,7 +176,7 @@ export async function generateQuotePdf(
 
   // ── SUMMARY ──────────────────────────────────────────────────────
   sectionLabel("Quote summary");
-  drawRow(`Labour (${quote.labour_hours ?? 0} hrs)`, `$${((quote.total_cost ?? 0) - (quote.materials_cost ?? 0)).toLocaleString()}`);
+  drawRow("Labour", `$${((quote.total_cost ?? 0) - (quote.materials_cost ?? 0)).toLocaleString()}`);
   drawRow("Materials", `$${(quote.materials_cost ?? 0).toLocaleString()}`);
   newPageIfNeeded(24);
   page.drawLine({ start: { x: MARGIN, y: y + 6 }, end: { x: PAGE_WIDTH - MARGIN, y: y + 6 }, thickness: 1.5, color: NAVY });

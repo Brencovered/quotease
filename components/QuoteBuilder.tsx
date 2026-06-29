@@ -21,16 +21,20 @@ type MaterialRow = { item_key: string; label: string; unit_cost: number };
 
 const DEFAULT_INTAKE: ElectricianIntake = {
   jobType: "reno", ceilingType: "unknown",
-  switchboardUpgrade: false, switchboardRcbo: false, threePhase: false,
+  switchboardUpgrade: false, switchboardRcbo: false, switchboardRcboMode: "full_board", switchboardPoles: 12,
+  threePhase: false,
   powerPoints: 0, lightPoints: 0, switches: 0,
-  downlights: 0, downlightGrade: "builder", exhaustFans: 0,
-  cableMetres: 0, roofAccess: 1, subfloorAccess: 1, trenchMetres: 0,
+  downlights: 0, downlightGrade: "builder", downlightSupply: "supply_and_fit", downlightProvisional: 0,
+  exhaustFans: [],
+  cableRuns: [],
+  roofAccess: 1, subfloorAccess: 1, trenchMetres: 0,
   applianceOven: false, applianceCooktop: false, applianceHwc: false,
   applianceAircon: false, appliancePool: false,
+  customAppliances: [],
   evCharger: false, solarConnection: false, externalCircuits: 0,
   dataPoints: 0, nbn: false,
   siteAccess: "easy", multistorey: false,
-  smokeAlarms: 0, coes: false, callout: false, ccew: false, notes: "",
+  smokeAlarms: 0, callout: false, ccew: false, notes: "",
 };
 
 const STEPS = [
@@ -146,14 +150,18 @@ export default function QuoteBuilder({
         lightPoints:       r.light_points       ?? prev.lightPoints,
         switches:          r.switches           ?? prev.switches,
         downlights:        r.downlights         ?? prev.downlights,
-        exhaustFans:       r.exhaust_fans       ?? prev.exhaustFans,
-        cableMetres:       r.cable_metres       ?? prev.cableMetres,
+        exhaustFans: r.exhaust_fans > 0
+          ? [{ type: "ceiling" as const, qty: r.exhaust_fans }]
+          : prev.exhaustFans,
+        cableRuns: r.cable_metres > 0
+          ? [{ size: "2.5" as const, metres: r.cable_metres }]
+          : prev.cableRuns,
         switchboardUpgrade: r.switchboard_upgrade ?? prev.switchboardUpgrade,
         threePhase:        r.three_phase        ?? prev.threePhase,
         dataPoints:        r.data_points        ?? prev.dataPoints,
         smokeAlarms:       r.smoke_alarms       ?? prev.smokeAlarms,
         externalCircuits:  r.external_circuits  ?? prev.externalCircuits,
-        ceilingType:       r.ceiling_type       ?? prev.ceilingType,
+        ceilingType: (r.ceiling_type as import('@/lib/calc').ElectricianIntake['ceilingType']) ?? prev.ceilingType,
         multistorey:       r.multistorey        ?? prev.multistorey,
       }));
       setAnalysisResult({ confidence: r.confidence ?? "medium", notes: r.notes ?? "" });
@@ -536,16 +544,12 @@ function StepElectrical({ intake, set, lib, setLib }: {
     const rows = ["item_key,label,unit_cost", ...lib.map((m) => `${m.item_key},"${m.label}",${m.unit_cost}`)];
     const blob = new Blob([rows.join("\n")], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "swiftscope-price-template.csv";
-    a.click();
+    const a = document.createElement("a"); a.href = url; a.download = "swiftscope-price-template.csv"; a.click();
     URL.revokeObjectURL(url);
   }
 
   function handleCsvUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const file = e.target.files?.[0]; if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
       const text = String(reader.result ?? "");
@@ -553,43 +557,86 @@ function StepElectrical({ intake, set, lib, setLib }: {
       const header = lines[0]?.toLowerCase().split(",") ?? [];
       const keyIdx = header.findIndex((h) => h.includes("key") || h.includes("item"));
       const costIdx = header.findIndex((h) => h.includes("cost") || h.includes("price"));
-      if (keyIdx === -1 || costIdx === -1) {
-        setCsvMessage("Couldn't find item and cost columns in that file - try the template instead.");
-        return;
-      }
-      let matched = 0;
-      const updates = new Map<string, number>();
+      if (keyIdx === -1 || costIdx === -1) { setCsvMessage("Couldn't find item and cost columns — try the template."); return; }
+      let matched = 0; const updates = new Map<string, number>();
       for (const line of lines.slice(1)) {
         const cols = line.split(",");
         const key = cols[keyIdx]?.trim().replace(/^"|"$/g, "");
         const cost = parseFloat(cols[costIdx]?.replace(/[^0-9.]/g, "") ?? "");
         if (key && !isNaN(cost)) updates.set(key, cost);
       }
-      setLib((prev) =>
-        prev.map((m) => {
-          if (updates.has(m.item_key)) {
-            matched++;
-            return { ...m, unit_cost: updates.get(m.item_key)! };
-          }
-          return m;
-        })
-      );
-      setCsvMessage(matched > 0 ? `Updated ${matched} price${matched === 1 ? "" : "s"}.` : "No matching items found in that file.");
+      setLib((prev) => prev.map((m) => { if (updates.has(m.item_key)) { matched++; return { ...m, unit_cost: updates.get(m.item_key)! }; } return m; }));
+      setCsvMessage(matched > 0 ? `Updated ${matched} price${matched === 1 ? "" : "s"}.` : "No matching items found.");
       e.target.value = "";
     };
     reader.readAsText(file);
   }
 
+  // Exhaust fan helpers
+  const exhaustFans: import("@/lib/calc").ExhaustFanEntry[] = intake.exhaustFans ?? [];
+  function setExhaustFan(type: import("@/lib/calc").ExhaustFanType, qty: number) {
+    const updated = exhaustFans.filter(e => e.type !== type);
+    if (qty > 0) updated.push({ type, qty });
+    set("exhaustFans", updated);
+  }
+  function exhaustQty(type: import("@/lib/calc").ExhaustFanType) {
+    return exhaustFans.find(e => e.type === type)?.qty ?? 0;
+  }
+
+  // Cable run helpers
+  const cableRuns: import("@/lib/calc").CableRun[] = intake.cableRuns ?? [];
+  function setCableRun(size: import("@/lib/calc").CableRun["size"], metres: number) {
+    const updated = cableRuns.filter(r => r.size !== size);
+    if (metres > 0) updated.push({ size, metres });
+    set("cableRuns", updated);
+  }
+  function cableMetres(size: import("@/lib/calc").CableRun["size"]) {
+    return cableRuns.find(r => r.size === size)?.metres ?? 0;
+  }
+
+  // Custom appliance helpers
+  const customAppliances: import("@/lib/calc").CustomAppliance[] = intake.customAppliances ?? [];
+  function addCustomAppliance() {
+    set("customAppliances", [...customAppliances, { id: Math.random().toString(36).slice(2), label: "", phase: "single", amps: 20 }]);
+  }
+  function updateCustomAppliance(id: string, patch: Partial<import("@/lib/calc").CustomAppliance>) {
+    set("customAppliances", customAppliances.map(a => a.id === id ? { ...a, ...patch } : a));
+  }
+  function removeCustomAppliance(id: string) {
+    set("customAppliances", customAppliances.filter(a => a.id !== id));
+  }
+
   return (
     <div className="space-y-4">
+
       {/* Switchboard */}
       <div className="card">
         <p className="section-tag mb-3">Switchboard</p>
         <Row>
           <Check2 checked={intake.switchboardUpgrade} onChange={(v) => set("switchboardUpgrade", v)} label="Upgrade needed" />
-          <Check2 checked={intake.switchboardRcbo}    onChange={(v) => set("switchboardRcbo", v)}    label="Full RCBO (not RCD)" />
-          <Check2 checked={intake.threePhase}         onChange={(v) => set("threePhase", v)}         label="3-phase supply" />
+          <Check2 checked={intake.threePhase}          onChange={(v) => set("threePhase", v)}          label="3-phase supply" />
         </Row>
+        {intake.switchboardUpgrade && (
+          <div className="mt-3 space-y-3 pt-3 border-t border-[var(--line-subtle)]">
+            <Field label="RCBO type">
+              <select value={intake.switchboardRcbo ? (intake.switchboardRcboMode ?? "full_board") : "rcd"}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "rcd") { set("switchboardRcbo", false); }
+                  else { set("switchboardRcbo", true); set("switchboardRcboMode", val as "full_board" | "per_pole"); }
+                }} className="app-field">
+                <option value="rcd">RCD upgrade only</option>
+                <option value="full_board">Full RCBO board</option>
+                <option value="per_pole">RCBO per pole</option>
+              </select>
+            </Field>
+            {intake.switchboardRcbo && intake.switchboardRcboMode === "per_pole" && (
+              <Field label="Number of poles">
+                <Num value={intake.switchboardPoles ?? 12} onChange={(v) => set("switchboardPoles", v)} />
+              </Field>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Points */}
@@ -614,42 +661,112 @@ function StepElectrical({ intake, set, lib, setLib }: {
         <p className="section-tag mb-3">Lighting</p>
         <div className="grid grid-cols-2 gap-3 mb-3">
           <Field label="Downlights"><Num value={intake.downlights} onChange={(v) => set("downlights", v)} /></Field>
+          <Field label="Supply">
+            <select value={intake.downlightSupply ?? "supply_and_fit"}
+              onChange={(e) => set("downlightSupply", e.target.value as ElectricianIntake["downlightSupply"])}
+              className="app-field">
+              <option value="supply_and_fit">Supply &amp; fit</option>
+              <option value="wire_and_fit">Wire &amp; fit only (client supply)</option>
+              <option value="provisional">Provisional sum</option>
+            </select>
+          </Field>
+        </div>
+        {intake.downlightSupply !== "wire_and_fit" && intake.downlightSupply !== "provisional" && (
           <Field label="Grade">
-            <select value={intake.downlightGrade} onChange={(e) => set("downlightGrade", e.target.value as ElectricianIntake["downlightGrade"])} className="app-field">
-              <option value="builder">Builder</option>
+            <select value={intake.downlightGrade}
+              onChange={(e) => set("downlightGrade", e.target.value as ElectricianIntake["downlightGrade"])}
+              className="app-field">
+              <option value="builder">Builder grade</option>
               <option value="standard">Standard</option>
               <option value="premium">Premium / smart</option>
             </select>
           </Field>
+        )}
+        {intake.downlightSupply === "provisional" && (
+          <Field label="Provisional sum ($)">
+            <Num value={intake.downlightProvisional ?? 0} onChange={(v) => set("downlightProvisional", v)} />
+          </Field>
+        )}
+
+        {/* Exhaust fans by type */}
+        <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-faint)] mt-4 mb-2">Exhaust fans</p>
+        <div className="grid grid-cols-3 gap-3">
+          <Field label="Ceiling"><Num value={exhaustQty("ceiling")} onChange={(v) => setExhaustFan("ceiling", v)} /></Field>
+          <Field label="Ducted"><Num value={exhaustQty("ducted")}  onChange={(v) => setExhaustFan("ducted", v)}  /></Field>
+          <Field label="Inline"><Num value={exhaustQty("inline")}  onChange={(v) => setExhaustFan("inline", v)}  /></Field>
         </div>
-        <Field label="Exhaust fans"><Num value={intake.exhaustFans} onChange={(v) => set("exhaustFans", v)} /></Field>
       </div>
 
-      {/* Appliances */}
+      {/* Fixed appliances */}
       <div className="card">
         <p className="section-tag mb-3">Fixed appliances</p>
-        <div className="grid grid-cols-2 gap-x-4">
-          <Check2 checked={intake.applianceOven}     onChange={(v) => set("applianceOven", v)}     label="Oven" />
-          <Check2 checked={intake.applianceCooktop}  onChange={(v) => set("applianceCooktop", v)}  label="Cooktop" />
-          <Check2 checked={intake.applianceHwc}      onChange={(v) => set("applianceHwc", v)}      label="Hot water" />
-          <Check2 checked={intake.applianceAircon}   onChange={(v) => set("applianceAircon", v)}   label="Aircon" />
-          <Check2 checked={intake.appliancePool}     onChange={(v) => set("appliancePool", v)}     label="Pool / spa" />
-          <Check2 checked={intake.evCharger}         onChange={(v) => set("evCharger", v)}         label="EV charger" />
-          <Check2 checked={intake.solarConnection}   onChange={(v) => set("solarConnection", v)}   label="Solar / battery" />
+        <div className="grid grid-cols-2 gap-x-4 mb-3">
+          <Check2 checked={intake.applianceOven}    onChange={(v) => set("applianceOven", v)}    label="Oven" />
+          <Check2 checked={intake.applianceCooktop} onChange={(v) => set("applianceCooktop", v)} label="Cooktop" />
+          <Check2 checked={intake.applianceHwc}     onChange={(v) => set("applianceHwc", v)}     label="Hot water" />
+          <Check2 checked={intake.applianceAircon}  onChange={(v) => set("applianceAircon", v)}  label="Aircon" />
+          <Check2 checked={intake.appliancePool}    onChange={(v) => set("appliancePool", v)}    label="Pool / spa" />
+          <Check2 checked={intake.evCharger}        onChange={(v) => set("evCharger", v)}        label="EV charger" />
+          <Check2 checked={intake.solarConnection}  onChange={(v) => set("solarConnection", v)}  label="Solar / battery" />
         </div>
+
+        {/* Custom appliances */}
+        {customAppliances.length > 0 && (
+          <div className="space-y-2 mb-3">
+            {customAppliances.map(ca => (
+              <div key={ca.id} className="flex items-center gap-2 bg-[var(--app-bg)] rounded-xl p-2">
+                <input value={ca.label} onChange={e => updateCustomAppliance(ca.id, { label: e.target.value })}
+                  placeholder="e.g. Sauna" className="app-field text-[13px] flex-1" />
+                <select value={ca.phase} onChange={e => updateCustomAppliance(ca.id, { phase: e.target.value as "single"|"three" })}
+                  className="app-field text-[13px] w-28">
+                  <option value="single">Single phase</option>
+                  <option value="three">3-phase</option>
+                </select>
+                <div className="flex items-center gap-1">
+                  <input type="number" value={ca.amps} onChange={e => updateCustomAppliance(ca.id, { amps: Number(e.target.value) })}
+                    className="app-field text-[13px] w-16 text-right" min={1} />
+                  <span className="text-[12px] text-[var(--ink-faint)]">A</span>
+                </div>
+                <button onClick={() => removeCustomAppliance(ca.id)} className="text-[var(--ink-faint)] hover:text-[var(--red)] p-1">
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <button onClick={addCustomAppliance} className="btn-secondary text-[12.5px] py-2 w-full justify-center">
+          <Plus size={13} /> Add custom appliance
+        </button>
       </div>
 
-      {/* Cabling */}
+      {/* Cabling by size */}
       <div className="card">
         <p className="section-tag mb-3">Cabling</p>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Cable metres">
-            <Num value={intake.cableMetres} onChange={(v) => set("cableMetres", v)} />
-          </Field>
-          <Field label="Trenching (m)">
-            <Num value={intake.trenchMetres} onChange={(v) => set("trenchMetres", v)} />
-          </Field>
+        <div className="grid grid-cols-3 gap-3 mb-3">
+          {(["1.5","2.5","4","6","10"] as const).map(size => (
+            <Field key={size} label={`${size}mm (m)`}>
+              <Num value={cableMetres(size)} onChange={(v) => setCableRun(size, v)} />
+            </Field>
+          ))}
         </div>
+        <Field label="Trenching (m)">
+          <Num value={intake.trenchMetres} onChange={(v) => set("trenchMetres", v)} />
+        </Field>
+      </div>
+
+      {/* Smoke / certs */}
+      <div className="card">
+        <p className="section-tag mb-3">Safety and compliance</p>
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <Field label="Smoke alarms"><Num value={intake.smokeAlarms} onChange={(v) => set("smokeAlarms", v)} /></Field>
+        </div>
+        <Row>
+          <Check2 checked={intake.ccew}    onChange={(v) => set("ccew", v)}    label="CCEW certificate" />
+          <Check2 checked={intake.callout} onChange={(v) => set("callout", v)} label="Call-out fee" />
+        </Row>
+        <p className="text-[11.5px] text-[var(--ink-faint)] mt-2">
+          COES is included automatically on all jobs.
+        </p>
       </div>
 
       {/* Material prices toggle */}
@@ -662,8 +779,7 @@ function StepElectrical({ intake, set, lib, setLib }: {
           <div className="card">
             <p className="section-tag mb-1">Sync from your supplier</p>
             <p className="text-[12px] text-[var(--ink-faint)] mb-3">
-              Most suppliers (Middys, Rexel, Tradelink) let you export your trade pricing from their account
-              portal. Download that as a CSV and upload it here, and every quote will use those real prices.
+              Most suppliers (Middys, Rexel, Tradelink) let you export your trade pricing as CSV. Upload it here and every quote uses real prices.
             </p>
             <div className="flex flex-wrap gap-2">
               <label className="btn-secondary text-[12.5px] py-2 px-3 cursor-pointer">
@@ -671,7 +787,7 @@ function StepElectrical({ intake, set, lib, setLib }: {
                 <input type="file" accept=".csv" className="hidden" onChange={handleCsvUpload} />
               </label>
               <button onClick={downloadCsvTemplate} className="text-[12.5px] font-semibold text-[var(--navy)] underline px-2">
-                Download a template
+                Download template
               </button>
             </div>
             {csvMessage && <p className="text-[12.5px] text-[var(--ink-soft)] mt-3">{csvMessage}</p>}

@@ -78,7 +78,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
             <div className="mb-5">
               <p className="text-[11px] tracking-[.1em] uppercase text-[var(--amber-deep)] font-bold mb-2">Quote summary</p>
               <div className="flex justify-between text-[14px] py-1">
-                <span className="text-[var(--ink-soft)]">Labour ({quote.labour_hours ?? 0} hrs)</span>
+                <span className="text-[var(--ink-soft)]">Labour</span>
                 <span className="font-semibold text-[var(--ink)]">${((quote.total_cost ?? 0) - (quote.materials_cost ?? 0)).toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-[14px] py-1">
