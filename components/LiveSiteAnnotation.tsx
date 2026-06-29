@@ -34,6 +34,7 @@ export default function LiveSiteAnnotation({
   trade,
   lib,
   onSaveDraft,
+  onAnnotationMeta,
   onAddLineItems,
 }: {
   trade: string;
