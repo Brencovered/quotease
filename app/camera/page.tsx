@@ -320,7 +320,7 @@ function CameraPage() {
       </div>
 
       {/* Bottom toolbar */}
-      <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"12px 16px calc(12px + env(safe-area-inset-bottom))",background:"linear-gradient(to top,rgba(0,0,0,.8),transparent)"}}>
+      <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"12px 16px calc(80px + env(safe-area-inset-bottom))",background:"linear-gradient(to top,rgba(0,0,0,.8),transparent)"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
           <div style={{display:"flex",gap:6}}>
             {(["point","line","area"] as AnnotationType[]).map(m=>{
