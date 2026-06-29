@@ -17,7 +17,20 @@ export default async function JobsPage() {
         .eq("profile_id", businessId)
         .eq("status", "accepted")
         .order("accepted_at", { ascending: true });
-      if (data) jobs = data;
+      if (data) {
+        const ids = data.map((q) => q.id);
+        const { data: tasks } = ids.length
+          ? await supabase.from("job_tasks").select("quote_id, status").in("quote_id", ids)
+          : { data: [] as { quote_id: string; status: string }[] };
+        const taskCounts = new Map<string, { total: number; done: number }>();
+        for (const t of tasks ?? []) {
+          const c = taskCounts.get(t.quote_id) ?? { total: 0, done: 0 };
+          c.total += 1;
+          if (t.status === "done") c.done += 1;
+          taskCounts.set(t.quote_id, c);
+        }
+        jobs = data.map((q) => ({ ...q, taskCounts: taskCounts.get(q.id) ?? null }));
+      }
     }
   } catch (err) {
     console.error("Jobs page: falling back to empty list -", err);

@@ -19,6 +19,7 @@ import {
   TrendingUp,
   Download,
   Zap,
+  Package,
 } from "lucide-react";
 
 const NAV = [
@@ -67,21 +68,55 @@ export default function AppHeader() {
         </div>
 
         <nav className="flex-1 flex flex-col gap-0.5 px-3 overflow-y-auto">
-          {NAV.filter((n) => !n.fab).map((n) => {
-            const active = isActive(n.href);
-            return (
-              <Link
-                key={n.href}
-                href={n.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
-                  active ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
-                }`}
-              >
-                <n.icon size={17} strokeWidth={active ? 2.2 : 1.8} />
-                {n.label}
-              </Link>
-            );
-          })}
+          <Link
+            href="/electrician/dashboard"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
+              isActive("/electrician/dashboard") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
+            }`}
+          >
+            <LayoutDashboard size={17} strokeWidth={isActive("/electrician/dashboard") ? 2.2 : 1.8} />
+            Dashboard
+          </Link>
+
+          <Link
+            href="/electrician/materials"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
+              isActive("/electrician/materials") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
+            }`}
+          >
+            <Package size={17} strokeWidth={isActive("/electrician/materials") ? 2.2 : 1.8} />
+            Materials &amp; Pricing
+          </Link>
+
+          <Link
+            href="/electrician/quotes"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
+              isActive("/electrician/quotes") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
+            }`}
+          >
+            <FileText size={17} strokeWidth={isActive("/electrician/quotes") ? 2.2 : 1.8} />
+            Quotes
+          </Link>
+
+          <Link
+            href="/electrician/jobs"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
+              isActive("/electrician/jobs") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
+            }`}
+          >
+            <Briefcase size={17} strokeWidth={isActive("/electrician/jobs") ? 2.2 : 1.8} />
+            Jobs
+          </Link>
+          <Link
+            href="/electrician/margins"
+            className={`flex items-center gap-2 pl-9 pr-3 py-2 rounded-lg text-[12.5px] font-semibold transition-colors -mt-0.5 ${
+              isActive("/electrician/margins") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-3)] hover:bg-white/[0.06] hover:text-white"
+            }`}
+          >
+            <TrendingUp size={14} strokeWidth={isActive("/electrician/margins") ? 2.2 : 1.8} />
+            Margins &amp; performance
+          </Link>
+
           <Link
             href="/electrician/plans"
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
@@ -91,24 +126,17 @@ export default function AppHeader() {
             <FolderOpen size={17} strokeWidth={isActive("/electrician/plans") ? 2.2 : 1.8} />
             Plans
           </Link>
+
           <Link
-            href="/electrician/margins"
+            href="/electrician/schedule"
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
-              isActive("/electrician/margins") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
+              isActive("/electrician/schedule") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
             }`}
           >
-            <TrendingUp size={17} strokeWidth={isActive("/electrician/margins") ? 2.2 : 1.8} />
-            Margins
+            <CalendarDays size={17} strokeWidth={isActive("/electrician/schedule") ? 2.2 : 1.8} />
+            Schedule
           </Link>
-          <Link
-            href="/electrician/export"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
-              isActive("/electrician/export") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
-            }`}
-          >
-            <Download size={17} strokeWidth={isActive("/electrician/export") ? 2.2 : 1.8} />
-            Export
-          </Link>
+
           <Link
             href="/electrician/leads"
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
@@ -118,6 +146,7 @@ export default function AppHeader() {
             <Zap size={17} strokeWidth={isActive("/electrician/leads") ? 2.2 : 1.8} />
             Leads
           </Link>
+
           <Link
             href="/electrician/clients"
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
@@ -127,15 +156,28 @@ export default function AppHeader() {
             <Users size={17} strokeWidth={isActive("/electrician/clients") ? 2.2 : 1.8} />
             Clients
           </Link>
-          <Link
-            href="/electrician/map"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
-              isActive("/electrician/map") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
-            }`}
-          >
-            <MapPin size={17} strokeWidth={isActive("/electrician/map") ? 2.2 : 1.8} />
-            Map
-          </Link>
+
+          {/* Secondary / less-frequent tools */}
+          <div className="mt-3 pt-3 border-t border-white/[0.06] flex flex-col gap-0.5">
+            <Link
+              href="/electrician/map"
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[12.5px] font-semibold transition-colors ${
+                isActive("/electrician/map") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-3)] hover:bg-white/[0.06] hover:text-white"
+              }`}
+            >
+              <MapPin size={15} strokeWidth={isActive("/electrician/map") ? 2.2 : 1.8} />
+              Map
+            </Link>
+            <Link
+              href="/electrician/export"
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[12.5px] font-semibold transition-colors ${
+                isActive("/electrician/export") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-3)] hover:bg-white/[0.06] hover:text-white"
+              }`}
+            >
+              <Download size={15} strokeWidth={isActive("/electrician/export") ? 2.2 : 1.8} />
+              Export
+            </Link>
+          </div>
         </nav>
 
         <div className="px-3 pb-4 pt-2 border-t border-white/[0.06] flex flex-col gap-0.5">
@@ -170,6 +212,9 @@ export default function AppHeader() {
           <>
             <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
             <div className="absolute top-12 right-4 z-50 bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-lg overflow-hidden w-48">
+              <Link href="/electrician/materials" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
+                <Package size={15} className="text-[var(--ink-faint)]" /> Materials &amp; Pricing
+              </Link>
               <Link href="/electrician/clients" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <Users size={15} className="text-[var(--ink-faint)]" /> Clients
               </Link>

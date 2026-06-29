@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { CalendarDays, MapPin, ChevronLeft, ChevronRight, Plus, Bell, Send } from "lucide-react";
+import { getActiveBusinessId } from "@/lib/team";
+import { CalendarDays, MapPin, ChevronLeft, ChevronRight, Plus, Bell, Send, X, Trash2 } from "lucide-react";
 
 type ScheduledJob = {
   id: string; client_name: string | null; site_address: string | null;
@@ -11,9 +12,14 @@ type ScheduledJob = {
   follow_up_at?: string | null; quote_expires_at?: string | null; sent_at?: string | null;
 };
 
+type ManualEvent = {
+  id: string; title: string; notes: string | null;
+  start_at: string; end_at: string | null; all_day: boolean;
+};
+
 type CalEvent = {
-  id: string; date: string; type: "job" | "followup" | "expiry" | "sent";
-  label: string; sub?: string; jobId: string;
+  id: string; date: string; type: "job" | "followup" | "expiry" | "sent" | "manual";
+  label: string; sub?: string; jobId?: string; manualId?: string;
 };
 
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -23,16 +29,20 @@ function toDateStr(d: Date) { return d.toISOString().slice(0,10); }
 function getDaysInMonth(y: number, m: number) { return new Date(y, m+1, 0).getDate(); }
 function getFirstDay(y: number, m: number)    { return new Date(y, m, 1).getDay(); }
 
-export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJob[] }) {
+export default function CalendarPanel({ jobs: initialJobs, manualEvents: initialManualEvents }: { jobs: ScheduledJob[]; manualEvents?: ManualEvent[] }) {
   const today = new Date();
   const [year,  setYear]  = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [jobs,  setJobs]  = useState(initialJobs);
+  const [manualEvents, setManualEvents] = useState(initialManualEvents ?? []);
   const [view,  setView]  = useState<"month"|"list">("month");
   const [selectedEvents, setSelectedEvents] = useState<CalEvent[] | null>(null);
   const [scheduling, setScheduling] = useState<ScheduledJob | null>(null);
   const [schedForm, setSchedForm]   = useState({ start: "", end: "", days: "" });
   const [saving, setSaving] = useState(false);
+  const [addingEvent, setAddingEvent] = useState(false);
+  const [eventForm, setEventForm] = useState({ title: "", start: "", end: "", notes: "" });
+  const [savingEvent, setSavingEvent] = useState(false);
 
   function prevMonth() { if (month===0){setYear(y=>y-1);setMonth(11);}else setMonth(m=>m-1); }
   function nextMonth() { if (month===11){setYear(y=>y+1);setMonth(0);}else setMonth(m=>m+1); }
@@ -63,6 +73,16 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
     // Sent date
     if (j.sent_at && j.status === "sent") {
       events.push({ id: `sent-${j.id}`, date: j.sent_at.slice(0,10), type: "sent", label: `Sent: ${j.client_name ?? ""}`, sub: "Quote sent", jobId: j.id });
+    }
+  }
+
+  // Manual entries -- anything that isn't auto-derived from a quote
+  // (a site visit, supplier pickup, day off, ad-hoc team coordination).
+  for (const m of manualEvents) {
+    const start = new Date(m.start_at);
+    const end = m.end_at ? new Date(m.end_at) : start;
+    for (let ms = start.getTime(); ms <= end.getTime(); ms += 86400000) {
+      events.push({ id: `manual-${m.id}-${toDateStr(new Date(ms))}`, date: toDateStr(new Date(ms)), type: "manual", label: m.title, sub: m.notes ?? undefined, manualId: m.id });
     }
   }
 
@@ -114,14 +134,54 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
     setScheduling(null);
   }
 
+  async function createManualEvent() {
+    if (!eventForm.title.trim() || !eventForm.start) return;
+    setSavingEvent(true);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSavingEvent(false); return; }
+    const businessId = await getActiveBusinessId(supabase, user.id);
+
+    const { data, error } = await supabase
+      .from("schedule_events")
+      .insert({
+        profile_id: businessId,
+        title: eventForm.title.trim(),
+        notes: eventForm.notes.trim() || null,
+        start_at: new Date(eventForm.start).toISOString(),
+        end_at: eventForm.end ? new Date(eventForm.end).toISOString() : null,
+        all_day: true,
+        created_by: user.id,
+      })
+      .select()
+      .single();
+
+    if (!error && data) {
+      setManualEvents((prev) => [...prev, data]);
+      setEventForm({ title: "", start: "", end: "", notes: "" });
+      setAddingEvent(false);
+    }
+    setSavingEvent(false);
+  }
+
+  async function deleteManualEvent(id: string) {
+    const supabase = createClient();
+    const { error } = await supabase.from("schedule_events").delete().eq("id", id);
+    if (!error) {
+      setManualEvents((prev) => prev.filter((m) => m.id !== id));
+      setSelectedEvents(null);
+    }
+  }
+
   const EVENT_STYLE: Record<string, string> = {
     job:      "bg-[var(--amber)]/25 text-[var(--navy)] border-l-2 border-[var(--amber)]",
     followup: "bg-[var(--blue-bg)] text-[var(--blue)] border-l-2 border-[var(--blue)]",
     expiry:   "bg-[var(--red-bg)] text-[var(--red)] border-l-2 border-[var(--red)]",
     sent:     "bg-[var(--green-bg)] text-[var(--green)] border-l-2 border-[var(--green)]",
+    manual:   "bg-[var(--steel-1)]/20 text-[var(--ink-soft)] border-l-2 border-[var(--steel-3)]",
   };
   const EVENT_ICON: Record<string, typeof CalendarDays> = {
-    job: CalendarDays, followup: Bell, expiry: Bell, sent: Send,
+    job: CalendarDays, followup: Bell, expiry: Bell, sent: Send, manual: CalendarDays,
   };
 
   const listJobs = [...jobs].sort((a,b) => {
@@ -131,9 +191,12 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
 
   return (
     <div className="page-wrap">
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
         <h1 className="font-display text-[28px] text-[var(--ink)]">Schedule</h1>
         <div className="flex gap-2">
+          <button onClick={() => setAddingEvent(true)} className="inline-flex items-center gap-1.5 bg-[var(--navy)] text-white font-bold text-[12.5px] px-3 py-1.5 rounded-lg">
+            <Plus size={14} /> New event
+          </button>
           <button onClick={() => setView("month")} className={`px-3 py-1.5 rounded-lg text-[12.5px] font-bold border-2 ${view==="month" ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] text-[var(--ink-soft)]"}`}>Month</button>
           <button onClick={() => setView("list")}  className={`px-3 py-1.5 rounded-lg text-[12.5px] font-bold border-2 ${view==="list"  ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] text-[var(--ink-soft)]"}`}>List</button>
         </div>
@@ -145,6 +208,7 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
         <span className="flex items-center gap-1.5 text-[var(--blue)]"><span className="w-3 h-3 rounded-sm bg-[var(--blue-bg)] border-l-2 border-[var(--blue)]" />Follow-up due</span>
         <span className="flex items-center gap-1.5 text-[var(--red)]"><span className="w-3 h-3 rounded-sm bg-[var(--red-bg)] border-l-2 border-[var(--red)]" />Quote expires</span>
         <span className="flex items-center gap-1.5 text-[var(--green)]"><span className="w-3 h-3 rounded-sm bg-[var(--green-bg)] border-l-2 border-[var(--green)]" />Quote sent</span>
+        <span className="flex items-center gap-1.5 text-[var(--ink-soft)]"><span className="w-3 h-3 rounded-sm bg-[var(--steel-1)]/20 border-l-2 border-[var(--steel-3)]" />Manual entry</span>
       </div>
       <p className="text-[11.5px] text-[var(--ink-faint)] mb-4">
         Drag a scheduled job onto a different day to reschedule it.
@@ -176,6 +240,36 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
         </div>
       )}
 
+      {/* New manual event modal */}
+      {addingEvent && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-[var(--surface)] rounded-2xl p-5 w-full max-w-sm shadow-2xl">
+            <div className="flex items-center justify-between mb-3">
+              <p className="font-bold text-[var(--ink)] text-[17px]">New event</p>
+              <button onClick={() => setAddingEvent(false)} className="text-[var(--ink-faint)] hover:text-[var(--ink)]"><X size={18} /></button>
+            </div>
+            <div className="space-y-3">
+              <label className="block"><span className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Title *</span>
+                <input value={eventForm.title} onChange={(e) => setEventForm(f => ({...f, title: e.target.value}))} placeholder="e.g. Supplier pickup, site visit, day off" className="app-field" />
+              </label>
+              <label className="block"><span className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Date *</span>
+                <input type="date" value={eventForm.start} onChange={(e) => setEventForm(f => ({...f, start: e.target.value}))} className="app-field" />
+              </label>
+              <label className="block"><span className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">End date (optional, for multi-day)</span>
+                <input type="date" value={eventForm.end} onChange={(e) => setEventForm(f => ({...f, end: e.target.value}))} className="app-field" />
+              </label>
+              <label className="block"><span className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Notes</span>
+                <textarea value={eventForm.notes} onChange={(e) => setEventForm(f => ({...f, notes: e.target.value}))} rows={2} className="app-field text-[13px]" />
+              </label>
+            </div>
+            <div className="flex gap-3 mt-4">
+              <button onClick={createManualEvent} disabled={savingEvent || !eventForm.title.trim() || !eventForm.start} className="btn-primary flex-1">{savingEvent ? "Saving..." : "Add to schedule"}</button>
+              <button onClick={() => setAddingEvent(false)} className="btn-secondary flex-1 justify-center">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Event detail modal */}
       {selectedEvents && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4" onClick={() => setSelectedEvents(null)}>
@@ -184,13 +278,28 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
             <div className="space-y-3">
               {selectedEvents.map((ev) => {
                 const Icon = EVENT_ICON[ev.type];
-                return (
-                  <a key={ev.id} href={`/electrician/quotes/${ev.jobId}`} className={`flex items-start gap-3 rounded-xl p-3 ${EVENT_STYLE[ev.type]}`}>
+                const content = (
+                  <>
                     <Icon size={15} className="mt-0.5 shrink-0" />
-                    <div>
+                    <div className="flex-1">
                       <p className="font-semibold text-[13.5px]">{ev.label}</p>
                       {ev.sub && <p className="text-[12px] opacity-75 mt-0.5">{ev.sub}</p>}
                     </div>
+                  </>
+                );
+                if (ev.type === "manual") {
+                  return (
+                    <div key={ev.id} className={`flex items-start gap-3 rounded-xl p-3 ${EVENT_STYLE[ev.type]}`}>
+                      {content}
+                      <button onClick={() => ev.manualId && deleteManualEvent(ev.manualId)} className="ml-auto mt-0.5 shrink-0 opacity-60 hover:opacity-100">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  );
+                }
+                return (
+                  <a key={ev.id} href={`/electrician/quotes/${ev.jobId}`} className={`flex items-start gap-3 rounded-xl p-3 ${EVENT_STYLE[ev.type]}`}>
+                    {content}
                     <ChevronRight size={14} className="ml-auto mt-0.5 opacity-50 shrink-0" />
                   </a>
                 );
@@ -233,7 +342,7 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
                     {dayEvs.slice(0,3).map((ev) => (
                       <div key={ev.id}
                         draggable={ev.type === "job"}
-                        onDragStart={(e) => { e.stopPropagation(); setDragJob({ jobId: ev.jobId, fromDate: ev.date }); }}
+                        onDragStart={(e) => { e.stopPropagation(); if (ev.jobId) setDragJob({ jobId: ev.jobId, fromDate: ev.date }); }}
                         onClick={(e) => ev.type === "job" && e.stopPropagation()}
                         className={`rounded px-1 py-0.5 text-[9.5px] font-bold truncate mb-0.5 ${EVENT_STYLE[ev.type]} ${ev.type === "job" ? "cursor-grab active:cursor-grabbing" : ""}`}>
                         {ev.label}

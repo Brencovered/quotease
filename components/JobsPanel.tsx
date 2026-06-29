@@ -14,6 +14,7 @@ type Job = {
   xero_exported_at: string | null; completed_at: string | null;
   accepted_at: string | null; scheduled_start: string | null;
   assigned_to: string | null;
+  taskCounts: { total: number; done: number } | null;
 };
 type Attachment = { id: string; file_name: string; storage_path: string; file_type: string | null; signedUrl?: string };
 
@@ -196,6 +197,19 @@ export default function JobsPanel({ jobs: initialJobs }: { jobs: Job[] }) {
                     Schedule <ChevronRight size={12} />
                   </Link>
                 </div>
+              )}
+
+              {/* Task progress */}
+              {j.taskCounts && j.taskCounts.total > 0 && (
+                <Link href={`/electrician/jobs/${j.id}`} className="flex items-center gap-2 mb-3 text-[12.5px]">
+                  <div className="h-1.5 flex-1 rounded-full bg-[var(--app-bg)] overflow-hidden max-w-[120px]">
+                    <div
+                      className={`h-full rounded-full ${j.taskCounts.done === j.taskCounts.total ? "bg-[var(--green)]" : "bg-[var(--amber)]"}`}
+                      style={{ width: `${(j.taskCounts.done / j.taskCounts.total) * 100}%` }}
+                    />
+                  </div>
+                  <span className="font-semibold text-[var(--ink-soft)]">{j.taskCounts.done}/{j.taskCounts.total} tasks</span>
+                </Link>
               )}
 
               {/* Files */}
