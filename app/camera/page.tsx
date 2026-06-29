@@ -59,7 +59,8 @@ function CameraPage() {
   const videoRef   = useRef<HTMLVideoElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const snapRef    = useRef<HTMLCanvasElement>(null);
-  const streamRef  = useRef<MediaStream|null>(null);
+  const streamRef       = useRef<MediaStream|null>(null);
+  const pendingFrameRef = useRef<string>("");
 
   const [ready,       setReady]       = useState(false);
   const [error,       setCameraError] = useState<string|null>(null);
@@ -184,17 +185,52 @@ function CameraPage() {
     if(v&&s&&o){
       s.width=v.videoWidth||o.width; s.height=v.videoHeight||o.height;
       const ctx=s.getContext("2d")!;
+      // Draw live video frame
       ctx.drawImage(v,0,0,s.width,s.height);
       const sx=s.width/o.width; const sy=s.height/o.height;
-      const c=COLOURS[colourIdx%COLOURS.length];
-      ctx.fillStyle=c; ctx.strokeStyle=c; ctx.lineWidth=3;
+      const colour=COLOURS[colourIdx%COLOURS.length];
+      // Draw annotation shape on top of the frame
+      ctx.fillStyle=colour; ctx.strokeStyle=colour; ctx.lineWidth=Math.max(3, s.width/200);
+      ctx.shadowColor="rgba(0,0,0,0.8)"; ctx.shadowBlur=6;
       if(pts.length===1){
-        ctx.beginPath(); ctx.arc(pts[0].x*sx,pts[0].y*sy,10,0,Math.PI*2); ctx.fill();
+        // Point: filled circle with white border
+        ctx.beginPath(); ctx.arc(pts[0].x*sx,pts[0].y*sy,18,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle="#fff"; ctx.lineWidth=3; ctx.shadowBlur=0;
+        ctx.stroke();
+        // Number label
+        ctx.fillStyle="#000"; ctx.font=`bold ${Math.max(14, s.width/60)}px system-ui`;
+        ctx.textAlign="center"; ctx.textBaseline="middle";
+        ctx.fillText(String(annotations.length+1), pts[0].x*sx, pts[0].y*sy);
+        ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+      } else if(pts.length===2){
+        // Line with end caps
+        ctx.strokeStyle=colour; ctx.lineWidth=Math.max(4, s.width/200); ctx.shadowBlur=4;
+        ctx.beginPath(); ctx.moveTo(pts[0].x*sx,pts[0].y*sy); ctx.lineTo(pts[1].x*sx,pts[1].y*sy); ctx.stroke();
+        [pts[0],pts[1]].forEach(p=>{
+          ctx.fillStyle=colour; ctx.beginPath(); ctx.arc(p.x*sx,p.y*sy,8,0,Math.PI*2); ctx.fill();
+        });
+        // Direction arrow at end
+        const angle=Math.atan2((pts[1].y-pts[0].y)*sy,(pts[1].x-pts[0].x)*sx);
+        const ex=pts[1].x*sx; const ey=pts[1].y*sy; const al=20;
+        ctx.fillStyle=colour;
+        ctx.beginPath();
+        ctx.moveTo(ex,ey);
+        ctx.lineTo(ex-al*Math.cos(angle-0.4),ey-al*Math.sin(angle-0.4));
+        ctx.lineTo(ex-al*Math.cos(angle+0.4),ey-al*Math.sin(angle+0.4));
+        ctx.closePath(); ctx.fill();
       } else {
+        // Area: semi-transparent fill + border
+        ctx.globalAlpha=0.25; ctx.fillStyle=colour;
         ctx.beginPath(); ctx.moveTo(pts[0].x*sx,pts[0].y*sy);
-        pts.slice(1).forEach(p=>ctx.lineTo(p.x*sx,p.y*sy)); ctx.stroke();
+        pts.slice(1).forEach(p=>ctx.lineTo(p.x*sx,p.y*sy)); ctx.closePath(); ctx.fill();
+        ctx.globalAlpha=1; ctx.strokeStyle=colour; ctx.lineWidth=3;
+        ctx.beginPath(); ctx.moveTo(pts[0].x*sx,pts[0].y*sy);
+        pts.slice(1).forEach(p=>ctx.lineTo(p.x*sx,p.y*sy)); ctx.closePath(); ctx.stroke();
       }
-      fd=s.toDataURL("image/jpeg",0.8);
+      ctx.shadowBlur=0;
+      fd=s.toDataURL("image/jpeg",0.82);
+      // Store for commitAnnotation to use
+      pendingFrameRef.current = fd;
     }
     let autoLen:number|null=null;
     if(calibration&&drawMode==="line"&&pts.length===2){
@@ -211,14 +247,7 @@ function CameraPage() {
       id:uid(), type:drawMode, points:pendingPts,
       label:def.label, itemKey:formItem, qty:formQty, unit:def.unit,
       note:formNote, length:formLength??undefined,
-      frameData: (() => {
-        const v=videoRef.current; const s=snapRef.current; const o=overlayRef.current;
-        if(!v||!s||!o) return "";
-        s.width=v.videoWidth||o.width; s.height=v.videoHeight||o.height;
-        const ctx=s.getContext("2d")!;
-        ctx.drawImage(v,0,0,s.width,s.height);
-        return s.toDataURL("image/jpeg",0.8);
-      })(),
+      frameData: pendingFrameRef.current,
       colour:COLOURS[colourIdx%COLOURS.length],
     };
     setAnnotations(p=>[...p,ann]);
