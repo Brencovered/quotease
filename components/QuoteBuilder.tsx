@@ -333,15 +333,16 @@ export default function QuoteBuilder({
           onVoiceTranscript={runAiAnalysisFromVoice}
           trade="electrician"
           onAddLiveItems={(items) => {
-            items.forEach((item) => {
-              setExtraLines((prev) => [...prev, {
+            setExtraLines((prev) => [
+              ...prev,
+              ...items.map((item) => ({
                 id: Math.random().toString(36).slice(2),
                 label: `${item.description}${item.notes ? ` — ${item.notes}` : ""}`,
                 hours: 0,
                 materialsCost: 0,
-                note: `${item.quantity} ${item.unit} · from live site annotation`,
-              }]);
-            });
+                note: `Qty: ${item.quantity} ${item.unit} · live site annotation`,
+              })),
+            ]);
           }}
         />
       )}
