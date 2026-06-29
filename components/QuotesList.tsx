@@ -76,6 +76,8 @@ export default function QuotesList({ quotes: initial, xeroConnected }: { quotes:
     setSyncing(false);
     setTimeout(() => window.location.reload(), 1500);
   }
+
+  async function exportXero() {
     setExporting(true); setExportMsg(null);
     const res = await fetch("/api/quotes/export-xero-csv");
     if (res.status === 404) { setExportMsg("Nothing to export."); setExporting(false); return; }
