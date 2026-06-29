@@ -17,10 +17,10 @@ const TRADE_LABELS: Record<string,string> = {
 type Listing = {
   id: string;
   business_name: string;
-  trade: string | null;
+  trades: string[] | null;
   suburb: string | null;
   scraped_contact_phone: string | null;
-  website: string | null;
+  website_url: string | null;
   scraped_contact_email: string | null;
   google_rating: number | null;
   google_reviews_count: number | null;
@@ -66,7 +66,7 @@ export default async function DirectoryPage({
     .order("google_reviews_count", { ascending: false, nullsFirst: false })
     .range(from, to);
 
-  if (trade)  query = query.eq("trade", trade);
+  if (trade)  query = query.contains("trades", [trade]);
   if (suburb) query = query.ilike("suburb", `%${suburb}%`);
 
   const { data: listings, error, count } = await query;
@@ -179,9 +179,9 @@ export default async function DirectoryPage({
 
                 <div className="p-4 flex flex-col flex-1">
                   {/* Trade badge */}
-                  {listing.trade && (
+                  {listing.trades?.length && (
                     <span className="inline-block text-[10.5px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[var(--amber-light)] text-[var(--amber-deep)] mb-2 w-fit capitalize">
-                      {TRADE_LABELS[listing.trade] ?? listing.trade}
+                      {listing.trades?.map(t => TRADE_LABELS[t] ?? t).join(", ")}
                     </span>
                   )}
 
@@ -230,8 +230,8 @@ export default async function DirectoryPage({
                           <Mail size={12} /> Email
                         </a>
                       )}
-                      {listing.website && (
-                        <a href={listing.website} target="_blank" rel="noopener noreferrer"
+                      {listing.website_url && (
+                        <a href={listing.website_url} target="_blank" rel="noopener noreferrer"
                           className="flex items-center gap-1 text-[12px] text-[var(--blue)] hover:opacity-70 font-semibold">
                           <Globe size={12} /> Website
                         </a>
