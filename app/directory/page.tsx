@@ -54,7 +54,7 @@ export default async function DirectoryPage({
       {/* Hero */}
       <div style={{ background: "var(--navy)" }} className="text-white">
         <div className="max-w-6xl mx-auto px-6 py-12">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-10">
             <Link href="/" className="font-display text-[20px] text-[var(--amber)]">Swiftscope</Link>
             <div className="flex gap-4">
               <Link href="/login" className="text-white/70 hover:text-white text-[13px] font-semibold">Log in</Link>
@@ -63,16 +63,34 @@ export default async function DirectoryPage({
               </Link>
             </div>
           </div>
-          <h1 className="font-display text-[2.6rem] leading-tight mb-2">Find a trusted local tradie</h1>
-          <p className="text-[var(--steel-2)] text-[15px] max-w-xl mb-6">
-            {count ?? 0} verified businesses across Melbourne&apos;s south east. Real ratings from Google Reviews.
+
+          <h1 className="font-display text-[2.8rem] leading-tight mb-3">Need a tradie?</h1>
+          <p className="text-[var(--steel-2)] text-[16px] max-w-xl mb-10">
+            {count ?? 0} verified local businesses across Melbourne&apos;s south east.
           </p>
-          <div className="flex gap-3 flex-wrap">
-            <Link href="/get-quotes" className="bg-[var(--amber)] text-[var(--navy)] font-extrabold text-[15px] px-6 py-3 rounded-xl hover:opacity-90 transition-opacity">
-              Get quotes from local tradies →
+
+          {/* Two path cards */}
+          <div className="grid sm:grid-cols-2 gap-4 max-w-2xl">
+            <Link href="/get-quotes"
+              className="group bg-[var(--amber)] rounded-2xl p-6 hover:opacity-95 transition-opacity">
+              <p className="font-display text-[1.4rem] text-[var(--navy)] mb-1">Get quotes</p>
+              <p className="text-[var(--navy)]/70 text-[13.5px] mb-4 leading-snug">
+                Tell us what you need. Up to 3 local tradies will contact you directly.
+              </p>
+              <p className="text-[var(--navy)] font-extrabold text-[13px] flex items-center gap-1">
+                Start request →
+              </p>
             </Link>
-            <Link href="#listings" className="text-white/70 hover:text-white font-semibold text-[14px] px-6 py-3 rounded-xl border border-white/20">
-              Browse directory
+
+            <Link href="#listings"
+              className="group bg-white/10 rounded-2xl p-6 hover:bg-white/15 transition-colors border border-white/10">
+              <p className="font-display text-[1.4rem] text-white mb-1">Browse tradies</p>
+              <p className="text-white/60 text-[13.5px] mb-4 leading-snug">
+                Search {count ?? 0} local businesses by trade and suburb. Read Google reviews.
+              </p>
+              <p className="text-white font-extrabold text-[13px] flex items-center gap-1">
+                Search directory →
+              </p>
             </Link>
           </div>
         </div>
