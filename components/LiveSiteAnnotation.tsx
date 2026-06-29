@@ -215,11 +215,8 @@ export default function LiveSiteAnnotation({
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw committed annotations
-    for (const ann of annotations) {
-      drawAnnotation(ctx, ann, ann.colour, false);
-    }
-
+    // NOTE: Committed annotations are NOT drawn on the live feed -- they are
+    // saved as frozen frame snapshots. Only show in-progress drawing.
     // Draw in-progress shape
     if (currentPoints.length > 0) {
       drawInProgress(ctx, currentPoints, drawMode, ANNOTATION_COLOURS[colourIdx % ANNOTATION_COLOURS.length]);
@@ -391,6 +388,7 @@ export default function LiveSiteAnnotation({
     setColourIdx((i) => (i + 1) % ANNOTATION_COLOURS.length);
     setShowForm(false);
     setPendingPoints([]);
+    setCurrentPoints([]); // Clear overlay for next annotation
   }
 
   // ── Calibration commit ───────────────────────────────────────────────────
@@ -714,7 +712,7 @@ export default function LiveSiteAnnotation({
           <div className="bg-white rounded-t-2xl p-4 w-full">
             <div className="flex items-center justify-between mb-3">
               <p className="font-bold text-[14px] text-[var(--ink)]">What is this?</p>
-              <button onClick={() => { setShowForm(false); setCurrentPoints([]); }} className="text-[var(--ink-faint)]"><X size={16} /></button>
+              <button onClick={() => { setShowForm(false); setCurrentPoints([]); setPendingPoints([]); }} className="text-[var(--ink-faint)]"><X size={16} /></button>
             </div>
 
             <div className="grid grid-cols-2 gap-1.5 mb-3 max-h-36 overflow-y-auto">
