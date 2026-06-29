@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 
 const XERO_CLIENT_ID     = process.env.XERO_CLIENT_ID!;
 const XERO_REDIRECT_URI  = process.env.NEXT_PUBLIC_APP_URL + "/api/xero/callback";
-const XERO_SCOPES        = "openid profile email accounting.transactions accounting.contacts offline_access";
+const XERO_SCOPES = "offline_access openid profile email accounting.invoices accounting.contacts accounting.settings";
 
 export async function GET(_req: NextRequest) {
   const supabase = await createClient();

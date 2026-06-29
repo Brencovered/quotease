@@ -340,25 +340,7 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
         </div>
       </div>
 
-      {/* Xero */}
-      <div className="card mb-4">
-        <p className="section-tag mb-1">Accounting</p>
-        <p className="font-semibold text-[var(--ink)] mb-1">Xero integration</p>
-        {profile?.xero_connected ? (
-          <div className="flex items-center gap-2 text-[var(--green)] font-semibold text-[14px] mt-2">
-            <Check size={15} /> Connected to Xero
-          </div>
-        ) : (
-          <>
-            <p className="text-[13px] text-[var(--ink-faint)] mb-3">
-              Most tradies use the free CSV export on the Quotes page. Only connect this for automatic invoice sync.
-            </p>
-            <a href="/api/xero/connect" className="btn-primary inline-flex text-[13px] py-2">
-              Connect Xero
-            </a>
-          </>
-        )}
-      </div>
+      {/* Xero connect is handled by XeroConnectPanel in settings/page.tsx */}
 
       {/* AI addon - lower priority */}
       <div className="card mb-4">
