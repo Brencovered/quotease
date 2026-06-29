@@ -176,6 +176,9 @@ export default function AppHeader() {
               <Link href="/electrician/plans" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <FolderOpen size={15} className="text-[var(--ink-faint)]" /> Plans
               </Link>
+              <Link href="/electrician/leads" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
+                <Zap size={15} className="text-[var(--ink-faint)]" /> Leads
+              </Link>
               <Link href="/electrician/margins" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <TrendingUp size={15} className="text-[var(--ink-faint)]" /> Margins
               </Link>
