@@ -98,12 +98,45 @@ function dist(a: Point, b: Point) {
 
 // ── Main component ─────────────────────────────────────────────────────────
 
+// Maps annotation item keys to material item_keys in the price book
+const ITEM_TO_MATERIAL: Record<string, { matKey: string; labourHrs: number }> = {
+  dl:       { matKey: "dl_standard",     labourHrs: 0.4 },
+  gpo:      { matKey: "pp",              labourHrs: 0.4 },
+  switch:   { matKey: "sw",              labourHrs: 0.3 },
+  data:     { matKey: "data",            labourHrs: 0.5 },
+  exhaust:  { matKey: "exhaust_ceiling", labourHrs: 0.75 },
+  smoke:    { matKey: "smoke",           labourHrs: 1.0 },
+  cable:    { matKey: "cable_2_5",       labourHrs: 0 },
+  conduit:  { matKey: "cable_2_5",       labourHrs: 0 },
+  sb:       { matKey: "sb_rcd",          labourHrs: 4 },
+  circuit:  { matKey: "appliance",       labourHrs: 1.5 },
+  tap:      { matKey: "appliance",       labourHrs: 1.0 },
+  toilet:   { matKey: "appliance",       labourHrs: 1.5 },
+  basin:    { matKey: "appliance",       labourHrs: 1.0 },
+  shower:   { matKey: "appliance",       labourHrs: 2.0 },
+  hwu:      { matKey: "appliance",       labourHrs: 3.0 },
+  pipe:     { matKey: "cable_2_5",       labourHrs: 0.2 },
+  drain:    { matKey: "cable_2_5",       labourHrs: 0.3 },
+  gas:      { matKey: "appliance",       labourHrs: 1.5 },
+  gutter:   { matKey: "appliance",       labourHrs: 0.5 },
+  downpipe: { matKey: "appliance",       labourHrs: 0.75 },
+  ridge:    { matKey: "cable_2_5",       labourHrs: 0.3 },
+  valley:   { matKey: "cable_2_5",       labourHrs: 0.4 },
+  skylight: { matKey: "appliance",       labourHrs: 4.0 },
+  whirly:   { matKey: "appliance",       labourHrs: 1.0 },
+  door:     { matKey: "appliance",       labourHrs: 2.0 },
+  wall:     { matKey: "cable_2_5",       labourHrs: 1.0 },
+  deck:     { matKey: "appliance",       labourHrs: 0.5 },
+};
+
 export default function LiveSiteAnnotation({
   trade,
+  lib,
   onAddLineItems,
 }: {
   trade:          string;
-  onAddLineItems: (items: { description: string; quantity: number; unit: string; notes: string }[]) => void;
+  lib?:           { item_key: string; unit_cost: number }[];
+  onAddLineItems: (items: { description: string; quantity: number; unit: string; notes: string; materialsCost: number; labourHrs: number }[]) => void;
 }) {
   const videoRef       = useRef<HTMLVideoElement>(null);
   const canvasRef      = useRef<HTMLCanvasElement>(null);
@@ -112,6 +145,7 @@ export default function LiveSiteAnnotation({
 
   const [mode,          setMode]          = useState<"idle" | "camera" | "review">("idle");
   const [cameraError,   setCameraError]   = useState<string | null>(null);
+  const [pendingStream, setPendingStream] = useState<MediaStream | null>(null);
 
   // Drawing state
   const [drawMode,      setDrawMode]      = useState<AnnotationType>("point");
@@ -415,11 +449,18 @@ export default function LiveSiteAnnotation({
   function finishAndAddToQuote() {
     const lineItems = annotations.map((ann) => {
       const lengthNote = ann.length != null ? ` (${ann.length}m estimated)` : "";
+      const pricing = ITEM_TO_MATERIAL[ann.itemKey];
+      const matCost = pricing && lib
+        ? (lib.find(m => m.item_key === pricing.matKey)?.unit_cost ?? 0) * ann.qty
+        : 0;
+      const labourHrs = pricing ? pricing.labourHrs * ann.qty : 0;
       return {
-        description: ann.label,
-        quantity:    ann.qty,
-        unit:        ann.unit,
-        notes:       [ann.note, lengthNote].filter(Boolean).join(" — "),
+        description:  ann.label,
+        quantity:     ann.qty,
+        unit:         ann.unit,
+        notes:        [ann.note, lengthNote].filter(Boolean).join(" — "),
+        materialsCost: Math.round(matCost),
+        labourHrs,
       };
     });
     onAddLineItems(lineItems);

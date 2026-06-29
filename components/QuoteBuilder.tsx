@@ -333,15 +333,16 @@ export default function QuoteBuilder({
           onAnalyse={runAiAnalysis}
           onVoiceTranscript={runAiAnalysisFromVoice}
           trade="electrician"
+          lib={lib}
           onAddLiveItems={(items) => {
             setExtraLines((prev) => [
               ...prev,
               ...items.map((item) => ({
                 id: Math.random().toString(36).slice(2),
                 label: `${item.description}${item.notes ? ` — ${item.notes}` : ""}`,
-                hours: 0,
-                materialsCost: 0,
-                note: `Qty: ${item.quantity} ${item.unit} · live site annotation`,
+                hours: (item as {labourHrs?: number}).labourHrs ?? 0,
+                materialsCost: (item as {materialsCost?: number}).materialsCost ?? 0,
+                note: `Qty: ${item.quantity} ${item.unit} · live site`,
               })),
             ]);
           }}
@@ -408,13 +409,14 @@ function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions
   onRemove: (name: string) => void; onAnalyse: () => void;
   onVoiceTranscript: (transcript: string) => void;
   trade: string;
-  onAddLiveItems: (items: { description: string; quantity: number; unit: string; notes: string }[]) => void;
+  lib: { item_key: string; unit_cost: number }[];
+  onAddLiveItems: (items: { description: string; quantity: number; unit: string; notes: string; materialsCost?: number; labourHrs?: number }[]) => void;
 }) {
   return (
     <div className="space-y-4">
 
       {/* Live site annotation */}
-      <LiveSiteAnnotation trade={trade} onAddLineItems={onAddLiveItems} />
+      <LiveSiteAnnotation trade={trade} lib={lib} onAddLineItems={onAddLiveItems} />
 
       <div className="card">
         <p className="section-tag mb-1">Step 1</p>
