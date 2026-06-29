@@ -11,6 +11,7 @@ import ExtraJobLines, { extraLinesTotals } from "./ExtraJobLines";
 import { resolveClientId } from "@/lib/resolveClientId";
 import { getActiveBusinessId } from "@/lib/team";
 import MaterialsEditor from "@/components/MaterialsEditor";
+import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import {
   calcElectricianQuote,
   ELECTRICIAN_DEFAULT_MATERIALS,
@@ -40,7 +41,7 @@ const DEFAULT_INTAKE: ElectricianIntake = {
 
 const STEPS = [
   { id: "customer",   label: "Customer" },
-  { id: "drawing",    label: "Files" },
+  { id: "drawing",    label: "Files" }, // badge handled inline
   { id: "job",        label: "Job" },
   { id: "electrical", label: "Electrical" },
   { id: "site",       label: "Site" },
@@ -288,12 +289,12 @@ export default function QuoteBuilder({
             </div>
             <div>
               <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Materials</p>
-              <p className="font-display text-[18px] text-white leading-tight">${(result.materialsCost + markupTotal).toLocaleString()}</p>
+              <p className="font-display text-[18px] text-white leading-tight">${(result.materialsCost + markupTotal + extraLinesTotals(extraLines, rate, margin).materials).toLocaleString()}</p>
             </div>
           </div>
           <div className="text-right">
             <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Total</p>
-            <p className="font-display text-[24px] text-[var(--amber)] leading-tight">${(result.totalCost + markupTotal).toLocaleString()}</p>
+            <p className="font-display text-[24px] text-[var(--amber)] leading-tight">${(result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, margin).total).toLocaleString()}</p>
           </div>
         </div>
       </div>
@@ -303,6 +304,7 @@ export default function QuoteBuilder({
         {STEPS.map((s, i) => {
           const done    = i < step;
           const current = i === step;
+          const badge   = s.id === "drawing" && extraLines.length > 0 ? extraLines.length : null;
           return (
             <button key={s.id} onClick={() => setStep(i)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12.5px] font-bold whitespace-nowrap transition-all ${
@@ -332,6 +334,20 @@ export default function QuoteBuilder({
           onRemove={(name) => { setDrawingFiles((p) => p.filter((f) => f.name !== name)); setAnalysisResult(null); }}
           onAnalyse={runAiAnalysis}
           onVoiceTranscript={runAiAnalysisFromVoice}
+          trade="electrician"
+          lib={lib}
+          onAddLiveItems={(items) => {
+            setExtraLines((prev) => [
+              ...prev,
+              ...items.map((item) => ({
+                id: Math.random().toString(36).slice(2),
+                label: `${item.description}${item.notes ? ` — ${item.notes}` : ""}`,
+                hours: (item as {labourHrs?: number}).labourHrs ?? 0,
+                materialsCost: (item as {materialsCost?: number}).materialsCost ?? 0,
+                note: `Qty: ${item.quantity} ${item.unit} · live site`,
+              })),
+            ]);
+          }}
         />
       )}
 
@@ -387,16 +403,23 @@ export default function QuoteBuilder({
 }
 
 /* ─── Step: Drawing ─────────────────────────────────────────────── */
-function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions, analyzing, analysisResult, analysisError, usageLimitReached, onUpload, onRemove, onAnalyse, onVoiceTranscript }: {
+function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions, analyzing, analysisResult, analysisError, usageLimitReached, onUpload, onRemove, onAnalyse, onVoiceTranscript, trade, lib, onAddLiveItems }: {
   drawingFiles: File[]; drawingInstructions: string; setDrawingInstructions: (v: string) => void;
   analyzing: boolean; analysisResult: { confidence: string; notes: string } | null;
   analysisError: string | null; usageLimitReached: boolean;
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRemove: (name: string) => void; onAnalyse: () => void;
   onVoiceTranscript: (transcript: string) => void;
+  trade: string;
+  lib: { item_key: string; unit_cost: number }[];
+  onAddLiveItems: (items: { description: string; quantity: number; unit: string; notes: string; materialsCost?: number; labourHrs?: number }[]) => void;
 }) {
   return (
     <div className="space-y-4">
+
+      {/* Live site annotation */}
+      <LiveSiteAnnotation trade={trade} lib={lib} onAddLineItems={onAddLiveItems} />
+
       <div className="card">
         <p className="section-tag mb-1">Step 1</p>
         <p className="font-semibold text-[var(--ink)] text-[17px] mb-1">Upload drawings</p>
@@ -880,7 +903,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
           </div>
           <div className="flex justify-between text-[14px]">
             <span className="text-[var(--steel-2)]">Materials</span>
-            <span className="text-white font-semibold tabular">${(result.materialsCost + markupTotal).toLocaleString()}</span>
+            <span className="text-white font-semibold tabular">${(result.materialsCost + markupTotal + extraLinesTotals(extraLines, rate, margin).materials).toLocaleString()}</span>
           </div>
           {markupTotal > 0 && (
             <div className="flex justify-between text-[12.5px]">
@@ -889,7 +912,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
           )}
           <div className="border-t border-white/10 pt-2 flex justify-between">
             <span className="text-white font-bold text-[15px]">Total</span>
-            <span className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + markupTotal).toLocaleString()}</span>
+            <span className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, margin).total).toLocaleString()}</span>
           </div>
         </div>
       </div>
@@ -927,7 +950,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
               <div key={i} className="flex justify-between text-[13.5px]">
                 <span className="text-[var(--ink-soft)]">{t.label}</span>
                 <span className="font-bold text-[var(--ink)] tabular">
-                  {t.percent}% - ${Math.round(((result.totalCost + markupTotal) * t.percent) / 100).toLocaleString()}
+                  {t.percent}% - ${Math.round(((result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, margin).total) * t.percent) / 100).toLocaleString()}
                 </span>
               </div>
             ))}
