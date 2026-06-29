@@ -90,17 +90,6 @@ export async function POST(request: Request) {
 
     <!-- Quote summary strip -->
     <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:24px;">
-      <tr style="background:#f8fafc;">
-        <td style="padding:10px 14px;font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#94a3b8;" colspan="2">Quote summary</td>
-      </tr>
-      <tr>
-        <td style="padding:10px 14px;font-size:13.5px;color:#475569;border-bottom:1px solid #e2e8f0;">Labour</td>
-        <td style="padding:10px 14px;font-size:13.5px;font-weight:700;color:#0a1722;text-align:right;border-bottom:1px solid #e2e8f0;">$${Math.round(((quote.total_cost ?? 0) - (quote.materials_cost ?? 0))).toLocaleString()}</td>
-      </tr>
-      <tr>
-        <td style="padding:10px 14px;font-size:13.5px;color:#475569;border-bottom:2px solid #0a1722;">Materials</td>
-        <td style="padding:10px 14px;font-size:13.5px;font-weight:700;color:#0a1722;text-align:right;border-bottom:2px solid #0a1722;">$${(quote.materials_cost ?? 0).toLocaleString()}</td>
-      </tr>
       <tr style="background:#0a1722;">
         <td style="padding:12px 14px;font-size:14px;font-weight:800;color:#ffffff;">Total</td>
         <td style="padding:12px 14px;font-size:20px;font-weight:900;color:#ffb400;text-align:right;">$${(quote.total_cost ?? 0).toLocaleString()}</td>

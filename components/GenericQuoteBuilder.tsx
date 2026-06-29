@@ -85,11 +85,12 @@ export default function GenericQuoteBuilder({
     setItems((p) => p.filter((it) => it.id !== id));
   }
 
-  // Backend prompt is electrical-specific - rather than force-mapping
-  // mismatched fields onto whichever of the 9 trades this is, surface the
-  // AI's notes/confidence as a read-only hint, same pattern the dedicated
-  // builders use. The trade name is at least passed through so the AI's
-  // framing is relevant even if the structured fields aren't.
+  // The backend now runs a trade-dynamic AI pipeline - sending `tradeKey`
+  // (tiler, painter, landscaper, etc.) gets a persona tailored to that
+  // trade and structured quantity/risk extraction instead of a generic
+  // read. The calc engine here is a flat labour+materials model, so we
+  // still only surface confidence/notes as a read-only hint rather than
+  // auto-filling line items.
   async function runAiAnalysis() {
     if (!drawingFiles.length) return;
     setAnalyzing(true); setAnalysisError(null); setAnalysisResult(null);

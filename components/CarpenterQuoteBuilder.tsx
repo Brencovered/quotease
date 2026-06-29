@@ -74,12 +74,12 @@ export default function CarpenterQuoteBuilder({ profile, materials, preClientId,
 
   function set<K extends keyof CarpenterIntake>(k: K, v: CarpenterIntake[K]) { setIntake((p) => ({...p,[k]:v})); }
 
-  // The backend prompt for both endpoints is tailored to electrical jobs
-  // (power points, light points, etc.) - rather than force-mapping
-  // mismatched fields onto a carpentry intake, this surfaces the AI's
-  // notes/confidence as a read-only hint, same pattern Plumber already
-  // uses. Genuine trade-specific structured extraction would need a
-  // separate backend prompt per trade.
+  // The backend now runs a trade-dynamic AI pipeline - passing `trade` here
+  // gets a carpentry-specific persona and structured extraction
+  // (timber schedule, framing, ceiling heights, bulkheads) instead of a
+  // generic read. We still only surface confidence/notes here since the
+  // calc engine's intake fields don't map 1:1 to the structured quantities -
+  // the AI's findings come through as a readable summary.
   async function runAiAnalysis() {
     if (!drawingFiles.length) return;
     setAnalyzing(true); setAnalysisError(null); setAnalysisResult(null);
