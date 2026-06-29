@@ -29,7 +29,7 @@ const FILTERS = ["all","draft","sent","accepted","paid","declined"];
 function daysUntil(d: string | null) { if (!d) return null; return Math.ceil((new Date(d).getTime() - Date.now()) / 86400000); }
 function daysAgo(d: string | null)   { if (!d) return null; return Math.floor((Date.now() - new Date(d).getTime()) / 86400000); }
 
-export default function QuotesList({ quotes: initial }: { quotes: Quote[] }) {
+export default function QuotesList({ quotes: initial, xeroConnected }: { quotes: Quote[]; xeroConnected?: boolean }) {
   const [quotes]  = useState(initial);
   const searchParams = useSearchParams();
   const initialFilter = searchParams.get("status");
@@ -59,7 +59,23 @@ export default function QuotesList({ quotes: initial }: { quotes: Quote[] }) {
     setBusyId(null);
   }
 
-  async function exportXero() {
+  const [syncing,   setSyncing]   = useState(false);
+  const [syncMsg,   setSyncMsg]   = useState<string | null>(null);
+
+  async function syncXero() {
+    setSyncing(true); setSyncMsg(null);
+    const ids = notExported.map(q => q.id);
+    const res = await fetch("/api/xero/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ quoteIds: ids }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { setSyncMsg(data.error ?? "Sync failed"); setSyncing(false); return; }
+    setSyncMsg(`${data.succeeded} invoice${data.succeeded !== 1 ? "s" : ""} pushed to Xero.${data.failed > 0 ? ` ${data.failed} failed.` : ""}`);
+    setSyncing(false);
+    setTimeout(() => window.location.reload(), 1500);
+  }
     setExporting(true); setExportMsg(null);
     const res = await fetch("/api/quotes/export-xero-csv");
     if (res.status === 404) { setExportMsg("Nothing to export."); setExporting(false); return; }
@@ -128,11 +144,19 @@ export default function QuotesList({ quotes: initial }: { quotes: Quote[] }) {
         <div className="card mb-4 flex items-center justify-between gap-3">
           <div>
             <p className="text-[13px] font-bold text-[var(--ink)]">{notExported.length} ready for Xero</p>
-            {exportMsg && <p className="text-[12px] text-[var(--ink-faint)] mt-0.5">{exportMsg}</p>}
+            {(exportMsg || syncMsg) && <p className="text-[12px] text-[var(--ink-faint)] mt-0.5">{syncMsg ?? exportMsg}</p>}
           </div>
-          <button onClick={exportXero} disabled={exporting} className="btn-secondary text-[13px] py-2 whitespace-nowrap">
-            {exporting ? "Exporting..." : "Export CSV"}
-          </button>
+          <div className="flex gap-2 shrink-0">
+            {xeroConnected ? (
+              <button onClick={syncXero} disabled={syncing} className="btn-primary text-[13px] py-2 whitespace-nowrap">
+                {syncing ? "Syncing..." : "Sync to Xero"}
+              </button>
+            ) : (
+              <button onClick={exportXero} disabled={exporting} className="btn-secondary text-[13px] py-2 whitespace-nowrap">
+                {exporting ? "Exporting..." : "Export CSV"}
+              </button>
+            )}
+          </div>
         </div>
       )}
 
