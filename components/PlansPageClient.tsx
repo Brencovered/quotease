@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import PlanMarkup, { type PlanShape, type CalibrationLine, type MaterialItem } from "./PlanMarkup";
+import DrawingAnalysisPanel from "./DrawingAnalysisPanel";
 import { Upload, X, Plus, FileText, ChevronRight, Check, User } from "lucide-react";
 
 type Client = { id: string; name: string; billing_address: string | null };
@@ -36,6 +37,7 @@ export default function PlansPageClient({
   const [linkedMsg,    setLinkedMsg]    = useState<string | null>(null);
   const [totalCost,    setTotalCost]    = useState<Record<string, number>>({});
   const [activeTrade,  setActiveTrade]  = useState<string>(trades[0] ?? 'electrician');
+  const [aiLineItems,  setAiLineItems]  = useState<{description:string;quantity:number;unit:string;notes:string}[]>([]);
 
   // Quick upload flow state
   const [showUpload,   setShowUpload]   = useState(false);
@@ -296,6 +298,12 @@ export default function PlansPageClient({
                   ))}
                 </div>
               )}
+              <DrawingAnalysisPanel
+                imageUrl={openPlan.signedUrl}
+                trade={activeTrade}
+                onAddLineItems={(items) => setAiLineItems(prev => [...prev, ...items])}
+              />
+
               <PlanMarkup
                 imageUrl={openPlan.signedUrl}
                 shapes={openPlan.shapes}
