@@ -19,13 +19,15 @@ type Listing = {
   business_name: string;
   trade: string | null;
   suburb: string | null;
-  phone: string | null;
+  scraped_contact_phone: string | null;
   website: string | null;
-  email: string | null;
-  rating: number | null;
-  review_count: number | null;
-  photo_refs: string[] | null;
+  scraped_contact_email: string | null;
+  google_rating: number | null;
+  google_reviews_count: number | null;
+  photo_references: string[] | null;
   place_id: string | null;
+  blurb: string | null;
+  is_claimed: boolean;
 };
 
 function StarRating({ rating }: { rating: number }) {
@@ -157,11 +159,11 @@ export default async function DirectoryPage({
             {listings?.map((listing: Listing) => (
               <div key={listing.id} className="card flex flex-col overflow-hidden p-0">
                 {/* Photo */}
-                {listing.photo_refs?.[0] ? (
+                {listing.photo_references?.[0] ? (
                   <div className="h-40 bg-[var(--app-bg)] overflow-hidden">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={`/api/places/photo?ref=${listing.photo_refs[0]}&maxw=600`}
+                      src={`/api/places/photo?ref=${listing.photo_references[0]}&maxw=600`}
                       alt={listing.business_name}
                       className="w-full h-full object-cover"
                       loading="lazy"
@@ -195,28 +197,35 @@ export default async function DirectoryPage({
                     </p>
                   )}
 
+                  {/* Blurb */}
+                  {listing.blurb && (
+                    <p className="text-[12.5px] text-[var(--ink-soft)] leading-snug mb-2 line-clamp-2">
+                      {listing.blurb}
+                    </p>
+                  )}
+
                   {/* Rating */}
-                  {listing.rating && (
+                  {listing.google_rating && (
                     <div className="flex items-center gap-1.5 mb-3">
-                      <StarRating rating={listing.rating} />
-                      <span className="text-[12.5px] font-bold text-[var(--ink)]">{listing.rating.toFixed(1)}</span>
-                      {listing.review_count && (
-                        <span className="text-[12px] text-[var(--ink-faint)]">({listing.review_count.toLocaleString()})</span>
+                      <StarRating rating={listing.google_rating} />
+                      <span className="text-[12.5px] font-bold text-[var(--ink)]">{listing.google_rating.toFixed(1)}</span>
+                      {listing.google_reviews_count != null && (
+                        <span className="text-[12px] text-[var(--ink-faint)]">({listing.google_reviews_count.toLocaleString()})</span>
                       )}
                     </div>
                   )}
 
                   {/* Contact */}
                   <div className="mt-auto pt-3 border-t border-[var(--line-subtle)] flex flex-wrap gap-2 items-center">
-                    {listing.phone && (
-                      <a href={`tel:${listing.phone}`}
+                    {listing.scraped_contact_phone && (
+                      <a href={`tel:${listing.scraped_contact_phone}`}
                         className="flex items-center gap-1 text-[12px] font-semibold text-[var(--navy)] hover:opacity-70">
-                        <Phone size={12} /> {listing.phone}
+                        <Phone size={12} /> {listing.scraped_contact_phone}
                       </a>
                     )}
                     <div className="flex gap-2 ml-auto">
-                      {listing.email && (
-                        <a href={`mailto:${listing.email}`}
+                      {listing.scraped_contact_email && (
+                        <a href={`mailto:${listing.scraped_contact_email}`}
                           className="flex items-center gap-1 text-[12px] text-[var(--blue)] hover:opacity-70 font-semibold">
                           <Mail size={12} /> Email
                         </a>
