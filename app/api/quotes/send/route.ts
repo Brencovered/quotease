@@ -94,7 +94,7 @@ export async function POST(request: Request) {
         <td style="padding:10px 14px;font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#94a3b8;" colspan="2">Quote summary</td>
       </tr>
       <tr>
-        <td style="padding:10px 14px;font-size:13.5px;color:#475569;border-bottom:1px solid #e2e8f0;">Labour (${quote.labour_hours ?? 0} hrs)</td>
+        <td style="padding:10px 14px;font-size:13.5px;color:#475569;border-bottom:1px solid #e2e8f0;">Labour</td>
         <td style="padding:10px 14px;font-size:13.5px;font-weight:700;color:#0a1722;text-align:right;border-bottom:1px solid #e2e8f0;">$${Math.round(((quote.total_cost ?? 0) - (quote.materials_cost ?? 0))).toLocaleString()}</td>
       </tr>
       <tr>

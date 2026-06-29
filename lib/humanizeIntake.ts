@@ -2,11 +2,12 @@
 // Used by both generateQuotePdf.ts and the public quote page /q/[token].
 
 export const INTAKE_FIELD_LABELS: Record<string, string> = {
-  switchboardUpgrade: "Switchboard upgrade",    switchboardRcbo: "Full RCBO upgrade",
+  switchboardUpgrade: "Switchboard upgrade",    switchboardRcbo: "RCBO upgrade",
+  switchboardRcboMode: "RCBO type",              switchboardPoles: "Number of poles",
   threePhase: "3-phase supply",                 powerPoints: "Power points",
   lightPoints: "Light points",                  switches: "Switches",
   downlights: "Downlights",                     downlightGrade: "Fitting grade",
-  exhaustFans: "Exhaust fans",                  cableMetres: "Cable run",
+  exhaustFans: "Exhaust fans",                  downlightSupply: "Downlight supply",
   trenchMetres: "Trenching",                    roofAccess: "Roof access",
   subfloorAccess: "Subfloor access",            ceilingType: "Ceiling type",
   siteAccess: "Site access",                    multistorey: "Multi-storey",
@@ -46,7 +47,9 @@ export const INTAKE_VALUE_LABELS: Record<string, Record<string, string>> = {
   roofAccess:     { "1": "No roof work", "1.3": "Easy access", "1.7": "Tight crawl", "2.3": "Extreme" },
   subfloorAccess: { "1": "No subfloor work", "1.3": "Easy crawl", "1.8": "Tight crawl", "2.4": "Wet / very low" },
   siteAccess:     { easy: "Easy", moderate: "Moderate", difficult: "Difficult" },
-  downlightGrade: { builder: "Builder grade", standard: "Standard", premium: "Premium / smart" },
+  downlightGrade: { builder: "Builder grade", standard: "Standard", premium: "Premium / smart", client_supply: "Client supply" },
+  downlightSupply: { supply_and_fit: "Supply & fit", wire_and_fit: "Wire & fit (client supply)", provisional: "Provisional sum" },
+  switchboardRcboMode: { full_board: "Full RCBO board", per_pole: "RCBO per pole" },
   roofType:       { colorbond: "Colorbond / metal", terracotta: "Terracotta tile", concrete_tile: "Concrete tile", mixed: "Mixed" },
   roofPitch:      { low: "Low pitch (<15°)", standard: "Standard (15–30°)", steep: "Steep (>30°)" },
   hwuType:        { electric: "Electric", gas: "Gas", heatpump: "Heat pump" },
@@ -74,7 +77,9 @@ const SUPPRESS_VALUES: Record<string, Set<string>> = {
   roofAccess:     new Set(["1"]),    // "No roof work"
   subfloorAccess: new Set(["1"]),    // "No subfloor work"
   siteAccess:     new Set(["easy"]), // easy is the default, only show if moderate/difficult
-  ceilingType:    new Set(["unknown"]), // unknown = not assessed, don't show
+  ceilingType:    new Set(["unknown"]),
+  downlightSupply: new Set(["supply_and_fit"]), // supply_and_fit is default, only show if different
+  switchboardRcboMode: new Set(["full_board"]),  // only show per_pole since full_board is obvious
 };
 
 export function humanizeIntakePublic(intake: Record<string, unknown> | null | undefined): string[] {
