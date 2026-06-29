@@ -173,6 +173,16 @@ export function humanizeIntakePublic(intake: Record<string, unknown> | null | un
     lines.push(unit !== undefined ? `${label}: ${value}${unit}` : `${label}: ${value}`);
   }
 
+  // Site annotation items
+  const siteItems = intake.site_items as {label:string;qty:number;unit:string;note:string}[] | undefined;
+  if (Array.isArray(siteItems)) {
+    for (const item of siteItems) {
+      if (item.label) {
+        lines.push(`${item.label}: ${item.qty} ${item.unit}${item.note ? ` — ${item.note}` : ""}`);
+      }
+    }
+  }
+
   // COES always included
   lines.push("Certificate of Electrical Safety (COES) — included");
 

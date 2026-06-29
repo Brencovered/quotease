@@ -75,6 +75,24 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
               </div>
             )}
 
+            {/* Site annotation items shown as priced line items */}
+            {Array.isArray((quote.intake_data as Record<string,unknown>)?.site_items) &&
+              ((quote.intake_data as Record<string,unknown>)?.site_items as {label:string;qty:number;unit:string;note:string}[]).length > 0 && (
+              <div className="mb-5">
+                <p className="text-[11px] tracking-[.1em] uppercase text-[var(--amber-deep)] font-bold mb-2">Included items</p>
+                <div className="space-y-2">
+                  {((quote.intake_data as Record<string,unknown>)?.site_items as {label:string;qty:number;unit:string;note:string}[]).map((item, i) => (
+                    <div key={i} className="flex items-center justify-between text-[13.5px] py-1.5 border-b border-[var(--line-subtle)]">
+                      <div>
+                        <p className="font-semibold text-[var(--ink)]">{item.label}</p>
+                        <p className="text-[12px] text-[var(--ink-faint)]">{item.qty} {item.unit}{item.note ? ` · ${item.note}` : ""}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="mb-5">
               <p className="text-[11px] tracking-[.1em] uppercase text-[var(--amber-deep)] font-bold mb-2">Quote summary</p>
               <div className="flex justify-between text-[15px] py-2">

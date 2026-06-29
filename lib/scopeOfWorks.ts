@@ -89,6 +89,16 @@ export function humanizeIntake(intake: Record<string, unknown> | null | undefine
     lines.push(typeof value === "boolean" ? label : `${label}: ${displayValue}`);
   }
 
+  // Site annotation items
+  const siteItems = intake.site_items as {label:string;qty:number;unit:string;note:string}[] | undefined;
+  if (Array.isArray(siteItems)) {
+    for (const item of siteItems) {
+      if (item.label) {
+        lines.push(`${item.label}: ${item.qty} ${item.unit}${item.note ? ` — ${item.note}` : ""}`);
+      }
+    }
+  }
+
   // COES always included
   lines.push("Certificate of Electrical Safety (COES) — included");
 

@@ -267,13 +267,25 @@ export default function QuoteBuilder({
       );
     }
 
+    const extraTotals    = extraLinesTotals(extraLines, rate, margin);
+    const siteLabourSave = siteItems.reduce((s, i) => s + i.labourHrs, 0);
+    const siteMatlsSave  = siteItems.reduce((s, i) => s + i.materialsCost * (1 + margin / 100), 0);
+    const siteTotalSave  = Math.round(siteLabourSave * rate + siteMatlsSave);
+
     const { data: quote, error } = await supabase.from("quotes").insert({
       profile_id: businessId, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail,
       site_address: siteAddress, trade: "electrician", job_type: intake.jobType,
-      intake_data: intake, labour_hours: result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0), materials_cost: result.materialsCost + extraLinesTotals(extraLines, rate, margin).materials,
-      total_cost: result.totalCost + extraLinesTotals(extraLines, rate, margin).total, payment_terms: paymentTerms,
+      intake_data: {
+        ...intake,
+        site_items:      siteItems,
+        annotation_meta: annotationMeta.map(a => ({ ...a, frameData: "" })), // strip large base64 from DB
+      },
+      labour_hours:   result.labourHours + extraTotals.hours + siteLabourSave,
+      materials_cost: Math.round(result.materialsCost + extraTotals.materials + siteMatlsSave),
+      total_cost:     result.totalCost + extraTotals.total + siteTotalSave,
+      payment_terms:  paymentTerms,
       quote_expires_at: new Date(Date.now() + (profile.default_expiry_days ?? 30) * 86400000).toISOString(),
-      status: sendEmail ? "sent" : "draft",
+      status:  sendEmail ? "sent" : "draft",
       sent_at: sendEmail ? new Date().toISOString() : null,
       markup_materials: preMarkupMaterials ?? [],
     }).select().single();
