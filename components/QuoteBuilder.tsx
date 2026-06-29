@@ -280,7 +280,7 @@ export default function QuoteBuilder({
         site_items:      siteItems,
         annotation_meta: annotationMeta.map(a => ({ ...a, frameData: "" })), // strip large base64 from DB
       },
-      labour_hours:   result.labourHours + extraTotals.hours + siteLabourSave,
+      labour_hours:   result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0) + siteLabourSave,
       materials_cost: Math.round(result.materialsCost + extraTotals.materials + siteMatlsSave),
       total_cost:     result.totalCost + extraTotals.total + siteTotalSave,
       payment_terms:  paymentTerms,
