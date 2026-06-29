@@ -28,7 +28,8 @@ export default async function SettingsPage() {
     const { data: userData } = await supabase.auth.getUser();
     if (userData.user) {
       const { data } = await supabase.from("profiles").select("id, business_name, contact_email, contact_phone, trades, hourly_rate, materials_margin_pct, default_deposit_pct, default_expiry_days, logo_url, abn, license_number, business_address, bank_account_name, bank_bsb, bank_account_number, accepts_cash, xero_tenant_id, xero_connected_at, xero_account_code, xero_tax_type, ai_free_analyses_used, ai_addon_status, ai_addon_period, ai_addon_analyses_used, directory_enabled, directory_suburb, directory_postcode, directory_bio, directory_website, directory_phone, directory_email").eq("id", userData.user.id).single();
-      profile = data;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      profile = data as any;
     }
   } catch (err) {
     console.error("Settings page: continuing without profile data -", err);
