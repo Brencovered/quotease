@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, xero_tenant_id, xero_access_token, xero_refresh_token, xero_token_expires_at, business_name")
+    .select("id, xero_tenant_id, xero_access_token, xero_refresh_token, xero_token_expires_at, business_name, xero_account_code, xero_tax_type")
     .eq("id", user.id)
     .single();
 
@@ -156,8 +156,8 @@ export async function POST(req: NextRequest) {
           Description: `${quote.trade ?? "Trade service"} - ${quote.job_type ?? "Service"} at ${quote.site_address ?? ""}`.trim(),
           Quantity:    1,
           UnitAmount:  total,
-          AccountCode: "200",
-          TaxType:     "OUTPUT2",
+          AccountCode: (profile as Record<string,unknown>).xero_account_code as string || "200",
+          TaxType:     (profile as Record<string,unknown>).xero_tax_type as string || "OUTPUT",
         }],
       };
 

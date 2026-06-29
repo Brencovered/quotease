@@ -150,3 +150,7 @@ create policy "Own xero mappings" on xero_contact_mappings
 -- Also add xero_connected_at if not already present (may have been missed)
 alter table profiles
   add column if not exists xero_connected_at timestamptz;
+
+-- Xero org-specific account code and tax type (read from org on connect)
+alter table profiles add column if not exists xero_account_code text default '200';
+alter table profiles add column if not exists xero_tax_type     text default 'OUTPUT';
