@@ -56,8 +56,10 @@ async function getOrCreateXeroContact(
     `https://api.xero.com/api.xro/2.0/Contacts?where=EmailAddress%3D%22${encodeURIComponent(clientEmail)}%22`,
     { headers: { Authorization: `Bearer ${accessToken}`, "Xero-tenant-id": tenantId, Accept: "application/json" } }
   );
-  const searchData = await searchRes.json();
-  const existing   = searchData?.Contacts?.[0];
+  const searchText = await searchRes.text();
+  let searchData: Record<string, unknown> = {};
+  try { searchData = JSON.parse(searchText); } catch { console.error("Xero contacts search non-JSON:", searchRes.status, searchText.slice(0, 200)); }
+  const existing = (searchData?.Contacts as {ContactID?: string}[])?.[0];
 
   let xeroContactId: string;
 
@@ -71,14 +73,17 @@ async function getOrCreateXeroContact(
         Authorization:    `Bearer ${accessToken}`,
         "Xero-tenant-id": tenantId,
         "Content-Type":   "application/json",
+        "Accept":         "application/json",
       },
       body: JSON.stringify({
         Contacts: [{ Name: clientName, EmailAddress: clientEmail }],
       }),
     });
-    const createData = await createRes.json();
-    xeroContactId    = createData?.Contacts?.[0]?.ContactID;
-    if (!xeroContactId) throw new Error("Failed to create Xero contact");
+    const createText = await createRes.text();
+    let createData: Record<string, unknown> = {};
+    try { createData = JSON.parse(createText); } catch { console.error("Xero contact create non-JSON:", createRes.status, createText.slice(0, 200)); }
+    xeroContactId = (createData?.Contacts as {ContactID?: string}[])?.[0]?.ContactID ?? "";
+    if (!xeroContactId) throw new Error(`Failed to create Xero contact (HTTP ${createRes.status})`);
   }
 
   // Save the mapping so we reuse this contact next time
@@ -163,15 +168,27 @@ export async function POST(req: NextRequest) {
           Authorization:    `Bearer ${accessToken}`,
           "Xero-tenant-id": tenantId,
           "Content-Type":   "application/json",
+          "Accept":         "application/json",
         },
         body: JSON.stringify({ Invoices: [xeroInvoice] }),
       });
-      const data = await res.json();
+
+      // Xero sometimes returns HTML error pages -- handle gracefully
+      const rawText = await res.text();
+      let data: Record<string, unknown> = {};
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        console.error("Xero non-JSON response:", res.status, rawText.slice(0, 300));
+        results.push({ quoteId: quote.id, error: `Xero error ${res.status} -- check your connection in Settings and try again` });
+        continue;
+      }
+
       console.log("Xero invoice response:", JSON.stringify(data).slice(0, 500));
-      const inv  = data?.Invoices?.[0];
+      const inv = (data?.Invoices as {InvoiceID?: string; InvoiceNumber?: string}[])?.[0];
 
       if (!res.ok || !inv?.InvoiceID) {
-        const errMsg = data?.Detail ?? data?.Message ?? data?.Elements?.[0]?.ValidationErrors?.[0]?.Message ?? JSON.stringify(data).slice(0, 200);
+        const errMsg = (data?.Detail ?? data?.Message ?? (data?.Elements as {ValidationErrors?: {Message: string}[]}[])?.[0]?.ValidationErrors?.[0]?.Message ?? `HTTP ${res.status}`) as string;
         console.error("Xero invoice error:", errMsg);
         results.push({ quoteId: quote.id, error: errMsg });
         continue;
