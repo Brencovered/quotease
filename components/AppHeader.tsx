@@ -18,6 +18,7 @@ import {
   FolderOpen,
   TrendingUp,
   Download,
+  Zap,
 } from "lucide-react";
 
 const NAV = [
@@ -107,6 +108,15 @@ export default function AppHeader() {
           >
             <Download size={17} strokeWidth={isActive("/electrician/export") ? 2.2 : 1.8} />
             Export
+          </Link>
+          <Link
+            href="/electrician/leads"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
+              isActive("/electrician/leads") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
+            }`}
+          >
+            <Zap size={17} strokeWidth={isActive("/electrician/leads") ? 2.2 : 1.8} />
+            Leads
           </Link>
           <Link
             href="/electrician/clients"
