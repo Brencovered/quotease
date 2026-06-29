@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveBusinessId } from "@/lib/team";
 import PriceBookSearch, { type PriceBookResult } from "@/components/PriceBookSearch";
-import { Package, Plus, Trash2, Loader2, X, Search, BookOpen } from "lucide-react";
+import { Package, Plus, Trash2, Loader2, X, Search, BookOpen, ArrowRight } from "lucide-react";
 
 interface PackageItem {
   item_key: string;
@@ -295,7 +296,7 @@ export default function PackagesPanel({
                 <p className="text-[12px] text-[var(--ink-soft)] mb-1">{pkg.items.length} item{pkg.items.length !== 1 ? "s" : ""} · {pkg.labour_hours}h labour</p>
                 <p className="text-[13px] font-bold text-[var(--ink)] mb-1">${Math.round(matCost + labCost).toLocaleString()} <span className="text-[11.5px] font-medium text-[var(--ink-faint)]">(${Math.round(matCost)} materials + ${Math.round(labCost)} labour)</span></p>
                 {expanded && (
-                  <ul className="mt-2 pt-2 border-t border-[var(--line-subtle)] space-y-1">
+                  <ul className="mt-2 pt-2 border-t border-[var(--line-subtle)] space-y-1 mb-3">
                     {pkg.items.map((it) => (
                       <li key={it.item_key} className="flex justify-between text-[12.5px] text-[var(--ink-soft)]">
                         <span>{it.qty}× {it.label}</span>
@@ -304,6 +305,12 @@ export default function PackagesPanel({
                     ))}
                   </ul>
                 )}
+                <Link
+                  href={`/electrician?package_id=${pkg.id}`}
+                  className="mt-2 inline-flex items-center gap-1.5 text-[12.5px] font-bold text-[var(--navy)] hover:underline"
+                >
+                  Use this package <ArrowRight size={12} />
+                </Link>
               </div>
             );
           })}

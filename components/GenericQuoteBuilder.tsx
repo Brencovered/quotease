@@ -28,11 +28,15 @@ export default function GenericQuoteBuilder({
   profile,
   preClientId,
   preMarkupMaterials,
+  prePackageName,
+  prePackageLabourHours,
 }: {
   tradeKey: string;
   profile: { hourly_rate: number; materials_margin_pct: number };
   preClientId?: string;
   preMarkupMaterials?: Array<{ label: string; quantity: number; unit: string; unitCost: number; totalCost: number }>;
+  prePackageName?: string;
+  prePackageLabourHours?: number;
 }) {
   const template = GENERIC_TRADE_TEMPLATES[tradeKey] ?? GENERIC_TRADE_TEMPLATES.custom;
   const margin   = profile.materials_margin_pct ?? 20;
@@ -55,7 +59,9 @@ export default function GenericQuoteBuilder({
   const [analysisResult, setAnalysisResult] = useState<{ confidence: string; notes: string } | null>(null);
   const [usageLimitReached, setUsageLimitReached] = useState(false);
   const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">("full_on_completion");
-  const [extraLines, setExtraLines]   = useState<ExtraLine[]>([]);
+  const [extraLines, setExtraLines]   = useState<ExtraLine[]>(
+    prePackageLabourHours ? [{ id: "package-labour", label: `${prePackageName ?? "Package"} labour`, hours: prePackageLabourHours, materialsCost: 0, note: "" }] : []
+  );
   const [saving,      setSaving]      = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 

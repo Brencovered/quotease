@@ -23,8 +23,9 @@ const DEDICATED_DEFAULTS: Record<string, readonly { item_key: string; label: str
 
 const DEDICATED = ["electrician", "plumber", "carpenter", "roofer"];
 
-export default async function NewQuotePage({ searchParams }: { searchParams: Promise<{ trade?: string; client_id?: string; markup_materials?: string; plan_id?: string }> }) {
-  const { trade: tradeParm, client_id: preClientId, markup_materials: preMarkup, plan_id: planId } = await searchParams;
+export default async function NewQuotePage({ searchParams }: { searchParams: Promise<{ trade?: string; client_id?: string; markup_materials?: string; plan_id?: string; package_id?: string }> }) {
+  let { trade: tradeParm } = await searchParams;
+  const { client_id: preClientId, markup_materials: preMarkup, plan_id: planId, package_id: packageId } = await searchParams;
 
   let profile: { hourly_rate: number; materials_margin_pct: number; trades?: string[]; onboarded_at?: string | null } = {
     hourly_rate: 95, materials_margin_pct: 20,
@@ -33,6 +34,8 @@ export default async function NewQuotePage({ searchParams }: { searchParams: Pro
   let activeTrades: string[] = [];
   let needsOnboarding = false;
   let preMarkupMaterials: Array<{ label: string; quantity: number; unit: string; unitCost: number; totalCost: number }> = [];
+  let prePackageName: string | undefined;
+  let prePackageLabourHours: number | undefined;
 
   try {
     const supabase = await createClient();
@@ -48,6 +51,18 @@ export default async function NewQuotePage({ searchParams }: { searchParams: Pro
         if (!dbProfile.onboarded_at && !isTeamMember) { needsOnboarding = true; }
         else { profile = dbProfile; activeTrades = dbProfile.trades ?? []; }
       }
+      // If raising a quote from a saved package, the package's own trade
+      // decides which builder loads -- has to happen before materials load
+      // below, or the wrong trade's price list gets pulled in.
+      let pkgForMaterials: { items: unknown; name: string; labour_hours: number; trade: string } | null = null;
+      if (packageId) {
+        const { data: pkg } = await supabase.from("job_packages").select("*").eq("id", packageId).eq("profile_id", businessId).single();
+        if (pkg) {
+          pkgForMaterials = pkg;
+          if (!tradeParm) tradeParm = pkg.trade;
+        }
+      }
+
       // Load materials for dedicated trade builders
       if (tradeParm && DEDICATED.includes(tradeParm)) {
         const tradeMats = await supabase.from("material_items").select("*").eq("profile_id", businessId).eq("trade", tradeParm).order("label");
@@ -72,6 +87,25 @@ export default async function NewQuotePage({ searchParams }: { searchParams: Pro
             unitCost: +(s.unit_cost * (1 + s.margin_pct / 100)).toFixed(2),
             totalCost: Math.round(s.qty * s.unit_cost * (1 + s.margin_pct / 100)),
           }));
+      } else if (pkgForMaterials) {
+        // Feeds the package's materials in through the same "markup
+        // materials" line-item mechanism used for plan markup, and seeds
+        // one labour line for its hours. Costs are copied in at this
+        // point, same as everywhere else packages are used - editing the
+        // package later won't retroactively change a quote already raised
+        // from it.
+        const items = (pkgForMaterials.items as Array<{ item_key: string; label: string; qty: number; unit_cost: number }>) ?? [];
+        preMarkupMaterials = items
+          .filter((i) => i.label)
+          .map((i) => ({
+            label: i.label,
+            quantity: i.qty,
+            unit: "ea",
+            unitCost: i.unit_cost,
+            totalCost: Math.round(i.qty * i.unit_cost),
+          }));
+        prePackageName = pkgForMaterials.name;
+        prePackageLabourHours = pkgForMaterials.labour_hours > 0 ? pkgForMaterials.labour_hours : undefined;
       } else if (preMarkup) {
         // Fallback for any older link that only passed a lump total.
         const lump = parseInt(preMarkup);
@@ -110,12 +144,12 @@ export default async function NewQuotePage({ searchParams }: { searchParams: Pro
       )}
 
       {/* Route to correct builder */}
-      {selectedTrade === "electrician" && <QuoteBuilder profile={profile} materials={materials} preClientId={preClientId} preMarkupMaterials={preMarkupMaterials} />}
-      {selectedTrade === "plumber"     && <PlumberQuoteBuilder profile={profile} materials={materials} preClientId={preClientId} preMarkupMaterials={preMarkupMaterials} />}
-      {selectedTrade === "carpenter"   && <CarpenterQuoteBuilder profile={profile} materials={materials} preClientId={preClientId} preMarkupMaterials={preMarkupMaterials} />}
-      {selectedTrade === "roofer"      && <RooferQuoteBuilder profile={profile} materials={materials} preClientId={preClientId} preMarkupMaterials={preMarkupMaterials} />}
+      {selectedTrade === "electrician" && <QuoteBuilder profile={profile} materials={materials} preClientId={preClientId} preMarkupMaterials={preMarkupMaterials} prePackageName={prePackageName} prePackageLabourHours={prePackageLabourHours} />}
+      {selectedTrade === "plumber"     && <PlumberQuoteBuilder profile={profile} materials={materials} preClientId={preClientId} preMarkupMaterials={preMarkupMaterials} prePackageName={prePackageName} prePackageLabourHours={prePackageLabourHours} />}
+      {selectedTrade === "carpenter"   && <CarpenterQuoteBuilder profile={profile} materials={materials} preClientId={preClientId} preMarkupMaterials={preMarkupMaterials} prePackageName={prePackageName} prePackageLabourHours={prePackageLabourHours} />}
+      {selectedTrade === "roofer"      && <RooferQuoteBuilder profile={profile} materials={materials} preClientId={preClientId} preMarkupMaterials={preMarkupMaterials} prePackageName={prePackageName} prePackageLabourHours={prePackageLabourHours} />}
       {!DEDICATED.includes(selectedTrade) && (
-        <GenericQuoteBuilder tradeKey={selectedTrade} profile={profile} preClientId={preClientId} preMarkupMaterials={preMarkupMaterials} />
+        <GenericQuoteBuilder tradeKey={selectedTrade} profile={profile} preClientId={preClientId} preMarkupMaterials={preMarkupMaterials} prePackageName={prePackageName} prePackageLabourHours={prePackageLabourHours} />
       )}
     </>
   );

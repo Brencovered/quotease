@@ -50,12 +50,14 @@ const STEPS = [
 ];
 
 export default function QuoteBuilder({
-  profile, materials, preClientId, preMarkupMaterials,
+  profile, materials, preClientId, preMarkupMaterials, prePackageName, prePackageLabourHours,
 }: {
   profile: { hourly_rate: number; materials_margin_pct: number; default_deposit_pct?: number | null; default_expiry_days?: number };
   materials: MaterialRow[];
   preClientId?: string;
   preMarkupMaterials?: Array<{ label: string; quantity: number; unit: string; unitCost: number; totalCost: number }>;
+  prePackageName?: string;
+  prePackageLabourHours?: number;
 }) {
   const [step, setStep]     = useState(0);
   const [intake, setIntake] = useState<ElectricianIntake>(DEFAULT_INTAKE);
@@ -87,7 +89,9 @@ export default function QuoteBuilder({
   const paymentTerms = termsPreset === "custom" ? customTerms : PAYMENT_TERM_PRESETS[termsPreset];
   const customTermsTotal = customTerms.reduce((s, t) => s + (Number(t.percent) || 0), 0);
 
-  const [extraLines, setExtraLines]   = useState<{id:string;label:string;hours:number;materialsCost:number;note:string}[]>([]);
+  const [extraLines, setExtraLines]   = useState<{id:string;label:string;hours:number;materialsCost:number;note:string}[]>(
+    prePackageLabourHours ? [{ id: "package-labour", label: `${prePackageName ?? "Package"} labour`, hours: prePackageLabourHours, materialsCost: 0, note: "" }] : []
+  );
   const [siteItems, setSiteItems]     = useState<{id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]>([]);
   const [annotationMeta, setAnnotationMeta] = useState<{id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string}[]>([]);
   const [saving, setSaving]         = useState(false);

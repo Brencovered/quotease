@@ -37,11 +37,13 @@ const STEPS = [
   { id: "send",      label: "Send"      },
 ];
 
-export default function PlumberQuoteBuilder({ profile, materials, preClientId, preMarkupMaterials, }: {
+export default function PlumberQuoteBuilder({ profile, materials, preClientId, preMarkupMaterials, prePackageName, prePackageLabourHours, }: {
   profile: { hourly_rate: number; materials_margin_pct: number };
   materials: MaterialRow[];
   preClientId?: string;
   preMarkupMaterials?: Array<{ label: string; quantity: number; unit: string; unitCost: number; totalCost: number }>;
+  prePackageName?: string;
+  prePackageLabourHours?: number;
 }) {
   const [step,   setStep]   = useState(0);
   const [intake, setIntake] = useState<PlumberIntake>(DEFAULT_INTAKE);
@@ -63,7 +65,9 @@ export default function PlumberQuoteBuilder({ profile, materials, preClientId, p
   const paymentTerms      = termsPreset === "custom" ? customTerms : PAYMENT_TERM_PRESETS[termsPreset];
   const customTermsTotal  = customTerms.reduce((s, t) => s + (Number(t.percent) || 0), 0);
 
-  const [extraLines, setExtraLines]   = useState<ExtraLine[]>([]);
+  const [extraLines, setExtraLines]   = useState<ExtraLine[]>(
+    prePackageLabourHours ? [{ id: "package-labour", label: `${prePackageName ?? "Package"} labour`, hours: prePackageLabourHours, materialsCost: 0, note: "" }] : []
+  );
   const [saving,      setSaving]      = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [savedQuoteId, setSavedQuoteId] = useState<string | null>(null);

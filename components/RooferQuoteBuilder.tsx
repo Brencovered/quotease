@@ -32,11 +32,13 @@ const STEPS = [
   { id: "send",      label: "Send"      },
 ];
 
-export default function RooferQuoteBuilder({ profile, materials, preClientId, preMarkupMaterials, }: {
+export default function RooferQuoteBuilder({ profile, materials, preClientId, preMarkupMaterials, prePackageName, prePackageLabourHours, }: {
   profile: { hourly_rate: number; materials_margin_pct: number };
   materials: MaterialRow[];
   preClientId?: string;
   preMarkupMaterials?: Array<{ label: string; quantity: number; unit: string; unitCost: number; totalCost: number }>;
+  prePackageName?: string;
+  prePackageLabourHours?: number;
 }) {
   const [step, setStep]     = useState(0);
   const [intake, setIntake] = useState<RooferIntake>(DEFAULT_INTAKE);
@@ -55,7 +57,9 @@ export default function RooferQuoteBuilder({ profile, materials, preClientId, pr
     { label: "Final",   percent: 70, trigger: "completion",  days: 7 },
   ]);
   const paymentTerms = termsPreset === "custom" ? customTerms : PAYMENT_TERM_PRESETS[termsPreset];
-  const [extraLines, setExtraLines] = useState<{id:string;label:string;hours:number;materialsCost:number;note:string}[]>([]);
+  const [extraLines, setExtraLines] = useState<{id:string;label:string;hours:number;materialsCost:number;note:string}[]>(
+    prePackageLabourHours ? [{ id: "package-labour", label: `${prePackageName ?? "Package"} labour`, hours: prePackageLabourHours, materialsCost: 0, note: "" }] : []
+  );
   const [saving, setSaving]         = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [savedQuoteId, setSavedQuoteId] = useState<string | null>(null);
