@@ -40,7 +40,7 @@ const DEFAULT_INTAKE: ElectricianIntake = {
 
 const STEPS = [
   { id: "customer",   label: "Customer" },
-  { id: "drawing",    label: "Files" },
+  { id: "drawing",    label: "Files" }, // badge handled inline
   { id: "job",        label: "Job" },
   { id: "electrical", label: "Electrical" },
   { id: "site",       label: "Site" },
@@ -287,12 +287,12 @@ export default function QuoteBuilder({
             </div>
             <div>
               <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Materials</p>
-              <p className="font-display text-[18px] text-white leading-tight">${(result.materialsCost + markupTotal).toLocaleString()}</p>
+              <p className="font-display text-[18px] text-white leading-tight">${(result.materialsCost + markupTotal + extraLinesTotals(extraLines, rate, margin).materials).toLocaleString()}</p>
             </div>
           </div>
           <div className="text-right">
             <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Total</p>
-            <p className="font-display text-[24px] text-[var(--amber)] leading-tight">${(result.totalCost + markupTotal).toLocaleString()}</p>
+            <p className="font-display text-[24px] text-[var(--amber)] leading-tight">${(result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, margin).total).toLocaleString()}</p>
           </div>
         </div>
       </div>
@@ -302,6 +302,7 @@ export default function QuoteBuilder({
         {STEPS.map((s, i) => {
           const done    = i < step;
           const current = i === step;
+          const badge   = s.id === "drawing" && extraLines.length > 0 ? extraLines.length : null;
           return (
             <button key={s.id} onClick={() => setStep(i)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12.5px] font-bold whitespace-nowrap transition-all ${
