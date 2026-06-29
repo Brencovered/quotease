@@ -936,6 +936,10 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
   siteTotal: number;
   annotationMeta: {id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string}[];
 }) {
+  // Mirrors the parent component's calc (siteMaterials there isn't passed
+  // down to this component) -- siteTotal alone doesn't give us the
+  // materials-only split this breakdown needs.
+  const siteMaterials = siteItems.reduce((s, i) => s + i.materialsCost * (1 + (margin ?? 20) / 100), 0);
   return (
     <div className="space-y-4">
 
