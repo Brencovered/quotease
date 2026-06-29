@@ -363,8 +363,8 @@ export default function Home() {
                   },
                   {
                     feature:"Homeowner directory",
-                    detail:"Swiftscope maintains a public directory of 196+ verified trade businesses with real Google ratings. Homeowners can browse by trade and suburb, or post a quote request. None of the trade management platforms include a consumer-facing directory.",
-                    us:"196+ listings",  c1:"Large network",   c2:"Not included",    c3:"Not included",  c4:"Not included",  c5:"Not included", usBest:false,
+                    detail:"Swiftscope includes a public tradie directory with real Google ratings, photo galleries, and a quote request system — built into the same platform tradies use to run their business. HiPages has a larger network, but tradies on Swiftscope are active users of the platform, not just passive listings.",
+                    us:"Verified + active", c1:"Large network", c2:"Not included", c3:"Not included", c4:"Not included", c5:"Not included", usBest:false,
                   },
                   {
                     feature:"Pricing",
