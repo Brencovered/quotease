@@ -152,13 +152,13 @@ export async function POST(req: NextRequest) {
         Status:          quote.status === "paid" ? "AUTHORISED" : "SUBMITTED",
         InvoiceNumber:   quote.invoice_number ?? undefined,
         Reference:       `${quote.trade ?? ""} - ${quote.job_type ?? ""} at ${quote.site_address ?? ""}`.trim(),
-        LineAmountTypes: "INCLUSIVE",
+        LineAmountTypes: "EXCLUSIVE",
         LineItems: [{
           Description: `${quote.trade ?? "Trade service"} - ${quote.job_type ?? "Service"}\n${quote.site_address ?? ""}`.trim(),
           Quantity:    1,
           UnitAmount:  total,
-          TaxType:     "OUTPUT2",
-          AccountCode: "200",
+          TaxType:     "OUTPUT",   // Australian GST on income
+          AccountCode: "200",      // Sales / Revenue -- standard in AU Xero
         }],
       };
 
@@ -188,8 +188,9 @@ export async function POST(req: NextRequest) {
       const inv = (data?.Invoices as {InvoiceID?: string; InvoiceNumber?: string}[])?.[0];
 
       if (!res.ok || !inv?.InvoiceID) {
-        const errMsg = (data?.Detail ?? data?.Message ?? (data?.Elements as {ValidationErrors?: {Message: string}[]}[])?.[0]?.ValidationErrors?.[0]?.Message ?? `HTTP ${res.status}`) as string;
-        console.error("Xero invoice error:", errMsg);
+        const validationErrors = (data?.Elements as {ValidationErrors?: {Message: string}[]}[])?.[0]?.ValidationErrors?.map((e: {Message: string}) => e.Message).join("; ");
+        const errMsg = (validationErrors ?? data?.Detail ?? data?.Message ?? `HTTP ${res.status}`) as string;
+        console.error("Xero invoice error:", errMsg, JSON.stringify(data).slice(0, 400));
         results.push({ quoteId: quote.id, error: errMsg });
         continue;
       }
