@@ -46,6 +46,7 @@ export default function Home() {
       <div className="absolute top-0 left-0 right-0 z-30 max-w-7xl mx-auto px-6 pt-6 flex items-center justify-between">
         <span className="font-display text-xl tracking-wide text-white drop-shadow-lg">SWIFTSCOPE</span>
         <div className="flex items-center gap-4">
+          <Link href="/directory" className="text-white/80 hover:text-white font-semibold text-sm transition-colors hidden sm:block drop-shadow">Find a tradie</Link>
           <Link href="/login" className="text-white/80 hover:text-white font-semibold text-sm transition-colors hidden sm:block drop-shadow">Log in</Link>
           <Link href="/signup" className="bg-[#ffb400] text-[#0a1722] font-extrabold text-sm px-5 py-2.5 rounded-xl hover:bg-[#e89e00] transition-colors">
             Sign up free
