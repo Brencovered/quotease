@@ -151,7 +151,13 @@ export default function LiveSiteAnnotation({
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+        videoRef.current.setAttribute("playsinline", "true");
+        videoRef.current.setAttribute("muted", "true");
+        try {
+          await videoRef.current.play();
+        } catch {
+          // Autoplay blocked -- onLoadedMetadata will retry
+        }
       }
       setMode("camera");
     } catch (err) {
@@ -601,8 +607,14 @@ export default function LiveSiteAnnotation({
 
       {/* Video feed */}
       <video
-        ref={videoRef} autoPlay playsInline muted
-        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        width="100%"
+        height="100%"
+        onLoadedMetadata={() => { videoRef.current?.play(); }}
+        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }}
       />
 
       {/* Drawing overlay */}
