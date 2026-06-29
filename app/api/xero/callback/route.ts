@@ -66,11 +66,9 @@ export async function GET(req: NextRequest) {
   }
 
   // Store tokens + org-specific account/tax settings in profiles
-  const userId = state ? Buffer.from(state, "base64url").toString() : null;
-  if (!userId) return NextResponse.redirect(`${APP_URL}/settings?xero=error&msg=no_state`);
-
   const supabase = await createClient();
-  await supabase.from("profiles").update({
+
+  const xeroData = {
     xero_tenant_id:        tenantId,
     xero_access_token:     tokens.access_token,
     xero_refresh_token:    tokens.refresh_token,
@@ -78,7 +76,30 @@ export async function GET(req: NextRequest) {
     xero_connected_at:     new Date().toISOString(),
     xero_account_code:     xeroAccountCode,
     xero_tax_type:         xeroTaxType,
-  }).eq("id", userId);
+  };
+
+  // Save to state-encoded user (original flow)
+  const stateUserId = state ? Buffer.from(state, "base64url").toString() : null;
+  if (stateUserId) {
+    await supabase.from("profiles").update(xeroData).eq("id", stateUserId);
+  }
+
+  // Also save to the active session user in case they differ (duplicate profile edge case)
+  const { data: { user: sessionUser } } = await supabase.auth.getUser();
+  if (sessionUser?.id && sessionUser.id !== stateUserId) {
+    await supabase.from("profiles").update(xeroData).eq("id", sessionUser.id);
+  }
+
+  // Also sync to any other profiles sharing the same email
+  const lookupId = sessionUser?.id ?? stateUserId;
+  if (lookupId) {
+    const { data: profileData } = await supabase.from("profiles").select("contact_email").eq("id", lookupId).single();
+    if (profileData?.contact_email) {
+      await supabase.from("profiles").update(xeroData)
+        .eq("contact_email", profileData.contact_email)
+        .neq("id", lookupId);
+    }
+  }
 
   return NextResponse.redirect(`${APP_URL}/settings?xero=connected&t=${Date.now()}`);
 }
