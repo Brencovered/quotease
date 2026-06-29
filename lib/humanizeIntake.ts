@@ -84,24 +84,85 @@ const SUPPRESS_VALUES: Record<string, Set<string>> = {
 
 export function humanizeIntakePublic(intake: Record<string, unknown> | null | undefined): string[] {
   if (!intake) return [];
-  const SKIP = new Set(["notes", "jobType"]);
   const lines: string[] = [];
+
+  const SKIP = new Set([
+    "notes", "jobType", "ceilingType",
+    "roofAccess", "subfloorAccess", "siteAccess", "multistorey",
+    "switchboardRcbo", "switchboardRcboMode", "switchboardPoles",
+    "downlightGrade", "downlightSupply", "downlightProvisional",
+  ]);
+
+  // Switchboard as single composed line
+  if (intake.switchboardUpgrade) {
+    if (intake.switchboardRcbo) {
+      if (intake.switchboardRcboMode === "per_pole") {
+        lines.push(`Switchboard upgrade — RCBO per pole (${intake.switchboardPoles ?? 12} poles)`);
+      } else {
+        lines.push("Switchboard upgrade — full RCBO board");
+      }
+    } else {
+      lines.push("Switchboard upgrade — RCD");
+    }
+  }
+
+  // Downlights as single composed line
+  if (typeof intake.downlights === "number" && intake.downlights > 0) {
+    const supply = intake.downlightSupply as string;
+    const grade  = intake.downlightGrade as string;
+    const gradeLabel = grade === "builder" ? "builder grade" : grade === "standard" ? "standard" : grade === "premium" ? "premium" : "";
+    if (supply === "wire_and_fit") {
+      lines.push(`Downlights: ${intake.downlights} × wire & fit (client supply)`);
+    } else if (supply === "provisional") {
+      lines.push(`Downlights: ${intake.downlights} × install — provisional sum $${((intake.downlightProvisional as number) ?? 0).toLocaleString()}`);
+    } else {
+      lines.push(`Downlights: ${intake.downlights}${gradeLabel ? ` × supply & fit, ${gradeLabel}` : ""}`);
+    }
+  }
+
+  // Exhaust fans array
+  const exhaustFans = intake.exhaustFans as {type: string; qty: number}[] | undefined;
+  if (Array.isArray(exhaustFans)) {
+    for (const ef of exhaustFans) {
+      if (ef.qty > 0) {
+        const t = ef.type === "ceiling" ? "ceiling-mounted" : ef.type === "ducted" ? "ducted" : "inline";
+        lines.push(`Exhaust fans: ${ef.qty} × ${t}`);
+      }
+    }
+  }
+
+  // Cable runs array
+  const cableRuns = intake.cableRuns as {size: string; metres: number}[] | undefined;
+  if (Array.isArray(cableRuns)) {
+    for (const cr of cableRuns) {
+      if (cr.metres > 0) lines.push(`Cable ${cr.size}mm T&E: ${cr.metres}m`);
+    }
+  }
+
+  // Custom appliances array
+  const customAppliances = intake.customAppliances as {label: string; phase: string; amps: number}[] | undefined;
+  if (Array.isArray(customAppliances)) {
+    for (const ca of customAppliances) {
+      if (ca.label) lines.push(`${ca.label} circuit — ${ca.phase === "three" ? "3-phase" : "single phase"}, ${ca.amps}A`);
+    }
+  }
+
+  // All other scalar fields
   for (const [key, value] of Object.entries(intake)) {
     if (SKIP.has(key)) continue;
+    if (["switchboardUpgrade","downlights","exhaustFans","cableRuns","customAppliances"].includes(key)) continue;
     if (value === null || value === undefined || value === "" || value === false) continue;
     if (typeof value === "number" && value === 0) continue;
     if (Array.isArray(value) || typeof value === "object") continue;
 
-    // Suppress default/no-op values
     const suppressSet = SUPPRESS_VALUES[key];
     if (suppressSet?.has(String(value))) continue;
 
-    // Suppress dependent fields when parent is falsy/zero
     const dep = DEPENDENT_FIELDS[key];
     if (dep) {
       const parentVal = intake[dep.parent];
       if (!parentVal || parentVal === false) continue;
-      if (dep.nonZero && (typeof parentVal === "number" && parentVal === 0)) continue;
+      if (dep.nonZero && typeof parentVal === "number" && parentVal === 0) continue;
     }
 
     const label = INTAKE_FIELD_LABELS[key] ?? key.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase()).trim();
@@ -109,8 +170,11 @@ export function humanizeIntakePublic(intake: Record<string, unknown> | null | un
     const valueMap = INTAKE_VALUE_LABELS[key];
     if (valueMap?.[String(value)]) { lines.push(`${label}: ${valueMap[String(value)]}`); continue; }
     const unit = INTAKE_UNITS[key];
-    if (unit !== undefined) { lines.push(`${label}: ${value}${unit}`); continue; }
-    lines.push(`${label}: ${value}`);
+    lines.push(unit !== undefined ? `${label}: ${value}${unit}` : `${label}: ${value}`);
   }
+
+  // COES always included
+  lines.push("Certificate of Electrical Safety (COES) — included");
+
   return lines;
 }
