@@ -675,7 +675,7 @@ function StepElectrical({ intake, set, lib, setLib }: {
             </div>
             {csvMessage && <p className="text-[12.5px] text-[var(--ink-soft)] mt-3">{csvMessage}</p>}
           </div>
-          <MaterialsEditor lib={lib} setLib={setLib} />
+          <MaterialsEditor lib={lib} setLib={setLib} trade="electrician" />
         </>
       )}
     </div>

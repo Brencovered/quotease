@@ -254,7 +254,7 @@ export default function RooferQuoteBuilder({ profile, materials, preClientId, pr
         </div>
       )}
 
-      {stepId === "materials" && <MaterialsEditor lib={lib} setLib={setLib} />}
+      {stepId === "materials" && <MaterialsEditor lib={lib} setLib={setLib} trade="roofer" />}
 
       {stepId === "send" && (
         <div className="space-y-4">

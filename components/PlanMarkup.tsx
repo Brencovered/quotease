@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { X, Trash2, Ruler, Check, AlertCircle, ChevronDown, ChevronUp, ZoomIn, ZoomOut, Maximize2, Copy } from "lucide-react";
+import PriceBookSearch from "@/components/PriceBookSearch";
 
 export type ShapeType = "pin" | "line" | "area" | "freehand";
 export interface ShapePoint { x: number; y: number; }
@@ -533,18 +534,29 @@ export default function PlanMarkup({
             </div>
             <div className="col-span-2">
               <label className="block text-[11.5px] font-semibold text-[var(--ink-soft)] mb-1">Material</label>
-              {materials.length>0?(
-                <select value={openShape.material_key??""} className="app-field text-[13px]"
-                  onChange={e=>{
-                    if(!e.target.value){updateShape(openShape.id,{material_key:null,material_label:"",unit_cost:0});return;}
-                    const mat=materials.find(m=>m.item_key===e.target.value);
-                    if(mat) updateShape(openShape.id,{material_key:mat.item_key,material_label:mat.label,unit_cost:mat.unit_cost});
+              <PriceBookSearch
+                trade={trade}
+                initialValue={openShape.material_label}
+                placeholder="Search price book or type a material..."
+                onSelect={item => updateShape(openShape.id, {
+                  material_key:   item.id,
+                  material_label: item.description,
+                  unit_cost:      item.cost_price,
+                })}
+              />
+              {/* Fallback: also show the library dropdown if materials exist */}
+              {materials.length > 0 && (
+                <select
+                  value={openShape.material_key ?? ""}
+                  className="app-field text-[12px] mt-1"
+                  onChange={e => {
+                    if (!e.target.value) { updateShape(openShape.id, { material_key: null, material_label: "", unit_cost: 0 }); return; }
+                    const mat = materials.find(m => m.item_key === e.target.value);
+                    if (mat) updateShape(openShape.id, { material_key: mat.item_key, material_label: mat.label, unit_cost: mat.unit_cost });
                   }}>
-                  <option value="">-- Pick from your materials --</option>
-                  {materials.map(m=><option key={m.item_key} value={m.item_key}>{m.label} (${m.unit_cost}/{openShape.unit})</option>)}
+                  <option value="">-- or pick from your quote materials --</option>
+                  {materials.map(m => <option key={m.item_key} value={m.item_key}>{m.label} (${m.unit_cost}/{openShape.unit})</option>)}
                 </select>
-              ):(
-                <input value={openShape.material_label} onChange={e=>updateShape(openShape.id,{material_label:e.target.value})} className="app-field text-[13px]" placeholder="e.g. 2.5mm T&E cable"/>
               )}
             </div>
             <div>

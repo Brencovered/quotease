@@ -293,7 +293,7 @@ export default function PlumberQuoteBuilder({ profile, materials, preClientId, p
         </div>
       )}
 
-      {stepId === "materials" && <MaterialsEditor lib={lib} setLib={setLib} />}
+      {stepId === "materials" && <MaterialsEditor lib={lib} setLib={setLib} trade="plumber" />}
 
       {stepId === "send" && (
         <div className="space-y-4">
