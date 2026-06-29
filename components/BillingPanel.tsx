@@ -37,14 +37,14 @@ export default function BillingPanel({ trialEndsAt, isSubscribed }: { trialEndsA
         <p className="text-[11px] font-bold tracking-[.16em] uppercase text-[var(--steel-3)] mb-1">
           {isSubscribed ? "Current plan" : trialExpired ? "Trial ended" : "Free trial"}
         </p>
-        <p className="font-display text-[2.5rem] text-[var(--amber)] leading-tight">$39</p>
+        <p className="font-display text-[2.5rem] text-[var(--amber)] leading-tight">$45</p>
         <p className="text-[var(--steel-2)] text-[14px] mb-1">per month</p>
         <p className="text-[12px] text-[var(--steel-3)]">Unlimited seats, quotes and jobs</p>
       </div>
 
       {isSubscribed ? (
         <p className="text-[14px] text-[var(--ink-faint)] leading-relaxed mb-4">
-          You&apos;re subscribed - $39/month, cancel any time, no lock-in.
+          You&apos;re subscribed - $45/month, cancel any time, no lock-in.
         </p>
       ) : trialExpired ? (
         <p className="text-[14px] text-[var(--ink-faint)] leading-relaxed mb-4">
@@ -59,7 +59,7 @@ export default function BillingPanel({ trialEndsAt, isSubscribed }: { trialEndsA
       {!isSubscribed && (
         <>
           <button onClick={startCheckout} disabled={loading} className="btn-primary w-full mb-4">
-            {loading ? "Redirecting..." : "Subscribe - $39/month"}
+            {loading ? "Redirecting..." : "Subscribe - $45/month"}
           </button>
           {error && <p className="text-[13px] text-[var(--red)] mb-4">{error}</p>}
         </>

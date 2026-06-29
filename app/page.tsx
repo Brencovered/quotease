@@ -49,7 +49,7 @@ export default function Home() {
             </h1>
             <p className="text-[17px] sm:text-[18px] leading-[1.65] text-[#c8d8e4] max-w-[560px] mb-10">
               Where homeowners find trusted local tradies — and tradies run their entire business.
-              Replace HiPages leads, Fergus job management, and GroundPlan drawings for one flat $39/month.
+              Replace HiPages leads, Fergus job management, and GroundPlan drawings for one flat $45/month.
             </p>
             <div className="flex flex-wrap gap-3 mb-10">
               <Link href="/signup" className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[16px] px-8 py-4 rounded-xl hover:bg-[#e89e00] transition-colors" style={{ boxShadow:"0 12px 32px rgba(255,180,0,.3)" }}>
@@ -60,7 +60,7 @@ export default function Home() {
               </Link>
             </div>
             <div className="flex flex-wrap gap-6 text-[13px] font-semibold text-[#8aa4b4]">
-              <span>3-day free trial — then $39/month</span>
+              <span>3-day free trial — then $45/month</span>
               <span className="text-[#2a3a47]">|</span>
               <span>Unlimited users</span>
               <span className="text-[#2a3a47]">|</span>
@@ -239,7 +239,7 @@ export default function Home() {
               </div>
               <div className="bg-white/[0.05] rounded-2xl p-7 text-center border border-white/10">
                 <p className="text-[12px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Swiftscope</p>
-                <div className="font-display text-[5rem] leading-none text-[#ffb400] mb-1">$39</div>
+                <div className="font-display text-[5rem] leading-none text-[#ffb400] mb-1">$45</div>
                 <p className="text-[#8aa4b4] text-[16px] mb-1">/month</p>
                 <p className="text-[13px] text-[#4a6070] mb-6">Everything included. Unlimited seats.<br/>Xero integration included.</p>
                 <Link href="/signup" className="block bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] py-3.5 rounded-xl hover:opacity-90">
@@ -368,8 +368,8 @@ export default function Home() {
                   },
                   {
                     feature:"Pricing",
-                    detail:"Swiftscope is $39/month flat for the full platform — unlimited seats, unlimited quotes, unlimited jobs. The directory add-on (leads) is $10/month extra. Per-user pricing at competitors means costs scale steeply as you add staff.",
-                    us:"$39/mo flat",    c1:"$80–300/mo + leads", c2:"~$40/user/mo", c3:"$29–349/mo",   c4:"$48–62/user/mo", c5:"$75+/user/mo", usBest:true,
+                    detail:"Swiftscope is $45/month flat for the full platform — unlimited seats, unlimited quotes, unlimited jobs. The directory add-on (leads) is $10/month extra. Per-user pricing at competitors means costs scale steeply as you add staff.",
+                    us:"$45/mo flat",    c1:"$80–300/mo + leads", c2:"~$40/user/mo", c3:"$29–349/mo",   c4:"$48–62/user/mo", c5:"$75+/user/mo", usBest:true,
                   },
                   {
                     feature:"Unlimited users",
@@ -434,7 +434,7 @@ export default function Home() {
               <div className="p-8">
                 <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-2">For tradies</p>
                 <div className="flex items-end gap-2 mb-1">
-                  <span className="font-display text-[4rem] leading-none text-[#ffb400]">$39</span>
+                  <span className="font-display text-[4rem] leading-none text-[#ffb400]">$45</span>
                   <span className="text-[#7e94a2] text-[16px] font-bold mb-2">/month</span>
                 </div>
                 <p className="text-[#7e94a2] text-[13px] mb-6">3-day free trial. No card needed.</p>
@@ -457,7 +457,7 @@ export default function Home() {
                 <span className="font-display text-[4rem] leading-none text-[#0a1722]">$10</span>
                 <span className="text-[#8a9ba8] text-[16px] font-bold mb-2">/month</span>
               </div>
-              <p className="text-[#8a9ba8] text-[13px] mb-6">On top of the $39 plan.</p>
+              <p className="text-[#8a9ba8] text-[13px] mb-6">On top of the $45 plan.</p>
               <div className="space-y-2.5 mb-8 flex-1">
                 {["Listed in the public tradie directory","Homeowner quote requests in your area","Set your service suburbs and radius","Choose lead types (early, warm, hot)","No per-lead costs. Ever."].map(f => (
                   <div key={f} className="flex items-center gap-2.5 text-[13.5px] text-[#0a1722]">

@@ -355,7 +355,7 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
             {freeLeft > 0
               ? `${freeLeft} free analysis${freeLeft !== 1 ? "es" : ""} remaining for now.`
               : `You've used your ${FREE_ANALYSES_LIMIT} free analyses for now.`}{" "}
-            3-day free trial — $39/month after that.
+            3-day free trial — $45/month after that.
           </p>
         )}
       </div>

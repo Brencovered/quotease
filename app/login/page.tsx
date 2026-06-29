@@ -78,7 +78,7 @@ function LoginForm() {
 
           {/* Trust */}
           <p className="text-center text-[12px] text-[var(--ink-faint)] mt-5">
-            7-day free trial · $40/mo flat · cancel anytime
+            3-day free trial · $45/mo flat · cancel anytime
           </p>
         </div>
       </div>
