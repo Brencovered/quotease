@@ -156,6 +156,8 @@ export async function POST(req: NextRequest) {
           Description: `${quote.trade ?? "Trade service"} - ${quote.job_type ?? "Service"} at ${quote.site_address ?? ""}`.trim(),
           Quantity:    1,
           UnitAmount:  total,
+          AccountCode: "200",
+          TaxType:     "OUTPUT2",
         }],
       };
 
