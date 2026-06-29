@@ -125,3 +125,28 @@ alter table profiles
 
 -- Track which quotes have been pushed to Xero (xero_invoice_id already exists)
 -- xero_exported_at already exists too - we reuse those columns
+
+-- ── Xero contact mappings ────────────────────────────────────────────────────
+-- Maps a Swiftscope client to their Xero contact ID.
+-- Prevents duplicate contacts being created in Xero on every sync.
+-- swiftscope_customer_id references client_name on quotes (via profile_id).
+-- We use the clients table as the source of truth for customer identity.
+
+create table if not exists xero_contact_mappings (
+  id                     uuid primary key default gen_random_uuid(),
+  profile_id             uuid not null references profiles(id) on delete cascade,
+  client_email           text not null,          -- Swiftscope client identifier
+  xero_contact_id        text not null,          -- Xero's ContactID (GUID)
+  xero_contact_name      text,                   -- cached for display
+  created_at             timestamptz not null default now(),
+  updated_at             timestamptz not null default now(),
+  unique(profile_id, client_email)               -- one Xero contact per client per tradie
+);
+
+alter table xero_contact_mappings enable row level security;
+create policy "Own xero mappings" on xero_contact_mappings
+  for all using (auth.uid() = profile_id);
+
+-- Also add xero_connected_at if not already present (may have been missed)
+alter table profiles
+  add column if not exists xero_connected_at timestamptz;
