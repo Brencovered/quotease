@@ -152,13 +152,10 @@ export async function POST(req: NextRequest) {
         Status:          quote.status === "paid" ? "AUTHORISED" : "SUBMITTED",
         InvoiceNumber:   quote.invoice_number ?? undefined,
         Reference:       `${quote.trade ?? ""} - ${quote.job_type ?? ""} at ${quote.site_address ?? ""}`.trim(),
-        LineAmountTypes: "EXCLUSIVE",
         LineItems: [{
-          Description: `${quote.trade ?? "Trade service"} - ${quote.job_type ?? "Service"}\n${quote.site_address ?? ""}`.trim(),
+          Description: `${quote.trade ?? "Trade service"} - ${quote.job_type ?? "Service"} at ${quote.site_address ?? ""}`.trim(),
           Quantity:    1,
           UnitAmount:  total,
-          TaxType:     "OUTPUT",   // Australian GST on income
-          AccountCode: "200",      // Sales / Revenue -- standard in AU Xero
         }],
       };
 
