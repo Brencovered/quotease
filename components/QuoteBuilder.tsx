@@ -982,7 +982,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
           </div>
           <div className="flex justify-between text-[14px]">
             <span className="text-[var(--steel-2)]">Materials</span>
-            <span className="text-white font-semibold tabular">${(result.materialsCost + markupTotal + extraLinesTotals(extraLines, rate, margin).materials + Math.round(siteMaterials ?? 0)).toLocaleString()}</span>
+            <span className="text-white font-semibold tabular">${(result.materialsCost + markupTotal + extraLinesTotals(extraLines, rate, margin).materials).toLocaleString()}</span>
           </div>
           {markupTotal > 0 && (
             <div className="flex justify-between text-[12.5px]">
