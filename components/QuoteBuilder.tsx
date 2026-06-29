@@ -511,7 +511,6 @@ function StepJob({ intake, rate, margin, set, setRate, setMargin }: {
         <Row>
           <Check2 checked={intake.callout}  onChange={(v) => set("callout", v)}  label="Include call-out fee" />
           <Check2 checked={intake.ccew}     onChange={(v) => set("ccew", v)}     label="CCEW certificate" />
-          <Check2 checked={intake.coes}     onChange={(v) => set("coes", v)}     label="COES required" />
         </Row>
       </div>
 
