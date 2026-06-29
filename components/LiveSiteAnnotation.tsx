@@ -33,10 +33,13 @@ const ITEM_TO_MATERIAL: Record<string, { matKey: string; labourHrs: number }> = 
 export default function LiveSiteAnnotation({
   trade,
   lib,
+  onSaveDraft,
   onAddLineItems,
 }: {
   trade: string;
   lib?: { item_key: string; unit_cost: number }[];
+  onSaveDraft?: () => void;
+  onAnnotationMeta?: (meta: {id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string}[]) => void;
   onAddLineItems: (items: {
     description: string; quantity: number; unit: string;
     notes: string; materialsCost: number; labourHrs: number;
@@ -50,8 +53,10 @@ export default function LiveSiteAnnotation({
   useEffect(() => {
     function onFocus() {
       const raw = sessionStorage.getItem("liveAnnotations");
+      const rawMeta = sessionStorage.getItem("liveAnnotationMeta");
       if (!raw) return;
       sessionStorage.removeItem("liveAnnotations");
+      sessionStorage.removeItem("liveAnnotationMeta");
 
       try {
         const annotations = JSON.parse(raw) as {
@@ -79,6 +84,10 @@ export default function LiveSiteAnnotation({
         onAddLineItems(lineItems);
         setCount(annotations.length);
         setAdded(true);
+        // Also save full annotation meta for the site report
+        if (rawMeta && onAnnotationMeta) {
+          try { onAnnotationMeta(JSON.parse(rawMeta)); } catch {}
+        }
       } catch {}
     }
 
@@ -127,7 +136,11 @@ export default function LiveSiteAnnotation({
       )}
 
       <button
-        onClick={() => { setAdded(false); router.push(`/camera?trade=${trade}`); }}
+        onClick={() => {
+          setAdded(false);
+          if (onSaveDraft) onSaveDraft();
+          router.push(`/camera?trade=${trade}`);
+        }}
         className="btn-primary w-full justify-center">
         <Camera size={15} /> Open camera
         <ChevronRight size={14} />

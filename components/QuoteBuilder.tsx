@@ -12,6 +12,7 @@ import { resolveClientId } from "@/lib/resolveClientId";
 import { getActiveBusinessId } from "@/lib/team";
 import MaterialsEditor from "@/components/MaterialsEditor";
 import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
+import SiteAnnotationReport from "@/components/SiteAnnotationReport";
 import {
   calcElectricianQuote,
   ELECTRICIAN_DEFAULT_MATERIALS,
@@ -87,11 +88,42 @@ export default function QuoteBuilder({
   const customTermsTotal = customTerms.reduce((s, t) => s + (Number(t.percent) || 0), 0);
 
   const [extraLines, setExtraLines]   = useState<{id:string;label:string;hours:number;materialsCost:number;note:string}[]>([]);
+  const [siteItems, setSiteItems]     = useState<{id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]>([]);
+  const [annotationMeta, setAnnotationMeta] = useState<{id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string}[]>([]);
   const [saving, setSaving]         = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [savedQuoteId, setSavedQuoteId] = useState<string | null>(null);
 
   const [drawingFiles, setDrawingFiles]         = useState<File[]>([]);
+
+  // Persist quote state to sessionStorage so camera navigation doesn't wipe it
+  const STORAGE_KEY = "swiftscope_quote_draft";
+
+  function saveDraft() {
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+        clientName, clientEmail, siteAddress, intake, step, extraLines, siteItems, annotationMeta,
+      }));
+    } catch {}
+  }
+
+  // Restore state from sessionStorage on mount
+  useMemo(() => {
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (saved.clientName)  setClientName(saved.clientName);
+      if (saved.clientEmail) setClientEmail(saved.clientEmail);
+      if (saved.siteAddress) setSiteAddress(saved.siteAddress);
+      if (saved.intake)      setIntake(saved.intake);
+      if (saved.step != null) setStep(saved.step);
+      if (saved.extraLines)  setExtraLines(saved.extraLines);
+      if (saved.siteItems)   setSiteItems(saved.siteItems);
+      if (saved.annotationMeta) setAnnotationMeta(saved.annotationMeta);
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [drawingInstructions, setDrawingInstructions] = useState("");
   const [analyzing, setAnalyzing]       = useState(false);
   const [analysisResult, setAnalysisResult] = useState<{ confidence: string; notes: string } | null>(null);
@@ -109,6 +141,9 @@ export default function QuoteBuilder({
   // saved record - otherwise raising a quote from a $244 plan shows $0
   // the whole time you're filling it in, which looks broken.
   const markupTotal = (preMarkupMaterials ?? []).reduce((s, m) => s + (m.totalCost ?? 0), 0);
+  const siteLabour    = siteItems.reduce((s, i) => s + i.labourHrs * (rate ?? 95), 0);
+  const siteMaterials = siteItems.reduce((s, i) => s + i.materialsCost * (1 + (margin ?? 20) / 100), 0);
+  const siteTotal     = Math.round(siteLabour + siteMaterials);
 
   function set<K extends keyof ElectricianIntake>(key: K, value: ElectricianIntake[K]) {
     setIntake((prev) => ({ ...prev, [key]: value }));
@@ -289,12 +324,12 @@ export default function QuoteBuilder({
             </div>
             <div>
               <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Materials</p>
-              <p className="font-display text-[18px] text-white leading-tight">${(result.materialsCost + markupTotal + extraLinesTotals(extraLines, rate, margin).materials).toLocaleString()}</p>
+              <p className="font-display text-[18px] text-white leading-tight">${(result.materialsCost + markupTotal + extraLinesTotals(extraLines, rate, margin).materials + Math.round(siteMaterials)).toLocaleString()}</p>
             </div>
           </div>
           <div className="text-right">
             <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Total</p>
-            <p className="font-display text-[24px] text-[var(--amber)] leading-tight">${(result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, margin).total).toLocaleString()}</p>
+            <p className="font-display text-[24px] text-[var(--amber)] leading-tight">${(result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, margin).total + siteTotal).toLocaleString()}</p>
           </div>
         </div>
       </div>
@@ -336,15 +371,19 @@ export default function QuoteBuilder({
           onVoiceTranscript={runAiAnalysisFromVoice}
           trade="electrician"
           lib={lib}
+          onSaveDraft={saveDraft}
+          onAnnotationMeta={(meta) => setAnnotationMeta(meta)}
           onAddLiveItems={(items) => {
-            setExtraLines((prev) => [
+            setSiteItems((prev) => [
               ...prev,
               ...items.map((item) => ({
                 id: Math.random().toString(36).slice(2),
-                label: `${item.description}${item.notes ? ` — ${item.notes}` : ""}`,
-                hours: (item as {labourHrs?: number}).labourHrs ?? 0,
+                label: item.description,
+                qty: item.quantity,
+                unit: item.unit,
+                note: item.notes,
                 materialsCost: (item as {materialsCost?: number}).materialsCost ?? 0,
-                note: `Qty: ${item.quantity} ${item.unit} · live site`,
+                labourHrs: (item as {labourHrs?: number}).labourHrs ?? 0,
               })),
             ]);
           }}
@@ -381,7 +420,7 @@ export default function QuoteBuilder({
           clientName={clientName} clientEmail={clientEmail} siteAddress={siteAddress}
           saving={saving} saveMessage={saveMessage} savedQuoteId={savedQuoteId} onSave={saveAndSend}
           extraLines={extraLines} setExtraLines={setExtraLines} rate={rate} margin={margin}
-          markupTotal={markupTotal}
+          markupTotal={markupTotal} siteItems={siteItems} setSiteItems={setSiteItems} siteTotal={siteTotal} annotationMeta={annotationMeta}
         />
       )}
 
@@ -403,7 +442,7 @@ export default function QuoteBuilder({
 }
 
 /* ─── Step: Drawing ─────────────────────────────────────────────── */
-function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions, analyzing, analysisResult, analysisError, usageLimitReached, onUpload, onRemove, onAnalyse, onVoiceTranscript, trade, lib, onAddLiveItems }: {
+function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions, analyzing, analysisResult, analysisError, usageLimitReached, onUpload, onRemove, onAnalyse, onVoiceTranscript, trade, lib, onSaveDraft, onAnnotationMeta, onAddLiveItems }: {
   drawingFiles: File[]; drawingInstructions: string; setDrawingInstructions: (v: string) => void;
   analyzing: boolean; analysisResult: { confidence: string; notes: string } | null;
   analysisError: string | null; usageLimitReached: boolean;
@@ -412,13 +451,15 @@ function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions
   onVoiceTranscript: (transcript: string) => void;
   trade: string;
   lib: { item_key: string; unit_cost: number }[];
+  onSaveDraft: () => void;
+  onAnnotationMeta: (meta: {id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string}[]) => void;
   onAddLiveItems: (items: { description: string; quantity: number; unit: string; notes: string; materialsCost?: number; labourHrs?: number }[]) => void;
 }) {
   return (
     <div className="space-y-4">
 
       {/* Live site annotation */}
-      <LiveSiteAnnotation trade={trade} lib={lib} onAddLineItems={onAddLiveItems} />
+      <LiveSiteAnnotation trade={trade} lib={lib} onSaveDraft={onSaveDraft} onAnnotationMeta={onAnnotationMeta} onAddLineItems={onAddLiveItems} />
 
       <div className="card">
         <p className="section-tag mb-1">Step 1</p>
@@ -877,7 +918,7 @@ function StepSite({ intake, set }: {
 function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTerms, setCustomTerms, customTermsTotal,
   clientName, clientEmail, siteAddress,
   saving, saveMessage, savedQuoteId, onSave,
-  extraLines, setExtraLines, rate, margin, markupTotal }: {
+  extraLines, setExtraLines, rate, margin, markupTotal, siteItems, setSiteItems, siteTotal, annotationMeta }: {
   intake: ElectricianIntake;
   result: { labourHours: number; materialsCost: number; totalCost: number };
   paymentTerms: PaymentTerm[];
@@ -890,9 +931,47 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
   extraLines: {id:string;label:string;hours:number;materialsCost:number;note:string}[];
   setExtraLines: React.Dispatch<React.SetStateAction<{id:string;label:string;hours:number;materialsCost:number;note:string}[]>>;
   rate: number; margin: number; markupTotal: number;
+  siteItems: {id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[];
+  setSiteItems: React.Dispatch<React.SetStateAction<{id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]>>;
+  siteTotal: number;
+  annotationMeta: {id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string}[];
 }) {
   return (
     <div className="space-y-4">
+
+      {/* Site annotation report -- photo evidence */}
+      <SiteAnnotationReport annotations={annotationMeta} />
+
+      {/* Site annotation items -- shown as proper line items */}
+      {siteItems.length > 0 && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-3">
+            <p className="section-tag">Site annotations</p>
+            <button onClick={() => setSiteItems([])} className="text-[11.5px] text-[var(--red)] font-semibold">Clear all</button>
+          </div>
+          <div className="space-y-2">
+            {siteItems.map((item) => (
+              <div key={item.id} className="flex items-center gap-3 bg-[var(--app-bg)] rounded-xl px-3 py-2.5">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-[13.5px] text-[var(--ink)] truncate">{item.label}</p>
+                  <p className="text-[11.5px] text-[var(--ink-faint)]">{item.qty} {item.unit}{item.note ? ` · ${item.note}` : ""}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="font-bold text-[13px] text-[var(--ink)]">${Math.round(item.materialsCost + item.labourHrs * rate).toLocaleString()}</p>
+                </div>
+                <button onClick={() => setSiteItems(p => p.filter(i => i.id !== item.id))} className="text-[var(--ink-faint)] hover:text-[var(--red)] p-1">
+                  <X size={13} />
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-between mt-2 pt-2 border-t border-[var(--line-subtle)]">
+            <span className="text-[13px] font-bold text-[var(--ink-soft)]">Site items total</span>
+            <span className="font-bold text-[14px] text-[var(--ink)]">${siteTotal.toLocaleString()}</span>
+          </div>
+        </div>
+      )}
+
       {/* Quote summary */}
       <div className="bg-[var(--navy)] rounded-2xl p-5">
         <p className="text-[11px] text-[var(--steel-3)] font-bold uppercase tracking-wider mb-3">Quote summary</p>
@@ -903,7 +982,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
           </div>
           <div className="flex justify-between text-[14px]">
             <span className="text-[var(--steel-2)]">Materials</span>
-            <span className="text-white font-semibold tabular">${(result.materialsCost + markupTotal + extraLinesTotals(extraLines, rate, margin).materials).toLocaleString()}</span>
+            <span className="text-white font-semibold tabular">${(result.materialsCost + markupTotal + extraLinesTotals(extraLines, rate, margin).materials + Math.round(siteMaterials ?? 0)).toLocaleString()}</span>
           </div>
           {markupTotal > 0 && (
             <div className="flex justify-between text-[12.5px]">
@@ -912,7 +991,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
           )}
           <div className="border-t border-white/10 pt-2 flex justify-between">
             <span className="text-white font-bold text-[15px]">Total</span>
-            <span className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, margin).total).toLocaleString()}</span>
+            <span className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, margin).total + (siteTotal ?? 0)).toLocaleString()}</span>
           </div>
         </div>
       </div>
@@ -950,7 +1029,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
               <div key={i} className="flex justify-between text-[13.5px]">
                 <span className="text-[var(--ink-soft)]">{t.label}</span>
                 <span className="font-bold text-[var(--ink)] tabular">
-                  {t.percent}% - ${Math.round(((result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, margin).total) * t.percent) / 100).toLocaleString()}
+                  {t.percent}% - ${Math.round(((result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, margin).total + (siteTotal ?? 0)) * t.percent) / 100).toLocaleString()}
                 </span>
               </div>
             ))}

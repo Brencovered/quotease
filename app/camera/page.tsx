@@ -235,8 +235,16 @@ function CameraPage() {
   }
 
   function finish(){
-    // Pass annotations back via sessionStorage then navigate back
+    // Save full annotations (with frame images) for the report
     sessionStorage.setItem("liveAnnotations", JSON.stringify(annotations));
+    // Also save a summary without large frame data for quote metadata
+    sessionStorage.setItem("liveAnnotationMeta", JSON.stringify(
+      annotations.map(ann => ({
+        id: ann.id, type: ann.type, label: ann.label, itemKey: ann.itemKey,
+        qty: ann.qty, unit: ann.unit, note: ann.note, length: ann.length,
+        colour: ann.colour, frameData: ann.frameData, // keep frame for report
+      }))
+    ));
     router.back();
   }
 
