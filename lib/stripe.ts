@@ -26,4 +26,9 @@ export const STRIPE_PRICE_IDS = {
   annual: process.env.STRIPE_PRICE_ANNUAL!,
 } as const;
 
-export const TRIAL_DAYS = 7;
+// The real "3-day free trial, no card needed" already happens before
+// anyone reaches Stripe at all (gated via trial_ends_at on the profile,
+// set at signup). Stripe's own trial_period_days must stay 0, or anyone
+// who enters a card gets a second trial stacked on top of the first -
+// 10 days free instead of 3.
+export const TRIAL_DAYS = 0;

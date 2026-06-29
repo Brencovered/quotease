@@ -268,7 +268,7 @@ export default function CarpenterQuoteBuilder({ profile, materials, preClientId,
         </div>
       )}
 
-      {stepId === "materials" && <MaterialsEditor lib={lib} setLib={setLib} />}
+      {stepId === "materials" && <MaterialsEditor lib={lib} setLib={setLib} trade="carpenter" />}
 
       {stepId === "send" && (
         <div className="space-y-4">

@@ -1,40 +1,23 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
-// Requires XERO_CLIENT_ID, XERO_REDIRECT_URI set to this app's
-// /api/xero/callback URL, registered at https://developer.xero.com/app/manage.
-// This is a per-business app registration - Brendan registers one Xero
-// developer app for this product, and every tradie connects their own
-// Xero org through it via this OAuth flow.
-export async function GET() {
-  const clientId = process.env.XERO_CLIENT_ID;
-  const redirectUri = process.env.XERO_REDIRECT_URI;
+const XERO_CLIENT_ID     = process.env.XERO_CLIENT_ID!;
+const XERO_REDIRECT_URI  = process.env.NEXT_PUBLIC_APP_URL + "/api/xero/callback";
+const XERO_SCOPES        = "openid profile email accounting.transactions accounting.contacts offline_access";
 
-  if (!clientId || !redirectUri) {
-    return NextResponse.json(
-      { error: "Xero is not configured on this deployment yet. Set XERO_CLIENT_ID and XERO_REDIRECT_URI." },
-      { status: 500 }
-    );
-  }
+export async function GET(_req: NextRequest) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.redirect(new URL("/login", process.env.NEXT_PUBLIC_APP_URL!));
 
-  const scopes = [
-    "openid",
-    "profile",
-    "email",
-    "accounting.transactions",
-    "accounting.contacts",
-    "offline_access",
-  ].join(" ");
+  const state  = Buffer.from(user.id).toString("base64url");
+  const params = new URLSearchParams({
+    response_type: "code",
+    client_id:     XERO_CLIENT_ID,
+    redirect_uri:  XERO_REDIRECT_URI,
+    scope:         XERO_SCOPES,
+    state,
+  });
 
-  const state = crypto.randomUUID();
-
-  const url = new URL("https://login.xero.com/identity/connect/authorize");
-  url.searchParams.set("response_type", "code");
-  url.searchParams.set("client_id", clientId);
-  url.searchParams.set("redirect_uri", redirectUri);
-  url.searchParams.set("scope", scopes);
-  url.searchParams.set("state", state);
-
-  const response = NextResponse.redirect(url.toString());
-  response.cookies.set("xero_oauth_state", state, { httpOnly: true, maxAge: 600 });
-  return response;
+  return NextResponse.redirect(`https://login.xero.com/identity/connect/authorize?${params}`);
 }

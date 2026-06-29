@@ -32,7 +32,12 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         <p className="text-[12px] text-[var(--ink-faint)] mb-1">
           <Link href="/electrician/clients" className="hover:underline">Clients</Link> / {client.name}
         </p>
-        <h1 className="font-display text-2xl text-[var(--ink)] mb-1">{client.name}</h1>
+        <div className="flex items-start justify-between gap-3 mb-1">
+          <h1 className="font-display text-2xl text-[var(--ink)]">{client.name}</h1>
+          <Link href={`/electrician?client_id=${client.id}`} className="btn-secondary text-[12.5px] py-2 px-3 shrink-0">
+            + New quote
+          </Link>
+        </div>
         {client.billing_address && <p className="text-[13px] text-[var(--ink-faint)] mb-5">{client.billing_address}</p>}
 
         <div className="flex flex-col gap-4">
