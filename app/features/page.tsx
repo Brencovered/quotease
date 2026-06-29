@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
 
-export const metadata = { title: "Features — Swiftscope" };
+export const metadata = { title: "Features - Swiftscope" };
 
 export default function FeaturesPage() {
   return (
@@ -21,7 +21,7 @@ export default function FeaturesPage() {
             Everything a tradie actually needs
           </h1>
           <p className="text-[16px] text-[#8aa4b4] mt-4 max-w-xl">
-            Most tradies run 3-4 separate tools. Swiftscope consolidates what makes sense — and connects cleanly to tools like Xero that you should keep.
+            Most tradies run 3-4 separate tools. Swiftscope consolidates what makes sense - and connects cleanly to tools like Xero that you should keep.
           </p>
         </div>
       </div>
@@ -36,7 +36,7 @@ export default function FeaturesPage() {
               { icon:Smartphone,  type:"replace",   replaces:"ServiceM8",        label:"Mobile quoting",       note:"Trade-specific quote builder on your phone. Send the quote before you leave the driveway." },
               { icon:PenTool,     type:"replace",   replaces:"GroundPlan",       label:"Drawing markup",       note:"Upload site plans, draw cable runs or pipe routes, count items. Costs link to your quote." },
               { icon:DollarSign,  type:"replace",   replaces:"SimPro",           label:"Job costing",          note:"Track actual hours and materials against what you quoted. Know your real margin on every job." },
-              { icon:RefreshCw,   type:"integrate", replaces:"Xero",             label:"Xero live sync",       note:"Swiftscope integrates with Xero. Accepted quotes push as invoices automatically — no double entry." },
+              { icon:RefreshCw,   type:"integrate", replaces:"Xero",             label:"Xero live sync",       note:"Swiftscope integrates with Xero. Accepted quotes push as invoices automatically - no double entry." },
             ].map(r => (
               <div key={r.replaces} className={`rounded-2xl p-6 border ${r.type === "integrate" ? "bg-blue-50 border-blue-100" : "bg-[#f8f9fa] border-[#e8ecef]"}`}>
                 <div className="flex items-start justify-between mb-3">
@@ -176,7 +176,7 @@ export default function FeaturesPage() {
                 {[
                   {
                     feature:"Lead generation",
-                    detail:"Swiftscope connects homeowners directly to tradies via the directory and quote request system. You pay $10/month flat — no auction, no credits, no per-lead cost. HiPages charges $30–150 per lead depending on trade and urgency.",
+                    detail:"Swiftscope connects homeowners directly to tradies via the directory and quote request system. You pay $10/month flat - no auction, no credits, no per-lead cost. HiPages charges $30–150 per lead depending on trade and urgency.",
                     us:"$10/mo flat",    c1:"$30–150/lead",    c2:"Not included",    c3:"Not included",  c4:"Not included",  c5:"Not included", usBest:true,
                   },
                   {
@@ -186,32 +186,32 @@ export default function FeaturesPage() {
                   },
                   {
                     feature:"Mobile quoting",
-                    detail:"Swiftscope is built phone-first. Trade-specific fields, live cost calculation, send from site. All major platforms support mobile quoting — this is table stakes.",
+                    detail:"Swiftscope is built phone-first. Trade-specific fields, live cost calculation, send from site. All major platforms support mobile quoting - this is table stakes.",
                     us:"Phone-first",    c1:"Not included",    c2:"Yes",             c3:"Yes",           c4:"Yes",           c5:"Limited",      usBest:false,
                   },
                   {
                     feature:"Drawing markup",
-                    detail:"Swiftscope includes drawing markup natively — upload a site plan, draw cable runs or pipe routes, count items, and those quantities flow directly into the quote. Fergus requires GroundPlan as a separate integration at $60–100/month extra.",
+                    detail:"Swiftscope includes drawing markup natively - upload a site plan, draw cable runs or pipe routes, count items, and those quantities flow directly into the quote. Fergus requires GroundPlan as a separate integration at $60–100/month extra.",
                     us:"Built in",       c1:"Not included",    c2:"Extra ($60–100/mo)", c3:"Basic photos", c4:"Not available", c5:"Basic",       usBest:true,
                   },
                   {
                     feature:"Xero integration",
-                    detail:"Swiftscope integrates with Xero via live OAuth sync. Accepted quotes push as invoices automatically. All platforms listed offer some form of Xero integration — Swiftscope's is included in the base plan.",
+                    detail:"Swiftscope integrates with Xero via live OAuth sync. Accepted quotes push as invoices automatically. All platforms listed offer some form of Xero integration - Swiftscope's is included in the base plan.",
                     us:"Live sync",      c1:"Not applicable",  c2:"Live sync",       c3:"Live sync",     c4:"Live sync",     c5:"Live sync",    usBest:false,
                   },
                   {
                     feature:"Job costing",
-                    detail:"Track actual labour hours and materials against what you quoted. Swiftscope shows your real margin on every job. Fergus, Tradify, and SimPro all have job costing — this is where they are more mature than Swiftscope currently.",
+                    detail:"Track actual labour hours and materials against what you quoted. Swiftscope shows your real margin on every job. Fergus, Tradify, and SimPro all have job costing - this is where they are more mature than Swiftscope currently.",
                     us:"Included",       c1:"Not included",    c2:"Yes",             c3:"Add-on",        c4:"Yes",           c5:"Advanced",     usBest:false,
                   },
                   {
                     feature:"Homeowner directory",
-                    detail:"Swiftscope includes a public tradie directory with real Google ratings, photo galleries, and a quote request system — built into the same platform tradies use to run their business. HiPages has a larger network, but tradies on Swiftscope are active users of the platform, not just passive listings.",
+                    detail:"Swiftscope includes a public tradie directory with real Google ratings, photo galleries, and a quote request system - built into the same platform tradies use to run their business. HiPages has a larger network, but tradies on Swiftscope are active users of the platform, not just passive listings.",
                     us:"Verified + active", c1:"Large network", c2:"Not included", c3:"Not included", c4:"Not included", c5:"Not included", usBest:false,
                   },
                   {
                     feature:"Pricing",
-                    detail:"Swiftscope is $45/month flat for the full platform — unlimited seats, unlimited quotes, unlimited jobs. The directory add-on (leads) is $10/month extra. Per-user pricing at competitors means costs scale steeply as you add staff.",
+                    detail:"Swiftscope is $45/month flat for the full platform - unlimited seats, unlimited quotes, unlimited jobs. The directory add-on (leads) is $10/month extra. Per-user pricing at competitors means costs scale steeply as you add staff.",
                     us:"$45/mo flat",    c1:"$80–300/mo + leads", c2:"~$40/user/mo", c3:"$29–349/mo",   c4:"$48–62/user/mo", c5:"$75+/user/mo", usBest:true,
                   },
                   {

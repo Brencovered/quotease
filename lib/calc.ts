@@ -163,7 +163,7 @@ export function calcElectricianQuote(
       const provSum = intake.downlightProvisional ?? 0;
       const hrs = 0.4 * intake.downlights * overallAccess;
       lines.push({
-        label:    `Downlight install — provisional sum for supply ($${provSum.toLocaleString()})`,
+        label:    `Downlight install - provisional sum for supply ($${provSum.toLocaleString()})`,
         qty:      intake.downlights,
         unit:     "each",
         unitCost: provSum / Math.max(intake.downlights, 1),
@@ -215,16 +215,16 @@ export function calcElectricianQuote(
         const hrs = (4 + poles * 0.2) / overallAccess; // unaffected by ceiling for SB work
         const uc  = costs.sb_rcbo_per_pole ?? 35;
         lines.push({
-          label:    `Switchboard upgrade — RCBO per pole (${poles} poles)`,
+          label:    `Switchboard upgrade - RCBO per pole (${poles} poles)`,
           qty:      poles, unit: "pole", unitCost: uc,
           labour:   Math.round(hrs * 10) / 10,
           total:    Math.round(uc * poles * margin + hrs * hourlyRate),
         });
       } else {
-        addLine("Switchboard upgrade — full RCBO board", 1, "each", 4, "sb_rcbo_full");
+        addLine("Switchboard upgrade - full RCBO board", 1, "each", 4, "sb_rcbo_full");
       }
     } else {
-      addLine("Switchboard upgrade — RCD", 1, "each", 4, "sb_rcd");
+      addLine("Switchboard upgrade - RCD", 1, "each", 4, "sb_rcd");
     }
   }
 
@@ -244,14 +244,14 @@ export function calcElectricianQuote(
     [intake.appliancePool,     "Pool/spa circuit"],
   ];
   for (const [enabled, label] of stdAppliances) {
-    if (enabled) addLine(`${label} — supply & wire`, 1, "each", 1.5, "appliance");
+    if (enabled) addLine(`${label} - supply & wire`, 1, "each", 1.5, "appliance");
   }
 
   // Custom appliances
   for (const ca of intake.customAppliances ?? []) {
     const phaseLabel = ca.phase === "three" ? "3-phase" : "single phase";
     addLine(
-      `${ca.label} circuit — ${phaseLabel}, ${ca.amps}A`,
+      `${ca.label} circuit - ${phaseLabel}, ${ca.amps}A`,
       1, "each",
       ca.phase === "three" ? 2.5 : 1.5,
       "appliance"

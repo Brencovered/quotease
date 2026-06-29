@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
   if (!settings?.length) {
     // No tradies set up yet -- still notify team
     await sendEmail("team@swiftscope.com.au",
-      `New ${request.trade} lead — ${request.suburb} (no matched tradies yet)`,
+      `New ${request.trade} lead - ${request.suburb} (no matched tradies yet)`,
       `<p>A new lead was submitted but no tradies matched yet.</p><p><strong>Trade:</strong> ${request.trade}</p><p><strong>Suburb:</strong> ${request.suburb}</p><p><strong>Job:</strong> ${request.description}</p>`
     );
     return NextResponse.json({ ok: true, sent: 0 });
@@ -77,8 +77,8 @@ export async function POST(req: NextRequest) {
 
   const tempLabel: Record<string,string> = {
     early: "🟡 Early stage",
-    warm:  "🟠 Warm — interested in speaking soon",
-    hot:   "🔴 Hot — budget approved, ready to go",
+    warm:  "🟠 Warm - interested in speaking soon",
+    hot:   "🔴 Hot - budget approved, ready to go",
   };
 
   let sent = 0;
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
     `;
     await sendEmail(
       profile.contact_email,
-      `New ${request.trade} lead — ${request.suburb} (${tempLabel[request.lead_temperature] ?? ""})`,
+      `New ${request.trade} lead - ${request.suburb} (${tempLabel[request.lead_temperature] ?? ""})`,
       html
     );
     sent++;

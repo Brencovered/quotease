@@ -183,7 +183,7 @@ export default function LeadsPanel({
     <div className="space-y-6">
       {open.length > 0 && (
         <div>
-          <p className="section-tag mb-3">Open leads — {open.length} available</p>
+          <p className="section-tag mb-3">Open leads - {open.length} available</p>
           <div className="space-y-3">
             {open.map(r => <RequestCard key={r.id} r={r} isClaimed={false} />)}
           </div>
@@ -191,7 +191,7 @@ export default function LeadsPanel({
       )}
       {claimed.length > 0 && (
         <div>
-          <p className="section-tag mb-3">Your claimed leads — {claimed.length}</p>
+          <p className="section-tag mb-3">Your claimed leads - {claimed.length}</p>
           <div className="space-y-3">
             {claimed.map(r => <RequestCard key={r.id} r={r} isClaimed={true} />)}
           </div>
@@ -199,7 +199,7 @@ export default function LeadsPanel({
       )}
       {full.length > 0 && (
         <div>
-          <p className="section-tag mb-3">Fully claimed — {full.length}</p>
+          <p className="section-tag mb-3">Fully claimed - {full.length}</p>
           <div className="space-y-3 opacity-60">
             {full.map(r => <RequestCard key={r.id} r={r} isClaimed={false} />)}
           </div>

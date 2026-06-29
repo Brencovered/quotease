@@ -4,7 +4,7 @@ import {
 } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
 
-export const metadata = { title: "How it works — Swiftscope" };
+export const metadata = { title: "How it works - Swiftscope" };
 
 export default function HowItWorksPage() {
   return (
@@ -51,7 +51,7 @@ export default function HowItWorksPage() {
           </div>
           <div className="text-center mt-10">
             <Link href="/get-quotes" className="inline-flex items-center gap-2 bg-[#0a1722] text-white font-extrabold text-[15px] px-10 py-4 rounded-xl hover:opacity-90">
-              Post a job — it&apos;s free <ArrowRight size={15} />
+              Post a job - it&apos;s free <ArrowRight size={15} />
             </Link>
           </div>
         </div>
@@ -69,7 +69,7 @@ export default function HowItWorksPage() {
           <div className="grid md:grid-cols-3 gap-6">
             {[
               { n:"01", icon:Zap, title:"Quote on site", body:"Trade-specific fields calculate live as you fill them in. Send a professional quote from your phone before you've left the driveway." },
-              { n:"02", icon:Briefcase, title:"Win it, run it", body:"The client accepts online. It moves straight to your job list — scheduling, materials checklist, variations, all in one place." },
+              { n:"02", icon:Briefcase, title:"Win it, run it", body:"The client accepts online. It moves straight to your job list - scheduling, materials checklist, variations, all in one place." },
               { n:"03", icon:RefreshCw, title:"Get paid", body:"Mark the job complete and it pushes straight to Xero as an invoice. No CSV export, no re-typing line items." },
             ].map(s => (
               <div key={s.n} className="bg-white rounded-2xl p-7 border border-[#e8ecef]">

@@ -126,7 +126,7 @@ export default function AdminTradieDetailPanel({
           <p className="text-[11px] tracking-[.1em] uppercase text-[var(--amber-deep)] font-bold mb-3">Account</p>
           <dl className="space-y-2 text-[13px]">
             <Row label="Trades" value={profile.trades.length ? profile.trades.join(", ") : "Not picked yet"} />
-            <Row label="Plan" value={profile.subscription_plan ?? "—"} />
+            <Row label="Plan" value={profile.subscription_plan ?? " - "} />
             <Row label="Status" value={profile.subscription_status} />
             <Row label="Trial ends" value={fmtDate(profile.trial_ends_at)} />
             <Row label="Signed up" value={fmtDate(profile.created_at)} />
@@ -141,9 +141,9 @@ export default function AdminTradieDetailPanel({
         <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-5 lg:col-span-1">
           <p className="text-[11px] tracking-[.1em] uppercase text-[var(--amber-deep)] font-bold mb-3">Business details</p>
           <dl className="space-y-2 text-[13px]">
-            <Row label="ABN" value={profile.abn ?? "—"} />
-            <Row label="Licence" value={profile.license_number ?? "—"} />
-            <Row label="Address" value={profile.business_address ?? "—"} />
+            <Row label="ABN" value={profile.abn ?? " - "} />
+            <Row label="Licence" value={profile.license_number ?? " - "} />
+            <Row label="Address" value={profile.business_address ?? " - "} />
           </dl>
           {!profile.business_address && !profile.abn && (
             <p className="flex items-center gap-1.5 text-[12px] text-[var(--ink-faint)] mt-3">
@@ -193,6 +193,6 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 function fmtDate(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return " - ";
   return new Date(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
 }

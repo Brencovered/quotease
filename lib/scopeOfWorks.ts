@@ -20,12 +20,12 @@ export function humanizeIntake(intake: Record<string, unknown> | null | undefine
     if (intake.switchboardRcbo) {
       const mode = intake.switchboardRcboMode;
       if (mode === "per_pole") {
-        lines.push(`Switchboard upgrade — RCBO per pole (${intake.switchboardPoles ?? 12} poles)`);
+        lines.push(`Switchboard upgrade - RCBO per pole (${intake.switchboardPoles ?? 12} poles)`);
       } else {
-        lines.push("Switchboard upgrade — full RCBO board");
+        lines.push("Switchboard upgrade - full RCBO board");
       }
     } else {
-      lines.push("Switchboard upgrade — RCD");
+      lines.push("Switchboard upgrade - RCD");
     }
   }
 
@@ -37,7 +37,7 @@ export function humanizeIntake(intake: Record<string, unknown> | null | undefine
     if (supply === "wire_and_fit") {
       lines.push(`Downlights: ${intake.downlights} × wire & fit (client supply)`);
     } else if (supply === "provisional") {
-      lines.push(`Downlights: ${intake.downlights} × install — provisional sum $${(intake.downlightProvisional as number ?? 0).toLocaleString()}`);
+      lines.push(`Downlights: ${intake.downlights} × install - provisional sum $${(intake.downlightProvisional as number ?? 0).toLocaleString()}`);
     } else {
       lines.push(`Downlights: ${intake.downlights} × supply & fit, ${gradeLabel}`);
     }
@@ -69,7 +69,7 @@ export function humanizeIntake(intake: Record<string, unknown> | null | undefine
   if (Array.isArray(customAppliances) && customAppliances.length > 0) {
     for (const ca of customAppliances) {
       if (ca.label) {
-        lines.push(`${ca.label} circuit — ${ca.phase === "three" ? "3-phase" : "single phase"}, ${ca.amps}A`);
+        lines.push(`${ca.label} circuit - ${ca.phase === "three" ? "3-phase" : "single phase"}, ${ca.amps}A`);
       }
     }
   }
@@ -94,13 +94,13 @@ export function humanizeIntake(intake: Record<string, unknown> | null | undefine
   if (Array.isArray(siteItems)) {
     for (const item of siteItems) {
       if (item.label) {
-        lines.push(`${item.label}: ${item.qty} ${item.unit}${item.note ? ` — ${item.note}` : ""}`);
+        lines.push(`${item.label}: ${item.qty} ${item.unit}${item.note ? ` - ${item.note}` : ""}`);
       }
     }
   }
 
   // COES always included
-  lines.push("Certificate of Electrical Safety (COES) — included");
+  lines.push("Certificate of Electrical Safety (COES) - included");
 
   return lines;
 }

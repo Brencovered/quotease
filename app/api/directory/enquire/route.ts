@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     ${others  ? `<p><strong>Other quotes:</strong> ${others}</p>` : ""}
     ${message ? `<p><strong>Notes:</strong> ${message}</p>` : ""}
     <hr/>
-    <p style="color:#888;font-size:12px">Sent via Swiftscope Directory — swiftscope.com.au/directory</p>
+    <p style="color:#888;font-size:12px">Sent via Swiftscope Directory - swiftscope.com.au/directory</p>
   `;
 
   const toAddress = to_email ?? "hello@swiftscope.com.au";
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
         from:     "Swiftscope Directory <noreply@swiftscope.com.au>",
         to:       [toAddress],
         reply_to: email,
-        subject:  `Quote request from ${name} — Swiftscope`,
+        subject:  `Quote request from ${name} - Swiftscope`,
         html,
       }),
     });

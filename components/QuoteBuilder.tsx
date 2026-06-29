@@ -634,7 +634,7 @@ function StepElectrical({ intake, set, lib, setLib }: {
       const header = lines[0]?.toLowerCase().split(",") ?? [];
       const keyIdx = header.findIndex((h) => h.includes("key") || h.includes("item"));
       const costIdx = header.findIndex((h) => h.includes("cost") || h.includes("price"));
-      if (keyIdx === -1 || costIdx === -1) { setCsvMessage("Couldn't find item and cost columns — try the template."); return; }
+      if (keyIdx === -1 || costIdx === -1) { setCsvMessage("Couldn't find item and cost columns - try the template."); return; }
       let matched = 0; const updates = new Map<string, number>();
       for (const line of lines.slice(1)) {
         const cols = line.split(",");

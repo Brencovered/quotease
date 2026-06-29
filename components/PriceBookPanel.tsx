@@ -393,7 +393,7 @@ export default function PriceBookPanel({
               ))}
               {filtered.length > 200 && (
                 <div className="px-3 py-2.5 text-[12px] text-[var(--ink-faint)] text-center">
-                  Showing first 200 of {filtered.length.toLocaleString()} — refine your search
+                  Showing first 200 of {filtered.length.toLocaleString()} - refine your search
                 </div>
               )}
             </div>

@@ -69,7 +69,7 @@ export default function XeroConnectPanel({
           </a>
           <p className="text-[12px] text-[var(--ink-faint)]">
             You&apos;ll be taken to Xero to authorise access. We only request permission to
-            create invoices and read contacts — nothing else.
+            create invoices and read contacts - nothing else.
           </p>
         </div>
       )}

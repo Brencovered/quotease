@@ -97,12 +97,12 @@ export function humanizeIntakePublic(intake: Record<string, unknown> | null | un
   if (intake.switchboardUpgrade) {
     if (intake.switchboardRcbo) {
       if (intake.switchboardRcboMode === "per_pole") {
-        lines.push(`Switchboard upgrade — RCBO per pole (${intake.switchboardPoles ?? 12} poles)`);
+        lines.push(`Switchboard upgrade - RCBO per pole (${intake.switchboardPoles ?? 12} poles)`);
       } else {
-        lines.push("Switchboard upgrade — full RCBO board");
+        lines.push("Switchboard upgrade - full RCBO board");
       }
     } else {
-      lines.push("Switchboard upgrade — RCD");
+      lines.push("Switchboard upgrade - RCD");
     }
   }
 
@@ -114,7 +114,7 @@ export function humanizeIntakePublic(intake: Record<string, unknown> | null | un
     if (supply === "wire_and_fit") {
       lines.push(`Downlights: ${intake.downlights} × wire & fit (client supply)`);
     } else if (supply === "provisional") {
-      lines.push(`Downlights: ${intake.downlights} × install — provisional sum $${((intake.downlightProvisional as number) ?? 0).toLocaleString()}`);
+      lines.push(`Downlights: ${intake.downlights} × install - provisional sum $${((intake.downlightProvisional as number) ?? 0).toLocaleString()}`);
     } else {
       lines.push(`Downlights: ${intake.downlights}${gradeLabel ? ` × supply & fit, ${gradeLabel}` : ""}`);
     }
@@ -143,7 +143,7 @@ export function humanizeIntakePublic(intake: Record<string, unknown> | null | un
   const customAppliances = intake.customAppliances as {label: string; phase: string; amps: number}[] | undefined;
   if (Array.isArray(customAppliances)) {
     for (const ca of customAppliances) {
-      if (ca.label) lines.push(`${ca.label} circuit — ${ca.phase === "three" ? "3-phase" : "single phase"}, ${ca.amps}A`);
+      if (ca.label) lines.push(`${ca.label} circuit - ${ca.phase === "three" ? "3-phase" : "single phase"}, ${ca.amps}A`);
     }
   }
 
@@ -178,13 +178,13 @@ export function humanizeIntakePublic(intake: Record<string, unknown> | null | un
   if (Array.isArray(siteItems)) {
     for (const item of siteItems) {
       if (item.label) {
-        lines.push(`${item.label}: ${item.qty} ${item.unit}${item.note ? ` — ${item.note}` : ""}`);
+        lines.push(`${item.label}: ${item.qty} ${item.unit}${item.note ? ` - ${item.note}` : ""}`);
       }
     }
   }
 
   // COES always included
-  lines.push("Certificate of Electrical Safety (COES) — included");
+  lines.push("Certificate of Electrical Safety (COES) - included");
 
   return lines;
 }

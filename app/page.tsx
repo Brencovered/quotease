@@ -31,19 +31,19 @@ export default function Home() {
               <span className="block text-[3.2rem] sm:text-[5rem] lg:text-[5.5rem] text-[#ffb400]">Every job.</span>
             </h1>
             <p className="text-[17px] sm:text-[18px] leading-[1.65] text-[#c8d8e4] max-w-[560px] mb-10">
-              Where homeowners find trusted local tradies — and tradies run their entire business,
+              Where homeowners find trusted local tradies - and tradies run their entire business,
               for one flat $45/month.
             </p>
             <div className="flex flex-wrap gap-3 mb-10">
               <Link href="/signup" className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[16px] px-8 py-4 rounded-xl hover:bg-[#e89e00] transition-colors" style={{ boxShadow:"0 12px 32px rgba(255,180,0,.3)" }}>
-                I&apos;m a tradie — start free
+                I&apos;m a tradie - start free
               </Link>
               <Link href="/get-quotes" className="text-white font-bold text-[16px] px-6 py-4 rounded-xl border border-white/25 hover:border-white/50 transition-colors flex items-center gap-2">
                 I need a tradie <ArrowRight size={16} />
               </Link>
             </div>
             <div className="flex flex-wrap gap-6 text-[13px] font-semibold text-[#8aa4b4]">
-              <span>3-day free trial — then $45/month</span>
+              <span>3-day free trial - then $45/month</span>
               <span className="text-[#2a3a47]">|</span>
               <span>Unlimited users</span>
               <span className="text-[#2a3a47]">|</span>
@@ -98,14 +98,14 @@ export default function Home() {
               <h3 className="font-display text-[1.8rem] text-white mb-3">Run your whole business</h3>
               <p className="text-[15px] text-[#8aa4b4] leading-relaxed mb-6">
                 Quote, win, manage, and invoice jobs from your phone. Get leads from homeowners
-                in your area for a flat $10/month — no auction, no per-lead cost.
+                in your area for a flat $10/month - no auction, no per-lead cost.
               </p>
               <div className="space-y-3 mb-8">
                 {[
                   "Quote from your phone in 4 minutes on site",
                   "Homeowner leads for flat $10/month",
                   "Job management, scheduling, drawing markup",
-                  "Xero live sync — no double entry",
+                  "Xero live sync - no double entry",
                 ].map(f => (
                   <div key={f} className="flex items-center gap-3 text-[14px] font-semibold text-white">
                     <CheckCircle size={16} className="text-[#ffb400] shrink-0" /> {f}
@@ -113,7 +113,7 @@ export default function Home() {
                 ))}
               </div>
               <Link href="/signup" className="flex items-center justify-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] py-4 rounded-xl hover:opacity-90 transition-opacity">
-                Start free trial — 3 days, no card <ArrowRight size={15} />
+                Start free trial - 3 days, no card <ArrowRight size={15} />
               </Link>
             </div>
           </div>
@@ -172,7 +172,7 @@ export default function Home() {
               <Link href="/signup" className="block text-center bg-[#0a1722] text-white font-extrabold text-[15px] py-3.5 rounded-xl hover:opacity-90">
                 Add to your plan
               </Link>
-              <p className="text-[12px] text-[#8a9ba8] text-center mt-3">Free for homeowners — always</p>
+              <p className="text-[12px] text-[#8a9ba8] text-center mt-3">Free for homeowners - always</p>
             </div>
           </div>
           <p className="text-center text-[13px] text-[#8a9ba8] mt-8">
@@ -198,7 +198,7 @@ export default function Home() {
             <h3 className="font-display text-[1.8rem] text-white mb-2">Need something done?</h3>
             <p className="text-[#8aa4b4] text-[14px] mb-6">Post your job and get up to 3 quotes from verified local tradies.</p>
             <Link href="/get-quotes" className="inline-flex items-center gap-2 bg-white text-[#0a1722] font-extrabold text-[15px] px-8 py-4 rounded-xl hover:opacity-90">
-              Get quotes — it&apos;s free <ArrowRight size={15} />
+              Get quotes - it&apos;s free <ArrowRight size={15} />
             </Link>
           </div>
         </div>

@@ -11,7 +11,7 @@ const TRADE_LABELS: Record<string,string> = {
 };
 
 // A small accent colour per trade so the grid doesn't read as one flat wall
-// of white cards — used for the top accent bar and the trade pill dot.
+// of white cards - used for the top accent bar and the trade pill dot.
 const TRADE_COLORS: Record<string,string> = {
   electrician:"#f59e0b", plumber:"#3b82f6", builder:"#64748b",
   roofer:"#ef4444", painter:"#a855f7", carpenter:"#92400e",
@@ -43,7 +43,7 @@ function Stars({ rating }: { rating: number }) {
 
 // Rating row doubles as a link straight to this business's Google reviews.
 // `search.google.com/local/reviews?placeid=` is the standard (if unofficial)
-// pattern for jumping to a reviews list rather than the write-a-review flow —
+// pattern for jumping to a reviews list rather than the write-a-review flow - 
 // no API key needed, and it degrades gracefully to a normal Maps search if
 // Google ever changes the behaviour.
 function RatingLink({ rating, count, placeId }: { rating: number; count: number | null; placeId: string | null }) {
@@ -117,7 +117,7 @@ function domainFromUrl(url: string): string | null {
 }
 
 // When neither the business's own logo nor a Google photo is available, show
-// a small branded Swiftscope cover instead of a bare initial letter — it
+// a small branded Swiftscope cover instead of a bare initial letter - it
 // reads as "this listing is taken care of" rather than "something's missing".
 function SwiftscopeCover({ trade }: { trade?: string }) {
   const accent = (trade && TRADE_COLORS[trade]) || "#ffb400";
@@ -132,19 +132,19 @@ function SwiftscopeCover({ trade }: { trade?: string }) {
 }
 
 // Logo hero: works through a small ladder of attempts and always lands on
-// something — never a bare letter, never an indefinite spinner.
+// something - never a bare letter, never an indefinite spinner.
 //
-//   1. Google's favicon service (s2.favicons) — tried FIRST because Google's
+//   1. Google's favicon service (s2.favicons) - tried FIRST because Google's
 //      own domain is essentially never blocked by corporate firewalls,
 //      privacy extensions, or DNS filters, unlike step 2.
-//   2. DuckDuckGo's icon service — a good secondary source, but it turns out
+//   2. DuckDuckGo's icon service - a good secondary source, but it turns out
 //      to be blocked outright on some networks. A blocked request often
 //      doesn't fire a clean onError either, so without a hard timeout the
 //      card would be stuck on a loading shimmer forever (this was the
-//      "grey circle with an arrow" — a Photoslider nav button left visible
+//      "grey circle with an arrow" - a Photoslider nav button left visible
 //      behind a hung, invisible image).
 //   3. A real Google Places photo, if one exists.
-//   4. A branded Swiftscope cover — guaranteed to render, no network call.
+//   4. A branded Swiftscope cover - guaranteed to render, no network call.
 //
 // A logo only "counts" if it loads AND isn't one of those services' tiny
 // (~16px) generic "no icon found" placeholders.
@@ -173,7 +173,7 @@ function LogoHero({ listing }: { listing: Listing }) {
 
   const advance = () => { setLoaded(false); setStageIdx(i => Math.min(i + 1, attempts.length - 1)); };
 
-  // Hard timeout safety net — see note above on why onError alone isn't
+  // Hard timeout safety net - see note above on why onError alone isn't
   // trustworthy here. Re-armed on every stage change, cleared on success.
   useEffect(() => {
     if (attempt.kind === "cover" || loaded) return;
@@ -269,7 +269,7 @@ function EnquiryModal({ listing, onClose }: { listing: Listing; onClose: () => v
             </div>
 
             <textarea value={jobType} onChange={e=>setJobType(e.target.value)}
-              placeholder="Describe the job — what needs doing, size of the job, any special requirements *"
+              placeholder="Describe the job - what needs doing, size of the job, any special requirements *"
               rows={3} className="app-field text-[13px] resize-none" />
 
             <div>
@@ -288,9 +288,9 @@ function EnquiryModal({ listing, onClose }: { listing: Listing; onClose: () => v
               <p className="text-[11.5px] font-semibold text-gray-500 uppercase tracking-wide mb-2">Where are you at?</p>
               <div className="space-y-1.5">
                 {[
-                  ["ready","Ready to go — just need the right tradie"],
-                  ["warm","Exploring options — comparing a few quotes"],
-                  ["planning","Planning ahead — not urgent yet"],
+                  ["ready","Ready to go - just need the right tradie"],
+                  ["warm","Exploring options - comparing a few quotes"],
+                  ["planning","Planning ahead - not urgent yet"],
                 ].map(([v,l]) => (
                   <button key={v} onClick={()=>setStage(v)}
                     className={`w-full px-4 py-2.5 rounded-xl border transition-all text-left text-[13px] font-semibold ${stage===v?"border-gray-900 bg-gray-900 text-white":"border-gray-200 text-gray-700 hover:border-gray-400"}`}>
@@ -374,7 +374,7 @@ export default function DirectoryCard({ listing, index = 0 }: { listing: Listing
             </p>
           )}
 
-          {/* Rating — clickable through to Google reviews */}
+          {/* Rating - clickable through to Google reviews */}
           {listing.google_rating && (
             <RatingLink rating={listing.google_rating} count={listing.google_reviews_count} placeId={listing.place_id} />
           )}

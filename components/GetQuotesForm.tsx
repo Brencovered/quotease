@@ -124,7 +124,7 @@ export default function GetQuotesForm({ user, homeowner }: { user: User; homeown
         <h2 className="font-display text-[1.6rem] text-[var(--ink)] mb-2">Request sent!</h2>
         <p className="text-[14px] text-[var(--ink-faint)] max-w-sm mx-auto mb-6">
           We&apos;ve alerted local {TRADE_LABELS[trade] ?? trade}s in {suburb}.
-          Up to {numQuotes} will contact you directly — usually within a few hours.
+          Up to {numQuotes} will contact you directly - usually within a few hours.
         </p>
         <a href="/directory" className="btn-secondary inline-flex">Browse the directory</a>
       </div>
@@ -167,7 +167,7 @@ export default function GetQuotesForm({ user, homeowner }: { user: User; homeown
           )}
           {error && <p className="text-[12.5px] text-[var(--red)] font-semibold">{error}</p>}
           <button onClick={submitStep1} className="btn-primary w-full justify-center">
-            Next — Job details <ChevronRight size={14} />
+            Next - Job details <ChevronRight size={14} />
           </button>
           {!user && (
             <p className="text-[12px] text-[var(--ink-faint)] text-center">
@@ -209,7 +209,7 @@ export default function GetQuotesForm({ user, homeowner }: { user: User; homeown
           <div className="card">
             <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-faint)] mb-3">Describe the job *</p>
             <textarea value={description} onChange={e => setDescription(e.target.value)}
-              placeholder="Tell tradies what you need done. The more detail the better — size, access, any special requirements..."
+              placeholder="Tell tradies what you need done. The more detail the better - size, access, any special requirements..."
               rows={4} className="app-field text-[13px] resize-none" />
           </div>
 

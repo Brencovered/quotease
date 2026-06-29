@@ -22,7 +22,7 @@ type AnalysisResult = {
 const CONFIDENCE_STYLE = {
   high:   { bg: "bg-green-50",  text: "text-green-700",  border: "border-green-200",  label: "High confidence" },
   medium: { bg: "bg-amber-50",  text: "text-amber-700",  border: "border-amber-200",  label: "Medium confidence" },
-  low:    { bg: "bg-red-50",    text: "text-red-700",    border: "border-red-200",    label: "Low confidence — review carefully" },
+  low:    { bg: "bg-red-50",    text: "text-red-700",    border: "border-red-200",    label: "Low confidence - review carefully" },
 };
 
 export default function DrawingAnalysisPanel({
@@ -98,7 +98,7 @@ export default function DrawingAnalysisPanel({
           </div>
           <div>
             <p className="font-bold text-[13.5px] text-[var(--ink)]">AI Drawing Analysis</p>
-            <p className="text-[11px] text-[var(--ink-faint)] capitalize">{trade} — powered by GPT-4o</p>
+            <p className="text-[11px] text-[var(--ink-faint)] capitalize">{trade} - powered by GPT-4o</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -138,7 +138,7 @@ export default function DrawingAnalysisPanel({
           <div className={`px-4 py-3 ${conf?.bg} border-b ${conf?.border}`}>
             <div className="flex items-center gap-2 mb-1.5">
               <CheckCircle size={13} className={conf?.text} />
-              <span className={`text-[12px] font-bold ${conf?.text}`}>{conf?.label} — review before saving</span>
+              <span className={`text-[12px] font-bold ${conf?.text}`}>{conf?.label} - review before saving</span>
             </div>
             <p className="text-[12px] text-[var(--ink-soft)] leading-relaxed">{result.notes}</p>
           </div>
@@ -147,7 +147,7 @@ export default function DrawingAnalysisPanel({
           {result.items.length > 0 && (
             <div className="px-4 py-3">
               <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-faint)] mb-2">
-                Items found — {result.items.length} types
+                Items found - {result.items.length} types
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {result.items.map((item, i) => (
@@ -165,7 +165,7 @@ export default function DrawingAnalysisPanel({
             <div className="px-4 py-3">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-faint)]">
-                  Suggested line items — select to add
+                  Suggested line items - select to add
                 </p>
                 <button onClick={() => setSelected(
                   selected.size === result.line_items.length
