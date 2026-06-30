@@ -1,330 +1,614 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
-import { Paperclip, X, ChevronRight, ChevronLeft, Check, Sparkles, AlertTriangle } from "lucide-react";
-import { calcRooferQuote, ROOFER_DEFAULT_MATERIALS, type RooferIntake } from "@/lib/calcRoofer";
-import MaterialsEditor from "@/components/MaterialsEditor";
-import StepCustomer from "./StepCustomer";
-import VoiceNoteRecorder from "./VoiceNoteRecorder";
-import { normalizeForAnalysis } from "@/lib/imageNormalize";
-import ExtraJobLines, { extraLinesTotals } from "./ExtraJobLines";
-import { resolveClientId } from "@/lib/resolveClientId";
-import { getActiveBusinessId } from "@/lib/team";
+import { useState, useMemo } from "react";
+import { Quote, Checkbox } from "./ui";
+import { ChevronDown, ChevronUp, Plus, Trash2, PenLine, Image, FileText, MessageSquare, Maximize2, Camera, SquareCheck, Mic, Phone, ArrowRight, Loader2, PlusCircle, MinusCircle } from "lucide-react";
 
-type MaterialRow = { item_key: string; label: string; unit_cost: number };
+// ── Types ──────────────────────────────────────────────────────────
 
-const DEFAULT_INTAKE: RooferIntake = {
-  jobType: "repair", roofType: "colorbond", roofSqm: 0, roofPitch: "standard",
-  ridgeLm: 0, valleyLm: 0, fasciaLm: 0, gutterLm: 0, downpipeLm: 0,
-  whirlybirds: 0, skylights: 0, insulationSqm: 0, flashingLm: 0,
-  scaffoldDays: 0, twoStorey: false, siteAccess: "easy", callout: false, notes: "",
+export interface JobDetail {
+  id: string;
+  area: number;
+  pitchType: "low" | "medium" | "steep";
+  roofStyle: "gable" | "hip" | "flat" | "complex";
+  description: string;
+  photos: File[];
+  photosLoaded: boolean;
+  voiceNote?: File;
+  annotations: string[];
+}
+
+export interface Measurements {
+  totalArea: number;
+  pitchFactor: number;
+  ridgeLength: number;
+  valleyCount: number;
+  flashingLength: number;
+}
+
+export type LabourRate = "standard" | "complex" | "heritage";
+
+export type MaterialType = "colourbond" | "concrete_tile" | "terracotta" | "slate" | "zinc";
+
+export type ColorPreference = "basalt" | "surfmist" | "monument" | "dune" | "other";
+
+export type ExtrasKey = "insulation" | "gutter_replacement" | "sarking" | "whirlybird" | "skylight";
+
+export interface ExtrasState {
+  insulation: boolean;
+  gutter_replacement: boolean;
+  sarking: boolean;
+  whirlybird: boolean;
+  skylight: boolean;
+}
+
+export type PricingTier = "standard" | "premium";
+
+// ── Constants ──────────────────────────────────────────────────────
+
+export const RATES: Record<LabourRate, { label: string; rate: number; min: number }> = {
+  standard: { label: "Standard ($55/m\u00B2)", rate: 55, min: 2000 },
+  complex:  { label: "Complex access ($70/m\u00B2)", rate: 70, min: 3000 },
+  heritage: { label: "Heritage slate ($95/m\u00B2)", rate: 95, min: 5000 },
 };
 
-const STEPS = [
-  { id: "customer",  label: "Customer"  },
-  { id: "drawing",   label: "Files"     },
-  { id: "job",       label: "Job"       },
-  { id: "roof",      label: "Roof"      },
-  { id: "extras",    label: "Extras"    },
-  { id: "materials", label: "Materials" },
-  { id: "send",      label: "Send"      },
-];
+export const MATERIALS: Record<MaterialType, { label: string; costPerSqm: number; description: string }> = {
+  colourbond:     { label: "Colorbond Steel", costPerSqm: 28, description: "Most popular in Australia - 25yr warranty" },
+  concrete_tile:  { label: "Concrete Tiles",  costPerSqm: 35, description: "Classic look, great insulation" },
+  terracotta:     { label: "Terracotta",      costPerSqm: 48, description: "Premium baked clay - 50yr lifespan" },
+  slate:          { label: "Natural Slate",   costPerSqm: 75, description: "Heritage luxury - 100yr lifespan" },
+  zinc:           { label: "Zinc/VM Zinc",    costPerSqm: 65, description: "Contemporary European finish" },
+};
 
-export default function RooferQuoteBuilder({ profile, materials, preClientId, preMarkupMaterials, }: {
-  profile: { hourly_rate: number; materials_margin_pct: number };
-  materials: MaterialRow[];
-  preClientId?: string;
-  preMarkupMaterials?: Array<{ label: string; quantity: number; unit: string; unitCost: number; totalCost: number }>;
-}) {
-  const [step, setStep]     = useState(0);
-  const [intake, setIntake] = useState<RooferIntake>(DEFAULT_INTAKE);
-  const [rate, setRate]     = useState(profile.hourly_rate ?? 90);
-  const [margin, setMargin] = useState(profile.materials_margin_pct ?? 20);
-  const [lib, setLib] = useState<MaterialRow[]>(
-    materials.length > 0 ? materials : ROOFER_DEFAULT_MATERIALS.map((m) => ({ ...m }))
-  );
-  const [clientName, setClientName]   = useState("");
-  const [clientEmail, setClientEmail] = useState("");
-  const [siteAddress, setSiteAddress] = useState("");
-  const [clientId, setClientId] = useState<string | null>(preClientId ?? null);
-  const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">("deposit_30_70");
-  const [customTerms] = useState<PaymentTerm[]>([
-    { label: "Deposit", percent: 30, trigger: "acceptance", days: 0 },
-    { label: "Final",   percent: 70, trigger: "completion",  days: 7 },
-  ]);
-  const paymentTerms = termsPreset === "custom" ? customTerms : PAYMENT_TERM_PRESETS[termsPreset];
-  const [extraLines, setExtraLines] = useState<{id:string;label:string;hours:number;materialsCost:number;note:string}[]>([]);
-  const [saving, setSaving]         = useState(false);
-  const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const [savedQuoteId, setSavedQuoteId] = useState<string | null>(null);
-  const [drawingFiles, setDrawingFiles] = useState<File[]>([]);
-  const [analyzing, setAnalyzing] = useState(false);
-  const [analysisError, setAnalysisError] = useState<string | null>(null);
-  const [analysisResult, setAnalysisResult] = useState<{ confidence: string; notes: string } | null>(null);
-  const [usageLimitReached, setUsageLimitReached] = useState(false);
+export const EXTRAS: Record<ExtrasKey, { label: string; unitCost: number; unit: string; description: string }> = {
+  insulation:       { label: "Ceiling insulation upgrade", unitCost: 12, unit: "m\u00B2", description: "R4.0 batt insulation" },
+  gutter_replacement: { label: "Gutter replacement", unitCost: 45, unit: "lm", description: "Colorbond gutters & downpipes" },
+  sarking:          { label: "Sarking/foil barrier", unitCost: 8,  unit: "m\u00B2", description: "Required under tiles in some councils" },
+  whirlybird:       { label: "Whirlybird ventilator", unitCost: 350, unit: "each", description: "Reduces attic heat by up to 30%" },
+  skylight:         { label: "Roof window/skylight", unitCost: 1200, unit: "each", description: "Velux or similar" },
+};
 
-  const costs  = useMemo(() => { const m: Record<string,number> = {}; lib.forEach((r) => (m[r.item_key] = Number(r.unit_cost)||0)); return m; }, [lib]);
-  const result = useMemo(() => calcRooferQuote(intake, costs, rate, margin), [intake, costs, rate, margin]);
-  const markupTotal = (preMarkupMaterials ?? []).reduce((s, m) => s + (m.totalCost ?? 0), 0);
+// ── Helper: generate quote number ─────────────────────────────────
 
-  function set<K extends keyof RooferIntake>(k: K, v: RooferIntake[K]) { setIntake((p) => ({...p,[k]:v})); }
+function generateQuoteNumber(): string {
+  const prefix = "RF";
+  const date   = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const random = Math.floor(Math.random() * 9000 + 1000);
+  return `${prefix}-${date}-${random}`;
+}
 
-  // Backend prompt is electrical-specific - show notes/confidence as a
-  // read-only hint rather than force-mapping mismatched fields, same
-  // pattern Plumber already uses for its drawing analysis.
-  async function runAiAnalysis() {
-    if (!drawingFiles.length) return;
-    setAnalyzing(true); setAnalysisError(null); setAnalysisResult(null);
-    try {
-      const fd = new FormData();
-      const fileForAnalysis = await normalizeForAnalysis(drawingFiles[0]);
-      fd.append("file", fileForAnalysis);
-      fd.append("trade", "roofer");
-      fd.append("instructions", "This is a roofing job. Focus on roof area, pitch, materials, and flashing/gutter runs.");
-      const res = await fetch("/api/quotes/analyze-drawing", { method: "POST", body: fd });
-      const body = await res.json();
-      if (!res.ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
-      setAnalysisResult({ confidence: body.result?.confidence ?? "low", notes: body.result?.notes ?? "" });
-    } catch (err) { setAnalysisError(err instanceof Error ? err.message : "Could not reach analysis service."); }
-    finally { setAnalyzing(false); }
+// ── Main component ────────────────────────────────────────────────
+
+interface RooferQuoteBuilderProps {
+  clientId?: string;
+  clientName?: string;
+  clientAddress?: string;
+  onSave?: (payload: unknown) => void;
+  onSend?: (payload: unknown) => void;
+}
+
+export default function RooferQuoteBuilder({
+  clientId,
+  clientName = "",
+  clientAddress = "",
+  onSave,
+  onSend,
+}: RooferQuoteBuilderProps) {
+
+  // ── State ──────────────────────────────────────────────────────
+  const [jobs, setJobs] = useState<JobDetail[]>([]);
+  const [material, setMaterial] = useState<MaterialType>("colourbond");
+  const [color, setColor] = useState<ColorPreference>("monument");
+  const [tier, setTier] = useState<PricingTier>("standard");
+  const [labourRate, setLabourRate] = useState<LabourRate>("standard");
+  const [extras, setExtras] = useState<ExtrasState>({
+    insulation: false, gutter_replacement: false, sarking: false,
+    whirlybird: false, skylight: false,
+  });
+  const [notes, setNotes] = useState("");
+  const [warranty, setWarranty] = useState("10-year manufacturer warranty + 5-year workmanship guarantee");
+  const [saving, setSaving] = useState(false);
+
+  // ── New job form ───────────────────────────────────────────────
+  const [newArea, setNewArea] = useState(0);
+  const [newPitch, setNewPitch] = useState<"low" | "medium" | "steep">("medium");
+  const [newStyle, setNewStyle] = useState<"gable" | "hip" | "flat" | "complex">("gable");
+  const [newDesc, setNewDesc] = useState("");
+  const [adding, setAdding] = useState(false);
+
+  const canAdd = newArea > 0 && newDesc.length > 5;
+
+  function addJob() {
+    if (!canAdd) return;
+    const job: JobDetail = {
+      id: crypto.randomUUID(),
+      area: newArea,
+      pitchType: newPitch,
+      roofStyle: newStyle,
+      description: newDesc,
+      photos: [],
+      photosLoaded: false,
+      annotations: [],
+    };
+    setJobs(prev => [...prev, job]);
+    setNewArea(0); setNewPitch("medium"); setNewStyle("gable"); setNewDesc("");
+    setAdding(false);
   }
 
-  async function onVoiceTranscript(transcript: string) {
-    setAnalyzing(true); setAnalysisError(null); setAnalysisResult(null); setUsageLimitReached(false);
-    try {
-      const res = await fetch("/api/quotes/analyze-voice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript, instructions: "This is a roofing job. Focus on roof area, pitch, materials, and flashing/gutter runs." }),
-      });
-      const body = await res.json();
-      if (!res.ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
-      setAnalysisResult({ confidence: body.result?.confidence ?? "low", notes: body.result?.notes ?? "" });
-    } catch (err) { setAnalysisError(err instanceof Error ? err.message : "Could not reach analysis service."); }
-    finally { setAnalyzing(false); }
+  function removeJob(id: string) {
+    setJobs(prev => prev.filter(j => j.id !== id));
   }
 
-  async function saveAndSend(sendEmail: boolean) {
-    setSaving(true); setSaveMessage(null);
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setSaveMessage("Not logged in"); setSaving(false); return; }
-    const businessId = await getActiveBusinessId(supabase, user.id);
-    const resolvedClientId = await resolveClientId(supabase, businessId, clientId, clientName, clientEmail, siteAddress);
-    for (const m of lib) {
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(m.item_key);
-      if (isUuid) {
-        await supabase.from("price_book_items").update({ description: m.label, cost_price: m.unit_cost, trade: "roofer", unit: "ea" }).eq("id", m.item_key).eq("profile_id", businessId);
-      } else {
-        await supabase.from("price_book_items").insert({ profile_id: businessId, supplier: "Custom", description: m.label, cost_price: m.unit_cost, trade: "roofer", unit: "ea" });
-      }
-      await supabase.from("material_items").upsert({ profile_id: businessId, trade: "roofer", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost }, { onConflict: "profile_id,item_key" });
+  function updateJob(id: string, patch: Partial<JobDetail>) {
+    setJobs(prev => prev.map(j => j.id === id ? { ...j, ...patch } : j));
+  }
+
+  // ── Cost calculations ──────────────────────────────────────────
+  const summary = useMemo(() => {
+    const totalArea = jobs.reduce((s, j) => s + j.area, 0);
+    if (totalArea === 0) return null;
+
+    const m = MATERIALS[material];
+    const r = RATES[labourRate];
+    const labour   = Math.max(totalArea * r.rate, r.min);
+    const matCost  = totalArea * m.costPerSqm;
+    const tierMult = tier === "premium" ? 1.15 : 1;
+
+    // Colour surcharge for premium colours
+    const colorSurcharge = (color === "surfmist" || color === "monument") && tier === "premium" ? totalArea * 2 : 0;
+
+    let extrasTotal = 0;
+    if (extras.insulation)       extrasTotal += totalArea * EXTRAS.insulation.unitCost;
+    if (extras.sarking)          extrasTotal += totalArea * EXTRAS.sarking.unitCost;
+    if (extras.gutter_replacement) {
+      const gutterLm = Math.ceil(totalArea / 8);
+      extrasTotal += gutterLm * EXTRAS.gutter_replacement.unitCost;
     }
-    const { data: quote, error } = await supabase.from("quotes").insert({ profile_id: businessId, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail, site_address: siteAddress, trade: "roofer", job_type: intake.jobType, intake_data: intake, labour_hours: result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0), materials_cost: result.materialsCost + extraLinesTotals(extraLines, rate, margin).materials, total_cost: result.totalCost + extraLinesTotals(extraLines, rate, margin).total, payment_terms: paymentTerms, status: sendEmail ? "sent" : "draft", sent_at: sendEmail ? new Date().toISOString() : null, markup_materials: preMarkupMaterials ?? [] }).select().single();
-    if (error) { setSaveMessage(error.message); setSaving(false); return; }
-    setSavedQuoteId(quote.id);
-    setSavedQuoteId(quote.id);
-    for (const file of drawingFiles) {
-      const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g,"_");
-      const path = `${businessId}/${quote.id}/${Date.now()}-${safeName}`;
-      await supabase.storage.from("job-files").upload(path, file);
-    }
-    if (sendEmail) {
-      const res = await fetch("/api/quotes/send", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ quoteId: quote.id }) });
-      if (!res.ok) { const b = await res.json().catch(()=>({})); setSaveMessage(`Saved - sending failed: ${b.error ?? res.statusText}`); setSaving(false); return; }
-      setSaveMessage(`Sent to ${clientEmail}`);
-    } else { setSaveMessage("Saved as draft"); }
-    setSaving(false);
+    if (extras.whirlybird)       extrasTotal += 2 * EXTRAS.whirlybird.unitCost;
+    if (extras.skylight)         extrasTotal += 1 * EXTRAS.skylight.unitCost;
+
+    const subtotal = (labour + matCost + extrasTotal + colorSurcharge) * tierMult;
+    const gst      = subtotal * 0.10;
+    const total    = subtotal + gst;
+
+    return {
+      totalArea, labour, matCost, extrasTotal, colorSurcharge,
+      subtotal, gst, total, tierMult,
+      breakdown: {
+        labourPerSqm: Math.round((labour / totalArea) * 100) / 100,
+        materialPerSqm: m.costPerSqm,
+      },
+    };
+  }, [jobs, material, labourRate, tier, color, extras]);
+
+  // ── Job card component ─────────────────────────────────────────
+  function JobCard({ job, index }: { job: JobDetail; index: number }) {
+    const [expanded, setExpanded] = useState(false);
+
+    return (
+      <div className="border border-[#f1ede8] rounded-2xl overflow-hidden bg-white">
+        {/* Header */}
+        <button onClick={() => setExpanded(!expanded)} className="w-full flex items-center justify-between p-5 text-left hover:bg-[#faf8f5] transition-colors">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-[var(--amber-light)] flex items-center justify-center text-[var(--amber-deep)] font-bold text-[14px]">
+              #{index + 1}
+            </div>
+            <div>
+              <p className="font-semibold text-[14px] text-[var(--ink)]">{job.area} m&sup2; - {job.roofStyle.charAt(0).toUpperCase() + job.roofStyle.slice(1)} roof</p>
+              <p className="text-[12px] text-[var(--ink-faint)] mt-0.5">{job.pitchType} pitch - {job.description.slice(0, 60)}{job.description.length > 60 ? "..." : ""}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={e => { e.stopPropagation(); removeJob(job.id); }}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--ink-faint)] hover:bg-red-50 hover:text-red-500 transition-colors">
+              <Trash2 size={15} />
+            </button>
+            {expanded ? <ChevronUp size={18} className="text-[var(--ink-faint)]" /> : <ChevronDown size={18} className="text-[var(--ink-faint)]" />}
+          </div>
+        </button>
+
+        {expanded && (
+          <div className="border-t border-[#f1ede8] p-5 space-y-4">
+            {/* Area editor */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label-field text-[11px]">Area (m&sup2;)</label>
+                <input type="number" value={job.area} onChange={e => updateJob(job.id, { area: Number(e.target.value) || 0 })}
+                  className="app-field text-[13px]" />
+              </div>
+              <div>
+                <label className="label-field text-[11px]">Pitch</label>
+                <select value={job.pitchType} onChange={e => updateJob(job.id, { pitchType: e.target.value as JobDetail["pitchType"] })}
+                  className="app-field text-[13px]">
+                  <option value="low">Low (&lt;15&deg;)</option>
+                  <option value="medium">Medium (15-30&deg;)</option>
+                  <option value="steep">Steep (&gt;30&deg;)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Roof style */}
+            <div>
+              <label className="label-field text-[11px]">Roof style</label>
+              <div className="grid grid-cols-4 gap-2">
+                {(["gable", "hip", "flat", "complex"] as const).map(s => (
+                  <button key={s} onClick={() => updateJob(job.id, { roofStyle: s })}
+                    className={`px-3 py-2 rounded-xl border text-[12px] font-semibold transition-all capitalize ${job.roofStyle === s ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] text-[var(--ink-soft)] hover:border-gray-400"}`}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="label-field text-[11px]">Description</label>
+              <textarea value={job.description} onChange={e => updateJob(job.id, { description: e.target.value })}
+                rows={3} className="app-field text-[13px] resize-none" />
+            </div>
+
+            {/* Photos */}
+            <div>
+              <label className="label-field text-[11px]">Site photos</label>
+              <div className="flex flex-wrap gap-2">
+                {job.photos.map((p, i) => (
+                  <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden bg-gray-100">
+                    <img src={URL.createObjectURL(p)} alt="" className="w-full h-full object-cover" />
+                    <button onClick={() => updateJob(job.id, { photos: job.photos.filter((_, pi) => pi !== i) })}
+                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 flex items-center justify-center text-white">
+                      <X size={10} />
+                    </button>
+                  </div>
+                ))}
+                <label className="w-20 h-20 rounded-xl border-2 border-dashed border-[var(--line)] flex flex-col items-center justify-center cursor-pointer hover:border-[var(--ink-faint)] transition-colors">
+                  <Camera size={16} className="text-[var(--ink-faint)] mb-1" />
+                  <span className="text-[9px] text-[var(--ink-faint)] font-semibold">Add</span>
+                  <input type="file" accept="image/*" multiple className="hidden"
+                    onChange={e => {
+                      const files = Array.from(e.target.files || []);
+                      updateJob(job.id, { photos: [...job.photos, ...files] });
+                    }} />
+                </label>
+              </div>
+            </div>
+
+            {/* Annotations */}
+            <div>
+              <label className="label-field text-[11px]">Annotations / mark-ups</label>
+              <div className="space-y-1.5">
+                {job.annotations.map((a, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <PenLine size={12} className="text-[var(--ink-faint)] shrink-0" />
+                    <span className="text-[12px] text-[var(--ink-soft)] flex-1">{a}</span>
+                    <button onClick={() => updateJob(job.id, { annotations: job.annotations.filter((_, ai) => ai !== i) })}
+                      className="text-[var(--ink-faint)] hover:text-red-500"><Trash2 size={12} /></button>
+                  </div>
+                ))}
+                <button onClick={() => {
+                  const text = prompt("Add annotation:");
+                  if (text) updateJob(job.id, { annotations: [...job.annotations, text] });
+                }} className="text-[12px] font-semibold text-[var(--amber-deep)] hover:underline flex items-center gap-1">
+                  <PenLine size={12} /> Add annotation
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   }
 
-  const stepId = STEPS[step].id;
+  // ── Build + send quote ─────────────────────────────────────────
+  async function buildQuote() {
+    if (!summary || jobs.length === 0) return;
+
+    const quotePayload = {
+      quoteNumber: generateQuoteNumber(),
+      clientId: clientId || null,
+      clientName: clientName || "Unnamed client",
+      clientAddress: clientAddress || "",
+      date: new Date().toISOString().slice(0, 10),
+      validUntil: new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10),
+      jobs: jobs.map((j, i) => ({
+        index: i + 1,
+        area: j.area,
+        pitch: j.pitchType,
+        style: j.roofStyle,
+        description: j.description,
+        photos: j.photos.length,
+        annotations: j.annotations,
+      })),
+      material: MATERIALS[material],
+      color,
+      labourRate: RATES[labourRate],
+      tier,
+      extras,
+      notes,
+      warranty,
+      summary: {
+        totalArea: summary.totalArea,
+        labour: summary.labour,
+        materials: summary.matCost,
+        extras: summary.extrasTotal,
+        colorSurcharge: summary.colorSurcharge,
+        subtotal: summary.subtotal,
+        gst: summary.gst,
+        total: summary.total,
+      },
+    };
+
+    return quotePayload;
+  }
+
+  async function handleSave() {
+    const payload = await buildQuote();
+    if (!payload) return;
+    setSaving(true);
+    try {
+      await onSave?.(payload);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleSend() {
+    const payload = await buildQuote();
+    if (!payload) return;
+    await onSend?.(payload);
+  }
+
+  // ── Render ─────────────────────────────────────────────────────
 
   return (
-    <div className="page-wrap-narrow">
-      <div className="sticky top-12 sm:top-0 z-30 mb-4 -mx-4 sm:mx-0 px-4 sm:px-0">
-        <div className="bg-[var(--navy)] rounded-none sm:rounded-2xl px-5 py-3 flex items-center justify-between" style={{boxShadow:"0 4px 20px rgba(10,23,34,.18)"}}>
-          <div className="flex gap-5">
-            <div><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Labour</p><p className="font-display text-[18px] text-white leading-tight">{result.labourHours}h</p></div>
-            <div><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Materials</p><p className="font-display text-[18px] text-white leading-tight">${(result.materialsCost + markupTotal).toLocaleString()}</p></div>
-          </div>
-          <div className="text-right"><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Total</p><p className="font-display text-[24px] text-[var(--amber)] leading-tight">${(result.totalCost + markupTotal).toLocaleString()}</p></div>
+    <div className="space-y-6 max-w-3xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="font-display text-[1.6rem] text-[var(--ink)]">Roofer Quote Builder</h2>
+          <p className="text-[13px] text-[var(--ink-soft)]">Scope, measure and price re-roofing jobs</p>
         </div>
-      </div>
-      <div className="flex items-center gap-1 mb-5 overflow-x-auto hide-scrollbar pb-1">
-        {STEPS.map((s,i) => <button key={s.id} onClick={() => setStep(i)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12.5px] font-bold whitespace-nowrap ${i===step ? "bg-[var(--navy)] text-white" : i<step ? "bg-[var(--amber-light)] text-[var(--amber-deep)]" : "bg-[var(--surface)] text-[var(--ink-faint)] border border-[var(--line)]"}`}>{i<step && <Check size={11}/>}{s.label}</button>)}
-      </div>
-
-      {stepId === "customer" && (
-        <StepCustomer
-          clientName={clientName} setClientName={setClientName}
-          clientEmail={clientEmail} setClientEmail={setClientEmail}
-          siteAddress={siteAddress} setSiteAddress={setSiteAddress}
-          setClientId={setClientId}
-        />
-      )}
-
-      {stepId === "drawing" && (
-        <div className="space-y-4">
-          <div className="card">
-            <p className="section-tag mb-1">Step 1</p>
-            <p className="font-semibold text-[17px] mb-4">Upload photos or roof plans</p>
-            <label className="flex items-center justify-center gap-2 border-2 border-dashed border-[var(--line)] rounded-xl py-8 cursor-pointer hover:border-[var(--amber)] bg-[var(--app-bg)]">
-              <Paperclip size={18} className="text-[var(--ink-faint)]"/><span className="text-[14px] font-semibold text-[var(--ink-soft)]">Add site photos or plans</span>
-              <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={(e) => { const f = Array.from(e.target.files??[]); setDrawingFiles((p) => [...p,...f.filter((x) => !p.some((y) => y.name===x.name))]); e.target.value=""; }}/>
-            </label>
-            {drawingFiles.map((f) => <div key={f.name} className="flex items-center gap-3 bg-[var(--app-bg)] rounded-lg px-3 py-2.5 mt-2"><Paperclip size={14} className="text-[var(--ink-faint)] shrink-0"/><span className="text-[13.5px] flex-1 truncate">{f.name}</span><button onClick={() => setDrawingFiles((p) => p.filter((x) => x.name!==f.name))}><X size={14} className="text-[var(--ink-faint)]"/></button></div>)}
+        {summary && (
+          <div className="text-right">
+            <p className="font-display text-[2rem] text-[var(--amber-deep)]">${Math.round(summary.total).toLocaleString()}</p>
+            <p className="text-[11px] text-[var(--ink-faint)] font-semibold">inc. GST - {summary.totalArea} m&sup2; total</p>
           </div>
+        )}
+      </div>
 
-          <VoiceNoteRecorder
-            onTranscriptReady={onVoiceTranscript}
-            analyzing={analyzing}
-            analysisError={analysisError}
-            analysisResult={analysisResult}
-            usageLimitReached={usageLimitReached}
-          />
+      {/* ── Jobs section ─────────────────────────────────────── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-[14px] text-[var(--ink)] flex items-center gap-2">
+            <FileText size={16} className="text-[var(--amber-deep)]" /> Jobs ({jobs.length})
+          </h3>
+          <button onClick={() => setAdding(!adding)}
+            className="flex items-center gap-1.5 text-[12px] font-bold text-[var(--amber-deep)] hover:underline">
+            <PlusCircle size={14} /> {adding ? "Cancel" : "Add job"}
+          </button>
+        </div>
 
-          {drawingFiles.length > 0 && (
-            <div className="card border-2 border-[var(--amber-light)]">
-              <div className="flex items-start gap-3 mb-3">
-                <Sparkles size={18} className="text-[var(--amber-deep)] mt-0.5 shrink-0" />
-                <div>
-                  <p className="font-semibold">AI field pre-fill (optional)</p>
-                  <p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5">AI reads the drawing and notes what it can. You review everything.</p>
-                </div>
+        {adding && (
+          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-5 space-y-4">
+            <p className="font-semibold text-[13px] text-[var(--ink)]">New job</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label-field text-[11px]">Roof area (m&sup2;)</label>
+                <input type="number" value={newArea || ""} onChange={e => setNewArea(Number(e.target.value))}
+                  placeholder="e.g. 150" className="app-field text-[13px]" />
               </div>
-              <button onClick={runAiAnalysis} disabled={analyzing} className="btn-secondary w-full justify-center"><Sparkles size={15} className="text-[var(--amber-deep)]" />{analyzing ? "Reading..." : "Analyse with AI"}</button>
-              {analysisError && <p className="text-[13px] text-[var(--red)] mt-2">{analysisError}</p>}
-              {analysisResult && <div className={`mt-3 rounded-lg px-3 py-2.5 flex items-start gap-2 ${analysisResult.confidence === "low" ? "bg-[var(--red-bg)]" : "bg-amber-50"}`}><AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-600" /><div><p className="text-[13px] font-semibold text-amber-800">Fields noted ({analysisResult.confidence} confidence) - review before saving</p>{analysisResult.notes && <p className="text-[12.5px] mt-1 text-amber-700">{analysisResult.notes}</p>}</div></div>}
+              <div>
+                <label className="label-field text-[11px]">Pitch</label>
+                <select value={newPitch} onChange={e => setNewPitch(e.target.value as JobDetail["pitchType"])}
+                  className="app-field text-[13px]">
+                  <option value="low">Low (&lt;15&deg;)</option>
+                  <option value="medium">Medium (15-30&deg;)</option>
+                  <option value="steep">Steep (&gt;30&deg;)</option>
+                </select>
+              </div>
             </div>
-          )}
+            <div>
+              <label className="label-field text-[11px]">Roof style</label>
+              <div className="grid grid-cols-4 gap-2">
+                {(["gable", "hip", "flat", "complex"] as const).map(s => (
+                  <button key={s} onClick={() => setNewStyle(s)}
+                    className={`px-3 py-2 rounded-xl border text-[12px] font-semibold transition-all capitalize ${newStyle === s ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] text-[var(--ink-soft)] hover:border-gray-400"}`}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="label-field text-[11px]">Description</label>
+              <textarea value={newDesc} onChange={e => setNewDesc(e.target.value)}
+                placeholder="e.g. Full re-roof on 1970s weatherboard. Existing tiles to be removed. Need new sarking."
+                rows={3} className="app-field text-[13px] resize-none" />
+            </div>
+            <button onClick={addJob} disabled={!canAdd}
+              className="flex items-center gap-2 bg-[var(--navy)] text-white font-bold text-[13px] px-5 py-2.5 rounded-xl hover:bg-[#121f2b] transition-colors disabled:opacity-40">
+              <Plus size={15} /> Add job
+            </button>
+          </div>
+        )}
+
+        {jobs.map((j, i) => <JobCard key={j.id} job={j} index={i} />)}
+
+        {jobs.length === 0 && (
+          <div className="text-center py-10 border-2 border-dashed border-[var(--line)] rounded-2xl">
+            <FileText size={28} className="text-[var(--ink-faint)] mx-auto mb-2" />
+            <p className="text-[13px] text-[var(--ink-faint)] font-semibold">No jobs added yet</p>
+            <p className="text-[11px] text-[var(--ink-faint)] mt-1">Click "Add job" to start scoping</p>
+          </div>
+        )}
+      </div>
+
+      {/* ── Materials ────────────────────────────────────────── */}
+      <div className="space-y-3">
+        <h3 className="font-semibold text-[14px] text-[var(--ink)] flex items-center gap-2">
+          <Image size={16} className="text-[var(--amber-deep)]" /> Material
+        </h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {(Object.entries(MATERIALS) as [MaterialType, typeof MATERIALS[MaterialType]][]).map(([key, m]) => (
+            <button key={key} onClick={() => setMaterial(key)}
+              className={`p-3 rounded-xl border text-left transition-all ${material === key ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] bg-white text-[var(--ink)] hover:border-gray-400"}`}>
+              <p className="font-bold text-[13px]">{m.label}</p>
+              <p className={`text-[11px] mt-1 ${material === key ? "text-white/70" : "text-[var(--ink-faint)]"}`}>{m.description}</p>
+              <p className={`text-[12px] font-bold mt-2 ${material === key ? "text-[var(--amber)]" : "text-[var(--amber-deep)]"}`}>${m.costPerSqm}/m&sup2;</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Colour ───────────────────────────────────────────── */}
+      <div className="space-y-3">
+        <h3 className="font-semibold text-[14px] text-[var(--ink)] flex items-center gap-2">
+          <SquareCheck size={16} className="text-[var(--amber-deep)]" /> Colour
+        </h3>
+        <div className="flex flex-wrap gap-2">
+          {(["basalt", "surfmist", "monument", "dune", "other"] as ColorPreference[]).map(c => (
+            <button key={c} onClick={() => setColor(c)}
+              className={`px-4 py-2 rounded-xl border text-[13px] font-semibold capitalize transition-all ${color === c ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] text-[var(--ink-soft)] hover:border-gray-400"}`}>
+              {c}
+            </button>
+          ))}
+        </div>
+        {(color === "surfmist" || color === "monument") && tier === "premium" && (
+          <p className="text-[11px] text-amber-600 font-medium">+ $2/m&sup2; premium colour surcharge</p>
+        )}
+      </div>
+
+      {/* ── Labour rate ──────────────────────────────────────── */}
+      <div className="space-y-3">
+        <h3 className="font-semibold text-[14px] text-[var(--ink)] flex items-center gap-2">
+          <ArrowRight size={16} className="text-[var(--amber-deep)]" /> Labour rate
+        </h3>
+        <div className="grid grid-cols-3 gap-2">
+          {(Object.entries(RATES) as [LabourRate, typeof RATES[LabourRate]][]).map(([key, r]) => (
+            <button key={key} onClick={() => setLabourRate(key)}
+              className={`p-3 rounded-xl border text-center transition-all ${labourRate === key ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] bg-white text-[var(--ink)] hover:border-gray-400"}`}>
+              <p className="font-bold text-[12.5px]">{r.label.split("(")[0]}</p>
+              <p className={`text-[11px] mt-1 ${labourRate === key ? "text-white/70" : "text-[var(--ink-faint)]"}`}>Min ${r.min.toLocaleString()}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Tier ─────────────────────────────────────────────── */}
+      <div className="space-y-3">
+        <h3 className="font-semibold text-[14px] text-[var(--ink)] flex items-center gap-2">
+          <Maximize2 size={16} className="text-[var(--amber-deep)]" /> Pricing tier
+        </h3>
+        <div className="grid grid-cols-2 gap-2">
+          {(["standard", "premium"] as PricingTier[]).map(t => (
+            <button key={t} onClick={() => setTier(t)}
+              className={`p-4 rounded-xl border text-center transition-all ${tier === t ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] bg-white text-[var(--ink)] hover:border-gray-400"}`}>
+              <p className="font-bold text-[14px] capitalize">{t}</p>
+              <p className={`text-[11px] mt-1 ${tier === t ? "text-white/70" : "text-[var(--ink-faint)]"}`}>{t === "standard" ? "Base pricing" : "+15% - Premium fixings & warranty"}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Extras ───────────────────────────────────────────── */}
+      <div className="space-y-3">
+        <h3 className="font-semibold text-[14px] text-[var(--ink)] flex items-center gap-2">
+          <PlusCircle size={16} className="text-[var(--amber-deep)]" /> Extras
+        </h3>
+        <div className="space-y-2">
+          {(Object.entries(EXTRAS) as [ExtrasKey, typeof EXTRAS[ExtrasKey]][]).map(([key, e]) => (
+            <label key={key} className="flex items-center gap-3 p-3 rounded-xl border border-[var(--line)] bg-white cursor-pointer hover:border-gray-400 transition-colors">
+              <input type="checkbox" checked={extras[key]} onChange={ev => setExtras(prev => ({ ...prev, [key]: ev.target.checked }))}
+                className="w-4 h-4 rounded accent-[var(--navy)] shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-[13px] text-[var(--ink)]">{e.label}</p>
+                <p className="text-[11px] text-[var(--ink-faint)]">{e.description}</p>
+              </div>
+              <span className="text-[12px] font-bold text-[var(--amber-deep)] shrink-0">${e.unitCost}/{e.unit}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Notes ────────────────────────────────────────────── */}
+      <div className="space-y-3">
+        <h3 className="font-semibold text-[14px] text-[var(--ink)] flex items-center gap-2">
+          <MessageSquare size={16} className="text-[var(--amber-deep)]" /> Notes &amp; conditions
+        </h3>
+        <textarea value={notes} onChange={e => setNotes(e.target.value)}
+          placeholder="Any special conditions, access notes, or client requests..."
+          rows={4} className="app-field text-[13px] resize-none" />
+        <div>
+          <label className="label-field text-[11px]">Warranty text</label>
+          <input type="text" value={warranty} onChange={e => setWarranty(e.target.value)}
+            className="app-field text-[13px]" />
+        </div>
+      </div>
+
+      {/* ── Summary ──────────────────────────────────────────── */}
+      {summary && (
+        <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-6 space-y-3">
+          <h3 className="font-semibold text-[14px] text-[var(--ink)] flex items-center gap-2">
+            <FileText size={16} className="text-[var(--amber-deep)]" /> Quote summary
+          </h3>
+
+          <div className="space-y-2 text-[13px]">
+            <div className="flex justify-between">
+              <span className="text-[var(--ink-soft)]">Labour ({RATES[labourRate].label})</span>
+              <span className="font-semibold">${Math.round(summary.labour).toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[var(--ink-soft)]">Materials ({MATERIALS[material].label})</span>
+              <span className="font-semibold">${Math.round(summary.matCost).toLocaleString()}</span>
+            </div>
+            {summary.extrasTotal > 0 && (
+              <div className="flex justify-between">
+                <span className="text-[var(--ink-soft)]">Extras</span>
+                <span className="font-semibold">${Math.round(summary.extrasTotal).toLocaleString()}</span>
+              </div>
+            )}
+            {summary.colorSurcharge > 0 && (
+              <div className="flex justify-between">
+                <span className="text-[var(--ink-soft)]">Colour premium</span>
+                <span className="font-semibold">${Math.round(summary.colorSurcharge).toLocaleString()}</span>
+              </div>
+            )}
+            {tier === "premium" && (
+              <div className="flex justify-between">
+                <span className="text-[var(--ink-soft)]">Premium tier (+15%)</span>
+                <span className="font-semibold text-amber-600">Included</span>
+              </div>
+            )}
+            <div className="border-t border-[var(--line)] pt-2 flex justify-between">
+              <span className="text-[var(--ink-soft)]">Subtotal</span>
+              <span className="font-bold">${Math.round(summary.subtotal).toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[var(--ink-soft)]">GST (10%)</span>
+              <span className="font-semibold">${Math.round(summary.gst).toLocaleString()}</span>
+            </div>
+            <div className="border-t-2 border-[var(--navy)] pt-2 flex justify-between">
+              <span className="font-bold text-[var(--ink)]">Total inc. GST</span>
+              <span className="font-display text-[1.4rem] text-[var(--amber-deep)]">${Math.round(summary.total).toLocaleString()}</span>
+            </div>
+          </div>
+
+          <p className="text-[11px] text-[var(--ink-faint)]">
+            Based on {summary.totalArea} m&sup2; @ ${summary.breakdown.labourPerSqm}/m&sup2; labour + ${summary.breakdown.materialPerSqm}/m&sup2; materials
+          </p>
         </div>
       )}
 
-      {stepId === "job" && (
-        <div className="space-y-4">
-          <div className="card">
-            <p className="section-tag mb-3">Job details</p>
-            <Field label="Job type" className="mb-3"><select value={intake.jobType} onChange={(e) => set("jobType", e.target.value as RooferIntake["jobType"])} className="app-field"><option value="reroof">Full re-roof</option><option value="repair">Repair / patch</option><option value="new">New roof (new build)</option><option value="gutters">Gutters and downpipes only</option><option value="inspection">Roof inspection</option></select></Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Hourly rate ($)"><input type="number" value={rate} onChange={(e) => setRate(Number(e.target.value))} className="app-field"/></Field>
-              <Field label="Materials margin (%)"><input type="number" value={margin} onChange={(e) => setMargin(Number(e.target.value))} className="app-field"/></Field>
-            </div>
-            <div className="mt-3 divide-y divide-[var(--line-subtle)]">
-              <Chk checked={intake.callout} onChange={(v) => set("callout", v)} label="Include call-out / inspection fee"/>
-              <Chk checked={intake.twoStorey} onChange={(v) => set("twoStorey", v)} label="Two-storey / elevated"/>
-            </div>
-          </div>
-          <div className="card">
-            <p className="section-tag mb-3">Site access</p>
-            <Field label="Overall site access"><select value={intake.siteAccess} onChange={(e) => set("siteAccess", e.target.value as RooferIntake["siteAccess"])} className="app-field"><option value="easy">Easy</option><option value="moderate">Moderate</option><option value="difficult">Difficult</option></select></Field>
-          </div>
-        </div>
-      )}
-
-      {stepId === "roof" && (
-        <div className="space-y-4">
-          <div className="card">
-            <p className="section-tag mb-3">Roof area and type</p>
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <Field label="Roof area (sqm)"><Num value={intake.roofSqm} onChange={(v) => set("roofSqm", v)}/></Field>
-              <Field label="Roof pitch"><select value={intake.roofPitch} onChange={(e) => set("roofPitch", e.target.value as RooferIntake["roofPitch"])} className="app-field"><option value="low">Low pitch (&lt;15°)</option><option value="standard">Standard (15–30°)</option><option value="steep">Steep (&gt;30°)</option></select></Field>
-            </div>
-            <Field label="Roof type"><select value={intake.roofType} onChange={(e) => set("roofType", e.target.value as RooferIntake["roofType"])} className="app-field"><option value="colorbond">Colorbond / metal</option><option value="terracotta">Terracotta tile</option><option value="concrete_tile">Concrete tile</option><option value="mixed">Mixed (assess on site)</option></select></Field>
-          </div>
-          <div className="card">
-            <p className="section-tag mb-3">Linear items</p>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Ridge capping (m)"><Num value={intake.ridgeLm}   onChange={(v) => set("ridgeLm", v)}/></Field>
-              <Field label="Valley iron (m)"><Num value={intake.valleyLm}  onChange={(v) => set("valleyLm", v)}/></Field>
-              <Field label="Fascia (m)"><Num value={intake.fasciaLm}  onChange={(v) => set("fasciaLm", v)}/></Field>
-              <Field label="Gutter (m)"><Num value={intake.gutterLm}  onChange={(v) => set("gutterLm", v)}/></Field>
-              <Field label="Downpipe (m)"><Num value={intake.downpipeLm} onChange={(v) => set("downpipeLm", v)}/></Field>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {stepId === "extras" && (
-        <div className="space-y-4">
-          <div className="card">
-            <p className="section-tag mb-3">Extras</p>
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <Field label="Whirlybirds"><Num value={intake.whirlybirds}   onChange={(v) => set("whirlybirds", v)}/></Field>
-              <Field label="Skylights"><Num value={intake.skylights}     onChange={(v) => set("skylights", v)}/></Field>
-              <Field label="Insulation (sqm)"><Num value={intake.insulationSqm} onChange={(v) => set("insulationSqm", v)}/></Field>
-              <Field label="Flashing (m)"><Num value={intake.flashingLm}   onChange={(v) => set("flashingLm", v)}/></Field>
-            </div>
-          </div>
-          <div className="card">
-            <p className="section-tag mb-3">Scaffolding</p>
-            <Field label="Scaffold days needed"><Num value={intake.scaffoldDays} onChange={(v) => set("scaffoldDays", v)}/></Field>
-            <p className="text-[12px] text-[var(--ink-faint)] mt-1.5">Scaffold cost is passed through at cost + margin</p>
-          </div>
-        </div>
-      )}
-
-      {stepId === "materials" && <MaterialsEditor lib={lib} setLib={setLib} trade="roofer" />}
-
-      {stepId === "send" && (
-        <div className="space-y-4">
-          <div className="bg-[var(--navy)] rounded-2xl p-5">
-            <p className="text-[11px] text-[var(--steel-3)] font-bold uppercase tracking-wider mb-3">Quote summary</p>
-            <div className="space-y-2">
-              <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Labour ({result.labourHours}h)</span><span className="text-white font-semibold tabular">${Math.round(result.labourHours*rate).toLocaleString()}</span></div>
-              <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Materials + scaffold</span><span className="text-white font-semibold tabular">${(result.materialsCost + markupTotal).toLocaleString()}</span></div>
-              <div className="border-t border-white/10 pt-2 flex justify-between"><span className="text-white font-bold">Total</span><span className="font-display text-[24px] text-[var(--amber)] tabular">${(result.totalCost + markupTotal).toLocaleString()}</span></div>
-            </div>
-          </div>
-          <div className="card">
-            <p className="section-tag mb-1">Sending to</p>
-            <p className="font-semibold text-[var(--ink)]">{clientName || "No client name set"}</p>
-            <p className="text-[13px] text-[var(--ink-faint)]">{clientEmail || "No email set - can still save as draft"}</p>
-            <p className="text-[13px] text-[var(--ink-faint)]">{siteAddress || "No site address set"}</p>
-          </div>
-          <ExtraJobLines
-            lines={extraLines}
-            onChange={setExtraLines}
-            hourlyRate={rate}
-            marginPct={margin}
-          />
-                    <div className="card">
-            <p className="section-tag mb-3">Payment terms</p>
-            <select value={termsPreset} onChange={(e) => setTermsPreset(e.target.value as keyof typeof PAYMENT_TERM_PRESETS | "custom")} className="app-field mb-3">
-              <option value="full_on_completion">100% on completion (14 days)</option>
-              <option value="deposit_50_50">50% deposit, 50% on completion</option>
-              <option value="deposit_30_70">30% deposit, 70% on completion</option>
-              <option value="due_on_invoice">100% due on invoice (7 days)</option>
-              <option value="custom">Custom split</option>
-            </select>
-            <div className="bg-[var(--app-bg)] rounded-xl p-3 space-y-1.5">
-              {paymentTerms.map((t,i) => <div key={i} className="flex justify-between text-[13.5px]"><span className="text-[var(--ink-soft)]">{t.label}</span><span className="font-bold tabular">${Math.round((result.totalCost+markupTotal)*t.percent/100).toLocaleString()}</span></div>)}
-            </div>
-          </div>
-          <div className="space-y-3">
-            <button onClick={() => saveAndSend(true)} disabled={saving||!clientEmail} className="btn-primary">{saving ? "Sending..." : "Send quote to client"}</button>
-            <button onClick={() => saveAndSend(false)} disabled={saving} className="btn-secondary w-full justify-center">Save as draft</button>
-            {saveMessage && <div className={`rounded-xl px-4 py-3 text-[13.5px] font-semibold text-center ${saveMessage.includes("fail") ? "bg-[var(--red-bg)] text-[var(--red)]" : "bg-[var(--green-bg)] text-[var(--green)]"}`}>{saveMessage}</div>}
-            {savedQuoteId && (<a href={`/api/quotes/${savedQuoteId}/pdf`} target="_blank" rel="noopener noreferrer" className="btn-secondary w-full justify-center block text-center">Download PDF</a>)}
-          </div>
-        </div>
-      )}
-
-      <div className="flex gap-3 mt-6">
-        {step > 0 && <button onClick={() => setStep(step-1)} className="btn-secondary flex-1"><ChevronLeft size={16}/> Back</button>}
-        {step < STEPS.length-1 && <button onClick={() => setStep(step+1)} className="btn-primary flex-1">{STEPS[step+1].label} <ChevronRight size={16}/></button>}
+      {/* ── Actions ──────────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row gap-3 pt-4">
+        <button onClick={handleSave} disabled={saving || !summary}
+          className="flex-1 flex items-center justify-center gap-2 bg-[var(--navy)] text-white font-bold text-[14px] py-3.5 rounded-xl hover:bg-[#121f2b] transition-colors disabled:opacity-40">
+          {saving ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
+          {saving ? "Saving..." : "Save quote"}
+        </button>
+        <button onClick={handleSend} disabled={!summary}
+          className="flex-1 flex items-center justify-center gap-2 bg-[var(--amber)] text-[var(--navy)] font-extrabold text-[14px] py-3.5 rounded-xl hover:bg-[var(--amber-deep)] transition-colors disabled:opacity-40">
+          <Phone size={15} /> Send to client
+        </button>
       </div>
     </div>
   );
-}
-
-function Field({ label, children, className="" }: { label: string; children: React.ReactNode; className?: string }) {
-  return <label className={`block ${className}`}><span className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">{label}</span>{children}</label>;
-}
-function Num({ value, onChange }: { value: number; onChange: (v: number) => void }) {
-  return <input type="number" inputMode="numeric" min={0} value={value} onChange={(e) => onChange(Number(e.target.value))} className="app-field"/>;
-}
-function Chk({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
-  return <label className="flex items-center gap-3 py-2.5 cursor-pointer"><input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)}/><span className="text-[14.5px] text-[var(--ink)]">{label}</span></label>;
 }
