@@ -276,7 +276,7 @@ function EnquiryModal({ listing, onClose }: { listing: Listing; onClose: () => v
             <div>
               <p className="text-[11.5px] font-semibold text-gray-500 uppercase tracking-wide mb-2">Budget</p>
               <div className="grid grid-cols-3 gap-1.5">
-                {["Under $500","$500–$2k","$2k–$10k","$10k+","Not sure"].map(b => (
+                {["Under $500","$500-$2k","$2k-$10k","$10k+","Not sure"].map(b => (
                   <button key={b} onClick={()=>setBudget(b)}
                     className={`px-2 py-2 rounded-lg text-[12px] font-semibold border transition-all ${budget===b?"border-gray-900 bg-gray-900 text-white":"border-gray-200 text-gray-600 hover:border-gray-400"}`}>
                     {b}
@@ -304,7 +304,7 @@ function EnquiryModal({ listing, onClose }: { listing: Listing; onClose: () => v
             <div>
               <p className="text-[11.5px] font-semibold text-gray-500 uppercase tracking-wide mb-2">Other quotes?</p>
               <div className="flex gap-2">
-                {["Just you","1–2 others","3+ others"].map(o => (
+                {["Just you","1-2 others","3+ others"].map(o => (
                   <button key={o} onClick={()=>setOthers(o)}
                     className={`flex-1 py-2 rounded-lg text-[12px] font-semibold border transition-all ${others===o?"border-gray-900 bg-gray-900 text-white":"border-gray-200 text-gray-600 hover:border-gray-400"}`}>
                     {o}
@@ -362,7 +362,7 @@ export default function DirectoryCard({ listing, index = 0 }: { listing: Listing
         {/* Content */}
         <div className="p-4 flex flex-col flex-1">
 
-          {/* Name + verified */}
+          {/* Name + listing */}
           <div className="flex items-start gap-2 mb-1">
             <h2 className="font-bold text-[15px] text-gray-900 leading-snug flex-1">{listing.business_name}</h2>
             <BadgeCheck size={16} className="text-blue-500 shrink-0 mt-0.5" />
