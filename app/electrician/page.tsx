@@ -104,14 +104,32 @@ export default async function NewQuotePage({
       }
 
       if (tradeParm && DEDICATED.includes(tradeParm)) {
+        /* Try price_book_items first (CSV uploads + supplier catalog) */
         const tradeMats = await supabase
-          .from("material_items")
-          .select("*")
+          .from("price_book_items")
+          .select("id,description,cost_price")
           .eq("profile_id", businessId)
           .eq("trade", tradeParm)
-          .order("label");
-        if (tradeMats.data && tradeMats.data.length > 0)
-          materials = tradeMats.data;
+          .order("description");
+        if (tradeMats.data && tradeMats.data.length > 0) {
+          materials = tradeMats.data.map((m) => ({
+            item_key: m.id,
+            label: m.description,
+            unit_cost: m.cost_price ?? 0,
+          }));
+        }
+        /* Fallback to legacy material_items */
+        if (materials.length === 0) {
+          const legacyMats = await supabase
+            .from("material_items")
+            .select("*")
+            .eq("profile_id", businessId)
+            .eq("trade", tradeParm)
+            .order("label");
+          if (legacyMats.data && legacyMats.data.length > 0)
+            materials = legacyMats.data;
+        }
+        /* Fallback to defaults */
         if (materials.length === 0) {
           const defaults = DEDICATED_DEFAULTS[tradeParm];
           if (defaults) materials = defaults.map((m) => ({ ...m }));
