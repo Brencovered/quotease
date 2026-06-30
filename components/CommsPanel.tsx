@@ -958,59 +958,65 @@ import { createClient } from "@/lib/supabase/client";
 /* ================================================================== */
 
  function BrochuresTab({ completedJobs, branding, quotes }: { completedJobs: Job[]; branding: Branding | null; quotes: Quote[] }) {
-  const [selectedTemplate, setSelectedTemplate] = useState<"services" | "recent" | "custom" | "quote">("services");
   const [showPreview, setShowPreview] = useState(false);
-  const [materials, setMaterials] = useState<Array<{ label: string; unit_cost: number; supplier?: string | null }>>([]);
-  const [title, setTitle] = useState("Our Services");
+  const [title, setTitle] = useState(branding?.business_name || "Our Company");
+  const [tagline, setTagline] = useState(branding?.branding_tagline || "");
+  const [logoUrl, setLogoUrl] = useState(branding?.logo_url || "");
+  const [accentColor, setAccentColor] = useState(branding?.branding_primary_color || "#0a1722");
+  const [tcs, setTcs] = useState("");
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  /* Section toggles */
+  const [showServices, setShowServices] = useState(true);
+  const [showRecentWork, setShowRecentWork] = useState(true);
+  const [showFromQuote, setShowFromQuote] = useState(false);
+  const [showCustomContent, setShowCustomContent] = useState(true);
   const [customText, setCustomText] = useState("");
 
-  /* -- Branding & styling -- */
-  const [brochureColor, setBrochureColor] = useState(branding?.branding_primary_color || "#0a1722");
-  const [brochureTagline, setBrochureTagline] = useState(branding?.branding_tagline || "");
-  const [brochureLogo, setBrochureLogo] = useState(branding?.logo_url || "");
-  const [brochureTcs, setBrochureTcs] = useState("");
-  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  /* Data sources */
+  const [serviceMaterials, setServiceMaterials] = useState<Array<{ label: string; unit_cost: number; supplier?: string | null }>>([]);
+  const [selectedQuoteId, setSelectedQuoteId] = useState("");
+  const [quoteItems, setQuoteItems] = useState<Array<{ label: string; qty: number; total: number }>>([]);
 
-  /* -- Website scraper -- */
+  /* Website scraper */
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [scrapeLoading, setScrapeLoading] = useState(false);
-  const [scrapedData, setScrapedData] = useState<{
-    businessName: string; about: string; services: string[];
-    testimonials: { text: string; author?: string }[]; images: string[]; logo: string;
-  } | null>(null);
-
-  /* -- Quote sync -- */
-  const [selectedQuoteId, setSelectedQuoteId] = useState<string>("");
-  const [quoteMaterials, setQuoteMaterials] = useState<Array<{ label: string; qty: number; unit_cost: number; total: number }>>([]);
+  const [scrapedAbout, setScrapedAbout] = useState("");
+  const [scrapedServices, setScrapedServices] = useState<string[]>([]);
+  const [scrapedTestimonials, setScrapedTestimonials] = useState<Array<{ text: string; author?: string }>>([]);
 
   const supabase = createClient();
 
+  /* Load service materials on mount */
   useEffect(() => {
-    if (selectedTemplate === "services") {
-      fetch("/api/comms/materials").then(r => r.json()).then(d => { if (d.items) setMaterials(d.items); });
-      setTitle("Our Services");
-    } else if (selectedTemplate === "recent") {
-      setTitle("Recent Work");
-    } else if (selectedTemplate === "quote") {
-      setTitle("Quote Summary");
-      if (selectedQuoteId) loadQuoteMaterials(selectedQuoteId);
-    } else {
-      setTitle("Company Brochure");
-    }
-  }, [selectedTemplate, selectedQuoteId]);
+    fetch("/api/comms/materials").then(r => r.json()).then(d => {
+      if (d.items) setServiceMaterials(d.items);
+    });
+  }, []);
 
-  async function loadQuoteMaterials(quoteId: string) {
-    const { data } = await supabase.from("quotes").select("intake_data, total_cost").eq("id", quoteId).single();
-    if (data?.intake_data?.site_items) {
-      const items = data.intake_data.site_items as Array<{ label: string; qty: number; materialsCost: number; labourHrs: number }>;
-      setQuoteMaterials(items.map(it => ({
-        label: it.label,
-        qty: it.qty ?? 1,
-        unit_cost: it.materialsCost ?? 0,
-        total: (it.materialsCost ?? 0) + (it.labourHrs ?? 0) * 95,
-      })));
-    }
-  }
+  /* Load quote materials when a quote is selected */
+  useEffect(() => {
+    if (!selectedQuoteId || !showFromQuote) { setQuoteItems([]); return; }
+    supabase.from("quotes").select("intake_data, total_cost").eq("id", selectedQuoteId).single()
+      .then(({ data }) => {
+        if (data?.intake_data?.site_items) {
+          const items = data.intake_data.site_items as Array<{ label: string; qty: number; materialsCost: number; labourHrs: number }>;
+          setQuoteItems(items.map(it => ({
+            label: it.label,
+            qty: it.qty ?? 1,
+            total: (it.materialsCost ?? 0) + (it.labourHrs ?? 0) * 95,
+          })));
+        } else if (data?.intake_data?.materials) {
+          const items = data.intake_data.materials as Array<{ description: string; qty: number; total: number }>;
+          setQuoteItems(items.map(it => ({
+            label: it.description,
+            qty: it.qty ?? 1,
+            total: it.total ?? 0,
+          })));
+        }
+      });
+  }, [selectedQuoteId, showFromQuote, supabase]);
 
   async function scrapeWebsite() {
     if (!websiteUrl.trim()) return;
@@ -1023,26 +1029,22 @@ import { createClient } from "@/lib/supabase/client";
       });
       const data = await res.json();
       if (res.ok) {
-        setScrapedData(data);
-        if (data.about && !customText) setCustomText(data.about);
-        if (data.businessName && title === "Company Brochure") setTitle(data.businessName);
-        if (data.logo) setBrochureLogo(data.logo);
-        // Auto-add scraped services to custom text
-        if (data.services?.length > 0) {
-          const servicesText = "\n\nOur Services:\n" + data.services.map((s: string) => "- " + s).join("\n");
-          setCustomText(prev => prev + (prev ? "" : data.about || "") + servicesText);
+        if (data.about) setScrapedAbout(data.about);
+        if (data.services) setScrapedServices(data.services);
+        if (data.testimonials) setScrapedTestimonials(data.testimonials);
+        if (data.businessName && title === (branding?.business_name || "Our Company")) setTitle(data.businessName);
+        if (data.logo && !logoUrl) setLogoUrl(data.logo);
+        /* Merge into custom text */
+        const parts: string[] = [];
+        if (data.about) parts.push(data.about);
+        if (data.services?.length) parts.push("Our Services:\n" + data.services.map((s: string) => "- " + s).join("\n"));
+        if (data.testimonials?.length) {
+          parts.push("What our clients say:\n" + data.testimonials.map((t: { text: string; author?: string }) =>
+            `\"${t.text}\"${t.author ? " - " + t.author : ""}`).join("\n"));
         }
-        // Add testimonials
-        if (data.testimonials?.length > 0) {
-          const testimonialsText = "\n\nWhat our clients say:\n" + data.testimonials.map((t: { text: string; author?: string }) =>
-            `- "${t.text}"${t.author ? " - " + t.author : ""}`
-          ).join("\n");
-          setCustomText(prev => prev + testimonialsText);
-        }
+        if (parts.length) setCustomText(prev => prev ? prev + "\n\n" + parts.join("\n\n") : parts.join("\n\n"));
       }
-    } catch {
-      /* silently fail */
-    }
+    } catch { /* silently fail */ }
     setScrapeLoading(false);
   }
 
@@ -1059,140 +1061,190 @@ import { createClient } from "@/lib/supabase/client";
     }
   }
 
-  function handlePrint() { window.print(); }
+  function removeImage(idx: number) { setUploadedImages(prev => prev.filter((_, i) => i !== idx)); }
 
-  function removeImage(idx: number) {
-    setUploadedImages(prev => prev.filter((_, i) => i !== idx));
+  async function saveBrochure() {
+    setSaving(true);
+    const payload = {
+      brochure_title: title,
+      brochure_tagline: tagline,
+      brochure_logo: logoUrl,
+      brochure_color: accentColor,
+      brochure_tcs: tcs,
+      brochure_images: uploadedImages,
+      brochure_sections: { showServices, showRecentWork, showFromQuote, showCustomContent },
+      brochure_custom_text: customText,
+    };
+    await fetch("/api/comms/branding", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    setSaving(false);
   }
+
+  function handlePrint() { window.print(); }
 
   const colorPresets = ["#0a1722", "#1e40af", "#b45309", "#15803d", "#7c3aed", "#be123c", "#0e7490", "#4338ca"];
 
   return (
     <div className="space-y-5">
-      <h2 className="font-display text-[18px] text-[var(--ink)]">Brochures</h2>
-
-      {/* Template selector */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {([
-          { key: "services" as const, label: "Services List", desc: "Material pricing" },
-          { key: "recent" as const, label: "Recent Work", desc: "Completed jobs" },
-          { key: "quote" as const, label: "From Quote", desc: "Quote products" },
-          { key: "custom" as const, label: "Custom", desc: "Freeform + scrape" },
-        ]).map((t) => (
-          <button key={t.key} onClick={() => { setSelectedTemplate(t.key); setShowPreview(false); }}
-            className={`card text-center p-4 border-2 transition-colors ${selectedTemplate === t.key ? "border-[var(--navy)]" : "border-transparent"}`}>
-            <FileText size={20} className={`mx-auto mb-1.5 ${selectedTemplate === t.key ? "text-[var(--navy)]" : "text-[var(--ink-faint)]"}`} />
-            <p className="font-bold text-[13px] text-[var(--ink)]">{t.label}</p>
-            <p className="text-[11px] text-[var(--ink-faint)]">{t.desc}</p>
-          </button>
-        ))}
-      </div>
-
-      {/* Quote sync selector */}
-      {selectedTemplate === "quote" && (
-        <div className="card">
-          <label className="text-[12px] font-bold text-[var(--ink-soft)] uppercase tracking-wide mb-1.5 block">Select Quote</label>
-          <select className="app-field text-[13px] py-2" value={selectedQuoteId} onChange={(e) => setSelectedQuoteId(e.target.value)}>
-            <option value="">Choose a quote...</option>
-            {quotes.map(q => (
-              <option key={q.id} value={q.id}>{q.client_name || "Unnamed"} - ${(q.total_cost ?? 0).toLocaleString()} - {q.site_address || "No address"}</option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* Options card */}
-      <div className="card space-y-4">
-        {/* Title */}
-        <div>
-          <label className="text-[12px] font-bold text-[var(--ink-soft)] uppercase tracking-wide mb-1.5 block">Brochure Title</label>
-          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="app-field text-[13px] py-2" />
-        </div>
-
-        {/* Tagline */}
-        <div>
-          <label className="text-[12px] font-bold text-[var(--ink-soft)] uppercase tracking-wide mb-1.5 block">Tagline / Subtitle</label>
-          <input type="text" value={brochureTagline} onChange={(e) => setBrochureTagline(e.target.value)} placeholder="e.g. Quality electrical work guaranteed" className="app-field text-[13px] py-2" />
-        </div>
-
-        {/* Logo URL */}
-        <div>
-          <label className="text-[12px] font-bold text-[var(--ink-soft)] uppercase tracking-wide mb-1.5 block">Logo URL</label>
-          <input type="text" value={brochureLogo} onChange={(e) => setBrochureLogo(e.target.value)} placeholder="https://... or leave blank" className="app-field text-[13px] py-2" />
-        </div>
-
-        {/* Color theme */}
-        <div>
-          <label className="text-[12px] font-bold text-[var(--ink-soft)] uppercase tracking-wide mb-1.5 block">Accent Colour</label>
-          <div className="flex flex-wrap gap-2">
-            {colorPresets.map(c => (
-              <button key={c} onClick={() => setBrochureColor(c)}
-                className={`w-8 h-8 rounded-full border-2 transition-transform ${brochureColor === c ? "border-[var(--navy)] scale-110" : "border-transparent"}`}
-                style={{ backgroundColor: c }} aria-label={`Color ${c}`} />
-            ))}
-            <input type="color" value={brochureColor} onChange={(e) => setBrochureColor(e.target.value)}
-              className="w-8 h-8 rounded-full border-2 border-[var(--line)] cursor-pointer" />
-          </div>
-        </div>
-
-        {/* Website scraper */}
-        {selectedTemplate === "custom" && (
-          <div>
-            <label className="text-[12px] font-bold text-[var(--ink-soft)] uppercase tracking-wide mb-1.5 block">Scrape Your Website</label>
-            <div className="flex gap-2">
-              <input type="text" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)}
-                placeholder="https://yourbusiness.com.au" className="app-field text-[13px] py-2 flex-1" />
-              <button onClick={scrapeWebsite} disabled={scrapeLoading || !websiteUrl.trim()}
-                className="btn-secondary text-[12px] py-2 px-3 shrink-0" style={{ width: "auto" }}>
-                {scrapeLoading ? "Scraping..." : "Scrape"}
-              </button>
-            </div>
-            <p className="text-[10px] text-[var(--ink-faint)] mt-1">Auto-fills about, services, testimonials & images</p>
-          </div>
-        )}
-
-        {/* Custom content */}
-        {selectedTemplate === "custom" && (
-          <div>
-            <label className="text-[12px] font-bold text-[var(--ink-soft)] uppercase tracking-wide mb-1.5 block">Content</label>
-            <textarea value={customText} onChange={(e) => setCustomText(e.target.value)} rows={8}
-              placeholder="Enter your brochure content here..." className="app-field text-[13px] py-2 resize-none" />
-          </div>
-        )}
-
-        {/* Image upload */}
-        <div>
-          <label className="text-[12px] font-bold text-[var(--ink-soft)] uppercase tracking-wide mb-1.5 block">Brochure Images</label>
-          <div className="flex flex-wrap gap-2 mb-2">
-            {uploadedImages.map((img, i) => (
-              <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-[var(--line)]">
-                <img src={img} alt="" className="w-full h-full object-cover" />
-                <button onClick={() => removeImage(i)} className="absolute top-0.5 right-0.5 bg-[var(--red)] text-white rounded-full p-0.5">
-                  <X size={10} />
-                </button>
-              </div>
-            ))}
-          </div>
-          <label className="flex items-center gap-2 border-2 border-dashed border-[var(--line)] rounded-xl py-3 px-4 cursor-pointer hover:border-[var(--amber)] transition-colors bg-[var(--app-bg)]">
-            <Upload size={16} className="text-[var(--ink-faint)]" />
-            <span className="text-[13px] font-semibold text-[var(--ink-soft)]">Add image</span>
-            <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-          </label>
-        </div>
-
-        {/* T&Cs */}
-        <div>
-          <label className="text-[12px] font-bold text-[var(--ink-soft)] uppercase tracking-wide mb-1.5 block">Terms & Conditions</label>
-          <textarea value={brochureTcs} onChange={(e) => setBrochureTcs(e.target.value)} rows={3}
-            placeholder="e.g. Valid for 30 days. Payment terms: 50% deposit, 50% on completion..." className="app-field text-[13px] py-2 resize-none" />
-        </div>
-
-        <button onClick={() => setShowPreview(true)} className="btn-primary text-[13px] py-2 px-5 w-full">
-          <Sparkles size={14} /> Generate brochure
+      <div className="flex items-center justify-between">
+        <h2 className="font-display text-[18px] text-[var(--ink)]">Company Brochure</h2>
+        <button onClick={saveBrochure} disabled={saving} className="btn-primary text-[12px] py-1.5 px-3">
+          <Save size={13} /> {saving ? "Saving..." : "Save Brochure"}
         </button>
       </div>
 
-      {/* Preview */}
+      <p className="text-[13px] text-[var(--ink-faint)]">Build one brochure with the sections you want. Toggle sections on/off below.</p>
+
+      {/* --- Branding --- */}
+      <div className="card space-y-4">
+        <p className="section-tag">Branding</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-[12px] font-bold text-[var(--ink-soft)] mb-1.5">Title</label>
+            <input type="text" className="app-field" value={title} onChange={e => setTitle(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-[12px] font-bold text-[var(--ink-soft)] mb-1.5">Tagline</label>
+            <input type="text" className="app-field" value={tagline} onChange={e => setTagline(e.target.value)} placeholder="e.g. Quality electrical work guaranteed" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-[12px] font-bold text-[var(--ink-soft)] mb-1.5">Logo URL</label>
+            <input type="text" className="app-field" value={logoUrl} onChange={e => setLogoUrl(e.target.value)} placeholder="https://..." />
+          </div>
+          <div>
+            <label className="block text-[12px] font-bold text-[var(--ink-soft)] mb-1.5">Accent Colour</label>
+            <div className="flex flex-wrap gap-2">
+              {colorPresets.map(c => (
+                <button key={c} onClick={() => setAccentColor(c)}
+                  className={`w-7 h-7 rounded-full border-2 ${accentColor === c ? "border-[var(--navy)] scale-110" : "border-transparent"}`}
+                  style={{ backgroundColor: c }} />
+              ))}
+              <input type="color" value={accentColor} onChange={e => setAccentColor(e.target.value)} className="w-7 h-7 rounded-full border border-[var(--line)] cursor-pointer" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* --- Sections toggles --- */}
+      <div className="card space-y-3">
+        <p className="section-tag">Sections</p>
+        {/* Services */}
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" checked={showServices} onChange={e => setShowServices(e.target.checked)} className="w-4 h-4 accent-[var(--navy)]" />
+          <div>
+            <p className="text-[13px] font-bold text-[var(--ink)]">Services List</p>
+            <p className="text-[11px] text-[var(--ink-faint)]">Material pricing from your price book ({serviceMaterials.length} items)</p>
+          </div>
+        </label>
+        {/* Recent Work */}
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" checked={showRecentWork} onChange={e => setShowRecentWork(e.target.checked)} className="w-4 h-4 accent-[var(--navy)]" />
+          <div>
+            <p className="text-[13px] font-bold text-[var(--ink)]">Recent Work</p>
+            <p className="text-[11px] text-[var(--ink-faint)]">Completed jobs ({completedJobs.length} jobs)</p>
+          </div>
+        </label>
+        {/* From Quote */}
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" checked={showFromQuote} onChange={e => setShowFromQuote(e.target.checked)} className="w-4 h-4 accent-[var(--navy)]" />
+          <div className="flex-1">
+            <p className="text-[13px] font-bold text-[var(--ink)]">From Quote</p>
+            {showFromQuote && (
+              <select className="app-field mt-1" value={selectedQuoteId} onChange={e => setSelectedQuoteId(e.target.value)} style={{ padding: "6px 10px", fontSize: "12px" }}>
+                <option value="">Select a quote...</option>
+                {quotes.map(q => (
+                  <option key={q.id} value={q.id}>{q.client_name || "Unnamed"} - ${(q.total_cost ?? 0).toLocaleString()}</option>
+                ))}
+              </select>
+            )}
+          </div>
+        </label>
+        {/* Custom Content */}
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" checked={showCustomContent} onChange={e => setShowCustomContent(e.target.checked)} className="w-4 h-4 accent-[var(--navy)]" />
+          <div className="flex-1">
+            <p className="text-[13px] font-bold text-[var](--ink)]">Custom Content</p>
+          </div>
+        </label>
+      </div>
+
+      {/* --- Custom content + scraper --- */}
+      {showCustomContent && (
+        <div className="card space-y-4">
+          <p className="section-tag">Custom Content</p>
+          {/* Website scraper */}
+          <div>
+            <label className="block text-[12px] font-bold text-[var(--ink-soft)] mb-1.5">Scrape Your Website</label>
+            <div className="flex gap-2">
+              <input type="text" className="app-field flex-1" value={websiteUrl} onChange={e => setWebsiteUrl(e.target.value)} placeholder="https://yourbusiness.com.au" />
+              <button onClick={scrapeWebsite} disabled={scrapeLoading || !websiteUrl.trim()} className="btn-secondary shrink-0" style={{ width: "auto", padding: "8px 14px" }}>
+                {scrapeLoading ? "Scraping..." : "Scrape"}
+              </button>
+            </div>
+            <p className="text-[10px] text-[var(--ink-faint)] mt-1">Auto-fills about, services, testimonials</p>
+          </div>
+          {/* Content textarea */}
+          <div>
+            <label className="block text-[12px] font-bold text-[var(--ink-soft)] mb-1.5">Brochure Text</label>
+            <textarea className="app-field resize-none" rows={8} value={customText} onChange={e => setCustomText(e.target.value)} placeholder="Enter your brochure content..." />
+          </div>
+          {/* Scraped data preview */}
+          {scrapedServices.length > 0 && (
+            <div className="bg-[var(--app-bg)] rounded-lg p-3">
+              <p className="text-[11px] font-bold text-[var(--ink-soft)] mb-1">Scraped Services</p>
+              <div className="flex flex-wrap gap-1">
+                {scrapedServices.map((s, i) => <span key={i} className="pill bg-[var(--blue-bg)] text-[var(--blue)] text-[10px]">{s}</span>)}
+              </div>
+            </div>
+          )}
+          {scrapedTestimonials.length > 0 && (
+            <div className="bg-[var(--app-bg)] rounded-lg p-3 space-y-1">
+              <p className="text-[11px] font-bold text-[var(--ink-soft)] mb-1">Scraped Testimonials</p>
+              {scrapedTestimonials.map((t, i) => (
+                <p key={i} className="text-[11px] text-[var(--ink-soft)] italic">&quot;{t.text}&quot;{t.author ? <span className="font-bold not-italic"> - {t.author}</span> : null}</p>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* --- Images --- */}
+      <div className="card space-y-3">
+        <p className="section-tag">Images</p>
+        <div className="flex flex-wrap gap-2">
+          {uploadedImages.map((img, i) => (
+            <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-[var(--line)]">
+              <img src={img} alt="" className="w-full h-full object-cover" />
+              <button onClick={() => removeImage(i)} className="absolute top-0.5 right-0.5 bg-[var(--red)] text-white rounded-full p-0.5">
+                <X size={10} />
+              </button>
+            </div>
+          ))}
+        </div>
+        <label className="flex items-center gap-2 border-2 border-dashed border-[var(--line)] rounded-xl py-3 px-4 cursor-pointer hover:border-[var(--amber)] transition-colors bg-[var(--app-bg)] w-fit">
+          <Upload size={16} className="text-[var(--ink-faint)]" />
+          <span className="text-[13px] font-semibold text-[var(--ink-soft)]">Add image</span>
+          <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+        </label>
+      </div>
+
+      {/* --- T&Cs --- */}
+      <div className="card space-y-3">
+        <p className="section-tag">Terms &amp; Conditions</p>
+        <textarea className="app-field resize-none" rows={3} value={tcs} onChange={e => setTcs(e.target.value)} placeholder="e.g. Valid for 30 days. 50% deposit required..." />
+      </div>
+
+      {/* Generate button */}
+      <button onClick={() => setShowPreview(true)} className="btn-primary w-full text-[14px] py-3">
+        <Sparkles size={15} /> Preview Brochure
+      </button>
+
+      {/* --- Preview --- */}
       {showPreview && (
         <div className="card overflow-hidden">
           <div className="flex items-center justify-between mb-3">
@@ -1200,98 +1252,105 @@ import { createClient } from "@/lib/supabase/client";
               <Eye size={14} /> Preview
             </h3>
             <button onClick={handlePrint} className="btn-primary text-[12px] py-1.5 px-3">
-              <Download size={12} /> Download PDF
+              <Download size={12} /> Print to PDF
             </button>
           </div>
 
           <div className="print-preview border border-[var(--line)] rounded-xl p-8 bg-white">
-            {/* Header with logo */}
+            {/* Header */}
             <div className="flex items-center gap-4 mb-4">
-              {brochureLogo && <img src={brochureLogo} alt="" className="h-12 w-auto object-contain" />}
+              {logoUrl && <img src={logoUrl} alt="" className="h-14 w-auto object-contain" />}
               <div>
-                <h1 className="font-display text-[28px] mb-0.5" style={{ color: brochureColor }}>{title}</h1>
-                {brochureTagline && <p className="text-[13px] text-[var(--ink-soft)]">{brochureTagline}</p>}
+                <h1 className="font-display text-[28px] mb-0.5" style={{ color: accentColor }}>{title}</h1>
+                {tagline && <p className="text-[13px] text-[var(--ink-soft)]">{tagline}</p>}
               </div>
             </div>
-            <div className="w-16 h-1 mb-6" style={{ backgroundColor: brochureColor }} />
+            <div className="w-20 h-1 mb-6" style={{ backgroundColor: accentColor }} />
 
-            {/* Uploaded images */}
+            {/* Images */}
             {uploadedImages.length > 0 && (
-              <div className="grid grid-cols-2 gap-3 mb-6">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
                 {uploadedImages.map((img, i) => (
-                  <img key={i} src={img} alt="" className="rounded-xl object-cover w-full h-32" />
+                  <img key={i} src={img} alt="" className="rounded-xl object-cover w-full h-28" />
                 ))}
               </div>
             )}
 
-            {/* Services template */}
-            {selectedTemplate === "services" && (
-              <div className="space-y-2">
-                {materials.length === 0 && <p className="text-[13px] text-[var(--ink-faint)]">No service items found. Add materials to your price book first.</p>}
-                {materials.map((m, i) => (
-                  <div key={i} className="flex items-center justify-between py-2 border-b border-[var(--line-subtle)]">
-                    <div>
-                      <p className="font-semibold text-[13px] text-[var(--ink)]">{m.label}</p>
-                      {m.supplier && <p className="text-[11px] text-[var(--ink-faint)]">{m.supplier}</p>}
+            {/* Custom Content */}
+            {showCustomContent && customText && (
+              <div className="mb-6">
+                <div className="text-[13px] text-[var(--ink-soft)] whitespace-pre-line leading-relaxed">{customText}</div>
+              </div>
+            )}
+
+            {/* Services */}
+            {showServices && serviceMaterials.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-[14px] font-bold text-[var(--ink)] mb-3 flex items-center gap-2">
+                  <span className="w-6 h-0.5" style={{ backgroundColor: accentColor }} />
+                  Our Services
+                </h3>
+                <div className="space-y-1">
+                  {serviceMaterials.slice(0, 20).map((m, i) => (
+                    <div key={i} className="flex items-center justify-between py-1.5 border-b border-[var(--line-subtle)]">
+                      <div>
+                        <p className="text-[12px] font-semibold text-[var(--ink)]">{m.label}</p>
+                        {m.supplier && <p className="text-[10px] text-[var(--ink-faint)]">{m.supplier}</p>}
+                      </div>
+                      <p className="text-[12px] font-bold" style={{ color: accentColor }}>${Number(m.unit_cost).toFixed(2)}</p>
                     </div>
-                    <p className="font-bold text-[13px]" style={{ color: brochureColor }}>${Number(m.unit_cost).toFixed(2)}</p>
-                  </div>
-                ))}
+                  ))}
+                  {serviceMaterials.length > 20 && (
+                    <p className="text-[11px] text-[var(--ink-faint)] italic mt-1">...and {serviceMaterials.length - 20} more services</p>
+                  )}
+                </div>
               </div>
             )}
 
-            {/* Recent work template */}
-            {selectedTemplate === "recent" && (
-              <div className="space-y-3">
-                {completedJobs.length === 0 && <p className="text-[13px] text-[var(--ink-faint)]">No completed jobs yet.</p>}
-                {completedJobs.map((j) => (
-                  <div key={j.id} className="py-2 border-b border-[var(--line-subtle)]">
-                    <div className="flex items-center justify-between">
-                      <p className="font-semibold text-[13px] text-[var(--ink)]">{j.client_name || "Unnamed client"}</p>
-                      <p className="font-bold text-[13px]" style={{ color: brochureColor }}>${(j.total_cost ?? 0).toLocaleString()}</p>
+            {/* Recent Work */}
+            {showRecentWork && completedJobs.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-[14px] font-bold text-[var(--ink)] mb-3 flex items-center gap-2">
+                  <span className="w-6 h-0.5" style={{ backgroundColor: accentColor }} />
+                  Recent Work
+                </h3>
+                <div className="space-y-2">
+                  {completedJobs.slice(0, 10).map((j) => (
+                    <div key={j.id} className="py-2 border-b border-[var(--line-subtle)]">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[12px] font-semibold text-[var(--ink)]">{j.client_name || "Unnamed client"}</p>
+                        <p className="text-[12px] font-bold" style={{ color: accentColor }}>${(j.total_cost ?? 0).toLocaleString()}</p>
+                      </div>
+                      {j.site_address && <p className="text-[10px] text-[var(--ink-faint)]">{j.site_address}</p>}
                     </div>
-                    {j.site_address && <p className="text-[11px] text-[var(--ink-faint)]">{j.site_address}</p>}
-                    {j.completed_at && <p className="text-[10px] text-[var(--green)] font-semibold mt-0.5"><CheckCircle2 size={10} className="inline" /> Completed</p>}
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
 
-            {/* Quote template */}
-            {selectedTemplate === "quote" && (
-              <div className="space-y-2">
-                {!selectedQuoteId && <p className="text-[13px] text-[var(--ink-faint)]">Select a quote above to generate a brochure.</p>}
-                {selectedQuoteId && quoteMaterials.length === 0 && <p className="text-[13px] text-[var(--ink-faint)]">No materials found for this quote.</p>}
-                {quoteMaterials.map((m, i) => (
-                  <div key={i} className="flex items-center justify-between py-2 border-b border-[var(--line-subtle)]">
-                    <p className="font-semibold text-[13px] text-[var(--ink)]">{m.label}</p>
-                    <p className="font-bold text-[13px]" style={{ color: brochureColor }}>${m.total.toLocaleString()}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Custom template */}
-            {selectedTemplate === "custom" && (
-              <div className="text-[13px] text-[var(--ink-soft)] whitespace-pre-line">
-                {customText || <span className="text-[var(--ink-faint)] italic">Enter your content above to see it here.</span>}
-              </div>
-            )}
-
-            {/* Scraped images */}
-            {scrapedData?.images && scrapedData.images.length > 0 && selectedTemplate === "custom" && (
-              <div className="grid grid-cols-3 gap-2 mt-4">
-                {scrapedData.images.slice(0, 6).map((img, i) => (
-                  <img key={i} src={img} alt="" className="rounded-lg object-cover w-full h-20" />
-                ))}
+            {/* From Quote */}
+            {showFromQuote && selectedQuoteId && quoteItems.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-[14px] font-bold text-[var(--ink)] mb-3 flex items-center gap-2">
+                  <span className="w-6 h-0.5" style={{ backgroundColor: accentColor }} />
+                  Project Details
+                </h3>
+                <div className="space-y-1">
+                  {quoteItems.map((m, i) => (
+                    <div key={i} className="flex items-center justify-between py-1.5 border-b border-[var(--line-subtle)]">
+                      <p className="text-[12px] font-semibold text-[var(--ink)]">{m.qty}x {m.label}</p>
+                      <p className="text-[12px] font-bold" style={{ color: accentColor }}>${m.total.toLocaleString()}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
             {/* T&Cs */}
-            {brochureTcs && (
+            {tcs && (
               <div className="mt-6 pt-4 border-t border-[var(--line-subtle)]">
-                <p className="text-[10px] text-[var(--ink-faint)] uppercase tracking-wide font-bold mb-1">Terms & Conditions</p>
-                <p className="text-[11px] text-[var(--ink-soft)] whitespace-pre-line">{brochureTcs}</p>
+                <p className="text-[10px] text-[var(--ink-faint)] uppercase tracking-wide font-bold mb-1">Terms &amp; Conditions</p>
+                <p className="text-[11px] text-[var(--ink-soft)] whitespace-pre-line">{tcs}</p>
               </div>
             )}
 
@@ -1310,6 +1369,7 @@ import { createClient } from "@/lib/supabase/client";
     </div>
   );
 }
+
 
 /* ================================================================== */
 /*  Shared helpers                                                     */
