@@ -52,7 +52,7 @@ export default async function CommsPage() {
         </div>
         <CommsPanel
           initialTemplates={templates ?? []}
-          branding={branding ?? {}}
+          branding={branding as { business_name: string | null; logo_url: string | null; branding_primary_color: string | null; branding_tagline: string | null; branding_email_footer: string | null; contact_email: string | null; contact_phone: string | null; } | null}
           outstandingJobs={outstandingJobs ?? []}
           expiringQuotes={expiringQuotes ?? []}
           businessId={businessId}
