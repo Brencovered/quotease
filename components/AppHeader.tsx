@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -19,6 +19,9 @@ import {
   TrendingUp,
   Download,
   Zap,
+  Package,
+  UsersRound,
+  ChevronDown,
 } from "lucide-react";
 
 const NAV = [
@@ -33,6 +36,23 @@ export default function AppHeader() {
   const pathname = usePathname();
   const router   = useRouter();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [moreExpanded, setMoreExpanded] = useState(false);
+  const [quoteCount, setQuoteCount] = useState(0);
+
+  useEffect(() => {
+    async function fetchQuoteCount() {
+      try {
+        const res = await fetch("/api/quotes/count");
+        if (res.ok) {
+          const data = await res.json();
+          setQuoteCount(data.count ?? 0);
+        }
+      } catch {
+        // Silently fail - badge will show 0
+      }
+    }
+    fetchQuoteCount();
+  }, []);
 
   async function logOut() {
     const supabase = createClient();
@@ -44,6 +64,12 @@ export default function AppHeader() {
   function isActive(href: string) {
     if (href === "/electrician") return pathname === "/electrician";
     return pathname.startsWith(href);
+  }
+
+  function navLinkClasses(href: string) {
+    return `flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
+      isActive(href) ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
+    }`;
   }
 
   return (
@@ -67,6 +93,7 @@ export default function AppHeader() {
         </div>
 
         <nav className="flex-1 flex flex-col gap-0.5 px-3 overflow-y-auto">
+          {/* ── Primary nav (always visible) ── */}
           {NAV.filter((n) => !n.fab).map((n) => {
             const active = isActive(n.href);
             return (
@@ -79,72 +106,71 @@ export default function AppHeader() {
               >
                 <n.icon size={17} strokeWidth={active ? 2.2 : 1.8} />
                 {n.label}
+                {n.label === "Quotes" && quoteCount > 0 && (
+                  <span className="ml-auto bg-[var(--amber)] text-[var(--navy)] text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                    {quoteCount}
+                  </span>
+                )}
               </Link>
             );
           })}
-          <Link
-            href="/electrician/plans"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
-              isActive("/electrician/plans") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
-            }`}
-          >
-            <FolderOpen size={17} strokeWidth={isActive("/electrician/plans") ? 2.2 : 1.8} />
-            Plans
-          </Link>
-          <Link
-            href="/electrician/margins"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
-              isActive("/electrician/margins") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
-            }`}
-          >
-            <TrendingUp size={17} strokeWidth={isActive("/electrician/margins") ? 2.2 : 1.8} />
-            Margins
-          </Link>
-          <Link
-            href="/electrician/export"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
-              isActive("/electrician/export") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
-            }`}
-          >
-            <Download size={17} strokeWidth={isActive("/electrician/export") ? 2.2 : 1.8} />
-            Export
-          </Link>
-          <Link
-            href="/electrician/leads"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
-              isActive("/electrician/leads") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
-            }`}
-          >
+
+          <Link href="/electrician/leads" className={navLinkClasses("/electrician/leads")}>
             <Zap size={17} strokeWidth={isActive("/electrician/leads") ? 2.2 : 1.8} />
             Leads
           </Link>
-          <Link
-            href="/electrician/clients"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
-              isActive("/electrician/clients") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
-            }`}
-          >
+          <Link href="/electrician/clients" className={navLinkClasses("/electrician/clients")}>
             <Users size={17} strokeWidth={isActive("/electrician/clients") ? 2.2 : 1.8} />
             Clients
           </Link>
-          <Link
-            href="/electrician/map"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
-              isActive("/electrician/map") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
+          <Link href="/electrician/team" className={navLinkClasses("/electrician/team")}>
+            <UsersRound size={17} strokeWidth={isActive("/electrician/team") ? 2.2 : 1.8} />
+            Team
+          </Link>
+
+          {/* ── More (collapsible) ── */}
+          <button
+            onClick={() => setMoreExpanded((v) => !v)}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors text-left w-full ${
+              moreExpanded ? "text-white" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
             }`}
           >
-            <MapPin size={17} strokeWidth={isActive("/electrician/map") ? 2.2 : 1.8} />
-            Map
-          </Link>
+            <Menu size={17} strokeWidth={1.8} />
+            <span className="flex-1">More</span>
+            <ChevronDown
+              size={14}
+              className={`transition-transform text-[var(--steel-2)] ${moreExpanded ? "rotate-180" : ""}`}
+            />
+          </button>
+
+          {moreExpanded && (
+            <div className="flex flex-col gap-0.5 pl-2">
+              <Link href="/electrician/plans" className={navLinkClasses("/electrician/plans")}>
+                <FolderOpen size={17} strokeWidth={isActive("/electrician/plans") ? 2.2 : 1.8} />
+                Plans
+              </Link>
+              <Link href="/electrician/packages" className={navLinkClasses("/electrician/packages")}>
+                <Package size={17} strokeWidth={isActive("/electrician/packages") ? 2.2 : 1.8} />
+                Packages
+              </Link>
+              <Link href="/electrician/margins" className={navLinkClasses("/electrician/margins")}>
+                <TrendingUp size={17} strokeWidth={isActive("/electrician/margins") ? 2.2 : 1.8} />
+                Profit
+              </Link>
+              <Link href="/electrician/export" className={navLinkClasses("/electrician/export")}>
+                <Download size={17} strokeWidth={isActive("/electrician/export") ? 2.2 : 1.8} />
+                Export
+              </Link>
+              <Link href="/electrician/map" className={navLinkClasses("/electrician/map")}>
+                <MapPin size={17} strokeWidth={isActive("/electrician/map") ? 2.2 : 1.8} />
+                Map
+              </Link>
+            </div>
+          )}
         </nav>
 
         <div className="px-3 pb-4 pt-2 border-t border-white/[0.06] flex flex-col gap-0.5">
-          <Link
-            href="/settings"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors ${
-              isActive("/settings") ? "bg-white/10 text-[var(--amber)]" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
-            }`}
-          >
+          <Link href="/settings" className={navLinkClasses("/settings")}>
             <Settings size={17} strokeWidth={isActive("/settings") ? 2.2 : 1.8} />
             Settings
           </Link>
@@ -173,14 +199,20 @@ export default function AppHeader() {
               <Link href="/electrician/clients" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <Users size={15} className="text-[var(--ink-faint)]" /> Clients
               </Link>
+              <Link href="/electrician/team" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
+                <UsersRound size={15} className="text-[var(--ink-faint)]" /> Team
+              </Link>
               <Link href="/electrician/plans" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <FolderOpen size={15} className="text-[var(--ink-faint)]" /> Plans
+              </Link>
+              <Link href="/electrician/packages" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
+                <Package size={15} className="text-[var(--ink-faint)]" /> Packages
               </Link>
               <Link href="/electrician/leads" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <Zap size={15} className="text-[var(--ink-faint)]" /> Leads
               </Link>
               <Link href="/electrician/margins" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
-                <TrendingUp size={15} className="text-[var(--ink-faint)]" /> Margins
+                <TrendingUp size={15} className="text-[var(--ink-faint)]" /> Profit
               </Link>
               <Link href="/electrician/export" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <Download size={15} className="text-[var(--ink-faint)]" /> Export to Xero / MYOB
