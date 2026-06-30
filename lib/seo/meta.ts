@@ -79,8 +79,8 @@ export function getTradeDisplay(trade: string) {
 // ── Page-level Metadata generators ───────────────────────────────────────
 
 export function homepageMeta(): Metadata {
-  const title       = "Swiftscope — Find Local Tradies & Instant Online Quotes";
-  const description = "Get up to 3 quotes from verified local tradies. Free for homeowners. Electricians, plumbers, builders and more across Victoria, NSW & QLD.";
+  const title       = "Swiftscope — Scope, Quote & Win Jobs On Site | Built for Tradies";
+  const description = "Quoting software built site-first for trade teams of 1-10. Scope, quote and send before you leave the driveway. Homeowners get free quotes from local tradies.";
   return {
     title,
     description,

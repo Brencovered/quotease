@@ -3,6 +3,8 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import {
   Home as HomeIcon, Briefcase, CheckCircle, ArrowRight,
+  Crosshair, Mic, PenTool, FileSearch, ListChecks, TrendingUp,
+  CalendarClock, FileText, Users2, RefreshCw,
 } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
 import FaqSchema, { SWIFTSCOPE_FAQS } from "@/components/seo/FaqSchema";
@@ -28,16 +30,16 @@ export default function Home() {
           <div className="max-w-[720px]">
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/15 rounded-full px-4 py-2 mb-8">
               <span className="w-2 h-2 rounded-full bg-[#ffb400]" />
-              <span className="text-[12px] font-bold text-white/80 uppercase tracking-widest">Australia&apos;s trade platform</span>
+              <span className="text-[12px] font-bold text-white/80 uppercase tracking-widest">Built by a tradie, for tradies — teams of 1 to 10</span>
             </div>
             <h1 className="font-display uppercase leading-[0.88] mb-6">
-              <span className="block text-[3.2rem] sm:text-[5rem] lg:text-[5.5rem] text-white">One platform.</span>
-              <span className="block text-[3.2rem] sm:text-[5rem] lg:text-[5.5rem] text-white">Every tradie.</span>
-              <span className="block text-[3.2rem] sm:text-[5rem] lg:text-[5.5rem] text-[#ffb400]">Every job.</span>
+              <span className="block text-[3.2rem] sm:text-[5rem] lg:text-[5.5rem] text-white">Scope it. Quote it.</span>
+              <span className="block text-[3.2rem] sm:text-[5rem] lg:text-[5.5rem] text-[#ffb400]">Win it on site.</span>
             </h1>
             <p className="text-[17px] sm:text-[18px] leading-[1.65] text-[#c8d8e4] max-w-[560px] mb-10">
-              Where homeowners find trusted local tradies - and tradies run their entire business,
-              for one flat $45/month.
+              Swiftscope is built site-first — every tool is designed to be used standing in the job,
+              not back at a desk. Mark it up, talk it through, or scope it live on screen, and send a
+              priced quote before you&apos;ve left the driveway.
             </p>
             <div className="flex flex-wrap gap-3 mb-10">
               <Link href="/signup" className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[16px] px-8 py-4 rounded-xl hover:bg-[#e89e00] transition-colors" style={{ boxShadow:"0 12px 32px rgba(255,180,0,.3)" }}>
@@ -53,6 +55,100 @@ export default function Home() {
               <span>Unlimited users</span>
               <span className="text-[#2a3a47]">|</span>
               <span>196 verified tradies listed</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* DIFFERENTIATORS — the core "built site-first" pitch */}
+      <div className="bg-white border-b border-[#e8ecef]">
+        <div className="max-w-7xl mx-auto px-6 py-20">
+          <div className="text-center mb-14">
+            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Why tradies switch</p>
+            <h2 className="font-display uppercase text-[2.6rem] sm:text-[3.2rem] leading-[0.93] text-[#0a1722] mb-4">
+              Everything below happens<br />on site. Nothing waits for the desk.
+            </h2>
+            <p className="text-[15px] text-[#5a6a78] max-w-xl mx-auto">
+              Four ways to turn what you see on site into a sent, priced quote — pick whichever fits how you work.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-5">
+            <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
+              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
+                <Crosshair size={20} className="text-[#ffb400]" />
+              </div>
+              <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">Live on-screen quoting</h3>
+              <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
+                Open Swiftscope and mark straight onto your screen what material, work, or zone needs capturing.
+                Press done — the materials and labour autoload into a quote with your pre-configured pricing.
+                Press send. That&apos;s it.
+              </p>
+              <p className="text-[13px] font-bold text-[#0a1722]">Customers can accept in 30 seconds from send.</p>
+            </div>
+
+            <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
+              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
+                <Mic size={20} className="text-[#ffb400]" />
+              </div>
+              <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">AI voice quote generator</h3>
+              <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
+                Walk the site and talk to Swiftscope — describe the work and materials needed. Save, and a quote
+                generates automatically using your own pricing and materials. Not your thing on site? Record it
+                on the drive home instead — same result either way.
+              </p>
+              <p className="text-[13px] font-bold text-[#0a1722]">Customers can accept in 30 seconds from end of recording.</p>
+            </div>
+
+            <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
+              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
+                <PenTool size={20} className="text-[#ffb400]" />
+              </div>
+              <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">Plan &amp; drawing markup</h3>
+              <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
+                Upload a plan or drawing. Drop markers configured to your materials, draw lines for cable or pipe
+                runs, or block out work zones. Press save — every markup syncs straight into a quote, quantities
+                and costs already calculated.
+              </p>
+            </div>
+
+            <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
+              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
+                <FileSearch size={20} className="text-[#ffb400]" />
+              </div>
+              <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">AI plan reading</h3>
+              <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
+                Plans can be exhaustive and time-consuming to read properly. Upload the plan, direct what needs
+                reading and calculating for the job, and save straight to a quote.
+              </p>
+              <p className="text-[12.5px] text-[#8a9ba8] italic">* AI output should always be checked by a qualified person before sending.</p>
+            </div>
+          </div>
+
+          {/* Everything else */}
+          <div className="mt-14 bg-[#0a1722] rounded-3xl p-8 md:p-10">
+            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-2 text-center">Plus everything else you&apos;d expect</p>
+            <h3 className="font-display text-[1.8rem] text-white text-center mb-8">Running the rest of the business</h3>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-5">
+              {[
+                { icon: Briefcase,     label: "Job & site management" },
+                { icon: ListChecks,    label: "Tasks for your team" },
+                { icon: TrendingUp,    label: "Margin & profit tracking" },
+                { icon: CalendarClock, label: "Schedule & quote expiry tracking" },
+                { icon: FileText,      label: "Standard quote builder" },
+                { icon: Users2,        label: "Client list & job history" },
+                { icon: RefreshCw,     label: "Xero live sync" },
+              ].map((f) => (
+                <div key={f.label} className="flex items-center gap-3">
+                  <f.icon size={17} className="text-[#ffb400] shrink-0" />
+                  <span className="text-[14px] font-semibold text-white">{f.label}</span>
+                </div>
+              ))}
+            </div>
+            <div className="text-center mt-8">
+              <Link href="/features" className="inline-flex items-center gap-1.5 text-[13.5px] font-bold text-[#ffb400] hover:underline">
+                See the full feature list <ArrowRight size={13} />
+              </Link>
             </div>
           </div>
         </div>
