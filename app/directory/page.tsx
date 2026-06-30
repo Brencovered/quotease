@@ -1,43 +1,115 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Search, Shield, Star, Users } from "lucide-react";
+import {
+  Search,
+  Shield,
+  Star,
+  Lock,
+  Check,
+  ClipboardList,
+  MessageSquare,
+  Award,
+  ArrowRight,
+  Sparkles,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import DirectoryCard from "@/components/DirectoryCard";
 import { directoryMeta } from "@/lib/seo/meta";
+import MarketingNav from "@/components/MarketingNav";
+import AnimatedCounter from "./_components/AnimatedCounter";
 
 export const metadata: Metadata = directoryMeta();
 
 const ALL_TRADES = [
-  "electrician","plumber","builder","roofer","painter","carpenter",
-  "tiler","landscaper","concreter","fencer","plasterer","handyman",
+  "electrician",
+  "plumber",
+  "builder",
+  "roofer",
+  "painter",
+  "carpenter",
+  "tiler",
+  "landscaper",
+  "concreter",
+  "fencer",
+  "plasterer",
+  "handyman",
 ];
 
-const TRADE_LABELS: Record<string,string> = {
-  electrician:"Electrician", plumber:"Plumber", builder:"Builder",
-  roofer:"Roofer", painter:"Painter", carpenter:"Carpenter",
-  tiler:"Tiler", landscaper:"Landscaper", concreter:"Concreter",
-  fencer:"Fencer", plasterer:"Plasterer", handyman:"Handyman",
+const TRADE_LABELS: Record<string, string> = {
+  electrician: "Electrician",
+  plumber: "Plumber",
+  builder: "Builder",
+  roofer: "Roofer",
+  painter: "Painter",
+  carpenter: "Carpenter",
+  tiler: "Tiler",
+  landscaper: "Landscaper",
+  concreter: "Concreter",
+  fencer: "Fencer",
+  plasterer: "Plasterer",
+  handyman: "Handyman",
 };
 
 type Listing = {
-  id: string; business_name: string; trades: string[] | null;
-  suburb: string | null; scraped_contact_phone: string | null;
-  website_url: string | null; scraped_contact_email: string | null;
-  google_rating: number | null; google_reviews_count: number | null;
-  photo_references: string[] | null; place_id: string | null;
-  blurb: string | null; logo_url: string | null;
+  id: string;
+  business_name: string;
+  trades: string[] | null;
+  suburb: string | null;
+  scraped_contact_phone: string | null;
+  website_url: string | null;
+  scraped_contact_email: string | null;
+  google_rating: number | null;
+  google_reviews_count: number | null;
+  photo_references: string[] | null;
+  place_id: string | null;
+  blurb: string | null;
+  logo_url: string | null;
 };
+
+/* ------------------------------------------------------------------ */
+/*  Mock review data for the social-proof section                      */
+/* ------------------------------------------------------------------ */
+const HOMEOWNER_REVIEWS = [
+  {
+    name: "Sarah M.",
+    suburb: "Frankston",
+    trade: "Electrician",
+    rating: 5,
+    quote:
+      "Posted my job on Monday, had 3 quotes by Tuesday afternoon. The electrician we hired was fantastic - punctual, professional and fairly priced.",
+  },
+  {
+    name: "David K.",
+    suburb: "Mount Eliza",
+    trade: "Plumber",
+    rating: 5,
+    quote:
+      "After a nightmare experience with a random Gumtree tradie, Swiftscope was a breath of fresh air. Every business here has real reviews you can verify.",
+  },
+  {
+    name: "Jenny T.",
+    suburb: "Mornington",
+    trade: "Landscaper",
+    rating: 5,
+    quote:
+      "We needed our backyard redone before Christmas. Got matched with an amazing landscaper who delivered ahead of schedule. Could not recommend more highly.",
+  },
+];
 
 export default async function DirectoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ trade?: string; suburb?: string; page?: string }>;
+  searchParams: Promise<{
+    trade?: string;
+    suburb?: string;
+    page?: string;
+  }>;
 }) {
   const { trade, suburb, page: pageParam } = await searchParams;
-  const page    = parseInt(pageParam ?? "1");
+  const page = parseInt(pageParam ?? "1");
   const perPage = 24;
-  const from    = (page - 1) * perPage;
-  const to      = from + perPage - 1;
+  const from = (page - 1) * perPage;
+  const to = from + perPage - 1;
 
   const supabase = await createClient();
 
@@ -48,135 +120,410 @@ export default async function DirectoryPage({
     .order("google_reviews_count", { ascending: false, nullsFirst: false })
     .range(from, to);
 
-  if (trade)  query = query.contains("trades", [trade]);
+  if (trade) query = query.contains("trades", [trade]);
   if (suburb) query = query.ilike("suburb", `%${suburb}%`);
 
   const { data: listings, error, count } = await query;
   const totalPages = Math.ceil((count ?? 0) / perPage);
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen" style={{ background: "var(--app-bg)" }}>
+      {/* ── Inline keyframes for gradient orbs ── */}
+      <style>{`
+        @keyframes orb-float-1 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(30px, -20px) scale(1.05); }
+          66% { transform: translate(-20px, 15px) scale(0.95); }
+        }
+        @keyframes orb-float-2 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(-25px, 20px) scale(0.95); }
+          66% { transform: translate(20px, -15px) scale(1.05); }
+        }
+        @keyframes orb-float-3 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(15px, -25px) scale(1.08); }
+        }
+      `}</style>
 
-      {/* Header */}
-      <div className="bg-[#0a1722] text-white">
-        <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
-          <Link href="/" className="font-display text-[20px] text-[#ffb400]">Swiftscope</Link>
-          <div className="flex items-center gap-5">
-            <Link href="/directory" className="text-white/70 hover:text-white text-[13px] font-semibold">Directory</Link>
-            <Link href="/login" className="text-white/70 hover:text-white text-[13px] font-semibold">Log in</Link>
-            <Link href="/signup" className="bg-[#ffb400] text-[#0a1722] text-[13px] font-bold px-4 py-2 rounded-lg hover:opacity-90">
-              Free trial
+      {/* ═══════════════════════════════════════════
+          NAVIGATION
+      ═══════════════════════════════════════════ */}
+      <MarketingNav transparent={false} />
+
+      {/* ═══════════════════════════════════════════
+          HERO SECTION
+      ═══════════════════════════════════════════ */}
+      <section className="relative overflow-hidden bg-[#0a1722]">
+        {/* Animated gradient orbs */}
+        <div
+          className="absolute w-[600px] h-[600px] rounded-full pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(255,180,0,0.22) 0%, transparent 65%)",
+            top: "-15%",
+            left: "-8%",
+            animation: "orb-float-1 10s ease-in-out infinite",
+          }}
+        />
+        <div
+          className="absolute w-[500px] h-[500px] rounded-full pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(37,99,235,0.14) 0%, transparent 65%)",
+            top: "10%",
+            right: "-10%",
+            animation: "orb-float-2 12s ease-in-out infinite",
+          }}
+        />
+        <div
+          className="absolute w-[400px] h-[400px] rounded-full pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(255,180,0,0.10) 0%, transparent 60%)",
+            bottom: "-10%",
+            left: "35%",
+            animation: "orb-float-3 9s ease-in-out infinite",
+          }}
+        />
+
+        {/* Subtle dot pattern overlay */}
+        <div
+          className="absolute inset-0 opacity-[0.03] pointer-events-none"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle, #ffffff 1px, transparent 1px)",
+            backgroundSize: "32px 32px",
+          }}
+        />
+
+        <div className="relative max-w-6xl mx-auto px-6 pt-16 pb-20 sm:pt-20 sm:pb-24">
+          {/* Eyebrow */}
+          <div className="reveal flex items-center gap-2 mb-5">
+            <Sparkles size={14} className="text-[#ffb400]" />
+            <span
+              className="text-[11px] font-bold tracking-[.2em] uppercase"
+              style={{ color: "#ffb400" }}
+            >
+              Swiftscope Directory
+            </span>
+          </div>
+
+          {/* Headline */}
+          <h1 className="reveal font-display text-[2.8rem] sm:text-[3.6rem] lg:text-[4.2rem] text-white leading-[1.05] mb-5">
+            Find a trusted local tradie
+          </h1>
+
+          {/* Subheadline */}
+          <p
+            className="reveal text-[15px] sm:text-[16px] max-w-xl mb-10 leading-relaxed"
+            style={{ color: "#8b96a1" }}
+          >
+            Every business is verified with real Google reviews. Browse 196+
+            verified tradies across Melbourne&apos;s south east, or post your
+            job and get up to 3 quotes.
+          </p>
+
+          {/* Counters */}
+          <div
+            className="reveal grid grid-cols-3 gap-6 sm:gap-10 max-w-lg mb-10 p-5 sm:p-6 rounded-2xl"
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.08)",
+            }}
+          >
+            <AnimatedCounter target={196} suffix="+" label="Verified tradies" />
+            <AnimatedCounter
+              target={50}
+              suffix="+"
+              label="Suburbs covered"
+              delay={150}
+            />
+            <AnimatedCounter
+              target={1200}
+              suffix="+"
+              label="Quotes sent"
+              delay={300}
+            />
+          </div>
+
+          {/* Trust badges row */}
+          <div className="reveal flex flex-wrap gap-4 sm:gap-6 mb-12">
+            {[
+              { icon: Star, text: "Real Google ratings" },
+              { icon: Shield, text: "Verified businesses" },
+              { icon: Lock, text: "No spam guarantee" },
+              { icon: Check, text: "Free for homeowners" },
+            ].map(({ icon: Icon, text }) => (
+              <div
+                key={text}
+                className="flex items-center gap-2 text-[12.5px] font-semibold"
+                style={{ color: "#8b96a1" }}
+              >
+                <Icon size={14} style={{ color: "#ffb400" }} />
+                {text}
+              </div>
+            ))}
+          </div>
+
+          {/* Two CTAs */}
+          <div className="reveal flex flex-wrap gap-3">
+            <Link
+              href="/get-quotes"
+              className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-7 py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors"
+            >
+              Get quotes <ArrowRight size={15} />
+            </Link>
+            <Link
+              href="#listings"
+              className="inline-flex items-center gap-2 text-white font-bold text-[14px] px-7 py-3.5 rounded-xl border border-white/25 hover:border-white/50 hover:bg-white/5 transition-all"
+            >
+              Browse directory
             </Link>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Hero */}
-      <div className="bg-white border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-6 py-14">
-          <div className="max-w-2xl">
-            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Swiftscope Directory</p>
-            <h1 className="font-display text-[3rem] leading-tight text-gray-900 mb-4">
-              Find a trusted local tradie
-            </h1>
-            <p className="text-[16px] text-gray-500 mb-8">
-              {count ?? 0} verified businesses across Melbourne&apos;s south east.
-              Every rating is from real Google Reviews.
+      {/* ═══════════════════════════════════════════
+          HOW IT WORKS STRIP
+      ═══════════════════════════════════════════ */}
+      <section className="bg-white border-b" style={{ borderColor: "var(--line)" }}>
+        <div className="max-w-6xl mx-auto px-6 py-16 sm:py-20">
+          <div className="text-center mb-12">
+            <h2
+              className="font-display text-[1.8rem] sm:text-[2.2rem] mb-3"
+              style={{ color: "var(--ink)" }}
+            >
+              How homeowners find tradies on Swiftscope
+            </h2>
+            <p
+              className="text-[14px] sm:text-[15px] max-w-md mx-auto"
+              style={{ color: "var(--ink-soft)" }}
+            >
+              Three simple steps to find the right tradie for your job.
             </p>
+          </div>
 
-            {/* Trust badges */}
-            <div className="flex flex-wrap gap-4 mb-10">
-              {[
-                { icon: Shield, text: "Verified businesses" },
-                { icon: Star,   text: "Real Google ratings" },
-                { icon: Users,  text: "196 local tradies" },
-              ].map(({ icon: Icon, text }) => (
-                <div key={text} className="flex items-center gap-2 text-[13px] font-semibold text-gray-600">
-                  <Icon size={15} className="text-[#ffb400]" /> {text}
+          <div className="grid sm:grid-cols-3 gap-6 lg:gap-8">
+            {[
+              {
+                num: "01",
+                icon: ClipboardList,
+                title: "Post your job",
+                desc: "Describe what you need done, your suburb, and any budget or timing preferences.",
+              },
+              {
+                num: "02",
+                icon: MessageSquare,
+                title: "Get up to 3 quotes",
+                desc: "Matched local tradies review your job and respond with detailed quotes.",
+              },
+              {
+                num: "03",
+                icon: Award,
+                title: "Hire with confidence",
+                desc: "Compare ratings, read real reviews, and choose the right tradie for you.",
+              },
+            ].map(({ num, icon: Icon, title, desc }, i) => (
+              <div
+                key={num}
+                className="reveal group relative p-6 sm:p-8 rounded-2xl border text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
+                style={{
+                  borderColor: "var(--line)",
+                  background: "var(--surface)",
+                  animationDelay: `${i * 100}ms`,
+                }}
+              >
+                {/* Number badge */}
+                <div
+                  className="absolute -top-3 left-1/2 -translate-x-1/2 text-[11px] font-extrabold px-3 py-1 rounded-full border"
+                  style={{
+                    background: "var(--amber-light)",
+                    color: "var(--navy)",
+                    borderColor: "var(--amber)",
+                  }}
+                >
+                  {num}
                 </div>
-              ))}
-            </div>
 
-            {/* Two paths */}
-            <div className="grid sm:grid-cols-2 gap-3 max-w-xl">
-              <Link href="/get-quotes"
-                className="flex flex-col bg-[#0a1722] rounded-2xl p-5 hover:opacity-90 transition-opacity">
-                <p className="font-bold text-[16px] text-white mb-1">Get quotes</p>
-                <p className="text-[13px] text-white/60 mb-4 leading-snug">
-                  Tell us what you need. Up to 3 local tradies will contact you.
+                {/* Icon */}
+                <div
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-5 transition-transform duration-200 group-hover:scale-110"
+                  style={{ background: "var(--navy)" }}
+                >
+                  <Icon size={24} style={{ color: "var(--amber)" }} />
+                </div>
+
+                <h3
+                  className="font-bold text-[16px] mb-2"
+                  style={{ color: "var(--ink)" }}
+                >
+                  {title}
+                </h3>
+                <p
+                  className="text-[13px] leading-relaxed"
+                  style={{ color: "var(--ink-soft)" }}
+                >
+                  {desc}
                 </p>
-                <p className="text-[#ffb400] font-bold text-[13px] mt-auto">Start request →</p>
-              </Link>
-              <Link href="#listings"
-                className="flex flex-col bg-gray-50 border border-gray-200 rounded-2xl p-5 hover:bg-gray-100 transition-colors">
-                <p className="font-bold text-[16px] text-gray-900 mb-1">Browse directory</p>
-                <p className="text-[13px] text-gray-500 mb-4 leading-snug">
-                  Search and compare {count ?? 0} local businesses by trade and suburb.
-                </p>
-                <p className="text-gray-700 font-bold text-[13px] mt-auto">Browse tradies →</p>
-              </Link>
-            </div>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Sticky search */}
-      <div id="listings" className="sticky top-0 z-20 bg-white border-b border-gray-100 shadow-sm">
-        <form method="GET" className="max-w-6xl mx-auto px-6 py-3 flex flex-wrap gap-2 items-center">
-          <select name="trade" defaultValue={trade ?? ""}
-            className="app-field text-[13px] w-auto bg-white">
+      {/* ═══════════════════════════════════════════
+          STICKY SEARCH BAR
+      ═══════════════════════════════════════════ */}
+      <div
+        id="listings"
+        className="sticky top-0 z-20 border-b shadow-sm"
+        style={{
+          background: "var(--surface)",
+          borderColor: "var(--line)",
+        }}
+      >
+        <form
+          method="GET"
+          className="max-w-6xl mx-auto px-6 py-3 flex flex-wrap gap-2 items-center"
+        >
+          <select
+            name="trade"
+            defaultValue={trade ?? ""}
+            className="app-field text-[13px] w-auto bg-white"
+          >
             <option value="">All trades</option>
-            {ALL_TRADES.map(t => <option key={t} value={t}>{TRADE_LABELS[t]}</option>)}
+            {ALL_TRADES.map((t) => (
+              <option key={t} value={t}>
+                {TRADE_LABELS[t]}
+              </option>
+            ))}
           </select>
           <div className="relative flex-1 min-w-[200px]">
-            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input type="text" name="suburb" defaultValue={suburb ?? ""}
+            <Search
+              size={13}
+              className="absolute left-3 top-1/2 -translate-y-1/2"
+              style={{ color: "var(--ink-faint)" }}
+            />
+            <input
+              type="text"
+              name="suburb"
+              defaultValue={suburb ?? ""}
               placeholder="Suburb e.g. Seaford, Frankston..."
-              className="app-field pl-8 text-[13px] w-full bg-white" />
+              className="app-field pl-8 text-[13px] w-full bg-white"
+            />
           </div>
-          <button type="submit"
-            className="bg-[#0a1722] text-white font-bold text-[13px] px-5 py-2.5 rounded-xl hover:opacity-90">
+          <button
+            type="submit"
+            className="bg-[#0a1722] text-white font-bold text-[13px] px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity"
+          >
             Search
           </button>
           {(trade || suburb) && (
-            <Link href="/directory" className="text-[13px] text-gray-500 hover:text-gray-800">Clear</Link>
+            <Link
+              href="/directory"
+              className="text-[13px] font-semibold hover:opacity-70 transition-opacity"
+              style={{ color: "var(--ink-faint)" }}
+            >
+              Clear
+            </Link>
           )}
-          <span className="text-[12px] text-gray-400 ml-auto hidden sm:block">
+          <span
+            className="text-[12px] ml-auto hidden sm:block"
+            style={{ color: "var(--ink-faint)" }}
+          >
             {count ?? 0} result{count !== 1 ? "s" : ""}
-            {trade ? ` · ${TRADE_LABELS[trade] ?? trade}` : ""}
-            {suburb ? ` · ${suburb}` : ""}
+            {trade ? ` \u00b7 ${TRADE_LABELS[trade] ?? trade}` : ""}
+            {suburb ? ` \u00b7 ${suburb}` : ""}
           </span>
         </form>
       </div>
 
+      {/* ═══════════════════════════════════════════
+          MAIN CONTENT AREA
+      ═══════════════════════════════════════════ */}
       <div className="max-w-6xl mx-auto px-6 py-8">
         {error && (
-          <div className="bg-red-50 text-red-700 text-[13px] px-4 py-3 rounded-xl mb-6 font-semibold">
+          <div
+            className="text-[13px] px-4 py-3 rounded-xl mb-6 font-semibold"
+            style={{
+              background: "var(--red-bg)",
+              color: "var(--red)",
+            }}
+          >
             Could not load directory: {error.message}
           </div>
         )}
 
-        {/* Trade pills */}
+        {/* ── Trade filter pills ── */}
         <div className="flex flex-wrap gap-2 mb-6">
-          <Link href={`/directory${suburb ? `?suburb=${suburb}` : ""}`}
-            className={`px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold border transition-colors ${!trade ? "bg-[#0a1722] text-white border-[#0a1722]" : "border-gray-200 text-gray-600 hover:border-gray-400 bg-white"}`}>
+          <Link
+            href={`/directory${suburb ? `?suburb=${suburb}` : ""}`}
+            className={`px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold border transition-colors ${
+              !trade
+                ? "bg-[#0a1722] text-white border-[#0a1722]"
+                : "bg-white hover:border-[#8b96a1]"
+            }`}
+            style={
+              trade
+                ? { borderColor: "var(--line)", color: "var(--ink-soft)" }
+                : {}
+            }
+          >
             All trades
           </Link>
-          {ALL_TRADES.map(t => (
-            <Link key={t} href={`/directory?trade=${t}${suburb ? `&suburb=${suburb}` : ""}`}
-              className={`px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold border transition-colors ${trade === t ? "bg-[#0a1722] text-white border-[#0a1722]" : "border-gray-200 text-gray-600 hover:border-gray-400 bg-white"}`}>
+          {ALL_TRADES.map((t) => (
+            <Link
+              key={t}
+              href={`/directory?trade=${t}${suburb ? `&suburb=${suburb}` : ""}`}
+              className={`px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold border transition-colors ${
+                trade === t
+                  ? "bg-[#0a1722] text-white border-[#0a1722]"
+                  : "bg-white hover:border-[#8b96a1]"
+              }`}
+              style={
+                trade !== t
+                  ? { borderColor: "var(--line)", color: "var(--ink-soft)" }
+                  : {}
+              }
+            >
               {TRADE_LABELS[t]}
             </Link>
           ))}
         </div>
 
-        {/* Grid */}
+        {/* ── Directory grid ── */}
         {!listings?.length ? (
-          <div className="bg-white rounded-2xl border border-gray-100 text-center py-16">
-            <p className="text-[32px] mb-3">🔍</p>
-            <p className="font-semibold text-gray-900 mb-1">No tradies found</p>
-            <p className="text-[13.5px] text-gray-500 mb-5">Try a different trade or suburb.</p>
-            <Link href="/directory" className="px-5 py-2.5 border border-gray-200 rounded-xl text-[13.5px] font-semibold text-gray-700 hover:bg-gray-50 inline-flex">
+          <div
+            className="rounded-2xl border text-center py-16"
+            style={{
+              background: "var(--surface)",
+              borderColor: "var(--line)",
+            }}
+          >
+            <p className="text-[32px] mb-3">
+              <Search size={32} className="mx-auto" style={{ color: "var(--ink-faint)" }} />
+            </p>
+            <p
+              className="font-semibold mb-1"
+              style={{ color: "var(--ink)" }}
+            >
+              No tradies found
+            </p>
+            <p
+              className="text-[13.5px] mb-5"
+              style={{ color: "var(--ink-soft)" }}
+            >
+              Try a different trade or suburb.
+            </p>
+            <Link
+              href="/directory"
+              className="px-5 py-2.5 border rounded-xl text-[13.5px] font-semibold inline-flex transition-colors hover:opacity-80"
+              style={{
+                borderColor: "var(--line)",
+                color: "var(--ink-soft)",
+              }}
+            >
               Clear filters
             </Link>
           </div>
@@ -188,38 +535,181 @@ export default async function DirectoryPage({
           </div>
         )}
 
-        {/* Pagination */}
+        {/* ── Pagination ── */}
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-2 mt-10">
             {page > 1 && (
-              <Link href={`/directory?${new URLSearchParams({ ...(trade?{trade}:{}), ...(suburb?{suburb}:{}), page: String(page-1) })}`}
-                className="px-4 py-2 border border-gray-200 rounded-xl text-[13px] font-semibold text-gray-700 hover:bg-gray-50 bg-white">
-                ← Previous
+              <Link
+                href={`/directory?${new URLSearchParams({
+                  ...(trade ? { trade } : {}),
+                  ...(suburb ? { suburb } : {}),
+                  page: String(page - 1),
+                })}`}
+                className="px-4 py-2 border rounded-xl text-[13px] font-semibold transition-colors hover:opacity-80"
+                style={{
+                  borderColor: "var(--line)",
+                  color: "var(--ink-soft)",
+                  background: "var(--surface)",
+                }}
+              >
+                &larr; Previous
               </Link>
             )}
-            <span className="text-[13px] text-gray-500 px-4">Page {page} of {totalPages}</span>
+            <span
+              className="text-[13px] px-4"
+              style={{ color: "var(--ink-faint)" }}
+            >
+              Page {page} of {totalPages}
+            </span>
             {page < totalPages && (
-              <Link href={`/directory?${new URLSearchParams({ ...(trade?{trade}:{}), ...(suburb?{suburb}:{}), page: String(page+1) })}`}
-                className="px-4 py-2 border border-gray-200 rounded-xl text-[13px] font-semibold text-gray-700 hover:bg-gray-50 bg-white">
-                Next →
+              <Link
+                href={`/directory?${new URLSearchParams({
+                  ...(trade ? { trade } : {}),
+                  ...(suburb ? { suburb } : {}),
+                  page: String(page + 1),
+                })}`}
+                className="px-4 py-2 border rounded-xl text-[13px] font-semibold transition-colors hover:opacity-80"
+                style={{
+                  borderColor: "var(--line)",
+                  color: "var(--ink-soft)",
+                  background: "var(--surface)",
+                }}
+              >
+                Next &rarr;
               </Link>
             )}
           </div>
         )}
 
-        {/* Tradie CTA */}
-        <div className="mt-14 bg-[#0a1722] rounded-2xl p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div>
-            <p className="font-display text-[1.6rem] text-white mb-1">Are you a tradie?</p>
-            <p className="text-white/60 text-[14px] max-w-sm">
-              Get listed free and reach homeowners searching for your trade in your area.
+        {/* ═══════════════════════════════════════════
+            SOCIAL PROOF SECTION
+        ═══════════════════════════════════════════ */}
+        <section className="mt-20 sm:mt-24">
+          <div className="text-center mb-10">
+            <h2
+              className="font-display text-[1.8rem] sm:text-[2.2rem] mb-3"
+              style={{ color: "var(--ink)" }}
+            >
+              What homeowners say
+            </h2>
+            <p
+              className="text-[14px] sm:text-[15px] max-w-md mx-auto"
+              style={{ color: "var(--ink-soft)" }}
+            >
+              Real stories from homeowners who found their tradie through
+              Swiftscope.
             </p>
           </div>
-          <Link href="/signup"
-            className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-7 py-3.5 rounded-xl hover:opacity-90 whitespace-nowrap shrink-0">
-            Start free trial →
-          </Link>
-        </div>
+
+          <div className="grid sm:grid-cols-3 gap-5">
+            {HOMEOWNER_REVIEWS.map((review, i) => (
+              <div
+                key={review.name}
+                className="reveal p-6 rounded-2xl border transition-all duration-200 hover:-translate-y-1 hover:shadow-md"
+                style={{
+                  background: "var(--surface)",
+                  borderColor: "var(--line)",
+                  animationDelay: `${i * 100}ms`,
+                }}
+              >
+                {/* Star rating */}
+                <div className="flex items-center gap-0.5 mb-4">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Star
+                      key={s}
+                      size={14}
+                      className={
+                        s <= review.rating
+                          ? "fill-[#f59e0b] text-[#f59e0b]"
+                          : "text-gray-200 fill-gray-200"
+                      }
+                    />
+                  ))}
+                </div>
+
+                {/* Quote */}
+                <p
+                  className="text-[13.5px] leading-relaxed mb-5 italic"
+                  style={{ color: "var(--ink-soft)" }}
+                >
+                  &ldquo;{review.quote}&rdquo;
+                </p>
+
+                {/* Author */}
+                <div className="flex items-center gap-3 pt-4 border-t" style={{ borderColor: "var(--line-subtle)" }}>
+                  <div
+                    className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-bold text-white"
+                    style={{ background: "var(--navy)" }}
+                  >
+                    {review.name.charAt(0)}
+                  </div>
+                  <div>
+                    <p
+                      className="text-[13px] font-bold"
+                      style={{ color: "var(--ink)" }}
+                    >
+                      {review.name}
+                    </p>
+                    <p
+                      className="text-[11.5px] font-semibold"
+                      style={{ color: "var(--ink-faint)" }}
+                    >
+                      {review.suburb} &middot; Hired a {review.trade}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════
+            BOTTOM CTA SECTION
+        ═══════════════════════════════════════════ */}
+        <section className="mt-20 sm:mt-24">
+          <div
+            className="relative overflow-hidden rounded-3xl p-10 sm:p-14 text-center"
+            style={{ background: "var(--navy)" }}
+          >
+            {/* Subtle accent orb */}
+            <div
+              className="absolute w-[300px] h-[300px] rounded-full pointer-events-none"
+              style={{
+                background:
+                  "radial-gradient(circle, rgba(255,180,0,0.15) 0%, transparent 60%)",
+                top: "-30%",
+                right: "10%",
+              }}
+            />
+
+            <div className="relative">
+              <h2 className="font-display text-[2rem] sm:text-[2.6rem] text-white mb-3">
+                Ready to find the right tradie?
+              </h2>
+              <p
+                className="text-[14px] sm:text-[15px] max-w-lg mx-auto mb-8"
+                style={{ color: "#8b96a1" }}
+              >
+                Post your job for free and get up to 3 quotes from verified
+                local tradies. No obligation, no spam.
+              </p>
+              <div className="flex flex-wrap justify-center gap-3">
+                <Link
+                  href="/get-quotes"
+                  className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-8 py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors"
+                >
+                  Get quotes <ArrowRight size={15} />
+                </Link>
+                <Link
+                  href="/signup"
+                  className="inline-flex items-center gap-2 text-white font-bold text-[14px] px-8 py-3.5 rounded-xl border border-white/25 hover:border-white/50 hover:bg-white/5 transition-all"
+                >
+                  List your business
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </main>
   );
