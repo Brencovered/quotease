@@ -6,8 +6,6 @@ import {
   Search, MapPin, Phone, Mail, FileText, Loader2, Check, Info, Wrench, ChevronRight,
 } from "lucide-react";
 
-import { ToastType, useToast } from "@/hooks/useToast";
-
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
 /* ------------------------------------------------------------------ */
@@ -79,15 +77,29 @@ interface StepConfig {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Simple toast fallback                                              */
+/* ------------------------------------------------------------------ */
+
+function useSimpleToast() {
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(t);
+  }, [toast]);
+  return { toast, showToast: setToast };
+}
+
+/* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
-export default function GetQuotesForm({ user, homeowner }: { user: User | null; homeowner: HomeownerData | null }) {
+export default function GetQuotesForm({ user, homeowner }: { user: UserData | null; homeowner: HomeownerData | null }) {
   const [step, setStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { showToast } = useToast();
+  const { toast, showToast } = useSimpleToast();
 
   // ── Form data (backed by localStorage) ───────────────────────────
   const [form, setForm] = useState<FormData>(() => {
@@ -210,12 +222,12 @@ export default function GetQuotesForm({ user, homeowner }: { user: User | null; 
       if (res.ok) {
         localStorage.removeItem("get-quotes-form");
         setSubmitted(true);
-        showToast("Job posted successfully!", ToastType.SUCCESS);
+        showToast({ message: "Job posted successfully!", type: "success" });
       } else {
-        showToast(data.error ?? "Something went wrong. Please try again.", ToastType.ERROR);
+        showToast({ message: data.error ?? "Something went wrong. Please try again.", type: "error" });
       }
     } catch {
-      showToast("Network error. Please try again.", ToastType.ERROR);
+      showToast({ message: "Network error. Please try again.", type: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -314,7 +326,7 @@ export default function GetQuotesForm({ user, homeowner }: { user: User | null; 
           {/* Budget */}
           <div>
             <label className="block text-[12.5px] font-bold text-[var(--ink)] mb-2.5">
-              What's your approximate budget? <span className="text-red-500">*</span>
+              What&apos;s your approximate budget? <span className="text-red-500">*</span>
             </label>
             <div className="grid grid-cols-3 gap-2">
               {BUDGETS.map(({ value, label }) => (
@@ -356,7 +368,7 @@ export default function GetQuotesForm({ user, homeowner }: { user: User | null; 
           {/* Suburb */}
           <div>
             <label className="block text-[12.5px] font-bold text-[var(--ink)] mb-2.5">
-              What's your suburb? <span className="text-red-500">*</span>
+              What&apos;s your suburb? <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)]" />
@@ -435,7 +447,7 @@ export default function GetQuotesForm({ user, homeowner }: { user: User | null; 
 
         {/* Review card */}
         <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-5 max-w-sm mx-auto text-left">
-          <p className="text-[12.5px] font-bold text-[var(--ink)] mb-3">What's next?</p>
+          <p className="text-[12.5px] font-bold text-[var(--ink)] mb-3">What&apos;s next?</p>
           <div className="space-y-2.5">
             {[
               "Tradies review your job details",
@@ -457,6 +469,13 @@ export default function GetQuotesForm({ user, homeowner }: { user: User | null; 
 
   return (
     <div>
+      {/* Toast notification */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg text-[13px] font-bold transition-all ${toast.type === "success" ? "bg-emerald-100 text-emerald-700 border border-emerald-200" : "bg-red-100 text-red-700 border border-red-200"}`}>
+          {toast.message}
+        </div>
+      )}
+
       {/* Progress header */}
       <div className="mb-6">
         {/* Step dots */}
