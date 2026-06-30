@@ -6,11 +6,9 @@ import { createClient } from "@/lib/supabase/client";
 import {
   TrendingUp,
   DollarSign,
-  Users,
   FileText,
   CheckCircle2,
   ArrowUpRight,
-  ArrowDownRight,
   Zap,
   Briefcase,
   CalendarDays,
@@ -93,7 +91,7 @@ export default function DashboardPanel({ stats, profit }: { stats: Stats; profit
             <TrendingUp size={14} className="text-purple-500" />
             <span className="text-[11px] font-bold text-[var(--ink-faint)] uppercase tracking-wide">Conversion</span>
           </div>
-          <p className="font-display text-[24px] text-[var(ink)]">{stats.conversionRate.toFixed(0)}%</p>
+          <p className="font-display text-[24px] text-[var(--ink)]">{stats.conversionRate.toFixed(0)}%</p>
         </div>
       </div>
 
@@ -123,28 +121,28 @@ export default function DashboardPanel({ stats, profit }: { stats: Stats; profit
       <div className="card mb-6">
         <div className="flex items-center gap-2 mb-4">
           <TrendingUp size={18} className="text-[var(--green)]" />
-          <h2 className="font-bold text-[17px] text-[var(ink)]">Profit snapshot</h2>
+          <h2 className="font-bold text-[17px] text-[var(--ink)]">Profit snapshot</h2>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div>
             <p className="text-[11px] font-bold text-[var(--ink-faint)] uppercase tracking-wide mb-1">Quoted value</p>
-            <p className="font-display text-[18px] text-[var(ink)]">${profit.quotedValue.toLocaleString()}</p>
+            <p className="font-display text-[18px] text-[var(--ink)]">${profit.quotedValue.toLocaleString()}</p>
           </div>
           <div>
-            <p className="text-[11px] font-bold text-[var(ink-faint)] uppercase tracking-wide mb-1">Actual profit</p>
-            <p className={`font-display text-[18px] ${profit.profit >= 0 ? "text-[var(--green)]" : "text-[var(red)]"}`}>
+            <p className="text-[11px] font-bold text-[var(--ink-faint)] uppercase tracking-wide mb-1">Actual profit</p>
+            <p className={`font-display text-[18px] ${profit.profit >= 0 ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
               ${Math.round(profit.profit).toLocaleString()}
             </p>
           </div>
           <div>
-            <p className="text-[11px] font-bold text-[var(ink-faint)] uppercase tracking-wide mb-1">Margin</p>
+            <p className="text-[11px] font-bold text-[var(--ink-faint)] uppercase tracking-wide mb-1">Margin</p>
             <p className={`font-display text-[18px] ${profit.marginPct >= 25 ? "text-[var(--green)]" : profit.marginPct >= 10 ? "text-[var(--amber-deep)]" : "text-[var(--red)]"}`}>
               {profit.marginPct.toFixed(1)}%
             </p>
           </div>
           <div>
-            <p className="text-[11px] font-bold text-[var(ink-faint)] uppercase tracking-wide mb-1">Completed jobs</p>
-            <p className="font-display text-[18px] text-[var(ink)]">{profit.completedJobs}</p>
+            <p className="text-[11px] font-bold text-[var(--ink-faint)] uppercase tracking-wide mb-1">Completed jobs</p>
+            <p className="font-display text-[18px] text-[var(--ink)]">{profit.completedJobs}</p>
           </div>
         </div>
       </div>
@@ -155,25 +153,25 @@ export default function DashboardPanel({ stats, profit }: { stats: Stats; profit
           <span className="flex items-center gap-2"><Zap size={16} className="text-[var(--amber)]" /> New quote</span>
           <ArrowUpRight size={14} className="text-[var(--ink-faint)]" />
         </Link>
-        <Link href="/electrician/jobs" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
+        <Link href="/electrician/jobs" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
           <span className="flex items-center gap-2"><Briefcase size={16} className="text-[var(--blue)]" /> Jobs</span>
-          <ArrowUpRight size={14} className="text-[var(ink-faint)]" />
+          <ArrowUpRight size={14} className="text-[var(--ink-faint)]" />
         </Link>
-        <Link href="/electrician/schedule" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
+        <Link href="/electrician/schedule" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
           <span className="flex items-center gap-2"><CalendarDays size={16} className="text-[var(--green)]" /> Schedule</span>
-          <ArrowUpRight size={14} className="text-[var(ink-faint)]" />
+          <ArrowUpRight size={14} className="text-[var(--ink-faint)]" />
         </Link>
-        <Link href="/electrician/packages" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
+        <Link href="/electrician/packages" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
           <span className="flex items-center gap-2"><Package size={16} className="text-[var(--amber-deep)]" /> Packages</span>
           <span className="text-[11px] font-bold text-[var(--ink-faint)] bg-[var(--app-bg)] rounded-full px-2 py-0.5">{packageCount} ready</span>
         </Link>
-        <Link href="/electrician/comms" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
+        <Link href="/electrician/comms" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
           <span className="flex items-center gap-2"><Bell size={16} className="text-purple-500" /> Comms</span>
-          <ArrowUpRight size={14} className="text-[var(ink-faint)]" />
+          <ArrowUpRight size={14} className="text-[var(--ink-faint)]" />
         </Link>
-        <Link href="/electrician/margins" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
+        <Link href="/electrician/margins" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
           <span className="flex items-center gap-2"><TrendingUp size={16} className="text-[var(--green)]" /> Profit detail</span>
-          <ArrowUpRight size={14} className="text-[var(ink-faint)]" />
+          <ArrowUpRight size={14} className="text-[var(--ink-faint)]" />
         </Link>
       </div>
     </div>
