@@ -47,9 +47,9 @@ export type PricingTier = "standard" | "premium";
 // ── Constants ──────────────────────────────────────────────────────
 
 export const RATES: Record<LabourRate, { label: string; rate: number; min: number }> = {
-  standard: { label: "Standard ($55/m\\u00B2)", rate: 55, min: 2000 },
-  complex:  { label: "Complex access ($70/m\\u00B2)", rate: 70, min: 3000 },
-  heritage: { label: "Heritage slate ($95/m\\u00B2)", rate: 95, min: 5000 },
+  standard: { label: "Standard ($55/m\u00B2)", rate: 55, min: 2000 },
+  complex:  { label: "Complex access ($70/m\u00B2)", rate: 70, min: 3000 },
+  heritage: { label: "Heritage slate ($95/m\u00B2)", rate: 95, min: 5000 },
 };
 
 export const MATERIALS: Record<MaterialType, { label: string; costPerSqm: number; description: string }> = {
@@ -61,9 +61,9 @@ export const MATERIALS: Record<MaterialType, { label: string; costPerSqm: number
 };
 
 export const EXTRAS: Record<ExtrasKey, { label: string; unitCost: number; unit: string; description: string }> = {
-  insulation:       { label: "Ceiling insulation upgrade", unitCost: 12, unit: "m\\u00B2", description: "R4.0 batt insulation" },
+  insulation:       { label: "Ceiling insulation upgrade", unitCost: 12, unit: "m\u00B2", description: "R4.0 batt insulation" },
   gutter_replacement: { label: "Gutter replacement", unitCost: 45, unit: "lm", description: "Colorbond gutters & downpipes" },
-  sarking:          { label: "Sarking/foil barrier", unitCost: 8,  unit: "m\\u00B2", description: "Required under tiles in some councils" },
+  sarking:          { label: "Sarking/foil barrier", unitCost: 8,  unit: "m\u00B2", description: "Required under tiles in some councils" },
   whirlybird:       { label: "Whirlybird ventilator", unitCost: 350, unit: "each", description: "Reduces attic heat by up to 30%" },
   skylight:         { label: "Roof window/skylight", unitCost: 1200, unit: "each", description: "Velux or similar" },
 };
@@ -80,19 +80,17 @@ function generateQuoteNumber(): string {
 // ── Main component ────────────────────────────────────────────────
 
 interface RooferQuoteBuilderProps {
-  clientId?: string;
-  clientName?: string;
-  clientAddress?: string;
-  onSave?: (payload: unknown) => void;
-  onSend?: (payload: unknown) => void;
+  profile: { hourly_rate: number; materials_margin_pct: number; trades?: string[]; onboarded_at?: string | null };
+  materials: { item_key: string; label: string; unit_cost: number }[];
+  preClientId?: string;
+  preMarkupMaterials?: { item_key: string; label: string; unit_cost: number; qty: number; supplier: string }[];
 }
 
 export default function RooferQuoteBuilder({
-  clientId,
-  clientName = "",
-  clientAddress = "",
-  onSave,
-  onSend,
+  profile,
+  materials: lib,
+  preClientId,
+  preMarkupMaterials,
 }: RooferQuoteBuilderProps) {
 
   // ── State ──────────────────────────────────────────────────────
@@ -305,9 +303,9 @@ export default function RooferQuoteBuilder({
 
     const quotePayload = {
       quoteNumber: generateQuoteNumber(),
-      clientId: clientId || null,
-      clientName: clientName || "Unnamed client",
-      clientAddress: clientAddress || "",
+      clientId: preClientId || null,
+      clientName: "",
+      clientAddress: "",
       date: new Date().toISOString().slice(0, 10),
       validUntil: new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10),
       jobs: jobs.map((j, i) => ({
@@ -346,7 +344,8 @@ export default function RooferQuoteBuilder({
     if (!payload) return;
     setSaving(true);
     try {
-      await onSave?.(payload);
+      const supabase = createClient();
+      await supabase.from("quotes").insert({ ...payload, profile_id: "TODO" });
     } finally {
       setSaving(false);
     }
@@ -355,7 +354,7 @@ export default function RooferQuoteBuilder({
   async function handleSend() {
     const payload = await buildQuote();
     if (!payload) return;
-    await onSend?.(payload);
+    console.log("Send quote:", payload);
   }
 
   // ── Render ─────────────────────────────────────────────────────
