@@ -24,11 +24,17 @@ export default async function CommsPage() {
 
   const { data: outstandingJobs } = await supabase
     .from("quotes")
-    .select("id, client_name, client_email, site_address, total_cost, amount_paid, completed_at, invoice_number")
+    .select("id, client_name, client_email, site_address, total_cost, amount_paid, completed_at, status")
     .eq("profile_id", businessId)
     .not("completed_at", "is", null)
     .gt("total_cost", 0)
     .or("amount_paid.lt.total_cost,amount_paid.is.null");
+
+  const { data: completedJobs } = await supabase
+    .from("quotes")
+    .select("id, client_name, client_email, site_address, total_cost, amount_paid, completed_at, status")
+    .eq("profile_id", businessId)
+    .not("completed_at", "is", null);
 
   const { data: expiringQuotes } = await supabase
     .from("quotes")
@@ -51,11 +57,11 @@ export default async function CommsPage() {
           </div>
         </div>
         <CommsPanel
-          initialTemplates={templates ?? []}
-          branding={branding as { business_name: string | null; logo_url: string | null; branding_primary_color: string | null; branding_tagline: string | null; branding_email_footer: string | null; contact_email: string | null; contact_phone: string | null; } | null}
-          outstandingJobs={outstandingJobs ?? []}
+          templates={templates ?? []}
+          branding={branding ?? null}
+          jobsWithOutstanding={outstandingJobs ?? []}
+          completedJobs={completedJobs ?? []}
           expiringQuotes={expiringQuotes ?? []}
-          businessId={businessId}
         />
       </div>
     </>
