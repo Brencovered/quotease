@@ -76,9 +76,6 @@ export default async function NewQuotePage({
         .eq("id", businessId)
         .single();
       if (dbProfile) {
-        // Onboarding (picking trades) is a one-time business setup step done
-        // by the owner -- a team member joining an already-onboarded
-        // business should never be sent through it themselves.
         if (!dbProfile.onboarded_at && !isTeamMember) {
           needsOnboarding = true;
         } else {
@@ -87,9 +84,6 @@ export default async function NewQuotePage({
         }
       }
 
-      // If raising a quote from a saved package, the package's own trade
-      // decides which builder loads -- has to happen before materials load
-      // below, or the wrong trade's price list gets pulled in.
       let pkgForMaterials: {
         items: unknown;
         title: string;
@@ -115,7 +109,6 @@ export default async function NewQuotePage({
         }
       }
 
-      // Load materials for dedicated trade builders
       if (tradeParm && DEDICATED.includes(tradeParm)) {
         const tradeMats = await supabase
           .from("material_items")
@@ -131,9 +124,6 @@ export default async function NewQuotePage({
         }
       }
 
-      // Raising a quote from a marked-up plan - pull the actual shapes
-      // (each with its own material, quantity and cost) rather than just
-      // a lump total, so the new quote gets real line items.
       if (planId) {
         const { data: plan } = await supabase
           .from("client_plans")
@@ -162,12 +152,6 @@ export default async function NewQuotePage({
             ),
           }));
       } else if (pkgForMaterials) {
-        // Feeds the package's materials in through the same "markup
-        // materials" line-item mechanism used for plan markup, and seeds
-        // one labour line for its hours. Costs are copied in at this
-        // point, same as everywhere else packages are used - editing the
-        // package later won't retroactively change a quote already raised
-        // from it.
         const items =
           (pkgForMaterials.items as Array<{
             label: string;
@@ -190,7 +174,6 @@ export default async function NewQuotePage({
             ? pkgForMaterials.labour_hours
             : undefined;
       } else if (preMarkup) {
-        // Fallback for any older link that only passed a lump total.
         const lump = parseInt(preMarkup);
         if (lump)
           preMarkupMaterials = [
@@ -215,19 +198,9 @@ export default async function NewQuotePage({
       ? tradeParm
       : (activeTrades[0] ?? "electrician");
 
-  const builderProps = {
-    profile,
-    materials,
-    preClientId,
-    preMarkupMaterials,
-    prePackageName,
-    prePackageLabourHours,
-  };
-
   return (
     <>
       <AppHeader />
-      {/* Trade switcher */}
       {activeTrades.length > 1 && (
         <div className="bg-[var(--surface)] border-b border-[var(--line)]">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-2 overflow-x-auto hide-scrollbar">
@@ -254,18 +227,45 @@ export default async function NewQuotePage({
         </div>
       )}
 
-      {/* Route to correct builder */}
       {selectedTrade === "electrician" && (
-        <QuoteBuilder {...(builderProps as any)} />
+        <QuoteBuilder
+          profile={profile}
+          materials={materials}
+          preClientId={preClientId}
+          preMarkupMaterials={preMarkupMaterials}
+          prePackageName={prePackageName}
+          prePackageLabourHours={prePackageLabourHours}
+        />
       )}
       {selectedTrade === "plumber" && (
-        <PlumberQuoteBuilder {...(builderProps as any)} />
+        <PlumberQuoteBuilder
+          profile={profile}
+          materials={materials}
+          preClientId={preClientId}
+          preMarkupMaterials={preMarkupMaterials}
+          prePackageName={prePackageName}
+          prePackageLabourHours={prePackageLabourHours}
+        />
       )}
       {selectedTrade === "carpenter" && (
-        <CarpenterQuoteBuilder {...(builderProps as any)} />
+        <CarpenterQuoteBuilder
+          profile={profile}
+          materials={materials}
+          preClientId={preClientId}
+          preMarkupMaterials={preMarkupMaterials}
+          prePackageName={prePackageName}
+          prePackageLabourHours={prePackageLabourHours}
+        />
       )}
       {selectedTrade === "roofer" && (
-        <RooferQuoteBuilder {...(builderProps as any)} />
+        <RooferQuoteBuilder
+          profile={profile}
+          materials={materials}
+          preClientId={preClientId}
+          preMarkupMaterials={preMarkupMaterials}
+          prePackageName={prePackageName}
+          prePackageLabourHours={prePackageLabourHours}
+        />
       )}
       {!DEDICATED.includes(selectedTrade) && (
         <GenericQuoteBuilder
