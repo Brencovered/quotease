@@ -8,7 +8,7 @@ const DEFAULT_TEMPLATES = [
     subject: "Payment reminder for {{business_name}} invoice",
     body: `Hi {{client_name}},
 
-This is a friendly reminder that payment of ${{amount}} is outstanding for work completed at {{site_address}}.
+This is a friendly reminder that payment of \${{amount}} is outstanding for work completed at {{site_address}}.
 
 Please contact us to arrange payment.
 
@@ -21,7 +21,7 @@ Thanks,
     subject: "Your quote from {{business_name}} expires soon",
     body: `Hi {{client_name}},
 
-Just a reminder that your quote of ${{amount}} for work at {{site_address}} will expire soon.
+Just a reminder that your quote of \${{amount}} for work at {{site_address}} will expire soon.
 
 To accept, visit: {{quote_url}}
 
@@ -36,7 +36,7 @@ Thanks,
 
 I wanted to follow up on the quote I sent for work at {{site_address}}. 
 
-The total was ${{amount}}. If you have any questions or would like to proceed, just reply to this email or call me.
+The total was \${{amount}}. If you have any questions or would like to proceed, just reply to this email or call me.
 
 Thanks,
 {{business_name}}`,
