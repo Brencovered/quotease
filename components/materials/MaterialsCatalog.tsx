@@ -597,6 +597,7 @@ export function CsvUploadModal({ onClose, onImported }: { onClose: () => void; o
   const [preview, setPreview] = useState<string[][]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
   const [columnMap, setColumnMap] = useState<Record<string, string>>({});
+  const [defaultSupplier, setDefaultSupplier] = useState("");
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<{ imported: number; errors: string[] } | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -604,11 +605,22 @@ export function CsvUploadModal({ onClose, onImported }: { onClose: () => void; o
 
   /* Auto-detect column mappings from headers */
   const HEADER_ALIASES: Record<string, string[]> = {
-    description: ["description", "desc", "item", "name", "item name", "product", "product name", "item description"],
-    sku: ["sku", "code", "item_code", "item code", "product code", "part number", "part_no"],
-    supplier: ["supplier", "vendor", "manufacturer", "brand", "source"],
-    unit: ["unit", "uom", "units", "measure", "um"],
-    cost_price: ["price", "cost", "cost_price", "cost price", "unit cost", "unitcost", "rate", "value"],
+    description: [
+      "description", "desc", "item", "name", "item name", "itemname",
+      "product", "product name", "item description", "purchasesdescription",
+    ],
+    sku: [
+      "sku", "code", "item_code", "item code", "itemcode", "product code",
+      "part number", "part_no", "itemnumber",
+    ],
+    supplier: [
+      "supplier", "vendor", "manufacturer", "brand", "source", "suppliername",
+    ],
+    unit: ["unit", "uom", "units", "measure", "um", "unitofmeasure"],
+    cost_price: [
+      "price", "cost", "cost_price", "cost price", "unit cost", "unitcost",
+      "rate", "value", "purchasesunitprice", "standardcost", "currentcost",
+    ],
     trade: ["trade", "category", "type", "discipline"],
   };
 
@@ -702,6 +714,9 @@ export function CsvUploadModal({ onClose, onImported }: { onClose: () => void; o
       const formData = new FormData();
       formData.append("file", file);
       formData.append("columnMap", JSON.stringify(columnMap));
+      if (defaultSupplier.trim()) {
+        formData.append("defaultSupplier", defaultSupplier.trim());
+      }
 
       const res = await fetch("/api/materials/upload", {
         method: "POST",
@@ -774,6 +789,7 @@ export function CsvUploadModal({ onClose, onImported }: { onClose: () => void; o
                     setPreview([]);
                     setHeaders([]);
                     setColumnMap({});
+                    setDefaultSupplier("");
                     setResult(null);
                   }}
                   className="text-[12px] font-bold text-[var(--red)] hover:underline"
@@ -781,6 +797,21 @@ export function CsvUploadModal({ onClose, onImported }: { onClose: () => void; o
                   Remove
                 </button>
               </div>
+
+              {/* Default supplier (when CSV has no supplier column) */}
+              {(!columnMap.supplier || columnMap.supplier === "") && (
+                <div>
+                  <p className="section-tag mb-2">Default Supplier</p>
+                  <input
+                    type="text"
+                    className="app-field"
+                    placeholder="e.g. Xero Import - enter supplier name since CSV has no supplier column"
+                    value={defaultSupplier}
+                    onChange={(e) => setDefaultSupplier(e.target.value)}
+                    style={{ padding: "8px 10px", fontSize: "13px" }}
+                  />
+                </div>
+              )}
 
               {/* Column mapping */}
               <div>
