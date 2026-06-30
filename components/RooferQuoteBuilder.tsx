@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Quote, Checkbox } from "./ui";
-import { ChevronDown, ChevronUp, Plus, Trash2, PenLine, Image, FileText, MessageSquare, Maximize2, Camera, SquareCheck, Mic, Phone, ArrowRight, Loader2, PlusCircle, MinusCircle } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Trash2, PenLine, Image, FileText, MessageSquare, Maximize2, Camera, SquareCheck, Mic, Phone, ArrowRight, Loader2, PlusCircle, MinusCircle, X } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -47,9 +47,9 @@ export type PricingTier = "standard" | "premium";
 // ── Constants ──────────────────────────────────────────────────────
 
 export const RATES: Record<LabourRate, { label: string; rate: number; min: number }> = {
-  standard: { label: "Standard ($55/m\u00B2)", rate: 55, min: 2000 },
-  complex:  { label: "Complex access ($70/m\u00B2)", rate: 70, min: 3000 },
-  heritage: { label: "Heritage slate ($95/m\u00B2)", rate: 95, min: 5000 },
+  standard: { label: "Standard ($55/m\\u00B2)", rate: 55, min: 2000 },
+  complex:  { label: "Complex access ($70/m\\u00B2)", rate: 70, min: 3000 },
+  heritage: { label: "Heritage slate ($95/m\\u00B2)", rate: 95, min: 5000 },
 };
 
 export const MATERIALS: Record<MaterialType, { label: string; costPerSqm: number; description: string }> = {
@@ -61,9 +61,9 @@ export const MATERIALS: Record<MaterialType, { label: string; costPerSqm: number
 };
 
 export const EXTRAS: Record<ExtrasKey, { label: string; unitCost: number; unit: string; description: string }> = {
-  insulation:       { label: "Ceiling insulation upgrade", unitCost: 12, unit: "m\u00B2", description: "R4.0 batt insulation" },
+  insulation:       { label: "Ceiling insulation upgrade", unitCost: 12, unit: "m\\u00B2", description: "R4.0 batt insulation" },
   gutter_replacement: { label: "Gutter replacement", unitCost: 45, unit: "lm", description: "Colorbond gutters & downpipes" },
-  sarking:          { label: "Sarking/foil barrier", unitCost: 8,  unit: "m\u00B2", description: "Required under tiles in some councils" },
+  sarking:          { label: "Sarking/foil barrier", unitCost: 8,  unit: "m\\u00B2", description: "Required under tiles in some councils" },
   whirlybird:       { label: "Whirlybird ventilator", unitCost: 350, unit: "each", description: "Reduces attic heat by up to 30%" },
   skylight:         { label: "Roof window/skylight", unitCost: 1200, unit: "each", description: "Velux or similar" },
 };
@@ -253,8 +253,9 @@ export default function RooferQuoteBuilder({
               <div className="flex flex-wrap gap-2">
                 {job.photos.map((p, i) => (
                   <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden bg-gray-100">
-                    <img src={URL.createObjectURL(p)} alt="" className="w-full h-full object-cover" />
+                    <img src={URL.createObjectURL(p)} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
                     <button onClick={() => updateJob(job.id, { photos: job.photos.filter((_, pi) => pi !== i) })}
+                      aria-label="Remove photo"
                       className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 flex items-center justify-center text-white">
                       <X size={10} />
                     </button>
@@ -436,7 +437,7 @@ export default function RooferQuoteBuilder({
           <div className="text-center py-10 border-2 border-dashed border-[var(--line)] rounded-2xl">
             <FileText size={28} className="text-[var(--ink-faint)] mx-auto mb-2" />
             <p className="text-[13px] text-[var(--ink-faint)] font-semibold">No jobs added yet</p>
-            <p className="text-[11px] text-[var(--ink-faint)] mt-1">Click "Add job" to start scoping</p>
+            <p className="text-[11px] text-[var(--ink-faint)] mt-1">Click &quot;Add job&quot; to start scoping</p>
           </div>
         )}
       </div>
@@ -502,7 +503,7 @@ export default function RooferQuoteBuilder({
             <button key={t} onClick={() => setTier(t)}
               className={`p-4 rounded-xl border text-center transition-all ${tier === t ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] bg-white text-[var(--ink)] hover:border-gray-400"}`}>
               <p className="font-bold text-[14px] capitalize">{t}</p>
-              <p className={`text-[11px] mt-1 ${tier === t ? "text-white/70" : "text-[var(--ink-faint)]"}`}>{t === "standard" ? "Base pricing" : "+15% - Premium fixings & warranty"}</p>
+              <p className={`text-[11px] mt-1 ${tier === t ? "text-white/70" : "text-[var(--ink-faint)]"}`}>{t === "standard" ? "Base pricing" : "+15% - Premium fixings &amp; warranty"}</p>
             </button>
           ))}
         </div>
