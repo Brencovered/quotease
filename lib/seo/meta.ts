@@ -18,7 +18,7 @@ import type { Metadata } from "next";
 const BASE_URL = "https://swiftscope.com.au";
 const DEFAULT_OG = `${BASE_URL}/og-default.jpg`; // NOTE: create this 1200×630 card in /public
 
-// ── Canonical helpers ─────────────────────────────────────────────────────
+// -- Canonical helpers ----------------------------------------------------
 
 /** "electrician" -> "electricians" */
 function tradeToSlug(trade: string): string {
@@ -54,7 +54,7 @@ export function directoryListingCanonical(slug: string): string {
   return `${BASE_URL}/directory/${slug}`;
 }
 
-// ── Trade display names ───────────────────────────────────────────────────
+// -- Trade display names --------------------------------------------------
 
 const TRADE_DISPLAY: Record<string, { singular: string; plural: string }> = {
   electrician:     { singular: "Electrician",     plural: "Electricians" },
@@ -76,11 +76,11 @@ export function getTradeDisplay(trade: string) {
   return TRADE_DISPLAY[trade.toLowerCase()] ?? { singular: trade, plural: `${trade}s` };
 }
 
-// ── Page-level Metadata generators ───────────────────────────────────────
+// -- Page-level Metadata generators ---------------------------------------
 
 export function homepageMeta(): Metadata {
-  const title       = "Swiftscope — Find Local Tradies & Instant Online Quotes";
-  const description = "Get up to 3 quotes from verified local tradies. Free for homeowners. Electricians, plumbers, builders and more across Victoria, NSW & QLD.";
+  const title       = "Swiftscope - Scope, Quote & Win Jobs On Site | Built for Tradies";
+  const description = "Quoting software built site-first for trade teams of 1-10. Scope, quote and send before you leave the driveway. Homeowners get free quotes from local tradies.";
   return {
     title,
     description,
@@ -90,7 +90,7 @@ export function homepageMeta(): Metadata {
       description,
       url: BASE_URL,
       siteName: "Swiftscope",
-      images: [{ url: DEFAULT_OG, width: 1200, height: 630, alt: "Swiftscope — find local tradies" }],
+      images: [{ url: DEFAULT_OG, width: 1200, height: 630, alt: "Swiftscope - find local tradies" }],
       type: "website",
     },
     twitter: { card: "summary_large_image", title, description, images: [DEFAULT_OG] },
@@ -110,7 +110,7 @@ export function tradeSuburbMeta(
   const canonical  = tradeSuburbCanonical(trade, suburb, state);
 
   const ratingSnippet = avgRating ? ` (avg ${avgRating.toFixed(1)}★)` : "";
-  const title       = `${plural} in ${suburb} ${stateUpper} | Compare Quotes — Swiftscope`;
+  const title       = `${plural} in ${suburb} ${stateUpper} | Compare Quotes - Swiftscope`;
   const description = listingCount > 0
     ? `Compare ${listingCount} local ${plural.toLowerCase()} in ${suburb}${ratingSnippet}. Get free quotes instantly. Verified reviews, upfront pricing, no call-centre.`
     : `Find trusted ${plural.toLowerCase()} in ${suburb} ${stateUpper}. Get up to 3 free quotes from verified local tradies on Swiftscope.`;
@@ -147,9 +147,9 @@ export function tradieListingMeta(listing: {
   const canonical = directoryListingCanonical(listing.slug);
 
   const ratingSnippet = listing.google_rating
-    ? ` — ${listing.google_rating}★ (${listing.google_reviews_count ?? 0} reviews)`
+    ? ` - ${listing.google_rating}★ (${listing.google_reviews_count ?? 0} reviews)`
     : "";
-  const title       = `${listing.business_name} | ${singular} in ${listing.suburb}${ratingSnippet} — Swiftscope`;
+  const title       = `${listing.business_name} | ${singular} in ${listing.suburb}${ratingSnippet} - Swiftscope`;
   const description = listing.blurb
     ? listing.blurb.slice(0, 155)
     : `${listing.business_name} is a ${singular.toLowerCase()} based in ${listing.suburb}. Get a free quote on Swiftscope.`;
@@ -192,11 +192,11 @@ export function directoryMeta(): Metadata {
   };
 }
 
-// ── Export helpers for use in generateStaticParams etc. ──────────────────
+// -- Export helpers for use in generateStaticParams etc. -----------------
 
 export { tradeToSlug, suburbToSlug };
 
-// ── Reverse lookup: plural trade slug -> internal trade key ──────────────
+// -- Reverse lookup: plural trade slug -> internal trade key -------------
 // Built from TRADE_DISPLAY plus the irregular plurals in tradeToSlug().
 const SLUG_TO_TRADE: Record<string, string> = {
   electricians: "electrician",
