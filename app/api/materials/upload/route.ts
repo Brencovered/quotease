@@ -2,149 +2,280 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveBusinessId } from "@/lib/team";
 
-function parseCSV(text: string): string[][] {
-  const rows: string[][] = [];
-  let currentRow: string[] = [];
-  let currentField = "";
+/* ------------------------------------------------------------------ */
+/*  Simple CSV helpers                                                 */
+/* ------------------------------------------------------------------ */
+
+function parseCSVLine(line: string): string[] {
+  const fields: string[] = [];
+  let current = "";
   let inQuotes = false;
 
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    const next = text[i + 1];
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
 
     if (inQuotes) {
       if (char === '"') {
-        if (next === '"') { currentField += '"'; i++; }
-        else { inQuotes = false; }
-      } else { currentField += char; }
+        // Check for escaped quotes ("")
+        if (line[i + 1] === '"') {
+          current += '"';
+          i++; // skip next quote
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        current += char;
+      }
     } else {
-      if (char === '"') { inQuotes = true; }
-      else if (char === ',') { currentRow.push(currentField.trim()); currentField = ""; }
-      else if (char === '\n' || char === '\r') {
-        if (char === '\r' && next === '\n') i++;
-        currentRow.push(currentField.trim());
-        if (currentRow.some((f) => f.length > 0)) rows.push(currentRow);
-        currentRow = [];
-        currentField = "";
-      } else { currentField += char; }
+      if (char === '"') {
+        inQuotes = true;
+      } else if (char === ',') {
+        fields.push(current.trim());
+        current = "";
+      } else {
+        current += char;
+      }
     }
   }
-  currentRow.push(currentField.trim());
-  if (currentRow.some((f) => f.length > 0)) rows.push(currentRow);
-  return rows;
+  fields.push(current.trim());
+  return fields;
 }
 
-function detectColumnMap(headers: string[]): Record<string, number> {
-  const lowerHeaders = headers.map((h) => h.toLowerCase().trim().replace(/['"]/g, ""));
-  const map: Record<string, number> = {};
-
-  const find = (aliases: string[]): number => {
-    for (const a of aliases) {
-      const idx = lowerHeaders.indexOf(a);
-      if (idx >= 0) return idx;
-    }
-    return -1;
-  };
-
-  map.description = find(["description", "desc", "item", "name", "product", "item_name", "product_name"]);
-  map.sku = find(["sku", "code", "item_code", "itemcode", "product_code", "part_number"]);
-  map.supplier = find(["supplier", "vendor", "source", "manufacturer", "brand"]);
-  map.unit = find(["unit", "uom", "unit_of_measure", "measure"]);
-  map.cost_price = find(["cost_price", "cost", "price", "unit_cost", "unitcost", "rate", "amount"]);
-  map.trade = find(["trade", "category", "type", "department"]);
-
-  return map;
+function isHeaderRow(fields: string[]): boolean {
+  const headerKeywords = [
+    "description", "desc", "purchasesdescription",
+    "cost_price", "cost", "price", "purchasesunitprice",
+    "supplier", "vendor",
+    "sku", "code", "itemcode", "itemnumber",
+    "unit", "uom",
+    "trade", "category",
+    "item", "name", "itemname",
+  ];
+  const lowerFields = fields.map((f) => f.toLowerCase().replace(/[_\s]/g, ""));
+  const matches = lowerFields.filter((f) =>
+    headerKeywords.some((kw) => f.includes(kw.replace(/[_\s]/g, "")))
+  );
+  return matches.length >= 2;
 }
 
+/* ------------------------------------------------------------------ */
+/*  POST - CSV bulk upload                                             */
+/* ------------------------------------------------------------------ */
 export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  if (!userData.user) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
   const businessId = await getActiveBusinessId(supabase, userData.user.id);
 
-  // Get user's trade from profile
-  const { data: profile } = await supabase.from("profiles").select("trade").eq("id", businessId).single();
-  const defaultTrade = profile?.trade || "electrician";
-
-  const formData = await request.formData();
-  const file = formData.get("file");
-  if (!file || typeof file === "string") {
-    return NextResponse.json({ error: "No file provided" }, { status: 400 });
+  /* ---- read multipart form data ---- */
+  let fileContent: string;
+  let defaultSupplier = "";
+  let clientColumnMap: Record<string, string> = {};
+  try {
+    const formData = await request.formData();
+    const file = formData.get("file");
+    if (!file || !(file instanceof File)) {
+      return NextResponse.json(
+        { error: "Missing file. Please upload a CSV file." },
+        { status: 400 }
+      );
+    }
+    fileContent = await file.text();
+    const ds = formData.get("defaultSupplier");
+    if (ds && typeof ds === "string") defaultSupplier = ds.trim();
+    const cm = formData.get("columnMap");
+    if (cm && typeof cm === "string") {
+      try { clientColumnMap = JSON.parse(cm); } catch { /* ignore */ }
+    }
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid form data. Expected multipart/form-data with a file field." },
+      { status: 400 }
+    );
   }
 
-  const text = await file.text();
-  if (!text.trim()) return NextResponse.json({ error: "Empty file" }, { status: 400 });
+  /* ---- parse CSV ---- */
+  const lines = fileContent
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
 
-  const allRows = parseCSV(text);
-  if (allRows.length === 0) return NextResponse.json({ error: "No rows found" }, { status: 400 });
-
-  // Detect header row
-  const headerRow = allRows[0];
-  const map = detectColumnMap(headerRow);
-  const hasHeaders = map.description >= 0 && map.cost_price >= 0;
-
-  const startIdx = hasHeaders ? 1 : 0;
-  const dataRows = allRows.slice(startIdx);
-
-  // Fallback positional mapping if no headers detected
-  if (!hasHeaders) {
-    map.description = 0;
-    map.cost_price = 1;
-    map.supplier = 2;
-    map.sku = 3;
-    map.unit = 4;
-    map.trade = 5;
+  if (lines.length === 0) {
+    return NextResponse.json(
+      { error: "CSV file is empty" },
+      { status: 400 }
+    );
   }
 
+  /* ---- detect headers ---- */
+  let startIndex = 0;
+  const firstRow = parseCSVLine(lines[0]);
+  if (isHeaderRow(firstRow)) {
+    startIndex = 1;
+  }
+
+  if (lines.length - startIndex > 500) {
+    return NextResponse.json(
+      { error: "Maximum 500 rows allowed per upload" },
+      { status: 400 }
+    );
+  }
+
+  /* ---- try to get user's trade from profile ---- */
+  let defaultTrade = "electrician";
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("trade")
+      .eq("id", userData.user.id)
+      .single();
+    if (profile?.trade) {
+      defaultTrade = profile.trade;
+    }
+  } catch {
+    // ignore profile lookup failure, use default
+  }
+
+  /* ---- build column index map (client map takes priority) ---- */
+  const colIdx: Record<string, number> = {};
+  if (startIndex === 1) {
+    // Normalise header names for fuzzy matching
+    const normHeaders = firstRow.map((h, i) => ({ raw: h, idx: i, norm: h.toLowerCase().trim().replace(/[_\s]/g, "") }));
+
+    // First: use explicit client column map
+    for (const [field, headerName] of Object.entries(clientColumnMap)) {
+      if (!headerName) continue;
+      const match = normHeaders.find((h) => h.raw === headerName);
+      if (match) colIdx[field] = match.idx;
+    }
+
+    // Second: fuzzy fallback for common headers
+    const find = (aliases: string[]) => {
+      for (const a of aliases) {
+        const aNorm = a.toLowerCase().replace(/[_\s]/g, "");
+        const hit = normHeaders.find((h) => h.norm === aNorm || h.norm.includes(aNorm));
+        if (hit) return hit.idx;
+      }
+      return -1;
+    };
+
+    if (colIdx.description === undefined) {
+      colIdx.description = find(["description", "itemname", "purchasesdescription", "name", "item", "product"]);
+    }
+    if (colIdx.cost_price === undefined) {
+      colIdx.cost_price = find(["purchasesunitprice", "costprice", "cost_price", "cost", "price", "unitcost", "rate", "value"]);
+    }
+    if (colIdx.supplier === undefined) {
+      colIdx.supplier = find(["supplier", "vendor", "source", "manufacturer", "brand"]);
+    }
+    if (colIdx.sku === undefined) {
+      colIdx.sku = find(["itemcode", "sku", "code", "itemnumber", "partnumber"]);
+    }
+    if (colIdx.unit === undefined) {
+      colIdx.unit = find(["unit", "uom", "unitofmeasure"]);
+    }
+    if (colIdx.trade === undefined) {
+      colIdx.trade = find(["trade", "category", "type"]);
+    }
+  }
+
+  /* ---- process rows ---- */
   const errors: string[] = [];
   const toInsert: Array<{
     profile_id: string;
-    description: string;
+    supplier: string;
     sku: string | null;
-    supplier: string | null;
+    description: string;
     unit: string;
     cost_price: number;
     trade: string;
     imported_at: string;
   }> = [];
 
-  const maxRows = 500;
-  for (let i = 0; i < Math.min(dataRows.length, maxRows); i++) {
-    const row = dataRows[i];
-    const desc = map.description >= 0 ? row[map.description] : "";
-    const costStr = map.cost_price >= 0 ? row[map.cost_price] : "";
-    const supplierVal = map.supplier >= 0 ? (row[map.supplier] || null) : null;
-    const skuVal = map.sku >= 0 ? (row[map.sku] || null) : null;
-    const unitVal = map.unit >= 0 ? (row[map.unit] || "ea") : "ea";
-    const tradeVal = map.trade >= 0 ? (row[map.trade] || defaultTrade) : defaultTrade;
+  for (let i = startIndex; i < lines.length; i++) {
+    const rowNum = i + 1;
+    const fields = parseCSVLine(lines[i]);
+    if (fields.length === 0) continue;
+    if (fields.every((f) => f.trim() === "")) continue; // skip blank rows
 
-    const cost = parseFloat(costStr.replace(/[$,]/g, ""));
+    let description = "";
+    let costPriceRaw = "";
+    let supplier = "";
+    let sku: string | null = null;
+    let unit = "ea";
+    let trade = defaultTrade;
 
-    if (!desc) { errors.push(`Row ${i + 1}: missing description`); continue; }
-    if (isNaN(cost) || cost < 0) { errors.push(`Row ${i + 1}: invalid cost price '${costStr}'`); continue; }
+    if (startIndex === 1 && Object.keys(colIdx).length > 0) {
+      /* ---- header-based mapping ---- */
+      if (colIdx.description >= 0) description = fields[colIdx.description] ?? "";
+      if (colIdx.cost_price >= 0) costPriceRaw = fields[colIdx.cost_price] ?? "";
+      if (colIdx.supplier >= 0) supplier = fields[colIdx.supplier] ?? "";
+      if (colIdx.sku >= 0) sku = fields[colIdx.sku] ?? null;
+      if (colIdx.unit >= 0) unit = fields[colIdx.unit] ?? "ea";
+      if (colIdx.trade >= 0) trade = fields[colIdx.trade] ?? defaultTrade;
+
+      // Fallback to first/second column if nothing mapped
+      if (!description && fields.length >= 1) description = fields[0];
+      if (!costPriceRaw && fields.length >= 2) costPriceRaw = fields[1];
+      if (!supplier && fields.length >= 3) supplier = fields[2];
+    } else {
+      /* ---- positional mapping ---- */
+      description = fields[0] ?? "";
+      costPriceRaw = fields[1] ?? "";
+      supplier = fields[2] ?? "";
+      if (fields.length > 3) sku = fields[3];
+      if (fields.length > 4) unit = fields[4];
+      if (fields.length > 5) trade = fields[5];
+    }
+
+    /* ---- normalise ---- */
+    description = description.trim();
+    supplier = supplier.trim();
+    if (!supplier && defaultSupplier) supplier = defaultSupplier;
+
+    /* ---- validation: skip bad rows, don't fail the batch ---- */
+    if (!description || description.length === 0) {
+      errors.push(`Row ${rowNum}: missing description - skipped`);
+      continue;
+    }
+
+    const costPrice = parseFloat(costPriceRaw.replace(/[$,\s]/g, ""));
+    if (isNaN(costPrice) || costPrice < 0) {
+      errors.push(`Row ${rowNum}: invalid cost "${costPriceRaw}" - skipped`);
+      continue;
+    }
+
+    if (!supplier || supplier.length === 0) {
+      errors.push(`Row ${rowNum}: missing supplier (map a supplier column or set a default) - skipped`);
+      continue;
+    }
 
     toInsert.push({
       profile_id: businessId,
-      description: desc,
-      sku: skuVal,
-      supplier: supplierVal,
-      unit: unitVal,
-      cost_price: cost,
-      trade: tradeVal,
+      supplier,
+      sku: sku ? sku.trim() : null,
+      description,
+      unit: (unit || "ea").trim(),
+      cost_price: costPrice,
+      trade: (trade || defaultTrade).trim(),
       imported_at: new Date().toISOString(),
     });
   }
 
-  if (dataRows.length > maxRows) {
-    errors.push(`Limited to ${maxRows} rows. ${dataRows.length - maxRows} rows skipped.`);
-  }
-
-  if (toInsert.length > 0) {
-    const { error } = await supabase.from("price_book_items").insert(toInsert);
+  /* ---- insert valid rows one-by-one so one bad row doesn't kill the batch ---- */
+  let imported = 0;
+  const insertErrors: string[] = [];
+  for (const row of toInsert) {
+    const { error } = await supabase.from("price_book_items").insert(row);
     if (error) {
-      return NextResponse.json({ error: `Insert failed: ${error.message}`, imported: 0, errors: [...errors, error.message] }, { status: 500 });
+      insertErrors.push(`"${row.description.substring(0, 40)}" - ${error.message}`);
+    } else {
+      imported++;
     }
   }
 
-  return NextResponse.json({ imported: toInsert.length, errors });
+  return NextResponse.json({ imported, errors: [...errors, ...insertErrors] });
 }
