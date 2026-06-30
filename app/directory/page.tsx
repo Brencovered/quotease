@@ -62,6 +62,14 @@ const REVIEW_RANGES = [
   { value: "500+", label: "500+ reviews" },
 ];
 
+/** Minimum rating filter */
+const RATING_OPTIONS = [
+  { value: "", label: "Any rating" },
+  { value: "4.5", label: "4.5+ stars" },
+  { value: "4.0", label: "4.0+ stars" },
+  { value: "3.5", label: "3.5+ stars" },
+];
+
 /** Sort options */
 const SORT_OPTIONS = [
   { value: "rating", label: "Highest rated" },
@@ -103,7 +111,7 @@ const HOMEOWNER_REVIEWS = [
     trade: "Plumber",
     rating: 5,
     quote:
-      "After a nightmare experience with a random Gumtree tradie, Swiftscope was a breath of fresh air. Every business here has real reviews you can verify.",
+      "After a nightmare experience with a random Gumtree tradie, Swiftscope was a breath of fresh air. Every listing is hand-picked with real reviews.",
   },
   {
     name: "Jenny T.",
@@ -122,11 +130,12 @@ export default async function DirectoryPage({
     trade?: string;
     suburb?: string;
     reviews?: string;
+    rating?: string;
     sort?: string;
     page?: string;
   }>;
 }) {
-  const { trade, suburb, reviews, sort, page: pageParam } = await searchParams;
+  const { trade, suburb, reviews, rating, sort, page: pageParam } = await searchParams;
   const page = parseInt(pageParam ?? "1");
   const perPage = 24;
   const from = (page - 1) * perPage;
@@ -155,6 +164,12 @@ export default async function DirectoryPage({
     }
   }
 
+  // Minimum rating filter
+  if (rating) {
+    const minRating = parseFloat(rating);
+    if (!isNaN(minRating)) query = query.gte("google_rating", minRating);
+  }
+
   // Sorting
   const activeSort = sort ?? "rating";
   if (activeSort === "reviews") {
@@ -181,6 +196,7 @@ export default async function DirectoryPage({
     if (trade) sp.set("trade", trade);
     if (suburb) sp.set("suburb", suburb);
     if (reviews) sp.set("reviews", reviews);
+    if (rating) sp.set("rating", rating);
     if (sort) sp.set("sort", sort);
     for (const [k, v] of Object.entries(params)) {
       if (v === undefined) sp.delete(k);
@@ -260,14 +276,14 @@ export default async function DirectoryPage({
           </h1>
 
           <p className="reveal text-[15px] sm:text-[16px] max-w-xl mb-10 leading-relaxed text-[#8b96a1]">
-            Every business is verified with real Google reviews. Browse verified tradies across Australia, or post your job and get up to 3 quotes.
+            A curated directory of local tradies with real Google reviews. Browse listings across Australia, or post your job and get up to 3 quotes.
           </p>
 
           <div
             className="reveal grid grid-cols-3 gap-6 sm:gap-10 max-w-lg mb-10 p-5 sm:p-6 rounded-2xl"
             style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
           >
-            <AnimatedCounter target={196} suffix="+" label="Verified tradies" />
+            <AnimatedCounter target={196} suffix="+" label="Curated listings" />
             <AnimatedCounter target={50} suffix="+" label="Suburbs covered" delay={150} />
             <AnimatedCounter target={1200} suffix="+" label="Quotes sent" delay={300} />
           </div>
@@ -275,7 +291,7 @@ export default async function DirectoryPage({
           <div className="reveal flex flex-wrap gap-4 sm:gap-6 mb-12">
             {[
               { icon: Star, text: "Real Google ratings" },
-              { icon: Shield, text: "Verified businesses" },
+              { icon: Shield, text: "Curated listings" },
               { icon: Lock, text: "No spam guarantee" },
               { icon: Check, text: "Free for homeowners" },
             ].map(({ icon: Icon, text }) => (
@@ -336,7 +352,7 @@ export default async function DirectoryPage({
           STICKY SEARCH BAR  (with filters)
       ═══════════════════════════════════════════ */}
       <div id="listings" className="sticky top-0 z-20 border-b shadow-sm" style={{ background: "var(--surface)", borderColor: "var(--line)" }}>
-        <form method="GET" className="max-w-6xl mx-auto px-6 py-3 flex flex-wrap gap-2 items-center">
+        <form method="GET" className="max-w-6xl mx-auto px-6 py-3 flex flex-wrap gap-2 items-center" onChange={(e) => { (e.currentTarget as HTMLFormElement).submit(); }}>
           {/* Trade select */}
           <select name="trade" defaultValue={trade ?? ""} className="app-field text-[13px] w-auto bg-white">
             <option value="">All trades</option>
@@ -357,6 +373,14 @@ export default async function DirectoryPage({
             </select>
           </div>
 
+          {/* Rating filter */}
+          <div className="relative">
+            <Star size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] pointer-events-none" />
+            <select name="rating" defaultValue={rating ?? ""} className="app-field pl-8 text-[13px] w-auto bg-white appearance-none pr-7">
+              {RATING_OPTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+            </select>
+          </div>
+
           {/* Sort */}
           <div className="relative">
             <ArrowUpDown size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] pointer-events-none" />
@@ -369,9 +393,9 @@ export default async function DirectoryPage({
             Search
           </button>
 
-          {(trade || suburb || reviews || sort) && (
+          {(trade || suburb || reviews || rating || sort) && (
             <Link href="/directory" className="text-[13px] font-semibold hover:opacity-70 transition-opacity" style={{ color: "var(--ink-faint)" }}>
-              Clear
+              Clear all
             </Link>
           )}
 
@@ -380,6 +404,7 @@ export default async function DirectoryPage({
             {trade ? ` - ${TRADE_LABELS[trade] ?? trade}` : ""}
             {suburb ? ` - ${suburb}` : ""}
             {reviews ? ` - ${REVIEW_RANGES.find((r) => r.value === reviews)?.label ?? reviews}` : ""}
+            {rating ? ` - ${RATING_OPTIONS.find((r) => r.value === rating)?.label ?? rating}` : ""}
           </span>
         </form>
       </div>
@@ -395,7 +420,7 @@ export default async function DirectoryPage({
         )}
 
         {/* Active filters summary */}
-        {(trade || suburb || reviews) && (
+        {(trade || suburb || reviews || rating) && (
           <div className="flex flex-wrap gap-2 mb-4">
             {trade && (
               <Link href={buildUrl({ trade: undefined })} className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full bg-[var(--navy)] text-white hover:opacity-80 transition-opacity">
@@ -410,6 +435,11 @@ export default async function DirectoryPage({
             {reviews && (
               <Link href={buildUrl({ reviews: undefined })} className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full bg-[var(--amber)] text-[var(--navy)] hover:opacity-80 transition-opacity">
                 {REVIEW_RANGES.find((r) => r.value === reviews)?.label ?? reviews} <span className="opacity-60">-</span>
+              </Link>
+            )}
+            {rating && (
+              <Link href={buildUrl({ rating: undefined })} className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full bg-[var(--green-bg)] text-[var(--green)] hover:opacity-80 transition-opacity">
+                {RATING_OPTIONS.find((r) => r.value === rating)?.label ?? rating} <span className="opacity-60">-</span>
               </Link>
             )}
           </div>
@@ -504,7 +534,7 @@ export default async function DirectoryPage({
             <div className="relative">
               <h2 className="font-display text-[2rem] sm:text-[2.6rem] text-white mb-3">Ready to find the right tradie?</h2>
               <p className="text-[14px] sm:text-[15px] max-w-lg mx-auto mb-8 text-[#8b96a1]">
-                Post your job for free and get up to 3 quotes from verified local tradies. No obligation, no spam.
+                Post your job for free and get up to 3 quotes from local tradies. No obligation, no spam.
               </p>
               <div className="flex flex-wrap justify-center gap-3">
                 <Link href="/get-quotes" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-8 py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors">
