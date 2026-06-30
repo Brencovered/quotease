@@ -356,3 +356,48 @@ create index if not exists job_tasks_profile_idx on job_tasks(profile_id);
 alter table job_tasks enable row level security;
 create policy "Business job tasks" on job_tasks
   for all using (profile_id in (select accessible_business_ids(auth.uid())));
+
+-- ── SEO automation (Prompt 3 of 4) ──────────────────────────────────────
+-- trade_suburb_pages: cached aggregate per trade x suburb combo, refreshed
+-- weekly by app/api/cron/refresh-seo. Source of truth for actual page
+-- content stays directory_listing -- this is bookkeeping for the cron and
+-- sitemap, not what the live pages render from.
+
+create table if not exists trade_suburb_pages (
+  id uuid primary key default uuid_generate_v4(),
+  trade text not null,
+  suburb text not null,
+  suburb_slug text not null,
+  state text not null default 'vic',
+  listing_count integer not null default 0,
+  avg_rating numeric,
+  total_reviews integer not null default 0,
+  is_indexed boolean not null default false,
+  last_refreshed_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  unique (trade, suburb_slug, state)
+);
+
+create index if not exists trade_suburb_pages_trade_idx on trade_suburb_pages(trade);
+create index if not exists trade_suburb_pages_indexed_idx on trade_suburb_pages(is_indexed);
+
+-- No public-read policy on purpose -- only the cron route (service-role
+-- client) touches this table.
+alter table trade_suburb_pages enable row level security;
+
+create table if not exists seo_refresh_log (
+  id uuid primary key default uuid_generate_v4(),
+  run_at timestamptz not null default now(),
+  pages_scanned integer not null default 0,
+  pages_updated integer not null default 0,
+  pages_newly_indexed integer not null default 0,
+  pages_newly_deindexed integer not null default 0,
+  sitemap_pinged boolean not null default false,
+  duration_ms integer,
+  error text,
+  status text not null default 'success' check (status in ('success', 'partial', 'failed'))
+);
+
+create index if not exists seo_refresh_log_run_at_idx on seo_refresh_log(run_at desc);
+
+alter table seo_refresh_log enable row level security;
