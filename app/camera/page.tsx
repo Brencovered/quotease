@@ -81,6 +81,8 @@ function CameraPage() {
   const [showCalib,   setShowCalib]   = useState(false);
   const [calibration, setCalibration] = useState<{pxPerMetre:number}|null>(null);
   const [formLength,  setFormLength]  = useState<number|null>(null);
+  const [stampMode,   setStampMode]   = useState(true); // fast tap-to-add mode
+  const [stampItem,   setStampItem]   = useState<string>(items[0]?.key ?? "dl");
 
   // Start camera on mount
   useEffect(() => {
@@ -179,37 +181,31 @@ function CameraPage() {
     else if(drawMode==="area"&&curPts.length>=3) captureAnnotation(curPts);
   }
 
-  function captureAnnotation(pts:Pt[]){
+  function captureFrame(pts:Pt[]){
     const v=videoRef.current; const s=snapRef.current; const o=overlayRef.current;
     let fd="";
     if(v&&s&&o){
       s.width=v.videoWidth||o.width; s.height=v.videoHeight||o.height;
       const ctx=s.getContext("2d")!;
-      // Draw live video frame
       ctx.drawImage(v,0,0,s.width,s.height);
       const sx=s.width/o.width; const sy=s.height/o.height;
       const colour=COLOURS[colourIdx%COLOURS.length];
-      // Draw annotation shape on top of the frame
       ctx.fillStyle=colour; ctx.strokeStyle=colour; ctx.lineWidth=Math.max(3, s.width/200);
       ctx.shadowColor="rgba(0,0,0,0.8)"; ctx.shadowBlur=6;
       if(pts.length===1){
-        // Point: filled circle with white border
         ctx.beginPath(); ctx.arc(pts[0].x*sx,pts[0].y*sy,18,0,Math.PI*2); ctx.fill();
         ctx.strokeStyle="#fff"; ctx.lineWidth=3; ctx.shadowBlur=0;
         ctx.stroke();
-        // Number label
         ctx.fillStyle="#000"; ctx.font=`bold ${Math.max(14, s.width/60)}px system-ui`;
         ctx.textAlign="center"; ctx.textBaseline="middle";
         ctx.fillText(String(annotations.length+1), pts[0].x*sx, pts[0].y*sy);
         ctx.textAlign="left"; ctx.textBaseline="alphabetic";
       } else if(pts.length===2){
-        // Line with end caps
         ctx.strokeStyle=colour; ctx.lineWidth=Math.max(4, s.width/200); ctx.shadowBlur=4;
         ctx.beginPath(); ctx.moveTo(pts[0].x*sx,pts[0].y*sy); ctx.lineTo(pts[1].x*sx,pts[1].y*sy); ctx.stroke();
         [pts[0],pts[1]].forEach(p=>{
           ctx.fillStyle=colour; ctx.beginPath(); ctx.arc(p.x*sx,p.y*sy,8,0,Math.PI*2); ctx.fill();
         });
-        // Direction arrow at end
         const angle=Math.atan2((pts[1].y-pts[0].y)*sy,(pts[1].x-pts[0].x)*sx);
         const ex=pts[1].x*sx; const ey=pts[1].y*sy; const al=20;
         ctx.fillStyle=colour;
@@ -219,7 +215,6 @@ function CameraPage() {
         ctx.lineTo(ex-al*Math.cos(angle+0.4),ey-al*Math.sin(angle+0.4));
         ctx.closePath(); ctx.fill();
       } else {
-        // Area: semi-transparent fill + border
         ctx.globalAlpha=0.25; ctx.fillStyle=colour;
         ctx.beginPath(); ctx.moveTo(pts[0].x*sx,pts[0].y*sy);
         pts.slice(1).forEach(p=>ctx.lineTo(p.x*sx,p.y*sy)); ctx.closePath(); ctx.fill();
@@ -229,9 +224,41 @@ function CameraPage() {
       }
       ctx.shadowBlur=0;
       fd=s.toDataURL("image/jpeg",0.82);
-      // Store for commitAnnotation to use
       pendingFrameRef.current = fd;
     }
+    return pendingFrameRef.current;
+  }
+
+  function quickCommit(pts:Pt[], itemKey:string){
+    const fd = captureFrame(pts);
+    const def = items.find(i=>i.key===itemKey) ?? items[0];
+    let qty = 1;
+    if(def.unit==="m" && calibration && pts.length===2){
+      qty = Math.round(dist(pts[0],pts[1])/calibration.pxPerMetre*100)/100;
+    }
+    const ann:Annotation={
+      id:uid(), type:def.defaultType as AnnotationType, points:pts,
+      label:def.label, itemKey, qty, unit:def.unit,
+      note:"", length:def.unit==="m"?qty:undefined,
+      frameData:fd, colour:COLOURS[colourIdx%COLOURS.length],
+    };
+    setAnnotations(p=>[...p,ann]);
+    setColourIdx(i=>(i+1)%COLOURS.length);
+  }
+
+  function captureAnnotation(pts:Pt[]){
+    // In stamp mode, immediately commit with the selected stamp item
+    if(stampMode && drawMode==="point"){
+      quickCommit(pts, stampItem);
+      return;
+    }
+    // In stamp mode for lines, also quick-commit
+    if(stampMode && (drawMode==="line" || drawMode==="area")){
+      quickCommit(pts, stampItem);
+      return;
+    }
+    // Detailed mode: show the form
+    captureFrame(pts);
     let autoLen:number|null=null;
     if(calibration&&drawMode==="line"&&pts.length===2){
       autoLen=Math.round(dist(pts[0],pts[1])/calibration.pxPerMetre*100)/100;
@@ -302,7 +329,7 @@ function CameraPage() {
                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{background:ann.colour}}/>
                 <p className="font-bold text-[13px] truncate">{ann.label}</p>
               </div>
-              <p className="text-[12px] text-gray-500">{ann.qty} {ann.unit}{ann.length!=null?` · ~${ann.length}m`:""}{ann.note?` · ${ann.note}`:""}</p>
+              <p className="text-[12px] text-gray-500">{ann.qty} {ann.unit}{ann.length!=null?` \u00b7 ~${ann.length}m`:""}{ann.note?` \u00b7 ${ann.note}`:""}</p>
             </div>
             <button onClick={()=>setAnnotations(p=>p.filter((_,j)=>j!==i))} className="text-red-400 p-1"><X size={14}/></button>
           </div>
@@ -362,14 +389,19 @@ function CameraPage() {
           <div style={{display:"flex",gap:6}}>
             {(["point","line","area"] as AnnotationType[]).map(m=>{
               const Icon=m==="point"?MapPin:m==="line"?Ruler:Pencil;
-              const label=m==="point"?"Point":m==="line"?"Line":"Area";
+              const label=m==="point"?"Tap":m==="line"?"Line":"Area";
               return <button key={m} onClick={()=>setDrawMode(m)}
                 style={{display:"flex",alignItems:"center",gap:4,padding:"6px 10px",borderRadius:10,fontSize:11,fontWeight:700,border:"none",background:drawMode===m?"#ffb400":"rgba(0,0,0,.4)",color:drawMode===m?"#0a1722":"white"}}>
                 <Icon size={11}/>{label}
               </button>;
             })}
           </div>
-          <div style={{display:"flex",gap:6}}>
+          <div style={{display:"flex",gap:6,alignItems:"center"}}>
+            {/* Stamp / Detail toggle */}
+            <button onClick={()=>setStampMode(s=>!s)}
+              style={{display:"flex",alignItems:"center",gap:4,padding:"6px 10px",borderRadius:10,fontSize:11,fontWeight:700,border:"none",background:stampMode?"#22c55e":"rgba(0,0,0,.4)",color:"white"}}>
+              {stampMode ? "Stamp ON" : "Stamp off"}
+            </button>
             <button onClick={()=>{setCalibMode(!calibMode);setCalibPts([]);}}
               style={{display:"flex",alignItems:"center",gap:4,padding:"6px 10px",borderRadius:10,fontSize:11,fontWeight:700,border:"none",background:calibMode?"#22c55e":"rgba(0,0,0,.4)",color:"white"}}>
               <Ruler size={11}/>{calibMode?"Calibrating...":"Calibrate"}
@@ -379,15 +411,31 @@ function CameraPage() {
             </button>}
           </div>
         </div>
-        {/* Item strip */}
+                {/* Item stamp strip - in stamp mode these are the active stamps */}
         <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:4}}>
-          {items.map(item=>(
-            <button key={item.key} onClick={()=>setDrawMode(item.defaultType)}
-              style={{background:"rgba(0,0,0,.4)",color:"white",fontSize:11,fontWeight:700,padding:"6px 10px",borderRadius:10,whiteSpace:"nowrap",border:"1px solid rgba(255,255,255,.2)",flexShrink:0}}>
+          {items.map(item=>{
+            const isActive = stampMode ? stampItem===item.key : drawMode===item.defaultType;
+            return (
+            <button key={item.key}
+              onClick={()=>{
+                if(stampMode){
+                  setStampItem(item.key);
+                  setDrawMode(item.defaultType as AnnotationType);
+                } else {
+                  setDrawMode(item.defaultType as AnnotationType);
+                }
+              }}
+              style={{background:isActive?"#ffb400":"rgba(0,0,0,.4)",color:isActive?"#0a1722":"white",fontSize:11,fontWeight:700,padding:"6px 10px",borderRadius:10,whiteSpace:"nowrap",border:isActive?"2px solid #ffb400":"1px solid rgba(255,255,255,.2)",flexShrink:0,cursor:"pointer"}}>
               {item.label}
             </button>
-          ))}
+            );
+          })}
         </div>
+        {stampMode && (
+          <p style={{color:"#4ade80",fontSize:10,fontWeight:700,marginTop:4,textAlign:"center"}}>
+            Tap the camera to add {items.find(i=>i.key===stampItem)?.label ?? "item"}s instantly
+          </p>
+        )}
       </div>
 
       {/* Annotation form */}
