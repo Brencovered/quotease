@@ -140,7 +140,7 @@ export default async function TradieProfilePage({
                     {tradeLabel}
                   </span>
                   <span className="flex items-center gap-1 text-[12px] font-semibold text-emerald-400 bg-emerald-400/10 px-2.5 py-1 rounded-full">
-                    <ShieldCheck size={12} /> Verified on Swiftscope
+                    <ShieldCheck size={12} /> Curated on Swiftscope
                   </span>
                 </div>
               )}
@@ -339,7 +339,7 @@ export default async function TradieProfilePage({
                       <Check size={14} className="text-emerald-600" />
                     </div>
                     <div>
-                      <p className="text-[13px] font-semibold text-gray-800">Verified business</p>
+                      <p className="text-[13px] font-semibold text-gray-800">Curated business</p>
                       <p className="text-[11.5px] text-gray-400">Contact details checked and confirmed</p>
                     </div>
                   </div>
@@ -357,8 +357,8 @@ export default async function TradieProfilePage({
                       <Shield size={14} className="text-[#ffb400]" />
                     </div>
                     <div>
-                      <p className="text-[13px] font-semibold text-gray-800">Swiftscope verified</p>
-                      <p className="text-[11.5px] text-gray-400">Listed in our verified tradie directory</p>
+                      <p className="text-[13px] font-semibold text-gray-800">Swiftscope curated</p>
+                      <p className="text-[11.5px] text-gray-400">Listed in our curated directory</p>
                     </div>
                   </div>
                 </div>
@@ -393,7 +393,7 @@ export default async function TradieProfilePage({
           <div className="bg-[#0a1722] rounded-2xl p-8 sm:p-10 flex flex-col sm:flex-row items-center justify-between gap-6">
             <div className="text-center sm:text-left">
               <p className="font-display text-[1.6rem] text-white mb-1">Need a different trade?</p>
-              <p className="text-white/60 text-[14px] max-w-sm">Browse our full directory of verified tradies across Melbourne&apos;s south east.</p>
+              <p className="text-white/60 text-[14px] max-w-sm">Browse our full directory of curated listings across Melbourne&apos;s south east.</p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 shrink-0">
               <Link href="/directory" className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-7 py-3.5 rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2 whitespace-nowrap">
