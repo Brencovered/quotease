@@ -2,10 +2,10 @@
  * POST /api/admin/scrape
  * ----------------------
  * Unified scraper pipeline that replaces 6 separate Python scripts.
- * Now supports multiple trades per suburb scrape.
+ * Now supports multiple trades per suburb scrape. AUSTRALIA-ONLY.
  *
  * 4-step pipeline per trade:
- *   1. Google Places Text Search (paginated, up to 60 results)
+ *   1. Google Places Text Search (paginated, up to 60 results, region=au)
  *   2. Google Place Details per result (rating, phone, photos, website)
  *   3. Website scrape for email (mailto + regex) and logo (og:image, favicon, etc.)
  *   4. Supabase upsert into directory_listing table
@@ -107,6 +107,9 @@ const JUNK_EMAIL_PATTERNS = [
   /\.(jpg|jpeg|png|gif|svg|webp|css|js)$/i,
 ];
 
+/** Australian state codes */
+const AU_STATES = ["VIC", "NSW", "QLD", "WA", "SA", "TAS", "ACT", "NT"];
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -119,20 +122,40 @@ function getRandomUserAgent(): string {
   return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 }
 
-function parseAustralianAddress(address: string): { suburb: string; postcode: string } {
+/**
+ * Parse an Australian address into suburb and postcode.
+ * Returns { suburb: "", postcode: "" } for non-AU addresses.
+ * Handles formats like: "123 Main St, Seaford VIC 3198, Australia"
+ */
+function parseAustralianAddress(address: string): { suburb: string; postcode: string; isAustralian: boolean } {
+  // Check for Australian state code
+  const hasAuState = AU_STATES.some((s) =>
+    new RegExp(`\\b${s}\\b`, "i").test(address)
+  );
+
   const statePattern = /,\s*([^,]+?)\s+(VIC|NSW|QLD|WA|SA|TAS|ACT|NT)\s+(\d{4})/i;
   const match = address.match(statePattern);
-  if (match) return { suburb: match[1].trim(), postcode: match[3] };
+  if (match) {
+    return { suburb: match[1].trim(), postcode: match[3], isAustralian: true };
+  }
 
+  // If no AU state found, mark as non-Australian
+  if (!hasAuState) {
+    return { suburb: "", postcode: "", isAustralian: false };
+  }
+
+  // Fallback: has AU state but no postcode match
   const postcodeFallback = address.match(/(\d{4})/);
   const parts = address.split(",").map((p) => p.trim());
   if (parts.length >= 2 && postcodeFallback) {
     return {
       suburb: parts[parts.length - 2].replace(/\s+\w+\s+\d{4}/, "").trim(),
       postcode: postcodeFallback[1],
+      isAustralian: true,
     };
   }
-  return { suburb: "", postcode: "" };
+
+  return { suburb: "", postcode: "", isAustralian: hasAuState };
 }
 
 function isValidEmail(email: string): boolean {
@@ -153,7 +176,7 @@ function resolveUrl(url: string, base: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Step 1: Google Places Text Search (paginated, up to 60 results)
+// Step 1: Google Places Text Search (paginated, up to 60 results, AU only)
 // ---------------------------------------------------------------------------
 
 async function searchPlaces(trade: string, suburb: string): Promise<GooglePlaceResult[]> {
@@ -161,7 +184,11 @@ async function searchPlaces(trade: string, suburb: string): Promise<GooglePlaceR
   let nextPageToken: string | undefined;
 
   for (let page = 0; page < 3; page++) {
-    const params = new URLSearchParams({ query: `${trade} in ${suburb}`, key: GOOGLE_API_KEY });
+    const params = new URLSearchParams({
+      query: `${trade} in ${suburb} Australia`,
+      key: GOOGLE_API_KEY,
+      region: "au",
+    });
     if (nextPageToken) params.set("pagetoken", nextPageToken);
 
     try {
@@ -334,7 +361,7 @@ async function runTradeScrape(
 
   // Step 1
   const searchResults = await searchPlaces(trade, suburb);
-  console.log(`[scrape] ${trade}: found ${searchResults.length} places`);
+  console.log(`[scrape] ${trade}: found ${searchResults.length} places (raw)`);
 
   if (searchResults.length === 0) {
     return {
@@ -345,8 +372,18 @@ async function runTradeScrape(
 
   // Steps 2 + 3: enrich each place
   const enriched: PlaceDetails[] = [];
+  let skippedNonAu = 0;
+
   for (const place of searchResults) {
     const addr = parseAustralianAddress(place.formatted_address);
+
+    // Skip non-Australian businesses
+    if (!addr.isAustralian) {
+      skippedNonAu++;
+      console.log(`[scrape] Skipping non-AU: ${place.name} (${place.formatted_address})`);
+      continue;
+    }
+
     const item: PlaceDetails = {
       placeId: place.place_id, name: place.name,
       formattedAddress: place.formatted_address,
@@ -367,6 +404,12 @@ async function runTradeScrape(
       item.photoReferences = details.photoReferences ?? [];
       if (details.formattedAddress) {
         const upd = parseAustralianAddress(details.formattedAddress);
+        // Re-check if the detailed address is Australian
+        if (!upd.isAustralian) {
+          skippedNonAu++;
+          console.log(`[scrape] Skipping non-AU (details): ${place.name}`);
+          continue;
+        }
         item.suburb = upd.suburb; item.postcode = upd.postcode;
       }
     }
@@ -381,6 +424,10 @@ async function runTradeScrape(
 
     enriched.push(item);
     await sleep(200);
+  }
+
+  if (skippedNonAu > 0) {
+    console.log(`[scrape] ${trade}: skipped ${skippedNonAu} non-AU businesses`);
   }
 
   // Step 4: Supabase upsert
@@ -427,7 +474,7 @@ async function runTradeScrape(
   }
 
   const summary: PerTradeSummary = {
-    trade, placesFound: searchResults.length, enriched: enriched.length,
+    trade, placesFound: enriched.length, enriched: enriched.length,
     new: newCount, updated: updatedCount,
     withEmail: results.filter((r) => r.email).length,
     withPhone: results.filter((r) => r.phone).length,
@@ -435,7 +482,7 @@ async function runTradeScrape(
     withLogo: results.filter((r) => r.logoUrl).length,
   };
 
-  console.log(`[scrape] ${trade}: ${newCount} new, ${updatedCount} updated`);
+  console.log(`[scrape] ${trade}: ${newCount} new, ${updatedCount} updated (${skippedNonAu} non-AU filtered)`);
   return { results, summary };
 }
 
@@ -498,7 +545,7 @@ export async function POST(request: Request) {
   const duration = Date.now() - startTime;
 
   console.log(
-    `[scrape] ALL DONE in ${duration}ms | ${trades.length} trades | ${allResults.length} results | ${totalNew} new | ${totalUpdated} updated`
+    `[scrape] ALL DONE in ${duration}ms | ${trades.length} trades | ${allResults.length} AU results | ${totalNew} new | ${totalUpdated} updated`
   );
 
   return NextResponse.json({
