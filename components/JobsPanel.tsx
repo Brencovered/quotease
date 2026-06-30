@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Briefcase, Hammer, Wallet, CheckCircle2, X, Upload, Plus, ChevronRight } from "lucide-react";
+import { Briefcase, Hammer, Wallet, CheckCircle2, X, Upload, Plus, ChevronRight, Send } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 type PaymentTerm = { label: string; percent: number; trigger: string; days: number };
@@ -13,7 +13,7 @@ type Job = {
   payment_terms: PaymentTerm[] | null; invoice_number: string | null;
   xero_exported_at: string | null; completed_at: string | null;
   accepted_at: string | null; scheduled_start: string | null;
-  assigned_to: string | null;
+  assigned_to: string | null; labour_hours: number | null;
 };
 type Attachment = { id: string; file_name: string; storage_path: string; file_type: string | null; signedUrl?: string };
 
@@ -28,6 +28,21 @@ export default function JobsPanel({ jobs: initialJobs }: { jobs: Job[] }) {
   const [attachments,  setAttachments]  = useState<Record<string, Attachment[]>>({});
   const [uploadingId,  setUploadingId]  = useState<string | null>(null);
   const [attError,     setAttError]     = useState<string | null>(null);
+  const [sendingInvoiceId, setSendingInvoiceId] = useState<string | null>(null);
+  const [invoiceSentIds, setInvoiceSentIds] = useState<Set<string>>(new Set());
+  const [hourlyRate, setHourlyRate] = useState(95);
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function fetchProfile() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from("profiles").select("hourly_rate").eq("id", user.id).single();
+      if (data?.hourly_rate) setHourlyRate(data.hourly_rate);
+    }
+    fetchProfile();
+  }, [supabase]);
 
   const notExported = jobs.filter((j) => !j.xero_exported_at);
   const assignees = Array.from(new Set(jobs.map((j) => j.assigned_to).filter((a): a is string => !!a)));
@@ -35,9 +50,14 @@ export default function JobsPanel({ jobs: initialJobs }: { jobs: Job[] }) {
   const totalValue  = filteredJobs.reduce((s, j) => s + (j.total_cost ?? 0), 0);
   const totalOwing  = filteredJobs.reduce((s, j) => s + Math.max((j.total_cost ?? 0) - (j.amount_paid ?? 0), 0), 0);
 
+  const totalLabourCost = filteredJobs.reduce((s, j) => s + ((j.labour_hours ?? 0) * hourlyRate), 0);
+  const totalMaterialsEstimate = filteredJobs.reduce((s, j) => s + ((j.total_cost ?? 0) * 0.4), 0);
+  const estProfit = totalValue - totalLabourCost - totalMaterialsEstimate;
+  const profitMargin = totalValue > 0 ? (estProfit / totalValue) * 100 : 0;
+  const profitColor = estProfit < 0 ? "text-[var(--red)]" : profitMargin >= 25 ? "text-[var(--green)]" : "text-[var(--amber-deep)]";
+
   useEffect(() => {
     if (!jobs.length) return;
-    const supabase = createClient();
     (async () => {
       const { data, error } = await supabase.from("job_attachments").select("*")
         .in("quote_id", jobs.map((j) => j.id)).order("created_at", { ascending: false });
@@ -49,12 +69,11 @@ export default function JobsPanel({ jobs: initialJobs }: { jobs: Job[] }) {
       }
       setAttachments(grouped);
     })();
-  }, [jobs]);
+  }, [jobs, supabase]);
 
   async function handleUpload(jobId: string, e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return;
     setUploadingId(jobId); setAttError(null);
-    const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setAttError("Not signed in"); setUploadingId(null); return; }
     const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
@@ -70,7 +89,6 @@ export default function JobsPanel({ jobs: initialJobs }: { jobs: Job[] }) {
   }
 
   async function deleteAttachment(a: Attachment, jobId: string) {
-    const supabase = createClient();
     await supabase.storage.from("job-files").remove([a.storage_path]);
     await supabase.from("job_attachments").delete().eq("id", a.id);
     setAttachments((p) => ({ ...p, [jobId]: (p[jobId] ?? []).filter((x) => x.id !== a.id) }));
@@ -94,6 +112,19 @@ export default function JobsPanel({ jobs: initialJobs }: { jobs: Job[] }) {
     setExportMsg(`Exported ${notExported.length} invoice(s).`); setExporting(false);
   }
 
+  async function sendInvoice(quoteId: string) {
+    setSendingInvoiceId(quoteId);
+    try {
+      const res = await fetch("/api/invoices/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quoteId }) });
+      if (res.ok) {
+        setInvoiceSentIds((prev) => new Set(prev).add(quoteId));
+      }
+    } catch (err) {
+      console.error("Failed to send invoice:", err);
+    }
+    setSendingInvoiceId(null);
+  }
+
   return (
     <div className="page-wrap">
       <div className="flex items-center justify-between mb-5">
@@ -110,15 +141,22 @@ export default function JobsPanel({ jobs: initialJobs }: { jobs: Job[] }) {
 
       {/* Totals */}
       {jobs.length > 0 && (
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="grid grid-cols-3 gap-3 mb-4">
           <div className="bg-[var(--navy)] rounded-2xl p-4">
             <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide mb-1">Job value</p>
-            <p className="font-display text-[26px] text-white">${totalValue.toLocaleString()}</p>
+            <p className="font-display text-[22px] text-white">${totalValue.toLocaleString()}</p>
           </div>
           <div className="card">
             <p className="text-[10px] text-[var(--ink-faint)] font-bold uppercase tracking-wide mb-1">Still owing</p>
-            <p className={`font-display text-[26px] ${totalOwing > 0 ? "text-[var(--red)]" : "text-[var(--green)]"}`}>
+            <p className={`font-display text-[22px] ${totalOwing > 0 ? "text-[var(--red)]" : "text-[var(--green)]"}`}>
               ${totalOwing.toLocaleString()}
+            </p>
+          </div>
+          <div className="card">
+            <p className="text-[10px] text-[var(--ink-faint)] font-bold uppercase tracking-wide mb-1">Est. profit</p>
+            <p className={`font-display text-[22px] ${profitColor}`}>
+              ${Math.round(estProfit).toLocaleString()}
+              <span className="text-[12px] ml-1">({Math.round(profitMargin)}%)</span>
             </p>
           </div>
         </div>
@@ -164,10 +202,11 @@ export default function JobsPanel({ jobs: initialJobs }: { jobs: Job[] }) {
           const StageIcon = !j.completed_at ? Hammer : owing > 0 ? Wallet : CheckCircle2;
           const stageColor = !j.completed_at ? "text-[var(--blue)]" : owing > 0 ? "text-amber-600" : "text-[var(--green)]";
           const jobFiles = attachments[j.id] ?? [];
+          const isSending = sendingInvoiceId === j.id;
+          const alreadySent = invoiceSentIds.has(j.id);
 
           return (
             <div key={j.id} className="card">
-              {/* Header */}
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-[15px] text-[var(--ink)] truncate">{j.client_name || "Unnamed client"}</p>
@@ -180,14 +219,12 @@ export default function JobsPanel({ jobs: initialJobs }: { jobs: Job[] }) {
                 </div>
               </div>
 
-              {/* Stage */}
               <div className={`flex items-center gap-1.5 mb-3 text-[13px] font-bold ${stageColor}`}>
                 <StageIcon size={14} />
                 {stage}
                 {stage === "Awaiting payment" && <span className="text-[var(--red)] ml-1">${owing.toLocaleString()} owing</span>}
               </div>
 
-              {/* Schedule nudge */}
               {j.scheduled_start && (
                 <div className="flex items-center gap-2 bg-[var(--app-bg)] rounded-lg px-3 py-2 mb-3 text-[12.5px]">
                   <span className="text-[var(--ink-faint)]">Scheduled</span>
@@ -198,7 +235,6 @@ export default function JobsPanel({ jobs: initialJobs }: { jobs: Job[] }) {
                 </div>
               )}
 
-              {/* Files */}
               <div className="border-t border-[var(--line-subtle)] pt-3 mb-3">
                 {jobFiles.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mb-2">
@@ -219,9 +255,8 @@ export default function JobsPanel({ jobs: initialJobs }: { jobs: Job[] }) {
                 </label>
               </div>
 
-              {/* Actions */}
               <div className="flex gap-2 flex-wrap">
-                <Link href={`/electrician/jobs/${j.id}`} className="btn-secondary text-[12.5px] py-1.5 px-3">Open →</Link>
+                <Link href={`/electrician/jobs/${j.id}`} className="btn-secondary text-[12.5px] py-1.5 px-3">Open &rarr;</Link>
                 {!j.completed_at && (
                   <button onClick={() => callUpdate({ quoteId: j.id, completeJob: true })} disabled={busyId === j.id} className="btn-secondary text-[12.5px] py-1.5 px-3">Mark complete</button>
                 )}
@@ -236,6 +271,13 @@ export default function JobsPanel({ jobs: initialJobs }: { jobs: Job[] }) {
                   ) : (
                     <button onClick={() => { setPayId(j.id); setPayVal(String(owing)); }} className="btn-secondary text-[12.5px] py-1.5 px-3">Record payment</button>
                   )
+                )}
+                {j.completed_at && owing > 0 && (
+                  <button onClick={() => sendInvoice(j.id)} disabled={isSending || alreadySent}
+                    className={`text-[12.5px] py-1.5 px-3 rounded-lg font-bold inline-flex items-center gap-1 ${alreadySent ? "bg-[var(--green-bg)] text-[var(--green)]" : "bg-[var(--amber)] text-[var(--navy)] hover:bg-[var(--amber-deep)]"} transition-colors disabled:opacity-50`}>
+                    <Send size={12} />
+                    {isSending ? "Sending..." : alreadySent ? "Sent" : "Send invoice"}
+                  </button>
                 )}
               </div>
             </div>

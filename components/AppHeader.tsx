@@ -29,7 +29,9 @@ const NAV = [
   { href: "/electrician/jobs",      icon: Briefcase,        label: "Jobs" },
   { href: "/electrician",           icon: Plus,             label: "Quote",   fab: true },
   { href: "/electrician/quotes",    icon: FileText,         label: "Quotes" },
+  { href: "/electrician/plans",     icon: FolderOpen,       label: "Plans" },
   { href: "/electrician/schedule",  icon: CalendarDays,     label: "Schedule" },
+  { href: "/electrician/margins",   icon: TrendingUp,       label: "Profit" },
 ];
 
 export default function AppHeader() {
@@ -74,7 +76,7 @@ export default function AppHeader() {
 
   return (
     <>
-      {/* ── Desktop sidebar (hidden on mobile) ───────────────────── */}
+      {/* ── Desktop sidebar ───────────────────── */}
       <aside
         className="hidden sm:flex flex-col fixed top-0 left-0 bottom-0 z-40 bg-[var(--navy)] border-r border-white/[0.06]"
         style={{ width: "var(--sidebar-width)" }}
@@ -93,7 +95,7 @@ export default function AppHeader() {
         </div>
 
         <nav className="flex-1 flex flex-col gap-0.5 px-3 overflow-y-auto">
-          {/* ── Primary nav (always visible) ── */}
+          {/* Primary nav */}
           {NAV.filter((n) => !n.fab).map((n) => {
             const active = isActive(n.href);
             return (
@@ -127,8 +129,12 @@ export default function AppHeader() {
             <UsersRound size={17} strokeWidth={isActive("/electrician/team") ? 2.2 : 1.8} />
             Team
           </Link>
+          <Link href="/electrician/comms" className={navLinkClasses("/electrician/comms")}>
+            <TrendingUp size={17} strokeWidth={isActive("/electrician/comms") ? 2.2 : 1.8} />
+            Comms
+          </Link>
 
-          {/* ── More (collapsible) ── */}
+          {/* More (collapsible) */}
           <button
             onClick={() => setMoreExpanded((v) => !v)}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors text-left w-full ${
@@ -145,17 +151,9 @@ export default function AppHeader() {
 
           {moreExpanded && (
             <div className="flex flex-col gap-0.5 pl-2">
-              <Link href="/electrician/plans" className={navLinkClasses("/electrician/plans")}>
-                <FolderOpen size={17} strokeWidth={isActive("/electrician/plans") ? 2.2 : 1.8} />
-                Plans
-              </Link>
               <Link href="/electrician/packages" className={navLinkClasses("/electrician/packages")}>
                 <Package size={17} strokeWidth={isActive("/electrician/packages") ? 2.2 : 1.8} />
                 Packages
-              </Link>
-              <Link href="/electrician/margins" className={navLinkClasses("/electrician/margins")}>
-                <TrendingUp size={17} strokeWidth={isActive("/electrician/margins") ? 2.2 : 1.8} />
-                Profit
               </Link>
               <Link href="/electrician/export" className={navLinkClasses("/electrician/export")}>
                 <Download size={17} strokeWidth={isActive("/electrician/export") ? 2.2 : 1.8} />
@@ -183,7 +181,7 @@ export default function AppHeader() {
         </div>
       </aside>
 
-      {/* ── Mobile top bar (logo + more menu) ────────────────────── */}
+      {/* ── Mobile top bar ────────────────────── */}
       <header className="sm:hidden bg-[var(--navy)] sticky top-0 z-40 h-12 flex items-center justify-between px-4 relative">
         <Link href="/electrician/dashboard" className="font-display text-[14px] tracking-widest text-white">
           SWIFTSCOPE
@@ -199,20 +197,14 @@ export default function AppHeader() {
               <Link href="/electrician/clients" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <Users size={15} className="text-[var(--ink-faint)]" /> Clients
               </Link>
-              <Link href="/electrician/team" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
+              <Link href="/electrician/team" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(ink)] border-b border-[var(--line)]">
                 <UsersRound size={15} className="text-[var(--ink-faint)]" /> Team
-              </Link>
-              <Link href="/electrician/plans" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
-                <FolderOpen size={15} className="text-[var(--ink-faint)]" /> Plans
-              </Link>
-              <Link href="/electrician/packages" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
-                <Package size={15} className="text-[var(--ink-faint)]" /> Packages
               </Link>
               <Link href="/electrician/leads" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <Zap size={15} className="text-[var(--ink-faint)]" /> Leads
               </Link>
-              <Link href="/electrician/margins" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
-                <TrendingUp size={15} className="text-[var(--ink-faint)]" /> Profit
+              <Link href="/electrician/packages" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
+                <Package size={15} className="text-[var(--ink-faint)]" /> Packages
               </Link>
               <Link href="/electrician/export" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <Download size={15} className="text-[var(--ink-faint)]" /> Export to Xero / MYOB
@@ -231,7 +223,7 @@ export default function AppHeader() {
         )}
       </header>
 
-      {/* ── Mobile bottom nav ─────────────────────────────────────── */}
+      {/* ── Mobile bottom nav ─────────────────── */}
       <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-[var(--surface)] border-t border-[var(--line)] flex items-center safe-bottom"
            style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
         {NAV.map((n) => {
