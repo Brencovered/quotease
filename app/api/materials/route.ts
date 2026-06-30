@@ -2,102 +2,253 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveBusinessId } from "@/lib/team";
 
-/* GET - list materials with filters */
+/* ------------------------------------------------------------------ */
+/*  Types                                                              */
+/* ------------------------------------------------------------------ */
+interface PriceBookItem {
+  id: string;
+  profile_id: string;
+  supplier: string | null;
+  sku: string | null;
+  description: string;
+  unit: string | null;
+  cost_price: number | null;
+  trade: string | null;
+  imported_at: string | null;
+}
+
+/* ------------------------------------------------------------------ */
+/*  GET - list materials with filtering + distinct suppliers/trades    */
+/* ------------------------------------------------------------------ */
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  const businessId = await getActiveBusinessId(supabase, userData.user.id);
-
-  const { searchParams } = new URL(request.url);
-  const supplier = searchParams.get("supplier");
-  const trade = searchParams.get("trade");
-  const q = searchParams.get("q");
-  const limit = Math.min(parseInt(searchParams.get("limit") ?? "50", 10), 100);
-  const offset = parseInt(searchParams.get("offset") ?? "0", 10);
-
-  // Build count query
-  let countQuery = supabase.from("price_book_items").select("*", { count: "exact", head: true }).eq("profile_id", businessId);
-  if (supplier) countQuery = countQuery.eq("supplier", supplier);
-  if (trade) countQuery = countQuery.eq("trade", trade);
-  if (q) countQuery = countQuery.or(`description.ilike.%${q}%,sku.ilike.%${q}%`);
-  const { count } = await countQuery;
-
-  // Build data query
-  let dataQuery = supabase.from("price_book_items").select("*").eq("profile_id", businessId).order("description", { ascending: true }).range(offset, offset + limit - 1);
-  if (supplier) dataQuery = dataQuery.eq("supplier", supplier);
-  if (trade) dataQuery = dataQuery.eq("trade", trade);
-  if (q) dataQuery = dataQuery.or(`description.ilike.%${q}%,sku.ilike.%${q}%`);
-  const { data: items, error } = await dataQuery;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  // Get distinct suppliers and trades for filter dropdowns
-  const { data: allItems } = await supabase.from("price_book_items").select("supplier, trade").eq("profile_id", businessId);
-  const suppliers = [...new Set((allItems ?? []).map((i) => i.supplier).filter(Boolean))].sort();
-  const trades = [...new Set((allItems ?? []).map((i) => i.trade).filter(Boolean))].sort();
-
-  return NextResponse.json({ items: items ?? [], total: count ?? 0, suppliers, trades });
-}
-
-/* POST - create a material */
-export async function POST(request: Request) {
-  const supabase = await createClient();
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  const businessId = await getActiveBusinessId(supabase, userData.user.id);
-
-  const { description, sku, supplier, unit, cost_price, trade } = await request.json();
-  if (!description || !supplier || cost_price === undefined || cost_price === null) {
-    return NextResponse.json({ error: "Description, supplier, and cost_price are required" }, { status: 400 });
+  if (!userData.user) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const { data: item, error } = await supabase.from("price_book_items").insert({
-    profile_id: businessId,
-    description,
-    sku: sku || null,
-    supplier,
-    unit: unit || "ea",
-    cost_price: Number(cost_price),
-    trade: trade || "electrician",
-    imported_at: new Date().toISOString(),
-  }).select().single();
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ item });
-}
-
-/* PATCH - update a material */
-export async function PATCH(request: NextRequest) {
-  const supabase = await createClient();
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   const businessId = await getActiveBusinessId(supabase, userData.user.id);
 
-  const id = new URL(request.url).searchParams.get("id");
-  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  const searchParams = request.nextUrl.searchParams;
+  const supplierFilter = searchParams.get("supplier") ?? "";
+  const tradeFilter    = searchParams.get("trade") ?? "";
+  const q              = searchParams.get("q") ?? "";
+  const limit          = parseInt(searchParams.get("limit") ?? "50", 10);
+  const offset         = parseInt(searchParams.get("offset") ?? "0", 10);
+
+  /* ---- build main query ---- */
+  let dbQuery = supabase
+    .from("price_book_items")
+    .select("*", { count: "exact" })
+    .eq("profile_id", businessId);
+
+  if (supplierFilter) {
+    dbQuery = dbQuery.ilike("supplier", `%${supplierFilter}%`);
+  }
+
+  if (tradeFilter) {
+    dbQuery = dbQuery.ilike("trade", `%${tradeFilter}%`);
+  }
+
+  if (q) {
+    dbQuery = dbQuery.or(
+      `description.ilike.%${q}%,sku.ilike.%${q}%,supplier.ilike.%${q}%`
+    );
+  }
+
+  const { data: items, error, count } = await dbQuery
+    .order("description", { ascending: true })
+    .range(offset, offset + limit - 1);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  /* ---- distinct suppliers ---- */
+  const { data: supplierRows, error: supplierError } = await supabase
+    .from("price_book_items")
+    .select("supplier")
+    .eq("profile_id", businessId)
+    .not("supplier", "is", null);
+
+  if (supplierError) {
+    return NextResponse.json({ error: supplierError.message }, { status: 500 });
+  }
+
+  const suppliers = Array.from(
+    new Set((supplierRows ?? []).map((r) => r.supplier).filter(Boolean))
+  ).sort() as string[];
+
+  /* ---- distinct trades ---- */
+  const { data: tradeRows, error: tradeError } = await supabase
+    .from("price_book_items")
+    .select("trade")
+    .eq("profile_id", businessId)
+    .not("trade", "is", null);
+
+  if (tradeError) {
+    return NextResponse.json({ error: tradeError.message }, { status: 500 });
+  }
+
+  const trades = Array.from(
+    new Set((tradeRows ?? []).map((r) => r.trade).filter(Boolean))
+  ).sort() as string[];
+
+  return NextResponse.json({
+    materials: (items ?? []) as PriceBookItem[],
+    total: count ?? 0,
+    suppliers,
+    trades,
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/*  POST - create a material                                           */
+/* ------------------------------------------------------------------ */
+export async function POST(request: Request) {
+  const body = await request.json();
+  const { supplier, sku, description, unit, cost_price, trade } = body;
+
+  if (!description) {
+    return NextResponse.json(
+      { error: "Missing required field: description" },
+      { status: 400 }
+    );
+  }
+
+  const supabase = await createClient();
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const businessId = await getActiveBusinessId(supabase, userData.user.id);
+
+  const { data: created, error } = await supabase
+    .from("price_book_items")
+    .insert({
+      profile_id: businessId,
+      supplier: supplier ?? null,
+      sku: sku ?? null,
+      description,
+      unit: unit ?? null,
+      cost_price: cost_price ?? null,
+      trade: trade ?? null,
+      imported_at: new Date().toISOString(),
+    })
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ item: created });
+}
+
+/* ------------------------------------------------------------------ */
+/*  PATCH - update a material                                          */
+/* ------------------------------------------------------------------ */
+export async function PATCH(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+
+  if (!id) {
+    return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  }
 
   const body = await request.json();
-  const update: Record<string, unknown> = {};
-  for (const key of ["description", "sku", "supplier", "unit", "cost_price", "trade"]) {
-    if (body[key] !== undefined) update[key] = body[key];
+  const { supplier, sku, description, unit, cost_price, trade } = body;
+
+  const updateData: Record<string, unknown> = {};
+  if (supplier !== undefined)     updateData.supplier = supplier;
+  if (sku !== undefined)          updateData.sku = sku;
+  if (description !== undefined)  updateData.description = description;
+  if (unit !== undefined)         updateData.unit = unit;
+  if (cost_price !== undefined)   updateData.cost_price = cost_price;
+  if (trade !== undefined)        updateData.trade = trade;
+  updateData.imported_at = new Date().toISOString();
+
+  if (Object.keys(updateData).length === 1) {
+    return NextResponse.json(
+      { error: "No fields to update" },
+      { status: 400 }
+    );
   }
 
-  const { data: item, error } = await supabase.from("price_book_items").update(update).eq("id", id).eq("profile_id", businessId).select().single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ item });
-}
-
-/* DELETE - remove a material */
-export async function DELETE(request: NextRequest) {
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  if (!userData.user) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
   const businessId = await getActiveBusinessId(supabase, userData.user.id);
 
-  const id = new URL(request.url).searchParams.get("id");
-  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  const { data: existing } = await supabase
+    .from("price_book_items")
+    .select("id")
+    .eq("id", id)
+    .eq("profile_id", businessId)
+    .single();
 
-  const { error } = await supabase.from("price_book_items").delete().eq("id", id).eq("profile_id", businessId);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (!existing) {
+    return NextResponse.json({ error: "Material not found" }, { status: 404 });
+  }
+
+  const { data: updated, error } = await supabase
+    .from("price_book_items")
+    .update(updateData)
+    .eq("id", id)
+    .eq("profile_id", businessId)
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ item: updated });
+}
+
+/* ------------------------------------------------------------------ */
+/*  DELETE - remove a material                                         */
+/* ------------------------------------------------------------------ */
+export async function DELETE(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+
+  if (!id) {
+    return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  }
+
+  const supabase = await createClient();
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const businessId = await getActiveBusinessId(supabase, userData.user.id);
+
+  const { data: existing } = await supabase
+    .from("price_book_items")
+    .select("id")
+    .eq("id", id)
+    .eq("profile_id", businessId)
+    .single();
+
+  if (!existing) {
+    return NextResponse.json({ error: "Material not found" }, { status: 404 });
+  }
+
+  const { error } = await supabase
+    .from("price_book_items")
+    .delete()
+    .eq("id", id)
+    .eq("profile_id", businessId);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
   return NextResponse.json({ ok: true });
 }
