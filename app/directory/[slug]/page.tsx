@@ -237,18 +237,13 @@ export default async function TradieProfilePage({
                     <Phone size={13} className="text-gray-400" /> {listing.scraped_contact_phone}
                   </a>
                 )}
-                {listing.scraped_contact_email && (
-                  <a href={`mailto:${listing.scraped_contact_email}`} className="flex items-center gap-2 text-[13px] font-semibold text-gray-700 hover:text-[#0a1722] transition-colors">
-                    <Mail size={13} className="text-gray-400" /> <span className="truncate">{listing.scraped_contact_email}</span>
-                  </a>
-                )}
                 {listing.website_url && domain && (
                   <a href={listing.website_url} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-2 text-[13px] font-semibold text-gray-700 hover:text-[#0a1722] transition-colors">
                     <Globe size={13} className="text-gray-400" /> {domain} <ExternalLink size={11} className="text-gray-300" />
                   </a>
                 )}
-                {!listing.scraped_contact_phone && !listing.scraped_contact_email && !listing.website_url && (
+                {!listing.scraped_contact_phone && !listing.website_url && (
                   <p className="text-[12.5px] text-gray-400">No contact details on file. Request a quote above.</p>
                 )}
               </div>
@@ -324,12 +319,6 @@ export default async function TradieProfilePage({
                     <a href={listing.website_url} target="_blank" rel="noopener noreferrer"
                       className="flex items-center justify-center gap-2 w-full border-2 border-gray-200 text-gray-700 font-bold text-[13px] py-2.5 rounded-xl hover:border-gray-400 transition-colors">
                       <Globe size={14} /> Visit website
-                    </a>
-                  )}
-                  {listing.scraped_contact_email && (
-                    <a href={`mailto:${listing.scraped_contact_email}`}
-                      className="flex items-center justify-center gap-2 w-full border-2 border-gray-200 text-gray-700 font-bold text-[13px] py-2.5 rounded-xl hover:border-gray-400 transition-colors">
-                      <Mail size={14} /> Send email
                     </a>
                   )}
                   {listing.place_id && (
