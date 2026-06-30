@@ -1,9 +1,14 @@
 import Link from "next/link";
 import Image from "next/image";
+import type { Metadata } from "next";
 import {
   Home as HomeIcon, Briefcase, CheckCircle, ArrowRight,
 } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
+import FaqSchema, { SWIFTSCOPE_FAQS } from "@/components/seo/FaqSchema";
+import { homepageMeta } from "@/lib/seo/meta";
+
+export const metadata: Metadata = homepageMeta();
 
 const HERO_IMG = "https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=1800&q=85&auto=format&fit=crop";
 
@@ -217,6 +222,22 @@ export default function Home() {
         </div>
       </div>
 
+      {/* FAQ section — visible to users and indexed by Google as FAQPage rich result */}
+      <div className="bg-[#f8f9fa] border-t border-[#e8ecef]">
+        <div className="max-w-3xl mx-auto px-6 py-16">
+          <h2 className="font-display uppercase text-[2rem] text-[#0a1722] mb-8">Common questions</h2>
+          <div className="space-y-5">
+            {SWIFTSCOPE_FAQS.map((faq) => (
+              <div key={faq.question} className="border-b border-[#e8ecef] pb-5">
+                <p className="font-bold text-[15px] text-[#0a1722] mb-2">{faq.question}</p>
+                <p className="text-[14px] text-[#5a6a78] leading-relaxed">{faq.answer}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <FaqSchema faqs={SWIFTSCOPE_FAQS} />
     </main>
   );
 }

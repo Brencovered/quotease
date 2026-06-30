@@ -1,7 +1,11 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Search, Shield, Star, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import DirectoryCard from "@/components/DirectoryCard";
+import { directoryMeta } from "@/lib/seo/meta";
+
+export const metadata: Metadata = directoryMeta();
 
 const ALL_TRADES = [
   "electrician","plumber","builder","roofer","painter","carpenter",
