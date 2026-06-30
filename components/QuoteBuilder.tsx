@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
 import { AlertTriangle, Paperclip, X, Sparkles, ChevronRight, ChevronLeft, Check, Upload, Plus } from "lucide-react";
@@ -535,7 +536,7 @@ function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions
               <AlertTriangle size={14} className="text-[var(--red)] mt-0.5 shrink-0" />
               <div>
                 <p className="text-[13px] text-[var(--red)]">{analysisError}</p>
-                {usageLimitReached && <a href="/settings" className="text-[12.5px] font-semibold text-[var(--red)] underline">Upgrade in Settings →</a>}
+                {usageLimitReached && <Link href="/settings" className="text-[12.5px] font-semibold text-[var(--red)] underline">Upgrade in Settings →</Link>}
               </div>
             </div>
           )}

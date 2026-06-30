@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Check, ChevronRight } from "lucide-react";
 
@@ -29,7 +29,6 @@ type User = { id: string; email?: string } | null;
 type Homeowner = { name: string; phone: string; suburb: string; postcode: string } | null;
 
 export default function GetQuotesForm({ user, homeowner }: { user: User; homeowner: Homeowner }) {
-  const router = useRouter();
   const [step, setStep] = useState(1);
 
   // Step 1 -- account
@@ -126,7 +125,7 @@ export default function GetQuotesForm({ user, homeowner }: { user: User; homeown
           We&apos;ve alerted local {TRADE_LABELS[trade] ?? trade}s in {suburb}.
           Up to {numQuotes} will contact you directly - usually within a few hours.
         </p>
-        <a href="/directory" className="btn-secondary inline-flex">Browse the directory</a>
+        <Link href="/directory" className="btn-secondary inline-flex">Browse the directory</Link>
       </div>
     );
   }
@@ -171,7 +170,7 @@ export default function GetQuotesForm({ user, homeowner }: { user: User; homeown
           </button>
           {!user && (
             <p className="text-[12px] text-[var(--ink-faint)] text-center">
-              Already have an account? <a href="/login" className="text-[var(--navy)] font-semibold">Log in</a>
+              Already have an account? <Link href="/login" className="text-[var(--navy)] font-semibold">Log in</Link>
             </p>
           )}
         </div>

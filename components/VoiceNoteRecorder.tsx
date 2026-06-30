@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { Mic, Square, Sparkles, AlertTriangle } from "lucide-react";
 
 // Uses the browser's built-in SpeechRecognition - free, no API key, no
@@ -140,9 +141,9 @@ export default function VoiceNoteRecorder({
           <div>
             <p className="text-[13px] text-[var(--red)]">{analysisError}</p>
             {usageLimitReached && (
-              <a href="/settings" className="text-[12.5px] font-semibold text-[var(--red)] underline">
+              <Link href="/settings" className="text-[12.5px] font-semibold text-[var(--red)] underline">
                 Upgrade in Settings →
-              </a>
+              </Link>
             )}
           </div>
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { CalendarDays, Check } from "lucide-react";
 
@@ -103,7 +104,7 @@ export default function JobBriefPanel({
       </div>
       {!hasTeam && (
         <p className="text-[11px] text-[var(--ink-faint)] mb-3">
-          <a href="/settings/team" className="underline font-semibold">Add a team member</a> to assign this job to someone.
+          <Link href="/settings/team" className="underline font-semibold">Add a team member</Link> to assign this job to someone.
         </p>
       )}
       <p className="text-[11px] text-[var(--ink-faint)] mb-3">This appears on your Schedule calendar automatically.</p>

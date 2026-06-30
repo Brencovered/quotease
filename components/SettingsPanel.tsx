@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { FREE_ANALYSES_LIMIT, ADDON_MONTHLY_LIMIT, currentPeriod } from "@/lib/aiUsage";
 import { ELECTRICIAN_DEFAULT_MATERIALS } from "@/lib/calc";
@@ -331,9 +332,9 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
         </div>
         <RateSaveButton />
         <div className="border-t border-[var(--line-subtle)] mt-4 pt-4">
-          <a href="/settings/materials" className="btn-primary w-full justify-center text-center text-[13.5px]">
+          <Link href="/settings/materials" className="btn-primary w-full justify-center text-center text-[13.5px]">
             Manage material prices per item
-          </a>
+          </Link>
           <p className="text-[12px] text-[var(--ink-faint)] mt-2 text-center">
             Set supplier costs for every line item - downlights, pipe, timber, etc.
           </p>
