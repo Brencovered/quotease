@@ -32,7 +32,7 @@ export default async function CommsPage() {
 
   const { data: expiringQuotes } = await supabase
     .from("quotes")
-    .select("id, client_name, client_email, site_address, total_cost, quote_expires_at, sent_at, public_token")
+    .select("id, client_name, client_email, site_address, total_cost, amount_paid, status, completed_at, created_at, quote_expires_at, sent_at, public_token")
     .eq("profile_id", businessId)
     .eq("status", "sent")
     .not("quote_expires_at", "is", null)
