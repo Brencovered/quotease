@@ -57,8 +57,8 @@ const FAQS = [
     a: "Most homeowners hear back within a few hours. All tradies are local and actively looking for work.",
   },
   {
-    q: "Are the tradies verified?",
-    a: "Every tradie on Swiftscope has verified Google reviews and a confirmed business listing.",
+    q: "How are tradies selected?",
+    a: "Every listing on Swiftscope is curated with real Google reviews and a confirmed business listing.",
   },
 ];
 
@@ -101,11 +101,11 @@ const TRUST_ITEMS = [
   {
     icon: <Star size={18} />,
     title: "Real Google ratings",
-    body: "Every tradie has verified reviews",
+    body: "Every listing has real reviews",
   },
   {
     icon: <ShieldCheck size={18} />,
-    title: "Verified businesses",
+    title: "Curated listings",
     body: "We check every listing",
   },
   {
@@ -210,7 +210,7 @@ function TrustSidebar() {
         <div className="mt-4 pt-4 border-t border-white/10 flex items-center gap-2 text-[12px] text-[var(--steel-2)]">
           <Users size={14} />
           <span>
-            <span className="text-white font-semibold">196+</span> verified
+            <span className="text-white font-semibold">196+</span> curated
             tradies listed
           </span>
         </div>
@@ -234,7 +234,7 @@ function BottomCTA() {
           Not sure what trade you need?
         </h2>
         <p className="text-[var(--steel-2)] text-[14px] mb-6">
-          Browse our directory of 196+ verified tradies
+          Browse our directory of 196+ curated listings
         </p>
         <Link
           href="/directory"
@@ -338,7 +338,7 @@ export default async function GetQuotesPage() {
                   Not sure what trade you need?
                 </h2>
                 <p className="text-[var(--steel-2)] text-[13px] mb-5">
-                  Browse our directory of 196+ verified tradies
+                  Browse our directory of 196+ curated listings
                 </p>
                 <Link
                   href="/directory"
