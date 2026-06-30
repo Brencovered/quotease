@@ -10,12 +10,6 @@ export default async function TeamPage() {
   if (!user) redirect("/login");
   const businessId = await getActiveBusinessId(supabase, user.id);
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("business_name")
-    .eq("id", businessId)
-    .single();
-
   const { data: members } = await supabase
     .from("team_members")
     .select("id, email, name, role, status, invited_at, joined_at")
@@ -45,7 +39,7 @@ export default async function TeamPage() {
       role: m.role,
       status: m.status,
       invited_at: m.invited_at,
-      owner_business_name: profile?.business_name ?? null,
+      owner_business_name: null,
     }));
 
   const isOwner = businessId === user.id;
@@ -66,7 +60,6 @@ export default async function TeamPage() {
           members={activeMembers}
           pendingInvites={pendingInvites}
           isOwner={isOwner}
-          businessName={profile?.business_name ?? null}
           currentUserEmail={user.email ?? null}
         />
       </div>
