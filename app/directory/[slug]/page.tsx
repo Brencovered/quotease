@@ -202,7 +202,7 @@ export default async function TradieProfilePage({
                 <p className="text-[12px] font-bold text-gray-500 uppercase tracking-wide">Services</p>
               </div>
               <div className="flex flex-wrap gap-1.5">
-                {listing.trades?.map((t) => (
+                {(listing.trades as string[] | null)?.map((t: string) => (
                   <span key={t} className="text-[12.5px] font-semibold px-2.5 py-1 rounded-lg bg-gray-50 text-gray-700 border border-gray-100 capitalize">
                     {TRADE_LABELS[t] ?? t}
                   </span>
@@ -307,7 +307,7 @@ export default async function TradieProfilePage({
                 )}
                 {listing.trades && listing.trades.length > 0 && (
                   <div className="flex flex-wrap justify-center gap-1 mb-4">
-                    {listing.trades.map((t) => (
+                    {(listing.trades as string[]).map((t: string) => (
                       <span key={t} className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-gray-50 text-gray-600 border border-gray-100 capitalize">
                         {TRADE_LABELS[t] ?? t}
                       </span>
