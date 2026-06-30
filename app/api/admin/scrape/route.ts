@@ -2,16 +2,18 @@
  * POST /api/admin/scrape
  * ----------------------
  * Unified scraper pipeline that replaces 6 separate Python scripts.
+ * Now supports multiple trades per suburb scrape.
  *
- * 4-step pipeline:
+ * 4-step pipeline per trade:
  *   1. Google Places Text Search (paginated, up to 60 results)
  *   2. Google Place Details per result (rating, phone, photos, website)
  *   3. Website scrape for email (mailto + regex) and logo (og:image, favicon, etc.)
  *   4. Supabase upsert into directory_listing table
  *
- * Body:  { trade: string, suburb: string }
- * Response: { success, trade, suburb, placesFound, enriched, new, updated,
- *             withEmail, withPhone, withRating, withLogo, results[] }
+ * Body:  { trade: string | string[], suburb: string }
+ * Response: { success, suburb, tradesScraped, totalPlacesFound, totalEnriched,
+ *             totalNew, totalUpdated, totalWithEmail, totalWithPhone,
+ *             totalWithRating, totalWithLogo, perTrade[], results[] }
  */
 
 import { NextResponse } from "next/server";
@@ -24,7 +26,7 @@ import { isAdminEmail } from "@/lib/admin";
 // ---------------------------------------------------------------------------
 
 interface ScrapeRequest {
-  trade: string;
+  trade: string | string[];
   suburb: string;
 }
 
@@ -54,6 +56,7 @@ interface PlaceDetails {
   email: string | null;
   logoUrl: string | null;
   status: "new" | "updated";
+  trade: string;
 }
 
 interface ScrapeResultItem {
@@ -67,6 +70,19 @@ interface ScrapeResultItem {
   logoUrl: string | null;
   website: string | null;
   status: "new" | "updated";
+  trade: string;
+}
+
+interface PerTradeSummary {
+  trade: string;
+  placesFound: number;
+  enriched: number;
+  new: number;
+  updated: number;
+  withEmail: number;
+  withPhone: number;
+  withRating: number;
+  withLogo: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -85,15 +101,9 @@ const USER_AGENTS = [
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
 ];
 
-// Email patterns to exclude
 const JUNK_EMAIL_PATTERNS = [
-  /noreply/i,
-  /no-reply/i,
-  /donotreply/i,
-  /example\.com/i,
-  /sentry\.io/i,
-  /wixpress\.com/i,
-  /schema\.org/i,
+  /noreply/i, /no-reply/i, /donotreply/i, /example\.com/i,
+  /sentry\.io/i, /wixpress\.com/i, /schema\.org/i,
   /\.(jpg|jpeg|png|gif|svg|webp|css|js)$/i,
 ];
 
@@ -109,29 +119,11 @@ function getRandomUserAgent(): string {
   return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 }
 
-/**
- * Parse an Australian address into suburb and postcode.
- * Handles formats like: "123 Main St, Seaford VIC 3198, Australia"
- */
-function parseAustralianAddress(
-  address: string
-): { suburb: string; postcode: string } {
-  const suburb: string = "";
-  const postcode: string = "";
-
-  // Match: suburb + state + 4-digit postcode
-  // Examples: "Seaford VIC 3198", "Bondi NSW 2026"
-  const statePattern =
-    /,\s*([^,]+?)\s+(VIC|NSW|QLD|WA|SA|TAS|ACT|NT)\s+(\d{4})/i;
+function parseAustralianAddress(address: string): { suburb: string; postcode: string } {
+  const statePattern = /,\s*([^,]+?)\s+(VIC|NSW|QLD|WA|SA|TAS|ACT|NT)\s+(\d{4})/i;
   const match = address.match(statePattern);
-  if (match) {
-    return {
-      suburb: match[1].trim(),
-      postcode: match[3],
-    };
-  }
+  if (match) return { suburb: match[1].trim(), postcode: match[3] };
 
-  // Fallback: look for any 4-digit postcode near the end
   const postcodeFallback = address.match(/(\d{4})/);
   const parts = address.split(",").map((p) => p.trim());
   if (parts.length >= 2 && postcodeFallback) {
@@ -140,36 +132,43 @@ function parseAustralianAddress(
       postcode: postcodeFallback[1],
     };
   }
-
-  return { suburb, postcode };
+  return { suburb: "", postcode: "" };
 }
 
-/**
- * Step 1: Google Places Text Search with pagination.
- * Returns up to 60 results (3 pages of 20).
- */
+function isValidEmail(email: string): boolean {
+  if (!email || email.length < 5) return false;
+  if (!email.includes("@")) return false;
+  for (const pattern of JUNK_EMAIL_PATTERNS) {
+    if (pattern.test(email)) return false;
+  }
+  return true;
+}
+
+function resolveUrl(url: string, base: string): string {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  if (url.startsWith("//")) return `https:${url}`;
+  try { return new URL(url, base).href; }
+  catch { return `${base.replace(/\/$/, "")}${url.startsWith("/") ? url : `/${url}`}`; }
+}
+
+// ---------------------------------------------------------------------------
+// Step 1: Google Places Text Search (paginated, up to 60 results)
+// ---------------------------------------------------------------------------
+
 async function searchPlaces(trade: string, suburb: string): Promise<GooglePlaceResult[]> {
   const results: GooglePlaceResult[] = [];
   let nextPageToken: string | undefined;
-  const pages = 3; // Google allows max 3 pages (60 results)
 
-  for (let page = 0; page < pages; page++) {
-    const params = new URLSearchParams({
-      query: `${trade} in ${suburb}`,
-      key: GOOGLE_API_KEY,
-    });
-    if (nextPageToken) {
-      params.set("pagetoken", nextPageToken);
-    }
-
-    const url = `${GOOGLE_TEXTSEARCH_URL}?${params.toString()}`;
+  for (let page = 0; page < 3; page++) {
+    const params = new URLSearchParams({ query: `${trade} in ${suburb}`, key: GOOGLE_API_KEY });
+    if (nextPageToken) params.set("pagetoken", nextPageToken);
 
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
-      if (!res.ok) {
-        console.error(`[scrape] Text search HTTP ${res.status}: ${await res.text()}`);
-        break;
-      }
+      const res = await fetch(`${GOOGLE_TEXTSEARCH_URL}?${params.toString()}`, {
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!res.ok) { console.error(`[scrape] Text search HTTP ${res.status}`); break; }
 
       const data = (await res.json()) as {
         results: GooglePlaceResult[];
@@ -179,110 +178,74 @@ async function searchPlaces(trade: string, suburb: string): Promise<GooglePlaceR
       };
 
       if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
-        console.error(`[scrape] Places API error: ${data.status} - ${data.error_message ?? ""}`);
-        break;
+        console.error(`[scrape] Places API error: ${data.status}`); break;
       }
-
-      if (data.results && data.results.length > 0) {
-        results.push(...data.results);
-      }
+      if (data.results?.length) results.push(...data.results);
 
       nextPageToken = data.next_page_token;
-
-      // If no next page, we're done
       if (!nextPageToken) break;
-
-      // Google requires a delay before using the next page token
       await sleep(2000);
     } catch (err) {
-      console.error("[scrape] Text search error:", err);
-      break;
+      console.error("[scrape] Text search error:", err); break;
     }
   }
-
   return results;
 }
 
-/**
- * Step 2: Fetch place details for a single place_id.
- */
-async function fetchPlaceDetails(
-  placeId: string
-): Promise<Partial<PlaceDetails> | null> {
-  const fields = [
-    "rating",
-    "user_ratings_total",
-    "photos",
-    "formatted_phone_number",
-    "website",
-    "formatted_address",
-  ].join(",");
+// ---------------------------------------------------------------------------
+// Step 2: Fetch place details for a single place_id
+// ---------------------------------------------------------------------------
 
+async function fetchPlaceDetails(placeId: string): Promise<Partial<PlaceDetails> | null> {
+  const fields = "rating,user_ratings_total,photos,formatted_phone_number,website,formatted_address";
   const url = `${GOOGLE_DETAILS_URL}?place_id=${placeId}&fields=${fields}&key=${GOOGLE_API_KEY}`;
 
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
     if (!res.ok) return null;
-
     const data = (await res.json()) as {
       result?: {
-        rating?: number;
-        user_ratings_total?: number;
+        rating?: number; user_ratings_total?: number;
         photos?: { photo_reference: string }[];
-        formatted_phone_number?: string;
-        website?: string;
+        formatted_phone_number?: string; website?: string;
         formatted_address?: string;
-      };
-      status: string;
+      }; status: string;
     };
-
     if (data.status !== "OK" || !data.result) return null;
-
     const r = data.result;
-
     return {
-      rating: r.rating ?? null,
-      reviewsCount: r.user_ratings_total ?? null,
-      phone: r.formatted_phone_number ?? null,
-      website: r.website ?? null,
+      rating: r.rating ?? null, reviewsCount: r.user_ratings_total ?? null,
+      phone: r.formatted_phone_number ?? null, website: r.website ?? null,
       formattedAddress: r.formatted_address ?? "",
-      photoReferences: (r.photos ?? [])
-        .slice(0, 6)
-        .map((p) => p.photo_reference),
+      photoReferences: (r.photos ?? []).slice(0, 6).map((p) => p.photo_reference),
     };
   } catch (err) {
-    console.error(`[scrape] Place details error for ${placeId}:`, err);
-    return null;
+    console.error(`[scrape] Place details error for ${placeId}:`, err); return null;
   }
 }
 
-/**
- * Step 3a: Scrape a website for email addresses.
- * Priority: mailto: links > regex in visible text.
- */
-function extractEmails(html: string, baseUrl: string): string | null {
+// ---------------------------------------------------------------------------
+// Step 3a: Scrape website for email
+// ---------------------------------------------------------------------------
+
+function extractEmails(html: string): string | null {
   const found = new Set<string>();
 
-  // 1. Look for mailto: links (most reliable)
+  // mailto: links
   const mailtoMatches = html.matchAll(/mailto:([^"'?\s]+)/gi);
   for (const m of mailtoMatches) {
     const email = decodeURIComponent(m[1]).trim().toLowerCase();
     if (isValidEmail(email)) found.add(email);
   }
+  if (found.size > 0) return Array.from(found)[0];
 
-  if (found.size > 0) {
-    return Array.from(found)[0];
-  }
-
-  // 2. Strip HTML tags to get visible text
+  // Visible text
   const visibleText = html
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
     .replace(/<[^>]+>/g, " ");
 
-  // 3. Regex scan in visible text
-  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-  const regexMatches = visibleText.match(emailRegex);
+  const regexMatches = visibleText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g);
   if (regexMatches) {
     for (const email of regexMatches) {
       const clean = email.trim().toLowerCase();
@@ -290,10 +253,9 @@ function extractEmails(html: string, baseUrl: string): string | null {
     }
   }
 
-  // 4. Check for emails in common obfuscation patterns
-  // data-email, data-contact, etc.
-  const dataEmailMatches = html.matchAll(/data-email="([^"]+)"/gi);
-  for (const m of dataEmailMatches) {
+  // data-email attributes
+  const dataMatches = html.matchAll(/data-email="([^"]+)"/gi);
+  for (const m of dataMatches) {
     const email = m[1].trim().toLowerCase();
     if (isValidEmail(email)) found.add(email);
   }
@@ -301,134 +263,180 @@ function extractEmails(html: string, baseUrl: string): string | null {
   return found.size > 0 ? Array.from(found)[0] : null;
 }
 
-/**
- * Validate an email is not junk.
- */
-function isValidEmail(email: string): boolean {
-  if (!email || email.length < 5) return false;
-  if (!email.includes("@")) return false;
+// ---------------------------------------------------------------------------
+// Step 3b: Scrape website for logo
+// ---------------------------------------------------------------------------
 
-  for (const pattern of JUNK_EMAIL_PATTERNS) {
-    if (pattern.test(email)) return false;
-  }
-
-  return true;
-}
-
-/**
- * Step 3b: Scrape a website for a logo URL.
- * Priority: og:image > apple-touch-icon > img[logo] > favicon.
- */
 function extractLogoUrl(html: string, baseUrl: string): string | null {
-  // 1. og:image meta tag
-  const ogImage = html.match(
-    /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i
-  );
+  const ogImage = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i);
   if (ogImage) return resolveUrl(ogImage[1], baseUrl);
+  const ogImageRev = html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+  if (ogImageRev) return resolveUrl(ogImageRev[1], baseUrl);
 
-  const ogImageReverse = html.match(
-    /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i
-  );
-  if (ogImageReverse) return resolveUrl(ogImageReverse[1], baseUrl);
+  const apple = html.match(/<link[^>]+rel=["']apple-touch-icon["'][^>]+href=["']([^"']+)["']/i);
+  if (apple) return resolveUrl(apple[1], baseUrl);
+  const appleRev = html.match(/<link[^>]+href=["']([^"']+)["'][^>]+rel=["']apple-touch-icon["']/i);
+  if (appleRev) return resolveUrl(appleRev[1], baseUrl);
 
-  // 2. apple-touch-icon
-  const appleIcon = html.match(
-    /<link[^>]+rel=["']apple-touch-icon["'][^>]+href=["']([^"']+)["']/i
-  );
-  if (appleIcon) return resolveUrl(appleIcon[1], baseUrl);
-
-  const appleIconReverse = html.match(
-    /<link[^>]+href=["']([^"']+)["'][^>]+rel=["']apple-touch-icon["']/i
-  );
-  if (appleIconReverse) return resolveUrl(appleIconReverse[1], baseUrl);
-
-  // 3. apple-touch-icon-precomposed
-  const appleIconPre = html.match(
-    /<link[^>]+rel=["']apple-touch-icon-precomposed["'][^>]+href=["']([^"']+)["']/i
-  );
-  if (appleIconPre) return resolveUrl(appleIconPre[1], baseUrl);
-
-  // 4. Image with "logo" in src or alt
-  const logoImg = html.match(
-    /<img[^>]+(?:src|alt)=["'][^"']*logo[^"']*["'][^>]*>/i
-  );
+  const logoImg = html.match(/<img[^>]+(?:src|alt)=["'][^"']*logo[^"']*["'][^>]*>/i);
   if (logoImg) {
     const srcMatch = logoImg[0].match(/src=["']([^"']+)["']/i);
     if (srcMatch) return resolveUrl(srcMatch[1], baseUrl);
   }
 
-  // 5. Favicon
-  const favicon = html.match(
-    /<link[^>]+rel=["']?(?:shortcut\s+)?icon["']?[^>]+href=["']([^"']+)["']/i
-  );
+  const favicon = html.match(/<link[^>]+rel=["']?(?:shortcut\s+)?icon["']?[^>]+href=["']([^"']+)["']/i);
   if (favicon) return resolveUrl(favicon[1], baseUrl);
 
-  const faviconReverse = html.match(
-    /<link[^>]+href=["']([^"']+)["'][^>]+rel=["']?(?:shortcut\s+)?icon["']?/i
-  );
-  if (faviconReverse) return resolveUrl(faviconReverse[1], baseUrl);
-
-  // 6. Default /favicon.ico
   return resolveUrl("/favicon.ico", baseUrl);
 }
 
-/**
- * Resolve a potentially relative URL against a base URL.
- */
-function resolveUrl(url: string, base: string): string {
-  if (!url) return "";
-  if (url.startsWith("http://") || url.startsWith("https://")) {
-    return url;
-  }
-  if (url.startsWith("//")) {
-    return `https:${url}`;
-  }
-  try {
-    return new URL(url, base).href;
-  } catch {
-    return `${base.replace(/\/$/, "")}${url.startsWith("/") ? url : `/${url}`}`;
-  }
-}
+// ---------------------------------------------------------------------------
+// Fetch website HTML
+// ---------------------------------------------------------------------------
 
-/**
- * Fetch website HTML with timeout and retry.
- */
 async function fetchWebsiteHtml(url: string): Promise<string | null> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 8000);
-
   try {
     const res = await fetch(url, {
       headers: {
         "User-Agent": getRandomUserAgent(),
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.5",
         "Accept-Encoding": "gzip, deflate, br",
         Connection: "keep-alive",
       },
-      signal: controller.signal,
-      redirect: "follow",
+      signal: controller.signal, redirect: "follow",
     });
-
     clearTimeout(timeoutId);
-
     if (!res.ok) return null;
-    const contentType = res.headers.get("content-type") ?? "";
-    if (!contentType.includes("text/html") && !contentType.includes("application/xhtml")) {
-      return null;
-    }
-
+    const ct = res.headers.get("content-type") ?? "";
+    if (!ct.includes("text/html") && !ct.includes("application/xhtml")) return null;
     return await res.text();
   } catch (err) {
     clearTimeout(timeoutId);
-    if ((err as Error).name === "AbortError") {
-      console.error(`[scrape] Website fetch timed out: ${url}`);
-    } else {
-      console.error(`[scrape] Website fetch error for ${url}:`, err);
-    }
+    console.error(`[scrape] Website fetch error for ${url}:`, err);
     return null;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Run pipeline for a single trade
+// ---------------------------------------------------------------------------
+
+async function runTradeScrape(
+  trade: string,
+  suburb: string,
+  existingIds: Set<string>,
+  admin: ReturnType<typeof createAdminClient>,
+): Promise<{ results: ScrapeResultItem[]; summary: PerTradeSummary }> {
+  console.log(`[scrape] --- ${trade} in ${suburb} ---`);
+
+  // Step 1
+  const searchResults = await searchPlaces(trade, suburb);
+  console.log(`[scrape] ${trade}: found ${searchResults.length} places`);
+
+  if (searchResults.length === 0) {
+    return {
+      results: [],
+      summary: { trade, placesFound: 0, enriched: 0, new: 0, updated: 0, withEmail: 0, withPhone: 0, withRating: 0, withLogo: 0 },
+    };
+  }
+
+  // Steps 2 + 3: enrich each place
+  const enriched: PlaceDetails[] = [];
+  for (const place of searchResults) {
+    const addr = parseAustralianAddress(place.formatted_address);
+    const item: PlaceDetails = {
+      placeId: place.place_id, name: place.name,
+      formattedAddress: place.formatted_address,
+      suburb: addr.suburb, postcode: addr.postcode,
+      latitude: place.geometry?.location.lat ?? 0,
+      longitude: place.geometry?.location.lng ?? 0,
+      rating: null, reviewsCount: null, phone: null,
+      website: null, photoReferences: [], email: null,
+      logoUrl: null, status: "new", trade,
+    };
+
+    const details = await fetchPlaceDetails(place.place_id);
+    if (details) {
+      item.rating = details.rating ?? null;
+      item.reviewsCount = details.reviewsCount ?? null;
+      item.phone = details.phone ?? null;
+      item.website = details.website ?? null;
+      item.photoReferences = details.photoReferences ?? [];
+      if (details.formattedAddress) {
+        const upd = parseAustralianAddress(details.formattedAddress);
+        item.suburb = upd.suburb; item.postcode = upd.postcode;
+      }
+    }
+
+    if (item.website) {
+      const html = await fetchWebsiteHtml(item.website);
+      if (html) {
+        item.email = extractEmails(html);
+        item.logoUrl = extractLogoUrl(html, item.website);
+      }
+    }
+
+    enriched.push(item);
+    await sleep(200);
+  }
+
+  // Step 4: Supabase upsert
+  const results: ScrapeResultItem[] = [];
+  let newCount = 0, updatedCount = 0;
+
+  for (const item of enriched) {
+    const isExisting = existingIds.has(item.placeId);
+    item.status = isExisting ? "updated" : "new";
+
+    const { error: rpcErr } = await admin.rpc("upsert_directory_listing", {
+      p_business_name: item.name, p_trades: [trade],
+      p_website_url: item.website, p_suburb: item.suburb,
+      p_postcode: item.postcode, p_latitude: item.latitude,
+      p_longitude: item.longitude, p_place_id: item.placeId,
+      p_google_rating: item.rating, p_google_reviews_count: item.reviewsCount,
+      p_photo_references: item.photoReferences,
+      p_scraped_contact_phone: item.phone,
+      p_private_email: item.email, p_logo_url: item.logoUrl,
+    });
+
+    if (rpcErr) {
+      const { error: fallbackErr } = await admin.from("directory_listing").upsert({
+        business_name: item.name, trades: [trade], website_url: item.website,
+        suburb: item.suburb, postcode: item.postcode, latitude: item.latitude,
+        longitude: item.longitude, place_id: item.placeId,
+        google_rating: item.rating, google_reviews_count: item.reviewsCount,
+        photo_references: item.photoReferences,
+        scraped_contact_phone: item.phone, private_email: item.email,
+        logo_url: item.logoUrl, source: "scraper",
+      }, { onConflict: "place_id" });
+      if (fallbackErr) { console.error(`[scrape] Upsert failed:`, fallbackErr); continue; }
+    }
+
+    if (isExisting) updatedCount++;
+    else { newCount++; existingIds.add(item.placeId); }
+
+    results.push({
+      placeId: item.placeId, name: item.name, suburb: item.suburb,
+      rating: item.rating, reviewsCount: item.reviewsCount,
+      phone: item.phone, email: item.email, logoUrl: item.logoUrl,
+      website: item.website, status: item.status, trade,
+    });
+  }
+
+  const summary: PerTradeSummary = {
+    trade, placesFound: searchResults.length, enriched: enriched.length,
+    new: newCount, updated: updatedCount,
+    withEmail: results.filter((r) => r.email).length,
+    withPhone: results.filter((r) => r.phone).length,
+    withRating: results.filter((r) => r.rating !== null).length,
+    withLogo: results.filter((r) => r.logoUrl).length,
+  };
+
+  console.log(`[scrape] ${trade}: ${newCount} new, ${updatedCount} updated`);
+  return { results, summary };
 }
 
 // ---------------------------------------------------------------------------
@@ -438,227 +446,75 @@ async function fetchWebsiteHtml(url: string): Promise<string | null> {
 export async function POST(request: Request) {
   const startTime = Date.now();
 
-  // --- Auth check ----------------------------------------------------------
+  // Auth
   const authClient = await createClient();
   const { data: userData } = await authClient.auth.getUser();
   if (!userData.user || !isAdminEmail(userData.user.email)) {
     return NextResponse.json({ error: "Not authorised" }, { status: 403 });
   }
 
-  // --- Parse body ----------------------------------------------------------
+  // Parse body
   let body: ScrapeRequest;
-  try {
-    body = (await request.json()) as ScrapeRequest;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  try { body = (await request.json()) as ScrapeRequest; }
+  catch { return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 }); }
+
+  const rawTrade = body.trade;
+  const suburb = body.suburb?.trim();
+
+  if (!rawTrade || !suburb) {
+    return NextResponse.json({ error: "trade and suburb are required" }, { status: 400 });
   }
 
-  const { trade, suburb } = body;
-  if (!trade || typeof trade !== "string" || !suburb || typeof suburb !== "string") {
-    return NextResponse.json(
-      { error: "trade and suburb are required strings" },
-      { status: 400 }
-    );
+  // Normalise trades into array
+  const trades: string[] = Array.isArray(rawTrade)
+    ? rawTrade.map((t) => t.trim().toLowerCase()).filter(Boolean)
+    : [rawTrade.trim().toLowerCase()];
+
+  if (trades.length === 0) {
+    return NextResponse.json({ error: "At least one trade is required" }, { status: 400 });
   }
 
-  const normalisedTrade = trade.trim().toLowerCase();
-  const normalisedSuburb = suburb.trim();
-
-  // --- Step 1: Google Places Text Search ----------------------------------
-  console.log(`[scrape] Starting search: "${normalisedTrade} in ${normalisedSuburb}"`);
-  const places = await searchPlaces(normalisedTrade, normalisedSuburb);
-  console.log(`[scrape] Found ${places.length} places`);
-
-  if (places.length === 0) {
-    return NextResponse.json({
-      success: true,
-      trade: normalisedTrade,
-      suburb: normalisedSuburb,
-      placesFound: 0,
-      enriched: 0,
-      new: 0,
-      updated: 0,
-      withEmail: 0,
-      withPhone: 0,
-      withRating: 0,
-      withLogo: 0,
-      results: [],
-    });
-  }
-
-  // --- Step 2 + 3: Enrich each place --------------------------------------
-  const enriched: PlaceDetails[] = [];
-
-  for (const place of places) {
-    const addressParts = parseAustralianAddress(place.formatted_address);
-
-    const enrichedItem: PlaceDetails = {
-      placeId: place.place_id,
-      name: place.name,
-      formattedAddress: place.formatted_address,
-      suburb: addressParts.suburb,
-      postcode: addressParts.postcode,
-      latitude: place.geometry?.location.lat ?? 0,
-      longitude: place.geometry?.location.lng ?? 0,
-      rating: null,
-      reviewsCount: null,
-      phone: null,
-      website: null,
-      photoReferences: [],
-      email: null,
-      logoUrl: null,
-      status: "new",
-    };
-
-    // Step 2: Place Details
-    const details = await fetchPlaceDetails(place.place_id);
-    if (details) {
-      enrichedItem.rating = details.rating ?? null;
-      enrichedItem.reviewsCount = details.reviewsCount ?? null;
-      enrichedItem.phone = details.phone ?? null;
-      enrichedItem.website = details.website ?? null;
-      enrichedItem.photoReferences = details.photoReferences ?? [];
-
-      // Update address from details if available
-      if (details.formattedAddress) {
-        enrichedItem.formattedAddress = details.formattedAddress;
-        const updatedParts = parseAustralianAddress(details.formattedAddress);
-        enrichedItem.suburb = updatedParts.suburb;
-        enrichedItem.postcode = updatedParts.postcode;
-      }
-    }
-
-    // Step 3: Website scrape for email + logo
-    if (enrichedItem.website) {
-      const html = await fetchWebsiteHtml(enrichedItem.website);
-      if (html) {
-        enrichedItem.email = extractEmails(html, enrichedItem.website);
-        enrichedItem.logoUrl = extractLogoUrl(html, enrichedItem.website);
-      }
-    }
-
-    enriched.push(enrichedItem);
-
-    // Rate limit: 200ms between each place
-    await sleep(200);
-  }
-
-  // --- Step 4: Supabase upsert --------------------------------------------
   const admin = createAdminClient();
 
-  // Check which place_ids already exist
-  const placeIds = enriched.map((e) => e.placeId);
+  // Load all existing place_ids once for deduplication across trades
   const { data: existingRows } = await admin
     .from("directory_listing")
-    .select("place_id")
-    .in("place_id", placeIds);
+    .select("place_id");
+  const existingIds = new Set((existingRows ?? []).map((r) => r.place_id as string));
 
-  const existingIds = new Set((existingRows ?? []).map((r) => r.place_id));
+  // Run pipeline for each trade
+  const allResults: ScrapeResultItem[] = [];
+  const perTrade: PerTradeSummary[] = [];
 
-  let newCount = 0;
-  let updatedCount = 0;
-  const results: ScrapeResultItem[] = [];
-
-  for (const item of enriched) {
-    const isExisting = existingIds.has(item.placeId);
-    item.status = isExisting ? "updated" : "new";
-
-    // Upsert via raw SQL for the ON CONFLICT logic with COALESCE
-    const { error: upsertError } = await admin.rpc("upsert_directory_listing", {
-      p_business_name: item.name,
-      p_trades: [normalisedTrade],
-      p_website_url: item.website,
-      p_suburb: item.suburb,
-      p_postcode: item.postcode,
-      p_latitude: item.latitude,
-      p_longitude: item.longitude,
-      p_place_id: item.placeId,
-      p_google_rating: item.rating,
-      p_google_reviews_count: item.reviewsCount,
-      p_photo_references: item.photoReferences,
-      p_scraped_contact_phone: item.phone,
-      p_private_email: item.email,
-      p_logo_url: item.logoUrl,
-    });
-
-    // Fallback: if RPC doesn't exist, use standard upsert
-    if (upsertError) {
-      console.error("[scrape] RPC upsert failed, trying standard upsert:", upsertError.message);
-
-      const { error: fallbackError } = await admin
-        .from("directory_listing")
-        .upsert(
-          {
-            business_name: item.name,
-            trades: [normalisedTrade],
-            website_url: item.website,
-            suburb: item.suburb,
-            postcode: item.postcode,
-            latitude: item.latitude,
-            longitude: item.longitude,
-            place_id: item.placeId,
-            google_rating: item.rating,
-            google_reviews_count: item.reviewsCount,
-            photo_references: item.photoReferences,
-            scraped_contact_phone: item.phone,
-            private_email: item.email,
-            logo_url: item.logoUrl,
-            source: "scraper",
-          },
-          { onConflict: "place_id" }
-        );
-
-      if (fallbackError) {
-        console.error(`[scrape] Upsert failed for ${item.placeId}:`, fallbackError);
-        continue;
-      }
-    }
-
-    if (isExisting) {
-      updatedCount++;
-    } else {
-      newCount++;
-      existingIds.add(item.placeId); // Prevent double-counting
-    }
-
-    results.push({
-      placeId: item.placeId,
-      name: item.name,
-      suburb: item.suburb,
-      rating: item.rating,
-      reviewsCount: item.reviewsCount,
-      phone: item.phone,
-      email: item.email,
-      logoUrl: item.logoUrl,
-      website: item.website,
-      status: item.status,
-    });
+  for (const trade of trades) {
+    const { results, summary } = await runTradeScrape(trade, suburb, existingIds, admin);
+    allResults.push(...results);
+    perTrade.push(summary);
   }
 
-  // --- Build response ------------------------------------------------------
-  const withEmail = results.filter((r) => r.email).length;
-  const withPhone = results.filter((r) => r.phone).length;
-  const withRating = results.filter((r) => r.rating !== null).length;
-  const withLogo = results.filter((r) => r.logoUrl).length;
+  // Aggregate
+  const totalNew = perTrade.reduce((s, t) => s + t.new, 0);
+  const totalUpdated = perTrade.reduce((s, t) => s + t.updated, 0);
   const duration = Date.now() - startTime;
 
   console.log(
-    `[scrape] Completed in ${duration}ms | Found: ${places.length} | New: ${newCount} | Updated: ${updatedCount} | Email: ${withEmail} | Phone: ${withPhone} | Rating: ${withRating} | Logo: ${withLogo}`
+    `[scrape] ALL DONE in ${duration}ms | ${trades.length} trades | ${allResults.length} results | ${totalNew} new | ${totalUpdated} updated`
   );
 
   return NextResponse.json({
     success: true,
-    trade: normalisedTrade,
-    suburb: normalisedSuburb,
-    placesFound: places.length,
-    enriched: enriched.length,
-    new: newCount,
-    updated: updatedCount,
-    withEmail,
-    withPhone,
-    withRating,
-    withLogo,
+    suburb,
+    tradesScraped: trades.length,
+    totalPlacesFound: perTrade.reduce((s, t) => s + t.placesFound, 0),
+    totalEnriched: perTrade.reduce((s, t) => s + t.enriched, 0),
+    totalNew,
+    totalUpdated,
+    totalWithEmail: perTrade.reduce((s, t) => s + t.withEmail, 0),
+    totalWithPhone: perTrade.reduce((s, t) => s + t.withPhone, 0),
+    totalWithRating: perTrade.reduce((s, t) => s + t.withRating, 0),
+    totalWithLogo: perTrade.reduce((s, t) => s + t.withLogo, 0),
     durationMs: duration,
-    results,
+    perTrade,
+    results: allResults,
   });
 }
