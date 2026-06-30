@@ -58,8 +58,6 @@ export default async function NewQuotePage({
     unitCost: number;
     totalCost: number;
   }> = [];
-  let prePackageName: string | undefined;
-  let prePackageLabourHours: number | undefined;
 
   try {
     const supabase = await createClient();
@@ -86,8 +84,6 @@ export default async function NewQuotePage({
 
       let pkgForMaterials: {
         items: unknown;
-        title: string;
-        labour_hours: number;
         trade: string;
       } | null = null;
 
@@ -101,8 +97,6 @@ export default async function NewQuotePage({
         if (pkg) {
           pkgForMaterials = {
             items: pkg.package_items,
-            title: pkg.title,
-            labour_hours: pkg.labour_hours,
             trade: pkg.trade,
           };
           if (!tradeParm) tradeParm = pkg.trade;
@@ -168,11 +162,6 @@ export default async function NewQuotePage({
             unitCost: i.unit_cost,
             totalCost: Math.round(i.qty * i.unit_cost),
           }));
-        prePackageName = pkgForMaterials.title;
-        prePackageLabourHours =
-          pkgForMaterials.labour_hours > 0
-            ? pkgForMaterials.labour_hours
-            : undefined;
       } else if (preMarkup) {
         const lump = parseInt(preMarkup);
         if (lump)
@@ -233,8 +222,6 @@ export default async function NewQuotePage({
           materials={materials}
           preClientId={preClientId}
           preMarkupMaterials={preMarkupMaterials}
-          prePackageName={prePackageName}
-          prePackageLabourHours={prePackageLabourHours}
         />
       )}
       {selectedTrade === "plumber" && (
@@ -243,8 +230,6 @@ export default async function NewQuotePage({
           materials={materials}
           preClientId={preClientId}
           preMarkupMaterials={preMarkupMaterials}
-          prePackageName={prePackageName}
-          prePackageLabourHours={prePackageLabourHours}
         />
       )}
       {selectedTrade === "carpenter" && (
@@ -253,8 +238,6 @@ export default async function NewQuotePage({
           materials={materials}
           preClientId={preClientId}
           preMarkupMaterials={preMarkupMaterials}
-          prePackageName={prePackageName}
-          prePackageLabourHours={prePackageLabourHours}
         />
       )}
       {selectedTrade === "roofer" && (
@@ -263,8 +246,6 @@ export default async function NewQuotePage({
           materials={materials}
           preClientId={preClientId}
           preMarkupMaterials={preMarkupMaterials}
-          prePackageName={prePackageName}
-          prePackageLabourHours={prePackageLabourHours}
         />
       )}
       {!DEDICATED.includes(selectedTrade) && (
@@ -273,8 +254,6 @@ export default async function NewQuotePage({
           profile={profile}
           preClientId={preClientId}
           preMarkupMaterials={preMarkupMaterials}
-          prePackageName={prePackageName}
-          prePackageLabourHours={prePackageLabourHours}
         />
       )}
     </>
