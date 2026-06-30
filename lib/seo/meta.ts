@@ -195,3 +195,67 @@ export function directoryMeta(): Metadata {
 // ── Export helpers for use in generateStaticParams etc. ──────────────────
 
 export { tradeToSlug, suburbToSlug };
+
+// ── Reverse lookup: plural trade slug -> internal trade key ──────────────
+// Built from TRADE_DISPLAY plus the irregular plurals in tradeToSlug().
+const SLUG_TO_TRADE: Record<string, string> = {
+  electricians: "electrician",
+  plumbers: "plumber",
+  builders: "builder",
+  roofers: "roofer",
+  painters: "painter",
+  carpenters: "carpenter",
+  tilers: "tiler",
+  landscapers: "landscaper",
+  arborists: "arborist",
+  concreters: "concreter",
+  fencers: "fencer",
+  "air-conditioning": "aircon",
+  surveyors: "surveyor",
+};
+
+const VALID_STATE_SLUGS = ["vic", "nsw", "qld", "wa", "sa", "tas", "act", "nt"];
+
+export function getSlugToTradeMap(): Record<string, string> {
+  return SLUG_TO_TRADE;
+}
+
+/**
+ * Parses a combined URL segment like "electricians-seaford-vic" into its
+ * trade / suburb / state parts.
+ *
+ * Format is {tradePluralSlug}-{suburb-slug...}-{stateSlug}. The suburb slug
+ * itself may contain hyphens (e.g. "south-melbourne"), so this works by
+ * peeling a known trade slug off the front and a known state slug off the
+ * back, treating whatever's left in the middle as the suburb.
+ *
+ * Returns null if the segment doesn't match a known trade or state -- the
+ * page component should call notFound() in that case.
+ */
+export function parseTradeSuburbSlug(segment: string): { trade: string; suburbSlug: string; state: string } | null {
+  const parts = segment.split("-");
+  if (parts.length < 3) return null;
+
+  const state = parts[parts.length - 1];
+  if (!VALID_STATE_SLUGS.includes(state)) return null;
+
+  // Trade slugs can themselves be multi-word ("air-conditioning"), so try
+  // progressively longer prefixes against the known slug map.
+  const knownSlugs = Object.keys(SLUG_TO_TRADE).sort((a, b) => b.split("-").length - a.split("-").length);
+  for (const slug of knownSlugs) {
+    const slugParts = slug.split("-");
+    const candidate = parts.slice(0, slugParts.length).join("-");
+    if (candidate === slug) {
+      const suburbSlug = parts.slice(slugParts.length, -1).join("-");
+      if (!suburbSlug) return null;
+      return { trade: SLUG_TO_TRADE[slug], suburbSlug, state };
+    }
+  }
+  return null;
+}
+
+/** "south-melbourne" -> "South Melbourne" (best-effort, used as a fallback
+ *  display name before the real suburb casing is confirmed against the DB). */
+export function slugToSuburbDisplay(slug: string): string {
+  return slug.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+}
