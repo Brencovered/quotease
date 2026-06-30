@@ -10,56 +10,46 @@ function parseCSVLine(line: string): string[] {
   const fields: string[] = [];
   let current = "";
   let inQuotes = false;
-
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
-
     if (inQuotes) {
       if (char === '"') {
-        // Check for escaped quotes ("")
-        if (line[i + 1] === '"') {
-          current += '"';
-          i++; // skip next quote
-        } else {
-          inQuotes = false;
-        }
-      } else {
-        current += char;
-      }
+        if (line[i + 1] === '"') { current += '"'; i++; }
+        else { inQuotes = false; }
+      } else { current += char; }
     } else {
-      if (char === '"') {
-        inQuotes = true;
-      } else if (char === ',') {
-        fields.push(current.trim());
-        current = "";
-      } else {
-        current += char;
-      }
+      if (char === '"') { inQuotes = true; }
+      else if (char === ',') { fields.push(current.trim()); current = ""; }
+      else { current += char; }
     }
   }
   fields.push(current.trim());
   return fields;
 }
 
+/** Fuzzy-match a header name against a list of aliases */
+function findColumn(headers: string[], aliases: string[]): number {
+  const norm = headers.map((h, i) => ({ raw: h, idx: i, n: h.toLowerCase().trim().replace(/[_\s]/g, "") }));
+  for (const a of aliases) {
+    const an = a.toLowerCase().replace(/[_\s]/g, "");
+    const exact = norm.find((h) => h.n === an);
+    if (exact !== undefined) return exact.idx;
+    const contains = norm.find((h) => h.n.includes(an));
+    if (contains !== undefined) return contains.idx;
+  }
+  return -1;
+}
+
 function isHeaderRow(fields: string[]): boolean {
-  const headerKeywords = [
-    "description", "desc", "purchasesdescription",
-    "cost_price", "cost", "price", "purchasesunitprice",
-    "supplier", "vendor",
-    "sku", "code", "itemcode", "itemnumber",
-    "unit", "uom",
-    "trade", "category",
-    "item", "name", "itemname",
-  ];
-  const lowerFields = fields.map((f) => f.toLowerCase().replace(/[_\s]/g, ""));
-  const matches = lowerFields.filter((f) =>
-    headerKeywords.some((kw) => f.includes(kw.replace(/[_\s]/g, "")))
+  const kws = ["description","item","name","product","cost","price","unit","supplier","sku","code","qty","quantity"];
+  const matches = fields.filter((f) =>
+    kws.some((kw) => f.toLowerCase().includes(kw))
   );
   return matches.length >= 2;
 }
 
 /* ------------------------------------------------------------------ */
-/*  POST - CSV bulk upload                                             */
+/*  POST - CSV bulk upload (bulletproof)                               */
 /* ------------------------------------------------------------------ */
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -67,140 +57,80 @@ export async function POST(request: Request) {
   if (!userData.user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
-
   const businessId = await getActiveBusinessId(supabase, userData.user.id);
 
   /* ---- read multipart form data ---- */
   let fileContent: string;
-  let defaultSupplier = "";
-  let clientColumnMap: Record<string, string> = {};
+  let fallbackSupplier = "CSV Import";
   try {
     const formData = await request.formData();
     const file = formData.get("file");
     if (!file || !(file instanceof File)) {
-      return NextResponse.json(
-        { error: "Missing file. Please upload a CSV file." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing file" }, { status: 400 });
     }
     fileContent = await file.text();
     const ds = formData.get("defaultSupplier");
-    if (ds && typeof ds === "string") defaultSupplier = ds.trim();
-    const cm = formData.get("columnMap");
-    if (cm && typeof cm === "string") {
-      try { clientColumnMap = JSON.parse(cm); } catch { /* ignore */ }
-    }
+    if (ds && typeof ds === "string" && ds.trim()) fallbackSupplier = ds.trim();
   } catch {
-    return NextResponse.json(
-      { error: "Invalid form data. Expected multipart/form-data with a file field." },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
   }
 
   /* ---- parse CSV ---- */
-  const lines = fileContent
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
-
+  const lines = fileContent.split(/\r?\n/).filter((l) => l.trim().length > 0);
   if (lines.length === 0) {
-    return NextResponse.json(
-      { error: "CSV file is empty" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "CSV file is empty" }, { status: 400 });
   }
 
   /* ---- detect headers ---- */
   let startIndex = 0;
   const firstRow = parseCSVLine(lines[0]);
-  if (isHeaderRow(firstRow)) {
-    startIndex = 1;
-  }
+  const hasHeader = isHeaderRow(firstRow);
+  if (hasHeader) startIndex = 1;
 
-  if (lines.length - startIndex > 500) {
-    return NextResponse.json(
-      { error: "Maximum 500 rows allowed per upload" },
-      { status: 400 }
-    );
-  }
-
-  /* ---- try to get user's trade from profile ---- */
+  /* ---- get user's trade ---- */
   let defaultTrade = "electrician";
   try {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("trade")
-      .eq("id", userData.user.id)
-      .single();
-    if (profile?.trade) {
-      defaultTrade = profile.trade;
-    }
-  } catch {
-    // ignore profile lookup failure, use default
+    const { data: profile } = await supabase.from("profiles").select("trade").eq("id", userData.user.id).single();
+    if (profile?.trade) defaultTrade = profile.trade;
+  } catch { /* ignore */ }
+
+  /* ---- build column index map ---- */
+  const ci: Record<string, number> = {};
+  if (hasHeader) {
+    ci.description = findColumn(firstRow, [
+      "purchasesdescription","itemname","description","itemdesc","productname",
+      "name","item","product","label","title"
+    ]);
+    ci.cost_price = findColumn(firstRow, [
+      "purchasesunitprice","currentcost","standardcost","costprice","unitcost",
+      "cost_price","cost","price","rate","value","amount","unitprice"
+    ]);
+    ci.supplier = findColumn(firstRow, [
+      "supplier","vendor","manufacturer","brand","source","suppliername"
+    ]);
+    ci.sku = findColumn(firstRow, [
+      "itemcode","itemnumber","sku","code","partnumber","productcode","ref"
+    ]);
+    ci.unit = findColumn(firstRow, [
+      "unit","uom","unitofmeasure","measure","qtyunit"
+    ]);
+    ci.trade = findColumn(firstRow, [
+      "trade","category","type","discipline","service"
+    ]);
   }
 
-  /* ---- build column index map (client map takes priority) ---- */
-  const colIdx: Record<string, number> = {};
-  if (startIndex === 1) {
-    // Normalise header names for fuzzy matching
-    const normHeaders = firstRow.map((h, i) => ({ raw: h, idx: i, norm: h.toLowerCase().trim().replace(/[_\s]/g, "") }));
-
-    // First: use explicit client column map
-    for (const [field, headerName] of Object.entries(clientColumnMap)) {
-      if (!headerName) continue;
-      const match = normHeaders.find((h) => h.raw === headerName);
-      if (match) colIdx[field] = match.idx;
-    }
-
-    // Second: fuzzy fallback for common headers
-    const find = (aliases: string[]) => {
-      for (const a of aliases) {
-        const aNorm = a.toLowerCase().replace(/[_\s]/g, "");
-        const hit = normHeaders.find((h) => h.norm === aNorm || h.norm.includes(aNorm));
-        if (hit) return hit.idx;
-      }
-      return -1;
-    };
-
-    if (colIdx.description === undefined) {
-      colIdx.description = find(["description", "itemname", "purchasesdescription", "name", "item", "product"]);
-    }
-    if (colIdx.cost_price === undefined) {
-      colIdx.cost_price = find(["purchasesunitprice", "costprice", "cost_price", "cost", "price", "unitcost", "rate", "value"]);
-    }
-    if (colIdx.supplier === undefined) {
-      colIdx.supplier = find(["supplier", "vendor", "source", "manufacturer", "brand"]);
-    }
-    if (colIdx.sku === undefined) {
-      colIdx.sku = find(["itemcode", "sku", "code", "itemnumber", "partnumber"]);
-    }
-    if (colIdx.unit === undefined) {
-      colIdx.unit = find(["unit", "uom", "unitofmeasure"]);
-    }
-    if (colIdx.trade === undefined) {
-      colIdx.trade = find(["trade", "category", "type"]);
-    }
-  }
-
-  /* ---- process rows ---- */
+  /* ---- process rows: skip only truly broken rows ---- */
   const errors: string[] = [];
-  const toInsert: Array<{
-    profile_id: string;
-    supplier: string;
-    sku: string | null;
-    description: string;
-    unit: string;
-    cost_price: number;
-    trade: string;
-    imported_at: string;
-  }> = [];
+  let imported = 0;
+  let skipped = 0;
 
   for (let i = startIndex; i < lines.length; i++) {
     const rowNum = i + 1;
     const fields = parseCSVLine(lines[i]);
     if (fields.length === 0) continue;
-    if (fields.every((f) => f.trim() === "")) continue; // skip blank rows
+    if (fields.every((f) => f.trim() === "")) continue;
 
+    /* Extract fields */
     let description = "";
     let costPriceRaw = "";
     let supplier = "";
@@ -208,52 +138,46 @@ export async function POST(request: Request) {
     let unit = "ea";
     let trade = defaultTrade;
 
-    if (startIndex === 1 && Object.keys(colIdx).length > 0) {
-      /* ---- header-based mapping ---- */
-      if (colIdx.description >= 0) description = fields[colIdx.description] ?? "";
-      if (colIdx.cost_price >= 0) costPriceRaw = fields[colIdx.cost_price] ?? "";
-      if (colIdx.supplier >= 0) supplier = fields[colIdx.supplier] ?? "";
-      if (colIdx.sku >= 0) sku = fields[colIdx.sku] ?? null;
-      if (colIdx.unit >= 0) unit = fields[colIdx.unit] ?? "ea";
-      if (colIdx.trade >= 0) trade = fields[colIdx.trade] ?? defaultTrade;
+    if (hasHeader) {
+      if (ci.description >= 0) description = fields[ci.description] ?? "";
+      if (ci.cost_price >= 0) costPriceRaw = fields[ci.cost_price] ?? "";
+      if (ci.supplier >= 0) supplier = fields[ci.supplier] ?? "";
+      if (ci.sku >= 0) sku = fields[ci.sku] ?? null;
+      if (ci.unit >= 0) unit = fields[ci.unit] ?? "ea";
+      if (ci.trade >= 0) trade = fields[ci.trade] ?? defaultTrade;
 
-      // Fallback to first/second column if nothing mapped
-      if (!description && fields.length >= 1) description = fields[0];
-      if (!costPriceRaw && fields.length >= 2) costPriceRaw = fields[1];
-      if (!supplier && fields.length >= 3) supplier = fields[2];
+      /* Fallback: first col = description, second with $/number = cost */
+      if (!description && fields[0]) description = fields[0];
+      if (!costPriceRaw) {
+        // Find first field that looks like a price
+        const priceField = fields.find((f) => /^\$?[\d,]+\.?\d*$/.test(f.trim()));
+        if (priceField) costPriceRaw = priceField;
+      }
     } else {
-      /* ---- positional mapping ---- */
+      /* No header: position 0 = description, position 1 = cost */
       description = fields[0] ?? "";
       costPriceRaw = fields[1] ?? "";
       supplier = fields[2] ?? "";
       if (fields.length > 3) sku = fields[3];
       if (fields.length > 4) unit = fields[4];
-      if (fields.length > 5) trade = fields[5];
     }
 
-    /* ---- normalise ---- */
     description = description.trim();
-    supplier = supplier.trim();
-    if (!supplier && defaultSupplier) supplier = defaultSupplier;
+    supplier = (supplier.trim() || fallbackSupplier).trim();
 
-    /* ---- validation: skip bad rows, don't fail the batch ---- */
-    if (!description || description.length === 0) {
-      errors.push(`Row ${rowNum}: missing description - skipped`);
-      continue;
-    }
+    /* Skip if no description */
+    if (!description) { skipped++; continue; }
 
+    /* Parse cost: strip $ and commas, accept 0 */
     const costPrice = parseFloat(costPriceRaw.replace(/[$,\s]/g, ""));
     if (isNaN(costPrice) || costPrice < 0) {
-      errors.push(`Row ${rowNum}: invalid cost "${costPriceRaw}" - skipped`);
+      errors.push(`Row ${rowNum}: "${costPriceRaw}" is not a valid price - skipped`);
+      skipped++;
       continue;
     }
 
-    if (!supplier || supplier.length === 0) {
-      errors.push(`Row ${rowNum}: missing supplier (map a supplier column or set a default) - skipped`);
-      continue;
-    }
-
-    toInsert.push({
+    /* Insert row (one-by-one so one bad row doesn't kill the batch) */
+    const { error } = await supabase.from("price_book_items").insert({
       profile_id: businessId,
       supplier,
       sku: sku ? sku.trim() : null,
@@ -263,19 +187,20 @@ export async function POST(request: Request) {
       trade: (trade || defaultTrade).trim(),
       imported_at: new Date().toISOString(),
     });
-  }
 
-  /* ---- insert valid rows one-by-one so one bad row doesn't kill the batch ---- */
-  let imported = 0;
-  const insertErrors: string[] = [];
-  for (const row of toInsert) {
-    const { error } = await supabase.from("price_book_items").insert(row);
     if (error) {
-      insertErrors.push(`"${row.description.substring(0, 40)}" - ${error.message}`);
+      errors.push(`Row ${rowNum}: "${description.slice(0, 40)}" - ${error.message}`);
+      skipped++;
     } else {
       imported++;
     }
   }
 
-  return NextResponse.json({ imported, errors: [...errors, ...insertErrors] });
+  return NextResponse.json({
+    imported,
+    skipped,
+    total: lines.length - startIndex,
+    errors: errors.slice(0, 10),
+    moreErrors: errors.length > 10 ? errors.length - 10 : 0,
+  });
 }
