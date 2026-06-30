@@ -1,287 +1,517 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
-import { Check, ChevronRight } from "lucide-react";
+import { useState, useCallback, useEffect } from "react";
+import {
+  Home, Building2, User,
+  Search, MapPin, Phone, Mail, FileText, Loader2, Check, Info, Wrench, ChevronRight,
+} from "lucide-react";
+
+import { ToastType, useToast } from "@/hooks/useToast";
+
+/* ------------------------------------------------------------------ */
+/*  Constants                                                          */
+/* ------------------------------------------------------------------ */
 
 const TRADES = [
-  "electrician","plumber","builder","roofer","painter","carpenter",
-  "tiler","landscaper","concreter","fencer","plasterer","handyman",
+  "Electrician", "Plumber", "Builder", "Roofer", "Painter", "Carpenter",
+  "Tiler", "Landscaper", "Concreter", "Fencer", "Plasterer", "Handyman",
 ];
 
-const TRADE_LABELS: Record<string,string> = {
-  electrician:"Electrician", plumber:"Plumber", builder:"Builder",
-  roofer:"Roofer", painter:"Painter", carpenter:"Carpenter",
-  tiler:"Tiler", landscaper:"Landscaper", concreter:"Concreter",
-  fencer:"Fencer", plasterer:"Plasterer", handyman:"Handyman",
-};
+const MIN_JOB_DESC_LENGTH = 10;
 
-const BUDGETS = ["Under $500","$500–$2k","$2k–$10k","$10k–$50k","$50k+","Not sure yet"];
-const TIMELINES = ["ASAP","Within 2 weeks","Within a month","1–3 months","Just planning ahead"];
-const TEMPS = [
-  { value:"early", label:"Early stage", desc:"I&apos;m exploring options, not ready to commit yet" },
-  { value:"warm",  label:"Warm",        desc:"I&apos;m interested in speaking with a tradie soon" },
-  { value:"hot",   label:"Hot",         desc:"Budget approved, ready to go" },
+const JOB_STAGES = [
+  { value: "ready", label: "Ready to hire - just need quotes" },
+  { value: "warm",  label: "Actively comparing quotes" },
+  { value: "planning", label: "Planning stage - flexible timing" },
 ];
 
-type User = { id: string; email?: string } | null;
-type Homeowner = { name: string; phone: string; suburb: string; postcode: string } | null;
+const TIMELINES = [
+  { value: "asap", label: "ASAP" },
+  { value: "this_week", label: "This week" },
+  { value: "this_month", label: "This month" },
+  { value: "flexible", label: "Flexible" },
+];
 
-export default function GetQuotesForm({ user, homeowner }: { user: User; homeowner: Homeowner }) {
-  const [step, setStep] = useState(1);
+const BUDGETS = [
+  { value: "under_500", label: "Under $500" },
+  { value: "500_2k", label: "$500 - $2,000" },
+  { value: "2k_10k", label: "$2,000 - $10,000" },
+  { value: "10k_plus", label: "$10,000+" },
+  { value: "not_sure", label: "Not sure" },
+];
 
-  // Step 1 -- account
-  const [name,     setName]     = useState(homeowner?.name ?? "");
-  const [email,    setEmail]    = useState(user?.email ?? "");
-  const [phone,    setPhone]    = useState(homeowner?.phone ?? "");
-  const [password, setPassword] = useState("");
+/* ------------------------------------------------------------------ */
+/*  Form state                                                         */
+/* ------------------------------------------------------------------ */
 
-  // Step 2 -- job
-  const [trade,       setTrade]       = useState("");
-  const [suburb,      setSuburb]      = useState(homeowner?.suburb ?? "");
-  const [postcode,    setPostcode]    = useState(homeowner?.postcode ?? "");
-  const [description, setDescription] = useState("");
-  const [budget,      setBudget]      = useState("");
-  const [timeline,    setTimeline]    = useState("");
-  const [temp,        setTemp]        = useState("early");
-  const [numQuotes,   setNumQuotes]   = useState(3);
+interface FormData {
+  trade: string;
+  jobDescription: string;
+  propertyType: string;
+  timeline: string;
+  budget: string;
+  stage: string;
+  location: string;
+  name: string;
+  email: string;
+  phone: string;
+  consent: boolean;
+}
 
-  const [saving,  setSaving]  = useState(false);
-  const [error,   setError]   = useState("");
-  const [success, setSuccess] = useState(false);
+interface UserData {
+  id: string;
+  email?: string;
+  user_metadata?: { full_name?: string; phone?: string };
+}
 
-  async function submitStep1() {
-    if (!name || !email || !phone) { setError("Please fill in all fields."); return; }
-    if (!user && !password) { setError("Please set a password for your account."); return; }
-    setError(""); setStep(2);
-  }
+interface HomeownerData {
+  full_name?: string | null;
+  phone?: string | null;
+  location?: string | null;
+}
 
-  async function submitJob() {
-    if (!trade || !suburb || !description) {
-      setError("Please fill in trade, suburb and job description."); return;
+interface StepConfig {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  component: React.ReactNode;
+  isValid: () => boolean;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Component                                                          */
+/* ------------------------------------------------------------------ */
+
+export default function GetQuotesForm({ user, homeowner }: { user: User | null; homeowner: HomeownerData | null }) {
+  const [step, setStep] = useState(0);
+  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const { showToast } = useToast();
+
+  // ── Form data (backed by localStorage) ───────────────────────────
+  const [form, setForm] = useState<FormData>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("get-quotes-form");
+        if (saved) return JSON.parse(saved);
+      } catch { /* ignore */ }
     }
-    setSaving(true); setError("");
-    const supabase = createClient();
+    return {
+      trade: "", jobDescription: "", propertyType: "", timeline: "",
+      budget: "", stage: "", location: "", name: "", email: "",
+      phone: "", consent: false,
+    };
+  });
 
-    let userId = user?.id;
+  useEffect(() => {
+    localStorage.setItem("get-quotes-form", JSON.stringify(form));
+  }, [form]);
 
-    // Create account if not logged in
-    if (!user) {
-      const { data: authData, error: authErr } = await supabase.auth.signUp({
-        email, password,
-        options: { data: { name } },
+  // ── Set initial value from URL search params (trade / suburb) ─────
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    const trade = sp.get("trade");
+    const suburb = sp.get("suburb");
+    if (trade || suburb) {
+      setForm(prev => ({
+        ...prev,
+        ...(trade && !prev.trade ? { trade: trade.charAt(0).toUpperCase() + trade.slice(1) } : {}),
+        ...(suburb && !prev.location ? { location: suburb } : {}),
+      }));
+    }
+  }, []);
+
+  // ── Fill from logged-in homeowner profile (autofill, not readonly) ─
+  useEffect(() => {
+    if (!user || !homeowner) return;
+    setForm(prev => ({
+      ...prev,
+      name: prev.name || homeowner.full_name || user.user_metadata?.full_name || "",
+      email: prev.email || user.email || "",
+      phone: prev.phone || homeowner.phone || user.user_metadata?.phone || "",
+      location: prev.location || homeowner.location || "",
+    }));
+  }, [user, homeowner]);
+
+  // ── Helpers ──────────────────────────────────────────────────────
+  const update = useCallback((patch: Partial<FormData>) => {
+    setForm(prev => ({ ...prev, ...patch }));
+    // clear error on field change
+    for (const key of Object.keys(patch)) {
+      if (errors[key]) {
+        setErrors(prev => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+      }
+    }
+  }, [errors]);
+
+  const validateStep = useCallback((s: number): boolean => {
+    const newErrors: Record<string, string> = {};
+    if (s === 0) {
+      if (!form.trade.trim()) newErrors.trade = "Please select a trade type.";
+      if (form.jobDescription.trim().length < MIN_JOB_DESC_LENGTH) {
+        newErrors.jobDescription = `Please provide at least ${MIN_JOB_DESC_LENGTH} characters. Current: ${form.jobDescription.trim().length}.`;
+      }
+      if (!form.propertyType) newErrors.propertyType = "Please select a property type.";
+    }
+    if (s === 1) {
+      if (!form.timeline) newErrors.timeline = "Please select a timeline.";
+      if (!form.budget) newErrors.budget = "Please select a budget.";
+      if (!form.stage) newErrors.stage = "Please select where you're at.";
+    }
+    if (s === 2) {
+      if (!form.location.trim()) newErrors.location = "Please enter your suburb.";
+      if (!form.name.trim()) newErrors.name = "Please enter your name.";
+      if (!form.email.trim()) newErrors.email = "Please enter your email.";
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) newErrors.email = "Please enter a valid email address.";
+      if (!form.consent) newErrors.consent = "You must agree to be contacted.";
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [form]);
+
+  const nextStep = useCallback(() => {
+    if (validateStep(step)) setStep(step + 1);
+  }, [validateStep, step]);
+
+  const prevStep = useCallback(() => setStep(Math.max(0, step - 1)), [step]);
+
+  // ── Submit ───────────────────────────────────────────────────────
+  async function handleSubmit() {
+    if (!validateStep(2)) return;
+    setSubmitting(true);
+    try {
+      const body = {
+        trade: form.trade,
+        job_description: form.jobDescription,
+        property_type: form.propertyType,
+        timeline: form.timeline,
+        budget: form.budget,
+        stage: form.stage,
+        location: form.location,
+        name: form.name,
+        email: form.email,
+        phone: form.phone || null,
+        consent: form.consent,
+      };
+
+      const res = await fetch("/api/jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       });
-      if (authErr) { setError(authErr.message); setSaving(false); return; }
-      userId = authData.user?.id;
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok) {
+        localStorage.removeItem("get-quotes-form");
+        setSubmitted(true);
+        showToast("Job posted successfully!", ToastType.SUCCESS);
+      } else {
+        showToast(data.error ?? "Something went wrong. Please try again.", ToastType.ERROR);
+      }
+    } catch {
+      showToast("Network error. Please try again.", ToastType.ERROR);
+    } finally {
+      setSubmitting(false);
     }
-
-    if (!userId) { setError("Could not create account. Try again."); setSaving(false); return; }
-
-    // Upsert homeowner profile
-    await supabase.from("homeowner_profiles").upsert({
-      id: userId, name, email, phone, suburb, postcode,
-    }, { onConflict: "id" });
-
-    // Create job request
-    const { data: request, error: reqErr } = await supabase
-      .from("job_requests")
-      .insert({
-        homeowner_id:      userId,
-        trade,
-        suburb,
-        postcode,
-        description,
-        budget,
-        timeline,
-        lead_temperature:  temp,
-        num_quotes_wanted: numQuotes,
-        status:            "open",
-      })
-      .select("id")
-      .single();
-
-    if (reqErr) { setError(reqErr.message); setSaving(false); return; }
-
-    // Trigger alert emails to tradies
-    await fetch("/api/job-requests/notify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ requestId: request.id }),
-    });
-
-    setSaving(false);
-    setSuccess(true);
   }
 
-  if (success) {
+  // ── Steps ────────────────────────────────────────────────────────
+  const steps: StepConfig[] = [
+    {
+      title: "Your job details",
+      description: "Tell us about your job",
+      icon: <FileText size={18} />,
+      component: (
+        <div className="space-y-5">
+          {/* Trade */}
+          <div>
+            <label className="block text-[12.5px] font-bold text-[var(--ink)] mb-2.5">
+              What trade do you need? <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] pointer-events-none z-10" />
+              <select value={form.trade} onChange={e => update({ trade: e.target.value })}
+                className={`app-field pl-9 text-[13px] ${errors.trade ? "border-red-300 ring-1 ring-red-200" : ""}`}>
+                <option value="">Select a trade...</option>
+                {TRADES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            {errors.trade && <p className="text-red-500 text-[12px] mt-1.5 font-medium">{errors.trade}</p>}
+          </div>
+
+          {/* Job description */}
+          <div>
+            <label className="block text-[12.5px] font-bold text-[var(--ink)] mb-2.5">
+              Tell us about your job <span className="text-red-500">*</span>
+            </label>
+            <textarea value={form.jobDescription} onChange={e => update({ jobDescription: e.target.value })}
+              placeholder="Describe what needs doing - e.g., 'Need to install 2 new power points in the kitchen and replace the bathroom exhaust fan'"
+              rows={5}
+              className={`app-field text-[13px] resize-none ${errors.jobDescription ? "border-red-300 ring-1 ring-red-200" : ""}`} />
+            <div className="flex items-center justify-between mt-1.5">
+              {errors.jobDescription ? (
+                <p className="text-red-500 text-[12px] font-medium">{errors.jobDescription}</p>
+              ) : (
+                <p className="text-[11px] text-[var(--ink-faint)]">The more detail, the better your quotes will be.</p>
+              )}
+              <span className={`text-[11px] font-medium ${form.jobDescription.length < MIN_JOB_DESC_LENGTH ? "text-[var(--ink-faint)]" : "text-emerald-600"}`}>
+                {form.jobDescription.length} chars
+              </span>
+            </div>
+          </div>
+
+          {/* Property type */}
+          <div>
+            <label className="block text-[12.5px] font-bold text-[var(--ink)] mb-2.5">
+              What type of property? <span className="text-red-500">*</span>
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { value: "residential", icon: <Home size={16} />, label: "Residential" },
+                { value: "commercial", icon: <Building2 size={16} />, label: "Commercial" },
+                { value: "other", icon: <Wrench size={16} />, label: "Other" },
+              ].map(({ value, icon, label }) => (
+                <button key={value} onClick={() => update({ propertyType: value })}
+                  className={`flex flex-col items-center gap-1.5 px-3 py-3.5 rounded-xl border text-[12px] font-semibold transition-all ${form.propertyType === value ? "border-gray-900 bg-gray-900 text-white" : "border-[var(--line)] text-[var(--ink-soft)] hover:border-gray-400"}`}>
+                  {icon} {label}
+                </button>
+              ))}
+            </div>
+            {errors.propertyType && <p className="text-red-500 text-[12px] mt-1.5 font-medium">{errors.propertyType}</p>}
+          </div>
+        </div>
+      ),
+      isValid: () => !!form.trade && form.jobDescription.length >= MIN_JOB_DESC_LENGTH && !!form.propertyType,
+    },
+    {
+      title: "Timing & budget",
+      description: "When do you need it done?",
+      icon: <Info size={18} />,
+      component: (
+        <div className="space-y-5">
+          {/* Timeline */}
+          <div>
+            <label className="block text-[12.5px] font-bold text-[var(--ink)] mb-2.5">
+              When do you need it done? <span className="text-red-500">*</span>
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {TIMELINES.map(({ value, label }) => (
+                <button key={value} onClick={() => update({ timeline: value })}
+                  className={`px-3 py-3 rounded-xl border text-[13px] font-semibold transition-all ${form.timeline === value ? "border-gray-900 bg-gray-900 text-white" : "border-[var(--line)] text-[var(--ink-soft)] hover:border-gray-400"}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {errors.timeline && <p className="text-red-500 text-[12px] mt-1.5 font-medium">{errors.timeline}</p>}
+          </div>
+
+          {/* Budget */}
+          <div>
+            <label className="block text-[12.5px] font-bold text-[var(--ink)] mb-2.5">
+              What's your approximate budget? <span className="text-red-500">*</span>
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {BUDGETS.map(({ value, label }) => (
+                <button key={value} onClick={() => update({ budget: value })}
+                  className={`px-2 py-3 rounded-xl border text-[12.5px] font-semibold transition-all ${form.budget === value ? "border-gray-900 bg-gray-900 text-white" : "border-[var(--line)] text-[var(--ink-soft)] hover:border-gray-400"}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {errors.budget && <p className="text-red-500 text-[12px] mt-1.5 font-medium">{errors.budget}</p>}
+          </div>
+
+          {/* Stage */}
+          <div>
+            <label className="block text-[12.5px] font-bold text-[var(--ink)] mb-2.5">
+              Where are you at? <span className="text-red-500">*</span>
+            </label>
+            <div className="space-y-2">
+              {JOB_STAGES.map(({ value, label }) => (
+                <button key={value} onClick={() => update({ stage: value })}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-[13px] font-semibold transition-all ${form.stage === value ? "border-gray-900 bg-gray-900 text-white" : "border-[var(--line)] text-[var(--ink-soft)] hover:border-gray-400"}`}>
+                  {label}
+                  {form.stage === value && <Check size={15} />}
+                </button>
+              ))}
+            </div>
+            {errors.stage && <p className="text-red-500 text-[12px] mt-1.5 font-medium">{errors.stage}</p>}
+          </div>
+        </div>
+      ),
+      isValid: () => !!form.timeline && !!form.budget && !!form.stage,
+    },
+    {
+      title: "Your details",
+      description: "Who should tradies contact?",
+      icon: <User size={18} />,
+      component: (
+        <div className="space-y-5">
+          {/* Suburb */}
+          <div>
+            <label className="block text-[12.5px] font-bold text-[var(--ink)] mb-2.5">
+              What's your suburb? <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)]" />
+              <input type="text" value={form.location} onChange={e => update({ location: e.target.value })}
+                placeholder="e.g., Frankston, VIC 3199"
+                className={`app-field pl-9 text-[13px] ${errors.location ? "border-red-300 ring-1 ring-red-200" : ""}`} />
+            </div>
+            {errors.location && <p className="text-red-500 text-[12px] mt-1.5 font-medium">{errors.location}</p>}
+          </div>
+
+          {/* Name */}
+          <div>
+            <label className="block text-[12.5px] font-bold text-[var(--ink)] mb-2.5">
+              Your full name <span className="text-red-500">*</span>
+            </label>
+            <input type="text" value={form.name} onChange={e => update({ name: e.target.value })}
+              placeholder="Enter your name"
+              className={`app-field text-[13px] ${errors.name ? "border-red-300 ring-1 ring-red-200" : ""}`} />
+            {errors.name && <p className="text-red-500 text-[12px] mt-1.5 font-medium">{errors.name}</p>}
+          </div>
+
+          {/* Email */}
+          <div>
+            <label className="block text-[12.5px] font-bold text-[var(--ink)] mb-2.5">
+              Email address <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)]" />
+              <input type="email" value={form.email} onChange={e => update({ email: e.target.value })}
+                placeholder="your@email.com"
+                className={`app-field pl-9 text-[13px] ${errors.email ? "border-red-300 ring-1 ring-red-200" : ""}`} />
+            </div>
+            {errors.email && <p className="text-red-500 text-[12px] mt-1.5 font-medium">{errors.email}</p>}
+          </div>
+
+          {/* Phone */}
+          <div>
+            <label className="block text-[12.5px] font-bold text-[var(--ink)] mb-2.5">
+              Phone number <span className="text-[var(--ink-faint)] font-normal">(optional)</span>
+            </label>
+            <div className="relative">
+              <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)]" />
+              <input type="tel" value={form.phone} onChange={e => update({ phone: e.target.value })}
+                placeholder="04XX XXX XXX"
+                className="app-field pl-9 text-[13px]" />
+            </div>
+          </div>
+
+          {/* Consent */}
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" checked={form.consent} onChange={e => update({ consent: e.target.checked })}
+              className={`mt-0.5 w-4 h-4 rounded accent-[var(--navy)] ${errors.consent ? "outline outline-2 outline-red-300 outline-offset-2" : ""}`} />
+            <span className={`text-[12.5px] leading-relaxed ${errors.consent ? "text-red-500 font-medium" : "text-[var(--ink-soft)]"}`}>
+              I agree to Swiftscope sharing my job details with up to 3 matched local tradies so they can contact me with quotes.
+            </span>
+          </label>
+          {errors.consent && <p className="text-red-500 text-[12px] font-medium ml-7">{errors.consent}</p>}
+        </div>
+      ),
+      isValid: () => !!form.location && !!form.name && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email) && form.consent,
+    },
+  ];
+
+  // ── Render ───────────────────────────────────────────────────────
+
+  if (submitted) {
     return (
-      <div className="card text-center py-12">
-        <div className="w-16 h-16 bg-[var(--green-bg)] rounded-full flex items-center justify-center mx-auto mb-4">
+      <div className="text-center py-12 px-6">
+        <div className="w-16 h-16 bg-[var(--green-bg)] rounded-full flex items-center justify-center mx-auto mb-5">
           <Check size={28} className="text-[var(--green)]" />
         </div>
-        <h2 className="font-display text-[1.6rem] text-[var(--ink)] mb-2">Request sent!</h2>
-        <p className="text-[14px] text-[var(--ink-faint)] max-w-sm mx-auto mb-6">
-          We&apos;ve alerted local {TRADE_LABELS[trade] ?? trade}s in {suburb}.
-          Up to {numQuotes} will contact you directly - usually within a few hours.
+        <h2 className="font-display text-[1.8rem] text-[var(--ink)] mb-2">Quote request sent!</h2>
+        <p className="text-[14px] text-[var(--ink-soft)] max-w-sm mx-auto mb-8">
+          Up to 3 local tradies will be in touch with quotes shortly.
         </p>
-        <Link href="/directory" className="btn-secondary inline-flex">Browse the directory</Link>
+
+        {/* Review card */}
+        <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-5 max-w-sm mx-auto text-left">
+          <p className="text-[12.5px] font-bold text-[var(--ink)] mb-3">What's next?</p>
+          <div className="space-y-2.5">
+            {[
+              "Tradies review your job details",
+              "Up to 3 will contact you with quotes",
+              "You choose who to hire - no pressure",
+            ].map((s, i) => (
+              <div key={i} className="flex items-center gap-2.5">
+                <div className="w-5 h-5 rounded-full bg-[var(--green-bg)] flex items-center justify-center shrink-0">
+                  <Check size={11} className="text-[var(--green)]" />
+                </div>
+                <p className="text-[13px] text-[var(--ink-soft)]">{s}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Progress */}
-      <div className="flex items-center gap-2 mb-6">
-        {[1,2].map(s => (
-          <div key={s} className="flex items-center gap-2">
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-bold transition-colors ${step >= s ? "bg-[var(--navy)] text-white" : "bg-[var(--line)] text-[var(--ink-faint)]"}`}>
-              {step > s ? <Check size={13} /> : s}
+    <div>
+      {/* Progress header */}
+      <div className="mb-6">
+        {/* Step dots */}
+        <div className="flex items-center gap-2 mb-4">
+          {steps.map((s, i) => (
+            <div key={i} className="flex items-center">
+              <button onClick={() => i < step && setStep(i)}
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-all ${i < step ? "bg-[var(--green-bg)] text-[var(--green)]" : i === step ? "bg-[var(--navy)] text-white" : "bg-[var(--line)] text-[var(--ink-faint)]"}`}>
+                {i < step ? <Check size={14} /> : i + 1}
+              </button>
+              {i < steps.length - 1 && (
+                <div className={`w-6 h-0.5 mx-1 ${i < step ? "bg-[var(--green)]" : "bg-[var(--line)]"}`} />
+              )}
             </div>
-            <span className={`text-[12.5px] font-semibold ${step >= s ? "text-[var(--ink)]" : "text-[var(--ink-faint)]"}`}>
-              {s === 1 ? "Your details" : "Job details"}
-            </span>
-            {s < 2 && <ChevronRight size={14} className="text-[var(--ink-faint)]" />}
+          ))}
+        </div>
+        {/* Title + description */}
+        <div className="flex items-center gap-3 mb-1">
+          <div className="w-9 h-9 rounded-xl bg-[var(--amber-light)] flex items-center justify-center text-[var(--amber-deep)]">
+            {steps[step].icon}
           </div>
-        ))}
+          <div>
+            <h2 className="font-bold text-[16px] text-[var(--ink)]">{steps[step].title}</h2>
+            <p className="text-[12.5px] text-[var(--ink-faint)]">{steps[step].description}</p>
+          </div>
+        </div>
       </div>
 
-      {step === 1 && (
-        <div className="card space-y-3">
-          <p className="font-semibold text-[var(--ink)] mb-1">Your contact details</p>
-          <p className="text-[13px] text-[var(--ink-faint)] mb-3">
-            {user ? "Confirm your details before submitting." : "Create a free account so tradies can contact you and you can track your requests."}
-          </p>
-          <input value={name} onChange={e => setName(e.target.value)}
-            placeholder="Your full name *" className="app-field text-[13px]" />
-          <input value={email} onChange={e => setEmail(e.target.value)}
-            placeholder="Email address *" type="email" className="app-field text-[13px]"
-            disabled={!!user} />
-          <input value={phone} onChange={e => setPhone(e.target.value)}
-            placeholder="Phone number *" type="tel" className="app-field text-[13px]" />
-          {!user && (
-            <input value={password} onChange={e => setPassword(e.target.value)}
-              placeholder="Create a password *" type="password" className="app-field text-[13px]" />
-          )}
-          {error && <p className="text-[12.5px] text-[var(--red)] font-semibold">{error}</p>}
-          <button onClick={submitStep1} className="btn-primary w-full justify-center">
-            Next - Job details <ChevronRight size={14} />
+      {/* Step content */}
+      {steps[step].component}
+
+      {/* Navigation buttons */}
+      <div className="flex items-center justify-between mt-8 pt-5 border-t border-[var(--line)]">
+        {step > 0 ? (
+          <button onClick={prevStep}
+            className="text-[13px] font-bold text-[var(--ink-faint)] hover:text-[var(--ink)] transition-colors">
+            Back
           </button>
-          {!user && (
-            <p className="text-[12px] text-[var(--ink-faint)] text-center">
-              Already have an account? <Link href="/login" className="text-[var(--navy)] font-semibold">Log in</Link>
-            </p>
-          )}
-        </div>
-      )}
+        ) : (
+          <div />
+        )}
 
-      {step === 2 && (
-        <div className="space-y-4">
-          {/* Trade */}
-          <div className="card">
-            <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-faint)] mb-3">What trade do you need? *</p>
-            <div className="grid grid-cols-3 gap-2">
-              {TRADES.map(t => (
-                <button key={t} onClick={() => setTrade(t)}
-                  className={`px-3 py-2 rounded-lg text-[12.5px] font-semibold border transition-colors ${trade === t ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] text-[var(--ink-faint)] hover:border-[var(--navy)]"}`}>
-                  {TRADE_LABELS[t]}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Location */}
-          <div className="card">
-            <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-faint)] mb-3">Where is the job? *</p>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="col-span-2">
-                <input value={suburb} onChange={e => setSuburb(e.target.value)}
-                  placeholder="Suburb *" className="app-field text-[13px]" />
-              </div>
-              <input value={postcode} onChange={e => setPostcode(e.target.value)}
-                placeholder="Postcode" className="app-field text-[13px]" />
-            </div>
-          </div>
-
-          {/* Description */}
-          <div className="card">
-            <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-faint)] mb-3">Describe the job *</p>
-            <textarea value={description} onChange={e => setDescription(e.target.value)}
-              placeholder="Tell tradies what you need done. The more detail the better - size, access, any special requirements..."
-              rows={4} className="app-field text-[13px] resize-none" />
-          </div>
-
-          {/* Budget */}
-          <div className="card">
-            <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-faint)] mb-3">Budget</p>
-            <div className="grid grid-cols-3 gap-2">
-              {BUDGETS.map(b => (
-                <button key={b} onClick={() => setBudget(b)}
-                  className={`px-3 py-2 rounded-lg text-[12px] font-semibold border transition-colors ${budget === b ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] text-[var(--ink-faint)] hover:border-[var(--navy)]"}`}>
-                  {b}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Timeline */}
-          <div className="card">
-            <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-faint)] mb-3">Timeline</p>
-            <div className="grid grid-cols-2 gap-2">
-              {TIMELINES.map(t => (
-                <button key={t} onClick={() => setTimeline(t)}
-                  className={`px-3 py-2 rounded-lg text-[12.5px] font-semibold border transition-colors text-left ${timeline === t ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] text-[var(--ink-faint)] hover:border-[var(--navy)]"}`}>
-                  {t}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Lead temp */}
-          <div className="card">
-            <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-faint)] mb-3">Where are you at?</p>
-            <div className="space-y-2">
-              {TEMPS.map(t => (
-                <button key={t.value} onClick={() => setTemp(t.value)}
-                  className={`w-full px-4 py-3 rounded-xl border transition-colors text-left ${temp === t.value ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] hover:border-[var(--navy)]"}`}>
-                  <p className={`font-semibold text-[13.5px] ${temp === t.value ? "text-[var(--amber)]" : "text-[var(--ink)]"}`}>{t.label}</p>
-                  <p className={`text-[12px] ${temp === t.value ? "text-white/70" : "text-[var(--ink-faint)]"}`} dangerouslySetInnerHTML={{ __html: t.desc }} />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Num quotes */}
-          <div className="card">
-            <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-faint)] mb-3">
-              How many tradies do you want to hear from?
-            </p>
-            <div className="flex gap-2">
-              {[1,2,3,4,5].map(n => (
-                <button key={n} onClick={() => setNumQuotes(n)}
-                  className={`w-12 h-12 rounded-xl font-bold text-[15px] border transition-colors ${numQuotes === n ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] text-[var(--ink-faint)] hover:border-[var(--navy)]"}`}>
-                  {n}
-                </button>
-              ))}
-            </div>
-            <p className="text-[12px] text-[var(--ink-faint)] mt-2">Default is 3. More quotes = more options but more calls.</p>
-          </div>
-
-          {error && <p className="text-[12.5px] text-[var(--red)] font-semibold px-1">{error}</p>}
-
-          <div className="flex gap-3">
-            <button onClick={() => { setStep(1); setError(""); }} className="btn-secondary">← Back</button>
-            <button onClick={submitJob} disabled={saving} className="btn-primary flex-1 justify-center">
-              {saving ? "Submitting..." : "Submit request"}
-            </button>
-          </div>
-
-          <p className="text-[12px] text-[var(--ink-faint)] text-center">
-            Your contact details are only shared with tradies who claim your request.
-          </p>
-        </div>
-      )}
+        {step < steps.length - 1 ? (
+          <button onClick={nextStep}
+            className="flex items-center gap-2 bg-[var(--navy)] text-white font-bold text-[13.5px] px-6 py-2.5 rounded-xl hover:bg-[#121f2b] transition-colors">
+            Next <ChevronRight size={15} />
+          </button>
+        ) : (
+          <button onClick={handleSubmit} disabled={submitting}
+            className="flex items-center gap-2 bg-[var(--amber)] text-[var(--navy)] font-extrabold text-[13.5px] px-7 py-3 rounded-xl hover:bg-[var(--amber-deep)] transition-colors disabled:opacity-50">
+            {submitting ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+            {submitting ? "Posting..." : "Post my job"}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
