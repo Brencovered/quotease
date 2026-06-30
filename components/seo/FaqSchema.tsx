@@ -38,7 +38,7 @@ export default function FaqSchema({ faqs }: { faqs: FaqItem[] }) {
   );
 }
 
-// ── Reusable FAQ sets ─────────────────────────────────────────────────────
+// -- Reusable FAQ sets ------------------------------------------------------------
 
 /**
  * Generic FAQs about Swiftscope itself -- used on the homepage.
@@ -53,8 +53,8 @@ export const SWIFTSCOPE_FAQS: FaqItem[] = [
     answer: "Up to 3 local tradies matched to your job will be able to respond with a quote. You compare them and choose who to hire.",
   },
   {
-    question: "Are the tradies verified?",
-    answer: "Every tradie listed on Swiftscope runs their business on the platform. We display their real Google rating and review count so you can compare them before making contact.",
+    question: "How are tradies selected?",
+    answer: "Every listing on Swiftscope is curated. We display real Google ratings and review counts so you can compare businesses before making contact.",
   },
   {
     question: "How quickly will I hear back?",
@@ -90,11 +90,11 @@ export function generateTradeSuburbFaqs(
     },
     {
       question: `How many ${tradePlural.toLowerCase()} are available in ${suburb}?`,
-      answer: `There are ${listingCount} verified ${tradePlural.toLowerCase()} listed in ${suburb} on Swiftscope.${ratingLine}`,
+      answer: `There are ${listingCount} curated ${tradePlural.toLowerCase()} listings in ${suburb} on Swiftscope.${ratingLine}`,
     },
     {
       question: `How do I find a reliable ${tradeSingular.toLowerCase()} in ${suburb}, ${state}?`,
-      answer: `Post your job on Swiftscope — it's free. Local ${suburb} ${tradePlural.toLowerCase()} will respond with quotes. You can compare Google ratings and reviews before choosing who to contact.`,
+      answer: `Post your job on Swiftscope - it's free. Local ${suburb} ${tradePlural.toLowerCase()} will respond with quotes. You can compare Google ratings and reviews before choosing who to contact.`,
     },
     {
       question: `Do ${suburb} ${tradePlural.toLowerCase()} on Swiftscope have insurance?`,
