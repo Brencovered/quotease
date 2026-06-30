@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { MapPin, Star, Phone, Globe, Mail, ChevronLeft, ChevronRight, X, Send, Check, BadgeCheck, MessageSquare } from "lucide-react";
+import { getGoogleReviewsUrl } from "@/lib/seo/gbp";
 
 const TRADE_LABELS: Record<string,string> = {
   electrician:"Electrician", plumber:"Plumber", builder:"Builder",
@@ -60,7 +61,7 @@ function RatingLink({ rating, count, placeId }: { rating: number; count: number 
   );
   if (!placeId) return <div className="flex items-center gap-2 mb-3">{inner}</div>;
   return (
-    <a href={`https://search.google.com/local/reviews?placeid=${placeId}`} target="_blank" rel="noopener noreferrer"
+    <a href={getGoogleReviewsUrl(placeId)} target="_blank" rel="noopener noreferrer"
       className="group flex items-center gap-2 mb-3 w-fit -ml-1 px-1 rounded-md hover:bg-amber-50/80 transition-colors">
       {inner}
     </a>
