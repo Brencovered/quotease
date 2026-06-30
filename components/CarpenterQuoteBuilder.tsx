@@ -120,7 +120,15 @@ export default function CarpenterQuoteBuilder({ profile, materials, preClientId,
     if (!user) { setSaveMessage("Not logged in"); setSaving(false); return; }
     const businessId = await getActiveBusinessId(supabase, user.id);
     const resolvedClientId = await resolveClientId(supabase, businessId, clientId, clientName, clientEmail, siteAddress);
-    for (const m of lib) await supabase.from("material_items").upsert({ profile_id: businessId, trade: "carpenter", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost }, { onConflict: "profile_id,item_key" });
+    for (const m of lib) {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(m.item_key);
+      if (isUuid) {
+        await supabase.from("price_book_items").update({ description: m.label, cost_price: m.unit_cost, trade: "carpenter", unit: "ea" }).eq("id", m.item_key).eq("profile_id", businessId);
+      } else {
+        await supabase.from("price_book_items").insert({ profile_id: businessId, supplier: "Custom", description: m.label, cost_price: m.unit_cost, trade: "carpenter", unit: "ea" });
+      }
+      await supabase.from("material_items").upsert({ profile_id: businessId, trade: "carpenter", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost }, { onConflict: "profile_id,item_key" });
+    }
     const { data: quote, error } = await supabase.from("quotes").insert({ profile_id: businessId, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail, site_address: siteAddress, trade: "carpenter", job_type: intake.jobType, intake_data: intake, labour_hours: result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0), materials_cost: result.materialsCost + extraLinesTotals(extraLines, rate, margin).materials, total_cost: result.totalCost + extraLinesTotals(extraLines, rate, margin).total, payment_terms: paymentTerms,
       markup_materials: preMarkupMaterials ?? [], status: sendEmail ? "sent" : "draft", sent_at: sendEmail ? new Date().toISOString() : null }).select().single();
     if (error) { setSaveMessage(error.message); setSaving(false); return; }
