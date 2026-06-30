@@ -30,14 +30,14 @@ export default function Home() {
           <div className="max-w-[720px]">
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/15 rounded-full px-4 py-2 mb-8">
               <span className="w-2 h-2 rounded-full bg-[#ffb400]" />
-              <span className="text-[12px] font-bold text-white/80 uppercase tracking-widest">Built by a tradie, for tradies - teams of 1 to 10</span>
+              <span className="text-[12px] font-bold text-white/80 uppercase tracking-widest">Built by tradies, for tradies - teams of 1 to 10</span>
             </div>
             <h1 className="font-display uppercase leading-[0.88] mb-6">
               <span className="block text-[3.2rem] sm:text-[5rem] lg:text-[5.5rem] text-white">Scope it. Quote it.</span>
               <span className="block text-[3.2rem] sm:text-[5rem] lg:text-[5.5rem] text-[#ffb400]">Win it on site.</span>
             </h1>
             <p className="text-[17px] sm:text-[18px] leading-[1.65] text-[#c8d8e4] max-w-[560px] mb-10">
-              Swiftscope is built site-first — every tool is designed to be used standing in the job,
+              Swiftscope is built site-first - every tool is designed to be used standing in the job,
               not back at a desk. Mark it up, talk it through, or scope it live on screen, and send a
               priced quote before you&apos;ve left the driveway.
             </p>
@@ -54,7 +54,7 @@ export default function Home() {
               <span className="text-[#2a3a47]">|</span>
               <span>Unlimited users</span>
               <span className="text-[#2a3a47]">|</span>
-              <span>196 verified tradies listed</span>
+              <span>196 curated tradie listings</span>
             </div>
           </div>
         </div>
@@ -69,7 +69,7 @@ export default function Home() {
               Everything below happens<br />on site. Nothing waits for the desk.
             </h2>
             <p className="text-[15px] text-[#5a6a78] max-w-xl mx-auto">
-              Four ways to turn what you see on site into a sent, priced quote — pick whichever fits how you work.
+              Four ways to turn what you see on site into a sent, priced quote - pick whichever fits how you work.
             </p>
           </div>
 
@@ -81,7 +81,7 @@ export default function Home() {
               <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">Live on-screen quoting</h3>
               <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
                 Open Swiftscope and mark straight onto your screen what material, work, or zone needs capturing.
-                Press done — the materials and labour autoload into a quote with your pre-configured pricing.
+                Press done - the materials and labour autoload into a quote with your pre-configured pricing.
                 Press send. That&apos;s it.
               </p>
               <p className="text-[13px] font-bold text-[#0a1722]">Customers can accept in 30 seconds from send.</p>
@@ -93,9 +93,9 @@ export default function Home() {
               </div>
               <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">AI voice quote generator</h3>
               <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
-                Walk the site and talk to Swiftscope — describe the work and materials needed. Save, and a quote
+                Walk the site and talk to Swiftscope - describe the work and materials needed. Save, and a quote
                 generates automatically using your own pricing and materials. Not your thing on site? Record it
-                on the drive home instead — same result either way.
+                on the drive home instead - same result either way.
               </p>
               <p className="text-[13px] font-bold text-[#0a1722]">Customers can accept in 30 seconds from end of recording.</p>
             </div>
@@ -107,7 +107,7 @@ export default function Home() {
               <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">Plan &amp; drawing markup</h3>
               <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
                 Upload a plan or drawing. Drop markers configured to your materials, draw lines for cable or pipe
-                runs, or block out work zones. Press save — every markup syncs straight into a quote, quantities
+                runs, or block out work zones. Press save - every markup syncs straight into a quote, quantities
                 and costs already calculated.
               </p>
             </div>
@@ -172,7 +172,7 @@ export default function Home() {
               <h3 className="font-display text-[1.8rem] text-[#0a1722] mb-3">Find and hire the right tradie</h3>
               <p className="text-[15px] text-[#5a6a78] leading-relaxed mb-6">
                 Post your job once. Up to 3 matched local tradies respond with quotes.
-                No lead auction. No dodgy reviews. Every tradie on Swiftscope is verified.
+                No lead auction. No dodgy reviews. Every listing is curated by Swiftscope.
               </p>
               <div className="space-y-3 mb-8">
                 {[
@@ -297,7 +297,7 @@ export default function Home() {
           <div className="bg-white/[0.04] rounded-2xl p-8 border border-white/10">
             <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Homeowners</p>
             <h3 className="font-display text-[1.8rem] text-white mb-2">Need something done?</h3>
-            <p className="text-[#8aa4b4] text-[14px] mb-6">Post your job and get up to 3 quotes from verified local tradies.</p>
+            <p className="text-[#8aa4b4] text-[14px] mb-6">Post your job and get up to 3 quotes from local tradies.</p>
             <Link href="/get-quotes" className="inline-flex items-center gap-2 bg-white text-[#0a1722] font-extrabold text-[15px] px-8 py-4 rounded-xl hover:opacity-90">
               Get quotes - it&apos;s free <ArrowRight size={15} />
             </Link>
