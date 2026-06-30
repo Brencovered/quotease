@@ -8,13 +8,10 @@ import {
   Shield,
   Loader2,
   Send,
-  Check,
   Users,
   UserPlus,
   UserCheck,
-  X,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 
 export interface TeamMemberRow {
   id: string;
@@ -41,7 +38,6 @@ interface TeamPageClientProps {
   members: TeamMemberRow[];
   pendingInvites: PendingInviteRow[];
   isOwner: boolean;
-  businessName: string | null;
   currentUserEmail: string | null;
 }
 
@@ -60,11 +56,9 @@ export default function TeamPageClient({
   members: initialMembers,
   pendingInvites: initialPendingInvites,
   isOwner,
-  businessName,
   currentUserEmail,
 }: TeamPageClientProps) {
   const router = useRouter();
-  const supabase = createClient();
 
   const [members, setMembers] = useState(initialMembers);
   const [pendingInvites, setPendingInvites] = useState(initialPendingInvites);
@@ -263,7 +257,7 @@ export default function TeamPageClient({
                       </select>
                       <button onClick={() => removeMember(m.id)} disabled={removingId === m.id}
                         className="p-1.5 rounded-lg hover:bg-[var(--red-bg)] transition-colors disabled:opacity-50">
-                        <Trash2 size={14} className="text-[var(--ink-faint)] hover:text-[var(red)]" />
+                        <Trash2 size={14} className="text-[var(--ink-faint)]" />
                       </button>
                     </div>
                   )}
