@@ -104,7 +104,7 @@ export default async function TradeSuburbPage({ params }: PageProps) {
           </h1>
           <p className="text-[16px] text-[#8aa4b4] max-w-xl mb-6">
             {listingCount > 0
-              ? `Compare ${listingCount} local ${tradePlural.toLowerCase()} in ${suburb}${avgRating ? ` with an average rating of ${avgRating.toFixed(1)} stars` : ""}. Get free quotes from verified businesses.`
+              ? `Compare ${listingCount} local ${tradePlural.toLowerCase()} in ${suburb}${avgRating ? ` with an average rating of ${avgRating.toFixed(1)} stars` : ""}. Get free quotes from curated listings.`
               : `Looking for a ${tradeSingular.toLowerCase()} in ${suburb}? Post your job and get quotes from local tradies as they join Swiftscope.`}
           </p>
           <div className="flex flex-wrap gap-3">
@@ -171,7 +171,7 @@ export default async function TradeSuburbPage({ params }: PageProps) {
           <div className="max-w-5xl mx-auto px-6 py-16 text-center">
             <p className="font-display text-[1.6rem] text-[#0a1722] mb-2">No {tradePlural.toLowerCase()} listed in {suburb} yet</p>
             <p className="text-[14px] text-[#5a6a78] max-w-md mx-auto mb-6">
-              Be the first to know when one joins, or post your job now — tradies from nearby suburbs may still be able to help.
+              Be the first to know when one joins, or post your job now - tradies from nearby suburbs may still be able to help.
             </p>
             <Link href={`/get-quotes?trade=${parsed.trade}&suburb=${encodeURIComponent(suburb)}`} className="inline-flex items-center gap-2 bg-[#0a1722] text-white font-extrabold text-[15px] px-7 py-3.5 rounded-xl hover:opacity-90">
               Post your job <ArrowRight size={15} />
@@ -188,7 +188,7 @@ export default async function TradeSuburbPage({ params }: PageProps) {
               How much does a {tradeSingular.toLowerCase()} cost in {suburb}?
             </h2>
             <p className="text-[15px] text-[#5a6a78] leading-relaxed max-w-2xl mb-2">
-              {pricingRange}. Exact pricing depends on the job — get a free, no-obligation quote from a local {tradeSingular.toLowerCase()} to know exactly what your job will cost.
+              {pricingRange}. Exact pricing depends on the job - get a free, no-obligation quote from a local {tradeSingular.toLowerCase()} to know exactly what your job will cost.
             </p>
             <p className="text-[12px] text-[#8a9ba8] italic">
               General market guide only, not specific to any one business or job. Always confirm pricing directly with your chosen tradie.
@@ -218,7 +218,7 @@ export default async function TradeSuburbPage({ params }: PageProps) {
           <h3 className="font-display text-[1.8rem] sm:text-[2.2rem] text-white mb-3">
             Need a {tradeSingular.toLowerCase()} in {suburb}?
           </h3>
-          <p className="text-[#8aa4b4] text-[14px] mb-6">Get up to 3 free quotes from verified local tradies.</p>
+          <p className="text-[#8aa4b4] text-[14px] mb-6">Get up to 3 free quotes from local tradies.</p>
           <Link href={`/get-quotes?trade=${parsed.trade}&suburb=${encodeURIComponent(suburb)}`} className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-8 py-4 rounded-xl hover:opacity-90">
             Get free quotes <ArrowRight size={15} />
           </Link>
