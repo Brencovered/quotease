@@ -8,23 +8,54 @@ import { PLUMBER_DEFAULT_MATERIALS } from "@/lib/calcPlumber";
 import { CARPENTER_DEFAULT_MATERIALS } from "@/lib/calcCarpenter";
 import { ROOFER_DEFAULT_MATERIALS } from "@/lib/calcRoofer";
 import { GENERIC_TRADE_TEMPLATES } from "@/lib/genericTrades";
-import { Check, ChevronRight, ChevronLeft, Upload, Download } from "lucide-react";
+import {
+  Check,
+  ChevronRight,
+  ChevronLeft,
+  Upload,
+  Download,
+  Clock,
+  Lightbulb,
+  ArrowRight,
+  Settings,
+  Link2,
+  FileText,
+  TrendingUp,
+  Building2,
+  Sparkles,
+} from "lucide-react";
 
 const TRADES = [
-  { key: "electrician", label: "Electrician",      desc: "Powerpoints, switchboards, solar" },
-  { key: "plumber",     label: "Plumber",           desc: "Tapware, HWU, rough-ins, gas" },
-  { key: "carpenter",   label: "Carpenter",         desc: "Framing, doors, decking, fitout" },
-  { key: "roofer",      label: "Roofer",            desc: "Colorbond, tiles, gutters, skylights" },
-  { key: "painter",     label: "Painter",           desc: "Interior, exterior, feature walls" },
-  { key: "tiler",       label: "Tiler",             desc: "Floor, wall, wet areas, outdoor" },
-  { key: "landscaper",  label: "Landscaper",        desc: "Paving, turf, retaining, irrigation" },
-  { key: "arborist",    label: "Arborist",          desc: "Tree removal, pruning, grinding" },
-  { key: "concreter",   label: "Concreter",         desc: "Slabs, driveways, pathways" },
-  { key: "fencer",      label: "Fencer",            desc: "Colorbond, timber, pool fencing" },
-  { key: "aircon",      label: "Air conditioning",  desc: "Split systems, ducted, service" },
-  { key: "surveyor",    label: "Surveyor",          desc: "Feature, boundary, construction" },
-  { key: "custom",      label: "Custom",            desc: "Build your own quote template" },
+  { key: "electrician", label: "Electrician",      desc: "Powerpoints, switchboards, solar",       popular: true },
+  { key: "plumber",     label: "Plumber",           desc: "Tapware, HWU, rough-ins, gas",          popular: true },
+  { key: "carpenter",   label: "Carpenter",         desc: "Framing, doors, decking, fitout",       popular: true },
+  { key: "roofer",      label: "Roofer",            desc: "Colorbond, tiles, gutters, skylights",  popular: false },
+  { key: "painter",     label: "Painter",           desc: "Interior, exterior, feature walls",     popular: true },
+  { key: "tiler",       label: "Tiler",             desc: "Floor, wall, wet areas, outdoor",       popular: false },
+  { key: "landscaper",  label: "Landscaper",        desc: "Paving, turf, retaining, irrigation",   popular: false },
+  { key: "arborist",    label: "Arborist",          desc: "Tree removal, pruning, grinding",       popular: false },
+  { key: "concreter",   label: "Concreter",         desc: "Slabs, driveways, pathways",            popular: false },
+  { key: "fencer",      label: "Fencer",            desc: "Colorbond, timber, pool fencing",       popular: false },
+  { key: "aircon",      label: "Air conditioning",  desc: "Split systems, ducted, service",        popular: false },
+  { key: "surveyor",    label: "Surveyor",          desc: "Feature, boundary, construction",       popular: false },
+  { key: "custom",      label: "Custom",            desc: "Build your own quote template",         popular: false },
 ];
+
+const RATE_COMPARISON: Record<string, { min: number; max: number }> = {
+  electrician: { min: 85, max: 120 },
+  plumber:     { min: 90, max: 130 },
+  carpenter:   { min: 70, max: 100 },
+  painter:     { min: 55, max: 85 },
+  roofer:      { min: 65, max: 95 },
+  tiler:       { min: 60, max: 90 },
+  landscaper:  { min: 55, max: 80 },
+  arborist:    { min: 70, max: 110 },
+  concreter:   { min: 60, max: 90 },
+  fencer:      { min: 55, max: 85 },
+  aircon:      { min: 80, max: 120 },
+  surveyor:    { min: 90, max: 150 },
+  custom:      { min: 65, max: 110 },
+};
 
 const DEDICATED_DEFAULTS: Record<string, readonly { item_key: string; label: string; unit_cost: number }[]> = {
   electrician: ELECTRICIAN_DEFAULT_MATERIALS,
@@ -62,6 +93,8 @@ export default function OnboardingPage() {
   const [step,   setStep]   = useState(1);
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState<string | null>(null);
+  const [completed, setCompleted] = useState(false);
+  const [redirectCountdown, setRedirectCountdown] = useState(8);
 
   // When trades are selected, initialise their material defaults
   useEffect(() => {
@@ -81,6 +114,22 @@ export default function OnboardingPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected]);
+
+  // Auto-redirect after completion
+  useEffect(() => {
+    if (!completed) return;
+    const timer = setInterval(() => {
+      setRedirectCountdown((c) => {
+        if (c <= 1) {
+          clearInterval(timer);
+          router.push("/electrician/dashboard");
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [completed, router]);
 
   function toggleTrade(key: string) {
     setSelected((p) => p.includes(key) ? p.filter((k) => k !== key) : [...p, key]);
@@ -120,7 +169,7 @@ export default function OnboardingPage() {
       const keyIdx = header.findIndex((h) => h.includes("key") || h.includes("item"));
       const costIdx = header.findIndex((h) => h.includes("cost") || h.includes("price"));
       if (keyIdx === -1 || costIdx === -1) {
-        setCsvMessage("Couldn't find item and cost columns in that file - try the template instead.");
+        setCsvMessage("Could not find item and cost columns in that file - try the template instead.");
         return;
       }
       const updates = new Map<string, number>();
@@ -174,8 +223,7 @@ export default function OnboardingPage() {
       );
     }
 
-    router.push("/electrician/dashboard");
-    router.refresh();
+    setCompleted(true);
   }
 
   const canProceed = [
@@ -185,8 +233,135 @@ export default function OnboardingPage() {
     true,                                // step 4
   ][step - 1];
 
+  // Get first selected trade for rate comparison
+  const firstTrade = selected[0] ?? "";
+  const firstTradeLabel = TRADES.find((t) => t.key === firstTrade)?.label ?? "";
+  const rateCompare = RATE_COMPARISON[firstTrade] ?? null;
+
+  // Tip box component
+  function TipBox({ children, icon = "lightbulb" }: { children: React.ReactNode; icon?: "lightbulb" | "clock" | "trending" }) {
+    const IconComp = icon === "clock" ? Clock : icon === "trending" ? TrendingUp : Lightbulb;
+    return (
+      <div className="flex gap-2.5 bg-[var(--amber)]/8 border border-[var(--amber)]/20 rounded-xl px-4 py-3 mt-5">
+        <IconComp size={16} className="text-[var(--amber)] shrink-0 mt-0.5" />
+        <p className="text-[12.5px] text-[var(--ink-soft)] leading-relaxed">{children}</p>
+      </div>
+    );
+  }
+
+  if (completed) {
+    return (
+      <div className="min-h-screen bg-[var(--app-bg)] flex flex-col">
+        <style>{`
+          @keyframes drawCheck {
+            0% { stroke-dashoffset: 100; }
+            100% { stroke-dashoffset: 0; }
+          }
+          @keyframes scaleIn {
+            0% { transform: scale(0); opacity: 0; }
+            60% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+          }
+          @keyframes fadeUp {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes pulseSoft {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+          }
+          .checkCircle { animation: scaleIn 0.5s ease-out forwards; }
+          .checkPath { stroke-dasharray: 100; stroke-dashoffset: 100; animation: drawCheck 0.5s ease-out 0.4s forwards; }
+          .fadeUp1 { animation: fadeUp 0.5s ease-out 0.6s both; }
+          .fadeUp2 { animation: fadeUp 0.5s ease-out 0.8s both; }
+          .fadeUp3 { animation: fadeUp 0.5s ease-out 1.0s both; }
+          .fadeUp4 { animation: fadeUp 0.5s ease-out 1.2s both; }
+        `}</style>
+
+        {/* Header */}
+        <div className="bg-[var(--navy)] px-6 py-4 flex items-center justify-center shrink-0">
+          <span className="font-display text-[15px] tracking-widest text-white">SWIFTSCOPE</span>
+        </div>
+
+        <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
+          {/* Animated checkmark */}
+          <div className="checkCircle mb-6">
+            <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+              <circle cx="40" cy="40" r="36" stroke="var(--amber)" strokeWidth="3" fill="none" />
+              <path className="checkPath" d="M24 42L34 52L56 30" stroke="var(--amber)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            </svg>
+          </div>
+
+          <h1 className="fadeUp1 font-display text-[32px] text-[var(--ink)] text-center mb-2">You are all set!</h1>
+          <p className="fadeUp2 text-[14px] text-[var(--ink-soft)] text-center max-w-sm mb-8">
+            Your quote templates are ready. Here is what you can do now:
+          </p>
+
+          {/* Quick action cards */}
+          <div className="fadeUp3 grid gap-3 w-full max-w-sm mb-8">
+            <button
+              onClick={() => router.push("/electrician")}
+              className="flex items-center gap-3.5 bg-[var(--navy)] rounded-xl px-5 py-4 text-left hover:bg-[var(--navy)]/90 transition-all hover:scale-[1.02] active:scale-[0.98]">
+              <div className="w-10 h-10 rounded-lg bg-[var(--amber)]/15 flex items-center justify-center shrink-0">
+                <FileText size={18} className="text-[var(--amber)]" />
+              </div>
+              <div>
+                <p className="text-white font-bold text-[14px]">Create your first quote</p>
+                <p className="text-[var(--steel-2)] text-[12px]">Build a quote in under 2 minutes</p>
+              </div>
+              <ArrowRight size={16} className="text-[var(--steel-3)] ml-auto" />
+            </button>
+
+            <button
+              onClick={() => router.push("/settings")}
+              className="flex items-center gap-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-xl px-5 py-4 text-left hover:border-[var(--navy)]/30 transition-all hover:scale-[1.02] active:scale-[0.98]">
+              <div className="w-10 h-10 rounded-lg bg-[var(--navy)]/8 flex items-center justify-center shrink-0">
+                <Settings size={18} className="text-[var(--navy)]" />
+              </div>
+              <div>
+                <p className="text-[var(--ink)] font-bold text-[14px]">Set up your logo</p>
+                <p className="text-[var(--ink-faint)] text-[12px]">Add your branding to quotes</p>
+              </div>
+              <ArrowRight size={16} className="text-[var(--steel-3)] ml-auto" />
+            </button>
+
+            <button
+              onClick={() => router.push("/settings")}
+              className="flex items-center gap-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-xl px-5 py-4 text-left hover:border-[var(--navy)]/30 transition-all hover:scale-[1.02] active:scale-[0.98]">
+              <div className="w-10 h-10 rounded-lg bg-[var(--navy)]/8 flex items-center justify-center shrink-0">
+                <Link2 size={18} className="text-[var(--navy)]" />
+              </div>
+              <div>
+                <p className="text-[var(--ink)] font-bold text-[14px]">Connect Xero</p>
+                <p className="text-[var(--ink-faint)] text-[12px]">Sync invoices automatically</p>
+              </div>
+              <ArrowRight size={16} className="text-[var(--steel-3)] ml-auto" />
+            </button>
+          </div>
+
+          <p className="fadeUp4 text-[12px] text-[var(--ink-faint)]">
+            Taking you to your dashboard in {redirectCountdown} seconds...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[var(--app-bg)] flex flex-col">
+      <style>{`
+        @keyframes stepEnter {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulseAmber {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(255, 180, 0, 0.25); }
+          50%      { box-shadow: 0 0 0 6px rgba(255, 180, 0, 0); }
+        }
+        .stepEnter { animation: stepEnter 0.35s ease-out both; }
+        .btnPrimaryPulse:hover { animation: pulseAmber 1s ease-in-out infinite; }
+      `}</style>
+
       {/* Header */}
       <div className="bg-[var(--navy)] px-6 py-4 flex items-center justify-between shrink-0">
         <span className="font-display text-[15px] tracking-widest text-white">SWIFTSCOPE</span>
@@ -195,15 +370,28 @@ export default function OnboardingPage() {
 
       {/* Progress bar */}
       <div className="bg-[var(--navy)] px-6 pb-4 shrink-0">
-        <div className="flex gap-1.5">
-          {STEPS.map((s) => (
-            <div key={s.n} className="flex-1">
-              <div className={`h-1 rounded-full transition-all ${s.n <= step ? "bg-[var(--amber)]" : "bg-white/20"}`} />
-              <p className={`text-[10px] font-semibold mt-1.5 ${s.n <= step ? "text-[var(--amber)]" : "text-white/30"}`}>
-                {s.label}
-              </p>
-            </div>
-          ))}
+        <div className="flex gap-2">
+          {STEPS.map((s) => {
+            const isActive = s.n === step;
+            const isComplete = s.n < step;
+            return (
+              <div key={s.n} className="flex-1">
+                <div className="relative h-2 rounded-full bg-white/15 overflow-hidden">
+                  <div
+                    className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ease-out ${
+                      isComplete || isActive ? "bg-[var(--amber)]" : "bg-transparent"
+                    }`}
+                    style={{ width: isComplete ? "100%" : isActive ? "60%" : "0%" }}
+                  />
+                </div>
+                <p className={`text-[10px] font-bold mt-2 transition-colors duration-300 ${
+                  isActive ? "text-[var(--amber)]" : isComplete ? "text-white/70" : "text-white/25"
+                }`}>
+                  {isComplete ? "Done" : s.label}
+                </p>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -212,18 +400,26 @@ export default function OnboardingPage() {
 
           {/* STEP 1 - Pick trades */}
           {step === 1 && (
-            <>
-              <h1 className="font-display text-[28px] text-[var(--ink)] mb-1">What trades do you do?</h1>
-              <p className="text-[14px] text-[var(--ink-faint)] mb-6">Pick all that apply. You can change this in Settings.</p>
+            <div className="stepEnter" key="step1">
+              <h1 className="font-display text-[28px] text-[var(--ink)] mb-2">What trades do you do?</h1>
+              <p className="text-[14px] text-[var(--ink-soft)] leading-relaxed mb-6">
+                Pick your trades and we will set up quote templates with the right materials and pricing for each one. This takes 2 minutes and saves you hours every week.
+              </p>
+
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-6">
                 {TRADES.map((t) => {
                   const on = selected.includes(t.key);
                   return (
                     <button key={t.key} onClick={() => toggleTrade(t.key)}
-                      className={`text-left rounded-xl border-2 px-3 py-3 transition-all ${on
+                      className={`relative text-left rounded-xl border-2 px-3 py-3 transition-all ${on
                         ? "border-[var(--navy)] bg-[var(--navy)]"
                         : "border-[var(--line)] bg-[var(--surface)] hover:border-[var(--navy)]/40"
                       }`}>
+                      {t.popular && !on && (
+                        <span className="absolute -top-2 -right-1 bg-[var(--amber)] text-[var(--navy)] text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-md">
+                          Popular
+                        </span>
+                      )}
                       <div className="flex items-center justify-between mb-1">
                         <p className={`font-bold text-[13px] ${on ? "text-white" : "text-[var(--ink)]"}`}>{t.label}</p>
                         {on && <Check size={13} className="text-[var(--amber)] shrink-0" strokeWidth={3} />}
@@ -233,21 +429,43 @@ export default function OnboardingPage() {
                   );
                 })}
               </div>
+
               {selected.length > 0 && (
                 <p className="text-[12.5px] text-[var(--ink-faint)] text-center mb-4">
                   {selected.length} trade{selected.length !== 1 ? "s" : ""} selected
                 </p>
               )}
-            </>
+
+              <TipBox>
+                Most tradies pick 1-2 trades. You can always add more later in Settings.
+              </TipBox>
+            </div>
           )}
 
           {/* STEP 2 - Business details */}
           {step === 2 && (
-            <>
-              <h1 className="font-display text-[28px] text-[var(--ink)] mb-1">Your business details</h1>
-              <p className="text-[14px] text-[var(--ink-faint)] mb-6">
-                These print on every quote you send. Get them right once, they fill in automatically.
+            <div className="stepEnter" key="step2">
+              <h1 className="font-display text-[28px] text-[var(--ink)] mb-2">Your business details</h1>
+              <p className="text-[14px] text-[var(--ink-soft)] leading-relaxed mb-6">
+                These details appear on every quote you send. Set them up once, never think about them again.
               </p>
+
+              {/* Business name preview */}
+              {businessName.trim() && (
+                <div className="bg-[var(--navy)] rounded-xl p-4 mb-5">
+                  <p className="text-[var(--steel-3)] font-bold uppercase tracking-wider text-[9px] mb-2">Quote preview</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+                      <Building2 size={16} className="text-[var(--amber)]" />
+                    </div>
+                    <div>
+                      <p className="text-white font-bold text-[14px]">{businessName}</p>
+                      <p className="text-[var(--steel-2)] text-[11px]">{abn ? `ABN: ${abn}` : "Your ABN will appear here"}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="card space-y-4 mb-4">
                 <div>
                   <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">
@@ -279,18 +497,19 @@ export default function OnboardingPage() {
                     className="app-field" placeholder="Suburb, State" />
                 </div>
               </div>
-              <p className="text-[12px] text-[var(--ink-faint)] text-center">
-                You can add your logo and payment details in Settings after setup.
-              </p>
-            </>
+
+              <TipBox icon="lightbulb">
+                Your ABN and licence number build trust with customers. Add them now or come back to Settings later.
+              </TipBox>
+            </div>
           )}
 
           {/* STEP 3 - Rates */}
           {step === 3 && (
-            <>
-              <h1 className="font-display text-[28px] text-[var(--ink)] mb-1">Your rates</h1>
-              <p className="text-[14px] text-[var(--ink-faint)] mb-6">
-                These two numbers drive every quote total. Set them once, adjust any time.
+            <div className="stepEnter" key="step3">
+              <h1 className="font-display text-[28px] text-[var(--ink)] mb-2">Your rates</h1>
+              <p className="text-[14px] text-[var(--ink-soft)] leading-relaxed mb-6">
+                These two numbers power every quote. Most tradies charge $75-$150/hr depending on trade and area.
               </p>
 
               <div className="card space-y-5 mb-4">
@@ -309,7 +528,7 @@ export default function OnboardingPage() {
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] text-[13px] pointer-events-none">/hr</span>
                   </div>
                   <p className="text-[12px] text-[var(--ink-faint)] mt-1.5">
-                    What you charge for your time. Tradies typically charge $75-$150/hr depending on trade and area.
+                    What you charge for your time.
                   </p>
                 </div>
 
@@ -331,6 +550,30 @@ export default function OnboardingPage() {
                   </p>
                 </div>
               </div>
+
+              {/* Rate comparison for selected trade */}
+              {rateCompare && (
+                <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-4 mb-4">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <TrendingUp size={14} className="text-[var(--amber)]" />
+                    <p className="text-[12px] font-bold text-[var(--ink)]">What {firstTradeLabel}s typically charge</p>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[12px] text-[var(--ink-soft)]">Hourly rate range</span>
+                    <span className="text-[14px] font-bold text-[var(--navy)]">${rateCompare.min} - ${rateCompare.max}/hr</span>
+                  </div>
+                  <div className="mt-2 h-1.5 bg-[var(--app-bg)] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[var(--amber)] rounded-full transition-all duration-700"
+                      style={{ width: `${Math.min(100, Math.max(15, ((hourlyRate - rateCompare.min) / (rateCompare.max - rateCompare.min)) * 100))}%` }}
+                    />
+                  </div>
+                  <p className="text-[11px] text-[var(--ink-faint)] mt-1.5">
+                    Your rate: <span className="font-semibold text-[var(--ink-soft)]">${hourlyRate}/hr</span>
+                    {hourlyRate < rateCompare.min ? " - below typical range" : hourlyRate > rateCompare.max ? " - above typical range" : " - within typical range"}
+                  </p>
+                </div>
+              )}
 
               {/* Live example */}
               {hourlyRate > 0 && (
@@ -354,18 +597,19 @@ export default function OnboardingPage() {
                   </div>
                 </div>
               )}
-            </>
+
+              <TipBox icon="lightbulb">
+                You can change this any time in Settings. Start with your current rate.
+              </TipBox>
+            </div>
           )}
 
           {/* STEP 4 - Material costs */}
           {step === 4 && (
-            <>
-              <h1 className="font-display text-[28px] text-[var(--ink)] mb-1">Your material costs</h1>
-              <p className="text-[14px] text-[var(--ink-faint)] mb-2">
-                These are your supplier prices ex-GST. We have pre-filled common items - update any that are wrong for your area.
-              </p>
-              <p className="text-[12.5px] text-[var(--amber-deep)] font-semibold mb-5">
-                You can skip this and update prices in Settings later - but accurate prices = accurate quotes.
+            <div className="stepEnter" key="step4">
+              <h1 className="font-display text-[28px] text-[var(--ink)] mb-2">Your material costs</h1>
+              <p className="text-[14px] text-[var(--ink-soft)] leading-relaxed mb-4">
+                We have pre-filled typical prices. Update any that are different for your suppliers.
               </p>
 
               {/* Trade tabs if multiple */}
@@ -385,14 +629,14 @@ export default function OnboardingPage() {
                 </div>
               )}
 
-              {/* CSV import - bulk-set prices from a supplier export, or fill in the template once */}
+              {/* CSV import */}
               {activeTradeMat && (
                 <div className="flex flex-wrap items-center gap-2 mb-4">
-                  <label className="btn-secondary text-[12.5px] py-2 px-3 cursor-pointer">
+                  <label className="btn-secondary text-[12.5px] py-2 px-3 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform">
                     <Upload size={13} /> Upload price CSV
                     <input type="file" accept=".csv" className="hidden" onChange={(e) => handleCsvUpload(activeTradeMat, e)} />
                   </label>
-                  <button onClick={() => downloadCsvTemplate(activeTradeMat)} className="btn-secondary text-[12.5px] py-2 px-3">
+                  <button onClick={() => downloadCsvTemplate(activeTradeMat)} className="btn-secondary text-[12.5px] py-2 px-3 hover:scale-[1.02] active:scale-[0.98] transition-transform">
                     <Download size={13} /> Download template
                   </button>
                   {csvMessage && <span className="text-[12.5px] text-[var(--ink-soft)]">{csvMessage}</span>}
@@ -408,7 +652,7 @@ export default function OnboardingPage() {
                   </div>
                   <div className="divide-y divide-[var(--line-subtle)] max-h-[380px] overflow-y-auto">
                     {matsByTrade[activeTradeMat].map((r) => (
-                      <div key={r.item_key} className="grid grid-cols-[1fr_110px] items-center px-4 py-2.5 hover:bg-[var(--app-bg)]">
+                      <div key={r.item_key} className="grid grid-cols-[1fr_110px] items-center px-4 py-2.5 hover:bg-[var(--app-bg)] transition-colors">
                         <span className="text-[13.5px] text-[var(--ink)] pr-3">{r.label}</span>
                         <div className="flex items-center gap-1 justify-end">
                           <span className="text-[var(--ink-faint)] text-[12px]">$</span>
@@ -425,23 +669,32 @@ export default function OnboardingPage() {
                 </div>
               )}
 
-              <p className="text-[12px] text-[var(--ink-faint)]">
-                You can add, remove and edit items any time from Settings &gt; Material Pricing.
-              </p>
-            </>
+              <TipBox icon="lightbulb">
+                Pro tip: Download the template, fill it in Excel, then upload it to update everything at once.
+              </TipBox>
+            </div>
           )}
 
           {/* Error */}
           {error && (
-            <div className="bg-[var(--red-bg)] border border-red-200 rounded-xl px-4 py-3 text-[13px] text-[var(--red)] font-semibold mt-4">
-              {error}
+            <div className="bg-[var(--red-bg)] border border-red-200 rounded-xl px-4 py-3 text-[13px] text-[var(--red)] font-semibold mt-4 flex items-start gap-2.5">
+              <span className="shrink-0 mt-0.5">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M8 5v4M8 11h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </span>
+              {error === "Add your business name - it goes on every quote."
+                ? error
+                : `Oops - ${error}. Give it another try or reach out if you need a hand.`}
             </div>
           )}
 
           {/* Navigation */}
           <div className="flex gap-3 mt-6">
             {step > 1 && (
-              <button onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3 | 4)} className="btn-secondary flex-1">
+              <button onClick={() => { setError(null); setStep((s) => (s - 1) as 1 | 2 | 3 | 4); }}
+                className="btn-secondary flex-1 text-[var(--ink-faint)] hover:text-[var(--ink)] transition-colors">
                 <ChevronLeft size={16} /> Back
               </button>
             )}
@@ -453,18 +706,19 @@ export default function OnboardingPage() {
                   setStep((s) => (s + 1) as 1 | 2 | 3 | 4);
                 }}
                 disabled={!canProceed}
-                className="btn-primary flex-1">
+                className="btn-primary flex-1 btnPrimaryPulse disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-[1.02] active:scale-[0.98]">
                 {step === 1 ? `Continue with ${selected.length} trade${selected.length !== 1 ? "s" : ""}` : "Continue"} <ChevronRight size={16} />
               </button>
             ) : (
-              <button onClick={finish} disabled={saving} className="btn-primary flex-1">
+              <button onClick={finish} disabled={saving} className="btn-primary flex-1 btnPrimaryPulse transition-all hover:scale-[1.02] active:scale-[0.98]">
                 {saving ? "Setting up..." : "Start quoting"}
               </button>
             )}
           </div>
 
           {step === 4 && (
-            <button onClick={finish} disabled={saving} className="w-full text-center text-[12.5px] text-[var(--ink-faint)] mt-3 hover:text-[var(--ink)] transition-colors">
+            <button onClick={finish} disabled={saving}
+              className="w-full text-center text-[13px] text-[var(--ink-faint)] mt-4 py-2 hover:text-[var(--ink)] transition-colors font-semibold">
               Skip and set prices later
             </button>
           )}
