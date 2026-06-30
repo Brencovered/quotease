@@ -65,9 +65,9 @@ export default function FeaturesPage() {
                 <p className="text-[#8aa4b4] text-[14px] mb-6">Approximate costs for a typical sole trader or small trade business.</p>
                 <div className="space-y-2">
                   {[
-                    ["HiPages lead credits",      "$80–300/month"],
-                    ["Fergus or ServiceM8",        "$40–130/month"],
-                    ["GroundPlan (drawings)",       "$60–100/month"],
+                    ["HiPages lead credits",      "$80-300/month"],
+                    ["Fergus or ServiceM8",        "$40-130/month"],
+                    ["GroundPlan (drawings)",       "$60-100/month"],
                   ].map(([tool, cost]) => (
                     <div key={tool} className="flex items-center justify-between py-2 border-b border-white/[0.07]">
                       <span className="text-[14px] text-[#8aa4b4]">{tool}</span>
@@ -76,7 +76,7 @@ export default function FeaturesPage() {
                   ))}
                   <div className="flex items-center justify-between pt-3">
                     <span className="text-[15px] font-bold text-white">Subtotal</span>
-                    <span className="text-[15px] font-bold text-red-400 line-through">$180–530/month</span>
+                    <span className="text-[15px] font-bold text-red-400 line-through">$180-530/month</span>
                   </div>
                 </div>
               </div>
@@ -176,8 +176,8 @@ export default function FeaturesPage() {
                 {[
                   {
                     feature:"Lead generation",
-                    detail:"Swiftscope connects homeowners directly to tradies via the directory and quote request system. You pay $10/month flat - no auction, no credits, no per-lead cost. HiPages charges $30–150 per lead depending on trade and urgency.",
-                    us:"$10/mo flat",    c1:"$30–150/lead",    c2:"Not included",    c3:"Not included",  c4:"Not included",  c5:"Not included", usBest:true,
+                    detail:"Swiftscope connects homeowners directly to tradies via the directory and quote request system. You pay $10/month flat - no auction, no credits, no per-lead cost. HiPages charges $30-150 per lead depending on trade and urgency.",
+                    us:"$10/mo flat",    c1:"$30-150/lead",    c2:"Not included",    c3:"Not included",  c4:"Not included",  c5:"Not included", usBest:true,
                   },
                   {
                     feature:"Job management",
@@ -191,8 +191,8 @@ export default function FeaturesPage() {
                   },
                   {
                     feature:"Drawing markup",
-                    detail:"Swiftscope includes drawing markup natively - upload a site plan, draw cable runs or pipe routes, count items, and those quantities flow directly into the quote. Fergus requires GroundPlan as a separate integration at $60–100/month extra.",
-                    us:"Built in",       c1:"Not included",    c2:"Extra ($60–100/mo)", c3:"Basic photos", c4:"Not available", c5:"Basic",       usBest:true,
+                    detail:"Swiftscope includes drawing markup natively - upload a site plan, draw cable runs or pipe routes, count items, and those quantities flow directly into the quote. Fergus requires GroundPlan as a separate integration at $60-100/month extra.",
+                    us:"Built in",       c1:"Not included",    c2:"Extra ($60-100/mo)", c3:"Basic photos", c4:"Not available", c5:"Basic",       usBest:true,
                   },
                   {
                     feature:"Xero integration",
@@ -212,7 +212,7 @@ export default function FeaturesPage() {
                   {
                     feature:"Pricing",
                     detail:"Swiftscope is $45/month flat for the full platform - unlimited seats, unlimited quotes, unlimited jobs. The directory add-on (leads) is $10/month extra. Per-user pricing at competitors means costs scale steeply as you add staff.",
-                    us:"$45/mo flat",    c1:"$80–300/mo + leads", c2:"~$40/user/mo", c3:"$29–349/mo",   c4:"$48–62/user/mo", c5:"$75+/user/mo", usBest:true,
+                    us:"$45/mo flat",    c1:"$80-300/mo + leads", c2:"~$40/user/mo", c3:"$29-349/mo",   c4:"$48-62/user/mo", c5:"$75+/user/mo", usBest:true,
                   },
                   {
                     feature:"Unlimited users",
@@ -222,7 +222,7 @@ export default function FeaturesPage() {
                   {
                     feature:"Setup time",
                     detail:"Swiftscope is designed to have you quoting on the same day you sign up. No implementation project, no onboarding consultant. SimPro and Fergus often require days to weeks of configuration for larger businesses.",
-                    us:"Same day",       c1:"Same day",        c2:"Days to weeks",   c3:"1–2 days",      c4:"Half day",      c5:"Weeks",        usBest:true,
+                    us:"Same day",       c1:"Same day",        c2:"Days to weeks",   c3:"1-2 days",      c4:"Half day",      c5:"Weeks",        usBest:true,
                   },
                 ].map((row) => (
                   <tr key={row.feature} className="group">
