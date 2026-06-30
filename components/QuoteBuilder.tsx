@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
@@ -247,7 +247,7 @@ export default function QuoteBuilder({
     }
   }
 
-  async function saveAndSend(sendEmail: boolean) {
+  async function saveAndSend(sendEmail: boolean, includeBrochure?: boolean) {
     setSaving(true);
     setSaveMessage(null);
     const supabase = createClient();
@@ -261,6 +261,28 @@ export default function QuoteBuilder({
     // on this job later.
     const resolvedClientId = await resolveClientId(supabase, businessId, clientId, clientName, clientEmail, siteAddress);
 
+    /* Save to price_book_items (primary catalog) */
+    for (const m of lib) {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(m.item_key);
+      if (isUuid) {
+        await supabase.from("price_book_items").update({
+          description: m.label,
+          cost_price: m.unit_cost,
+          trade: "electrician",
+          unit: "ea",
+        }).eq("id", m.item_key).eq("profile_id", businessId);
+      } else {
+        await supabase.from("price_book_items").insert({
+          profile_id: businessId,
+          supplier: "Custom",
+          description: m.label,
+          cost_price: m.unit_cost,
+          trade: "electrician",
+          unit: "ea",
+        });
+      }
+    }
+    /* Also keep material_items in sync for other components */
     for (const m of lib) {
       await supabase.from("material_items").upsert(
         { profile_id: businessId, trade: "electrician", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost },
@@ -289,6 +311,7 @@ export default function QuoteBuilder({
       status:  sendEmail ? "sent" : "draft",
       sent_at: sendEmail ? new Date().toISOString() : null,
       markup_materials: preMarkupMaterials ?? [],
+      include_brochure: includeBrochure ?? false,
     }).select().single();
 
     if (error) { setSaveMessage(error.message); setSaving(false); return; }
@@ -307,7 +330,7 @@ export default function QuoteBuilder({
     }
 
     if (sendEmail) {
-      const res = await fetch("/api/quotes/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quoteId: quote.id }) });
+      const res = await fetch("/api/quotes/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quoteId: quote.id, includeBrochure: includeBrochure ?? false }) });
       if (!res.ok) {
         const b = await res.json().catch(() => ({}));
         setSaveMessage(`Saved - but sending failed: ${b.error ?? res.statusText}`);
@@ -940,7 +963,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
   customTermsTotal: number;
   clientName: string; clientEmail: string; siteAddress: string;
   saving: boolean; saveMessage: string | null; savedQuoteId: string | null;
-  onSave: (send: boolean) => void;
+  onSave: (send: boolean, includeBrochure?: boolean) => void;
   extraLines: {id:string;label:string;hours:number;materialsCost:number;note:string}[];
   setExtraLines: React.Dispatch<React.SetStateAction<{id:string;label:string;hours:number;materialsCost:number;note:string}[]>>;
   rate: number; margin: number; markupTotal: number;
@@ -953,6 +976,18 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
   // down to this component) -- siteTotal alone doesn't give us the
   // materials-only split this breakdown needs.
   const siteMaterials = siteItems.reduce((s, i) => s + i.materialsCost * (1 + (margin ?? 20) / 100), 0);
+
+  /* Brochure inclusion */
+  const [includeBrochure, setIncludeBrochure] = useState(false);
+  const [brochureConfigured, setBrochureConfigured] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetch("/api/comms/branding").then(r => r.json()).then(d => {
+      const hasContent = !!(d.branding?.brochure_title || d.branding?.branding_tagline || d.branding?.brochure_custom_text);
+      setBrochureConfigured(hasContent);
+    }).catch(() => setBrochureConfigured(false));
+  }, []);
+
   return (
     <div className="space-y-4">
 
@@ -1071,9 +1106,24 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
         )}
       </div>
 
+      {/* Brochure checkbox */}
+      {brochureConfigured && (
+        <label className="flex items-center gap-3 py-2 cursor-pointer card">
+          <input
+            type="checkbox"
+            checked={includeBrochure}
+            onChange={(e) => setIncludeBrochure(e.target.checked)}
+          />
+          <div>
+            <span className="text-[14.5px] text-[var(--ink)] font-semibold">Include company brochure</span>
+            <p className="text-[12px] text-[var(--ink-faint)] mt-0.5">Attach your company brochure to the quote email</p>
+          </div>
+        </label>
+      )}
+
       {/* Save / send */}
       <div className="space-y-3">
-        <button onClick={() => onSave(true)} disabled={saving || !clientEmail} className="btn-primary">
+        <button onClick={() => onSave(true, includeBrochure)} disabled={saving || !clientEmail} className="btn-primary">
           {saving ? "Sending..." : "Send quote to client"}
         </button>
         <button onClick={() => onSave(false)} disabled={saving} className="btn-secondary w-full justify-center">
