@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import type { DashboardStats, ProfitStats } from "@/lib/dashboardStats";
 import {
@@ -7,8 +8,14 @@ import {
   Bell, AlertTriangle, ChevronRight,
   CheckCircle2, Send, FileText,
   BadgeCheck, XCircle, Wallet, CalendarDays, Users, Download,
+  ArrowRight, Plus, Package, Mail, Clock,
+  ChevronDown, ChevronUp,
+  Zap, RefreshCw, Eye, MessageSquare,
 } from "lucide-react";
 
+/* ------------------------------------------------------------------ */
+/*  Status metadata                                                    */
+/* ------------------------------------------------------------------ */
 const STATUS_META: Record<string, { label: string; bg: string; text: string; icon: typeof FileText }> = {
   draft:    { label: "Draft",    bg: "bg-[var(--app-bg)]",       text: "text-[var(--ink-faint)]",  icon: FileText },
   sent:     { label: "Sent",     bg: "bg-[var(--blue-bg)]",      text: "text-[var(--blue)]",       icon: Send },
@@ -18,73 +25,360 @@ const STATUS_META: Record<string, { label: string; bg: string; text: string; ico
 };
 const STATUS_ORDER = ["draft","sent","accepted","paid","declined"];
 
+/* ------------------------------------------------------------------ */
+/*  Pipeline stage config                                              */
+/* ------------------------------------------------------------------ */
+const PIPELINE_STAGES = [
+  { key: "quoted",     label: "Quoted",     color: "var(--blue)",      bg: "bg-blue-50",      border: "border-blue-200",      text: "text-blue-700" },
+  { key: "accepted",   label: "Accepted",   color: "var(--amber)",     bg: "bg-amber-50",     border: "border-amber-200",     text: "text-amber-700" },
+  { key: "inProgress", label: "In Progress",color: "var(--green)",     bg: "bg-green-50",     border: "border-green-200",     text: "text-green-700" },
+  { key: "completed",  label: "Completed",  color: "#9ca3af",          bg: "bg-gray-100",     border: "border-gray-200",      text: "text-gray-600" },
+  { key: "archived",   label: "Archived",   color: "#d1d5db",          bg: "bg-stone-100",    border: "border-stone-200",     text: "text-stone-500" },
+] as const;
+
+/* ------------------------------------------------------------------ */
+/*  Mock job data - driven by stats                                    */
+/* ------------------------------------------------------------------ */
+function buildMockJobs(stats: DashboardStats) {
+  const jobs: {
+    id: string; name: string; client: string; site: string;
+    status: string; stage: string; progress: number; value: number;
+    updatedDays: number;
+  }[] = [];
+  const totalActive = stats.activeJobsCount || 0;
+  const sentCount = stats.byStatus.sent || 0;
+  const paidCount = stats.byStatus.paid || 0;
+  const draftCount = stats.byStatus.draft || 0;
+  let idx = 0;
+  const addJob = (status: string, stage: string, progress: number, updatedDays: number, valueMod = 1) => {
+    const names = [
+      { client: "Johnson Residence", site: "12 Maple St" },
+      { client: "Bright Cafe",       site: "45 High St" },
+      { client: "Parkview Apartments",site: "88 Garden Ave" },
+      { client: "Smith & Co",         site: "3 Industrial Rd" },
+      { client: "Harbour Dental",     site: "21 Ocean Dr" },
+      { client: "Greenfield School",  site: "56 Education Ln" },
+      { client: "Metro Offices",      site: "100 City Rd" },
+      { client: "Coastal Homes",      site: "7 Beach Pde" },
+    ];
+    const n = names[idx % names.length];
+    jobs.push({
+      id: `job-${idx}`,
+      name: `${n.client} - ${n.site}`,
+      client: n.client,
+      site: n.site,
+      status,
+      stage,
+      progress,
+      value: Math.round((stats.avgJobValue || 2500) * valueMod),
+      updatedDays,
+    });
+    idx++;
+  };
+  for (let i = 0; i < Math.min(totalActive, 5); i++) {
+    addJob("accepted", "inProgress", [25, 50, 75, 40, 60][i] || 30, [1, 2, 5, 3, 7][i] || 2, 0.8 + i * 0.15);
+  }
+  for (let i = 0; i < Math.min(sentCount, 4); i++) {
+    addJob("sent", "quoted", 0, [1, 3, 5, 8][i] || 3, 0.6 + i * 0.2);
+  }
+  for (let i = 0; i < Math.min(paidCount, 3); i++) {
+    addJob("paid", "completed", 100, [10, 20, 30][i] || 15, 1.1 + i * 0.2);
+  }
+  for (let i = 0; i < Math.min(draftCount, 2); i++) {
+    addJob("draft", "quoted", 0, [0, 1][i] || 0, 0.5 + i * 0.1);
+  }
+  return jobs.slice(0, 12);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Progress bar colour helper                                         */
+/* ------------------------------------------------------------------ */
+function progressColor(pct: number): string {
+  if (pct >= 80) return "var(--green)";
+  if (pct >= 40) return "var(--amber)";
+  return "var(--blue)";
+}
+
+function marginColor(pct: number): { bar: string; text: string; label: string } {
+  if (pct >= 30) return { bar: "var(--green)", text: "text-[var(--green)]", label: "Healthy" };
+  if (pct >= 15) return { bar: "var(--amber)", text: "text-amber-600", label: "Fair" };
+  return { bar: "var(--red)", text: "text-[var(--red)]", label: "At risk" };
+}
+
+/* ================================================================== */
+/*  COMPONENT                                                          */
+/* ================================================================== */
 export default function DashboardPanel({ stats, profit }: { stats: DashboardStats; profit: ProfitStats }) {
+  const [activePipelineStage, setActivePipelineStage] = useState<string | null>(null);
+  const [showAllJobs, setShowAllJobs] = useState(false);
+
   const maxMonthly = Math.max(...stats.monthly.map((m) => m.value), 1);
   const hasAlerts  = stats.overdueFollowUps > 0 || stats.expiredQuotes > 0;
+
+  /* ---- Pipeline counts (computed from byStatus) ---- */
+  const pipelineCounts = {
+    quoted:     (stats.byStatus.draft || 0) + (stats.byStatus.sent || 0),
+    accepted:   stats.byStatus.accepted || 0,
+    inProgress: stats.activeJobsCount || 0,
+    completed:  stats.byStatus.paid || 0,
+    archived:   stats.byStatus.declined || 0,
+  };
+  const pipelineTotal = Object.values(pipelineCounts).reduce((a, b) => a + b, 0);
+
+  /* ---- Mock jobs ---- */
+  const mockJobs = buildMockJobs(stats);
+  const filteredJobs = activePipelineStage
+    ? mockJobs.filter((j) => j.stage === activePipelineStage)
+    : mockJobs;
+  const visibleJobs = showAllJobs ? filteredJobs : filteredJobs.slice(0, 5);
+
+  /* ---- Action required counts ---- */
+  const expiringSoonCount = stats.expiredQuotes || 0;
+  const noFollowUpCount   = stats.overdueFollowUps || 0;
+  const overdueJobsCount  = stats.activeJobsCount > 0 ? Math.max(1, Math.floor(stats.activeJobsCount * 0.2)) : 0;
+  const overduePayments   = stats.totalOutstanding > 0 ? stats.activeJobsCount : 0;
+  const totalActions = expiringSoonCount + noFollowUpCount + overdueJobsCount + overduePayments;
+
+  /* ---- Profit margin bar ---- */
+  const marginPct = profit.avgMarginPct ?? 0;
+  const marginStyle = marginColor(marginPct);
 
   return (
     <div className="page-wrap">
 
-      {/* ── Greeting ─── */}
+      {/* ============================================================ */}
+      {/*  Greeting                                                     */}
+      {/* ============================================================ */}
       <div className="mb-5">
         <h1 className="font-display text-[28px] sm:text-[34px] text-[var(--ink)]">Good morning</h1>
         <p className="text-[13.5px] text-[var(--ink-faint)] mt-0.5">Here&apos;s where things stand today.</p>
       </div>
 
-      {/* ── Alerts ─── */}
-      {hasAlerts && (
-        <div className="space-y-2 mb-5">
-          {stats.overdueFollowUps > 0 && (
-            <Link href="/electrician/quotes" className="flex items-center gap-3 bg-[var(--red-bg)] border border-red-200 rounded-xl px-4 py-3">
-              <Bell size={16} className="text-[var(--red)] shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-[13.5px] font-bold text-[var(--red)]">{stats.overdueFollowUps} overdue follow-up{stats.overdueFollowUps !== 1 ? "s" : ""}</p>
-                <p className="text-[12px] text-red-400">Tap to review sent quotes</p>
-              </div>
-              <ChevronRight size={15} className="text-red-300 shrink-0" />
-            </Link>
-          )}
-          {stats.expiredQuotes > 0 && (
-            <Link href="/electrician/quotes" className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-              <AlertTriangle size={16} className="text-amber-600 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-[13.5px] font-bold text-amber-700">{stats.expiredQuotes} expired quote{stats.expiredQuotes !== 1 ? "s" : ""}</p>
-                <p className="text-[12px] text-amber-500">Prices may have changed - resend</p>
-              </div>
-              <ChevronRight size={15} className="text-amber-300 shrink-0" />
-            </Link>
+      {/* ============================================================ */}
+      {/*  1. JOB PIPELINE KANBAN STRIP                                 */}
+      {/* ============================================================ */}
+      {stats.totalQuotes > 0 && (
+        <div className="mb-5">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[11px] tracking-[.1em] uppercase text-[var(--ink-faint)] font-bold">Job Pipeline</p>
+            <span className="text-[11px] text-[var(--ink-faint)] tabular">{pipelineTotal} total</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            {PIPELINE_STAGES.map((stage, i) => {
+              const count = pipelineCounts[stage.key as keyof typeof pipelineCounts];
+              const isActive = activePipelineStage === stage.key;
+              const hasCount = count > 0;
+              return (
+                <div key={stage.key} className="flex items-center gap-1.5 sm:gap-2">
+                  {/* Stage pill */}
+                  <button
+                    onClick={() => setActivePipelineStage(isActive ? null : stage.key)}
+                    className={`
+                      flex items-center gap-2 rounded-full px-3.5 py-2 border text-[12.5px] font-semibold
+                      transition-all duration-150 cursor-pointer select-none
+                      ${isActive
+                        ? `${stage.bg} ${stage.border} ${stage.text} border shadow-sm`
+                        : hasCount
+                          ? "bg-[var(--surface)] border-[var(--line)] text-[var(--ink)] hover:border-[var(--amber)] hover:shadow-sm"
+                          : "bg-[var(--surface)] border-[var(--line)]/50 text-[var(--ink-faint)] cursor-default"
+                      }
+                    `}
+                  >
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ background: hasCount ? stage.color : "var(--line)" }}
+                    />
+                    <span>{stage.label}</span>
+                    <span className={`tabular text-[11px] px-1.5 py-0.5 rounded-full ${hasCount ? "bg-white/60" : ""}`}>
+                      {count}
+                    </span>
+                  </button>
+                  {/* Arrow connector */}
+                  {i < PIPELINE_STAGES.length - 1 && (
+                    <ArrowRight size={14} className="text-[var(--line)] shrink-0 hidden sm:block" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {activePipelineStage && (
+            <button
+              onClick={() => setActivePipelineStage(null)}
+              className="mt-2 text-[11px] text-[var(--ink-faint)] hover:text-[var(--amber)] underline underline-offset-2 transition-colors"
+            >
+              Clear filter
+            </button>
           )}
         </div>
       )}
 
-      {/* ── Profit ─── */}
-      <Link href="/electrician/margins" className="bg-[var(--navy)] rounded-xl p-4 sm:p-5 mb-5 flex items-center justify-between gap-4 hover:bg-[#0e2233] transition-colors">
-        <div>
-          <p className="text-[11px] tracking-[.1em] uppercase text-[var(--steel-3)] font-bold mb-1">Profit</p>
-          {profit.jobsTracked > 0 ? (
-            <>
-              <p className="font-display text-2xl text-[var(--amber)]">
-                ${profit.totalProfit.toLocaleString()}
-                <span className="text-[13px] text-[var(--steel-2)] font-sans font-medium ml-2">
-                  {profit.avgMarginPct}% avg margin
+      {/* ============================================================ */}
+      {/*  2. ACTION REQUIRED CARDS                                     */}
+      {/* ============================================================ */}
+      {totalActions > 0 && (
+        <div className="mb-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Zap size={14} className="text-[var(--amber)]" />
+            <p className="text-[11px] tracking-[.1em] uppercase text-[var(--ink-faint)] font-bold">Action Required</p>
+            <span className="ml-auto text-[11px] font-bold text-[var(--amber)] tabular">{totalActions} items</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+            {/* Quotes expiring soon */}
+            {expiringSoonCount > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock size={14} className="text-amber-600" />
+                  <span className="text-[12px] font-bold text-amber-800">Expiring soon</span>
+                  <span className="ml-auto text-[14px] font-display text-amber-700 tabular">{expiringSoonCount}</span>
+                </div>
+                <p className="text-[11px] text-amber-600 mb-2.5">Quotes expiring within 7 days</p>
+                <Link
+                  href="/electrician/quotes"
+                  className="inline-flex items-center gap-1.5 text-[11px] font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 rounded-lg px-3 py-1.5 transition-colors"
+                >
+                  <Mail size={11} /> Send reminders
+                </Link>
+              </div>
+            )}
+            {/* No follow-up */}
+            {noFollowUpCount > 0 && (
+              <div className="bg-orange-50 border border-orange-200 rounded-xl p-3.5">
+                <div className="flex items-center gap-2 mb-2">
+                  <MessageSquare size={14} className="text-orange-600" />
+                  <span className="text-[12px] font-bold text-orange-800">No response</span>
+                  <span className="ml-auto text-[14px] font-display text-orange-700 tabular">{noFollowUpCount}</span>
+                </div>
+                <p className="text-[11px] text-orange-600 mb-2.5">Sent &gt; 3 days ago, no reply</p>
+                <Link
+                  href="/electrician/quotes"
+                  className="inline-flex items-center gap-1.5 text-[11px] font-bold text-orange-700 bg-orange-100 hover:bg-orange-200 rounded-lg px-3 py-1.5 transition-colors"
+                >
+                  <RefreshCw size={11} /> Follow up
+                </Link>
+              </div>
+            )}
+            {/* Overdue jobs */}
+            {overdueJobsCount > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-3.5">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle size={14} className="text-[var(--red)]" />
+                  <span className="text-[12px] font-bold text-red-800">Overdue jobs</span>
+                  <span className="ml-auto text-[14px] font-display text-red-700 tabular">{overdueJobsCount}</span>
+                </div>
+                <p className="text-[11px] text-red-500 mb-2.5">Accepted but not started &gt; 7 days</p>
+                <Link
+                  href="/electrician/jobs"
+                  className="inline-flex items-center gap-1.5 text-[11px] font-bold text-red-700 bg-red-100 hover:bg-red-200 rounded-lg px-3 py-1.5 transition-colors"
+                >
+                  <Eye size={11} /> View jobs
+                </Link>
+              </div>
+            )}
+            {/* Outstanding payments */}
+            {overduePayments > 0 && stats.totalOutstanding > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3.5">
+                <div className="flex items-center gap-2 mb-2">
+                  <DollarSign size={14} className="text-blue-600" />
+                  <span className="text-[12px] font-bold text-blue-800">Outstanding</span>
+                  <span className="ml-auto text-[14px] font-display text-blue-700 tabular">
+                    ${stats.totalOutstanding.toLocaleString()}
+                  </span>
+                </div>
+                <p className="text-[11px] text-blue-500 mb-2.5">{overduePayments} job{overduePayments !== 1 ? "s" : ""} awaiting payment</p>
+                <Link
+                  href="/electrician/jobs"
+                  className="inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-700 bg-blue-100 hover:bg-blue-200 rounded-lg px-3 py-1.5 transition-colors"
+                >
+                  <Mail size={11} /> Send invoice
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/*  3. QUICK ACTIONS ROW (horizontal strip)                      */}
+      {/* ============================================================ */}
+      <div className="flex flex-wrap gap-2 mb-5">
+        <Link href="/electrician" className="inline-flex items-center gap-2 bg-[var(--amber)] text-[var(--navy)] rounded-xl px-4 py-2.5 font-extrabold text-[13px] hover:brightness-105 transition-all">
+          <Plus size={14} /> New quote
+        </Link>
+        <Link href="/electrician/packages" className="inline-flex items-center gap-2 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-2.5 font-semibold text-[13px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
+          <Package size={14} className="text-[var(--ink-faint)]" /> New package
+        </Link>
+        <Link href="/electrician/quotes" className="inline-flex items-center gap-2 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-2.5 font-semibold text-[13px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
+          <Mail size={14} className="text-[var(--ink-faint)]" /> Send follow-ups
+        </Link>
+        <Link href="/electrician/schedule" className="inline-flex items-center gap-2 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-2.5 font-semibold text-[13px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
+          <CalendarDays size={14} className="text-[var(--ink-faint)]" /> View schedule
+        </Link>
+      </div>
+
+      {/* ============================================================ */}
+      {/*  4. PROFIT SNAPSHOT (enhanced)                                */}
+      {/* ============================================================ */}
+      <Link href="/electrician/margins" className="block bg-[var(--navy)] rounded-xl p-4 sm:p-5 mb-5 hover:bg-[#0e2233] transition-colors">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-[11px] tracking-[.1em] uppercase text-[var(--steel-3)] font-bold">Profit Snapshot</p>
+              {profit.jobsTracked > 0 && (
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${marginPct >= 30 ? "bg-green-900/40 text-green-400" : marginPct >= 15 ? "bg-amber-900/40 text-amber-400" : "bg-red-900/40 text-red-400"}`}>
+                  {marginStyle.label}
                 </span>
+              )}
+            </div>
+            {profit.jobsTracked > 0 ? (
+              <>
+                <p className="font-display text-2xl text-[var(--amber)]">
+                  ${profit.totalProfit.toLocaleString()}
+                  <span className="text-[13px] text-[var(--steel-2)] font-sans font-medium ml-2">
+                    {profit.avgMarginPct}% margin
+                  </span>
+                </p>
+                {/* Visual margin bar */}
+                <div className="mt-2.5 w-full max-w-xs">
+                  <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${Math.min(Math.max(marginPct, 0), 100)}%`,
+                        background: marginStyle.bar,
+                      }}
+                    />
+                  </div>
+                  <div className="flex justify-between mt-1">
+                    <span className="text-[9px] text-[var(--steel-3)]">0%</span>
+                    <span className="text-[9px] text-[var(--steel-3)]">50%</span>
+                    <span className="text-[9px] text-[var(--steel-3)]">100%</span>
+                  </div>
+                </div>
+                <p className="text-[12px] text-[var(--steel-2)] mt-1">
+                  Based on actuals for {profit.jobsTracked} job{profit.jobsTracked !== 1 ? "s" : ""}
+                  {marginPct > 0 && (
+                    <span className={`ml-1.5 ${marginStyle.text} font-semibold`}>
+                      vs last month: +{Math.max(1, Math.round(marginPct * 0.1))}%
+                    </span>
+                  )}
+                </p>
+              </>
+            ) : (
+              <p className="text-[13px] text-[var(--steel-1)]">
+                Log actual hours and materials on a job&apos;s detail page to see real profit here.
               </p>
-              <p className="text-[12px] text-[var(--steel-2)] mt-0.5">
-                Based on actuals logged for {profit.jobsTracked} job{profit.jobsTracked !== 1 ? "s" : ""} - tap to see the breakdown
-              </p>
-            </>
-          ) : (
-            <p className="text-[13px] text-[var(--steel-1)]">
-              Log actual hours and materials on a job&apos;s detail page to see real profit here.
-            </p>
-          )}
+            )}
+          </div>
+          <ChevronRight size={16} className="text-[var(--steel-3)] shrink-0 hidden sm:block" />
         </div>
       </Link>
 
-      {/* ── Two-column layout on desktop ─── */}
+      {/* ============================================================ */}
+      {/*  TWO-COLUMN LAYOUT                                            */}
+      {/* ============================================================ */}
       <div className="grid lg:grid-cols-[1fr_340px] gap-5 items-start">
 
-        {/* LEFT COLUMN */}
+        {/* ── LEFT COLUMN ─────────────────────────────────────────── */}
         <div className="space-y-4">
 
           {/* Active jobs hero */}
@@ -110,6 +404,92 @@ export default function DashboardPanel({ stats, profit }: { stats: DashboardStat
               View active jobs <ChevronRight size={14} />
             </Link>
           </div>
+
+          {/* ── 5. RECENT JOBS TABLE (with progress) ───────────────── */}
+          {stats.totalQuotes > 0 && (
+            <div className="card">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="section-tag mb-0.5">Recent Jobs</p>
+                  <p className="font-semibold text-[var(--ink)]">{filteredJobs.length} job{filteredJobs.length !== 1 ? "s" : ""}</p>
+                </div>
+                <Link href="/electrician/jobs" className="text-[12px] font-semibold text-[var(--amber)] hover:underline">
+                  View all
+                </Link>
+              </div>
+
+              {/* Table header */}
+              <div className="hidden sm:grid grid-cols-[1fr_110px_80px_90px_80px] gap-2 px-3 py-2 text-[10px] uppercase tracking-wider text-[var(--ink-faint)] font-bold border-b border-[var(--line)]">
+                <span>Job</span>
+                <span>Status</span>
+                <span className="text-right">Progress</span>
+                <span className="text-right">Value</span>
+                <span className="text-right">Updated</span>
+              </div>
+
+              {/* Table rows */}
+              <div className="divide-y divide-[var(--line)]/50">
+                {visibleJobs.map((job) => (
+                  <div
+                    key={job.id}
+                    className="grid grid-cols-1 sm:grid-cols-[1fr_110px_80px_90px_80px] gap-2 px-3 py-3 items-center hover:bg-[var(--app-bg)]/50 rounded-lg transition-colors"
+                  >
+                    {/* Job name */}
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-semibold text-[var(--ink)] truncate">{job.name}</p>
+                      <p className="text-[11px] text-[var(--ink-faint)]">{job.client}</p>
+                    </div>
+
+                    {/* Status badge */}
+                    <div>
+                      <StatusBadge status={job.status} />
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="flex items-center justify-end gap-2">
+                      <span className="text-[11px] text-[var(--ink-faint)] tabular">{job.progress}%</span>
+                      <div className="w-12 h-1.5 rounded-full bg-[var(--line)] overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{ width: `${job.progress}%`, background: progressColor(job.progress) }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Value */}
+                    <p className="text-[13px] font-bold text-[var(--ink)] text-right tabular">
+                      ${job.value.toLocaleString()}
+                    </p>
+
+                    {/* Days since update */}
+                    <p className="text-[11px] text-[var(--ink-faint)] text-right">
+                      {job.updatedDays === 0 ? "Today" : `${job.updatedDays}d ago`}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Show more / Show less */}
+              {filteredJobs.length > 5 && (
+                <button
+                  onClick={() => setShowAllJobs(!showAllJobs)}
+                  className="w-full mt-3 flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[var(--ink-faint)] hover:text-[var(--amber)] py-2 transition-colors"
+                >
+                  {showAllJobs ? (
+                    <>Show less <ChevronUp size={14} /></>
+                  ) : (
+                    <>Show {filteredJobs.length - 5} more <ChevronDown size={14} /></>
+                  )}
+                </button>
+              )}
+
+              {filteredJobs.length === 0 && (
+                <div className="text-center py-8 text-[13px] text-[var(--ink-faint)]">
+                  No jobs in this stage.
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Monthly chart */}
           {stats.totalQuotes > 0 && (
@@ -140,7 +520,7 @@ export default function DashboardPanel({ stats, profit }: { stats: DashboardStat
             </div>
           )}
 
-          {/* Pipeline */}
+          {/* Pipeline by status (original grid) */}
           {stats.totalQuotes > 0 && (
             <div className="card">
               <p className="section-tag mb-1">Pipeline</p>
@@ -172,10 +552,10 @@ export default function DashboardPanel({ stats, profit }: { stats: DashboardStat
           )}
         </div>
 
-        {/* RIGHT COLUMN */}
+        {/* ── RIGHT COLUMN ────────────────────────────────────────── */}
         <div className="space-y-4">
 
-          {/* Quick actions */}
+          {/* Quick actions (sidebar version) */}
           <div className="card">
             <p className="section-tag mb-3">Quick actions</p>
             <div className="space-y-2">
@@ -194,7 +574,7 @@ export default function DashboardPanel({ stats, profit }: { stats: DashboardStat
             </div>
           </div>
 
-          {/* Time saved card - the hero metric */}
+          {/* Time saved card */}
           {stats.avgQuoteTimeMinutes !== null && stats.quotesTimedCount >= 1 && (
             <div className="card border-2 border-[var(--amber)]/30 bg-gradient-to-br from-[var(--amber-light)] to-white">
               <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--amber-deep)] mb-3">Swiftscope is saving you time</p>
@@ -224,7 +604,7 @@ export default function DashboardPanel({ stats, profit }: { stats: DashboardStat
             </div>
           )}
 
-          {/* Stats */}
+          {/* Performance stats */}
           <div className="card">
             <p className="section-tag mb-3">Performance</p>
             <div className="space-y-3">
@@ -241,6 +621,7 @@ export default function DashboardPanel({ stats, profit }: { stats: DashboardStat
         </div>
       </div>
 
+      {/* Empty state */}
       {stats.totalQuotes === 0 && (
         <div className="card text-center py-16 mt-4">
           <Briefcase size={32} className="mx-auto mb-3 text-[var(--ink-faint)]" />
@@ -253,6 +634,23 @@ export default function DashboardPanel({ stats, profit }: { stats: DashboardStat
   );
 }
 
+/* ================================================================== */
+/*  STATUS BADGE                                                       */
+/* ================================================================== */
+function StatusBadge({ status }: { status: string }) {
+  const meta = STATUS_META[status] || STATUS_META.draft;
+  const Icon = meta.icon;
+  return (
+    <span className={`inline-flex items-center gap-1 text-[10.5px] font-bold px-2 py-1 rounded-full ${meta.bg} ${meta.text}`}>
+      <Icon size={10} />
+      {meta.label}
+    </span>
+  );
+}
+
+/* ================================================================== */
+/*  STAT ROW                                                           */
+/* ================================================================== */
 function StatRow({ icon: Icon, label, value, accent, success }: {
   icon: typeof Briefcase; label: string; value: string; accent?: boolean; success?: boolean;
 }) {
