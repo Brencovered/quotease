@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import {
   Bell,
@@ -11,7 +10,6 @@ import {
   Palette,
   FileText,
   CheckCircle2,
-  X,
   Plus,
   Edit3,
   Trash2,
@@ -19,7 +17,6 @@ import {
   Download,
   Sparkles,
   Save,
-  Upload,
   Loader2,
 } from "lucide-react";
 
@@ -77,7 +74,6 @@ export default function CommsPanel({
   branding: initialBranding,
   outstandingJobs,
   expiringQuotes,
-  businessId,
 }: {
   initialTemplates: Template[];
   branding: Record<string, string | null>;
@@ -105,7 +101,7 @@ export default function CommsPanel({
           return (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[12.5px] font-bold whitespace-nowrap border-2 transition-colors ${
-                tab === t.key ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] text-[var(--ink-soft)] bg-[var(surface)]"
+                tab === t.key ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] text-[var(--ink-soft)] bg-[var(--surface)]"
               }`}>
               <Icon size={14} /> {t.label}
             </button>
@@ -124,14 +120,13 @@ export default function CommsPanel({
           overdueJobs={overdueJobs}
           expiringQuotes={expiringQuotes}
           templates={templates}
-          businessId={businessId}
+          branding={branding}
           onToast={setToast}
         />
       )}
       {tab === "templates" && (
         <TemplatesTab
           templates={templates}
-          businessId={businessId}
           onUpdate={setTemplates}
           onToast={setToast}
         />
@@ -139,13 +134,12 @@ export default function CommsPanel({
       {tab === "branding" && (
         <BrandingTab
           branding={branding}
-          businessId={businessId}
           onUpdate={setBranding}
           onToast={setToast}
         />
       )}
       {tab === "brochures" && (
-        <BrochuresTab businessId={businessId} onToast={setToast} />
+        <BrochuresTab branding={branding} />
       )}
     </div>
   );
@@ -157,13 +151,13 @@ function RemindersTab({
   overdueJobs,
   expiringQuotes,
   templates,
-  businessId,
+  branding,
   onToast,
 }: {
   overdueJobs: Job[];
   expiringQuotes: Quote[];
   templates: Template[];
-  businessId: string;
+  branding: Record<string, string | null>;
   onToast: (msg: string) => void;
 }) {
   const [sendingId, setSendingId] = useState<string | null>(null);
@@ -197,7 +191,7 @@ function RemindersTab({
     if (!quote) return;
     const business = branding?.business_name ?? "Your tradie";
     const owing = Math.max((quote.total_cost ?? 0) - (quote.amount_paid ?? 0), 0);
-    let subject = template?.subject ?? (type === "overdue_invoice" ? `Payment reminder for ${business} invoice` : `Your quote from ${business}`);
+    const subject = template?.subject ?? (type === "overdue_invoice" ? `Payment reminder for ${business} invoice` : `Your quote from ${business}`);
     let body = template?.body ?? "";
     if (!body) {
       body = type === "overdue_invoice"
@@ -244,7 +238,7 @@ function RemindersTab({
               return (
                 <div key={j.id} className="card flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-semibold text-[14px] text-[var(ink)] truncate">{j.client_name || "Unnamed"}</p>
+                    <p className="font-semibold text-[14px] text-[var(--ink)] truncate">{j.client_name || "Unnamed"}</p>
                     <p className="text-[12px] text-[var(--ink-faint)]">{j.site_address}</p>
                     <p className="text-[13px] font-bold text-[var(--red)] mt-0.5">${owing.toLocaleString()} owing</p>
                   </div>
@@ -267,7 +261,7 @@ function RemindersTab({
       {/* Expiring quotes */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-bold text-[16px] text-[var(ink)] flex items-center gap-2">
+          <h3 className="font-bold text-[16px] text-[var(--ink)] flex items-center gap-2">
             <Bell size={16} className="text-amber-600" /> Expiring quotes ({expiringQuotes.length})
           </h3>
           {expiringQuotes.length > 0 && (
@@ -280,7 +274,7 @@ function RemindersTab({
         {expiringQuotes.length === 0 ? (
           <div className="card text-center py-8">
             <CheckCircle2 size={24} className="mx-auto mb-2 text-[var(--green)]" />
-            <p className="text-[13px] text-[var(ink-faint)]">No quotes expiring soon.</p>
+            <p className="text-[13px] text-[var(--ink-faint)]">No quotes expiring soon.</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -290,8 +284,8 @@ function RemindersTab({
               return (
                 <div key={q.id} className="card flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-semibold text-[14px] text-[var(ink)] truncate">{q.client_name || "Unnamed"}</p>
-                    <p className="text-[12px] text-[var(ink-faint)]">{q.site_address}</p>
+                    <p className="font-semibold text-[14px] text-[var(--ink)] truncate">{q.client_name || "Unnamed"}</p>
+                    <p className="text-[12px] text-[var(--ink-faint)]">{q.site_address}</p>
                     <p className={`text-[12px] font-bold mt-0.5 ${daysLeft <= 0 ? "text-[var(--red)]" : "text-amber-600"}`}>
                       {daysLeft <= 0 ? "Expired" : `${daysLeft} day${daysLeft !== 1 ? "s" : ""} left`} - ${(q.total_cost ?? 0).toLocaleString()}
                     </p>
@@ -316,9 +310,9 @@ function RemindersTab({
       {preview && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4" onClick={() => setPreview(null)}>
           <div className="bg-[var(--surface)] rounded-2xl p-5 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <p className="font-bold text-[var(ink)] mb-1">{preview.type === "overdue_invoice" ? "Invoice Reminder" : "Quote Reminder"}</p>
-            <p className="text-[12px] text-[var(ink-faint)] mb-3">Subject: {preview.subject}</p>
-            <div className="bg-[var(--app-bg)] rounded-xl p-4 text-[13px] text-[var(ink-soft)] whitespace-pre-line mb-4 border border-[var(line)]">
+            <p className="font-bold text-[var(--ink)] mb-1">{preview.type === "overdue_invoice" ? "Invoice Reminder" : "Quote Reminder"}</p>
+            <p className="text-[12px] text-[var(--ink-faint)] mb-3">Subject: {preview.subject}</p>
+            <div className="bg-[var(--app-bg)] rounded-xl p-4 text-[13px] text-[var(--ink-soft)] whitespace-pre-line mb-4 border border-[var(--line)]">
               {preview.body}
             </div>
             <div className="flex gap-3">
@@ -338,12 +332,10 @@ function RemindersTab({
 
 function TemplatesTab({
   templates,
-  businessId,
   onUpdate,
   onToast,
 }: {
   templates: Template[];
-  businessId: string;
   onUpdate: (t: Template[]) => void;
   onToast: (msg: string) => void;
 }) {
@@ -360,8 +352,12 @@ function TemplatesTab({
       body: JSON.stringify(editing ? { id: editing.id, type: form.type, subject: form.subject, body: form.body } : { type: form.type, subject: form.subject, body: form.body }),
     });
     if (res.ok) {
-      const { data } = await supabase.from("communication_templates").select("*").eq("profile_id", businessId).order("created_at", { ascending: false });
-      onUpdate(data ?? []);
+      const { data: { user } } = await supabase.auth.getUser();
+      const profileId = user?.id;
+      if (profileId) {
+        const { data } = await supabase.from("communication_templates").select("*").eq("profile_id", profileId).order("created_at", { ascending: false });
+        onUpdate(data ?? []);
+      }
       setEditing(null);
       setForm({ type: "custom", subject: "", body: "" });
       onToast(editing ? "Template updated" : "Template created");
@@ -398,7 +394,7 @@ function TemplatesTab({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-bold text-[16px] text-[var(ink)]">Email Templates</h3>
+        <h3 className="font-bold text-[16px] text-[var(--ink)]">Email Templates</h3>
         <button onClick={openCreate} className="btn-primary text-[12px] py-2" style={{ width: "auto", padding: "8px 16px" }}>
           <Plus size={13} /> New template
         </button>
@@ -411,17 +407,17 @@ function TemplatesTab({
             {items.map((t) => (
               <div key={t.id} className="card flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="font-semibold text-[14px] text-[var(ink)] truncate">{t.subject}</p>
-                  <p className="text-[12px] text-[var(ink-faint)] line-clamp-2 mt-0.5">{t.body}</p>
+                  <p className="font-semibold text-[14px] text-[var(--ink)] truncate">{t.subject}</p>
+                  <p className="text-[12px] text-[var(--ink-faint)] line-clamp-2 mt-0.5">{t.body}</p>
                   <div className="flex items-center gap-2 mt-1.5">
                     <span className={`pill ${TYPE_COLORS[t.type] ?? TYPE_COLORS.custom}`}>{t.type}</span>
                     {t.is_default && <span className="pill bg-[var(--amber-light)] text-[var(--amber-deep)]">Default</span>}
                   </div>
                 </div>
                 <div className="flex gap-1 shrink-0">
-                  <button onClick={() => openEdit(t)} className="p-1.5 rounded-lg hover:bg-[var(--app-bg)]"><Edit3 size={14} className="text-[var(ink-faint)]" /></button>
+                  <button onClick={() => openEdit(t)} className="p-1.5 rounded-lg hover:bg-[var(--app-bg)]"><Edit3 size={14} className="text-[var(--ink-faint)]" /></button>
                   {!t.is_default && (
-                    <button onClick={() => deleteTemplate(t.id)} className="p-1.5 rounded-lg hover:bg-[var(--red-bg)]"><Trash2 size={14} className="text-[var(ink-faint)]" /></button>
+                    <button onClick={() => deleteTemplate(t.id)} className="p-1.5 rounded-lg hover:bg-[var(--red-bg)]"><Trash2 size={14} className="text-[var(--ink-faint)]" /></button>
                   )}
                 </div>
               </div>
@@ -432,8 +428,8 @@ function TemplatesTab({
 
       {templates.length === 0 && (
         <div className="card text-center py-10">
-          <Mail size={24} className="mx-auto mb-2 text-[var(ink-faint)]" />
-          <p className="text-[13px] text-[var(ink-faint)]">No templates yet. Create your first one!</p>
+          <Mail size={24} className="mx-auto mb-2 text-[var(--ink-faint)]" />
+          <p className="text-[13px] text-[var(--ink-faint)]">No templates yet. Create your first one!</p>
         </div>
       )}
 
@@ -441,10 +437,10 @@ function TemplatesTab({
       {(editing || form.subject !== "" || form.body !== "") && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
           <div className="bg-[var(--surface)] rounded-2xl p-5 w-full max-w-lg shadow-2xl">
-            <p className="font-bold text-[var(ink)] mb-4">{editing ? "Edit Template" : "New Template"}</p>
+            <p className="font-bold text-[var(--ink)] mb-4">{editing ? "Edit Template" : "New Template"}</p>
             <div className="space-y-3">
               <div>
-                <label className="block text-[12px] font-bold text-[var(ink-soft)] mb-1.5">Type</label>
+                <label className="block text-[12px] font-bold text-[var(--ink-soft)] mb-1.5">Type</label>
                 <select value={form.type} onChange={(e) => setForm(f => ({ ...f, type: e.target.value }))} className="app-field text-[13px]">
                   <option value="custom">Custom</option>
                   <option value="overdue_invoice">Overdue Invoice</option>
@@ -454,13 +450,13 @@ function TemplatesTab({
                 </select>
               </div>
               <div>
-                <label className="block text-[12px] font-bold text-[var(ink-soft)] mb-1.5">Subject</label>
+                <label className="block text-[12px] font-bold text-[var(--ink-soft)] mb-1.5">Subject</label>
                 <input type="text" value={form.subject} onChange={(e) => setForm(f => ({ ...f, subject: e.target.value }))} className="app-field" placeholder="Email subject line" />
               </div>
               <div>
-                <label className="block text-[12px] font-bold text-[var(ink-soft)] mb-1.5">Body</label>
+                <label className="block text-[12px] font-bold text-[var(--ink-soft)] mb-1.5">Body</label>
                 <textarea value={form.body} onChange={(e) => setForm(f => ({ ...f, body: e.target.value }))} className="app-field" rows={6} placeholder="Email body text. Use {{client_name}}, {{amount}}, {{quote_url}}, {{business_name}}, {{site_address}} as variables." />
-                <p className="text-[11px] text-[var(ink-faint)] mt-1">
+                <p className="text-[11px] text-[var(--ink-faint)] mt-1">
                   Variables: {"{{client_name}}, {{amount}}, {{quote_url}}, {{business_name}}, {{site_address}}"}
                 </p>
               </div>
@@ -483,12 +479,10 @@ function TemplatesTab({
 
 function BrandingTab({
   branding: initialBranding,
-  businessId,
   onUpdate,
   onToast,
 }: {
   branding: Record<string, string | null>;
-  businessId: string;
   onUpdate: (b: Record<string, string | null>) => void;
   onToast: (msg: string) => void;
 }) {
@@ -518,30 +512,30 @@ function BrandingTab({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Settings */}
         <div className="card space-y-4">
-          <h3 className="font-bold text-[16px] text-[var(ink)] flex items-center gap-2">
+          <h3 className="font-bold text-[16px] text-[var(--ink)] flex items-center gap-2">
             <Palette size={16} /> Quote Branding
           </h3>
 
           <div>
-            <label className="block text-[12px] font-bold text-[var(ink-soft)] mb-1.5">Primary color</label>
+            <label className="block text-[12px] font-bold text-[var(--ink-soft)] mb-1.5">Primary color</label>
             <div className="flex items-center gap-3">
-              <input type="color" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} className="w-10 h-10 rounded-lg border border-[var(line)] cursor-pointer" />
+              <input type="color" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} className="w-10 h-10 rounded-lg border border-[var(--line)] cursor-pointer" />
               <input type="text" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} className="app-field text-[13px] w-28" />
               <div className="flex gap-1">
                 {["#ffb400", "#ef4444", "#3b82f6", "#10b981", "#8b5cf6", "#f97316"].map((c) => (
-                  <button key={c} onClick={() => setPrimaryColor(c)} className="w-6 h-6 rounded-full border border-[var(line)]" style={{ backgroundColor: c }} />
+                  <button key={c} onClick={() => setPrimaryColor(c)} className="w-6 h-6 rounded-full border border-[var(--line)]" style={{ backgroundColor: c }} />
                 ))}
               </div>
             </div>
           </div>
 
           <div>
-            <label className="block text-[12px] font-bold text-[var(ink-soft)] mb-1.5">Business tagline</label>
+            <label className="block text-[12px] font-bold text-[var(--ink-soft)] mb-1.5">Business tagline</label>
             <input type="text" value={tagline} onChange={(e) => setTagline(e.target.value)} className="app-field" placeholder="e.g. Quality electrical work guaranteed" />
           </div>
 
           <div>
-            <label className="block text-[12px] font-bold text-[var(ink-soft)] mb-1.5">Email footer</label>
+            <label className="block text-[12px] font-bold text-[var(--ink-soft)] mb-1.5">Email footer</label>
             <input type="text" value={footer} onChange={(e) => setFooter(e.target.value)} className="app-field" placeholder="Sent via Swiftscope" />
           </div>
 
@@ -553,7 +547,7 @@ function BrandingTab({
         {/* Preview */}
         <div>
           <p className="section-tag mb-2">Preview</p>
-          <div className="border border-[var(line)] rounded-xl overflow-hidden">
+          <div className="border border-[var(--line)] rounded-xl overflow-hidden">
             <div className="p-4" style={{ backgroundColor: "#0a1722" }}>
               <p className="font-display text-[16px] font-bold text-white tracking-widest">{(initialBranding?.business_name ?? "YOUR BUSINESS").toUpperCase()}</p>
               {tagline && <p className="text-[11px] text-[var(--steel-3)] mt-0.5">{tagline}</p>}
@@ -580,7 +574,7 @@ function BrandingTab({
 
 /* ─────────────────────────── Brochures Tab ─────────────────────────── */
 
-function BrochuresTab({ businessId, onToast }: { businessId: string; onToast: (msg: string) => void }) {
+function BrochuresTab({ branding }: { branding: Record<string, string | null> }) {
   const [template, setTemplate] = useState("services");
   const [generating, setGenerating] = useState(false);
   const [brochureHtml, setBrochureHtml] = useState("");
@@ -588,9 +582,11 @@ function BrochuresTab({ businessId, onToast }: { businessId: string; onToast: (m
   async function generateBrochure() {
     setGenerating(true);
     const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setGenerating(false); return; }
     const [{ data: profile }, { data: materials }] = await Promise.all([
-      supabase.from("profiles").select("business_name, contact_email, contact_phone, logo_url, branding_tagline").eq("id", businessId).single(),
-      supabase.from("material_items").select("label, unit_cost, trade").eq("profile_id", businessId).order("label").limit(50),
+      supabase.from("profiles").select("business_name, contact_email, contact_phone, logo_url, branding_tagline").eq("id", user.id).single(),
+      supabase.from("material_items").select("label, unit_cost, trade").eq("profile_id", user.id).order("label").limit(50),
     ]);
 
     const business = profile?.business_name ?? "Your Business";
@@ -598,10 +594,10 @@ function BrochuresTab({ businessId, onToast }: { businessId: string; onToast: (m
 
     let html = "";
     if (template === "services") {
-      const byTrade = (materials ?? []).reduce((acc, m) => {
+      const byTrade = (materials ?? []).reduce((acc: Record<string, typeof materials>, m) => {
         acc[m.trade] = [...(acc[m.trade] ?? []), m];
         return acc;
-      }, {} as Record<string, typeof materials>);
+      }, {});
       html = `<div style="max-width:700px;margin:0 auto;font-family:Arial,sans-serif;padding:40px;">
         <div style="background:#0a1722;padding:32px;border-radius:16px 16px 0 0;text-align:center;">
           <h1 style="color:#fff;font-size:28px;font-weight:900;letter-spacing:2px;margin:0;">${business}</h1>
@@ -614,7 +610,7 @@ function BrochuresTab({ businessId, onToast }: { businessId: string; onToast: (m
           ${Object.entries(byTrade).map(([trade, items]) => `
             <h2 style="color:#0a1722;font-size:18px;font-weight:700;text-transform:capitalize;margin:24px 0 12px;border-bottom:2px solid #ffb400;padding-bottom:8px;">${trade}</h2>
             <table width="100%" style="border-collapse:collapse;">
-              ${(items ?? []).slice(0, 15).map((m) => `
+              ${(items ?? []).slice(0, 15).map((m: { label: string; unit_cost: number }) => `
                 <tr style="border-bottom:1px solid #e2e8f0;">
                   <td style="padding:10px 0;font-size:14px;color:#334155;">${m.label}</td>
                   <td style="padding:10px 0;font-size:14px;color:#0a1722;font-weight:700;text-align:right;">$${m.unit_cost}</td>
@@ -668,11 +664,11 @@ function BrochuresTab({ businessId, onToast }: { businessId: string; onToast: (m
   return (
     <div className="space-y-4">
       <div className="card space-y-4">
-        <h3 className="font-bold text-[16px] text-[var(ink)] flex items-center gap-2">
+        <h3 className="font-bold text-[16px] text-[var(--ink)] flex items-center gap-2">
           <FileText size={16} /> Generate Brochure
         </h3>
         <div>
-          <label className="block text-[12px] font-bold text-[var(ink-soft)] mb-1.5">Template</label>
+          <label className="block text-[12px] font-bold text-[var(--ink-soft)] mb-1.5">Template</label>
           <div className="flex gap-2">
             {[
               { key: "services", label: "Services list" },
@@ -680,7 +676,7 @@ function BrochuresTab({ businessId, onToast }: { businessId: string; onToast: (m
             ].map((t) => (
               <button key={t.key} onClick={() => setTemplate(t.key)}
                 className={`px-4 py-2 rounded-xl text-[12.5px] font-bold border-2 transition-colors ${
-                  template === t.key ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(line)] text-[var(ink-soft)]"
+                  template === t.key ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] text-[var(--ink-soft)]"
                 }`}>
                 {t.label}
               </button>
@@ -697,11 +693,11 @@ function BrochuresTab({ businessId, onToast }: { businessId: string; onToast: (m
         <div>
           <div className="flex items-center justify-between mb-2">
             <p className="section-tag">Preview</p>
-            <button onClick={downloadPdf} className="text-[12px] font-bold text-[var(navy)] flex items-center gap-1 border-2 border-[var(line)] rounded-lg px-3 py-1.5 hover:border-[var(--amber)] transition-colors">
+            <button onClick={downloadPdf} className="text-[12px] font-bold text-[var(--navy)] flex items-center gap-1 border-2 border-[var(--line)] rounded-lg px-3 py-1.5 hover:border-[var(--amber)] transition-colors">
               <Download size={13} /> Download PDF
             </button>
           </div>
-          <div className="border border-[var(line)] rounded-xl overflow-hidden bg-white">
+          <div className="border border-[var(--line)] rounded-xl overflow-hidden bg-white">
             <iframe srcDoc={brochureHtml} className="w-full h-[600px]" title="Brochure preview" />
           </div>
         </div>
