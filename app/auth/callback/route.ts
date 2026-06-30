@@ -8,7 +8,21 @@ export async function GET(request: Request) {
   if (code) {
     const supabase = await createClient();
     await supabase.auth.exchangeCodeForSession(code);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("onboarded_at")
+        .eq("id", user.id)
+        .single();
+      if (!profile?.onboarded_at) {
+        return NextResponse.redirect(`${origin}/onboarding`);
+      }
+    }
   }
 
-  return NextResponse.redirect(`${origin}/electrician`);
+  return NextResponse.redirect(`${origin}/electrician/dashboard`);
 }
