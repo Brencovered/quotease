@@ -2,12 +2,15 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Box, Building2, Package } from "lucide-react";
+import { Box, Building2, Package, Tag, Layers, ShoppingBag } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import MaterialsCatalog, { MaterialModal, CsvUploadModal } from "./materials/MaterialsCatalog";
 import SuppliersView from "./materials/SuppliersView";
 import PackagesView from "./materials/PackagesView";
-import type { Material, Supplier, Pkg, PackageRow } from "./materials/shared";
+import PricingTiersView from "./materials/PricingTiersView";
+import JobSizeTiersView from "./materials/JobSizeTiersView";
+import MaterialBundlesView from "./materials/MaterialBundlesView";
+import type { Material, Supplier, Pkg, PackageRow, PricingTier, JobSizeTier, MaterialBundle } from "./materials/shared";
 import { PAGE_SIZE } from "./materials/shared";
 
 const DEFAULT_HOURLY_RATE = 95;
@@ -17,7 +20,10 @@ export default function MaterialsPanel() {
   const supabase = createClient();
 
   /* --- Tabs --- */
-  const [activeTab, setActiveTab] = useState<"materials" | "suppliers" | "packages">("materials");
+  const [activeTab, setActiveTab] = useState<"materials" | "suppliers" | "packages" | "pricing" | "bundles">("materials");
+
+  /* --- Pricing sub-tabs --- */
+  const [pricingSubTab, setPricingSubTab] = useState<"tiers" | "sizes">("tiers");
 
   /* --- Materials tab state --- */
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -36,6 +42,20 @@ export default function MaterialsPanel() {
   /* --- Packages tab state --- */
   const [packages, setPackages] = useState<Pkg[]>([]);
   const [packagesLoading, setPackagesLoading] = useState(true);
+
+  /* --- Pricing tiers state --- */
+  const [pricingTiers, setPricingTiers] = useState<PricingTier[]>([]);
+  const [pricingTiersLoading, setPricingTiersLoading] = useState(true);
+
+  /* --- Job size tiers state --- */
+  const [jobSizeTiers, setJobSizeTiers] = useState<JobSizeTier[]>([]);
+  const [jobSizeTiersLoading, setJobSizeTiersLoading] = useState(true);
+
+  /* --- Bundles state --- */
+  const [bundles, setBundles] = useState<MaterialBundle[]>([]);
+  const [bundlesLoading, setBundlesLoading] = useState(true);
+
+  /* --- Shared --- */
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [hourlyRate, setHourlyRate] = useState(DEFAULT_HOURLY_RATE);
 
@@ -70,6 +90,15 @@ export default function MaterialsPanel() {
 
       await loadPackages(user.id);
       setPackagesLoading(false);
+
+      await loadPricingTiers();
+      setPricingTiersLoading(false);
+
+      await loadJobSizeTiers();
+      setJobSizeTiersLoading(false);
+
+      await loadBundles();
+      setBundlesLoading(false);
     }
     init();
   }, [router, supabase]);
@@ -137,6 +166,51 @@ export default function MaterialsPanel() {
     setPackages(transformed);
   }
 
+  /* --- Load pricing tiers --- */
+  async function loadPricingTiers() {
+    setPricingTiersLoading(true);
+    try {
+      const res = await fetch("/api/pricing-tiers");
+      if (!res.ok) throw new Error("Failed to load pricing tiers");
+      const data = await res.json();
+      setPricingTiers(data.tiers ?? []);
+    } catch (err: unknown) {
+      console.error("Error loading pricing tiers:", err);
+    } finally {
+      setPricingTiersLoading(false);
+    }
+  }
+
+  /* --- Load job size tiers --- */
+  async function loadJobSizeTiers() {
+    setJobSizeTiersLoading(true);
+    try {
+      const res = await fetch("/api/job-size-tiers");
+      if (!res.ok) throw new Error("Failed to load job size tiers");
+      const data = await res.json();
+      setJobSizeTiers(data.tiers ?? []);
+    } catch (err: unknown) {
+      console.error("Error loading job size tiers:", err);
+    } finally {
+      setJobSizeTiersLoading(false);
+    }
+  }
+
+  /* --- Load bundles --- */
+  async function loadBundles() {
+    setBundlesLoading(true);
+    try {
+      const res = await fetch("/api/material-bundles");
+      if (!res.ok) throw new Error("Failed to load bundles");
+      const data = await res.json();
+      setBundles(data.bundles ?? []);
+    } catch (err: unknown) {
+      console.error("Error loading bundles:", err);
+    } finally {
+      setBundlesLoading(false);
+    }
+  }
+
   /* --- Initial data load --- */
   useEffect(() => {
     loadMaterials();
@@ -147,6 +221,19 @@ export default function MaterialsPanel() {
       loadSuppliers();
     }
   }, [activeTab, loadSuppliers]);
+
+  useEffect(() => {
+    if (activeTab === "pricing") {
+      loadPricingTiers();
+      loadJobSizeTiers();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === "bundles") {
+      loadBundles();
+    }
+  }, [activeTab]);
 
   /* --- Derived --- */
   const totalPages = Math.max(1, Math.ceil(totalMaterials / PAGE_SIZE));
@@ -184,6 +271,8 @@ export default function MaterialsPanel() {
           { key: "materials" as const, label: "Materials", icon: Box },
           { key: "suppliers" as const, label: "Suppliers", icon: Building2 },
           { key: "packages" as const, label: "Packages", icon: Package },
+          { key: "pricing" as const, label: "Pricing", icon: Tag },
+          { key: "bundles" as const, label: "Bundles", icon: ShoppingBag },
         ].map((tab) => {
           const active = activeTab === tab.key;
           return (
@@ -232,6 +321,7 @@ export default function MaterialsPanel() {
           }}
           onDeleteMaterial={handleDeleteMaterial}
           onOpenCsvUpload={() => setCsvModalOpen(true)}
+          pricingTiers={pricingTiers}
         />
       )}
 
@@ -255,6 +345,61 @@ export default function MaterialsPanel() {
           hourlyRate={hourlyRate}
           supabase={supabase}
           onPackagesChanged={(bid) => loadPackages(bid)}
+        />
+      )}
+
+      {/* ---- Tab 4: Pricing ---- */}
+      {activeTab === "pricing" && (
+        <div>
+          {/* Sub-tab bar */}
+          <div className="flex items-center gap-2 mb-6">
+            {[
+              { key: "tiers" as const, label: "Customer Tiers", icon: Tag },
+              { key: "sizes" as const, label: "Job Sizes", icon: Layers },
+            ].map((sub) => {
+              const active = pricingSubTab === sub.key;
+              return (
+                <button
+                  key={sub.key}
+                  onClick={() => setPricingSubTab(sub.key)}
+                  className={`flex items-center gap-2 px-4 py-2.5 text-[12px] font-bold rounded-xl border transition-colors ${
+                    active
+                      ? "border-[var(--amber)] bg-[var(--amber-light)] text-[var(--amber-deep)]"
+                      : "border-[var(--line)] bg-transparent text-[var(--ink-faint)] hover:text-[var(--ink-soft)] hover:bg-[var(--app-bg)]"
+                  }`}
+                >
+                  <sub.icon size={14} strokeWidth={active ? 2.5 : 1.8} />
+                  {sub.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {pricingSubTab === "tiers" && (
+            <PricingTiersView
+              tiers={pricingTiers}
+              loading={pricingTiersLoading}
+              onTiersChanged={() => loadPricingTiers()}
+            />
+          )}
+
+          {pricingSubTab === "sizes" && (
+            <JobSizeTiersView
+              tiers={jobSizeTiers}
+              loading={jobSizeTiersLoading}
+              onTiersChanged={() => loadJobSizeTiers()}
+            />
+          )}
+        </div>
+      )}
+
+      {/* ---- Tab 5: Bundles ---- */}
+      {activeTab === "bundles" && (
+        <MaterialBundlesView
+          bundles={bundles}
+          loading={bundlesLoading}
+          businessId={businessId}
+          onBundlesChanged={() => loadBundles()}
         />
       )}
 
