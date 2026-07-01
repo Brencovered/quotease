@@ -28,14 +28,35 @@ export default function GenericQuoteBuilder({
   profile,
   preClientId,
   preMarkupMaterials,
+  pricingTiers,
+  jobSizeTiers,
 }: {
   tradeKey: string;
   profile: { hourly_rate: number; materials_margin_pct: number };
   preClientId?: string;
   preMarkupMaterials?: Array<{ label: string; quantity: number; unit: string; unitCost: number; totalCost: number }>;
+  pricingTiers?: Array<{ id: string; name: string; markup_pct: number; sort_order: number }>;
+  jobSizeTiers?: Array<{ id: string; name: string; max_days: number | null; markup_pct: number; sort_order: number }>;
 }) {
   const template = GENERIC_TRADE_TEMPLATES[tradeKey] ?? GENERIC_TRADE_TEMPLATES.custom;
-  const margin   = profile.materials_margin_pct ?? 20;
+  const [margin, setMargin] = useState(profile.materials_margin_pct ?? 20);
+
+  const [selectedPricingTierId, setSelectedPricingTierId] = useState<string | null>(null);
+  const [selectedJobSizeTierId, setSelectedJobSizeTierId] = useState<string | null>(null);
+
+  const selectedPricingTier = useMemo(() =>
+    pricingTiers?.find(t => t.id === selectedPricingTierId) ?? null,
+  [pricingTiers, selectedPricingTierId]);
+
+  const selectedJobSizeTier = useMemo(() =>
+    jobSizeTiers?.find(t => t.id === selectedJobSizeTierId) ?? null,
+  [jobSizeTiers, selectedJobSizeTierId]);
+
+  const effectiveMargin = useMemo(() => {
+    const base = selectedPricingTier?.markup_pct ?? profile.materials_margin_pct ?? 20;
+    const adjustment = selectedJobSizeTier?.markup_pct ?? 0;
+    return base + adjustment;
+  }, [selectedPricingTier, selectedJobSizeTier, profile.materials_margin_pct]);
 
   const [step,        setStep]        = useState(0);
   const [jobType,     setJobType]     = useState(template.jobTypes[0]);
@@ -63,7 +84,7 @@ export default function GenericQuoteBuilder({
     jobType, description, lineItems: items, siteAccess,
   }), [jobType, description, items, siteAccess]);
 
-  const result = useMemo(() => calcGenericQuote(intake, margin), [intake, margin]);
+  const result = useMemo(() => calcGenericQuote(intake, effectiveMargin), [intake, effectiveMargin]);
   const markupTotal = (preMarkupMaterials ?? []).reduce((s, m) => s + (m.totalCost ?? 0), 0);
   const paymentTerms = termsPreset === "custom" ? [] : PAYMENT_TERM_PRESETS[termsPreset];
 
@@ -86,12 +107,6 @@ export default function GenericQuoteBuilder({
     setItems((p) => p.filter((it) => it.id !== id));
   }
 
-  // The backend now runs a trade-dynamic AI pipeline - sending `tradeKey`
-  // (tiler, painter, landscaper, etc.) gets a persona tailored to that
-  // trade and structured quantity/risk extraction instead of a generic
-  // read. The calc engine here is a flat labour+materials model, so we
-  // still only surface confidence/notes as a read-only hint rather than
-  // auto-filling line items.
   async function runAiAnalysis() {
     if (!drawingFiles.length) return;
     setAnalyzing(true); setAnalysisError(null); setAnalysisResult(null);
@@ -133,6 +148,7 @@ export default function GenericQuoteBuilder({
 
     const resolvedClientId = await resolveClientId(supabase, businessId, clientId, clientName, clientEmail, siteAddress);
     const intakeData = { ...intake, tradeKey };
+    const extraTotals = extraLinesTotals(extraLines, profile.hourly_rate ?? 85, effectiveMargin);
     const { data: quote, error } = await supabase.from("quotes").insert({
       profile_id:    businessId,
       client_id:     resolvedClientId,
@@ -143,9 +159,11 @@ export default function GenericQuoteBuilder({
       job_type:      jobType,
       intake_data:   intakeData,
       labour_hours:  result.labourHours,
-      materials_cost: result.materialsCost + extraLinesTotals(extraLines, profile.hourly_rate ?? 85, profile.materials_margin_pct ?? 20).materials,
+      materials_cost: result.materialsCost + extraTotals.materials,
       total_cost:    result.totalCost,
       payment_terms: paymentTerms,
+      pricing_tier_id: selectedPricingTierId,
+      job_size_tier_id: selectedJobSizeTierId,
       markup_materials: preMarkupMaterials ?? [],
       status:        sendEmail ? "sent" : "draft",
       sent_at:       sendEmail ? new Date().toISOString() : null,
@@ -211,7 +229,7 @@ export default function GenericQuoteBuilder({
         ))}
       </div>
 
-      {/* Step: Job */}
+      {/* Step: Customer */}
       {stepId === "customer" && (
         <StepCustomer
           clientName={clientName} setClientName={setClientName}
@@ -280,6 +298,44 @@ export default function GenericQuoteBuilder({
                   <option value="difficult">Difficult (25% labour premium)</option>
                 </select>
               </Field>
+              {pricingTiers && pricingTiers.length > 0 && (
+                <div>
+                  <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Customer type</label>
+                  <select
+                    value={selectedPricingTierId ?? ""}
+                    onChange={(e) => setSelectedPricingTierId(e.target.value || null)}
+                    className="app-field"
+                  >
+                    <option value="">Custom margin ({profile.materials_margin_pct ?? 20}%)</option>
+                    {pricingTiers.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} ({t.markup_pct >= 0 ? "+" : ""}{t.markup_pct}%)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {jobSizeTiers && jobSizeTiers.length > 0 && (
+                <div>
+                  <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Job size</label>
+                  <select
+                    value={selectedJobSizeTierId ?? ""}
+                    onChange={(e) => setSelectedJobSizeTierId(e.target.value || null)}
+                    className="app-field"
+                  >
+                    <option value="">Select job size...</option>
+                    {jobSizeTiers.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} {t.max_days ? `(< ${t.max_days} day${t.max_days !== 1 ? "s" : ""})` : "(3+ days)"}
+                        ({t.markup_pct >= 0 ? "+" : ""}{t.markup_pct}%)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <Field label="Materials margin (%)">
+                <input type="number" value={margin} onChange={(e) => setMargin(Number(e.target.value))} className="app-field" />
+              </Field>
             </div>
           </div>
         </div>
@@ -292,7 +348,7 @@ export default function GenericQuoteBuilder({
             <div className="flex items-center justify-between mb-3">
               <p className="section-tag">Line items</p>
               <p className="text-[12px] text-[var(--ink-faint)]">
-                Margin ({margin}%) applied to materials
+                Margin ({effectiveMargin}%) applied to materials
               </p>
             </div>
 
@@ -329,7 +385,7 @@ export default function GenericQuoteBuilder({
                 </span>
               </div>
               <div className="flex justify-between text-[13.5px] mb-3">
-                <span className="text-[var(--steel-2)]">Materials + {margin}% margin</span>
+                <span className="text-[var(--steel-2)]">Materials + {effectiveMargin}% margin</span>
                 <span className="text-white font-semibold tabular">${(result.materialsCost + markupTotal).toLocaleString()}</span>
               </div>
               <div className="flex justify-between border-t border-white/10 pt-3">
@@ -373,9 +429,9 @@ export default function GenericQuoteBuilder({
             lines={extraLines}
             onChange={setExtraLines}
             hourlyRate={profile.hourly_rate ?? 85}
-            marginPct={profile.materials_margin_pct ?? 20}
+            marginPct={effectiveMargin}
           />
-                    <div className="card">
+          <div className="card">
             <p className="section-tag mb-3">Payment terms</p>
             <select value={termsPreset} onChange={(e) => setTermsPreset(e.target.value as keyof typeof PAYMENT_TERM_PRESETS | "custom")} className="app-field mb-3">
               <option value="full_on_completion">100% on completion (14 days)</option>
