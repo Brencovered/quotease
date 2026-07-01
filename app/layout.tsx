@@ -14,7 +14,8 @@ export const metadata: Metadata = {
   description: "Quote the job before you've left the driveway.",
   icons: {
     icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.svg", type: "image/svg+xml", sizes: "any" },
+      { url: "/favicon.ico", sizes: "48x48" },
     ],
     apple: [
       { url: "/apple-touch-icon.png", sizes: "180x180" },
@@ -43,6 +44,7 @@ export default function RootLayout({
       <head>
         <link rel="mask-icon" href="/favicon.svg" color="#1c252d" />
         <meta name="msapplication-TileColor" content="#1c252d" />
+        <meta name="msapplication-config" content="/browserconfig.xml" />
       </head>
       <body className="min-h-full flex flex-col">
         {children}
