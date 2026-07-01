@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 
   const { data: quote, error: quoteError } = await supabase
     .from("quotes")
-    .select("*, include_brochure, profiles!quotes_profile_id_fkey(business_name, contact_email, contact_phone, logo_url, branding_primary_color, branding_tagline, brochure_title, brochure_tagline, brochure_color, brochure_tcs, brochure_custom_text)")
+    .select("*, profiles!quotes_profile_id_fkey(business_name, contact_email, contact_phone, logo_url, branding_primary_color, branding_tagline, brochure_title, brochure_tagline, brochure_color, brochure_tcs, brochure_custom_text)")
     .eq("id", quoteId)
     .eq("profile_id", userData.user.id)
     .single();
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     : `<div style="font-family:Arial Black,Arial,sans-serif;font-size:20px;font-weight:900;letter-spacing:2px;color:#ffffff;">${business.toUpperCase()}</div>`;
 
   /* ---- Build brochure HTML if requested ---- */
-  const shouldIncludeBrochure = includeBrochure || (quote as unknown as Record<string, unknown>).include_brochure;
+  const shouldIncludeBrochure = includeBrochure;
   let brochureHtml = "";
   if (shouldIncludeBrochure && quote.profiles) {
     const p = quote.profiles as Record<string, unknown>;

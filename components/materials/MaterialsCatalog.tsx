@@ -18,8 +18,8 @@ import {
   Check,
   FileUp,
 } from "lucide-react";
-import type { Material, Supplier } from "./shared";
-import { TRADE_COLORS, TRADES, UNITS, PAGE_SIZE, formatCurrency } from "./shared";
+import type { Material, Supplier, PricingTier } from "./shared";
+import { TRADE_COLORS, TRADES, UNITS, PAGE_SIZE, formatCurrency, calcSellPrice } from "./shared";
 
 /* ================================================================== */
 /*  TAB 1: MATERIALS                                                   */
@@ -46,6 +46,7 @@ interface MaterialsTabProps {
   onEditMaterial: (m: Material) => void;
   onDeleteMaterial: (id: string) => void;
   onOpenCsvUpload: () => void;
+  pricingTiers: PricingTier[];
 }
 
 export default function MaterialsCatalog({
@@ -69,7 +70,11 @@ export default function MaterialsCatalog({
   onEditMaterial,
   onDeleteMaterial,
   onOpenCsvUpload,
+  pricingTiers,
 }: MaterialsTabProps) {
+  const firstTier = pricingTiers[0];
+  const tierMarkup = firstTier?.markup_pct ?? 0;
+  const tierName = firstTier?.name ?? "default";
   return (
     <div>
       {/* Header */}
@@ -215,6 +220,7 @@ export default function MaterialsCatalog({
                   <th className="text-left px-4 py-2.5 w-28">Trade</th>
                   <th className="text-center px-4 py-2.5 w-20">Unit</th>
                   <th className="text-right px-4 py-2.5 w-28">Cost</th>
+                  <th className="text-right px-4 py-2.5 w-32">Sell Price</th>
                   <th className="text-right px-4 py-2.5 w-24">Actions</th>
                 </tr>
               </thead>
@@ -242,6 +248,16 @@ export default function MaterialsCatalog({
                       <td className="px-4 py-2.5 text-center text-[12px] text-[var(--ink-soft)]">{m.unit}</td>
                       <td className="px-4 py-2.5 text-right text-[13px] font-bold text-[var(--ink)] tabular">
                         {formatCurrency(m.cost_price)}
+                      </td>
+                      <td className="px-4 py-2.5 text-right">
+                        <div className="text-[13px] font-bold text-[var(--green)] tabular">
+                          {formatCurrency(calcSellPrice(m.cost_price, tierMarkup))}
+                        </div>
+                        {firstTier && (
+                          <div className="text-[10px] text-[var(--ink-faint)] mt-0.5">
+                            at {tierName} markup
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-2.5 text-right">
                         <div className="relative inline-block">
@@ -343,7 +359,15 @@ export default function MaterialsCatalog({
                     <span className="text-[11px] text-[var(--ink-faint)]">|</span>
                     <span className="text-[11px] text-[var(--ink-faint)]">{m.unit}</span>
                   </div>
-                  <div className="mt-2 text-[14px] font-bold text-[var(--ink)] tabular">{formatCurrency(m.cost_price)}</div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-[14px] font-bold text-[var(--ink)] tabular">{formatCurrency(m.cost_price)}</span>
+                    <span className="text-[12px] text-[var(--green)] font-bold tabular">
+                      {formatCurrency(calcSellPrice(m.cost_price, tierMarkup))}
+                    </span>
+                  </div>
+                  {firstTier && (
+                    <div className="text-[10px] text-[var(--ink-faint)] mt-0.5">at {tierName} markup</div>
+                  )}
                 </div>
               );
             })}
