@@ -84,6 +84,8 @@ interface RooferQuoteBuilderProps {
   materials: { item_key: string; label: string; unit_cost: number }[];
   preClientId?: string;
   preMarkupMaterials?: { label: string; quantity: number; unit: string; unitCost: number; totalCost: number }[];
+  pricingTiers?: Array<{ id: string; name: string; markup_pct: number; sort_order: number }>;
+  jobSizeTiers?: Array<{ id: string; name: string; max_days: number | null; markup_pct: number; sort_order: number }>;
 }
 
 export default function RooferQuoteBuilder({
@@ -91,6 +93,8 @@ export default function RooferQuoteBuilder({
   materials: lib,
   preClientId,
   preMarkupMaterials,
+  pricingTiers,
+  jobSizeTiers,
 }: RooferQuoteBuilderProps) {
 
   // ── State ──────────────────────────────────────────────────────
@@ -106,6 +110,23 @@ export default function RooferQuoteBuilder({
   const [notes, setNotes] = useState("");
   const [warranty, setWarranty] = useState("10-year manufacturer warranty + 5-year workmanship guarantee");
   const [saving, setSaving] = useState(false);
+
+  const [selectedPricingTierId, setSelectedPricingTierId] = useState<string | null>(null);
+  const [selectedJobSizeTierId, setSelectedJobSizeTierId] = useState<string | null>(null);
+
+  const selectedPricingTier = useMemo(() =>
+    pricingTiers?.find(t => t.id === selectedPricingTierId) ?? null,
+  [pricingTiers, selectedPricingTierId]);
+
+  const selectedJobSizeTier = useMemo(() =>
+    jobSizeTiers?.find(t => t.id === selectedJobSizeTierId) ?? null,
+  [jobSizeTiers, selectedJobSizeTierId]);
+
+  const effectiveMargin = useMemo(() => {
+    const base = selectedPricingTier?.markup_pct ?? profile.materials_margin_pct ?? 20;
+    const adjustment = selectedJobSizeTier?.markup_pct ?? 0;
+    return base + adjustment;
+  }, [selectedPricingTier, selectedJobSizeTier, profile.materials_margin_pct]);
 
   // ── New job form ───────────────────────────────────────────────
   const [newArea, setNewArea] = useState(0);
@@ -324,6 +345,8 @@ export default function RooferQuoteBuilder({
       extras,
       notes,
       warranty,
+      pricing_tier_id: selectedPricingTierId,
+      job_size_tier_id: selectedJobSizeTierId,
       summary: {
         totalArea: summary.totalArea,
         labour: summary.labour,
@@ -492,7 +515,49 @@ export default function RooferQuoteBuilder({
         </div>
       </div>
 
-      {/* ── Tier ─────────────────────────────────────────────── */}
+      {/* ── Tier selectors ───────────────────────────────────── */}
+      {pricingTiers && pricingTiers.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="font-semibold text-[14px] text-[var(--ink)] flex items-center gap-2">
+            <Maximize2 size={16} className="text-[var(--amber-deep)]" /> Customer type
+          </h3>
+          <select
+            value={selectedPricingTierId ?? ""}
+            onChange={(e) => setSelectedPricingTierId(e.target.value || null)}
+            className="app-field"
+          >
+            <option value="">Custom margin ({profile.materials_margin_pct ?? 20}%)</option>
+            {pricingTiers.map(t => (
+              <option key={t.id} value={t.id}>
+                {t.name} ({t.markup_pct >= 0 ? "+" : ""}{t.markup_pct}%)
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {jobSizeTiers && jobSizeTiers.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="font-semibold text-[14px] text-[var(--ink)] flex items-center gap-2">
+            <Maximize2 size={16} className="text-[var(--amber-deep)]" /> Job size
+          </h3>
+          <select
+            value={selectedJobSizeTierId ?? ""}
+            onChange={(e) => setSelectedJobSizeTierId(e.target.value || null)}
+            className="app-field"
+          >
+            <option value="">Select job size...</option>
+            {jobSizeTiers.map(t => (
+              <option key={t.id} value={t.id}>
+                {t.name} {t.max_days ? `(< ${t.max_days} day${t.max_days !== 1 ? "s" : ""})` : "(3+ days)"}
+                ({t.markup_pct >= 0 ? "+" : ""}{t.markup_pct}%)
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* ── Pricing tier (legacy) ────────────────────────────── */}
       <div className="space-y-3">
         <h3 className="font-semibold text-[14px] text-[var(--ink)] flex items-center gap-2">
           <Maximize2 size={16} className="text-[var(--amber-deep)]" /> Pricing tier
