@@ -305,7 +305,18 @@ export default function PlumberQuoteBuilder({
               <div className="flex items-start gap-3 mb-3"><Sparkles size={18} className="text-[var(--amber-deep)] mt-0.5 shrink-0" /><div><p className="font-semibold">AI field pre-fill (optional)</p><p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5">AI reads the drawing and notes what it can. You review everything.</p></div></div>
               <button onClick={runAiAnalysis} disabled={analyzing} className="btn-secondary w-full justify-center"><Sparkles size={15} className="text-[var(--amber-deep)]" />{analyzing ? "Reading..." : "Analyse with AI"}</button>
               {analysisError && <p className="text-[13px] text-[var(--red)] mt-2">{analysisError}</p>}
-              {analysisResult && <div className={`mt-3 rounded-lg px-3 py-2.5 flex items-start gap-2 ${analysisResult.confidence === "low" ? "bg-[var(--red-bg)]" : "bg-amber-50"}`}><AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-600" /><div><p className="text-[13px] font-semibold text-amber-800">Fields noted ({analysisResult.confidence} confidence) - review before saving</p>{analysisResult.notes && <p className="text-[12.5px] mt-1 text-amber-700">{analysisResult.notes}</p>}</div></div>}
+              {analysisResult && (
+                <div className={`mt-3 rounded-xl border ${analysisResult.confidence === "low" ? "bg-[var(--red-bg)] border-red-100" : "bg-amber-50 border-amber-100"}`}>
+                  <div className="flex items-center gap-2 px-3 pt-3 pb-1">
+                    <AlertTriangle size={14} className={`shrink-0 ${analysisResult.confidence === "low" ? "text-[var(--red)]" : "text-amber-600"}`} />
+                    <p className={`text-[13px] font-bold ${analysisResult.confidence === "low" ? "text-[var(--red)]" : "text-amber-800"}`}>
+                      Drawing read ({analysisResult.confidence} confidence) — values pre-filled, review next step
+                    </p>
+                  </div>
+                  {analysisResult.notes && <p className="text-[12px] px-3 pb-2 text-amber-700">{analysisResult.notes}</p>}
+                  <p className="text-[11px] px-3 pb-3 text-amber-600 font-semibold">Check the next step to see what was detected and adjust if needed.</p>
+                </div>
+              )}
             </div>
           )}
         </div>

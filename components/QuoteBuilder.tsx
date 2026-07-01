@@ -582,14 +582,21 @@ function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions
             </div>
           )}
           {analysisResult && (
-            <div className={`mt-3 rounded-lg px-3 py-2.5 flex items-start gap-2 ${analysisResult.confidence === "low" ? "bg-[var(--red-bg)]" : "bg-amber-50"}`}>
-              <AlertTriangle size={14} className={`mt-0.5 shrink-0 ${analysisResult.confidence === "low" ? "text-[var(--red)]" : "text-amber-600"}`} />
-              <div>
-                <p className={`text-[13px] font-semibold ${analysisResult.confidence === "low" ? "text-[var(--red)]" : "text-amber-800"}`}>
-                  Fields pre-filled ({analysisResult.confidence} confidence) - review before saving
+            <div className={`mt-3 rounded-xl border ${analysisResult.confidence === "low" ? "bg-[var(--red-bg)] border-red-100" : "bg-amber-50 border-amber-100"}`}>
+              <div className="flex items-center gap-2 px-3 pt-3 pb-1">
+                <AlertTriangle size={14} className={`shrink-0 ${analysisResult.confidence === "low" ? "text-[var(--red)]" : "text-amber-600"}`} />
+                <p className={`text-[13px] font-bold ${analysisResult.confidence === "low" ? "text-[var(--red)]" : "text-amber-800"}`}>
+                  Drawing read ({analysisResult.confidence} confidence) — fields pre-filled
                 </p>
-                {analysisResult.notes && <p className={`text-[12.5px] mt-1 ${analysisResult.confidence === "low" ? "text-red-500" : "text-amber-700"}`}>{analysisResult.notes}</p>}
               </div>
+              {analysisResult.notes && (
+                <p className={`text-[12px] px-3 pb-2 ${analysisResult.confidence === "low" ? "text-red-600" : "text-amber-700"}`}>
+                  {analysisResult.notes}
+                </p>
+              )}
+              <p className="text-[11px] px-3 pb-3 text-amber-600 font-semibold">
+                Go to the Electrical step to review what was detected and adjust if needed.
+              </p>
             </div>
           )}
         </div>
@@ -765,6 +772,40 @@ function StepElectrical({ intake, set, lib, setLib }: {
 
   return (
     <div className="space-y-4">
+
+      {/* AI pre-fill summary -- show what was detected from drawing/voice */}
+      {(intake.powerPoints > 0 || intake.lightPoints > 0 || intake.switches > 0 ||
+        intake.downlights > 0 || intake.dataPoints > 0 || intake.smokeAlarms > 0 ||
+        (intake.cableRuns ?? []).some((r) => r.metres > 0) ||
+        (intake.exhaustFans ?? []).some((e) => e.qty > 0) ||
+        intake.switchboardUpgrade || intake.threePhase) && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700 mb-2">
+            Detected from drawing or voice — review and adjust
+          </p>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+            {([
+              ["Power points",  intake.powerPoints],
+              ["Light points",  intake.lightPoints],
+              ["Switches",      intake.switches],
+              ["Downlights",    intake.downlights],
+              ["Data points",   intake.dataPoints],
+              ["Smoke alarms",  intake.smokeAlarms],
+              ["Ext. circuits", intake.externalCircuits],
+              ["Cable (2.5mm)", (intake.cableRuns ?? []).find(r => r.size === "2.5")?.metres ?? 0],
+              ["Exhaust fans",  (intake.exhaustFans ?? []).reduce((s, e) => s + e.qty, 0)],
+            ] as [string, number][]).filter(([, v]) => v > 0).map(([label, val]) => (
+              <div key={label} className="flex items-center justify-between py-0.5">
+                <span className="text-[12px] text-amber-700">{label}</span>
+                <span className="text-[12.5px] font-bold text-amber-900">{val}</span>
+              </div>
+            ))}
+            {intake.switchboardUpgrade && <div className="col-span-2 text-[12px] font-semibold text-amber-800 py-0.5">Switchboard upgrade detected</div>}
+            {intake.threePhase && <div className="col-span-2 text-[12px] font-semibold text-amber-800 py-0.5">3-phase detected</div>}
+          </div>
+        </div>
+      )}
+
       <div className="card">
         <p className="section-tag mb-3">Switchboard</p>
         <Row>
