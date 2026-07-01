@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { DashboardStats, ProfitStats } from "@/lib/dashboardStats";
+import DashboardChatAssistant from "@/components/DashboardChatAssistant";
 import {
   TrendingUp,
   DollarSign,
