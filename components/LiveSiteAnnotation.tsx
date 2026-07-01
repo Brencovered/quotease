@@ -141,6 +141,10 @@ export default function LiveSiteAnnotation({
           setAdded(false);
           if (onSaveDraft) onSaveDraft();
           router.push(`/camera?trade=${trade}`);
+          // Also save price book for PricingEngine in camera page
+          if (lib) {
+            try { sessionStorage.setItem("swiftscope_price_book", JSON.stringify(lib)); } catch {}
+          }
         }}
         className="btn-primary w-full justify-center">
         <Camera size={15} /> Open camera

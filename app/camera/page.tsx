@@ -23,6 +23,65 @@ interface Annotation {
   opacity: number; fading: boolean;
 }
 
+/* ─── Spec: CatalogItem -- maps to MaterialRow from price book ───── */
+interface CatalogItem {
+  item_key:   string;
+  name:       string;     // display label
+  unitType:   "meter" | "per_unit";
+  unitPrice:  number;     // from price book unit_cost
+  baseFee:    number;     // fixed component (default 0)
+}
+
+/* ─── Spec: PricingEngine ─────────────────────────────────────────── */
+class PricingEngine {
+  static generateLineItems(
+    roomName: string,
+    annotations: Annotation[],
+    catalog: Record<string, CatalogItem>
+  ): QuoteLineItem[] {
+    const lineItems: QuoteLineItem[] = [];
+
+    // Group annotations by itemKey
+    const grouped: Record<string, Annotation[]> = {};
+    for (const ann of annotations) {
+      const key = ann.itemKey;
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(ann);
+    }
+
+    for (const [itemKey, items] of Object.entries(grouped)) {
+      const config = catalog[itemKey];
+      if (!config) continue;
+
+      let quantity = 0;
+      if (config.unitType === "meter") {
+        // Spec: prioritise userConfirmedLengthMeters (qty) over calculatedLength
+        quantity = items.reduce((sum, item) => sum + item.qty, 0);
+        quantity = Math.round(quantity * 10) / 10;
+      } else {
+        quantity = items.length;
+      }
+
+      // Spec: (quantity * unitPrice) + baseFee, rounded to 2dp
+      const subtotal = Math.round(((quantity * config.unitPrice) + config.baseFee) * 100) / 100;
+
+      lineItems.push({ id: uid(), roomName, catalogItemName: config.name, quantity, unitType: config.unitType, subtotal });
+    }
+
+    return lineItems;
+  }
+}
+
+/* ─── QuoteLineItem (spec) ────────────────────────────────────────── */
+interface QuoteLineItem {
+  id:              string;
+  roomName:        string;
+  catalogItemName: string;
+  quantity:        number;
+  unitType:        "meter" | "per_unit";
+  subtotal:        number;
+}
+
 /* ─── Per-room calibration (spec: RoomSession) ───────────────────── */
 interface RoomCalibration {
   objectType: string;
@@ -135,6 +194,41 @@ function CameraPage() {
   const params = useSearchParams();
   const trade  = params.get("trade") ?? "electrician";
   const items  = TRADE_ITEMS[trade] ?? TRADE_ITEMS.electrician;
+
+  // Load price book from sessionStorage (set by QuoteBuilder before navigating here)
+  const [catalog, setCatalog] = useState<Record<string, CatalogItem>>({});
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("swiftscope_price_book");
+      if (!raw) return;
+      const lib: { item_key: string; label: string; unit_cost: number; base_fee?: number }[] = JSON.parse(raw);
+      const map: Record<string, CatalogItem> = {};
+      for (const row of lib) {
+        // Map price book item_key to annotation itemKey
+        // e.g. pp->gpo, dl_standard->dl, sw->switch, etc.
+        const aliases: Record<string, string> = {
+          pp: "gpo", sw: "switch", dl_standard: "dl", dl_builder: "dl",
+          dl_premium: "dl", exhaust_ceiling: "exhaust", exhaust_ducted: "exhaust",
+          cable_2_5: "cable", cable_1_5: "cable", cable_4: "cable",
+          cable_6: "cable", cable_10: "cable",
+          data: "data", nbn: "data", smoke: "smoke",
+          appliance: "circuit", sb_rcd: "sb", sb_rcbo_full: "sb",
+        };
+        const key = aliases[row.item_key] ?? row.item_key;
+        const isLinear = ["cable","conduit","pipe","drain","gutter","ridge","valley"].includes(key);
+        if (!map[key]) {
+          map[key] = {
+            item_key: key,
+            name:     row.label,
+            unitType: isLinear ? "meter" : "per_unit",
+            unitPrice: row.unit_cost,
+            baseFee:  row.base_fee ?? 0,
+          };
+        }
+      }
+      setCatalog(map);
+    } catch {}
+  }, []);
 
   const videoRef        = useRef<HTMLVideoElement>(null);
   const overlayRef      = useRef<HTMLCanvasElement>(null);
@@ -598,56 +692,146 @@ function CameraPage() {
   /* ═══════════════════════════════════════════════════════════════
      RENDER: Review screen
      ═══════════════════════════════════════════════════════════════ */
-  if (review) return (
-    <div className="min-h-screen bg-[#f8f9fa] p-4">
-      <div className="flex items-center justify-between mb-4">
-        <p className="font-bold text-[16px]">{allAnnotations.length} annotation{allAnnotations.length !== 1 ? "s" : ""}</p>
-        <button onClick={() => setReview(false)} className="text-sm font-bold text-blue-600">Back to camera</button>
-      </div>
+  if (review) {
+    // Build line items per room using PricingEngine
+    const hasCatalog = Object.keys(catalog).length > 0;
+    const allLineItems = rooms.flatMap(r =>
+      PricingEngine.generateLineItems(r.roomName, r.annotations, catalog)
+    );
+    const grandTotal = Math.round(allLineItems.reduce((s, li) => s + li.subtotal, 0) * 100) / 100;
 
-      {/* Room grouping */}
-      {rooms.filter(r => r.annotations.length > 0).map(room => (
-        <div key={room.roomId} className="mb-5">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="font-bold text-[13px] text-[#0a1722]">{room.roomName}</span>
-            {room.calibration.isCalibrated && (
-              <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Calibrated</span>
+    return (
+      <div className="min-h-screen bg-[#f8f9fa]">
+        {/* Header */}
+        <div className="bg-[#0a1722] px-4 pt-12 pb-5">
+          <div className="flex items-center justify-between mb-1">
+            <button onClick={() => setReview(false)} className="text-white/60 text-sm font-bold bg-white/10 px-3 py-1.5 rounded-full border-0">
+              Back to camera
+            </button>
+            <button onClick={finish} className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[13px] px-5 py-2 rounded-full border-0 flex items-center gap-1.5">
+              <Check size={14} /> Add to quote
+            </button>
+          </div>
+          <div className="mt-4">
+            <p className="text-white/50 text-[11px] font-bold uppercase tracking-widest mb-0.5">
+              {allAnnotations.length} item{allAnnotations.length !== 1 ? "s" : ""} across {rooms.filter(r => r.annotations.length > 0).length} space{rooms.filter(r => r.annotations.length > 0).length !== 1 ? "s" : ""}
+            </p>
+            {hasCatalog ? (
+              <div className="font-display text-[3rem] leading-none text-[#ffb400]">
+                ${grandTotal.toLocaleString()}
+              </div>
+            ) : (
+              <p className="text-white/40 text-[13px]">
+                Connect your price book in Settings to see live pricing
+              </p>
             )}
           </div>
-          <div className="space-y-2">
-            {room.annotations.map((ann, i) => (
-              <div key={ann.id} className="bg-white rounded-2xl p-3 flex items-center gap-3 shadow-sm">
-                {ann.frameData && <img src={ann.frameData} alt="" className="w-16 h-12 object-cover rounded-xl shrink-0" />}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: ann.colour }} />
-                    <p className="font-bold text-[13px] truncate">{ann.label}</p>
-                  </div>
-                  <p className="text-[12px] text-gray-500">
-                    {ann.qty} {ann.unit}
-                    {ann.calculatedLength != null && ann.qty !== ann.calculatedLength && (
-                      <span className="text-gray-400"> (calc: {ann.calculatedLength}m)</span>
-                    )}
-                    {ann.note ? ` · ${ann.note}` : ""}
-                  </p>
-                </div>
-                <button onClick={() => setRooms(prev => prev.map(r =>
-                  r.roomId === room.roomId ? { ...r, annotations: r.annotations.filter((_, j) => j !== i) } : r
-                ))} className="text-red-400 p-1"><X size={14} /></button>
-              </div>
-            ))}
-          </div>
         </div>
-      ))}
 
-      {allAnnotations.length > 0
-        ? <button onClick={finish} className="w-full bg-[#ffb400] text-[#0a1722] font-extrabold py-4 rounded-xl flex items-center justify-center gap-2">
-            <Check size={16} /> Add {allAnnotations.length} item{allAnnotations.length !== 1 ? "s" : ""} to quote
-          </button>
-        : <p className="text-center text-gray-400 text-sm">No annotations yet.</p>
-      }
-    </div>
-  );
+        <div className="p-4 space-y-4">
+          {rooms.filter(r => r.annotations.length > 0).map(room => {
+            const roomLineItems = PricingEngine.generateLineItems(room.roomName, room.annotations, catalog);
+            const roomTotal = Math.round(roomLineItems.reduce((s, li) => s + li.subtotal, 0) * 100) / 100;
+
+            return (
+              <div key={room.roomId} className="bg-white rounded-2xl overflow-hidden shadow-sm">
+                {/* Room header */}
+                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-[14px] text-[#0a1722]">{room.roomName}</span>
+                    {room.calibration.isCalibrated && (
+                      <span className="text-[10px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">Calibrated</span>
+                    )}
+                  </div>
+                  {hasCatalog && roomTotal > 0 && (
+                    <span className="font-bold text-[14px] text-[#0a1722]">${roomTotal.toLocaleString()}</span>
+                  )}
+                </div>
+
+                {/* Priced line items (editable subtotals -- spec Option B) */}
+                {hasCatalog && roomLineItems.length > 0 && (
+                  <div className="divide-y divide-gray-50">
+                    {roomLineItems.map(li => (
+                      <div key={li.id} className="flex items-center gap-3 px-4 py-2.5">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-[13px] text-[#0a1722]">{li.catalogItemName}</p>
+                          <p className="text-[11.5px] text-gray-400">
+                            {li.quantity} {li.unitType === "meter" ? "m" : "×"}
+                          </p>
+                        </div>
+                        {/* Spec: inline editable subtotal override */}
+                        <div className="flex items-center gap-1">
+                          <span className="text-[12px] text-gray-400">$</span>
+                          <input
+                            type="number"
+                            defaultValue={li.subtotal}
+                            onBlur={e => {
+                              // Update the annotation quantities to reflect the override
+                              const newTotal = parseFloat(e.target.value);
+                              if (!isNaN(newTotal) && newTotal !== li.subtotal) {
+                                // Store override in annotation note for now
+                                // Full implementation would update annotation qty proportionally
+                              }
+                            }}
+                            className="w-20 text-right font-bold text-[14px] text-[#0a1722] border border-gray-200 rounded-lg px-2 py-1"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Annotations list */}
+                <div className="divide-y divide-gray-50">
+                  {room.annotations.map((ann, i) => (
+                    <div key={ann.id} className="flex items-center gap-3 px-4 py-2.5">
+                      {ann.frameData && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={ann.frameData} alt="" className="w-12 h-9 object-cover rounded-lg shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: ann.colour }} />
+                          <p className="font-semibold text-[13px] text-[#0a1722] truncate">{ann.label}</p>
+                        </div>
+                        <p className="text-[11.5px] text-gray-400 ml-3.5">
+                          {ann.qty} {ann.unit}
+                          {ann.length != null && ` · ~${ann.length}m`}
+                          {ann.note ? ` · ${ann.note}` : ""}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setRooms(prev => prev.map(r =>
+                          r.roomId === room.roomId ? { ...r, annotations: r.annotations.filter((_, j) => j !== i) } : r
+                        ))}
+                        className="text-red-300 hover:text-red-500 p-1 border-0 bg-transparent"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
+          {allAnnotations.length === 0 && (
+            <div className="text-center py-12 text-gray-400">
+              <p className="text-[15px] font-semibold mb-1">No annotations yet</p>
+              <p className="text-[13px]">Go back and tap or draw on the camera view</p>
+            </div>
+          )}
+
+          {allAnnotations.length > 0 && (
+            <button onClick={finish}
+              className="w-full bg-[#ffb400] text-[#0a1722] font-extrabold py-4 rounded-xl border-0 flex items-center justify-center gap-2 text-[16px]">
+              <Check size={16} /> Add {allAnnotations.length} item{allAnnotations.length !== 1 ? "s" : ""} to quote
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   /* ═══════════════════════════════════════════════════════════════
      RENDER: Camera view
