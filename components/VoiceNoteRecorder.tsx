@@ -35,6 +35,7 @@ export default function VoiceNoteRecorder({
   const [recording, setRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [unsupported, setUnsupported] = useState(false);
+  const [recError, setRecError] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   function getRecognition(): SpeechRecognitionLike | null {
@@ -45,6 +46,8 @@ export default function VoiceNoteRecorder({
   }
 
   function startRecording() {
+    setRecError(null);
+
     const recognition = getRecognition();
     if (!recognition) {
       setUnsupported(true);
@@ -69,12 +72,44 @@ export default function VoiceNoteRecorder({
       }
       setTranscript(finalTranscript + interim);
     };
-    recognition.onerror = () => setRecording(false);
-    recognition.onend = () => setRecording(false);
+
+    recognition.onerror = (event) => {
+      setRecording(false);
+      switch (event.error) {
+        case "not-allowed":
+          setRecError("Microphone access denied. Check your browser's address bar for a blocked mic icon and allow permission.");
+          break;
+        case "no-speech":
+          setRecError("No speech detected. Try speaking closer to the microphone in a quieter environment.");
+          break;
+        case "audio-capture":
+          setRecError("No microphone found. Make sure a mic is connected and enabled.");
+          break;
+        case "network":
+          setRecError("Network error during speech recognition. Check your connection and try again.");
+          break;
+        case "aborted":
+          // User or code intentionally stopped - no error to show
+          setRecError(null);
+          break;
+        default:
+          setRecError(`Speech recognition error: ${event.error}. Try refreshing the page.`);
+      }
+    };
+
+    recognition.onend = () => {
+      setRecording(false);
+    };
 
     recognitionRef.current = recognition;
-    recognition.start();
-    setRecording(true);
+
+    try {
+      recognition.start();
+      setRecording(true);
+    } catch {
+      setRecError("Could not start microphone. Check browser permissions and try again.");
+      setRecording(false);
+    }
   }
 
   function stopRecording() {
@@ -113,6 +148,14 @@ export default function VoiceNoteRecorder({
           <Square size={14} />
           Stop recording
         </button>
+      )}
+
+      {/* Recording errors */}
+      {recError && (
+        <div className="mt-3 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 flex items-start gap-2">
+          <AlertTriangle size={14} className="text-red-600 mt-0.5 shrink-0" />
+          <p className="text-[13px] text-red-700">{recError}</p>
+        </div>
       )}
 
       {transcript && (
