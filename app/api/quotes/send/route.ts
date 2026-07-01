@@ -29,16 +29,24 @@ export async function POST(request: Request) {
   }
 
   const apiKey = process.env.RESEND_API_KEY;
+  const appUrl   = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
+  const quoteUrl = `${appUrl}/q/${quote.public_token}`;
+
+  // ── Graceful fallback: no email config → mark sent, return warning ──
   if (!apiKey) {
-    return NextResponse.json(
-      { error: "RESEND_API_KEY is not configured on this deployment" },
-      { status: 500 }
-    );
+    await supabase
+      .from("quotes")
+      .update({ status: "sent", sent_at: new Date().toISOString() })
+      .eq("id", quoteId);
+
+    return NextResponse.json({
+      ok: true,
+      quoteUrl,
+      warning: "Quote saved but email was not sent — RESEND_API_KEY is not configured. Add it to your environment variables to enable email delivery.",
+    });
   }
 
   const business = quote.profiles?.business_name ?? "Your tradie";
-  const appUrl   = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
-  const quoteUrl = `${appUrl}/q/${quote.public_token}`;
 
   const logoHtml = quote.profiles?.logo_url
     ? `<img src="${quote.profiles.logo_url}" alt="${business}" style="max-height:52px;max-width:200px;display:block;margin-bottom:4px;" />`

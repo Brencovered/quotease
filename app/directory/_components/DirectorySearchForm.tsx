@@ -1,37 +1,19 @@
 "use client";
 
-import { Search, Filter, Star, ArrowUpDown } from "lucide-react";
+import { Search, Filter, Star, ArrowUpDown, Locate } from "lucide-react";
 import Link from "next/link";
 import { useCallback } from "react";
 
 const ALL_TRADES = [
-  "electrician",
-  "plumber",
-  "builder",
-  "roofer",
-  "painter",
-  "carpenter",
-  "tiler",
-  "landscaper",
-  "concreter",
-  "fencer",
-  "plasterer",
-  "handyman",
+  "electrician", "plumber", "builder", "roofer", "painter", "carpenter",
+  "tiler", "landscaper", "concreter", "fencer", "plasterer", "handyman",
 ];
 
 const TRADE_LABELS: Record<string, string> = {
-  electrician: "Electrician",
-  plumber: "Plumber",
-  builder: "Builder",
-  roofer: "Roofer",
-  painter: "Painter",
-  carpenter: "Carpenter",
-  tiler: "Tiler",
-  landscaper: "Landscaper",
-  concreter: "Concreter",
-  fencer: "Fencer",
-  plasterer: "Plasterer",
-  handyman: "Handyman",
+  electrician: "Electrician", plumber: "Plumber", builder: "Builder",
+  roofer: "Roofer", painter: "Painter", carpenter: "Carpenter",
+  tiler: "Tiler", landscaper: "Landscaper", concreter: "Concreter",
+  fencer: "Fencer", plasterer: "Plasterer", handyman: "Handyman",
 };
 
 const REVIEW_RANGES = [
@@ -56,12 +38,22 @@ const SORT_OPTIONS = [
   { value: "name", label: "Name A-Z" },
 ];
 
+const RADIUS_OPTIONS = [
+  { value: "", label: "Any distance" },
+  { value: "5", label: "Within 5 km" },
+  { value: "10", label: "Within 10 km" },
+  { value: "25", label: "Within 25 km" },
+  { value: "50", label: "Within 50 km" },
+  { value: "100", label: "Within 100 km" },
+];
+
 interface DirectorySearchFormProps {
   trade: string | undefined;
   suburb: string | undefined;
   reviews: string | undefined;
   rating: string | undefined;
   sort: string | undefined;
+  radius: string | undefined;
   count: number;
 }
 
@@ -71,6 +63,7 @@ export default function DirectorySearchForm({
   reviews,
   rating,
   sort,
+  radius,
   count,
 }: DirectorySearchFormProps) {
   const activeSort = sort ?? "rating";
@@ -99,6 +92,17 @@ export default function DirectorySearchForm({
             placeholder="Suburb..."
             className="app-field pl-8 pr-3 text-[13px] w-full bg-white"
           />
+        </div>
+
+        <div className="relative">
+          <Locate size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] z-10 pointer-events-none" />
+          <select name="radius" defaultValue={radius ?? ""}
+            className="app-field text-[13px] w-auto bg-white pl-8 pr-2"
+            style={{ appearance: "none", WebkitAppearance: "none" }}>
+            {RADIUS_OPTIONS.map((r) => (
+              <option key={r.value} value={r.value}>{r.label}</option>
+            ))}
+          </select>
         </div>
 
         <div className="relative">
@@ -138,7 +142,7 @@ export default function DirectorySearchForm({
           Search
         </button>
 
-        {(trade || suburb || reviews || rating || sort) && (
+        {(trade || suburb || reviews || rating || sort || radius) && (
           <Link href="/directory" className="text-[13px] font-semibold hover:opacity-70 transition-opacity" style={{ color: "var(--ink-faint)" }}>
             Clear all
           </Link>
@@ -148,6 +152,7 @@ export default function DirectorySearchForm({
           {count} result{count !== 1 ? "s" : ""}
           {trade ? ` - ${TRADE_LABELS[trade] ?? trade}` : ""}
           {suburb ? ` - ${suburb}` : ""}
+          {radius ? ` - ${RADIUS_OPTIONS.find((r) => r.value === radius)?.label ?? radius}` : ""}
           {reviews ? ` - ${REVIEW_RANGES.find((r) => r.value === reviews)?.label ?? reviews}` : ""}
           {rating ? ` - ${RATING_OPTIONS.find((r) => r.value === rating)?.label ?? rating}` : ""}
         </span>
