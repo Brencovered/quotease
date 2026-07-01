@@ -18,7 +18,7 @@ export const metadata: Metadata = {
       { url: "/favicon.ico", sizes: "48x48" },
     ],
     apple: [
-      { url: "/apple-touch-icon.png", sizes: "180x180" },
+      { url: "/api/favicon?size=180", sizes: "180x180" },
     ],
     other: [
       { rel: "manifest", url: "/site.webmanifest" },
