@@ -52,11 +52,14 @@ const STEPS = [
 
 export default function QuoteBuilder({
   profile, materials, preClientId, preMarkupMaterials,
+  pricingTiers, jobSizeTiers,
 }: {
   profile: { hourly_rate: number; materials_margin_pct: number; default_deposit_pct?: number | null; default_expiry_days?: number };
   materials: MaterialRow[];
   preClientId?: string;
   preMarkupMaterials?: Array<{ label: string; quantity: number; unit: string; unitCost: number; totalCost: number }>;
+  pricingTiers?: Array<{ id: string; name: string; markup_pct: number; sort_order: number }>;
+  jobSizeTiers?: Array<{ id: string; name: string; max_days: number | null; markup_pct: number; sort_order: number }>;
 }) {
   const [step, setStep]     = useState(0);
   const [intake, setIntake] = useState<ElectricianIntake>(DEFAULT_INTAKE);
@@ -65,6 +68,26 @@ export default function QuoteBuilder({
   const [lib, setLib]       = useState<MaterialRow[]>(
     materials.length > 0 ? materials : ELECTRICIAN_DEFAULT_MATERIALS.map((m) => ({ ...m }))
   );
+
+  // Pricing tier selection
+  const [selectedPricingTierId, setSelectedPricingTierId] = useState<string | null>(null);
+  const [selectedJobSizeTierId, setSelectedJobSizeTierId] = useState<string | null>(null);
+
+  // Derive selected tiers and effective margin
+  const selectedPricingTier = useMemo(() =>
+    pricingTiers?.find(t => t.id === selectedPricingTierId) ?? null,
+  [pricingTiers, selectedPricingTierId]);
+
+  const selectedJobSizeTier = useMemo(() =>
+    jobSizeTiers?.find(t => t.id === selectedJobSizeTierId) ?? null,
+  [jobSizeTiers, selectedJobSizeTierId]);
+
+  // Effective margin = pricing tier markup + job size tier markup
+  const effectiveMargin = useMemo(() => {
+    const base = selectedPricingTier?.markup_pct ?? profile.materials_margin_pct ?? 20;
+    const adjustment = selectedJobSizeTier?.markup_pct ?? 0;
+    return base + adjustment;
+  }, [selectedPricingTier, selectedJobSizeTier, profile.materials_margin_pct]);
 
   const [clientName, setClientName]   = useState("");
   const [clientEmail, setClientEmail] = useState("");
@@ -137,13 +160,13 @@ export default function QuoteBuilder({
     return m;
   }, [lib]);
 
-  const result = useMemo(() => calcElectricianQuote(intake, costs, rate, margin), [intake, costs, rate, margin]);
+  const result = useMemo(() => calcElectricianQuote(intake, costs, rate, effectiveMargin), [intake, costs, rate, effectiveMargin]);
   // The wizard's running total needs to include this too, not just the
   // saved record - otherwise raising a quote from a $244 plan shows $0
   // the whole time you're filling it in, which looks broken.
-  const markupTotal = (preMarkupMaterials ?? []).reduce((s, m) => s + (m.totalCost ?? 0), 0);
+  const markupTotal = (preMarkupMaterials ?? []).reduce((s, m) => s + (m.totalCost ?? 0) * (1 + effectiveMargin / 100), 0);
   const siteLabour    = siteItems.reduce((s, i) => s + i.labourHrs * (rate ?? 95), 0);
-  const siteMaterials = siteItems.reduce((s, i) => s + i.materialsCost * (1 + (margin ?? 20) / 100), 0);
+  const siteMaterials = siteItems.reduce((s, i) => s + i.materialsCost * (1 + (effectiveMargin ?? 20) / 100), 0);
   const siteTotal     = Math.round(siteLabour + siteMaterials);
 
   function set<K extends keyof ElectricianIntake>(key: K, value: ElectricianIntake[K]) {
@@ -290,9 +313,9 @@ export default function QuoteBuilder({
       );
     }
 
-    const extraTotals    = extraLinesTotals(extraLines, rate, margin);
+    const extraTotals    = extraLinesTotals(extraLines, rate, effectiveMargin);
     const siteLabourSave = siteItems.reduce((s, i) => s + i.labourHrs, 0);
-    const siteMatlsSave  = siteItems.reduce((s, i) => s + i.materialsCost * (1 + margin / 100), 0);
+    const siteMatlsSave  = siteItems.reduce((s, i) => s + i.materialsCost * (1 + effectiveMargin / 100), 0);
     const siteTotalSave  = Math.round(siteLabourSave * rate + siteMatlsSave);
 
     const { data: quote, error } = await supabase.from("quotes").insert({
@@ -307,6 +330,8 @@ export default function QuoteBuilder({
       materials_cost: Math.round(result.materialsCost + extraTotals.materials + siteMatlsSave),
       total_cost:     result.totalCost + extraTotals.total + siteTotalSave,
       payment_terms:  paymentTerms,
+      pricing_tier_id: selectedPricingTierId,
+      job_size_tier_id: selectedJobSizeTierId,
       quote_expires_at: new Date(Date.now() + (profile.default_expiry_days ?? 30) * 86400000).toISOString(),
       status:  sendEmail ? "sent" : "draft",
       sent_at: sendEmail ? new Date().toISOString() : null,
@@ -360,12 +385,12 @@ export default function QuoteBuilder({
             </div>
             <div>
               <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Materials</p>
-              <p className="font-display text-[18px] text-white leading-tight">${(result.materialsCost + markupTotal + extraLinesTotals(extraLines, rate, margin).materials + Math.round(siteMaterials)).toLocaleString()}</p>
+              <p className="font-display text-[18px] text-white leading-tight">${(result.materialsCost + markupTotal + extraLinesTotals(extraLines, rate, effectiveMargin).materials + Math.round(siteMaterials)).toLocaleString()}</p>
             </div>
           </div>
           <div className="text-right">
             <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Total</p>
-            <p className="font-display text-[24px] text-[var(--amber)] leading-tight">${(result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, margin).total + siteTotal).toLocaleString()}</p>
+            <p className="font-display text-[24px] text-[var(--amber)] leading-tight">${(result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total + siteTotal).toLocaleString()}</p>
           </div>
         </div>
       </div>
@@ -427,7 +452,24 @@ export default function QuoteBuilder({
       )}
 
       {stepId === "job" && (
-        <StepJob intake={intake} rate={rate} margin={margin} set={set} setRate={setRate} setMargin={setMargin} />
+        <StepJob
+          intake={intake}
+          rate={rate}
+          margin={margin}
+          effectiveMargin={effectiveMargin}
+          set={set}
+          setRate={setRate}
+          setMargin={setMargin}
+          pricingTiers={pricingTiers}
+          jobSizeTiers={jobSizeTiers}
+          selectedPricingTierId={selectedPricingTierId}
+          setSelectedPricingTierId={setSelectedPricingTierId}
+          selectedJobSizeTierId={selectedJobSizeTierId}
+          setSelectedJobSizeTierId={setSelectedJobSizeTierId}
+          selectedPricingTier={selectedPricingTier}
+          selectedJobSizeTier={selectedJobSizeTier}
+          profile={profile}
+        />
       )}
 
       {stepId === "electrical" && (
@@ -456,7 +498,10 @@ export default function QuoteBuilder({
           clientName={clientName} clientEmail={clientEmail} siteAddress={siteAddress}
           saving={saving} saveMessage={saveMessage} savedQuoteId={savedQuoteId} onSave={saveAndSend}
           extraLines={extraLines} setExtraLines={setExtraLines} rate={rate} margin={margin}
+          effectiveMargin={effectiveMargin}
           markupTotal={markupTotal} siteItems={siteItems} setSiteItems={setSiteItems} siteTotal={siteTotal} annotationMeta={annotationMeta}
+          selectedPricingTier={selectedPricingTier}
+          selectedJobSizeTier={selectedJobSizeTier}
         />
       )}
 
@@ -582,10 +627,24 @@ function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions
 }
 
 /* ─── Step: Job ─────────────────────────────────────────────────── */
-function StepJob({ intake, rate, margin, set, setRate, setMargin }: {
-  intake: ElectricianIntake; rate: number; margin: number;
+function StepJob({
+  intake, rate, margin, effectiveMargin, set, setRate, setMargin,
+  pricingTiers, jobSizeTiers,
+  selectedPricingTierId, setSelectedPricingTierId,
+  selectedJobSizeTierId, setSelectedJobSizeTierId,
+  selectedPricingTier, selectedJobSizeTier,
+  profile,
+}: {
+  intake: ElectricianIntake; rate: number; margin: number; effectiveMargin: number;
   set: <K extends keyof ElectricianIntake>(k: K, v: ElectricianIntake[K]) => void;
   setRate: (v: number) => void; setMargin: (v: number) => void;
+  pricingTiers?: Array<{ id: string; name: string; markup_pct: number; sort_order: number }>;
+  jobSizeTiers?: Array<{ id: string; name: string; max_days: number | null; markup_pct: number; sort_order: number }>;
+  selectedPricingTierId: string | null; setSelectedPricingTierId: (v: string | null) => void;
+  selectedJobSizeTierId: string | null; setSelectedJobSizeTierId: (v: string | null) => void;
+  selectedPricingTier: { id: string; name: string; markup_pct: number } | null;
+  selectedJobSizeTier: { id: string; name: string; markup_pct: number } | null;
+  profile: { hourly_rate: number; materials_margin_pct: number; default_deposit_pct?: number | null; default_expiry_days?: number };
 }) {
   return (
     <div className="space-y-4">
@@ -617,14 +676,78 @@ function StepJob({ intake, rate, margin, set, setRate, setMargin }: {
       </div>
 
       <div className="card">
-        <p className="section-tag mb-3">Your rates</p>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Hourly rate ($)">
-            <input type="number" inputMode="decimal" value={rate} onChange={(e) => setRate(Number(e.target.value))} className="app-field" />
-          </Field>
-          <Field label="Materials margin (%)">
-            <input type="number" inputMode="decimal" value={margin} onChange={(e) => setMargin(Number(e.target.value))} className="app-field" />
-          </Field>
+        <p className="section-tag mb-3">Customer &amp; job pricing</p>
+        
+        {pricingTiers && pricingTiers.length > 0 && (
+          <div className="mb-3">
+            <Field label="Customer type">
+              <select 
+                value={selectedPricingTierId ?? ""} 
+                onChange={(e) => setSelectedPricingTierId(e.target.value || null)} 
+                className="app-field"
+              >
+                <option value="">Custom margin ({profile.materials_margin_pct ?? 20}%)</option>
+                {pricingTiers.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} ({t.markup_pct >= 0 ? '+' : ''}{t.markup_pct}%)
+                  </option>
+                ))}
+              </select>
+            </Field>
+            {selectedPricingTier && (
+              <p className="text-[11px] text-[var(--ink-faint)] mt-1">
+                Materials marked up {selectedPricingTier.markup_pct}% for {selectedPricingTier.name.toLowerCase()} work
+              </p>
+            )}
+          </div>
+        )}
+
+        {jobSizeTiers && jobSizeTiers.length > 0 && (
+          <div className="mb-3">
+            <Field label="Job size">
+              <select 
+                value={selectedJobSizeTierId ?? ""} 
+                onChange={(e) => setSelectedJobSizeTierId(e.target.value || null)} 
+                className="app-field"
+              >
+                <option value="">Select job size...</option>
+                {jobSizeTiers.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} {t.max_days ? `(< ${t.max_days} day${t.max_days !== 1 ? 's' : ''})` : '(3+ days)'} 
+                    ({t.markup_pct >= 0 ? '+' : ''}{t.markup_pct}%)
+                  </option>
+                ))}
+              </select>
+            </Field>
+            {selectedJobSizeTier && selectedJobSizeTier.markup_pct !== 0 && (
+              <p className="text-[11px] text-[var(--ink-faint)] mt-1">
+                {selectedJobSizeTier.markup_pct > 0 ? 'Upward adjustment' : 'Discount'} of {Math.abs(selectedJobSizeTier.markup_pct)}% for {selectedJobSizeTier.name.toLowerCase()}
+              </p>
+            )}
+          </div>
+        )}
+
+        <div className="border-t border-[var(--line-subtle)] pt-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Hourly rate ($)">
+              <input type="number" inputMode="decimal" value={rate} onChange={(e) => setRate(Number(e.target.value))} className="app-field" />
+            </Field>
+            <Field label={`Effective margin (${effectiveMargin}%)`}>
+              <input 
+                type="number" 
+                inputMode="decimal" 
+                value={effectiveMargin} 
+                onChange={(e) => { /* Allow manual override by creating a pseudo-tier */ }} 
+                className="app-field bg-[var(--amber-light)]" 
+                readOnly
+              />
+            </Field>
+          </div>
+          {selectedPricingTier && selectedJobSizeTier && (
+            <p className="text-[11px] text-[var(--ink-faint)] mt-2">
+              {selectedPricingTier.markup_pct}% (customer) {selectedJobSizeTier.markup_pct >= 0 ? '+' : ''}{selectedJobSizeTier.markup_pct}% (job size) = {effectiveMargin}% total
+            </p>
+          )}
         </div>
       </div>
     </div>
@@ -954,7 +1077,8 @@ function StepSite({ intake, set }: {
 function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTerms, setCustomTerms, customTermsTotal,
   clientName, clientEmail, siteAddress,
   saving, saveMessage, savedQuoteId, onSave,
-  extraLines, setExtraLines, rate, margin, markupTotal, siteItems, setSiteItems, siteTotal, annotationMeta }: {
+  extraLines, setExtraLines, rate, margin, effectiveMargin, markupTotal, siteItems, setSiteItems, siteTotal, annotationMeta,
+  selectedPricingTier, selectedJobSizeTier }: {
   intake: ElectricianIntake;
   result: { labourHours: number; materialsCost: number; totalCost: number };
   paymentTerms: PaymentTerm[];
@@ -966,16 +1090,18 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
   onSave: (send: boolean, includeBrochure?: boolean) => void;
   extraLines: {id:string;label:string;hours:number;materialsCost:number;note:string}[];
   setExtraLines: React.Dispatch<React.SetStateAction<{id:string;label:string;hours:number;materialsCost:number;note:string}[]>>;
-  rate: number; margin: number; markupTotal: number;
+  rate: number; margin: number; effectiveMargin: number; markupTotal: number;
   siteItems: {id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[];
   setSiteItems: React.Dispatch<React.SetStateAction<{id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]>>;
   siteTotal: number;
   annotationMeta: {id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string}[];
+  selectedPricingTier: { id: string; name: string; markup_pct: number } | null;
+  selectedJobSizeTier: { id: string; name: string; markup_pct: number } | null;
 }) {
   // Mirrors the parent component's calc (siteMaterials there isn't passed
   // down to this component) -- siteTotal alone doesn't give us the
   // materials-only split this breakdown needs.
-  const siteMaterials = siteItems.reduce((s, i) => s + i.materialsCost * (1 + (margin ?? 20) / 100), 0);
+  const siteMaterials = siteItems.reduce((s, i) => s + i.materialsCost * (1 + (effectiveMargin ?? 20) / 100), 0);
 
   /* Brochure inclusion */
   const [includeBrochure, setIncludeBrochure] = useState(false);
@@ -1024,6 +1150,29 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
         </div>
       )}
 
+      {/* Applied pricing tiers */}
+      {(selectedPricingTier || selectedJobSizeTier) && (
+        <div className="card">
+          <p className="section-tag mb-2">Applied pricing</p>
+          {selectedPricingTier && (
+            <div className="flex justify-between text-[13px]">
+              <span className="text-[var(--ink-soft)]">Customer type: {selectedPricingTier.name}</span>
+              <span className="font-semibold">+{selectedPricingTier.markup_pct}%</span>
+            </div>
+          )}
+          {selectedJobSizeTier && (
+            <div className="flex justify-between text-[13px]">
+              <span className="text-[var(--ink-soft)]">Job size: {selectedJobSizeTier.name}</span>
+              <span className="font-semibold">{selectedJobSizeTier.markup_pct >= 0 ? '+' : ''}{selectedJobSizeTier.markup_pct}%</span>
+            </div>
+          )}
+          <div className="border-t border-[var(--line-subtle)] pt-1 mt-1 flex justify-between text-[13px]">
+            <span className="text-[var(--ink)] font-semibold">Effective materials margin</span>
+            <span className="font-bold text-[var(--amber-deep)]">{effectiveMargin}%</span>
+          </div>
+        </div>
+      )}
+
       {/* Quote summary */}
       <div className="bg-[var(--navy)] rounded-2xl p-5">
         <p className="text-[11px] text-[var(--steel-3)] font-bold uppercase tracking-wider mb-3">Quote summary</p>
@@ -1034,7 +1183,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
           </div>
           <div className="flex justify-between text-[14px]">
             <span className="text-[var(--steel-2)]">Materials</span>
-            <span className="text-white font-semibold tabular">${Math.round(result.materialsCost + markupTotal + extraLinesTotals(extraLines, rate, margin).materials).toLocaleString()}</span>
+            <span className="text-white font-semibold tabular">${Math.round(result.materialsCost + markupTotal + extraLinesTotals(extraLines, rate, effectiveMargin).materials).toLocaleString()}</span>
           </div>
           {siteTotal > 0 && (
             <div className="flex justify-between text-[14px]">
@@ -1049,7 +1198,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
           )}
           <div className="border-t border-white/10 pt-2 flex justify-between">
             <span className="text-white font-bold text-[15px]">Total</span>
-            <span className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, margin).total + siteTotal).toLocaleString()}</span>
+            <span className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total + siteTotal).toLocaleString()}</span>
           </div>
         </div>
       </div>
@@ -1067,7 +1216,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
         lines={extraLines}
         onChange={setExtraLines}
         hourlyRate={rate}
-        marginPct={margin}
+        marginPct={effectiveMargin}
       />
 
       {/* Payment terms */}
@@ -1087,7 +1236,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
               <div key={i} className="flex justify-between text-[13.5px]">
                 <span className="text-[var(--ink-soft)]">{t.label}</span>
                 <span className="font-bold text-[var(--ink)] tabular">
-                  {t.percent}% - ${Math.round(((result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, margin).total + (siteTotal ?? 0)) * t.percent) / 100).toLocaleString()}
+                  {t.percent}% - ${Math.round(((result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total + (siteTotal ?? 0)) * t.percent) / 100).toLocaleString()}
                 </span>
               </div>
             ))}
