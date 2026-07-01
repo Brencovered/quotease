@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ChevronDown, ChevronUp, Plus, Trash2, PenLine, Image, FileText, MessageSquare, Maximize2, Camera, SquareCheck, Phone, ArrowRight, Loader2, PlusCircle, X } from "lucide-react";
+import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -98,6 +99,9 @@ export default function RooferQuoteBuilder({
 }: RooferQuoteBuilderProps) {
 
   // ── State ──────────────────────────────────────────────────────
+  const [siteItems, setSiteItems] = useState<{id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]>([]);
+  const [annotationMeta, setAnnotationMeta] = useState<{id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string;roomName?:string}[]>([]);
+
   const [jobs, setJobs] = useState<JobDetail[]>([]);
   const [material, setMaterial] = useState<MaterialType>("colourbond");
   const [color, setColor] = useState<ColorPreference>("monument");
@@ -382,6 +386,15 @@ export default function RooferQuoteBuilder({
 
   // ── Render ─────────────────────────────────────────────────────
 
+  const siteTotal = Math.round(siteItems.reduce((s, i) => s + i.labourHrs * 95 + i.materialsCost, 0));
+
+  function saveDraft() {
+    try {
+      sessionStorage.setItem("swiftscope_quote_draft", JSON.stringify({ siteItems, annotationMeta }));
+      if (lib) sessionStorage.setItem("swiftscope_price_book", JSON.stringify(lib));
+    } catch {}
+  }
+
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
       {/* Header */}
@@ -392,11 +405,33 @@ export default function RooferQuoteBuilder({
         </div>
         {summary && (
           <div className="text-right">
-            <p className="font-display text-[2rem] text-[var(--amber-deep)]">${Math.round(summary.total).toLocaleString()}</p>
+            <p className="font-display text-[2rem] text-[var(--amber-deep)]">${Math.round(summary.total + siteTotal).toLocaleString()}</p>
             <p className="text-[11px] text-[var(--ink-faint)] font-semibold">inc. GST - {summary.totalArea} m&sup2; total</p>
           </div>
         )}
       </div>
+
+      {/* Live site annotation */}
+      <LiveSiteAnnotation
+        trade="roofer"
+        lib={lib}
+        onSaveDraft={saveDraft}
+        onAnnotationMeta={(meta) => setAnnotationMeta(meta)}
+        onAddLineItems={(items) => {
+          setSiteItems((prev) => [
+            ...prev,
+            ...items.map((item) => ({
+              id: Math.random().toString(36).slice(2),
+              label: item.description,
+              qty: item.quantity,
+              unit: item.unit,
+              note: item.notes,
+              materialsCost: (item as {materialsCost?: number}).materialsCost ?? 0,
+              labourHrs: (item as {labourHrs?: number}).labourHrs ?? 0,
+            })),
+          ]);
+        }}
+      />
 
       {/* ── Jobs section ─────────────────────────────────────── */}
       <div className="space-y-3">

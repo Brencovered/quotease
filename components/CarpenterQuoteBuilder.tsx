@@ -12,6 +12,7 @@ import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import ExtraJobLines, { type ExtraLine, extraLinesTotals } from "./ExtraJobLines";
 import { resolveClientId } from "@/lib/resolveClientId";
 import { getActiveBusinessId } from "@/lib/team";
+import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 
 type MaterialRow = { item_key: string; label: string; unit_cost: number };
 
@@ -82,6 +83,8 @@ export default function CarpenterQuoteBuilder({
   ]);
   const paymentTerms = termsPreset === "custom" ? customTerms : PAYMENT_TERM_PRESETS[termsPreset];
   const customTermsTotal = customTerms.reduce((s, t) => s + (Number(t.percent)||0), 0);
+  const [siteItems,     setSiteItems]     = useState<{id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]>([]);
+  const [annotationMeta, setAnnotationMeta] = useState<{id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string;roomName?:string}[]>([]);
   const [extraLines, setExtraLines] = useState<ExtraLine[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -92,9 +95,30 @@ export default function CarpenterQuoteBuilder({
   const [analysisResult, setAnalysisResult] = useState<{ confidence: string; notes: string } | null>(null);
   const [usageLimitReached, setUsageLimitReached] = useState(false);
 
+  // Restore draft state from sessionStorage (survives camera navigation)
+  useMemo(() => {
+    try {
+      const raw = sessionStorage.getItem("swiftscope_quote_draft");
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (saved.clientName)  setClientName(saved.clientName);
+      if (saved.clientEmail) setClientEmail(saved.clientEmail);
+      if (saved.siteAddress) setSiteAddress(saved.siteAddress);
+      if (saved.intake)      setIntake(saved.intake);
+      if (saved.step != null) setStep(saved.step);
+      if (saved.extraLines)  setExtraLines(saved.extraLines);
+      if (saved.siteItems)   setSiteItems(saved.siteItems);
+      if (saved.annotationMeta) setAnnotationMeta(saved.annotationMeta);
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const costs = useMemo(() => { const m: Record<string,number> = {}; lib.forEach((r) => (m[r.item_key] = Number(r.unit_cost)||0)); return m; }, [lib]);
   const result = useMemo(() => calcCarpenterQuote(intake, costs, rate, effectiveMargin), [intake, costs, rate, effectiveMargin]);
-  const markupTotal = (preMarkupMaterials ?? []).reduce((s, m) => s + (m.totalCost ?? 0), 0);
+  const markupTotal  = (preMarkupMaterials ?? []).reduce((s, m) => s + (m.totalCost ?? 0), 0);
+  const siteLabour   = siteItems.reduce((s, i) => s + i.labourHrs * rate, 0);
+  const siteMaterials = siteItems.reduce((s, i) => s + i.materialsCost * (1 + effectiveMargin / 100), 0);
+  const siteTotal    = Math.round(siteLabour + siteMaterials);
 
   function set<K extends keyof CarpenterIntake>(k: K, v: CarpenterIntake[K]) { setIntake((p) => ({...p,[k]:v})); }
 
@@ -128,6 +152,13 @@ export default function CarpenterQuoteBuilder({
       setAnalysisResult({ confidence: body.result?.confidence ?? "low", notes: body.result?.notes ?? "" });
     } catch (err) { setAnalysisError(err instanceof Error ? err.message : "Could not reach analysis service."); }
     finally { setAnalyzing(false); }
+  }
+
+  function saveDraft() {
+    try {
+      sessionStorage.setItem("swiftscope_quote_draft", JSON.stringify({ clientName, clientEmail, siteAddress, intake, step, extraLines, siteItems, annotationMeta }));
+      if (lib) sessionStorage.setItem("swiftscope_price_book", JSON.stringify(lib));
+    } catch {}
   }
 
   async function saveAndSend(sendEmail: boolean) {
@@ -189,9 +220,9 @@ export default function CarpenterQuoteBuilder({
         <div className="bg-[var(--navy)] rounded-none sm:rounded-2xl px-5 py-3 flex items-center justify-between" style={{boxShadow:"0 4px 20px rgba(10,23,34,.18)"}}>
           <div className="flex gap-5">
             <div><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Labour</p><p className="font-display text-[18px] text-white leading-tight">{result.labourHours}h</p></div>
-            <div><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Materials</p><p className="font-display text-[18px] text-white leading-tight">${(result.materialsCost + markupTotal).toLocaleString()}</p></div>
+            <div><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Materials</p><p className="font-display text-[18px] text-white leading-tight">${(result.materialsCost + markupTotal + Math.round(siteMaterials)).toLocaleString()}</p></div>
           </div>
-          <div className="text-right"><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Total</p><p className="font-display text-[24px] text-[var(--amber)] leading-tight">${(result.totalCost + markupTotal).toLocaleString()}</p></div>
+          <div className="text-right"><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Total</p><p className="font-display text-[24px] text-[var(--amber)] leading-tight">${(result.totalCost + markupTotal + siteTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total).toLocaleString()}</p></div>
         </div>
       </div>
       <div className="flex items-center gap-1 mb-5 overflow-x-auto hide-scrollbar pb-1">
@@ -209,6 +240,27 @@ export default function CarpenterQuoteBuilder({
 
       {stepId === "drawing" && (
         <div className="space-y-4">
+          <LiveSiteAnnotation
+            trade="carpenter"
+            lib={lib}
+            onSaveDraft={saveDraft}
+            onAnnotationMeta={(meta) => setAnnotationMeta(meta)}
+            onAddLineItems={(items) => {
+              setSiteItems((prev) => [
+                ...prev,
+                ...items.map((item) => ({
+                  id: Math.random().toString(36).slice(2),
+                  label: item.description,
+                  qty: item.quantity,
+                  unit: item.unit,
+                  note: item.notes,
+                  materialsCost: (item as {materialsCost?: number}).materialsCost ?? 0,
+                  labourHrs: (item as {labourHrs?: number}).labourHrs ?? 0,
+                })),
+              ]);
+            }}
+          />
+
           <div className="card">
             <p className="section-tag mb-1">Step 1</p>
             <p className="font-semibold text-[17px] mb-4">Upload drawings or site photos</p>
