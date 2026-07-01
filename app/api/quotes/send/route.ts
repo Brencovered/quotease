@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 
 // Requires a RESEND_API_KEY env var (https://resend.com) and a verified sending domain.
 export async function POST(request: Request) {
-  const { quoteId, includeBrochure } = await request.json();
+  const { quoteId } = await request.json();
   if (!quoteId) {
     return NextResponse.json({ error: "Missing quoteId" }, { status: 400 });
   }
@@ -44,11 +44,11 @@ export async function POST(request: Request) {
     ? `<img src="${quote.profiles.logo_url}" alt="${business}" style="max-height:52px;max-width:200px;display:block;margin-bottom:4px;" />`
     : `<div style="font-family:Arial Black,Arial,sans-serif;font-size:20px;font-weight:900;letter-spacing:2px;color:#ffffff;">${business.toUpperCase()}</div>`;
 
-  /* ---- Build brochure HTML if requested ---- */
-  const shouldIncludeBrochure = includeBrochure;
+  /* ---- Build brochure HTML if profile has brochure data ---- */
   let brochureHtml = "";
-  if (shouldIncludeBrochure && quote.profiles) {
-    const p = quote.profiles as Record<string, unknown>;
+  const p = quote.profiles as Record<string, unknown> | null;
+  const hasBrochureContent = !!(p?.brochure_title || p?.branding_tagline || p?.brochure_custom_text);
+  if (hasBrochureContent && quote.profiles) {
     const bTitle = (p.brochure_title as string) || (p.business_name as string) || business;
     const bTagline = (p.brochure_tagline as string) || (p.branding_tagline as string) || "";
     const bColor = (p.brochure_color as string) || (p.branding_primary_color as string) || "#0a1722";
