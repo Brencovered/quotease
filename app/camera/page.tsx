@@ -19,9 +19,10 @@ interface Annotation {
   opacity: number; fading: boolean;
 }
 
-/** iOS Safari DeviceOrientationEvent with permission API */
-interface DeviceOrientationEventIOS extends typeof DeviceOrientationEvent {
-  requestPermission?: () => Promise<string>;
+/** iOS Safari adds requestPermission() static method to DeviceOrientationEvent */
+function requestOrientationPermission(): Promise<string> | undefined {
+  const ctor = DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> };
+  return ctor.requestPermission?.();
 }
 
 /* ─── Constants ─────────────────────────────────────────────────── */
@@ -198,11 +199,9 @@ function CameraPage() {
       m.lastBeta = b; m.lastGamma = g; m.lastAlpha = a;
     }
 
-    const DOE = DeviceOrientationEvent as DeviceOrientationEventIOS;
-    if (typeof DOE.requestPermission === "function") {
-      DOE.requestPermission()
-        .then((state: string) => { if (state === "granted") window.addEventListener("deviceorientation", handleOrientation); })
-        .catch(() => {});
+    const perm = requestOrientationPermission();
+    if (perm) {
+      perm.then((state: string) => { if (state === "granted") window.addEventListener("deviceorientation", handleOrientation); }).catch(() => {});
     } else {
       window.addEventListener("deviceorientation", handleOrientation);
     }
