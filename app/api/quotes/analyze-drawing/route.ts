@@ -51,29 +51,34 @@ export async function POST(request: Request) {
   // Get the trade-specific expert system prompt
   const tradePrompt = getTradeSystemPrompt(trade);
 
-  // Append the structured JSON output requirement for backward compatibility
-  // The trade prompt provides expert context; this section ensures the output
-  // shape matches what the quote builder fields expect.
+  // Spec: return detected items as an array for the review table
+  // instead of pre-filling individual form fields
   const outputSchema = `
 
-After your expert analysis, output a JSON object with these fields so the quote builder can pre-fill automatically:
+After your expert analysis, output a JSON object with these two fields:
+
 {
-  "power_points": <integer>,
-  "light_points": <integer>,
-  "switches": <integer>,
-  "downlights": <integer>,
-  "exhaust_fans": <integer>,
-  "cable_metres": <integer>,
-  "switchboard_upgrade": <boolean>,
-  "three_phase": <boolean>,
-  "data_points": <integer>,
-  "smoke_alarms": <integer>,
-  "ceiling_type": "<standard_plasterboard|concrete_slab|heritage_timber|skillion|unknown>",
-  "multistorey": <boolean>,
-  "external_circuits": <integer>,
-  "confidence": "<high|medium|low>",
-  "notes": "<your expert verification warnings in trade vernacular>"
+  "detected_items": [
+    { "label": "Downlight", "item_key": "dl", "quantity": <integer>, "unit": "each" },
+    { "label": "Power point (GPO)", "item_key": "gpo", "quantity": <integer>, "unit": "each" },
+    ...
+  ],
+  "notes": "<verification warnings and caveats in trade vernacular>",
+  "confidence": "<high|medium|low>"
 }
+
+Rules for detected_items:
+- Only include items with quantity > 0
+- Collate the same item type into one row (e.g. all downlights = one row with total count)
+- Use these item_key values to match the price book:
+  dl (downlights), gpo (power points), sw (switches), data (data points),
+  exhaust (exhaust fans), smoke (smoke alarms), cable (cable runs, unit=m),
+  conduit (conduit runs, unit=m), sb (switchboard), circuit (new circuits),
+  tap, toilet, basin, shower, hwu, pipe_cold, pipe_hot, pipe_waste,
+  gutter, downpipe, ridge, valley, fascia, skylight, whirlybird, roof_area,
+  wall_frame, door, window, skirting, decking
+- For metre-based items (cable, conduit, pipe runs, gutters), set unit to "m" and estimate total metres
+- For area items (roof sections), set unit to "m2"
 
 Output ONLY the JSON object. No other text before or after it.`;
 

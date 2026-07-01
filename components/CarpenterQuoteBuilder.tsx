@@ -13,6 +13,7 @@ import ExtraJobLines, { type ExtraLine, extraLinesTotals } from "./ExtraJobLines
 import { resolveClientId } from "@/lib/resolveClientId";
 import { getActiveBusinessId } from "@/lib/team";
 import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
+import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 
 type MaterialRow = { item_key: string; label: string; unit_cost: number };
 
@@ -92,6 +93,7 @@ export default function CarpenterQuoteBuilder({
   const [drawingFiles, setDrawingFiles] = useState<File[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [detectedItems, setDetectedItems] = useState<DetectedItem[]>([]);
   const [analysisResult, setAnalysisResult] = useState<{ confidence: string; notes: string } | null>(null);
   const [usageLimitReached, setUsageLimitReached] = useState(false);
 
@@ -134,6 +136,9 @@ export default function CarpenterQuoteBuilder({
       const res = await fetch("/api/quotes/analyze-drawing", { method: "POST", body: fd });
       const body = await res.json();
       if (!res.ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
+      if (Array.isArray(body.result?.detected_items) && body.result.detected_items.length > 0) {
+        setDetectedItems(body.result.detected_items);
+      }
       setAnalysisResult({ confidence: body.result?.confidence ?? "low", notes: body.result?.notes ?? "" });
     } catch (err) { setAnalysisError(err instanceof Error ? err.message : "Could not reach analysis service."); }
     finally { setAnalyzing(false); }
@@ -290,17 +295,30 @@ export default function CarpenterQuoteBuilder({
               </div>
               <button onClick={runAiAnalysis} disabled={analyzing} className="btn-secondary w-full justify-center"><Sparkles size={15} className="text-[var(--amber-deep)]" />{analyzing ? "Reading..." : "Analyse with AI"}</button>
               {analysisError && <p className="text-[13px] text-[var(--red)] mt-2">{analysisError}</p>}
-              {analysisResult && (
-                <div className={`mt-3 rounded-xl border ${analysisResult.confidence === "low" ? "bg-[var(--red-bg)] border-red-100" : "bg-amber-50 border-amber-100"}`}>
-                  <div className="flex items-center gap-2 px-3 pt-3 pb-1">
-                    <AlertTriangle size={14} className={`shrink-0 ${analysisResult.confidence === "low" ? "text-[var(--red)]" : "text-amber-600"}`} />
-                    <p className={`text-[13px] font-bold ${analysisResult.confidence === "low" ? "text-[var(--red)]" : "text-amber-800"}`}>
-                      Drawing read ({analysisResult.confidence} confidence) — values pre-filled, review next step
-                    </p>
-                  </div>
-                  {analysisResult.notes && <p className="text-[12px] px-3 pb-2 text-amber-700">{analysisResult.notes}</p>}
-                  <p className="text-[11px] px-3 pb-3 text-amber-600 font-semibold">Check the next step to see what was detected and adjust if needed.</p>
-                </div>
+              {detectedItems.length > 0 && analysisResult && (
+                <DrawingAnalysisReviewTable
+                  detectedItems={detectedItems}
+                  confidence={analysisResult.confidence as "high" | "medium" | "low"}
+                  notes={analysisResult.notes}
+                  lib={lib as { item_key: string; label: string; unit_cost: number }[]}
+                  onAccept={(items: ReviewLineItem[]) => {
+                    setSiteItems((prev: {id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]) => [
+                      ...prev,
+                      ...items.map(item => ({
+                        id: Math.random().toString(36).slice(2),
+                        label: item.label,
+                        qty: item.quantity,
+                        unit: item.unit,
+                        note: "from drawing analysis",
+                        materialsCost: item.total ?? 0,
+                        labourHrs: 0,
+                      })),
+                    ]);
+                    setDetectedItems([]);
+                    setAnalysisResult(null);
+                  }}
+                  onDismiss={() => { setDetectedItems([]); setAnalysisResult(null); }}
+                />
               )}
             </div>
           )}

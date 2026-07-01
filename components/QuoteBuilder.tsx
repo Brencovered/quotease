@@ -13,6 +13,7 @@ import { resolveClientId } from "@/lib/resolveClientId";
 import { getActiveBusinessId } from "@/lib/team";
 import MaterialsEditor from "@/components/MaterialsEditor";
 import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
+import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import SiteAnnotationReport from "@/components/SiteAnnotationReport";
 import {
   calcElectricianQuote,
@@ -150,7 +151,8 @@ export default function QuoteBuilder({
   }, []);
   const [drawingInstructions, setDrawingInstructions] = useState("");
   const [analyzing, setAnalyzing]       = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<{ confidence: string; notes: string } | null>(null);
+  const [analysisResult,  setAnalysisResult]  = useState<{ confidence: string; notes: string } | null>(null);
+  const [detectedItems,   setDetectedItems]   = useState<DetectedItem[]>([]);
   const [analysisError, setAnalysisError]   = useState<string | null>(null);
   const [usageLimitReached, setUsageLimitReached] = useState(false);
 
@@ -205,27 +207,14 @@ export default function QuoteBuilder({
         return;
       }
       const r = body.result;
-      setIntake((prev) => ({
-        ...prev,
-        powerPoints:       r.power_points      ?? prev.powerPoints,
-        lightPoints:       r.light_points       ?? prev.lightPoints,
-        switches:          r.switches           ?? prev.switches,
-        downlights:        r.downlights         ?? prev.downlights,
-        exhaustFans: r.exhaust_fans > 0
-          ? [{ type: "ceiling" as const, qty: r.exhaust_fans }]
-          : prev.exhaustFans,
-        cableRuns: r.cable_metres > 0
-          ? [{ size: "2.5" as const, metres: r.cable_metres }]
-          : prev.cableRuns,
-        switchboardUpgrade: r.switchboard_upgrade ?? prev.switchboardUpgrade,
-        threePhase:        r.three_phase        ?? prev.threePhase,
-        dataPoints:        r.data_points        ?? prev.dataPoints,
-        smokeAlarms:       r.smoke_alarms       ?? prev.smokeAlarms,
-        externalCircuits:  r.external_circuits  ?? prev.externalCircuits,
-        ceilingType: (r.ceiling_type as import('@/lib/calc').ElectricianIntake['ceilingType']) ?? prev.ceilingType,
-        multistorey:       r.multistorey        ?? prev.multistorey,
-      }));
-      setAnalysisResult({ confidence: r.confidence ?? "medium", notes: r.notes ?? "" });
+      // New flow: show detected items in review table, not pre-fill
+      if (Array.isArray(r.detected_items) && r.detected_items.length > 0) {
+        setDetectedItems(r.detected_items);
+        setAnalysisResult({ confidence: r.confidence ?? "medium", notes: r.notes ?? "" });
+      } else {
+        // Fallback to old pre-fill for backwards compatibility
+        setAnalysisResult({ confidence: r.confidence ?? "medium", notes: r.notes ?? "No items detected in this drawing." });
+      }
     } catch (err) {
       setAnalysisError(err instanceof Error ? err.message : "Could not reach the drawing analysis service.");
     } finally {
@@ -407,11 +396,30 @@ export default function QuoteBuilder({
           setDrawingInstructions={setDrawingInstructions}
           analyzing={analyzing}
           analysisResult={analysisResult}
+          detectedItems={detectedItems}
           analysisError={analysisError}
           usageLimitReached={usageLimitReached}
           onUpload={handleDrawingUpload}
-          onRemove={(name) => { setDrawingFiles((p) => p.filter((f) => f.name !== name)); setAnalysisResult(null); }}
+          onRemove={(name) => { setDrawingFiles((p) => p.filter((f) => f.name !== name)); setAnalysisResult(null); setDetectedItems([]); }}
           onAnalyse={runAiAnalysis}
+          onAcceptDetected={(items) => {
+            // Map review line items into siteItems for the quote
+            setSiteItems((prev) => [
+              ...prev,
+              ...items.map((item) => ({
+                id:           Math.random().toString(36).slice(2),
+                label:        item.label,
+                qty:          item.quantity,
+                unit:         item.unit,
+                note:         "from drawing analysis",
+                materialsCost: item.total ?? 0,
+                labourHrs:    0,
+              })),
+            ]);
+            setDetectedItems([]);
+            setAnalysisResult(null);
+          }}
+          onDismissDetected={() => { setDetectedItems([]); setAnalysisResult(null); }}
           onVoiceTranscript={runAiAnalysisFromVoice}
           trade="electrician"
           lib={lib}
@@ -504,15 +512,18 @@ export default function QuoteBuilder({
   );
 }
 
-function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions, analyzing, analysisResult, analysisError, usageLimitReached, onUpload, onRemove, onAnalyse, onVoiceTranscript, trade, lib, onSaveDraft, onAnnotationMeta, onAddLiveItems }: {
+function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions, analyzing, analysisResult, detectedItems, analysisError, usageLimitReached, onUpload, onRemove, onAnalyse, onAcceptDetected, onDismissDetected, onVoiceTranscript, trade, lib, onSaveDraft, onAnnotationMeta, onAddLiveItems }: {
   drawingFiles: File[]; drawingInstructions: string; setDrawingInstructions: (v: string) => void;
   analyzing: boolean; analysisResult: { confidence: string; notes: string } | null;
+  detectedItems: DetectedItem[];
   analysisError: string | null; usageLimitReached: boolean;
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRemove: (name: string) => void; onAnalyse: () => void;
+  onAcceptDetected: (items: ReviewLineItem[]) => void;
+  onDismissDetected: () => void;
   onVoiceTranscript: (transcript: string) => void;
   trade: string;
-  lib: { item_key: string; unit_cost: number }[];
+  lib: { item_key: string; unit_cost: number; label: string }[];
   onSaveDraft: () => void;
   onAnnotationMeta: (meta: {id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string}[]) => void;
   onAddLiveItems: (items: { description: string; quantity: number; unit: string; notes: string; materialsCost?: number; labourHrs?: number }[]) => void;
@@ -581,22 +592,19 @@ function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions
               </div>
             </div>
           )}
-          {analysisResult && (
-            <div className={`mt-3 rounded-xl border ${analysisResult.confidence === "low" ? "bg-[var(--red-bg)] border-red-100" : "bg-amber-50 border-amber-100"}`}>
-              <div className="flex items-center gap-2 px-3 pt-3 pb-1">
-                <AlertTriangle size={14} className={`shrink-0 ${analysisResult.confidence === "low" ? "text-[var(--red)]" : "text-amber-600"}`} />
-                <p className={`text-[13px] font-bold ${analysisResult.confidence === "low" ? "text-[var(--red)]" : "text-amber-800"}`}>
-                  Drawing read ({analysisResult.confidence} confidence) — fields pre-filled
-                </p>
-              </div>
-              {analysisResult.notes && (
-                <p className={`text-[12px] px-3 pb-2 ${analysisResult.confidence === "low" ? "text-red-600" : "text-amber-700"}`}>
-                  {analysisResult.notes}
-                </p>
-              )}
-              <p className="text-[11px] px-3 pb-3 text-amber-600 font-semibold">
-                Go to the Electrical step to review what was detected and adjust if needed.
-              </p>
+          {detectedItems.length > 0 && analysisResult && (
+            <DrawingAnalysisReviewTable
+              detectedItems={detectedItems}
+              confidence={analysisResult.confidence as "high" | "medium" | "low"}
+              notes={analysisResult.notes}
+              lib={lib as { item_key: string; label: string; unit_cost: number }[]}
+              onAccept={onAcceptDetected}
+              onDismiss={onDismissDetected}
+            />
+          )}
+          {analysisResult && detectedItems.length === 0 && (
+            <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+              <p className="text-[12.5px] font-semibold text-amber-800">{analysisResult.notes || "Analysis complete — no items detected. Try a clearer image."}</p>
             </div>
           )}
         </div>
