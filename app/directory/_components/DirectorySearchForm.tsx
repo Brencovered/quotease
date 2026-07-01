@@ -83,7 +83,7 @@ export default function DirectorySearchForm({
   return (
     <div id="listings" className="sticky top-0 z-20 border-b shadow-sm" style={{ background: "var(--surface)", borderColor: "var(--line)" }}>
       <form method="GET" className="max-w-6xl mx-auto px-6 py-3 flex flex-wrap gap-2 items-center" onChange={handleChange}>
-        <select name="trade" defaultValue={trade ?? ""} className="app-field text-[13px] w-auto bg-white">
+        <select name="trade" defaultValue={trade ?? ""} className="app-field text-[13px] w-auto bg-white pl-3 pr-2">
           <option value="">All trades</option>
           {ALL_TRADES.map((t) => (
             <option key={t} value={t}>{TRADE_LABELS[t]}</option>
@@ -91,19 +91,21 @@ export default function DirectorySearchForm({
         </select>
 
         <div className="relative flex-1 min-w-[160px]">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)]" />
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] z-10" />
           <input
             type="text"
             name="suburb"
             defaultValue={suburb ?? ""}
             placeholder="Suburb..."
-            className="app-field pl-8 text-[13px] w-full bg-white"
+            className="app-field pl-8 pr-3 text-[13px] w-full bg-white"
           />
         </div>
 
         <div className="relative">
-          <Filter size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] pointer-events-none" />
-          <select name="reviews" defaultValue={reviews ?? ""} className="app-field pl-8 text-[13px] w-auto bg-white appearance-none pr-7">
+          <Filter size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] z-10 pointer-events-none" />
+          <select name="reviews" defaultValue={reviews ?? ""}
+            className="app-field text-[13px] w-auto bg-white pl-8 pr-2"
+            style={{ appearance: "none", WebkitAppearance: "none" }}>
             {REVIEW_RANGES.map((r) => (
               <option key={r.value} value={r.value}>{r.label}</option>
             ))}
@@ -111,8 +113,10 @@ export default function DirectorySearchForm({
         </div>
 
         <div className="relative">
-          <Star size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] pointer-events-none" />
-          <select name="rating" defaultValue={rating ?? ""} className="app-field pl-8 text-[13px] w-auto bg-white appearance-none pr-7">
+          <Star size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] z-10 pointer-events-none" />
+          <select name="rating" defaultValue={rating ?? ""}
+            className="app-field text-[13px] w-auto bg-white pl-8 pr-2"
+            style={{ appearance: "none", WebkitAppearance: "none" }}>
             {RATING_OPTIONS.map((r) => (
               <option key={r.value} value={r.value}>{r.label}</option>
             ))}
@@ -120,8 +124,10 @@ export default function DirectorySearchForm({
         </div>
 
         <div className="relative">
-          <ArrowUpDown size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] pointer-events-none" />
-          <select name="sort" defaultValue={activeSort} className="app-field pl-8 text-[13px] w-auto bg-white appearance-none pr-7">
+          <ArrowUpDown size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] z-10 pointer-events-none" />
+          <select name="sort" defaultValue={activeSort}
+            className="app-field text-[13px] w-auto bg-white pl-8 pr-2"
+            style={{ appearance: "none", WebkitAppearance: "none" }}>
             {SORT_OPTIONS.map((s) => (
               <option key={s.value} value={s.value}>{s.label}</option>
             ))}
