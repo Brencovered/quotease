@@ -35,11 +35,16 @@ const STEPS = [
   { id: "send",      label: "Send"      },
 ];
 
-export default function CarpenterQuoteBuilder({ profile, materials, preClientId, preMarkupMaterials, }: {
+export default function CarpenterQuoteBuilder({
+  profile, materials, preClientId, preMarkupMaterials,
+  pricingTiers, jobSizeTiers,
+}: {
   profile: { hourly_rate: number; materials_margin_pct: number };
   materials: MaterialRow[];
   preClientId?: string;
   preMarkupMaterials?: Array<{ label: string; quantity: number; unit: string; unitCost: number; totalCost: number }>;
+  pricingTiers?: Array<{ id: string; name: string; markup_pct: number; sort_order: number }>;
+  jobSizeTiers?: Array<{ id: string; name: string; max_days: number | null; markup_pct: number; sort_order: number }>;
 }) {
   const [step,   setStep]   = useState(0);
   const [intake, setIntake] = useState<CarpenterIntake>(DEFAULT_INTAKE);
@@ -48,6 +53,24 @@ export default function CarpenterQuoteBuilder({ profile, materials, preClientId,
   const [lib, setLib] = useState<MaterialRow[]>(
     materials.length > 0 ? materials : CARPENTER_DEFAULT_MATERIALS.map((m) => ({ ...m }))
   );
+
+  const [selectedPricingTierId, setSelectedPricingTierId] = useState<string | null>(null);
+  const [selectedJobSizeTierId, setSelectedJobSizeTierId] = useState<string | null>(null);
+
+  const selectedPricingTier = useMemo(() =>
+    pricingTiers?.find(t => t.id === selectedPricingTierId) ?? null,
+  [pricingTiers, selectedPricingTierId]);
+
+  const selectedJobSizeTier = useMemo(() =>
+    jobSizeTiers?.find(t => t.id === selectedJobSizeTierId) ?? null,
+  [jobSizeTiers, selectedJobSizeTierId]);
+
+  const effectiveMargin = useMemo(() => {
+    const base = selectedPricingTier?.markup_pct ?? profile.materials_margin_pct ?? 20;
+    const adjustment = selectedJobSizeTier?.markup_pct ?? 0;
+    return base + adjustment;
+  }, [selectedPricingTier, selectedJobSizeTier, profile.materials_margin_pct]);
+
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [siteAddress, setSiteAddress] = useState("");
@@ -70,17 +93,11 @@ export default function CarpenterQuoteBuilder({ profile, materials, preClientId,
   const [usageLimitReached, setUsageLimitReached] = useState(false);
 
   const costs = useMemo(() => { const m: Record<string,number> = {}; lib.forEach((r) => (m[r.item_key] = Number(r.unit_cost)||0)); return m; }, [lib]);
-  const result = useMemo(() => calcCarpenterQuote(intake, costs, rate, margin), [intake, costs, rate, margin]);
+  const result = useMemo(() => calcCarpenterQuote(intake, costs, rate, effectiveMargin), [intake, costs, rate, effectiveMargin]);
   const markupTotal = (preMarkupMaterials ?? []).reduce((s, m) => s + (m.totalCost ?? 0), 0);
 
   function set<K extends keyof CarpenterIntake>(k: K, v: CarpenterIntake[K]) { setIntake((p) => ({...p,[k]:v})); }
 
-  // The backend now runs a trade-dynamic AI pipeline - passing `trade` here
-  // gets a carpentry-specific persona and structured extraction
-  // (timber schedule, framing, ceiling heights, bulkheads) instead of a
-  // generic read. We still only surface confidence/notes here since the
-  // calc engine's intake fields don't map 1:1 to the structured quantities -
-  // the AI's findings come through as a readable summary.
   async function runAiAnalysis() {
     if (!drawingFiles.length) return;
     setAnalyzing(true); setAnalysisError(null); setAnalysisResult(null);
@@ -129,10 +146,27 @@ export default function CarpenterQuoteBuilder({ profile, materials, preClientId,
       }
       await supabase.from("material_items").upsert({ profile_id: businessId, trade: "carpenter", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost }, { onConflict: "profile_id,item_key" });
     }
-    const { data: quote, error } = await supabase.from("quotes").insert({ profile_id: businessId, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail, site_address: siteAddress, trade: "carpenter", job_type: intake.jobType, intake_data: intake, labour_hours: result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0), materials_cost: result.materialsCost + extraLinesTotals(extraLines, rate, margin).materials, total_cost: result.totalCost + extraLinesTotals(extraLines, rate, margin).total, payment_terms: paymentTerms,
-      markup_materials: preMarkupMaterials ?? [], status: sendEmail ? "sent" : "draft", sent_at: sendEmail ? new Date().toISOString() : null }).select().single();
+    const extraTotals = extraLinesTotals(extraLines, rate, effectiveMargin);
+    const { data: quote, error } = await supabase.from("quotes").insert({
+      profile_id: businessId,
+      client_id: resolvedClientId,
+      client_name: clientName,
+      client_email: clientEmail,
+      site_address: siteAddress,
+      trade: "carpenter",
+      job_type: intake.jobType,
+      intake_data: intake,
+      labour_hours: result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0),
+      materials_cost: result.materialsCost + extraTotals.materials,
+      total_cost: result.totalCost + extraTotals.total,
+      payment_terms: paymentTerms,
+      pricing_tier_id: selectedPricingTierId,
+      job_size_tier_id: selectedJobSizeTierId,
+      markup_materials: preMarkupMaterials ?? [],
+      status: sendEmail ? "sent" : "draft",
+      sent_at: sendEmail ? new Date().toISOString() : null,
+    }).select().single();
     if (error) { setSaveMessage(error.message); setSaving(false); return; }
-    setSavedQuoteId(quote.id);
     setSavedQuoteId(quote.id);
     for (const file of drawingFiles) {
       const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g,"_");
@@ -215,6 +249,41 @@ export default function CarpenterQuoteBuilder({ profile, materials, preClientId,
           <div className="card">
             <p className="section-tag mb-3">Job details</p>
             <Field label="Job type" className="mb-3"><select value={intake.jobType} onChange={(e) => set("jobType", e.target.value as CarpenterIntake["jobType"])} className="app-field"><option value="reno">Renovation / alteration</option><option value="newbuild">New build</option><option value="deck">Deck / outdoor</option><option value="framing">Framing only</option><option value="fitout">Fitout / joinery</option><option value="repair">Repair</option></select></Field>
+            {pricingTiers && pricingTiers.length > 0 && (
+              <div className="mb-3">
+                <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Customer type</label>
+                <select
+                  value={selectedPricingTierId ?? ""}
+                  onChange={(e) => setSelectedPricingTierId(e.target.value || null)}
+                  className="app-field"
+                >
+                  <option value="">Custom margin ({profile.materials_margin_pct ?? 20}%)</option>
+                  {pricingTiers.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.markup_pct >= 0 ? "+" : ""}{t.markup_pct}%)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {jobSizeTiers && jobSizeTiers.length > 0 && (
+              <div className="mb-3">
+                <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Job size</label>
+                <select
+                  value={selectedJobSizeTierId ?? ""}
+                  onChange={(e) => setSelectedJobSizeTierId(e.target.value || null)}
+                  className="app-field"
+                >
+                  <option value="">Select job size...</option>
+                  {jobSizeTiers.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} {t.max_days ? `(< ${t.max_days} day${t.max_days !== 1 ? "s" : ""})` : "(3+ days)"}
+                      ({t.markup_pct >= 0 ? "+" : ""}{t.markup_pct}%)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <Field label="Hourly rate ($)"><input type="number" value={rate} onChange={(e) => setRate(Number(e.target.value))} className="app-field"/></Field>
               <Field label="Materials margin (%)"><input type="number" value={margin} onChange={(e) => setMargin(Number(e.target.value))} className="app-field"/></Field>
@@ -301,9 +370,9 @@ export default function CarpenterQuoteBuilder({ profile, materials, preClientId,
             lines={extraLines}
             onChange={setExtraLines}
             hourlyRate={rate}
-            marginPct={margin}
+            marginPct={effectiveMargin}
           />
-                    <div className="card">
+          <div className="card">
             <p className="section-tag mb-3">Payment terms</p>
             <select value={termsPreset} onChange={(e) => setTermsPreset(e.target.value as keyof typeof PAYMENT_TERM_PRESETS | "custom")} className="app-field mb-3">
               <option value="full_on_completion">100% on completion (14 days)</option>
@@ -320,7 +389,7 @@ export default function CarpenterQuoteBuilder({ profile, materials, preClientId,
           <div className="space-y-3">
             <button onClick={() => saveAndSend(true)} disabled={saving||!clientEmail} className="btn-primary">{saving ? "Sending..." : "Send quote to client"}</button>
             <button onClick={() => saveAndSend(false)} disabled={saving} className="btn-secondary w-full justify-center">Save as draft</button>
-            {saveMessage && <div className={`rounded-xl px-4 py-3 text-[13.5px] font-semibold text-center ${saveMessage.includes("fail") ? "bg-[var(--red-bg)] text-[var(--red)]" : "bg-[var(--green-bg)] text-[var(--green)]"}`}>{saveMessage}</div>}
+            {saveMessage && <div className={`rounded-xl px-4 py-3 text-[13.5px] font-semibold text-center ${saveMessage.includes("fail") ? "bg-[var(--red-bg)] text-[var(--red)]" : "bg-[var(--green-bg)] text-[var("green")]"}`}>{saveMessage}</div>}
             {savedQuoteId && (<a href={`/api/quotes/${savedQuoteId}/pdf`} target="_blank" rel="noopener noreferrer" className="btn-secondary w-full justify-center block text-center">Download PDF</a>)}
           </div>
         </div>
