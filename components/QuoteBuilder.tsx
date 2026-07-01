@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
@@ -270,7 +270,7 @@ export default function QuoteBuilder({
     }
   }
 
-  async function saveAndSend(sendEmail: boolean, includeBrochure?: boolean) {
+  async function saveAndSend(sendEmail: boolean) {
     setSaving(true);
     setSaveMessage(null);
     const supabase = createClient();
@@ -336,7 +336,6 @@ export default function QuoteBuilder({
       status:  sendEmail ? "sent" : "draft",
       sent_at: sendEmail ? new Date().toISOString() : null,
       markup_materials: preMarkupMaterials ?? [],
-      include_brochure: includeBrochure ?? false,
     }).select().single();
 
     if (error) { setSaveMessage(error.message); setSaving(false); return; }
@@ -355,7 +354,7 @@ export default function QuoteBuilder({
     }
 
     if (sendEmail) {
-      const res = await fetch("/api/quotes/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quoteId: quote.id, includeBrochure: includeBrochure ?? false }) });
+      const res = await fetch("/api/quotes/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quoteId: quote.id }) });
       if (!res.ok) {
         const b = await res.json().catch(() => ({}));
         setSaveMessage(`Saved - but sending failed: ${b.error ?? res.statusText}`);
@@ -1087,7 +1086,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
   customTermsTotal: number;
   clientName: string; clientEmail: string; siteAddress: string;
   saving: boolean; saveMessage: string | null; savedQuoteId: string | null;
-  onSave: (send: boolean, includeBrochure?: boolean) => void;
+  onSave: (send: boolean) => void;
   extraLines: {id:string;label:string;hours:number;materialsCost:number;note:string}[];
   setExtraLines: React.Dispatch<React.SetStateAction<{id:string;label:string;hours:number;materialsCost:number;note:string}[]>>;
   rate: number; margin: number; effectiveMargin: number; markupTotal: number;
@@ -1102,17 +1101,6 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
   // down to this component) -- siteTotal alone doesn't give us the
   // materials-only split this breakdown needs.
   const siteMaterials = siteItems.reduce((s, i) => s + i.materialsCost * (1 + (effectiveMargin ?? 20) / 100), 0);
-
-  /* Brochure inclusion */
-  const [includeBrochure, setIncludeBrochure] = useState(false);
-  const [brochureConfigured, setBrochureConfigured] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    fetch("/api/comms/branding").then(r => r.json()).then(d => {
-      const hasContent = !!(d.branding?.brochure_title || d.branding?.branding_tagline || d.branding?.brochure_custom_text);
-      setBrochureConfigured(hasContent);
-    }).catch(() => setBrochureConfigured(false));
-  }, []);
 
   return (
     <div className="space-y-4">
@@ -1255,24 +1243,9 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
         )}
       </div>
 
-      {/* Brochure checkbox */}
-      {brochureConfigured && (
-        <label className="flex items-center gap-3 py-2 cursor-pointer card">
-          <input
-            type="checkbox"
-            checked={includeBrochure}
-            onChange={(e) => setIncludeBrochure(e.target.checked)}
-          />
-          <div>
-            <span className="text-[14.5px] text-[var(--ink)] font-semibold">Include company brochure</span>
-            <p className="text-[12px] text-[var(--ink-faint)] mt-0.5">Attach your company brochure to the quote email</p>
-          </div>
-        </label>
-      )}
-
       {/* Save / send */}
       <div className="space-y-3">
-        <button onClick={() => onSave(true, includeBrochure)} disabled={saving || !clientEmail} className="btn-primary">
+        <button onClick={() => onSave(true)} disabled={saving || !clientEmail} className="btn-primary">
           {saving ? "Sending..." : "Send quote to client"}
         </button>
         <button onClick={() => onSave(false)} disabled={saving} className="btn-secondary w-full justify-center">
