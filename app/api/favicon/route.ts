@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import sharp from "sharp";
 
 const SVG_FAVICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
@@ -18,13 +18,13 @@ export async function GET(req: NextRequest) {
       .png()
       .toBuffer();
 
-    return new NextResponse(pngBuffer, {
+    return new Response(new Uint8Array(pngBuffer), {
       headers: {
         "Content-Type": "image/png",
         "Cache-Control": "public, max-age=86400",
       },
     });
   } catch {
-    return new NextResponse("Failed to generate favicon", { status: 500 });
+    return new Response("Failed to generate favicon", { status: 500 });
   }
 }
