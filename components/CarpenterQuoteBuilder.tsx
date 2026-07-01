@@ -216,7 +216,7 @@ export default function CarpenterQuoteBuilder({
               <Paperclip size={18} className="text-[var(--ink-faint)]"/><span className="text-[14px] font-semibold text-[var(--ink-soft)]">Add files</span>
               <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={(e) => { const f = Array.from(e.target.files??[]); setDrawingFiles((p) => [...p, ...f.filter((x) => !p.some((y) => y.name===x.name))]); e.target.value=""; }} />
             </label>
-            {drawingFiles.map((f) => <div key={f.name} className="flex items-center gap-3 bg-[var(--app-bg)] rounded-lg px-3 py-2.5 mt-2"><Paperclip size={14} className="text-[var(--ink-faint)] shrink-0"/><span className="text-[13.5px] flex-1 truncate">{f.name}</span><button onClick={() => setDrawingFiles((p) => p.filter((x) => x.name!==f.name))}><X size={14} className="text-[var(--ink-faint)]"/></button></div>)}
+            {drawingFiles.map((f) => <div key={f.name} className="flex items-center gap-3 bg-[var(--app-bg)] rounded-lg px-3 py-2.5 mt-2"><Paperclip size={14} className="text-[var(ink-faint)] shrink-0"/><span className="text-[13.5px] flex-1 truncate">{f.name}</span><button onClick={() => setDrawingFiles((p) => p.filter((x) => x.name!==f.name))}><X size={14} className="text-[var(--ink-faint)]"/></button></div>)}
           </div>
 
           <VoiceNoteRecorder
@@ -268,7 +268,7 @@ export default function CarpenterQuoteBuilder({
             )}
             {jobSizeTiers && jobSizeTiers.length > 0 && (
               <div className="mb-3">
-                <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Job size</label>
+                <label className="block text-[12.5px] font-semibold text-[var(ink-soft)] mb-1.5">Job size</label>
                 <select
                   value={selectedJobSizeTierId ?? ""}
                   onChange={(e) => setSelectedJobSizeTierId(e.target.value || null)}
@@ -362,9 +362,9 @@ export default function CarpenterQuoteBuilder({
           </div>
           <div className="card">
             <p className="section-tag mb-1">Sending to</p>
-            <p className="font-semibold text-[var(--ink)]">{clientName || "No client name set"}</p>
-            <p className="text-[13px] text-[var(--ink-faint)]">{clientEmail || "No email set - can still save as draft"}</p>
-            <p className="text-[13px] text-[var(--ink-faint)]">{siteAddress || "No site address set"}</p>
+            <p className="font-semibold text-[var(ink)]">{clientName || "No client name set"}</p>
+            <p className="text-[13px] text-[var(ink-faint)]">{clientEmail || "No email set - can still save as draft"}</p>
+            <p className="text-[13px] text-[var(ink-faint)]">{siteAddress || "No site address set"}</p>
           </div>
           <ExtraJobLines
             lines={extraLines}
@@ -382,14 +382,14 @@ export default function CarpenterQuoteBuilder({
               <option value="custom">Custom split</option>
             </select>
             <div className="bg-[var(--app-bg)] rounded-xl p-3 space-y-1.5">
-              {paymentTerms.map((t,i) => <div key={i} className="flex justify-between text-[13.5px]"><span className="text-[var(--ink-soft)]">{t.label}</span><span className="font-bold tabular">{t.percent}% - ${Math.round((result.totalCost+markupTotal)*t.percent/100).toLocaleString()}</span></div>)}
+              {paymentTerms.map((t,i) => <div key={i} className="flex justify-between text-[13.5px]"><span className="text-[var(ink-soft)]">{t.label}</span><span className="font-bold tabular">{t.percent}% - ${Math.round((result.totalCost+markupTotal)*t.percent/100).toLocaleString()}</span></div>)}
             </div>
             {termsPreset === "custom" && customTermsTotal !== 100 && <p className="text-[12.5px] text-[var(--red)] font-semibold mt-1">Adds up to {customTermsTotal}% - must total 100%</p>}
           </div>
           <div className="space-y-3">
             <button onClick={() => saveAndSend(true)} disabled={saving||!clientEmail} className="btn-primary">{saving ? "Sending..." : "Send quote to client"}</button>
             <button onClick={() => saveAndSend(false)} disabled={saving} className="btn-secondary w-full justify-center">Save as draft</button>
-            {saveMessage && <div className={`rounded-xl px-4 py-3 text-[13.5px] font-semibold text-center ${saveMessage.includes("fail") ? "bg-[var(--red-bg)] text-[var(--red)]" : "bg-[var(--green-bg)] text-[var("green")]"}`}>{saveMessage}</div>}
+            {saveMessage && <div className={`rounded-xl px-4 py-3 text-[13.5px] font-semibold text-center ${saveMessage.includes("fail") ? "bg-[var(--red-bg)] text-[var(--red)]" : "bg-green-50 text-green-600"}`}>{saveMessage}</div>}
             {savedQuoteId && (<a href={`/api/quotes/${savedQuoteId}/pdf`} target="_blank" rel="noopener noreferrer" className="btn-secondary w-full justify-center block text-center">Download PDF</a>)}
           </div>
         </div>
@@ -404,11 +404,11 @@ export default function CarpenterQuoteBuilder({
 }
 
 function Field({ label, children, className="" }: { label: string; children: React.ReactNode; className?: string }) {
-  return <label className={`block ${className}`}><span className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">{label}</span>{children}</label>;
+  return <label className={`block ${className}`}><span className="block text-[12.5px] font-semibold text-[var(ink-soft)] mb-1.5">{label}</span>{children}</label>;
 }
 function Num({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   return <input type="number" inputMode="numeric" min={0} value={value} onChange={(e) => onChange(Number(e.target.value))} className="app-field"/>;
 }
 function Chk({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
-  return <label className="flex items-center gap-3 py-2.5 cursor-pointer"><input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)}/><span className="text-[14.5px] text-[var(--ink)]">{label}</span></label>;
+  return <label className="flex items-center gap-3 py-2.5 cursor-pointer"><input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)}/><span className="text-[14.5px] text-[var(ink)]">{label}</span></label>;
 }
