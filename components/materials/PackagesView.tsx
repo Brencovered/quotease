@@ -20,6 +20,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import type { Pkg, PackageItem, PackageRow } from "./shared";
 import { TRADE_COLORS, TRADES, formatCurrency, calcItemTotal, calcPackageTotal } from "./shared";
+import AIPackageAssistant from "./AIPackageAssistant";
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -242,6 +243,38 @@ export default function PackagesView({
       </div>
 
       {/* Stats */}
+      <div className="mb-6">
+        <AIPackageAssistant
+          trade={formTrade}
+          hourlyRate={hourlyRate}
+          onCreatePackage={async (suggested) => {
+            if (!businessId) return;
+            // Save suggested package to Supabase
+            const { data: pkg } = await supabase.from("packages").insert({
+              profile_id:  businessId,
+              title:       suggested.title,
+              trade:       suggested.trade,
+              description: suggested.description,
+              labour_hrs:  suggested.labour_hrs,
+            }).select().single();
+            if (pkg) {
+              // Add items
+              await supabase.from("package_items").insert(
+                suggested.items.map((item, i) => ({
+                  package_id: pkg.id,
+                  label:      item.label,
+                  qty:        item.qty,
+                  unit:       item.unit,
+                  unit_cost:  item.unit_cost,
+                  sort_order: i,
+                }))
+              );
+              onPackagesChanged(businessId);
+            }
+          }}
+        />
+      </div>
+
       {packages.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
           <div className="card flex items-center gap-3">
