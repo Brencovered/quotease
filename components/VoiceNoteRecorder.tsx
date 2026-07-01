@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import Link from "next/link";
-import { Mic, Square, Sparkles, AlertTriangle } from "lucide-react";
+import { Mic, Square, Sparkles, AlertTriangle, Volume2 } from "lucide-react";
 
 // Uses the browser's built-in SpeechRecognition - free, no API key, no
 // audio ever leaves the device for transcription. Best supported in
@@ -15,8 +15,10 @@ type SpeechRecognitionLike = {
   onresult: ((event: { resultIndex: number; results: { [i: number]: { [j: number]: { transcript: string }; isFinal: boolean }; length: number } }) => void) | null;
   onerror: ((event: { error: string }) => void) | null;
   onend: (() => void) | null;
+  onstart: (() => void) | null;
   start: () => void;
   stop: () => void;
+  abort: () => void;
 };
 
 export default function VoiceNoteRecorder({
@@ -34,53 +36,73 @@ export default function VoiceNoteRecorder({
 }) {
   const [recording, setRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
+  const [liveText, setLiveText] = useState("");
   const [unsupported, setUnsupported] = useState(false);
   const [recError, setRecError] = useState<string | null>(null);
+  const [speechDetected, setSpeechDetected] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const finalRef = useRef("");
 
-  function getRecognition(): SpeechRecognitionLike | null {
+  const getRecognition = useCallback((): SpeechRecognitionLike | null => {
     if (typeof window === "undefined") return null;
-    const w = window as unknown as { SpeechRecognition?: new () => SpeechRecognitionLike; webkitSpeechRecognition?: new () => SpeechRecognitionLike };
+    const w = window as unknown as {
+      SpeechRecognition?: new () => SpeechRecognitionLike;
+      webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+    };
     const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
     return Ctor ? new Ctor() : null;
-  }
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      try { recognitionRef.current?.abort(); } catch { /* noop */ }
+    };
+  }, []);
 
   function startRecording() {
     setRecError(null);
+    setSpeechDetected(false);
+    setLiveText("");
 
     const recognition = getRecognition();
     if (!recognition) {
       setUnsupported(true);
       return;
     }
+
+    // If restarting, keep previous transcript
+    finalRef.current = transcript;
+
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = "en-AU";
 
-    let finalTranscript = transcript;
+    recognition.onstart = () => {
+      setRecording(true);
+    };
+
     recognition.onresult = (event) => {
-      // event.results contains every result since recognition started, not
-      // just what's new - looping the whole array on every event re-appends
-      // already-finalized segments again and again, which is exactly what
-      // produced the repeating-sentence transcript. event.resultIndex marks
-      // where the genuinely new results start.
+      setSpeechDetected(true);
       let interim = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
-        if (result.isFinal) finalTranscript += result[0].transcript + " ";
-        else interim += result[0].transcript;
+        if (result.isFinal) {
+          finalRef.current += result[0].transcript + " ";
+        } else {
+          interim += result[0].transcript;
+        }
       }
-      setTranscript(finalTranscript + interim);
+      setLiveText(finalRef.current + interim);
     };
 
     recognition.onerror = (event) => {
-      setRecording(false);
       switch (event.error) {
         case "not-allowed":
-          setRecError("Microphone access denied. Check your browser's address bar for a blocked mic icon and allow permission.");
+          setRecError("Microphone access denied. Click the 🔒 icon in your browser's address bar and allow microphone access.");
           break;
         case "no-speech":
-          setRecError("No speech detected. Try speaking closer to the microphone in a quieter environment.");
+          // Don't show error for no-speech, just stop gracefully
           break;
         case "audio-capture":
           setRecError("No microphone found. Make sure a mic is connected and enabled.");
@@ -89,39 +111,43 @@ export default function VoiceNoteRecorder({
           setRecError("Network error during speech recognition. Check your connection and try again.");
           break;
         case "aborted":
-          // User or code intentionally stopped - no error to show
-          setRecError(null);
+          // Intentional - ignore
           break;
         default:
-          setRecError(`Speech recognition error: ${event.error}. Try refreshing the page.`);
+          setRecError(`Speech recognition error: ${event.error}. Try Chrome or Edge browser.`);
       }
+      setRecording(false);
     };
 
     recognition.onend = () => {
       setRecording(false);
+      // Persist whatever we captured
+      setTranscript(finalRef.current.trim());
+      setLiveText("");
     };
 
     recognitionRef.current = recognition;
 
     try {
       recognition.start();
-      setRecording(true);
     } catch {
-      setRecError("Could not start microphone. Check browser permissions and try again.");
+      setRecError("Could not start microphone. Try refreshing the page.");
       setRecording(false);
     }
   }
 
   function stopRecording() {
-    recognitionRef.current?.stop();
+    try { recognitionRef.current?.stop(); } catch { /* noop */ }
     setRecording(false);
+    setTranscript(finalRef.current.trim());
+    setLiveText("");
   }
 
   if (unsupported) {
     return (
       <div className="card border-2 border-[var(--line)]">
         <p className="font-semibold text-[var(--ink)] mb-1">Voice notes aren&apos;t supported in this browser</p>
-        <p className="text-[12.5px] text-[var(--ink-faint)]">Try Chrome on Android, or just upload a drawing instead.</p>
+        <p className="text-[12.5px] text-[var(--ink-faint)]">Try Chrome or Edge on desktop/Android. Safari and Firefox don&apos;t support speech recognition yet.</p>
       </div>
     );
   }
@@ -138,6 +164,7 @@ export default function VoiceNoteRecorder({
         </div>
       </div>
 
+      {/* Recording button */}
       {!recording ? (
         <button onClick={startRecording} className="btn-secondary w-full justify-center">
           <Mic size={15} className="text-[var(--amber-deep)]" />
@@ -150,6 +177,33 @@ export default function VoiceNoteRecorder({
         </button>
       )}
 
+      {/* Live transcript area - shows while recording */}
+      {recording && (
+        <div className="mt-3 bg-white border border-[var(--amber)] rounded-xl p-4 min-h-[80px]">
+          {/* Status indicator */}
+          <div className="flex items-center gap-2 mb-2">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
+            </span>
+            <span className="text-[12px] font-bold text-red-500 uppercase tracking-wide">
+              {speechDetected ? "Hearing you..." : "Listening... speak now"}
+            </span>
+            {!speechDetected && (
+              <span className="text-[11px] text-[var(--ink-faint)] ml-auto">Waiting for speech</span>
+            )}
+          </div>
+
+          {/* Live text stream */}
+          <p className="text-[14px] text-[var(--ink)] leading-relaxed min-h-[1.5em]">
+            {liveText || (
+              <span className="text-[var(--ink-faint)] italic">Your words will appear here as you speak...</span>
+            )}
+            {speechDetected && <span className="inline-block w-[2px] h-[1.1em] bg-[var(--amber)] ml-0.5 animate-pulse align-middle" />}
+          </p>
+        </div>
+      )}
+
       {/* Recording errors */}
       {recError && (
         <div className="mt-3 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 flex items-start gap-2">
@@ -158,18 +212,24 @@ export default function VoiceNoteRecorder({
         </div>
       )}
 
-      {transcript && (
+      {/* Final transcript (editable) - shown after recording stops */}
+      {!recording && transcript && (
         <>
+          {/* Label */}
+          <div className="flex items-center gap-2 mt-3 mb-1.5">
+            <Volume2 size={13} className="text-[var(--ink-faint)]" />
+            <span className="text-[11px] font-bold text-[var(--ink-faint)] uppercase tracking-wide">Transcript</span>
+          </div>
           <textarea
             value={transcript}
             onChange={(e) => setTranscript(e.target.value)}
             rows={4}
-            className="app-field text-[13px] mt-3"
-            placeholder="Transcript will appear here as you talk..."
+            className="app-field text-[13px]"
+            placeholder="Transcript will appear here..."
           />
           <button
             onClick={() => onTranscriptReady(transcript)}
-            disabled={analyzing || recording}
+            disabled={analyzing || !transcript.trim()}
             className="btn-secondary w-full justify-center mt-2"
           >
             <Sparkles size={15} className="text-[var(--amber-deep)]" />
@@ -178,6 +238,7 @@ export default function VoiceNoteRecorder({
         </>
       )}
 
+      {/* Analysis error */}
       {analysisError && (
         <div className="mt-3 bg-[var(--red-bg)] rounded-lg px-3 py-2.5 flex items-start gap-2">
           <AlertTriangle size={14} className="text-[var(--red)] mt-0.5 shrink-0" />
@@ -192,6 +253,7 @@ export default function VoiceNoteRecorder({
         </div>
       )}
 
+      {/* Analysis result */}
       {analysisResult && (
         <div className={`mt-3 rounded-lg px-3 py-2.5 flex items-start gap-2 ${analysisResult.confidence === "low" ? "bg-[var(--red-bg)]" : "bg-amber-50"}`}>
           <AlertTriangle size={14} className={`mt-0.5 shrink-0 ${analysisResult.confidence === "low" ? "text-[var(--red)]" : "text-amber-600"}`} />
