@@ -11,16 +11,13 @@ import {
   Award,
   ArrowRight,
   Sparkles,
-  Filter,
-  ArrowUpDown,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import DirectoryCard from "@/components/DirectoryCard";
 import { directoryMeta } from "@/lib/seo/meta";
 import MarketingNav from "@/components/MarketingNav";
 import AnimatedCounter from "./_components/AnimatedCounter";
-
-export const metadata: Metadata = directoryMeta();
+import DirectorySearchForm from "./_components/DirectorySearchForm";
 
 const ALL_TRADES = [
   "electrician",
@@ -51,31 +48,6 @@ const TRADE_LABELS: Record<string, string> = {
   plasterer: "Plasterer",
   handyman: "Handyman",
 };
-
-/** Review count range filters */
-const REVIEW_RANGES = [
-  { value: "", label: "Any reviews" },
-  { value: "1-10", label: "1-10 reviews" },
-  { value: "10-50", label: "10-50 reviews" },
-  { value: "50-100", label: "50-100 reviews" },
-  { value: "100-500", label: "100-500 reviews" },
-  { value: "500+", label: "500+ reviews" },
-];
-
-/** Minimum rating filter */
-const RATING_OPTIONS = [
-  { value: "", label: "Any rating" },
-  { value: "4.5", label: "4.5+ stars" },
-  { value: "4.0", label: "4.0+ stars" },
-  { value: "3.5", label: "3.5+ stars" },
-];
-
-/** Sort options */
-const SORT_OPTIONS = [
-  { value: "rating", label: "Highest rated" },
-  { value: "reviews", label: "Most reviews" },
-  { value: "name", label: "Name A-Z" },
-];
 
 type Listing = {
   id: string;
@@ -122,6 +94,8 @@ const HOMEOWNER_REVIEWS = [
       "We needed our backyard redone before Christmas. Got matched with an amazing landscaper who delivered ahead of schedule. Could not recommend more highly.",
   },
 ];
+
+export const metadata: Metadata = directoryMeta();
 
 export default async function DirectoryPage({
   searchParams,
@@ -349,65 +323,16 @@ export default async function DirectoryPage({
       </section>
 
       {/* ═══════════════════════════════════════════
-          STICKY SEARCH BAR  (with filters)
+          STICKY SEARCH BAR  (Client Component)
       ═══════════════════════════════════════════ */}
-      <div id="listings" className="sticky top-0 z-20 border-b shadow-sm" style={{ background: "var(--surface)", borderColor: "var(--line)" }}>
-        <form method="GET" className="max-w-6xl mx-auto px-6 py-3 flex flex-wrap gap-2 items-center" onChange={(e) => { (e.currentTarget as HTMLFormElement).submit(); }}>
-          {/* Trade select */}
-          <select name="trade" defaultValue={trade ?? ""} className="app-field text-[13px] w-auto bg-white">
-            <option value="">All trades</option>
-            {ALL_TRADES.map((t) => <option key={t} value={t}>{TRADE_LABELS[t]}</option>)}
-          </select>
-
-          {/* Suburb input */}
-          <div className="relative flex-1 min-w-[160px]">
-            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)]" />
-            <input type="text" name="suburb" defaultValue={suburb ?? ""} placeholder="Suburb..." className="app-field pl-8 text-[13px] w-full bg-white" />
-          </div>
-
-          {/* Review count filter */}
-          <div className="relative">
-            <Filter size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] pointer-events-none" />
-            <select name="reviews" defaultValue={reviews ?? ""} className="app-field pl-8 text-[13px] w-auto bg-white appearance-none pr-7">
-              {REVIEW_RANGES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-            </select>
-          </div>
-
-          {/* Rating filter */}
-          <div className="relative">
-            <Star size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] pointer-events-none" />
-            <select name="rating" defaultValue={rating ?? ""} className="app-field pl-8 text-[13px] w-auto bg-white appearance-none pr-7">
-              {RATING_OPTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-            </select>
-          </div>
-
-          {/* Sort */}
-          <div className="relative">
-            <ArrowUpDown size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] pointer-events-none" />
-            <select name="sort" defaultValue={activeSort} className="app-field pl-8 text-[13px] w-auto bg-white appearance-none pr-7">
-              {SORT_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
-          </div>
-
-          <button type="submit" className="bg-[#0a1722] text-white font-bold text-[13px] px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity">
-            Search
-          </button>
-
-          {(trade || suburb || reviews || rating || sort) && (
-            <Link href="/directory" className="text-[13px] font-semibold hover:opacity-70 transition-opacity" style={{ color: "var(--ink-faint)" }}>
-              Clear all
-            </Link>
-          )}
-
-          <span className="text-[12px] ml-auto hidden sm:block" style={{ color: "var(--ink-faint)" }}>
-            {count ?? 0} result{count !== 1 ? "s" : ""}
-            {trade ? ` - ${TRADE_LABELS[trade] ?? trade}` : ""}
-            {suburb ? ` - ${suburb}` : ""}
-            {reviews ? ` - ${REVIEW_RANGES.find((r) => r.value === reviews)?.label ?? reviews}` : ""}
-            {rating ? ` - ${RATING_OPTIONS.find((r) => r.value === rating)?.label ?? rating}` : ""}
-          </span>
-        </form>
-      </div>
+      <DirectorySearchForm
+        trade={trade}
+        suburb={suburb}
+        reviews={reviews}
+        rating={rating}
+        sort={sort}
+        count={count ?? 0}
+      />
 
       {/* ═══════════════════════════════════════════
           MAIN CONTENT AREA
@@ -434,12 +359,12 @@ export default async function DirectoryPage({
             )}
             {reviews && (
               <Link href={buildUrl({ reviews: undefined })} className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full bg-[var(--amber)] text-[var(--navy)] hover:opacity-80 transition-opacity">
-                {REVIEW_RANGES.find((r) => r.value === reviews)?.label ?? reviews} <span className="opacity-60">-</span>
+                {({"1-10": "1-10 reviews", "10-50": "10-50 reviews", "50-100": "50-100 reviews", "100-500": "100-500 reviews", "500+": "500+ reviews"} as Record<string,string>)[reviews] ?? reviews} <span className="opacity-60">-</span>
               </Link>
             )}
             {rating && (
               <Link href={buildUrl({ rating: undefined })} className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full bg-[var(--green-bg)] text-[var(--green)] hover:opacity-80 transition-opacity">
-                {RATING_OPTIONS.find((r) => r.value === rating)?.label ?? rating} <span className="opacity-60">-</span>
+                {({"4.5": "4.5+ stars", "4.0": "4.0+ stars", "3.5": "3.5+ stars"} as Record<string,string>)[rating] ?? rating} <span className="opacity-60">-</span>
               </Link>
             )}
           </div>
