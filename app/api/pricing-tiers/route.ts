@@ -33,7 +33,7 @@ export async function GET(_request: NextRequest) {
 
   const businessId = await getActiveBusinessId(supabase, userData.user.id);
 
-  let { data: tiers, error } = await supabase
+  const { data: tiersRaw, error } = await supabase
     .from("pricing_tiers")
     .select("*")
     .eq("profile_id", businessId)
@@ -42,6 +42,8 @@ export async function GET(_request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  let tiers = tiersRaw;
 
   /* Auto-seed defaults if user has no tiers yet */
   if (!tiers || tiers.length === 0) {
