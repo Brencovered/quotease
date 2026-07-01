@@ -83,7 +83,7 @@ interface RooferQuoteBuilderProps {
   profile: { hourly_rate: number; materials_margin_pct: number; trades?: string[]; onboarded_at?: string | null };
   materials: { item_key: string; label: string; unit_cost: number }[];
   preClientId?: string;
-  preMarkupMaterials?: { item_key: string; label: string; unit_cost: number; qty: number; supplier: string }[];
+  preMarkupMaterials?: { label: string; quantity: number; unit: string; unitCost: number; totalCost: number }[];
 }
 
 export default function RooferQuoteBuilder({
