@@ -53,6 +53,46 @@ export interface PackageRow {
   package_items: PackageItem[] | null;
 }
 
+export interface PricingTier {
+  id: string;
+  profile_id: string;
+  name: string;
+  markup_pct: number;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface JobSizeTier {
+  id: string;
+  profile_id: string;
+  name: string;
+  max_days: number | null;
+  markup_pct: number;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface BundleItem {
+  id: string;
+  bundle_id: string;
+  label: string;
+  qty: number;
+  unit: string;
+  unit_cost: number;
+  sort_order: number;
+}
+
+export interface MaterialBundle {
+  id: string;
+  profile_id: string;
+  title: string;
+  trade: string;
+  description: string | null;
+  status: string;
+  created_at: string;
+  items: BundleItem[];
+}
+
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
 /* ------------------------------------------------------------------ */
@@ -106,4 +146,8 @@ export function calcPackageTotal(items: PackageItem[], labourHours: number, hour
   const materialsTotal = items.reduce((sum, item) => sum + calcItemTotal(item), 0);
   const labourTotal = labourHours * hourlyRate;
   return +(materialsTotal + labourTotal).toFixed(2);
+}
+
+export function calcSellPrice(costPrice: number, markupPct: number): number {
+  return +(costPrice * (1 + markupPct / 100)).toFixed(2);
 }
