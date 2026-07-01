@@ -43,7 +43,7 @@ const DEFAULT_INTAKE: ElectricianIntake = {
 
 const STEPS = [
   { id: "customer",   label: "Customer" },
-  { id: "drawing",    label: "Files" }, // badge handled inline
+  { id: "drawing",    label: "Files" },
   { id: "job",        label: "Job" },
   { id: "electrical", label: "Electrical" },
   { id: "site",       label: "Site" },
@@ -278,34 +278,20 @@ export default function QuoteBuilder({
     if (!userData.user) { setSaveMessage("Not logged in"); setSaving(false); return; }
     const businessId = await getActiveBusinessId(supabase, userData.user.id);
 
-    // Keep the client list growing automatically rather than requiring an
-    // explicit "add customer" step - resolves to a real client_id either
-    // way, which is what lets saved plans/drawings for that client surface
-    // on this job later.
     const resolvedClientId = await resolveClientId(supabase, businessId, clientId, clientName, clientEmail, siteAddress);
 
-    /* Save to price_book_items (primary catalog) */
     for (const m of lib) {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(m.item_key);
       if (isUuid) {
         await supabase.from("price_book_items").update({
-          description: m.label,
-          cost_price: m.unit_cost,
-          trade: "electrician",
-          unit: "ea",
+          description: m.label, cost_price: m.unit_cost, trade: "electrician", unit: "ea",
         }).eq("id", m.item_key).eq("profile_id", businessId);
       } else {
         await supabase.from("price_book_items").insert({
-          profile_id: businessId,
-          supplier: "Custom",
-          description: m.label,
-          cost_price: m.unit_cost,
-          trade: "electrician",
-          unit: "ea",
+          profile_id: businessId, supplier: "Custom", description: m.label, cost_price: m.unit_cost, trade: "electrician", unit: "ea",
         });
       }
     }
-    /* Also keep material_items in sync for other components */
     for (const m of lib) {
       await supabase.from("material_items").upsert(
         { profile_id: businessId, trade: "electrician", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost },
@@ -318,25 +304,29 @@ export default function QuoteBuilder({
     const siteMatlsSave  = siteItems.reduce((s, i) => s + i.materialsCost * (1 + effectiveMargin / 100), 0);
     const siteTotalSave  = Math.round(siteLabourSave * rate + siteMatlsSave);
 
-    const { data: quote, error } = await supabase.from("quotes").insert({
+    const quotePayload: Record<string, unknown> = {
       profile_id: businessId, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail,
       site_address: siteAddress, trade: "electrician", job_type: intake.jobType,
       intake_data: {
         ...intake,
         site_items:      siteItems,
-        annotation_meta: annotationMeta.map(a => ({ ...a, frameData: "" })), // strip large base64 from DB
+        annotation_meta: annotationMeta.map(a => ({ ...a, frameData: "" })),
       },
       labour_hours:   result.labourHours + extraLines.reduce((s, l) => s + l.hours, 0) + siteLabourSave,
       materials_cost: Math.round(result.materialsCost + extraTotals.materials + siteMatlsSave),
       total_cost:     result.totalCost + extraTotals.total + siteTotalSave,
       payment_terms:  paymentTerms,
-      pricing_tier_id: selectedPricingTierId,
-      job_size_tier_id: selectedJobSizeTierId,
       quote_expires_at: new Date(Date.now() + (profile.default_expiry_days ?? 30) * 86400000).toISOString(),
       status:  sendEmail ? "sent" : "draft",
       sent_at: sendEmail ? new Date().toISOString() : null,
       markup_materials: preMarkupMaterials ?? [],
-    }).select().single();
+    };
+
+    // Opt-in: only send tier IDs to DB if user explicitly selected them
+    if (selectedPricingTierId) quotePayload.pricing_tier_id = selectedPricingTierId;
+    if (selectedJobSizeTierId) quotePayload.job_size_tier_id = selectedJobSizeTierId;
+
+    const { data: quote, error } = await supabase.from("quotes").insert(quotePayload).select().single();
 
     if (error) { setSaveMessage(error.message); setSaving(false); return; }
     setSavedQuoteId(quote.id);
@@ -372,8 +362,6 @@ export default function QuoteBuilder({
 
   return (
     <div className="page-wrap-narrow">
-
-      {/* ── Live total ─────────────────────────────── */}
       <div className="sticky top-12 sm:top-0 z-30 mb-4 -mx-4 sm:mx-0 px-4 sm:px-0">
         <div className="bg-[var(--navy)] rounded-none sm:rounded-2xl px-5 py-3 flex items-center justify-between gap-4"
              style={{ boxShadow: "0 4px 20px rgba(10,23,34,.18)" }}>
@@ -389,17 +377,15 @@ export default function QuoteBuilder({
           </div>
           <div className="text-right">
             <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Total</p>
-            <p className="font-display text-[24px] text-[var(--amber)] leading-tight">${(result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total + siteTotal).toLocaleString()}</p>
+            <p className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total + siteTotal).toLocaleString()}</p>
           </div>
         </div>
       </div>
 
-      {/* ── Step progress ──────────────────────────── */}
       <div className="flex items-center gap-1 mb-5 overflow-x-auto hide-scrollbar pb-1">
         {STEPS.map((s, i) => {
           const done    = i < step;
           const current = i === step;
-          const badge   = s.id === "drawing" && extraLines.length > 0 ? extraLines.length : null;
           return (
             <button key={s.id} onClick={() => setStep(i)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12.5px] font-bold whitespace-nowrap transition-all ${
@@ -408,14 +394,12 @@ export default function QuoteBuilder({
                           "bg-[var(--surface)] text-[var(--ink-faint)] border border-[var(--line)]"
               }`}
             >
-              {done && <Check size={11} />}
-              {s.label}
+              {done && <Check size={11} />}{s.label}
             </button>
           );
         })}
       </div>
 
-      {/* ── Step content ───────────────────────────── */}
       {stepId === "drawing" && (
         <StepDrawing
           drawingFiles={drawingFiles}
@@ -504,7 +488,6 @@ export default function QuoteBuilder({
         />
       )}
 
-      {/* ── Navigation buttons ─────────────────────── */}
       <div className="flex gap-3 mt-6">
         {step > 0 && (
           <button onClick={() => setStep(step - 1)} className="btn-secondary flex-1">
@@ -521,7 +504,6 @@ export default function QuoteBuilder({
   );
 }
 
-/* ─── Step: Drawing ─────────────────────────────────────────────── */
 function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions, analyzing, analysisResult, analysisError, usageLimitReached, onUpload, onRemove, onAnalyse, onVoiceTranscript, trade, lib, onSaveDraft, onAnnotationMeta, onAddLiveItems }: {
   drawingFiles: File[]; drawingInstructions: string; setDrawingInstructions: (v: string) => void;
   analyzing: boolean; analysisResult: { confidence: string; notes: string } | null;
@@ -537,21 +519,16 @@ function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions
 }) {
   return (
     <div className="space-y-4">
-
-      {/* Live site annotation */}
       <LiveSiteAnnotation trade={trade} lib={lib} onSaveDraft={onSaveDraft} onAnnotationMeta={onAnnotationMeta} onAddLineItems={onAddLiveItems} />
-
       <div className="card">
         <p className="section-tag mb-1">Step 1</p>
         <p className="font-semibold text-[var(--ink)] text-[17px] mb-1">Upload drawings</p>
         <p className="text-[13px] text-[var(--ink-faint)] mb-4">Floor plans, site photos, electrical drawings - uploaded now, saved to the job. AI reading is optional.</p>
-
         <label className="flex items-center justify-center gap-2 border-2 border-dashed border-[var(--line)] rounded-xl py-8 cursor-pointer hover:border-[var(--amber)] transition-colors bg-[var(--app-bg)]">
           <Paperclip size={18} className="text-[var(--ink-faint)]" />
           <span className="text-[14px] font-semibold text-[var(--ink-soft)]">Tap to add drawings or photos</span>
           <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={onUpload} />
         </label>
-
         {drawingFiles.length > 0 && (
           <div className="mt-3 space-y-2">
             {drawingFiles.map((f) => (
@@ -567,7 +544,6 @@ function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions
           </div>
         )}
       </div>
-
       <VoiceNoteRecorder
         onTranscriptReady={onVoiceTranscript}
         analyzing={analyzing}
@@ -575,14 +551,13 @@ function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions
         analysisResult={analysisResult}
         usageLimitReached={usageLimitReached}
       />
-
       {drawingFiles.length > 0 && (
         <div className="card border-2 border-[var(--amber-light)]">
           <div className="flex items-start gap-3 mb-3">
             <Sparkles size={18} className="text-[var(--amber-deep)] mt-0.5 shrink-0" />
             <div>
               <p className="font-semibold text-[var(--ink)]">AI field pre-fill</p>
-              <p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5">Optional - AI reads the first drawing and estimates quantities. You review everything before saving.</p>
+              <p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5">Optional - AI reads the drawing and estimates quantities. You review everything before saving.</p>
             </div>
           </div>
           <textarea
@@ -597,7 +572,6 @@ function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions
             <Sparkles size={15} className="text-[var(--amber-deep)]" />
             {analyzing ? "Reading drawing..." : "Analyse with AI"}
           </button>
-
           {analysisError && (
             <div className="mt-3 bg-[var(--red-bg)] rounded-lg px-3 py-2.5 flex items-start gap-2">
               <AlertTriangle size={14} className="text-[var(--red)] mt-0.5 shrink-0" />
@@ -607,7 +581,6 @@ function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions
               </div>
             </div>
           )}
-
           {analysisResult && (
             <div className={`mt-3 rounded-lg px-3 py-2.5 flex items-start gap-2 ${analysisResult.confidence === "low" ? "bg-[var(--red-bg)]" : "bg-amber-50"}`}>
               <AlertTriangle size={14} className={`mt-0.5 shrink-0 ${analysisResult.confidence === "low" ? "text-[var(--red)]" : "text-amber-600"}`} />
@@ -625,7 +598,6 @@ function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions
   );
 }
 
-/* ─── Step: Job ─────────────────────────────────────────────────── */
 function StepJob({
   intake, rate, margin, effectiveMargin, set, setRate, setMargin,
   pricingTiers, jobSizeTiers,
@@ -673,79 +645,45 @@ function StepJob({
           <Check2 checked={intake.ccew}     onChange={(v) => set("ccew", v)}     label="CCEW certificate" />
         </Row>
       </div>
-
       <div className="card">
         <p className="section-tag mb-3">Customer &amp; job pricing</p>
-        
         {pricingTiers && pricingTiers.length > 0 && (
           <div className="mb-3">
             <Field label="Customer type">
-              <select 
-                value={selectedPricingTierId ?? ""} 
-                onChange={(e) => setSelectedPricingTierId(e.target.value || null)} 
-                className="app-field"
-              >
+              <select value={selectedPricingTierId ?? ""} onChange={(e) => setSelectedPricingTierId(e.target.value || null)} className="app-field">
                 <option value="">Custom margin ({profile.materials_margin_pct ?? 20}%)</option>
                 {pricingTiers.map(t => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} ({t.markup_pct >= 0 ? '+' : ''}{t.markup_pct}%)
-                  </option>
+                  <option key={t.id} value={t.id}>{t.name} ({t.markup_pct >= 0 ? '+' : ''}{t.markup_pct}%)</option>
                 ))}
               </select>
             </Field>
             {selectedPricingTier && (
-              <p className="text-[11px] text-[var(--ink-faint)] mt-1">
-                Materials marked up {selectedPricingTier.markup_pct}% for {selectedPricingTier.name.toLowerCase()} work
-              </p>
+              <p className="text-[11px] text-[var(--ink-faint)] mt-1">Materials marked up {selectedPricingTier.markup_pct}% for {selectedPricingTier.name.toLowerCase()} work</p>
             )}
           </div>
         )}
-
         {jobSizeTiers && jobSizeTiers.length > 0 && (
           <div className="mb-3">
             <Field label="Job size">
-              <select 
-                value={selectedJobSizeTierId ?? ""} 
-                onChange={(e) => setSelectedJobSizeTierId(e.target.value || null)} 
-                className="app-field"
-              >
+              <select value={selectedJobSizeTierId ?? ""} onChange={(e) => setSelectedJobSizeTierId(e.target.value || null)} className="app-field">
                 <option value="">Select job size...</option>
                 {jobSizeTiers.map(t => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} {t.max_days ? `(< ${t.max_days} day${t.max_days !== 1 ? 's' : ''})` : '(3+ days)'} 
-                    ({t.markup_pct >= 0 ? '+' : ''}{t.markup_pct}%)
-                  </option>
+                  <option key={t.id} value={t.id}>{t.name} {t.max_days ? `(< ${t.max_days} day${t.max_days !== 1 ? 's' : ''})` : '(3+ days)'} ({t.markup_pct >= 0 ? '+' : ''}{t.markup_pct}%)</option>
                 ))}
               </select>
             </Field>
             {selectedJobSizeTier && selectedJobSizeTier.markup_pct !== 0 && (
-              <p className="text-[11px] text-[var(--ink-faint)] mt-1">
-                {selectedJobSizeTier.markup_pct > 0 ? 'Upward adjustment' : 'Discount'} of {Math.abs(selectedJobSizeTier.markup_pct)}% for {selectedJobSizeTier.name.toLowerCase()}
-              </p>
+              <p className="text-[11px] text-[var(--ink-faint)] mt-1">{selectedJobSizeTier.markup_pct > 0 ? 'Upward adjustment' : 'Discount'} of {Math.abs(selectedJobSizeTier.markup_pct)}% for {selectedJobSizeTier.name.toLowerCase()}</p>
             )}
           </div>
         )}
-
         <div className="border-t border-[var(--line-subtle)] pt-3">
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Hourly rate ($)">
-              <input type="number" inputMode="decimal" value={rate} onChange={(e) => setRate(Number(e.target.value))} className="app-field" />
-            </Field>
-            <Field label={`Effective margin (${effectiveMargin}%)`}>
-              <input 
-                type="number" 
-                inputMode="decimal" 
-                value={effectiveMargin} 
-                onChange={(e) => { /* Allow manual override by creating a pseudo-tier */ }} 
-                className="app-field bg-[var(--amber-light)]" 
-                readOnly
-              />
-            </Field>
+            <Field label="Hourly rate ($)"><input type="number" inputMode="decimal" value={rate} onChange={(e) => setRate(Number(e.target.value))} className="app-field" /></Field>
+            <Field label={`Effective margin (${effectiveMargin}%)`}><input type="number" inputMode="decimal" value={effectiveMargin} className="app-field bg-[var(--amber-light)]" readOnly /></Field>
           </div>
           {selectedPricingTier && selectedJobSizeTier && (
-            <p className="text-[11px] text-[var(--ink-faint)] mt-2">
-              {selectedPricingTier.markup_pct}% (customer) {selectedJobSizeTier.markup_pct >= 0 ? '+' : ''}{selectedJobSizeTier.markup_pct}% (job size) = {effectiveMargin}% total
-            </p>
+            <p className="text-[11px] text-[var(--ink-faint)] mt-2">{selectedPricingTier.markup_pct}% (customer) {selectedJobSizeTier.markup_pct >= 0 ? '+' : ''}{selectedJobSizeTier.markup_pct}% (job size) = {effectiveMargin}% total</p>
           )}
         </div>
       </div>
@@ -753,7 +691,6 @@ function StepJob({
   );
 }
 
-/* ─── Step: Electrical ──────────────────────────────────────────── */
 function StepElectrical({ intake, set, lib, setLib }: {
   intake: ElectricianIntake;
   set: <K extends keyof ElectricianIntake>(k: K, v: ElectricianIntake[K]) => void;
@@ -795,7 +732,6 @@ function StepElectrical({ intake, set, lib, setLib }: {
     reader.readAsText(file);
   }
 
-  // Exhaust fan helpers
   const exhaustFans: import("@/lib/calc").ExhaustFanEntry[] = intake.exhaustFans ?? [];
   function setExhaustFan(type: import("@/lib/calc").ExhaustFanType, qty: number) {
     const updated = exhaustFans.filter(e => e.type !== type);
@@ -806,7 +742,6 @@ function StepElectrical({ intake, set, lib, setLib }: {
     return exhaustFans.find(e => e.type === type)?.qty ?? 0;
   }
 
-  // Cable run helpers
   const cableRuns: import("@/lib/calc").CableRun[] = intake.cableRuns ?? [];
   function setCableRun(size: import("@/lib/calc").CableRun["size"], metres: number) {
     const updated = cableRuns.filter(r => r.size !== size);
@@ -817,7 +752,6 @@ function StepElectrical({ intake, set, lib, setLib }: {
     return cableRuns.find(r => r.size === size)?.metres ?? 0;
   }
 
-  // Custom appliance helpers
   const customAppliances: import("@/lib/calc").CustomAppliance[] = intake.customAppliances ?? [];
   function addCustomAppliance() {
     set("customAppliances", [...customAppliances, { id: Math.random().toString(36).slice(2), label: "", phase: "single", amps: 20 }]);
@@ -831,8 +765,6 @@ function StepElectrical({ intake, set, lib, setLib }: {
 
   return (
     <div className="space-y-4">
-
-      {/* Switchboard */}
       <div className="card">
         <p className="section-tag mb-3">Switchboard</p>
         <Row>
@@ -854,15 +786,11 @@ function StepElectrical({ intake, set, lib, setLib }: {
               </select>
             </Field>
             {intake.switchboardRcbo && intake.switchboardRcboMode === "per_pole" && (
-              <Field label="Number of poles">
-                <Num value={intake.switchboardPoles ?? 12} onChange={(v) => set("switchboardPoles", v)} />
-              </Field>
+              <Field label="Number of poles"><Num value={intake.switchboardPoles ?? 12} onChange={(v) => set("switchboardPoles", v)} /></Field>
             )}
           </div>
         )}
       </div>
-
-      {/* Points */}
       <div className="card">
         <p className="section-tag mb-3">Points and circuits</p>
         <div className="grid grid-cols-3 gap-3 mb-3">
@@ -874,12 +802,8 @@ function StepElectrical({ intake, set, lib, setLib }: {
           <Field label="Data points"><Num value={intake.dataPoints} onChange={(v) => set("dataPoints", v)} /></Field>
           <Field label="Ext. circuits"><Num value={intake.externalCircuits} onChange={(v) => set("externalCircuits", v)} /></Field>
         </div>
-        <div className="mt-3">
-          <Check2 checked={intake.nbn} onChange={(v) => set("nbn", v)} label="NBN connection point" />
-        </div>
+        <div className="mt-3"><Check2 checked={intake.nbn} onChange={(v) => set("nbn", v)} label="NBN connection point" /></div>
       </div>
-
-      {/* Lighting */}
       <div className="card">
         <p className="section-tag mb-3">Lighting</p>
         <div className="grid grid-cols-2 gap-3 mb-3">
@@ -906,12 +830,8 @@ function StepElectrical({ intake, set, lib, setLib }: {
           </Field>
         )}
         {intake.downlightSupply === "provisional" && (
-          <Field label="Provisional sum ($)">
-            <Num value={intake.downlightProvisional ?? 0} onChange={(v) => set("downlightProvisional", v)} />
-          </Field>
+          <Field label="Provisional sum ($)"><Num value={intake.downlightProvisional ?? 0} onChange={(v) => set("downlightProvisional", v)} /></Field>
         )}
-
-        {/* Exhaust fans by type */}
         <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-faint)] mt-4 mb-2">Exhaust fans</p>
         <div className="grid grid-cols-3 gap-3">
           <Field label="Ceiling"><Num value={exhaustQty("ceiling")} onChange={(v) => setExhaustFan("ceiling", v)} /></Field>
@@ -919,8 +839,6 @@ function StepElectrical({ intake, set, lib, setLib }: {
           <Field label="Inline"><Num value={exhaustQty("inline")}  onChange={(v) => setExhaustFan("inline", v)}  /></Field>
         </div>
       </div>
-
-      {/* Fixed appliances */}
       <div className="card">
         <p className="section-tag mb-3">Fixed appliances</p>
         <div className="grid grid-cols-2 gap-x-4 mb-3">
@@ -932,8 +850,6 @@ function StepElectrical({ intake, set, lib, setLib }: {
           <Check2 checked={intake.evCharger}        onChange={(v) => set("evCharger", v)}        label="EV charger" />
           <Check2 checked={intake.solarConnection}  onChange={(v) => set("solarConnection", v)}  label="Solar / battery" />
         </div>
-
-        {/* Custom appliances */}
         {customAppliances.length > 0 && (
           <div className="space-y-2 mb-3">
             {customAppliances.map(ca => (
@@ -961,23 +877,15 @@ function StepElectrical({ intake, set, lib, setLib }: {
           <Plus size={13} /> Add custom appliance
         </button>
       </div>
-
-      {/* Cabling by size */}
       <div className="card">
         <p className="section-tag mb-3">Cabling</p>
         <div className="grid grid-cols-3 gap-3 mb-3">
           {(["1.5","2.5","4","6","10"] as const).map(size => (
-            <Field key={size} label={`${size}mm (m)`}>
-              <Num value={cableMetres(size)} onChange={(v) => setCableRun(size, v)} />
-            </Field>
+            <Field key={size} label={`${size}mm (m)`}><Num value={cableMetres(size)} onChange={(v) => setCableRun(size, v)} /></Field>
           ))}
         </div>
-        <Field label="Trenching (m)">
-          <Num value={intake.trenchMetres} onChange={(v) => set("trenchMetres", v)} />
-        </Field>
+        <Field label="Trenching (m)"><Num value={intake.trenchMetres} onChange={(v) => set("trenchMetres", v)} /></Field>
       </div>
-
-      {/* Smoke / certs */}
       <div className="card">
         <p className="section-tag mb-3">Safety and compliance</p>
         <div className="grid grid-cols-2 gap-3 mb-3">
@@ -987,12 +895,8 @@ function StepElectrical({ intake, set, lib, setLib }: {
           <Check2 checked={intake.ccew}    onChange={(v) => set("ccew", v)}    label="CCEW certificate" />
           <Check2 checked={intake.callout} onChange={(v) => set("callout", v)} label="Call-out fee" />
         </Row>
-        <p className="text-[11.5px] text-[var(--ink-faint)] mt-2">
-          COES is included automatically on all jobs.
-        </p>
+        <p className="text-[11.5px] text-[var(--ink-faint)] mt-2">COES is included automatically on all jobs.</p>
       </div>
-
-      {/* Material prices toggle */}
       <button onClick={() => setShowLib(!showLib)} className="btn-secondary w-full justify-between">
         <span>Material unit prices</span>
         <ChevronRight size={15} className={`transition-transform ${showLib ? "rotate-90" : ""}`} />
@@ -1022,7 +926,6 @@ function StepElectrical({ intake, set, lib, setLib }: {
   );
 }
 
-/* ─── Step: Site ────────────────────────────────────────────────── */
 function StepSite({ intake, set }: {
   intake: ElectricianIntake;
   set: <K extends keyof ElectricianIntake>(k: K, v: ElectricianIntake[K]) => void;
@@ -1057,21 +960,14 @@ function StepSite({ intake, set }: {
           </Field>
         </div>
       </div>
-
       <div className="card">
         <p className="section-tag mb-3">Compliance and alarms</p>
-        <Field label="Smoke alarms to interconnect" className="mb-3">
-          <Num value={intake.smokeAlarms} onChange={(v) => set("smokeAlarms", v)} />
-        </Field>
-        <Row>
-          <Check2 checked={intake.multistorey} onChange={(v) => set("multistorey", v)} label="Multi-storey" />
-        </Row>
+        <Field label="Smoke alarms to interconnect" className="mb-3"><Num value={intake.smokeAlarms} onChange={(v) => set("smokeAlarms", v)} /></Field>
+        <Row><Check2 checked={intake.multistorey} onChange={(v) => set("multistorey", v)} label="Multi-storey" /></Row>
       </div>
     </div>
   );
 }
-
-/* ─── Step: Send ────────────────────────────────────────────────── */
 
 function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTerms, setCustomTerms, customTermsTotal,
   clientName, clientEmail, siteAddress,
@@ -1097,18 +993,11 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
   selectedPricingTier: { id: string; name: string; markup_pct: number } | null;
   selectedJobSizeTier: { id: string; name: string; markup_pct: number } | null;
 }) {
-  // Mirrors the parent component's calc (siteMaterials there isn't passed
-  // down to this component) -- siteTotal alone doesn't give us the
-  // materials-only split this breakdown needs.
   const siteMaterials = siteItems.reduce((s, i) => s + i.materialsCost * (1 + (effectiveMargin ?? 20) / 100), 0);
 
   return (
     <div className="space-y-4">
-
-      {/* Site survey report -- photo evidence */}
       <SiteAnnotationReport annotations={annotationMeta} />
-
-      {/* Site annotation items -- shown as proper line items */}
       {siteItems.length > 0 && (
         <div className="card">
           <div className="flex items-center justify-between mb-3">
@@ -1125,9 +1014,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
                 <div className="text-right shrink-0">
                   <p className="font-bold text-[13px] text-[var(--ink)]">${Math.round(item.materialsCost + item.labourHrs * rate).toLocaleString()}</p>
                 </div>
-                <button onClick={() => setSiteItems(p => p.filter(i => i.id !== item.id))} className="text-[var(--ink-faint)] hover:text-[var(--red)] p-1">
-                  <X size={13} />
-                </button>
+                <button onClick={() => setSiteItems(p => p.filter(i => i.id !== item.id))} className="text-[var(--ink-faint)] hover:text-[var(--red)] p-1"><X size={13} /></button>
               </div>
             ))}
           </div>
@@ -1137,8 +1024,6 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
           </div>
         </div>
       )}
-
-      {/* Applied pricing tiers */}
       {(selectedPricingTier || selectedJobSizeTier) && (
         <div className="card">
           <p className="section-tag mb-2">Applied pricing</p>
@@ -1160,54 +1045,26 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
           </div>
         </div>
       )}
-
-      {/* Quote summary */}
       <div className="bg-[var(--navy)] rounded-2xl p-5">
         <p className="text-[11px] text-[var(--steel-3)] font-bold uppercase tracking-wider mb-3">Quote summary</p>
         <div className="space-y-2">
-          <div className="flex justify-between text-[14px]">
-            <span className="text-[var(--steel-2)]">Labour</span>
-            <span className="text-white font-semibold tabular">${Math.round(result.labourHours * rate).toLocaleString()}</span>
-          </div>
-          <div className="flex justify-between text-[14px]">
-            <span className="text-[var(--steel-2)]">Materials</span>
-            <span className="text-white font-semibold tabular">${Math.round(result.materialsCost + markupTotal + extraLinesTotals(extraLines, rate, effectiveMargin).materials).toLocaleString()}</span>
-          </div>
-          {siteTotal > 0 && (
-            <div className="flex justify-between text-[14px]">
-              <span className="text-[var(--steel-2)]">On-site items</span>
-              <span className="text-white font-semibold tabular">${siteTotal.toLocaleString()}</span>
-            </div>
-          )}
-          {markupTotal > 0 && (
-            <div className="flex justify-between text-[12.5px]">
-              <span className="text-[var(--steel-3)]">incl. ${markupTotal.toLocaleString()} from site plans</span>
-            </div>
-          )}
+          <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Labour</span><span className="text-white font-semibold tabular">${Math.round(result.labourHours * rate).toLocaleString()}</span></div>
+          <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Materials</span><span className="text-white font-semibold tabular">${Math.round(result.materialsCost + markupTotal + extraLinesTotals(extraLines, rate, effectiveMargin).materials).toLocaleString()}</span></div>
+          {siteTotal > 0 && <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">On-site items</span><span className="text-white font-semibold tabular">${siteTotal.toLocaleString()}</span></div>}
+          {markupTotal > 0 && <div className="flex justify-between text-[12.5px]"><span className="text-[var(--steel-3)]">incl. ${markupTotal.toLocaleString()} from site plans</span></div>}
           <div className="border-t border-white/10 pt-2 flex justify-between">
             <span className="text-white font-bold text-[15px]">Total</span>
             <span className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total + siteTotal).toLocaleString()}</span>
           </div>
         </div>
       </div>
-
-      {/* Who it's going to - confirmation only, edited back in the Customer step */}
       <div className="card">
         <p className="section-tag mb-1">Sending to</p>
         <p className="font-semibold text-[var(--ink)]">{clientName || "No client name set"}</p>
         <p className="text-[13px] text-[var(--ink-faint)]">{clientEmail || "No email set - can still save as draft"}</p>
         <p className="text-[13px] text-[var(--ink-faint)]">{siteAddress || "No site address set"}</p>
       </div>
-
-      {/* Extra job lines */}
-      <ExtraJobLines
-        lines={extraLines}
-        onChange={setExtraLines}
-        hourlyRate={rate}
-        marginPct={effectiveMargin}
-      />
-
-      {/* Payment terms */}
+      <ExtraJobLines lines={extraLines} onChange={setExtraLines} hourlyRate={rate} marginPct={effectiveMargin} />
       <div className="card">
         <p className="section-tag mb-3">Payment terms</p>
         <select value={termsPreset} onChange={(e) => setTermsPreset(e.target.value)} className="app-field mb-3">
@@ -1217,15 +1074,12 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
           <option value="due_on_invoice">100% due on invoice (7 days)</option>
           <option value="custom">Custom split</option>
         </select>
-
         {termsPreset !== "custom" ? (
           <div className="bg-[var(--app-bg)] rounded-xl p-3 space-y-1.5">
             {paymentTerms.map((t, i) => (
               <div key={i} className="flex justify-between text-[13.5px]">
                 <span className="text-[var(--ink-soft)]">{t.label}</span>
-                <span className="font-bold text-[var(--ink)] tabular">
-                  {t.percent}% - ${Math.round(((result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total + (siteTotal ?? 0)) * t.percent) / 100).toLocaleString()}
-                </span>
+                <span className="font-bold text-[var(--ink)] tabular">{t.percent}% - ${Math.round(((result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total + (siteTotal ?? 0)) * t.percent) / 100).toLocaleString()}</span>
               </div>
             ))}
           </div>
@@ -1242,61 +1096,25 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
           </div>
         )}
       </div>
-
-      {/* Save / send */}
       <div className="space-y-3">
-        <button onClick={() => onSave(true)} disabled={saving || !clientEmail} className="btn-primary">
-          {saving ? "Sending..." : "Send quote to client"}
-        </button>
-        <button onClick={() => onSave(false)} disabled={saving} className="btn-secondary w-full justify-center">
-          Save as draft
-        </button>
-        {saveMessage && (
-          <div className={`rounded-xl px-4 py-3 text-[13.5px] font-semibold text-center ${saveMessage.includes("fail") || saveMessage.includes("error") ? "bg-[var(--red-bg)] text-[var(--red)]" : "bg-[var(--green-bg)] text-[var(--green)]"}`}>
-            {saveMessage}
-          </div>
-        )}
-        {savedQuoteId && (
-          <a
-            href={`/api/quotes/${savedQuoteId}/pdf`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-secondary w-full justify-center block text-center"
-          >
-            Download PDF
-          </a>
-        )}
+        <button onClick={() => onSave(true)} disabled={saving || !clientEmail} className="btn-primary">{saving ? "Sending..." : "Send quote to client"}</button>
+        <button onClick={() => onSave(false)} disabled={saving} className="btn-secondary w-full justify-center">Save as draft</button>
+        {saveMessage && <div className={`rounded-xl px-4 py-3 text-[13.5px] font-semibold text-center ${saveMessage.includes("fail") || saveMessage.includes("error") ? "bg-[var(--red-bg)] text-[var(--red)]" : "bg-[var(--green-bg)] text-[var(--green)]"}`}>{saveMessage}</div>}
+        {savedQuoteId && <a href={`/api/quotes/${savedQuoteId}/pdf`} target="_blank" rel="noopener noreferrer" className="btn-secondary w-full justify-center block text-center">Download PDF</a>}
       </div>
     </div>
   );
 }
 
-/* ─── Shared field components ───────────────────────────────────── */
 function Field({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
-  return (
-    <label className={`block ${className}`}>
-      <span className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">{label}</span>
-      {children}
-    </label>
-  );
+  return <label className={`block ${className}`}><span className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">{label}</span>{children}</label>;
 }
-
 function Num({ value, onChange }: { value: number; onChange: (v: number) => void }) {
-  return (
-    <input type="number" inputMode="numeric" min={0} value={value}
-      onChange={(e) => onChange(Number(e.target.value))} className="app-field" />
-  );
+  return <input type="number" inputMode="numeric" min={0} value={value} onChange={(e) => onChange(Number(e.target.value))} className="app-field" />;
 }
-
 function Check2({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
-  return (
-    <label className="flex items-center gap-3 py-2.5 cursor-pointer">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      <span className="text-[14.5px] text-[var(--ink)]">{label}</span>
-    </label>
-  );
+  return <label className="flex items-center gap-3 py-2.5 cursor-pointer"><input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} /><span className="text-[14.5px] text-[var(--ink)]">{label}</span></label>;
 }
-
 function Row({ children }: { children: React.ReactNode }) {
   return <div className="divide-y divide-[var(--line-subtle)]">{children}</div>;
 }
