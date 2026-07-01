@@ -190,6 +190,15 @@ function CameraPage() {
     ));
   }
 
+  const [editingRoomId, setEditingRoomId] = useState<string | null>(null);
+  const [editingRoomName, setEditingRoomName] = useState("");
+
+  const ROOM_PRESETS = [
+    "Kitchen","Living room","Master bedroom","Bedroom 2","Bedroom 3",
+    "Bathroom","Ensuite","Laundry","Garage","Study","Hallway",
+    "Exterior - Front","Exterior - Rear","Exterior - Side","Roof","Under floor",
+  ];
+
   function addRoom() {
     const newRoom: RoomSession = {
       roomId: uid(),
@@ -199,6 +208,14 @@ function CameraPage() {
     };
     setRooms(prev => [...prev, newRoom]);
     setActiveRoomId(newRoom.roomId);
+    // Immediately open rename for new room
+    setEditingRoomId(newRoom.roomId);
+    setEditingRoomName(newRoom.roomName);
+  }
+
+  function renameRoom(roomId: string, name: string) {
+    setRooms(prev => prev.map(r => r.roomId === roomId ? { ...r, roomName: name } : r));
+    setEditingRoomId(null);
   }
 
   /* ── Calibration state ───────────────────────────────────────── */
@@ -668,10 +685,14 @@ function CameraPage() {
             <span className="text-white text-[12px] font-bold">LIVE</span>
 
             {/* Room selector */}
-            <div className="flex gap-1">
+            <div className="flex gap-1 flex-wrap">
               {rooms.map(r => (
                 <button key={r.roomId}
-                  onClick={() => setActiveRoomId(r.roomId)}
+                  onClick={() => {
+                    setActiveRoomId(r.roomId);
+                    setEditingRoomId(r.roomId);
+                    setEditingRoomName(r.roomName);
+                  }}
                   className="text-[10px] font-bold px-2 py-0.5 rounded-full border-0"
                   style={{
                     background: (activeRoom.roomId === r.roomId) ? "#ffb400" : "rgba(0,0,0,.4)",
@@ -958,6 +979,14 @@ function CameraPage() {
                     </p>
                   </div>
                 )}
+                {formCalcLen != null && (items.find(i => i.key === formItem)?.unit === "m") && (
+                  <div className="flex items-start gap-1 mt-1">
+                    <AlertTriangle size={10} className="text-amber-500 shrink-0 mt-0.5" />
+                    <p className="text-[10px] text-amber-600 font-semibold leading-tight">
+                      Cable/pipe length accuracy depends on camera distance. Verify on site.
+                    </p>
+                  </div>
+                )}
                 {formCalcLen == null && drawMode === "line" && !calibration && (
                   <p className="text-[10px] text-amber-500 mt-1 font-semibold">
                     Calibrate this room for auto-measurement
@@ -983,6 +1012,44 @@ function CameraPage() {
       {/* Colour dot */}
       <div className="absolute top-14 right-4 w-3.5 h-3.5 rounded-full border-2 border-white"
         style={{ background: COLOURS[colourIdx % COLOURS.length] }} />
+
+      {/* ═══ Room rename overlay ══════════════════════════════════════ */}
+      {editingRoomId && (
+        <div className="absolute inset-0 z-30 bg-black/60 flex items-end">
+          <div className="bg-white rounded-t-3xl p-5 w-full">
+            <div className="flex items-center justify-between mb-3">
+              <p className="font-bold text-[15px]">Name this space</p>
+              <button onClick={() => setEditingRoomId(null)} className="border-0 bg-none p-1"><X size={17} /></button>
+            </div>
+            <input
+              value={editingRoomName}
+              onChange={e => setEditingRoomName(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") renameRoom(editingRoomId, editingRoomName || "Room"); }}
+              placeholder="e.g. Kitchen, Bedroom 2, Exterior..."
+              className="w-full border-2 border-[#0a1722] rounded-xl px-3 py-2.5 text-[15px] font-semibold mb-3"
+              autoFocus
+            />
+            <div className="flex flex-wrap gap-1.5 mb-4 max-h-28 overflow-y-auto">
+              {ROOM_PRESETS.map(preset => (
+                <button key={preset}
+                  onClick={() => setEditingRoomName(preset)}
+                  className="text-[12px] font-semibold px-3 py-1.5 rounded-full border-0"
+                  style={{
+                    background: editingRoomName === preset ? "#0a1722" : "#f3f4f6",
+                    color: editingRoomName === preset ? "white" : "#374151",
+                  }}>
+                  {preset}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => renameRoom(editingRoomId, editingRoomName || "Room")}
+              className="w-full bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] py-3.5 rounded-xl border-0">
+              Set name
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
