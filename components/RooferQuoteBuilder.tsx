@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ChevronDown, ChevronUp, Plus, Trash2, PenLine, Image, FileText, MessageSquare, Maximize2, Camera, SquareCheck, Phone, ArrowRight, Loader2, PlusCircle, X } from "lucide-react";
 
-// -- Types -----------------------------------------------------------
+// ── Types ──────────────────────────────────────────────────────────
 
 export interface JobDetail {
   id: string;
@@ -44,7 +44,7 @@ export interface ExtrasState {
 
 export type PricingTier = "standard" | "premium";
 
-// -- Constants -------------------------------------------------------
+// ── Constants ──────────────────────────────────────────────────────
 
 export const RATES: Record<LabourRate, { label: string; rate: number; min: number }> = {
   standard: { label: "Standard ($55/m\u00B2)", rate: 55, min: 2000 },
@@ -68,7 +68,7 @@ export const EXTRAS: Record<ExtrasKey, { label: string; unitCost: number; unit: 
   skylight:         { label: "Roof window/skylight", unitCost: 1200, unit: "each", description: "Velux or similar" },
 };
 
-// -- Helper: generate quote number ----------------------------------
+// ── Helper: generate quote number ─────────────────────────────────
 
 function generateQuoteNumber(): string {
   const prefix = "RF";
@@ -77,13 +77,13 @@ function generateQuoteNumber(): string {
   return `${prefix}-${date}-${random}`;
 }
 
-// -- Main component -------------------------------------------------
+// ── Main component ────────────────────────────────────────────────
 
 interface RooferQuoteBuilderProps {
   profile: { hourly_rate: number; materials_margin_pct: number; trades?: string[]; onboarded_at?: string | null };
   materials: { item_key: string; label: string; unit_cost: number }[];
   preClientId?: string;
-  preMarkupMaterials?: { label: string; quantity: number; unit: string; unitCost: number; totalCost: number }[];
+  preMarkupMaterials?: { item_key: string; label: string; unit_cost: number; qty: number; supplier: string }[];
 }
 
 export default function RooferQuoteBuilder({
@@ -93,7 +93,7 @@ export default function RooferQuoteBuilder({
   preMarkupMaterials,
 }: RooferQuoteBuilderProps) {
 
-  // -- State -------------------------------------------------------
+  // ── State ──────────────────────────────────────────────────────
   const [jobs, setJobs] = useState<JobDetail[]>([]);
   const [material, setMaterial] = useState<MaterialType>("colourbond");
   const [color, setColor] = useState<ColorPreference>("monument");
@@ -107,7 +107,7 @@ export default function RooferQuoteBuilder({
   const [warranty, setWarranty] = useState("10-year manufacturer warranty + 5-year workmanship guarantee");
   const [saving, setSaving] = useState(false);
 
-  // -- New job form ----------------------------------------------
+  // ── New job form ───────────────────────────────────────────────
   const [newArea, setNewArea] = useState(0);
   const [newPitch, setNewPitch] = useState<"low" | "medium" | "steep">("medium");
   const [newStyle, setNewStyle] = useState<"gable" | "hip" | "flat" | "complex">("gable");
@@ -141,7 +141,7 @@ export default function RooferQuoteBuilder({
     setJobs(prev => prev.map(j => j.id === id ? { ...j, ...patch } : j));
   }
 
-  // -- Cost calculations -------------------------------------------
+  // ── Cost calculations ──────────────────────────────────────────
   const summary = useMemo(() => {
     const totalArea = jobs.reduce((s, j) => s + j.area, 0);
     if (totalArea === 0) return null;
@@ -179,7 +179,7 @@ export default function RooferQuoteBuilder({
     };
   }, [jobs, material, labourRate, tier, color, extras]);
 
-  // -- Job card component ------------------------------------------
+  // ── Job card component ─────────────────────────────────────────
   function JobCard({ job, index }: { job: JobDetail; index: number }) {
     const [expanded, setExpanded] = useState(false);
 
@@ -297,7 +297,7 @@ export default function RooferQuoteBuilder({
     );
   }
 
-  // -- Build + send quote ------------------------------------------
+  // ── Build + send quote ─────────────────────────────────────────
   async function buildQuote() {
     if (!summary || jobs.length === 0) return;
 
@@ -357,7 +357,7 @@ export default function RooferQuoteBuilder({
     console.log("Send quote:", payload);
   }
 
-  // -- Render ------------------------------------------------------
+  // ── Render ─────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
@@ -375,7 +375,7 @@ export default function RooferQuoteBuilder({
         )}
       </div>
 
-      {/* -- Jobs section ---------------------------------------- */}
+      {/* ── Jobs section ─────────────────────────────────────── */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-[14px] text-[var(--ink)] flex items-center gap-2">
@@ -441,7 +441,7 @@ export default function RooferQuoteBuilder({
         )}
       </div>
 
-      {/* -- Materials ------------------------------------------- */}
+      {/* ── Materials ────────────────────────────────────────── */}
       <div className="space-y-3">
         <h3 className="font-semibold text-[14px] text-[var(--ink)] flex items-center gap-2">
           <Image size={16} className="text-[var(--amber-deep)]" /> Material
@@ -458,7 +458,7 @@ export default function RooferQuoteBuilder({
         </div>
       </div>
 
-      {/* -- Colour ---------------------------------------------- */}
+      {/* ── Colour ───────────────────────────────────────────── */}
       <div className="space-y-3">
         <h3 className="font-semibold text-[14px] text-[var(--ink)] flex items-center gap-2">
           <SquareCheck size={16} className="text-[var(--amber-deep)]" /> Colour
@@ -476,7 +476,7 @@ export default function RooferQuoteBuilder({
         )}
       </div>
 
-      {/* -- Labour rate ----------------------------------------- */}
+      {/* ── Labour rate ──────────────────────────────────────── */}
       <div className="space-y-3">
         <h3 className="font-semibold text-[14px] text-[var(--ink)] flex items-center gap-2">
           <ArrowRight size={16} className="text-[var(--amber-deep)]" /> Labour rate
@@ -492,7 +492,7 @@ export default function RooferQuoteBuilder({
         </div>
       </div>
 
-      {/* -- Tier ------------------------------------------------ */}
+      {/* ── Tier ─────────────────────────────────────────────── */}
       <div className="space-y-3">
         <h3 className="font-semibold text-[14px] text-[var(--ink)] flex items-center gap-2">
           <Maximize2 size={16} className="text-[var(--amber-deep)]" /> Pricing tier
@@ -508,9 +508,9 @@ export default function RooferQuoteBuilder({
         </div>
       </div>
 
-      {/* -- Extras ---------------------------------------------- */}
+      {/* ── Extras ───────────────────────────────────────────── */}
       <div className="space-y-3">
-        <h3 className="font-semibold text-[14px] text-[var(--ink)] flex items-center gap-2">
+        <h3 className="font-semibold text-[14px] text-[var(ink)] flex items-center gap-2">
           <PlusCircle size={16} className="text-[var(--amber-deep)]" /> Extras
         </h3>
         <div className="space-y-2">
@@ -528,7 +528,7 @@ export default function RooferQuoteBuilder({
         </div>
       </div>
 
-      {/* -- Notes ----------------------------------------------- */}
+      {/* ── Notes ────────────────────────────────────────────── */}
       <div className="space-y-3">
         <h3 className="font-semibold text-[14px] text-[var(--ink)] flex items-center gap-2">
           <MessageSquare size={16} className="text-[var(--amber-deep)]" /> Notes &amp; conditions
@@ -543,7 +543,7 @@ export default function RooferQuoteBuilder({
         </div>
       </div>
 
-      {/* -- Summary --------------------------------------------- */}
+      {/* ── Summary ──────────────────────────────────────────── */}
       {summary && (
         <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-6 space-y-3">
           <h3 className="font-semibold text-[14px] text-[var(--ink)] flex items-center gap-2">
@@ -567,7 +567,7 @@ export default function RooferQuoteBuilder({
             )}
             {summary.colorSurcharge > 0 && (
               <div className="flex justify-between">
-                <span className="text-[var(--ink-soft)]">Colour premium</span>
+                <span className="text-[var(ink-soft)]">Colour premium</span>
                 <span className="font-semibold">${Math.round(summary.colorSurcharge).toLocaleString()}</span>
               </div>
             )}
@@ -597,7 +597,7 @@ export default function RooferQuoteBuilder({
         </div>
       )}
 
-      {/* -- Actions --------------------------------------------- */}
+      {/* ── Actions ──────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row gap-3 pt-4">
         <button onClick={handleSave} disabled={saving || !summary}
           className="flex-1 flex items-center justify-center gap-2 bg-[var(--navy)] text-white font-bold text-[14px] py-3.5 rounded-xl hover:bg-[#121f2b] transition-colors disabled:opacity-40">
