@@ -55,6 +55,20 @@ export default function PackagesView({
   supabase,
   onPackagesChanged,
 }: PackagesTabProps) {
+  const [priceBook, setPriceBook] = useState<{ item_key: string; label: string; unit_cost: number }[]>([]);
+
+  // Load price book on mount
+  useEffect(() => {
+    if (!businessId) return;
+    supabase
+      .from("price_book_items")
+      .select("item_key, label, unit_cost")
+      .eq("profile_id", businessId)
+      .then(({ data }) => {
+        if (data && data.length > 0) setPriceBook(data);
+      });
+  }, [businessId, supabase]);
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formTitle, setFormTitle] = useState("");
@@ -247,6 +261,7 @@ export default function PackagesView({
         <AIPackageAssistant
           trade={formTrade}
           hourlyRate={hourlyRate}
+          priceBook={priceBook}
           onCreatePackage={async (suggested) => {
             if (!businessId) return;
             // Save suggested package to Supabase

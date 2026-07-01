@@ -24,13 +24,36 @@ interface Message {
   packages?: SuggestedPackage[];
 }
 
+/** Fuzzy match an AI-suggested label against the price book.
+ *  Returns the real unit_cost if a confident match is found, otherwise null. */
+function lookupRealPrice(
+  label: string,
+  priceBook: { item_key: string; label: string; unit_cost: number }[]
+): number | null {
+  if (!priceBook.length) return null;
+  const needle = label.toLowerCase();
+  // Exact label match first
+  const exact = priceBook.find(r => r.label.toLowerCase() === needle);
+  if (exact) return exact.unit_cost;
+  // Partial word match -- all words in the item label must appear in the price book label
+  const words = needle.split(/\s+/).filter(w => w.length > 3);
+  if (words.length === 0) return null;
+  const match = priceBook.find(r => {
+    const hay = r.label.toLowerCase();
+    return words.every(w => hay.includes(w));
+  });
+  return match?.unit_cost ?? null;
+}
+
 export default function AIPackageAssistant({
   trade,
   hourlyRate,
+  priceBook = [],
   onCreatePackage,
 }: {
   trade:           string;
   hourlyRate:      number;
+  priceBook:       { item_key: string; label: string; unit_cost: number }[];
   onCreatePackage: (pkg: SuggestedPackage) => void;
 }) {
   const [open,     setOpen]     = useState(false);
@@ -76,6 +99,7 @@ Rules:
 - 3 to 8 line items per package
 - Labour hours realistic for job size
 - Tradie hourly rate is $${hourlyRate}/hr
+${priceBook.length > 0 ? `- The tradie has ${priceBook.length} items in their price book. Your suggested item names should match real items where possible (e.g. "Downlight, standard", "Power point", "Switch"). Prices will be updated automatically from their price book after you respond.` : "- No price book connected yet, use realistic Australian trade prices."}
 - After the JSON add a short note about what to customise`;
 
   async function send() {
@@ -110,8 +134,19 @@ Rules:
         } catch {}
       }
 
+      // Replace AI-estimated prices with real price book prices where possible
+      const pricedPackages = packages.map(pkg => ({
+        ...pkg,
+        items: pkg.items.map(item => {
+          const realPrice = lookupRealPrice(item.label, priceBook);
+          return realPrice != null
+            ? { ...item, unit_cost: realPrice }
+            : item;
+        }),
+      }));
+
       const cleanText = text.replace(/```json[\s\S]*?```/g, "").trim();
-      setMessages(prev => [...prev, { role: "assistant", content: cleanText, packages }]);
+      setMessages(prev => [...prev, { role: "assistant", content: cleanText, packages: pricedPackages }]);
     } catch (e) {
       setMessages(prev => [...prev, { role: "assistant", content: e instanceof Error ? e.message : "Something went wrong. Try again." }]);
     } finally {
