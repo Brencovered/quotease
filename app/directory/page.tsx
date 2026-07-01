@@ -18,6 +18,7 @@ import { directoryMeta } from "@/lib/seo/meta";
 import MarketingNav from "@/components/MarketingNav";
 import AnimatedCounter from "./_components/AnimatedCounter";
 import DirectorySearchForm from "./_components/DirectorySearchForm";
+import FindTradieHeroSearch from "./_components/FindTradieHeroSearch";
 
 const ALL_TRADES = [
   "electrician",
@@ -107,9 +108,10 @@ export default async function DirectoryPage({
     rating?: string;
     sort?: string;
     page?: string;
+    radius?: string;
   }>;
 }) {
-  const { trade, suburb, reviews, rating, sort, page: pageParam } = await searchParams;
+  const { trade, suburb, reviews, rating, sort, page: pageParam, radius } = await searchParams;
   const page = parseInt(pageParam ?? "1");
   const perPage = 24;
   const from = (page - 1) * perPage;
@@ -172,6 +174,7 @@ export default async function DirectoryPage({
     if (reviews) sp.set("reviews", reviews);
     if (rating) sp.set("rating", rating);
     if (sort) sp.set("sort", sort);
+    if (radius) sp.set("radius", radius);
     for (const [k, v] of Object.entries(params)) {
       if (v === undefined) sp.delete(k);
       else sp.set(k, v);
@@ -179,6 +182,9 @@ export default async function DirectoryPage({
     const qs = sp.toString();
     return `/directory${qs ? `?${qs}` : ""}`;
   }
+
+  /* Determine if user has performed a search */
+  const hasActiveFilters = !!(trade || suburb || reviews || rating);
 
   return (
     <main className="min-h-screen" style={{ background: "var(--app-bg)" }}>
@@ -286,193 +292,258 @@ export default async function DirectoryPage({
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════
-          HOW IT WORKS STRIP
-      ═══════════════════════════════════════════ */}
-      <section className="bg-white border-b" style={{ borderColor: "var(--line)" }}>
-        <div className="max-w-6xl mx-auto px-6 py-16 sm:py-20">
-          <div className="text-center mb-12">
-            <h2 className="font-display text-[1.8rem] sm:text-[2.2rem] mb-3" style={{ color: "var(--ink)" }}>
-              How homeowners find tradies on Swiftscope
-            </h2>
-            <p className="text-[14px] sm:text-[15px] max-w-md mx-auto" style={{ color: "var(--ink-soft)" }}>
-              Three simple steps to find the right tradie for your job.
-            </p>
-          </div>
+      {hasActiveFilters ? (
+        /* ═══════════════════════════════════════════
+            RESULTS MODE: Sticky search + listings grid
+        ═══════════════════════════════════════════ */
+        <>
+          {/* Sticky Search Bar */}
+          <DirectorySearchForm
+            trade={trade}
+            suburb={suburb}
+            reviews={reviews}
+            rating={rating}
+            sort={sort}
+            radius={radius}
+            count={count ?? 0}
+          />
 
-          <div className="grid sm:grid-cols-3 gap-6 lg:gap-8">
-            {[
-              { num: "01", icon: ClipboardList, title: "Post your job", desc: "Describe what you need done, your suburb, and any budget or timing preferences." },
-              { num: "02", icon: MessageSquare, title: "Get up to 3 quotes", desc: "Matched local tradies review your job and respond with detailed quotes." },
-              { num: "03", icon: Award, title: "Hire with confidence", desc: "Compare ratings, read real reviews, and choose the right tradie for you." },
-            ].map(({ num, icon: Icon, title, desc }, i) => (
-              <div key={num} className="reveal group relative p-6 sm:p-8 rounded-2xl border text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
-                style={{ borderColor: "var(--line)", background: "var(--surface)", animationDelay: `${i * 100}ms` }}>
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[11px] font-extrabold px-3 py-1 rounded-full border" style={{ background: "var(--amber-light)", color: "var(--navy)", borderColor: "var(--amber)" }}>
-                  {num}
-                </div>
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-5 transition-transform duration-200 group-hover:scale-110" style={{ background: "var(--navy)" }}>
-                  <Icon size={24} style={{ color: "var(--amber)" }} />
-                </div>
-                <h3 className="font-bold text-[16px] mb-2" style={{ color: "var(--ink)" }}>{title}</h3>
-                <p className="text-[13px] leading-relaxed" style={{ color: "var(--ink-soft)" }}>{desc}</p>
+          {/* Main Content Area */}
+          <div className="max-w-6xl mx-auto px-6 py-8">
+            {error && (
+              <div className="text-[13px] px-4 py-3 rounded-xl mb-6 font-semibold" style={{ background: "var(--red-bg)", color: "var(--red)" }}>
+                Could not load directory: {error.message}
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════
-          STICKY SEARCH BAR  (Client Component)
-      ═══════════════════════════════════════════ */}
-      <DirectorySearchForm
-        trade={trade}
-        suburb={suburb}
-        reviews={reviews}
-        rating={rating}
-        sort={sort}
-        count={count ?? 0}
-      />
-
-      {/* ═══════════════════════════════════════════
-          MAIN CONTENT AREA
-      ═══════════════════════════════════════════ */}
-      <div className="max-w-6xl mx-auto px-6 py-8">
-        {error && (
-          <div className="text-[13px] px-4 py-3 rounded-xl mb-6 font-semibold" style={{ background: "var(--red-bg)", color: "var(--red)" }}>
-            Could not load directory: {error.message}
-          </div>
-        )}
-
-        {/* Active filters summary */}
-        {(trade || suburb || reviews || rating) && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {trade && (
-              <Link href={buildUrl({ trade: undefined })} className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full bg-[var(--navy)] text-white hover:opacity-80 transition-opacity">
-                {TRADE_LABELS[trade]} <span className="opacity-60">-</span>
-              </Link>
             )}
-            {suburb && (
-              <Link href={buildUrl({ suburb: undefined })} className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full bg-[var(--navy)] text-white hover:opacity-80 transition-opacity">
-                {suburb} <span className="opacity-60">-</span>
-              </Link>
-            )}
-            {reviews && (
-              <Link href={buildUrl({ reviews: undefined })} className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full bg-[var(--amber)] text-[var(--navy)] hover:opacity-80 transition-opacity">
-                {({"1-10": "1-10 reviews", "10-50": "10-50 reviews", "50-100": "50-100 reviews", "100-500": "100-500 reviews", "500+": "500+ reviews"} as Record<string,string>)[reviews] ?? reviews} <span className="opacity-60">-</span>
-              </Link>
-            )}
-            {rating && (
-              <Link href={buildUrl({ rating: undefined })} className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full bg-[var(--green-bg)] text-[var(--green)] hover:opacity-80 transition-opacity">
-                {({"4.5": "4.5+ stars", "4.0": "4.0+ stars", "3.5": "3.5+ stars"} as Record<string,string>)[rating] ?? rating} <span className="opacity-60">-</span>
-              </Link>
-            )}
-          </div>
-        )}
 
-        {/* Trade filter pills */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          <Link href={buildUrl({ trade: undefined })}
-            className={`px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold border transition-colors ${!trade ? "bg-[#0a1722] text-white border-[#0a1722]" : "bg-white hover:border-[#8b96a1]"}`}
-            style={trade ? { borderColor: "var(--line)", color: "var(--ink-soft)" } : {}}>
-            All trades
-          </Link>
-          {ALL_TRADES.map((t) => (
-            <Link key={t} href={buildUrl({ trade: t })}
-              className={`px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold border transition-colors ${trade === t ? "bg-[#0a1722] text-white border-[#0a1722]" : "bg-white hover:border-[#8b96a1]"}`}
-              style={trade !== t ? { borderColor: "var(--line)", color: "var(--ink-soft)" } : {}}>
-              {TRADE_LABELS[t]}
-            </Link>
-          ))}
-        </div>
-
-        {/* Directory grid */}
-        {!listings?.length ? (
-          <div className="rounded-2xl border text-center py-16" style={{ background: "var(--surface)", borderColor: "var(--line)" }}>
-            <Search size={32} className="mx-auto mb-2" style={{ color: "var(--ink-faint)" }} />
-            <p className="font-semibold mb-1" style={{ color: "var(--ink)" }}>No tradies found</p>
-            <p className="text-[13.5px] mb-5" style={{ color: "var(--ink-soft)" }}>Try adjusting your filters.</p>
-            <Link href="/directory" className="px-5 py-2.5 border rounded-xl text-[13.5px] font-semibold inline-flex transition-colors hover:opacity-80" style={{ borderColor: "var(--line)", color: "var(--ink-soft)" }}>
-              Clear all filters
-            </Link>
-          </div>
-        ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {listings.map((listing: Listing, i: number) => (
-              <DirectoryCard key={listing.id} listing={listing} index={i} />
-            ))}
-          </div>
-        )}
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 mt-10">
-            {page > 1 && (
-              <Link href={buildUrl({ page: String(page - 1) })} className="px-4 py-2 border rounded-xl text-[13px] font-semibold transition-colors hover:opacity-80" style={{ borderColor: "var(--line)", color: "var(--ink-soft)", background: "var(--surface)" }}>
-                &larr; Previous
-              </Link>
+            {/* Active filters summary */}
+            {(trade || suburb || reviews || rating) && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {trade && (
+                  <Link href={buildUrl({ trade: undefined })} className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full bg-[var(--navy)] text-white hover:opacity-80 transition-opacity">
+                    {TRADE_LABELS[trade]} <span className="opacity-60">&times;</span>
+                  </Link>
+                )}
+                {suburb && (
+                  <Link href={buildUrl({ suburb: undefined })} className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full bg-[var(--navy)] text-white hover:opacity-80 transition-opacity">
+                    {suburb} <span className="opacity-60">&times;</span>
+                  </Link>
+                )}
+                {reviews && (
+                  <Link href={buildUrl({ reviews: undefined })} className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full bg-[var(--amber)] text-[var(--navy)] hover:opacity-80 transition-opacity">
+                    {({"1-10": "1-10 reviews", "10-50": "10-50 reviews", "50-100": "50-100 reviews", "100-500": "100-500 reviews", "500+": "500+ reviews"} as Record<string,string>)[reviews] ?? reviews} <span className="opacity-60">&times;</span>
+                  </Link>
+                )}
+                {rating && (
+                  <Link href={buildUrl({ rating: undefined })} className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full bg-[var(--green-bg)] text-[var(--green)] hover:opacity-80 transition-opacity">
+                    {({"4.5": "4.5+ stars", "4.0": "4.0+ stars", "3.5": "3.5+ stars"} as Record<string,string>)[rating] ?? rating} <span className="opacity-60">&times;</span>
+                  </Link>
+                )}
+              </div>
             )}
-            <span className="text-[13px] px-4" style={{ color: "var(--ink-faint)" }}>Page {page} of {totalPages}</span>
-            {page < totalPages && (
-              <Link href={buildUrl({ page: String(page + 1) })} className="px-4 py-2 border rounded-xl text-[13px] font-semibold transition-colors hover:opacity-80" style={{ borderColor: "var(--line)", color: "var(--ink-soft)", background: "var(--surface)" }}>
-                Next &rarr;
-              </Link>
-            )}
-          </div>
-        )}
 
-        {/* Social proof */}
-        <section className="mt-20 sm:mt-24">
-          <div className="text-center mb-10">
-            <h2 className="font-display text-[1.8rem] sm:text-[2.2rem] mb-3" style={{ color: "var(--ink)" }}>What homeowners say</h2>
-            <p className="text-[14px] sm:text-[15px] max-w-md mx-auto" style={{ color: "var(--ink-soft)" }}>
-              Real stories from homeowners who found their tradie through Swiftscope.
-            </p>
-          </div>
-          <div className="grid sm:grid-cols-3 gap-5">
-            {HOMEOWNER_REVIEWS.map((review, i) => (
-              <div key={review.name} className="reveal p-6 rounded-2xl border transition-all duration-200 hover:-translate-y-1 hover:shadow-md" style={{ background: "var(--surface)", borderColor: "var(--line)", animationDelay: `${i * 100}ms` }}>
-                <div className="flex items-center gap-0.5 mb-4">
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <Star key={s} size={14} className={s <= review.rating ? "fill-[#f59e0b] text-[#f59e0b]" : "text-gray-200 fill-gray-200"} />
-                  ))}
-                </div>
-                <p className="text-[13.5px] leading-relaxed mb-5 italic" style={{ color: "var(--ink-soft)" }}>&ldquo;{review.quote}&rdquo;</p>
-                <div className="flex items-center gap-3 pt-4 border-t" style={{ borderColor: "var(--line-subtle)" }}>
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-bold text-white" style={{ background: "var(--navy)" }}>
-                    {review.name.charAt(0)}
+            {/* Trade filter pills */}
+            <div className="flex flex-wrap gap-2 mb-6">
+              <Link href={buildUrl({ trade: undefined })}
+                className={`px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold border transition-colors ${!trade ? "bg-[#0a1722] text-white border-[#0a1722]" : "bg-white hover:border-[#8b96a8]"}`}
+                style={trade ? { borderColor: "var(--line)", color: "var(--ink-soft)" } : {}}>
+                All trades
+              </Link>
+              {ALL_TRADES.map((t) => (
+                <Link key={t} href={buildUrl({ trade: t })}
+                  className={`px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold border transition-colors ${trade === t ? "bg-[#0a1722] text-white border-[#0a1722]" : "bg-white hover:border-[#8b96a8]"}`}
+                  style={trade !== t ? { borderColor: "var(--line)", color: "var(--ink-soft)" } : {}}>
+                  {TRADE_LABELS[t]}
+                </Link>
+              ))}
+            </div>
+
+            {/* Directory grid */}
+            {!listings?.length ? (
+              <div className="rounded-2xl border text-center py-16" style={{ background: "var(--surface)", borderColor: "var(--line)" }}>
+                <Search size={32} className="mx-auto mb-2" style={{ color: "var(--ink-faint)" }} />
+                <p className="font-semibold mb-1" style={{ color: "var(--ink)" }}>No tradies found</p>
+                <p className="text-[13.5px] mb-5" style={{ color: "var(--ink-soft)" }}>Try adjusting your filters.</p>
+                <Link href="/directory" className="px-5 py-2.5 border rounded-xl text-[13.5px] font-semibold inline-flex transition-colors hover:opacity-80" style={{ borderColor: "var(--line)", color: "var(--ink-soft)" }}>
+                  Clear all filters
+                </Link>
+              </div>
+            ) : (
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {listings.map((listing: Listing, i: number) => (
+                  <DirectoryCard key={listing.id} listing={listing} index={i} />
+                ))}
+              </div>
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-10">
+                {page > 1 && (
+                  <Link href={buildUrl({ page: String(page - 1) })} className="px-4 py-2 border rounded-xl text-[13px] font-semibold transition-colors hover:opacity-80" style={{ borderColor: "var(--line)", color: "var(--ink-soft)", background: "var(--surface)" }}>
+                    &larr; Previous
+                  </Link>
+                )}
+                <span className="text-[13px] px-4" style={{ color: "var(--ink-faint)" }}>Page {page} of {totalPages}</span>
+                {page < totalPages && (
+                  <Link href={buildUrl({ page: String(page + 1) })} className="px-4 py-2 border rounded-xl text-[13px] font-semibold transition-colors hover:opacity-80" style={{ borderColor: "var(--line)", color: "var(--ink-soft)", background: "var(--surface)" }}>
+                    Next &rarr;
+                  </Link>
+                )}
+              </div>
+            )}
+
+            {/* Social proof */}
+            <section className="mt-20 sm:mt-24">
+              <div className="text-center mb-10">
+                <h2 className="font-display text-[1.8rem] sm:text-[2.2rem] mb-3" style={{ color: "var(--ink)" }}>What homeowners say</h2>
+                <p className="text-[14px] sm:text-[15px] max-w-md mx-auto" style={{ color: "var(--ink-soft)" }}>
+                  Real stories from homeowners who found their tradie through Swiftscope.
+                </p>
+              </div>
+              <div className="grid sm:grid-cols-3 gap-5">
+                {HOMEOWNER_REVIEWS.map((review, i) => (
+                  <div key={review.name} className="reveal p-6 rounded-2xl border transition-all duration-200 hover:-translate-y-1 hover:shadow-md" style={{ background: "var(--surface)", borderColor: "var(--line)", animationDelay: `${i * 100}ms` }}>
+                    <div className="flex items-center gap-0.5 mb-4">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star key={s} size={14} className={s <= review.rating ? "fill-[#f59e0b] text-[#f59e0b]" : "text-gray-200 fill-gray-200"} />
+                      ))}
+                    </div>
+                    <p className="text-[13.5px] leading-relaxed mb-5 italic" style={{ color: "var(--ink-soft)" }}>&ldquo;{review.quote}&rdquo;</p>
+                    <div className="flex items-center gap-3 pt-4 border-t" style={{ borderColor: "var(--line-subtle)" }}>
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-bold text-white" style={{ background: "var(--navy)" }}>
+                        {review.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-[13px] font-bold" style={{ color: "var(--ink)" }}>{review.name}</p>
+                        <p className="text-[11.5px] font-semibold" style={{ color: "var(--ink-faint)" }}>{review.suburb} - Hired a {review.trade}</p>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[13px] font-bold" style={{ color: "var(--ink)" }}>{review.name}</p>
-                    <p className="text-[11.5px] font-semibold" style={{ color: "var(--ink-faint)" }}>{review.suburb} - Hired a {review.trade}</p>
+                ))}
+              </div>
+            </section>
+
+            {/* Bottom CTA */}
+            <section className="mt-20 sm:mt-24">
+              <div className="relative overflow-hidden rounded-3xl p-10 sm:p-14 text-center" style={{ background: "var(--navy)" }}>
+                <div className="absolute w-[300px] h-[300px] rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(255,180,0,0.15) 0%, transparent 60%)", top: "-30%", right: "10%" }} />
+                <div className="relative">
+                  <h2 className="font-display text-[2rem] sm:text-[2.6rem] text-white mb-3">Ready to find the right tradie?</h2>
+                  <p className="text-[14px] sm:text-[15px] max-w-lg mx-auto mb-8 text-[#8b96a1]">
+                    Post your job for free and get up to 3 quotes from local tradies. No obligation, no spam.
+                  </p>
+                  <div className="flex flex-wrap justify-center gap-3">
+                    <Link href="/get-quotes" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-8 py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors">
+                      Get quotes <ArrowRight size={15} />
+                    </Link>
+                    <Link href="/signup" className="inline-flex items-center gap-2 text-white font-bold text-[14px] px-8 py-3.5 rounded-xl border border-white/25 hover:border-white/50 hover:bg-white/5 transition-all">
+                      List your business
+                    </Link>
                   </div>
                 </div>
               </div>
-            ))}
+            </section>
           </div>
-        </section>
+        </>
+      ) : (
+        /* ═══════════════════════════════════════════
+            SEARCH MODE: Hero search + how it works + social proof
+        ═══════════════════════════════════════════ */
+        <>
+          {/* Hero search form */}
+          <FindTradieHeroSearch count={count ?? 196} />
 
-        {/* Bottom CTA */}
-        <section className="mt-20 sm:mt-24">
-          <div className="relative overflow-hidden rounded-3xl p-10 sm:p-14 text-center" style={{ background: "var(--navy)" }}>
-            <div className="absolute w-[300px] h-[300px] rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(255,180,0,0.15) 0%, transparent 60%)", top: "-30%", right: "10%" }} />
-            <div className="relative">
-              <h2 className="font-display text-[2rem] sm:text-[2.6rem] text-white mb-3">Ready to find the right tradie?</h2>
-              <p className="text-[14px] sm:text-[15px] max-w-lg mx-auto mb-8 text-[#8b96a1]">
-                Post your job for free and get up to 3 quotes from local tradies. No obligation, no spam.
-              </p>
-              <div className="flex flex-wrap justify-center gap-3">
-                <Link href="/get-quotes" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-8 py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors">
-                  Get quotes <ArrowRight size={15} />
-                </Link>
-                <Link href="/signup" className="inline-flex items-center gap-2 text-white font-bold text-[14px] px-8 py-3.5 rounded-xl border border-white/25 hover:border-white/50 hover:bg-white/5 transition-all">
-                  List your business
-                </Link>
+          {/* How it works section */}
+          <section className="bg-white border-b" style={{ borderColor: "var(--line)" }}>
+            <div className="max-w-6xl mx-auto px-6 py-16 sm:py-20">
+              <div className="text-center mb-12">
+                <h2 className="font-display text-[1.8rem] sm:text-[2.2rem] mb-3" style={{ color: "var(--ink)" }}>
+                  How homeowners find tradies on Swiftscope
+                </h2>
+                <p className="text-[14px] sm:text-[15px] max-w-md mx-auto" style={{ color: "var(--ink-soft)" }}>
+                  Three simple steps to find the right tradie for your job.
+                </p>
+              </div>
+
+              <div className="grid sm:grid-cols-3 gap-6 lg:gap-8">
+                {[
+                  { num: "01", icon: ClipboardList, title: "Post your job", desc: "Describe what you need done, your suburb, and any budget or timing preferences." },
+                  { num: "02", icon: MessageSquare, title: "Get up to 3 quotes", desc: "Matched local tradies review your job and respond with detailed quotes." },
+                  { num: "03", icon: Award, title: "Hire with confidence", desc: "Compare ratings, read real reviews, and choose the right tradie for you." },
+                ].map(({ num, icon: Icon, title, desc }, i) => (
+                  <div key={num} className="reveal group relative p-6 sm:p-8 rounded-2xl border text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
+                    style={{ borderColor: "var(--line)", background: "var(--surface)", animationDelay: `${i * 100}ms` }}>
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[11px] font-extrabold px-3 py-1 rounded-full border" style={{ background: "var(--amber-light)", color: "var(--navy)", borderColor: "var(--amber)" }}>
+                      {num}
+                    </div>
+                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-5 transition-transform duration-200 group-hover:scale-110" style={{ background: "var(--navy)" }}>
+                      <Icon size={24} style={{ color: "var(--amber)" }} />
+                    </div>
+                    <h3 className="font-bold text-[16px] mb-2" style={{ color: "var(--ink)" }}>{title}</h3>
+                    <p className="text-[13px] leading-relaxed" style={{ color: "var(--ink-soft)" }}>{desc}</p>
+                  </div>
+                ))}
               </div>
             </div>
+          </section>
+
+          {/* Social proof + Bottom CTA */}
+          <div className="max-w-6xl mx-auto px-6 py-8">
+            {/* Social proof */}
+            <section className="mt-20 sm:mt-24">
+              <div className="text-center mb-10">
+                <h2 className="font-display text-[1.8rem] sm:text-[2.2rem] mb-3" style={{ color: "var(--ink)" }}>What homeowners say</h2>
+                <p className="text-[14px] sm:text-[15px] max-w-md mx-auto" style={{ color: "var(--ink-soft)" }}>
+                  Real stories from homeowners who found their tradie through Swiftscope.
+                </p>
+              </div>
+              <div className="grid sm:grid-cols-3 gap-5">
+                {HOMEOWNER_REVIEWS.map((review, i) => (
+                  <div key={review.name} className="reveal p-6 rounded-2xl border transition-all duration-200 hover:-translate-y-1 hover:shadow-md" style={{ background: "var(--surface)", borderColor: "var(--line)", animationDelay: `${i * 100}ms` }}>
+                    <div className="flex items-center gap-0.5 mb-4">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star key={s} size={14} className={s <= review.rating ? "fill-[#f59e0b] text-[#f59e0b]" : "text-gray-200 fill-gray-200"} />
+                      ))}
+                    </div>
+                    <p className="text-[13.5px] leading-relaxed mb-5 italic" style={{ color: "var(--ink-soft)" }}>&ldquo;{review.quote}&rdquo;</p>
+                    <div className="flex items-center gap-3 pt-4 border-t" style={{ borderColor: "var(--line-subtle)" }}>
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-bold text-white" style={{ background: "var(--navy)" }}>
+                        {review.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-[13px] font-bold" style={{ color: "var(--ink)" }}>{review.name}</p>
+                        <p className="text-[11.5px] font-semibold" style={{ color: "var(--ink-faint)" }}>{review.suburb} - Hired a {review.trade}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Bottom CTA */}
+            <section className="mt-20 sm:mt-24">
+              <div className="relative overflow-hidden rounded-3xl p-10 sm:p-14 text-center" style={{ background: "var(--navy)" }}>
+                <div className="absolute w-[300px] h-[300px] rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(255,180,0,0.15) 0%, transparent 60%)", top: "-30%", right: "10%" }} />
+                <div className="relative">
+                  <h2 className="font-display text-[2rem] sm:text-[2.6rem] text-white mb-3">Ready to find the right tradie?</h2>
+                  <p className="text-[14px] sm:text-[15px] max-w-lg mx-auto mb-8 text-[#8b96a1]">
+                    Post your job for free and get up to 3 quotes from local tradies. No obligation, no spam.
+                  </p>
+                  <div className="flex flex-wrap justify-center gap-3">
+                    <Link href="/get-quotes" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-8 py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors">
+                      Get quotes <ArrowRight size={15} />
+                    </Link>
+                    <Link href="/signup" className="inline-flex items-center gap-2 text-white font-bold text-[14px] px-8 py-3.5 rounded-xl border border-white/25 hover:border-white/50 hover:bg-white/5 transition-all">
+                      List your business
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </section>
           </div>
-        </section>
-      </div>
+        </>
+      )}
     </main>
   );
 }
