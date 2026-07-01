@@ -5,6 +5,7 @@ import { Camera, Check, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 const ITEM_TO_MATERIAL: Record<string, { matKey: string; labourHrs: number }> = {
+  // Electrician
   dl:       { matKey: "dl_standard",     labourHrs: 0.4  },
   gpo:      { matKey: "pp",              labourHrs: 0.4  },
   switch:   { matKey: "sw",              labourHrs: 0.3  },
@@ -15,19 +16,43 @@ const ITEM_TO_MATERIAL: Record<string, { matKey: string; labourHrs: number }> = 
   conduit:  { matKey: "cable_2_5",       labourHrs: 0    },
   sb:       { matKey: "sb_rcd",          labourHrs: 4    },
   circuit:  { matKey: "appliance",       labourHrs: 1.5  },
-  tap:      { matKey: "appliance",       labourHrs: 1.0  },
-  toilet:   { matKey: "appliance",       labourHrs: 1.5  },
-  basin:    { matKey: "appliance",       labourHrs: 1.0  },
-  shower:   { matKey: "appliance",       labourHrs: 2.0  },
-  hwu:      { matKey: "appliance",       labourHrs: 3.0  },
-  pipe:     { matKey: "cable_2_5",       labourHrs: 0.2  },
-  drain:    { matKey: "cable_2_5",       labourHrs: 0.3  },
-  gutter:   { matKey: "appliance",       labourHrs: 0.5  },
-  downpipe: { matKey: "appliance",       labourHrs: 0.75 },
-  ridge:    { matKey: "cable_2_5",       labourHrs: 0.3  },
-  valley:   { matKey: "cable_2_5",       labourHrs: 0.4  },
-  skylight: { matKey: "appliance",       labourHrs: 4.0  },
-  damage:   { matKey: "appliance",       labourHrs: 0.5  },
+  // Plumber
+  tap:        { matKey: "appliance",     labourHrs: 1.0  },
+  toilet:     { matKey: "appliance",     labourHrs: 1.5  },
+  basin:      { matKey: "appliance",     labourHrs: 1.0  },
+  shower:     { matKey: "appliance",     labourHrs: 2.0  },
+  bath:       { matKey: "appliance",     labourHrs: 2.5  },
+  hwu:        { matKey: "appliance",     labourHrs: 3.0  },
+  pipe_cold:  { matKey: "pipe_run",      labourHrs: 0.2  },
+  pipe_hot:   { matKey: "pipe_run",      labourHrs: 0.2  },
+  pipe_waste: { matKey: "pipe_run",      labourHrs: 0.25 },
+  gas_pipe:   { matKey: "pipe_run",      labourHrs: 0.3  },
+  gas_point:  { matKey: "appliance",     labourHrs: 1.5  },
+  slab_pen:   { matKey: "appliance",     labourHrs: 1.0  },
+  floor_waste:{ matKey: "appliance",     labourHrs: 0.5  },
+  // Roofer
+  gutter:     { matKey: "gutter_lm",     labourHrs: 0.2  },
+  downpipe:   { matKey: "downpipe_lm",   labourHrs: 0.3  },
+  ridge:      { matKey: "ridge_lm",      labourHrs: 0.25 },
+  valley:     { matKey: "valley_lm",     labourHrs: 0.3  },
+  fascia:     { matKey: "fascia_lm",     labourHrs: 0.2  },
+  skylight:   { matKey: "skylight",      labourHrs: 4.0  },
+  whirlybird: { matKey: "whirlybird",    labourHrs: 1.0  },
+  roof_area:  { matKey: "colorbond_sqm", labourHrs: 0.15 },
+  damage:     { matKey: "appliance",     labourHrs: 0.5  },
+  flashing:   { matKey: "flex_flashing", labourHrs: 0.2  },
+  // Carpenter
+  wall_frame: { matKey: "stud_lm",       labourHrs: 0.3  },
+  stud:       { matKey: "stud_lm",       labourHrs: 0.25 },
+  door:       { matKey: "door_internal", labourHrs: 2.0  },
+  window:     { matKey: "appliance",     labourHrs: 1.5  },
+  skirting:   { matKey: "skirting_lm",   labourHrs: 0.15 },
+  architrave: { matKey: "architrave_lm", labourHrs: 0.15 },
+  decking:    { matKey: "decking_lm",    labourHrs: 0.3  },
+  deck_area:  { matKey: "decking_lm",    labourHrs: 0.3  },
+  shelf:      { matKey: "robe_shelf_lm", labourHrs: 0.25 },
+  robe:       { matKey: "appliance",     labourHrs: 3.0  },
+  ceiling_h:  { matKey: "framing_lm",    labourHrs: 0.1  },
 };
 
 export default function LiveSiteAnnotation({
@@ -141,6 +166,10 @@ export default function LiveSiteAnnotation({
           setAdded(false);
           if (onSaveDraft) onSaveDraft();
           router.push(`/camera?trade=${trade}`);
+          // Also save price book for PricingEngine in camera page
+          if (lib) {
+            try { sessionStorage.setItem("swiftscope_price_book", JSON.stringify(lib)); } catch {}
+          }
         }}
         className="btn-primary w-full justify-center">
         <Camera size={15} /> Open camera

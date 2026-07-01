@@ -11,6 +11,8 @@ import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import ExtraJobLines, { type ExtraLine, extraLinesTotals } from "./ExtraJobLines";
 import { resolveClientId } from "@/lib/resolveClientId";
 import { getActiveBusinessId } from "@/lib/team";
+import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
+import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 
 const STEPS = [
   { id: "customer", label: "Customer" },
@@ -73,9 +75,12 @@ export default function GenericQuoteBuilder({
   const [drawingFiles, setDrawingFiles] = useState<File[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [detectedItems, setDetectedItems] = useState<DetectedItem[]>([]);
   const [analysisResult, setAnalysisResult] = useState<{ confidence: string; notes: string } | null>(null);
   const [usageLimitReached, setUsageLimitReached] = useState(false);
   const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">("full_on_completion");
+  const [siteItems,     setSiteItems]     = useState<{id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]>([]);
+  const [annotationMeta, setAnnotationMeta] = useState<{id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string;roomName?:string}[]>([]);
   const [extraLines, setExtraLines]   = useState<ExtraLine[]>([]);
   const [saving,      setSaving]      = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -85,7 +90,10 @@ export default function GenericQuoteBuilder({
   }), [jobType, description, items, siteAccess]);
 
   const result = useMemo(() => calcGenericQuote(intake, effectiveMargin), [intake, effectiveMargin]);
-  const markupTotal = (preMarkupMaterials ?? []).reduce((s, m) => s + (m.totalCost ?? 0), 0);
+  const markupTotal  = (preMarkupMaterials ?? []).reduce((s, m) => s + (m.totalCost ?? 0), 0);
+  const siteLabour   = siteItems.reduce((s, i) => s + i.labourHrs * (profile.hourly_rate ?? 85), 0);
+  const siteMaterials = siteItems.reduce((s, i) => s + i.materialsCost * (1 + effectiveMargin / 100), 0);
+  const siteTotal    = Math.round(siteLabour + siteMaterials);
   const paymentTerms = termsPreset === "custom" ? [] : PAYMENT_TERM_PRESETS[termsPreset];
 
   function addItem(isLabour: boolean) {
@@ -119,6 +127,9 @@ export default function GenericQuoteBuilder({
       const res = await fetch("/api/quotes/analyze-drawing", { method: "POST", body: fd });
       const body = await res.json();
       if (!res.ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
+      if (Array.isArray(body.result?.detected_items) && body.result.detected_items.length > 0) {
+        setDetectedItems(body.result.detected_items);
+      }
       setAnalysisResult({ confidence: body.result?.confidence ?? "low", notes: body.result?.notes ?? "" });
     } catch (err) { setAnalysisError(err instanceof Error ? err.message : "Could not reach analysis service."); }
     finally { setAnalyzing(false); }
@@ -137,6 +148,13 @@ export default function GenericQuoteBuilder({
       setAnalysisResult({ confidence: body.result?.confidence ?? "low", notes: body.result?.notes ?? "" });
     } catch (err) { setAnalysisError(err instanceof Error ? err.message : "Could not reach analysis service."); }
     finally { setAnalyzing(false); }
+  }
+
+  function saveDraft() {
+    try {
+      sessionStorage.setItem("swiftscope_quote_draft", JSON.stringify({ clientName, clientEmail, siteAddress, intake, step, extraLines, siteItems, annotationMeta }));
+
+    } catch {}
   }
 
   async function saveAndSend(sendEmail: boolean) {
@@ -210,7 +228,7 @@ export default function GenericQuoteBuilder({
           </div>
           <div className="text-right">
             <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Total</p>
-            <p className="font-display text-[24px] text-[var(--amber)] leading-tight">${(result.totalCost + markupTotal).toLocaleString()}</p>
+            <p className="font-display text-[24px] text-[var(--amber)] leading-tight">${(result.totalCost + markupTotal + siteTotal + extraLinesTotals(extraLines, profile.hourly_rate ?? 85, effectiveMargin).total).toLocaleString()}</p>
           </div>
         </div>
       </div>
@@ -241,6 +259,26 @@ export default function GenericQuoteBuilder({
 
       {stepId === "drawing" && (
         <div className="space-y-4">
+          <LiveSiteAnnotation
+            trade={tradeKey}
+            onSaveDraft={saveDraft}
+            onAnnotationMeta={(meta) => setAnnotationMeta(meta)}
+            onAddLineItems={(items) => {
+              setSiteItems((prev) => [
+                ...prev,
+                ...items.map((item) => ({
+                  id: Math.random().toString(36).slice(2),
+                  label: item.description,
+                  qty: item.quantity,
+                  unit: item.unit,
+                  note: item.notes,
+                  materialsCost: (item as {materialsCost?: number}).materialsCost ?? 0,
+                  labourHrs: (item as {labourHrs?: number}).labourHrs ?? 0,
+                })),
+              ]);
+            }}
+          />
+
           <div className="card">
             <p className="section-tag mb-1">Step 1</p>
             <p className="font-semibold text-[17px] mb-4">Upload drawings or site photos</p>
@@ -270,7 +308,31 @@ export default function GenericQuoteBuilder({
               </div>
               <button onClick={runAiAnalysis} disabled={analyzing} className="btn-secondary w-full justify-center"><Sparkles size={15} className="text-[var(--amber-deep)]" />{analyzing ? "Reading..." : "Analyse with AI"}</button>
               {analysisError && <p className="text-[13px] text-[var(--red)] mt-2">{analysisError}</p>}
-              {analysisResult && <div className={`mt-3 rounded-lg px-3 py-2.5 flex items-start gap-2 ${analysisResult.confidence === "low" ? "bg-[var(--red-bg)]" : "bg-amber-50"}`}><AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-600" /><div><p className="text-[13px] font-semibold text-amber-800">Fields noted ({analysisResult.confidence} confidence) - review before saving</p>{analysisResult.notes && <p className="text-[12.5px] mt-1 text-amber-700">{analysisResult.notes}</p>}</div></div>}
+              {detectedItems.length > 0 && analysisResult && (
+                <DrawingAnalysisReviewTable
+                  detectedItems={detectedItems}
+                  confidence={analysisResult.confidence as "high" | "medium" | "low"}
+                  notes={analysisResult.notes}
+                  lib={[] as { item_key: string; label: string; unit_cost: number }[]}
+                  onAccept={(items: ReviewLineItem[]) => {
+                    setSiteItems((prev: {id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]) => [
+                      ...prev,
+                      ...items.map(item => ({
+                        id: Math.random().toString(36).slice(2),
+                        label: item.label,
+                        qty: item.quantity,
+                        unit: item.unit,
+                        note: "from drawing analysis",
+                        materialsCost: item.total ?? 0,
+                        labourHrs: 0,
+                      })),
+                    ]);
+                    setDetectedItems([]);
+                    setAnalysisResult(null);
+                  }}
+                  onDismiss={() => { setDetectedItems([]); setAnalysisResult(null); }}
+                />
+              )}
             </div>
           )}
         </div>
