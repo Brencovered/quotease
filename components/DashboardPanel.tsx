@@ -43,6 +43,7 @@ export default function DashboardPanel({ stats, profit }: Props) {
   const expiringSoon = stats.expiredQuotes ?? 0;
 
   return (
+    <>
     <div className="page-wrap">
       <h1 className="font-display text-[28px] text-[var(--ink)] mb-5">Dashboard</h1>
 
@@ -209,5 +210,7 @@ export default function DashboardPanel({ stats, profit }: Props) {
         </Link>
       </div>
     </div>
+    <DashboardChatAssistant stats={stats} profit={profit} />
+    </>
   );
 }

@@ -197,7 +197,7 @@ Your job is to help them understand their numbers, identify opportunities, and g
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
             placeholder="Ask about your business..."
-            className="app-field flex-1 text-[13px]"
+            className="flex-1 rounded-xl border border-[var(--line)] bg-white px-3.5 py-2.5 text-[13.5px] text-[var(--ink)] placeholder:text-[var(--ink-faint)] focus:outline-none focus:border-[var(--navy)] transition-colors"
             disabled={loading}
           />
           <button

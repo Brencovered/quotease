@@ -250,13 +250,15 @@ export default function PackagesView({
           onCreatePackage={async (suggested) => {
             if (!businessId) return;
             // Save suggested package to Supabase
-            const { data: pkg } = await supabase.from("packages").insert({
-              profile_id:  businessId,
-              title:       suggested.title,
-              trade:       suggested.trade,
-              description: suggested.description,
-              labour_hrs:  suggested.labour_hrs,
+            const { data: pkg, error: pkgErr } = await supabase.from("packages").insert({
+              profile_id:   businessId,
+              title:        suggested.title,
+              trade:        suggested.trade,
+              description:  suggested.description,
+              labour_hours: suggested.labour_hrs,
+              status:       "active",
             }).select().single();
+            if (pkgErr) { console.error("Package save error:", pkgErr); return; }
             if (pkg) {
               // Add items
               await supabase.from("package_items").insert(
