@@ -298,14 +298,14 @@ Rules:
                           <div className="space-y-0.5 mb-2">
                             {pkg.items.map((item, ii) => (
                               <div key={ii} className="flex items-center justify-between text-[12px]">
-                                <span className="text-[var(--ink-soft)] truncate flex-1 flex items-center gap-1">
+                                <span className="text-[var(--ink-soft)] truncate min-w-0">
                                   {item.qty} {item.unit} × {item.label}
-                                  {!item.matched && (
-                                    <span className="text-[9px] font-bold text-[var(--amber-deep)] bg-amber-50 border border-amber-200 px-1 py-0.5 rounded shrink-0">
-                                      EST.
-                                    </span>
-                                  )}
                                 </span>
+                                {!item.matched && (
+                                  <span className="text-[9px] font-bold text-[var(--amber-deep)] bg-amber-50 border border-amber-200 px-1 py-0.5 rounded shrink-0 ml-1">
+                                    EST.
+                                  </span>
+                                )}
                                 <span className="text-[var(--ink)] font-semibold ml-2 shrink-0">${(item.qty * item.unit_cost).toLocaleString()}</span>
                               </div>
                             ))}
