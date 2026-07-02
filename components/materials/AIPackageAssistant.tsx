@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Sparkles, Send, X, ChevronDown, ChevronUp, Check, Plus } from "lucide-react";
+import { Sparkles, Send, X, ChevronDown, ChevronUp, Check, Plus, AlertTriangle } from "lucide-react";
 
 interface SuggestedItem {
   label:     string;
   qty:       number;
   unit:      string;
   unit_cost: number;
+  matched?:  boolean; // true = unit_cost came from the tradie's price book, false/undefined = AI estimate
 }
 
 interface SuggestedPackage {
@@ -134,14 +135,16 @@ ${priceBook.length > 0 ? `- The tradie has ${priceBook.length} items in their pr
         } catch {}
       }
 
-      // Replace AI-estimated prices with real price book prices where possible
+      // Replace AI-estimated prices with real price book prices where possible,
+      // and record whether each item actually matched so the UI never shows
+      // a guess indistinguishably from a real supplier cost.
       const pricedPackages = packages.map(pkg => ({
         ...pkg,
         items: pkg.items.map(item => {
           const realPrice = lookupRealPrice(item.label, priceBook);
           return realPrice != null
-            ? { ...item, unit_cost: realPrice }
-            : item;
+            ? { ...item, unit_cost: realPrice, matched: true }
+            : { ...item, matched: false };
         }),
       }));
 
@@ -233,10 +236,35 @@ ${priceBook.length > 0 ? `- The tradie has ${priceBook.length} items in their pr
                           {pkg.description && (
                             <p className="text-[12px] text-[var(--ink-faint)] mb-2">{pkg.description}</p>
                           )}
+                          {(() => {
+                            const matchedCount = pkg.items.filter(it => it.matched).length;
+                            return matchedCount < pkg.items.length ? (
+                              <div className="flex items-center gap-1.5 mb-2 px-2 py-1 rounded-lg bg-amber-50 border border-amber-200">
+                                <AlertTriangle size={11} className="text-[var(--amber-deep)] shrink-0" />
+                                <p className="text-[10.5px] font-semibold text-[var(--amber-deep)]">
+                                  {matchedCount} of {pkg.items.length} items priced from your price book — the rest are estimates, check before sending
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5 mb-2 px-2 py-1 rounded-lg bg-green-50 border border-green-200">
+                                <Check size={11} className="text-green-700 shrink-0" />
+                                <p className="text-[10.5px] font-semibold text-green-700">
+                                  All items priced from your price book
+                                </p>
+                              </div>
+                            );
+                          })()}
                           <div className="space-y-0.5 mb-2">
                             {pkg.items.map((item, ii) => (
                               <div key={ii} className="flex items-center justify-between text-[12px]">
-                                <span className="text-[var(--ink-soft)] truncate flex-1">{item.qty} {item.unit} × {item.label}</span>
+                                <span className="text-[var(--ink-soft)] truncate flex-1 flex items-center gap-1">
+                                  {item.qty} {item.unit} × {item.label}
+                                  {!item.matched && (
+                                    <span className="text-[9px] font-bold text-[var(--amber-deep)] bg-amber-50 border border-amber-200 px-1 py-0.5 rounded shrink-0">
+                                      EST.
+                                    </span>
+                                  )}
+                                </span>
                                 <span className="text-[var(--ink)] font-semibold ml-2 shrink-0">${(item.qty * item.unit_cost).toLocaleString()}</span>
                               </div>
                             ))}
