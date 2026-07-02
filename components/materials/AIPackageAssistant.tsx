@@ -73,7 +73,29 @@ export default function AIPackageAssistant({
     if (open) setTimeout(() => inputRef.current?.focus(), 150);
   }, [open]);
 
-  const SYSTEM = `You are an expert Australian trade business assistant helping a ${trade} build reusable job packages in Swiftscope.
+  /** Find price book items relevant to what the tradie typed, so the AI can
+   *  pick from real items/prices instead of inventing plausible-sounding
+   *  ones and hoping the fuzzy matcher catches them after the fact. */
+  function findCandidateItems(userInput: string, limit = 60) {
+    const words = userInput.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+    if (words.length === 0 || priceBook.length === 0) return [];
+    return priceBook
+      .filter(r => {
+        const hay = r.label.toLowerCase();
+        return words.some(w => hay.includes(w));
+      })
+      .slice(0, limit);
+  }
+
+  function buildSystem(userInput: string) {
+    const candidates = findCandidateItems(userInput);
+    const candidateBlock = candidates.length > 0
+      ? `\n- The tradie's ACTUAL price book contains these relevant items -- use these EXACT labels and EXACT costs whenever one fits, instead of inventing a similar-sounding item:\n${candidates.map(c => `  - "${c.label}" — $${c.unit_cost}`).join("\n")}\n- Only invent a new item name (and mark it as an estimate in your note) if nothing above genuinely covers it.`
+      : priceBook.length > 0
+        ? `\n- The tradie has ${priceBook.length} items in their price book but none matched keywords from this request -- use realistic Australian trade prices and say in your note that these are estimates, not price book items.`
+        : "\n- No price book connected yet, use realistic Australian trade prices and say in your note that these are estimates.";
+
+    return `You are an expert Australian trade business assistant helping a ${trade} build reusable job packages in Swiftscope.
 
 When the tradie describes a job type, respond with:
 1. A short helpful sentence
@@ -100,12 +122,14 @@ Rules:
 - 3 to 8 line items per package
 - Labour hours realistic for job size
 - Tradie hourly rate is $${hourlyRate}/hr
-${priceBook.length > 0 ? `- The tradie has ${priceBook.length} items in their price book. Your suggested item names should match real items where possible (e.g. "Downlight, standard", "Power point", "Switch"). Prices will be updated automatically from their price book after you respond.` : "- No price book connected yet, use realistic Australian trade prices."}
+- If asked for multiple packages in one request, keep each package concise (fewer items, shorter descriptions) so the full response fits -- a complete simple answer beats a detailed one that gets cut off${candidateBlock}
 - After the JSON add a short note about what to customise`;
+  }
 
   async function send() {
     if (!input.trim() || loading) return;
-    const userMsg: Message = { role: "user", content: input.trim() };
+    const currentInput = input.trim();
+    const userMsg: Message = { role: "user", content: currentInput };
     const nextMessages = [...messages, userMsg];
     setMessages(nextMessages);
     setInput("");
@@ -116,7 +140,7 @@ ${priceBook.length > 0 ? `- The tradie has ${priceBook.length} items in their pr
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          system: SYSTEM,
+          system: buildSystem(currentInput),
           messages: nextMessages.map(m => ({ role: m.role, content: m.content })),
         }),
       });
@@ -128,11 +152,28 @@ ${priceBook.length > 0 ? `- The tradie has ${priceBook.length} items in their pr
       // Extract JSON packages
       const packages: SuggestedPackage[] = [];
       const match = text.match(/```json\s*([\s\S]*?)```/);
+      let parseFailed = false;
       if (match) {
         try {
           const parsed = JSON.parse(match[1]);
           if (Array.isArray(parsed)) packages.push(...parsed);
-        } catch {}
+          else parseFailed = true;
+        } catch {
+          parseFailed = true;
+        }
+      } else if (text.includes("```json")) {
+        // Opening fence present but no closing fence -- response was cut off
+        // mid-JSON. Never show this half-formed data as if it were real.
+        parseFailed = true;
+      }
+
+      if (parseFailed || (match && packages.length === 0)) {
+        setMessages(prev => [...prev, {
+          role: "assistant",
+          content: "That response got cut off before I could finish the package details, so I'm not showing it -- I don't want to display incomplete pricing. Try asking for fewer packages at once (e.g. one or two at a time) and I'll get you a complete, checked result.",
+        }]);
+        setLoading(false);
+        return;
       }
 
       // Replace AI-estimated prices with real price book prices where possible,
