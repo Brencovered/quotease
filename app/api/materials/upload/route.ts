@@ -27,14 +27,48 @@ function parseCSVLine(line: string): string[] {
   return fields;
 }
 
-/** Fuzzy-match a header name against a list of aliases */
-function findColumn(headers: string[], aliases: string[]): number {
-  const norm = headers.map((h, i) => ({ raw: h, idx: i, n: h.toLowerCase().trim().replace(/[_\s]/g, "") }));
+/** Fuzzy-match a header name against a list of aliases.
+ *
+ *  Fixes for real-world exports (esp. Xero):
+ *  - `sampleRows`: a matched column that is empty in (almost) all data rows is
+ *    rejected and the next alias is tried. Xero exports include a
+ *    PurchasesDescription header that is blank on every row while the real
+ *    names live in ItemName -- matching on header alone silently imported
+ *    SKU codes as descriptions.
+ *  - `claimed`: a column already assigned to another field can't be matched
+ *    again. Without this, the alias "unit" substring-matched
+ *    "PurchasesUnitPrice" and the price was written into the unit column.
+ *  - Exact-normalized matches for ALL aliases are tried before any
+ *    substring match, and substring matches require the alias to be at
+ *    least 4 chars to avoid generic collisions.
+ */
+function findColumn(
+  headers: string[],
+  aliases: string[],
+  sampleRows: string[][] = [],
+  claimed: Set<number> = new Set()
+): number {
+  const norm = headers.map((h, i) => ({ idx: i, n: h.toLowerCase().trim().replace(/[_\s]/g, "") }));
+
+  const columnHasData = (idx: number): boolean => {
+    if (sampleRows.length === 0) return true;
+    const nonEmpty = sampleRows.filter((r) => (r[idx] ?? "").trim() !== "").length;
+    return nonEmpty / sampleRows.length > 0.2; // >20% of sampled rows have a value
+  };
+
+  const usable = (idx: number) => !claimed.has(idx) && columnHasData(idx);
+
+  // Pass 1: exact normalized match, in alias priority order
   for (const a of aliases) {
     const an = a.toLowerCase().replace(/[_\s]/g, "");
-    const exact = norm.find((h) => h.n === an);
+    const exact = norm.find((h) => h.n === an && usable(h.idx));
     if (exact !== undefined) return exact.idx;
-    const contains = norm.find((h) => h.n.includes(an));
+  }
+  // Pass 2: substring match, only for reasonably specific aliases
+  for (const a of aliases) {
+    const an = a.toLowerCase().replace(/[_\s]/g, "");
+    if (an.length < 4) continue;
+    const contains = norm.find((h) => h.n.includes(an) && usable(h.idx));
     if (contains !== undefined) return contains.idx;
   }
   return -1;
@@ -97,26 +131,37 @@ export async function POST(request: Request) {
   /* ---- build column index map ---- */
   const ci: Record<string, number> = {};
   if (hasHeader) {
-    ci.description = findColumn(firstRow, [
-      "purchasesdescription","itemname","description","itemdesc","productname",
-      "name","item","product","label","title"
-    ]);
-    ci.cost_price = findColumn(firstRow, [
+    // Sample up to 25 data rows so column matching can reject headers whose
+    // column is empty in the actual data (e.g. Xero's PurchasesDescription).
+    const sampleRows: string[][] = [];
+    for (let i = startIndex; i < Math.min(startIndex + 25, lines.length); i++) {
+      sampleRows.push(parseCSVLine(lines[i]));
+    }
+    const claimed = new Set<number>();
+    const claim = (idx: number) => { if (idx >= 0) claimed.add(idx); return idx; };
+
+    // Resolve in order of importance so the most critical fields get first
+    // pick of columns, and later fields can't steal or double-claim them.
+    ci.description = claim(findColumn(firstRow, [
+      "itemname","description","purchasesdescription","salesdescription",
+      "itemdesc","productname","name","item","product","label","title"
+    ], sampleRows, claimed));
+    ci.cost_price = claim(findColumn(firstRow, [
       "purchasesunitprice","currentcost","standardcost","costprice","unitcost",
       "cost_price","cost","price","rate","value","amount","unitprice"
-    ]);
-    ci.supplier = findColumn(firstRow, [
-      "supplier","vendor","manufacturer","brand","source","suppliername"
-    ]);
-    ci.sku = findColumn(firstRow, [
+    ], sampleRows, claimed));
+    ci.sku = claim(findColumn(firstRow, [
       "itemcode","itemnumber","sku","code","partnumber","productcode","ref"
-    ]);
-    ci.unit = findColumn(firstRow, [
-      "unit","uom","unitofmeasure","measure","qtyunit"
-    ]);
-    ci.trade = findColumn(firstRow, [
+    ], sampleRows, claimed));
+    ci.supplier = claim(findColumn(firstRow, [
+      "supplier","vendor","manufacturer","brand","source","suppliername"
+    ], sampleRows, claimed));
+    ci.unit = claim(findColumn(firstRow, [
+      "unitofmeasure","uom","qtyunit","measure","unit"
+    ], sampleRows, claimed));
+    ci.trade = claim(findColumn(firstRow, [
       "trade","category","type","discipline","service"
-    ]);
+    ], sampleRows, claimed));
   }
 
   /* ---- process rows: skip only truly broken rows ---- */
@@ -146,13 +191,18 @@ export async function POST(request: Request) {
       if (ci.unit >= 0) unit = fields[ci.unit] ?? "ea";
       if (ci.trade >= 0) trade = fields[ci.trade] ?? defaultTrade;
 
-      /* Fallback: first col = description, second with $/number = cost */
-      if (!description && fields[0]) description = fields[0];
+      /* Fallback: first unclaimed col = description, second with $/number = cost.
+         Never fall back to the SKU column -- importing codes as descriptions
+         makes the whole price book unsearchable. */
+      if (!description && fields[0] && ci.sku !== 0) description = fields[0];
       if (!costPriceRaw) {
         // Find first field that looks like a price
         const priceField = fields.find((f) => /^\$?[\d,]+\.?\d*$/.test(f.trim()));
         if (priceField) costPriceRaw = priceField;
       }
+      /* A unit should be a word ("each", "m", "roll"), never a number.
+         If a numeric value slipped through, discard it. */
+      if (/^[\d\.,\$\s]+$/.test(unit.trim())) unit = "ea";
     } else {
       /* No header: position 0 = description, position 1 = cost */
       description = fields[0] ?? "";
