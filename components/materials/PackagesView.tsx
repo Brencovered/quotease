@@ -62,10 +62,22 @@ export default function PackagesView({
     if (!businessId) return;
     supabase
       .from("price_book_items")
-      .select("item_key, label, unit_cost")
+      .select("sku, description, cost_price")
       .eq("profile_id", businessId)
-      .then(({ data }) => {
-        if (data && data.length > 0) setPriceBook(data);
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("Failed to load price book:", error);
+          return;
+        }
+        if (data && data.length > 0) {
+          setPriceBook(
+            data.map((row) => ({
+              item_key: row.sku ?? row.description,
+              label: row.description,
+              unit_cost: row.cost_price ?? 0,
+            }))
+          );
+        }
       });
   }, [businessId, supabase]);
 
