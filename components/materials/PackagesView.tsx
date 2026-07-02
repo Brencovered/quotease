@@ -57,28 +57,40 @@ export default function PackagesView({
 }: PackagesTabProps) {
   const [priceBook, setPriceBook] = useState<{ item_key: string; label: string; unit_cost: number }[]>([]);
 
-  // Load price book on mount
+  // Load the FULL price book on mount. Supabase caps un-limited selects at
+  // 1000 rows -- with 2000+ items, a single query silently drops everything
+  // past row 1000 (which turned out to be all the Custom items and every
+  // downlight), making the AI assistant think nothing matched. Paginate.
   useEffect(() => {
     if (!businessId) return;
-    supabase
-      .from("price_book_items")
-      .select("sku, description, cost_price")
-      .eq("profile_id", businessId)
-      .then(({ data, error }) => {
+    let cancelled = false;
+    (async () => {
+      const PAGE = 1000;
+      const all: { item_key: string; label: string; unit_cost: number }[] = [];
+      for (let from = 0; ; from += PAGE) {
+        const { data, error } = await supabase
+          .from("price_book_items")
+          .select("sku, description, cost_price")
+          .eq("profile_id", businessId)
+          .order("id")
+          .range(from, from + PAGE - 1);
         if (error) {
           console.error("Failed to load price book:", error);
           return;
         }
-        if (data && data.length > 0) {
-          setPriceBook(
-            data.map((row) => ({
-              item_key: row.sku ?? row.description,
-              label: row.description,
-              unit_cost: row.cost_price ?? 0,
-            }))
-          );
-        }
-      });
+        if (!data || data.length === 0) break;
+        all.push(
+          ...data.map((row) => ({
+            item_key: row.sku ?? row.description,
+            label: row.description,
+            unit_cost: row.cost_price ?? 0,
+          }))
+        );
+        if (data.length < PAGE) break;
+      }
+      if (!cancelled && all.length > 0) setPriceBook(all);
+    })();
+    return () => { cancelled = true; };
   }, [businessId, supabase]);
 
   const [modalOpen, setModalOpen] = useState(false);
