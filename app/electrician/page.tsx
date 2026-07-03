@@ -175,16 +175,34 @@ export default async function NewQuotePage({
         }
       }
 
+      /* Default the trade to the tradie's first active trade if the URL
+         didn't specify one and no package/bundle set it. Without this, a
+         plain visit to the new-quote page skipped the price book load
+         entirely and fell back to hardcoded default materials with made-up
+         prices -- quote items MUST come from the tradie's real supplier
+         pricing wherever it exists. */
+      if (!tradeParm && activeTrades.length > 0) tradeParm = activeTrades[0];
+
       if (tradeParm && DEDICATED.includes(tradeParm)) {
-        /* Try price_book_items first (CSV uploads + supplier catalog) */
-        const tradeMats = await supabase
-          .from("price_book_items")
-          .select("id,description,cost_price")
-          .eq("profile_id", businessId)
-          .eq("trade", tradeParm)
-          .order("description");
-        if (tradeMats.data && tradeMats.data.length > 0) {
-          materials = tradeMats.data.map((m) => ({
+        /* Try price_book_items first (CSV uploads + supplier catalog).
+           Paginated: PostgREST caps un-limited selects at 1000 rows, which
+           silently dropped over half of a 2200-item catalog. */
+        const PAGE = 1000;
+        const pbAll: { id: string; description: string; cost_price: number | null }[] = [];
+        for (let from = 0; ; from += PAGE) {
+          const { data: pageData, error: pageErr } = await supabase
+            .from("price_book_items")
+            .select("id,description,cost_price")
+            .eq("profile_id", businessId)
+            .eq("trade", tradeParm)
+            .order("description")
+            .range(from, from + PAGE - 1);
+          if (pageErr || !pageData || pageData.length === 0) break;
+          pbAll.push(...pageData);
+          if (pageData.length < PAGE) break;
+        }
+        if (pbAll.length > 0) {
+          materials = pbAll.map((m) => ({
             item_key: m.id,
             label: m.description,
             unit_cost: m.cost_price ?? 0,
