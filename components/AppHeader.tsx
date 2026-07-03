@@ -22,6 +22,7 @@ import {
   Package,
   UsersRound,
   ChevronDown,
+  Search,
 } from "lucide-react";
 
 const NAV = [
@@ -160,6 +161,10 @@ export default function AppHeader() {
                 <MapPin size={17} strokeWidth={isActive("/electrician/map") ? 2.2 : 1.8} />
                 Map
               </Link>
+              <Link href="/electrician/seo" className={navLinkClasses("/electrician/seo")}>
+                <Search size={17} strokeWidth={isActive("/electrician/seo") ? 2.2 : 1.8} />
+                SEO
+              </Link>
             </div>
           )}
         </nav>
@@ -205,6 +210,9 @@ export default function AppHeader() {
               </Link>
               <Link href="/electrician/map" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <MapPin size={15} className="text-[var(--ink-faint)]" /> Map
+              </Link>
+              <Link href="/electrician/seo" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
+                <Search size={15} className="text-[var(--ink-faint)]" /> SEO
               </Link>
               <Link href="/settings" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <Settings size={15} className="text-[var(--ink-faint)]" /> Settings
