@@ -55,7 +55,7 @@ export default function QuoteBuilder({
   profile, materials, preClientId, preMarkupMaterials,
   pricingTiers, jobSizeTiers,
 }: {
-  profile: { hourly_rate: number; materials_margin_pct: number; default_deposit_pct?: number | null; default_expiry_days?: number };
+  profile: { hourly_rate: number; materials_margin_pct: number; default_deposit_pct?: number | null; default_expiry_days?: number; archetype_defaults?: Record<string, string> };
   materials: MaterialRow[];
   preClientId?: string;
   preMarkupMaterials?: Array<{ label: string; quantity: number; unit: string; unitCost: number; totalCost: number }>;
@@ -66,6 +66,26 @@ export default function QuoteBuilder({
   const [intake, setIntake] = useState<ElectricianIntake>(DEFAULT_INTAKE);
   const [rate, setRate]     = useState(profile.hourly_rate ?? 95);
   const [margin, setMargin] = useState(profile.materials_margin_pct ?? 20);
+  // Remembered archetype -> real price book product mappings. Updated
+  // optimistically when the tradie picks a product in the review step and
+  // persisted to profiles.archetype_defaults in the background.
+  const [archetypeDefaults, setArchetypeDefaults] = useState<Record<string, string>>(
+    profile.archetype_defaults ?? {}
+  );
+  async function saveArchetypeDefault(archetypeKey: string, itemKey: string) {
+    const key = `electrician:${archetypeKey}`;
+    const next = { ...archetypeDefaults, [key]: itemKey };
+    setArchetypeDefaults(next);
+    try {
+      const supabase = createClient();
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+      const businessId = await getActiveBusinessId(supabase, userData.user.id);
+      await supabase.from("profiles").update({ archetype_defaults: next }).eq("id", businessId);
+    } catch (e) {
+      console.error("Failed to save archetype default:", e);
+    }
+  }
   const [lib, setLib]       = useState<MaterialRow[]>(
     materials.length > 0 ? materials : ELECTRICIAN_DEFAULT_MATERIALS.map((m) => ({ ...m }))
   );
@@ -399,6 +419,8 @@ export default function QuoteBuilder({
           detectedItems={detectedItems}
           analysisError={analysisError}
           usageLimitReached={usageLimitReached}
+          archetypeDefaults={archetypeDefaults}
+          onSaveArchetypeDefault={saveArchetypeDefault}
           onUpload={handleDrawingUpload}
           onRemove={(name) => { setDrawingFiles((p) => p.filter((f) => f.name !== name)); setAnalysisResult(null); setDetectedItems([]); }}
           onAnalyse={runAiAnalysis}
@@ -512,11 +534,13 @@ export default function QuoteBuilder({
   );
 }
 
-function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions, analyzing, analysisResult, detectedItems, analysisError, usageLimitReached, onUpload, onRemove, onAnalyse, onAcceptDetected, onDismissDetected, onVoiceTranscript, trade, lib, onSaveDraft, onAnnotationMeta, onAddLiveItems }: {
+function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions, analyzing, analysisResult, detectedItems, analysisError, usageLimitReached, archetypeDefaults, onSaveArchetypeDefault, onUpload, onRemove, onAnalyse, onAcceptDetected, onDismissDetected, onVoiceTranscript, trade, lib, onSaveDraft, onAnnotationMeta, onAddLiveItems }: {
   drawingFiles: File[]; drawingInstructions: string; setDrawingInstructions: (v: string) => void;
   analyzing: boolean; analysisResult: { confidence: string; notes: string } | null;
   detectedItems: DetectedItem[];
   analysisError: string | null; usageLimitReached: boolean;
+  archetypeDefaults: Record<string, string>;
+  onSaveArchetypeDefault: (archetypeKey: string, itemKey: string) => void;
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRemove: (name: string) => void; onAnalyse: () => void;
   onAcceptDetected: (items: ReviewLineItem[]) => void;
@@ -598,6 +622,9 @@ function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions
               confidence={analysisResult.confidence as "high" | "medium" | "low"}
               notes={analysisResult.notes}
               lib={lib as { item_key: string; label: string; unit_cost: number }[]}
+              trade={trade}
+              archetypeDefaults={archetypeDefaults}
+              onSaveDefault={onSaveArchetypeDefault}
               onAccept={onAcceptDetected}
               onDismiss={onDismissDetected}
             />
