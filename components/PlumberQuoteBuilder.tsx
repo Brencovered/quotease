@@ -312,6 +312,7 @@ export default function PlumberQuoteBuilder({
               {analysisError && <p className="text-[13px] text-[var(--red)] mt-2">{analysisError}</p>}
               {detectedItems.length > 0 && analysisResult && (
                 <DrawingAnalysisReviewTable
+                  trade="plumber"
                   detectedItems={detectedItems}
                   confidence={analysisResult.confidence as "high" | "medium" | "low"}
                   notes={analysisResult.notes}

@@ -51,8 +51,8 @@ export default function DrawingAnalysisReviewTable({
   confidence,
   notes,
   lib,
-  trade,
-  archetypeDefaults,
+  trade = "electrician",
+  archetypeDefaults = {},
   onSaveDefault,
   onAccept,
   onDismiss,
@@ -61,11 +61,13 @@ export default function DrawingAnalysisReviewTable({
   confidence:    "high" | "medium" | "low";
   notes:         string;
   lib:           PickerItem[];
-  trade:         string;
+  trade?:        string;
   /** Map "trade:archetype_key" -> price_book item_key from profiles.archetype_defaults */
-  archetypeDefaults: Record<string, string>;
-  /** Persist a newly chosen default; fire-and-forget */
-  onSaveDefault: (archetypeKey: string, itemKey: string) => void;
+  archetypeDefaults?: Record<string, string>;
+  /** Persist a newly chosen default; fire-and-forget. Optional -- when
+      absent (older trade builders), selections still price the row but
+      aren't remembered across quotes. */
+  onSaveDefault?: (archetypeKey: string, itemKey: string) => void;
   onAccept:      (items: ReviewLineItem[]) => void;
   onDismiss:     () => void;
 }) {
@@ -101,7 +103,7 @@ export default function DrawingAnalysisReviewTable({
     setRows((prev) => prev.map((r, i) =>
       i === idx ? { ...r, unitPrice: Number(item.unit_cost), product: item, manual: false } : r
     ));
-    onSaveDefault(rows[idx].item_key, item.item_key);
+    onSaveDefault?.(rows[idx].item_key, item.item_key);
     setPickerIdx(null);
   }
 
