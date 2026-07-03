@@ -467,7 +467,19 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense
+      fallback={
+        /* Server-rendered while the client form hydrates. Without this the
+           initial HTML was completely empty (fallback={null}) -- crawlers
+           saw no h1 and no content at all. */
+        <div className="min-h-screen flex items-center justify-center px-4">
+          <div className="text-center">
+            <h1 className="font-display text-[26px] text-[var(--ink)] mb-1">Welcome back</h1>
+            <p className="text-[13.5px] text-[var(--ink-faint)]">Log in to your Swiftscope account</p>
+          </div>
+        </div>
+      }
+    >
       <LoginForm />
     </Suspense>
   );

@@ -6,7 +6,10 @@ import {
 } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
 
-export const metadata = { title: "Features - Swiftscope" };
+export const metadata = {
+  title: "Features - Swiftscope",
+  description: "Everything Swiftscope gives your trade business: 4-minute quoting, plan markup and takeoffs, AI drawing analysis, job management, and Xero-friendly exports.",
+};
 
 export default function FeaturesPage() {
   return (

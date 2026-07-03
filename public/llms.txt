@@ -1,0 +1,30 @@
+# Swiftscope
+
+> Swiftscope (https://www.swiftscope.com.au) is quoting and job management
+> software for Australian trade businesses -- electricians, plumbers,
+> carpenters, roofers and other trades. Tradies build and send professional
+> quotes from their phone in under 4 minutes, mark up plans and drawings,
+> manage jobs, and export to Xero. Pricing is $45/month flat with a 3-day
+> free trial. Swiftscope also runs a public directory where homeowners can
+> find verified local tradies and request quotes for free.
+
+## Key pages
+
+- [Home](https://www.swiftscope.com.au/): product overview for tradies
+- [Features](https://www.swiftscope.com.au/features): quoting, plan markup, AI drawing analysis, job management, Xero export
+- [How it works](https://www.swiftscope.com.au/how-it-works): the quote-on-site workflow explained
+- [Get quotes](https://www.swiftscope.com.au/get-quotes): homeowners describe a job and receive quotes from local tradies
+- [Directory](https://www.swiftscope.com.au/directory): browse verified local trade businesses
+- [Sign up](https://www.swiftscope.com.au/signup): start a 3-day free trial
+- [Log in](https://www.swiftscope.com.au/login): existing account sign-in
+
+## For homeowners
+
+Requesting quotes through Swiftscope is free. Describe the job, and local
+tradies on the platform respond with quotes.
+
+## For trade businesses
+
+Swiftscope replaces spreadsheets and paper quoting: price book import from
+supplier CSVs, reusable job packages, margin controls, quote PDFs, digital
+acceptance, and accounting export. Built for small teams of 1-10.

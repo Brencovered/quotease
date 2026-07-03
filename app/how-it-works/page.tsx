@@ -4,7 +4,10 @@ import {
 } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
 
-export const metadata = { title: "How it works - Swiftscope" };
+export const metadata = {
+  title: "How it works - Swiftscope",
+  description: "See how tradies use Swiftscope to quote on-site in minutes: build the quote, send it from your phone, and win the job before you leave the driveway.",
+};
 
 export default function HowItWorksPage() {
   return (

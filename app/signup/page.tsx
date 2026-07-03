@@ -564,7 +564,19 @@ function SignupForm() {
 
 export default function SignupPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense
+      fallback={
+        /* Server-rendered while the client form hydrates. Without this the
+           initial HTML was completely empty (fallback={null}) -- crawlers
+           saw no h1 and no content at all. */
+        <div className="min-h-screen flex items-center justify-center px-4">
+          <div className="text-center">
+            <h1 className="font-display text-[26px] text-[var(--ink)] mb-1">Start your free trial</h1>
+            <p className="text-[13.5px] text-[var(--ink-faint)]">3-day free trial - $45/month flat - cancel anytime</p>
+          </div>
+        </div>
+      }
+    >
       <SignupForm />
     </Suspense>
   );
