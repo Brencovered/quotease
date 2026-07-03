@@ -8,11 +8,14 @@ export async function requireActiveAccess() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("subscription_status, trial_ends_at")
+    .select("subscription_status, trial_ends_at, comp_access")
     .eq("id", userData.user.id)
     .single();
 
   if (!profile) return;
+
+  // Admin-granted complimentary access bypasses billing entirely
+  if (profile.comp_access) return;
 
   const isSubscribed = profile.subscription_status === "active" || profile.subscription_status === "trialing";
   const trialStillActive = !!profile.trial_ends_at && new Date(profile.trial_ends_at) > new Date();

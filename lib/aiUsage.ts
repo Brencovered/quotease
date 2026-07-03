@@ -14,6 +14,8 @@ export interface UsageProfile {
   ai_addon_status: string;
   ai_addon_period: string | null;
   ai_addon_analyses_used: number;
+  /** Admin-set override for the free analyses limit. NULL/undefined = default. */
+  ai_analyses_limit_override?: number | null;
 }
 
 export type UsageCheckResult =
@@ -23,8 +25,12 @@ export type UsageCheckResult =
 // Pure decision logic, kept separate from the DB calls so it's easy to test
 // and easy to reason about without tracing through Supabase round-trips.
 export function checkUsage(profile: UsageProfile): UsageCheckResult {
-  if (profile.ai_free_analyses_used < FREE_ANALYSES_LIMIT) {
-    return { allowed: true, via: "free", remainingFree: FREE_ANALYSES_LIMIT - profile.ai_free_analyses_used - 1 };
+  // Admins can grant a per-account limit that replaces the default free cap
+  // (e.g. 50 for a partner account, or 0 to disable free analyses).
+  const freeLimit = profile.ai_analyses_limit_override ?? FREE_ANALYSES_LIMIT;
+
+  if (profile.ai_free_analyses_used < freeLimit) {
+    return { allowed: true, via: "free", remainingFree: freeLimit - profile.ai_free_analyses_used - 1 };
   }
 
   if (profile.ai_addon_status === "active") {
@@ -41,6 +47,6 @@ export function checkUsage(profile: UsageProfile): UsageCheckResult {
 
   return {
     allowed: false,
-    reason: `You've used your ${FREE_ANALYSES_LIMIT} free drawing analyses. Subscribe to the AI add-on (${ADDON_PRICE_LABEL}) to keep using this.`,
+    reason: `You've used your ${freeLimit} free drawing analyses. Subscribe to the AI add-on (${ADDON_PRICE_LABEL}) to keep using this.`,
   };
 }

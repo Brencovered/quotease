@@ -12,11 +12,16 @@ export default async function BillingPage() {
     if (userData.user) {
       const { data: profile } = await supabase
         .from("profiles")
-        .select("subscription_status, trial_ends_at")
+        .select("subscription_status, trial_ends_at, comp_access")
         .eq("id", userData.user.id)
         .single();
       trialEndsAt = profile?.trial_ends_at ?? null;
-      isSubscribed = profile?.subscription_status === "active" || profile?.subscription_status === "trialing";
+      // Comp access renders the same as an active subscription -- a tradie
+      // you've comped shouldn't be nagged to subscribe.
+      isSubscribed =
+        profile?.comp_access === true ||
+        profile?.subscription_status === "active" ||
+        profile?.subscription_status === "trialing";
     }
   } catch (err) {
     console.error("Billing page: continuing without profile data -", err);

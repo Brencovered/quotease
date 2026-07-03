@@ -33,6 +33,9 @@ interface ProfileRow {
   business_address: string | null;
   hourly_rate: number;
   materials_margin_pct: number;
+  comp_access?: boolean;
+  ai_analyses_limit_override?: number | null;
+  ai_free_analyses_used?: number;
 }
 
 export default function AdminTradieDetailPanel({
@@ -127,7 +130,7 @@ export default function AdminTradieDetailPanel({
           <dl className="space-y-2 text-[13px]">
             <Row label="Trades" value={profile.trades.length ? profile.trades.join(", ") : "Not picked yet"} />
             <Row label="Plan" value={profile.subscription_plan ?? " - "} />
-            <Row label="Status" value={profile.subscription_status} />
+            <Row label="Status" value={profile.comp_access ? `${profile.subscription_status} (comp access)` : profile.subscription_status} />
             <Row label="Trial ends" value={fmtDate(profile.trial_ends_at)} />
             <Row label="Signed up" value={fmtDate(profile.created_at)} />
             <Row label="Onboarded" value={fmtDate(profile.onboarded_at)} />
@@ -152,6 +155,9 @@ export default function AdminTradieDetailPanel({
           )}
         </div>
       </div>
+
+      {/* Account controls */}
+      <AccountControlsCard profile={profile} />
 
       {/* Quotes */}
       <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl overflow-hidden">
@@ -195,4 +201,177 @@ function Row({ label, value }: { label: string; value: string }) {
 function fmtDate(iso: string | null): string {
   if (!iso) return " - ";
   return new Date(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
+}
+
+/* ------------------------------------------------------------------ */
+/* Account controls: trial extension, comp access, AI drawings limit  */
+/* ------------------------------------------------------------------ */
+
+function AccountControlsCard({ profile }: { profile: ProfileRow }) {
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(profile.trial_ends_at);
+  const [compAccess, setCompAccess] = useState<boolean>(profile.comp_access ?? false);
+  const [aiLimit, setAiLimit] = useState<string>(
+    profile.ai_analyses_limit_override != null ? String(profile.ai_analyses_limit_override) : ""
+  );
+  const [saving, setSaving] = useState<string | null>(null); // which control is saving
+  const [error, setError] = useState<string | null>(null);
+  const [savedMsg, setSavedMsg] = useState<string | null>(null);
+
+  async function apply(controls: { trialEndsAt?: string | null; compAccess?: boolean; aiLimitOverride?: number | null }, which: string) {
+    setSaving(which); setError(null); setSavedMsg(null);
+    try {
+      const res = await fetch("/api/admin/account-controls", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profileId: profile.id, ...controls }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Update failed");
+      if ("trial_ends_at" in json.profile) setTrialEndsAt(json.profile.trial_ends_at);
+      if ("comp_access" in json.profile) setCompAccess(json.profile.comp_access);
+      setSavedMsg("Saved");
+      setTimeout(() => setSavedMsg(null), 2000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Update failed");
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  function extendTrial(days: number) {
+    const base = trialEndsAt && new Date(trialEndsAt) > new Date() ? new Date(trialEndsAt) : new Date();
+    base.setDate(base.getDate() + days);
+    apply({ trialEndsAt: base.toISOString() }, "trial");
+  }
+
+  const trialActive = !!trialEndsAt && new Date(trialEndsAt) > new Date();
+
+  return (
+    <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-5 mb-6">
+      <p className="text-[11px] tracking-[.1em] uppercase text-[var(--amber-deep)] font-bold mb-4">
+        Account controls
+      </p>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {/* Trial extension */}
+        <div>
+          <p className="text-[13px] font-semibold text-[var(--ink)] mb-1">Trial</p>
+          <p className="text-[12px] text-[var(--ink-faint)] mb-2">
+            {trialActive
+              ? `Ends ${fmtDate(trialEndsAt)}`
+              : trialEndsAt
+                ? `Expired ${fmtDate(trialEndsAt)}`
+                : "No trial set"}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => extendTrial(7)}
+              disabled={saving !== null}
+              className="text-[12px] font-semibold px-2.5 py-1.5 rounded-lg border border-[var(--line)] hover:border-[var(--amber)] disabled:opacity-50"
+            >
+              +7 days
+            </button>
+            <button
+              onClick={() => extendTrial(30)}
+              disabled={saving !== null}
+              className="text-[12px] font-semibold px-2.5 py-1.5 rounded-lg border border-[var(--line)] hover:border-[var(--amber)] disabled:opacity-50"
+            >
+              +30 days
+            </button>
+            <button
+              onClick={() => extendTrial(90)}
+              disabled={saving !== null}
+              className="text-[12px] font-semibold px-2.5 py-1.5 rounded-lg border border-[var(--line)] hover:border-[var(--amber)] disabled:opacity-50"
+            >
+              +90 days
+            </button>
+          </div>
+          <p className="text-[11px] text-[var(--ink-faint)] mt-1.5">
+            Extends from {trialActive ? "current end date" : "today"}
+          </p>
+        </div>
+
+        {/* Comp access */}
+        <div>
+          <p className="text-[13px] font-semibold text-[var(--ink)] mb-1">Free access</p>
+          <p className="text-[12px] text-[var(--ink-faint)] mb-2">
+            {compAccess
+              ? "Complimentary access ON — billing bypassed"
+              : "Normal billing applies"}
+          </p>
+          <button
+            onClick={() => {
+              const next = !compAccess;
+              const confirmed = window.confirm(
+                next
+                  ? "Grant complimentary access? This tradie will never hit the billing wall until you turn it off."
+                  : "Revoke complimentary access? If their trial has expired and they have no subscription, they'll be sent to billing on next page load."
+              );
+              if (confirmed) apply({ compAccess: next }, "comp");
+            }}
+            disabled={saving !== null}
+            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors disabled:opacity-50 ${
+              compAccess ? "bg-[var(--amber)]" : "bg-[var(--line)]"
+            }`}
+            aria-label="Toggle complimentary access"
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                compAccess ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+        </div>
+
+        {/* AI drawings limit */}
+        <div>
+          <p className="text-[13px] font-semibold text-[var(--ink)] mb-1">AI drawing analyses</p>
+          <p className="text-[12px] text-[var(--ink-faint)] mb-2">
+            Used: {profile.ai_free_analyses_used ?? 0} · Limit:{" "}
+            {profile.ai_analyses_limit_override != null
+              ? `${profile.ai_analyses_limit_override} (custom)`
+              : "3 (default)"}
+          </p>
+          <div className="flex gap-2 items-center">
+            <input
+              type="number"
+              min={0}
+              max={10000}
+              value={aiLimit}
+              onChange={(e) => setAiLimit(e.target.value)}
+              placeholder="e.g. 50"
+              className="w-24 text-[13px] px-2.5 py-1.5 rounded-lg border border-[var(--line)] bg-transparent"
+            />
+            <button
+              onClick={() => {
+                const n = aiLimit.trim() === "" ? null : parseInt(aiLimit, 10);
+                if (n !== null && (isNaN(n) || n < 0)) { setError("Limit must be 0 or more"); return; }
+                apply({ aiLimitOverride: n }, "ai");
+              }}
+              disabled={saving !== null}
+              className="text-[12px] font-semibold px-2.5 py-1.5 rounded-lg border border-[var(--line)] hover:border-[var(--amber)] disabled:opacity-50"
+            >
+              Set
+            </button>
+            <button
+              onClick={() => { setAiLimit(""); apply({ aiLimitOverride: null }, "ai"); }}
+              disabled={saving !== null}
+              className="text-[12px] px-2.5 py-1.5 rounded-lg text-[var(--ink-faint)] hover:text-[var(--ink)] disabled:opacity-50"
+            >
+              Reset to default
+            </button>
+          </div>
+          <p className="text-[11px] text-[var(--ink-faint)] mt-1.5">
+            Empty + Set, or Reset, restores the default (3)
+          </p>
+        </div>
+      </div>
+
+      {(error || savedMsg || saving) && (
+        <p className={`text-[12px] mt-3 ${error ? "text-red-600" : "text-[var(--green)]"}`}>
+          {error ?? (saving ? "Saving..." : savedMsg)}
+        </p>
+      )}
+    </div>
+  );
 }

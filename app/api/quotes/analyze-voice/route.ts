@@ -50,7 +50,7 @@ export async function POST(request: Request) {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("ai_free_analyses_used, ai_addon_status, ai_addon_period, ai_addon_analyses_used")
+    .select("ai_free_analyses_used, ai_addon_status, ai_addon_period, ai_addon_analyses_used, ai_analyses_limit_override")
     .eq("id", userData.user.id)
     .single();
   if (profileError || !profile) {
