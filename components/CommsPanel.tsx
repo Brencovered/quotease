@@ -132,6 +132,8 @@ import { createClient } from "@/lib/supabase/client";
   const [branding, setBranding] = useState<Branding | null>(initialBranding);
   const [toast, setToast] = useState<string | null>(null);
 
+  const [serviceMaterials, setServiceMaterials] = useState<Array<{ label: string; unit_cost: number; supplier?: string | null }>>([]);
+
   // Seed templates on first load if empty
   useEffect(() => {
     if (templates.length === 0) {
@@ -149,6 +151,11 @@ import { createClient } from "@/lib/supabase/client";
     fetch("/api/comms/branding")
       .then((r) => r.json())
       .then((d) => { if (d.branding) setBranding(d.branding); });
+
+    // Load price book for brochure builder
+    fetch("/api/comms/materials")
+      .then((r) => r.json())
+      .then((d) => { if (d.items) setServiceMaterials(d.items); });
   }, [templates.length]);
 
   function showToast(msg: string) {
