@@ -4,8 +4,9 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
-  Upload, SkipForward, ArrowRight, ArrowLeft,
-  Check, Package, Monitor, HardHat, PenTool,
+  Upload, Download, SkipForward, ArrowRight, ArrowLeft,
+  Check, Package, Monitor, Smartphone, ClipboardList,
+  HardHat, PenTool, FileText, Wrench, TrendingUp,
   Loader2, Sparkles,
 } from "lucide-react";
 
@@ -14,15 +15,15 @@ import {
 /* ------------------------------------------------------------------ */
 
 const DIGITAL_TOOLS = [
-  { key: "fergus",      label: "Fergus",           icon: PenTool },
-  { key: "servicem8",   label: "ServiceM8",        icon: Monitor },
+  { key: "fergus",      label: "Fergus",           icon: ClipboardList },
+  { key: "servicem8",   label: "ServiceM8",        icon: Smartphone },
   { key: "hipages",     label: "HiPages",          icon: Search },
   { key: "groundplan",  label: "GroundPlan",       icon: PenTool },
   { key: "simpro",      label: "SimPro",           icon: Monitor },
-  { key: "tradify",     label: "Tradify",          icon: PenTool },
-  { key: "excel",       label: "Excel / Spreadsheets", icon: PenTool },
-  { key: "xero",        label: "Xero",             icon: Monitor },
-  { key: "myob",        label: "MYOB",             icon: Monitor },
+  { key: "tradify",     label: "Tradify",          icon: FileText },
+  { key: "excel",       label: "Excel / Spreadsheets", icon: FileText },
+  { key: "xero",        label: "Xero",             icon: TrendingUp },
+  { key: "myob",        label: "MYOB",             icon: TrendingUp },
   { key: "none",        label: "Nothing yet - pen and paper", icon: PenTool },
 ];
 
@@ -62,6 +63,7 @@ export default function OnboardingPage() {
   // Step 1: Materials upload
   const [csvMessage, setCsvMessage] = useState<string | null>(null);
   const [hasUploaded, setHasUploaded] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   // Step 2: Digital tools
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
@@ -85,19 +87,44 @@ export default function OnboardingPage() {
     setSelectedTools((p) => p.includes(key) ? p.filter((k) => k !== key) : [...p, key]);
   }
 
-  function handleCsvUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleCsvUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    setUploading(true);
     setCsvMessage("Uploading...");
-    const reader = new FileReader();
-    reader.onload = () => {
-      setTimeout(() => {
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("defaultSupplier", "CSV Import");
+
+    try {
+      const res = await fetch("/api/materials/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setCsvMessage(data.error || "Upload failed. Please check your CSV and try again.");
+        setHasUploaded(false);
+      } else {
         setHasUploaded(true);
-        setCsvMessage(`${file.name} uploaded successfully. Your items will be added to your price book.`);
-      }, 800);
+        const parts: string[] = [];
+        parts.push(`${file.name} uploaded successfully.`);
+        if (data.imported > 0) parts.push(`${data.imported} item${data.imported !== 1 ? "s" : ""} added to your price book.`);
+        if (data.skipped > 0) parts.push(`${data.skipped} row${data.skipped !== 1 ? "s" : ""} skipped.`);
+        if (data.errors?.length > 0) {
+          parts.push(`${data.errors.length} issue${data.errors.length !== 1 ? "s" : ""} found.`);
+        }
+        setCsvMessage(parts.join(" "));
+      }
+    } catch {
+      setCsvMessage("Network error. Please check your connection and try again.");
+      setHasUploaded(false);
+    } finally {
+      setUploading(false);
       e.target.value = "";
-    };
-    reader.readAsText(file);
+    }
   }
 
   async function finish() {
@@ -106,6 +133,7 @@ export default function OnboardingPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaving(false); return; }
 
+    // Save onboarding responses to profile
     const updates: Record<string, unknown> = {
       onboarded_at: new Date().toISOString(),
       digital_tools: selectedTools.length > 0 ? selectedTools : null,
@@ -229,9 +257,9 @@ export default function OnboardingPage() {
                 <Upload size={32} className="text-[var(--ink-faint)] mx-auto mb-3" />
                 <p className="text-[14px] font-semibold text-[var(--ink)] mb-1">Drop your CSV here or click to browse</p>
                 <p className="text-[12px] text-[var(--ink-faint)] mb-4">Xero, MYOB, or any CSV with item codes and prices</p>
-                <label className="btn-primary inline-flex cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform">
-                  <Upload size={14} /> Select file
-                  <input type="file" accept=".csv" className="hidden" onChange={handleCsvUpload} />
+                <label className={`btn-primary inline-flex cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
+                  {uploading ? <><Loader2 size={14} className="animate-spin" /> Uploading...</> : <><Upload size={14} /> Select file</>}
+                  <input type="file" accept=".csv" className="hidden" onChange={handleCsvUpload} disabled={uploading} />
                 </label>
               </div>
 
@@ -240,6 +268,14 @@ export default function OnboardingPage() {
                   {csvMessage}
                 </div>
               )}
+
+              <div className="flex items-center gap-2 mb-6">
+                <button onClick={() => {}} className="text-[12px] text-[var(--ink-faint)] hover:text-[var(--ink-soft)] font-semibold flex items-center gap-1 transition-colors">
+                  <Download size={12} /> Download a template
+                </button>
+                <span className="text-[var(--line-subtle)]">|</span>
+                <span className="text-[12px] text-[var(--ink-faint)]">Supported: Xero, MYOB, custom CSV</span>
+              </div>
 
               <TipBox icon={Sparkles}>
                 Most suppliers can email you a price list in CSV format. Just ask your rep for an &quot;item price export.&quot;
@@ -321,7 +357,7 @@ export default function OnboardingPage() {
                         {on && <div className="w-2.5 h-2.5 rounded-full bg-[var(--amber)]" />}
                       </div>
                       <div>
-                        <p className={`font-bold text-[14px] ${on ? "text-white" : "text-[var(--ink)]"}`}>{opt.label}</p>
+                        <p className={`font-bold text-[14px] ${on ? "text-white" : "text-[var(ink)]"}`}>{opt.label}</p>
                         <p className={`text-[12px] ${on ? "text-[var(--steel-2)]" : "text-[var(--ink-faint)]"}`}>{opt.desc}</p>
                       </div>
                     </button>
