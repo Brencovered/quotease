@@ -16,7 +16,7 @@ export default async function LeadsPage() {
     .eq("profile_id", user.id)
     .single();
 
-  const hasAccess = settings?.directory_active && settings?.monthly_fee_active;
+  const hasAccess = settings?.directory_active;
 
   if (!hasAccess) {
     return (
@@ -27,7 +27,7 @@ export default async function LeadsPage() {
             <p className="text-[32px] mb-3">🔒</p>
             <p className="font-semibold text-[var(--ink)] mb-1">Directory access required</p>
             <p className="text-[13.5px] text-[var(--ink-faint)] max-w-xs mx-auto mb-5">
-              Get access to homeowner quote requests in your area for $10/month on top of your Swiftscope plan.
+              Get access to homeowner quote requests in your area. Activate your directory listing to start receiving leads.
             </p>
             <Link href="/settings" className="btn-primary inline-flex">
               Set up directory access
