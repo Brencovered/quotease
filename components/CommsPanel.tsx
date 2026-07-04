@@ -1,4 +1,5 @@
 "use client";
+import BrochureBuilder from "@/components/BrochureBuilder";
 
 import { useState, useEffect, useRef } from "react";
 import {
@@ -216,10 +217,11 @@ import { createClient } from "@/lib/supabase/client";
         />
       )}
       {activeTab === "brochures" && (
-        <BrochuresTab
-          completedJobs={completedJobs}
+        <BrochureBuilder
           branding={branding}
-          quotes={expiringQuotes}
+          completedJobs={completedJobs}
+          quotes={[...expiringQuotes, ...completedJobs.map(j => ({ id: j.id, client_name: j.client_name, total_cost: j.total_cost }))]}
+          serviceMaterials={serviceMaterials}
         />
       )}
     </div>
