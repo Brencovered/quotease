@@ -25,8 +25,7 @@ const PLATFORMS: Platform[] = [
   { id:"hipages",     name:"HiPages",     category:"Lead generation",   pricePerSeat:200,  avgSeats:1, description:"Trade lead marketplace" },
   { id:"oneflare",    name:"Oneflare",    category:"Lead generation",   pricePerSeat:150,  avgSeats:1, description:"Trade lead marketplace" },
   { id:"airtasker",   name:"Airtasker",   category:"Lead generation",   pricePerSeat:100,  avgSeats:1, description:"Task marketplace (avg monthly fees)" },
-  { id:"xero",        name:"Xero",        category:"Accounting",        pricePerSeat:70,   avgSeats:1, description:"Accounting and invoicing" },
-  { id:"quickbooks",  name:"QuickBooks",  category:"Accounting",        pricePerSeat:55,   avgSeats:1, description:"Accounting software" },
+
   { id:"deputy",      name:"Deputy",      category:"Scheduling",        pricePerSeat:7,    avgSeats:3, description:"Workforce scheduling (per employee)" },
   { id:"calendly",    name:"Calendly",    category:"Scheduling",        pricePerSeat:20,   avgSeats:1, description:"Appointment scheduling" },
   { id:"dropbox",     name:"Dropbox",     category:"File storage",      pricePerSeat:22,   avgSeats:1, description:"Cloud file storage" },
@@ -314,7 +313,7 @@ export default function SavingsCalculator() {
           )}
 
           <p className="text-white/40 text-[11.5px] mb-5">
-            Swiftscope replaces quoting, job management, scheduling, and Xero sync. Excludes accounting software.
+            Swiftscope replaces quoting, job management, scheduling, and Xero sync. Xero and accounting software work alongside Swiftscope.
           </p>
 
           <Link
