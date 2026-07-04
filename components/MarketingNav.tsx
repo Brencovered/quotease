@@ -24,6 +24,7 @@ export default function MarketingNav({ transparent = false }: { transparent?: bo
         <div className="hidden lg:flex items-center gap-7">
           <Link href="/features" className="text-white/75 hover:text-white font-semibold text-sm transition-colors">Features</Link>
           <Link href="/how-it-works" className="text-white/75 hover:text-white font-semibold text-sm transition-colors">How it works</Link>
+          <Link href="/blog" className="text-white/75 hover:text-white font-semibold text-sm transition-colors">Blog</Link>
         </div>
 
         <div className="hidden lg:flex items-center gap-2.5">
@@ -52,6 +53,7 @@ export default function MarketingNav({ transparent = false }: { transparent?: bo
         <div className="lg:hidden bg-[#0a1722] border-t border-white/10 px-6 py-5 flex flex-col gap-1">
           <Link href="/features" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Features</Link>
           <Link href="/how-it-works" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">How it works</Link>
+          <Link href="/blog" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Blog</Link>
           <Link href="/directory" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Find a tradie</Link>
           <Link href="/get-quotes" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Get a quote</Link>
           <Link href="/login" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Log in</Link>
