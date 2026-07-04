@@ -93,7 +93,7 @@ export default function Home() {
               </div>
               <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">AI voice quote generator</h3>
               <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
-                Walk the site and talk to Swiftscope - describe the work and materials needed. Save, and a quote
+                Walk the job and talk to Swiftscope - describe the work and materials needed. Save, and a quote
                 generates automatically using your own pricing and materials. Not your thing on site? Record it
                 on the drive home instead - same result either way.
               </p>
@@ -198,13 +198,13 @@ export default function Home() {
               <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-2">Tradies &amp; Trade Businesses</p>
               <h3 className="font-display text-[1.8rem] text-white mb-3">Run your whole business</h3>
               <p className="text-[15px] text-[#8aa4b4] leading-relaxed mb-6">
-                Quote, win, manage, and invoice jobs from your phone. Get leads from homeowners
-                in your area for a flat $10/month - no auction, no per-lead cost.
+                Quote, win, manage, and invoice jobs from your phone. Get homeowner leads
+                in your area included with your plan - no auction, no per-lead cost.
               </p>
               <div className="space-y-3 mb-8">
                 {[
                   "Quote from your phone in 4 minutes on site",
-                  "Homeowner leads for flat $10/month",
+                  "Homeowner leads included in your plan",
                   "Job management, scheduling, drawing markup",
                   "Xero live sync - no double entry",
                 ].map(f => (
@@ -257,12 +257,11 @@ export default function Home() {
             </div>
 
             <div className="bg-[#f8f9fa] rounded-3xl border border-[#e8ecef] p-8 flex flex-col">
-              <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-2">Directory add-on</p>
+              <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-2">Directory included</p>
               <div className="flex items-end gap-2 mb-1">
-                <span className="font-display text-[4rem] leading-none text-[#0a1722]">$10</span>
-                <span className="text-[#8a9ba8] text-[16px] font-bold mb-2">/month</span>
+                <span className="font-display text-[2.5rem] leading-none text-[#0a1722]">Included</span>
               </div>
-              <p className="text-[#8a9ba8] text-[13px] mb-6">On top of the $45 plan.</p>
+              <p className="text-[#8a9ba8] text-[13px] mb-6">With every Swiftscope plan.</p>
               <div className="space-y-2.5 mb-8 flex-1">
                 {["Listed in the public tradie directory","Homeowner quote requests in your area","Set your service suburbs and radius","No per-lead costs. Ever."].map(f => (
                   <div key={f} className="flex items-center gap-2.5 text-[13.5px] text-[#0a1722]">
@@ -271,7 +270,7 @@ export default function Home() {
                 ))}
               </div>
               <Link href="/signup" className="block text-center bg-[#0a1722] text-white font-extrabold text-[15px] py-3.5 rounded-xl hover:opacity-90">
-                Add to your plan
+                Get listed
               </Link>
               <p className="text-[12px] text-[#8a9ba8] text-center mt-3">Free for homeowners - always</p>
             </div>
