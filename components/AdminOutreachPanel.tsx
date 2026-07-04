@@ -9,7 +9,7 @@ import {
 
 interface DirectoryListing {
   id: string; business_name: string | null; email: string;
-  trade: string | null; suburb: string | null; state: string | null;
+  trades: string[]; suburb: string | null; postcode: string | null;
 }
 interface TradieProfile {
   id: string; business_name: string | null; contact_email: string;
@@ -21,9 +21,9 @@ interface Contact {
   id:     string;
   name:   string;
   email:  string;
-  trade:  string;
+  trades: string[];
   suburb: string;
-  state:  string;
+  postcode: string;
   source: ContactSource;
   status: string;
 }
@@ -83,9 +83,9 @@ export default function AdminOutreachPanel({
           id:     l.id,
           name:   l.business_name ?? l.email,
           email:  key,
-          trade:  l.trade ?? "",
+          trades: l.trades ?? [],
           suburb: l.suburb ?? "",
-          state:  l.state ?? "",
+          postcode: l.postcode ?? "",
           source: "directory",
           status: "",
         });
@@ -100,9 +100,9 @@ export default function AdminOutreachPanel({
           id:     p.id,
           name:   p.business_name ?? p.contact_email,
           email:  key,
-          trade:  (p.trades ?? [])[0] ?? "",
+          trades: p.trades ?? [],
           suburb: "",
-          state:  "",
+          postcode: "",
           source: "registered",
           status: p.subscription_status ?? "",
         });
@@ -116,16 +116,16 @@ export default function AdminOutreachPanel({
   const [search,      setSearch]      = useState("");
   const [srcFilter,   setSrcFilter]   = useState<"all"|"directory"|"registered">("all");
   const [tradeFilter, setTradeFilter] = useState<string>("");
-  const [stateFilter, setStateFilter] = useState<string>("");
+  const [stateFilter, setStateFilter] = useState<string>(""); // used as postcode filter
   const [showFilters, setShowFilters] = useState(false);
 
   const filtered = useMemo(() => allContacts.filter(c => {
     if (srcFilter !== "all" && c.source !== srcFilter) return false;
-    if (tradeFilter && !c.trade.toLowerCase().includes(tradeFilter)) return false;
-    if (stateFilter && c.state !== stateFilter) return false;
+    if (tradeFilter && !c.trades.some(t => t.toLowerCase().includes(tradeFilter))) return false;
+    if (stateFilter && c.postcode !== stateFilter) return false;
     if (search) {
       const q = search.toLowerCase();
-      if (!c.name.toLowerCase().includes(q) && !c.email.includes(q) && !c.trade.toLowerCase().includes(q) && !c.suburb.toLowerCase().includes(q)) return false;
+      if (!c.name.toLowerCase().includes(q) && !c.email.includes(q) && !c.trades.some(t=>t.toLowerCase().includes(q)) && !c.suburb.toLowerCase().includes(q)) return false;
     }
     return true;
   }), [allContacts, srcFilter, tradeFilter, stateFilter, search]);
@@ -163,7 +163,7 @@ export default function AdminOutreachPanel({
   const filteredAllSelected = filtered.length > 0 && filtered.every(c => selected.has(c.email));
   const filteredSomeSelected = filtered.some(c => selected.has(c.email));
 
-  const states  = [...new Set(allContacts.map(c => c.state).filter(Boolean))].sort();
+  const postcodes = [...new Set(allContacts.map(c => c.postcode).filter(Boolean))].sort();
   const recipients = [...selected];
 
   // ── Compose ───────────────────────────────────────────
@@ -272,16 +272,16 @@ export default function AdminOutreachPanel({
                   ))}
                 </div>
               </div>
-              {states.length > 0 && (
+              {postcodes.length > 0 && (
                 <div>
-                  <p className="text-[10px] font-bold uppercase text-[var(--ink-faint)] mb-1.5">State</p>
-                  <div className="flex flex-wrap gap-1">
+                  <p className="text-[10px] font-bold uppercase text-[var(--ink-faint)] mb-1.5">Postcode</p>
+                  <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
                     <button onClick={() => setStateFilter("")}
                       className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
                       style={{ background: !stateFilter ? "var(--navy)" : "var(--surface)", color: !stateFilter ? "white" : "var(--ink-soft)", border: "1px solid var(--line)" }}>
                       All
                     </button>
-                    {states.map(s => (
+                    {postcodes.map(s => (
                       <button key={s} onClick={() => setStateFilter(stateFilter === s ? "" : s!)}
                         className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
                         style={{ background: stateFilter === s ? "var(--navy)" : "var(--surface)", color: stateFilter === s ? "white" : "var(--ink-soft)", border: "1px solid var(--line)" }}>
@@ -355,11 +355,11 @@ export default function AdminOutreachPanel({
                     <p className="text-[11.5px] text-[var(--ink-faint)] truncate">{c.email}</p>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
-                    {c.trade && (
-                      <span className="text-[10px] font-bold capitalize px-1.5 py-0.5 bg-[var(--app-bg)] border border-[var(--line)] rounded-full text-[var(--ink-soft)]">
-                        {c.trade}
+                    {c.trades.slice(0,2).map(t => (
+                      <span key={t} className="text-[10px] font-bold capitalize px-1.5 py-0.5 bg-[var(--app-bg)] border border-[var(--line)] rounded-full text-[var(--ink-soft)]">
+                        {t}
                       </span>
-                    )}
+                    ))}
                     {c.suburb && <span className="text-[10.5px] text-[var(--ink-faint)]">{c.suburb}</span>}
                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
                       c.source === "registered" ? "bg-green-50 text-green-700" : "bg-blue-50 text-blue-700"

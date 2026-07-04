@@ -3,59 +3,65 @@ import AdminOutreachPanel from "@/components/AdminOutreachPanel";
 
 export const dynamic = "force-dynamic";
 
-type ListingRow = {
-  id: string;
-  business_name: string | null;
-  email: string;
-  trade: string | null;
-  suburb: string | null;
-  state: string | null;
-};
-
-async function fetchAllListings(admin: ReturnType<typeof createAdminClient>): Promise<ListingRow[]> {
+export default async function AdminOutreachPage() {
+  const admin = createAdminClient();
   const PAGE = 1000;
-  const all: ListingRow[] = [];
-  const seen = new Set<string>();
-  let from = 0;
 
+  // Fetch all directory listings -- paginate past the 1000 row default limit
+  const listings: {
+    id: string;
+    business_name: string | null;
+    email: string;
+    trades: string[];
+    suburb: string | null;
+    postcode: string | null;
+  }[] = [];
+
+  let from = 0;
   while (true) {
     const { data, error } = await admin
       .from("directory_listing")
-      .select("id, business_name, scraped_contact_email, private_email, trade, suburb, state")
+      .select("id, business_name, scraped_contact_email, private_email, trades, suburb, postcode")
       .or("scraped_contact_email.not.is.null,private_email.not.is.null")
       .order("business_name")
       .range(from, from + PAGE - 1);
 
-    if (error) { console.error("[outreach] listings error:", error); break; }
+    if (error) {
+      console.error("[outreach] directory_listing error:", JSON.stringify(error));
+      break;
+    }
     if (!data?.length) break;
 
+    const seen = new Set(listings.map(l => l.email));
     for (const l of data) {
-      // Prefer private_email (directly supplied), fall back to scraped
-      const email = ((l.private_email ?? l.scraped_contact_email) as string | null)?.toLowerCase();
+      const email = ((l.private_email ?? l.scraped_contact_email) as string | null)?.toLowerCase().trim();
       if (!email || seen.has(email)) continue;
       seen.add(email);
-      all.push({
+      listings.push({
         id:            l.id,
         business_name: l.business_name,
         email,
-        trade:         l.trade,
+        trades:        (l.trades as string[]) ?? [],
         suburb:        l.suburb,
-        state:         l.state,
+        postcode:      l.postcode,
       });
     }
 
+    console.log(`[outreach] fetched rows ${from}–${from + data.length - 1}, total so far: ${listings.length}`);
     if (data.length < PAGE) break;
     from += PAGE;
   }
 
-  return all;
-}
+  // Fetch registered profiles
+  const profiles: {
+    id: string;
+    business_name: string | null;
+    contact_email: string;
+    trades: string[] | null;
+    subscription_status: string | null;
+  }[] = [];
 
-async function fetchAllProfiles(admin: ReturnType<typeof createAdminClient>) {
-  const PAGE = 1000;
-  let all: { id: string; business_name: string | null; contact_email: string; trades: string[] | null; subscription_status: string | null }[] = [];
-  let from = 0;
-
+  from = 0;
   while (true) {
     const { data, error } = await admin
       .from("profiles")
@@ -64,25 +70,18 @@ async function fetchAllProfiles(admin: ReturnType<typeof createAdminClient>) {
       .order("business_name")
       .range(from, from + PAGE - 1);
 
-    if (error) { console.error("[outreach] profiles error:", error); break; }
+    if (error) {
+      console.error("[outreach] profiles error:", JSON.stringify(error));
+      break;
+    }
     if (!data?.length) break;
 
-    all = [...all, ...data];
+    profiles.push(...data);
     if (data.length < PAGE) break;
     from += PAGE;
   }
 
-  return all;
-}
-
-export default async function AdminOutreachPage() {
-  const admin = createAdminClient();
-  const [listings, profiles] = await Promise.all([
-    fetchAllListings(admin),
-    fetchAllProfiles(admin),
-  ]);
-
-  console.log(`[outreach] loaded ${listings.length} directory listings, ${profiles.length} profiles`);
+  console.log(`[outreach] final: ${listings.length} directory, ${profiles.length} profiles`);
 
   return (
     <AdminOutreachPanel
