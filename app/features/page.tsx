@@ -6,10 +6,7 @@ import {
 } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
 
-export const metadata = {
-  title: "Features - Swiftscope",
-  description: "Everything Swiftscope gives your trade business: 4-minute quoting, plan markup and takeoffs, AI drawing analysis, job management, and Xero-friendly exports.",
-};
+export const metadata = { title: "Features - Swiftscope" };
 
 export default function FeaturesPage() {
   return (
@@ -34,7 +31,7 @@ export default function FeaturesPage() {
         <div className="max-w-7xl mx-auto px-6 py-20">
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
             {[
-              { icon:MapPin,      type:"replace",   replaces:"HiPages",          label:"Lead generation",      note:"Homeowner quote requests for a flat $10/month. No per-lead auction. No credits system." },
+              { icon:MapPin,      type:"replace",   replaces:"HiPages",          label:"Lead generation",      note:"Homeowner quote requests included with your plan. No per-lead auction. No credits system." },
               { icon:Briefcase,   type:"replace",   replaces:"Fergus / Tradify", label:"Job management",       note:"Quotes, jobs, scheduling, variations, job costing. All in one place, all on your phone." },
               { icon:Smartphone,  type:"replace",   replaces:"ServiceM8",        label:"Mobile quoting",       note:"Trade-specific quote builder on your phone. Send the quote before you leave the driveway." },
               { icon:PenTool,     type:"replace",   replaces:"GroundPlan",       label:"Drawing markup",       note:"Upload site plans, draw cable runs or pipe routes, count items. Costs link to your quote." },
@@ -109,7 +106,7 @@ export default function FeaturesPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
               { icon:Zap,       title:"Quote in 4 minutes",   body:"Trade-specific fields. Numbers calculate live as you fill them in. Send a professional quote from your phone before you leave the driveway." },
-              { icon:MapPin,    title:"Win local leads",      body:"Homeowners in your area post jobs. You claim them for a flat $10/month directory fee. No auction. No credits. No per-lead cost." },
+              { icon:MapPin,    title:"Win local leads",      body:"Homeowners in your area post jobs. You claim them at no extra cost. No auction. No credits. No per-lead cost." },
               { icon:PenTool,   title:"Mark up drawings",     body:"Upload site plans. Draw cable runs, pipe routes, or areas. Count items directly on the plan. All costs feed into your quote automatically." },
               { icon:DollarSign,title:"Know your margin",     body:"Job costing tracks actual hours and materials against what you quoted. See exactly where you made or lost money on every single job." },
               { icon:FileText,  title:"Variations in writing",body:"Scope creep kills margins. Raise a variation order in one tap. It gets signed off before you touch a single extra item." },
@@ -179,8 +176,8 @@ export default function FeaturesPage() {
                 {[
                   {
                     feature:"Lead generation",
-                    detail:"Swiftscope connects homeowners directly to tradies via the directory and quote request system. You pay $10/month flat - no auction, no credits, no per-lead cost. HiPages charges $30-150 per lead depending on trade and urgency.",
-                    us:"$10/mo flat",    c1:"$30-150/lead",    c2:"Not included",    c3:"Not included",  c4:"Not included",  c5:"Not included", usBest:true,
+                    detail:"Swiftscope connects homeowners directly to tradies via the directory and quote request system. Included with your plan - no auction, no credits, no per-lead cost. HiPages charges $30-150 per lead depending on trade and urgency.",
+                    us:"Included",    c1:"$30-150/lead",    c2:"Not included",    c3:"Not included",  c4:"Not included",  c5:"Not included", usBest:true,
                   },
                   {
                     feature:"Job management",
@@ -214,7 +211,7 @@ export default function FeaturesPage() {
                   },
                   {
                     feature:"Pricing",
-                    detail:"Swiftscope is $45/month flat for the full platform - unlimited seats, unlimited quotes, unlimited jobs. The directory add-on (leads) is $10/month extra. Per-user pricing at competitors means costs scale steeply as you add staff.",
+                    detail:"Swiftscope is $45/month flat for the full platform - unlimited seats, unlimited quotes, unlimited jobs, directory and leads included. Per-user pricing at competitors means costs scale steeply as you add staff.",
                     us:"$45/mo flat",    c1:"$80-300/mo + leads", c2:"~$40/user/mo", c3:"$29-349/mo",   c4:"$48-62/user/mo", c5:"$75+/user/mo", usBest:true,
                   },
                   {
