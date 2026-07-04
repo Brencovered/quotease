@@ -42,7 +42,7 @@ interface SelectedPlatform {
   customPrice:number;
 }
 
-const SWIFTSCOPE_PRICE = 39; // AUD/month all inclusive
+const SWIFTSCOPE_PRICE = 45; // AUD/month all inclusive
 
 export default function SavingsCalculator() {
   const [selected,   setSelected]   = useState<SelectedPlatform[]>([]);

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SavingsCalculator from "@/components/SavingsCalculator";
 import Image from "next/image";
 import type { Metadata } from "next";
 import {
@@ -279,6 +280,22 @@ export default function Home() {
             Curious how we stack up against Fergus, ServiceM8, and the rest?{" "}
             <Link href="/features" className="font-bold text-[#0a1722] underline">See the comparison</Link>
           </p>
+        </div>
+      </div>
+
+      {/* SAVINGS CALCULATOR */}
+      <div className="bg-white border-b border-[#e8ecef]">
+        <div className="max-w-7xl mx-auto px-6 py-20">
+          <div className="text-center mb-12">
+            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Savings calculator</p>
+            <h2 className="font-display uppercase text-[2.4rem] sm:text-[3rem] leading-[0.93] text-[#0a1722] mb-4">
+              See what you&apos;d save switching to Swiftscope
+            </h2>
+            <p className="text-[15px] text-[#5a6a78] max-w-xl mx-auto">
+              Select the platforms you&apos;re currently paying for, adjust seat count and pricing, then calculate.
+            </p>
+          </div>
+          <SavingsCalculator />
         </div>
       </div>
 
