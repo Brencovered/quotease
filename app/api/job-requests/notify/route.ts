@@ -41,7 +41,6 @@ export async function POST(req: NextRequest) {
     .from("tradie_directory_settings")
     .select("profile_id, service_suburbs, lead_temps_wanted")
     .eq("directory_active", true)
-    .eq("monthly_fee_active", true)
     .contains("lead_temps_wanted", [request.lead_temperature]);
 
   if (!settings?.length) {
