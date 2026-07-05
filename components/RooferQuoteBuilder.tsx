@@ -7,7 +7,11 @@ import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
-import { siteItemsLabourTotal, siteItemsMaterialsTotal, markupChargeTotal } from "@/lib/quotePricing";
+import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupChargeTotal, markupMaterialsTotal, markupLabourHours } from "@/lib/quotePricing";
+import StepCustomer from "./StepCustomer";
+import { resolveClientId } from "@/lib/resolveClientId";
+import { getActiveBusinessId } from "@/lib/team";
+import { PAYMENT_TERM_PRESETS } from "@/lib/paymentTerms";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -105,6 +109,14 @@ export default function RooferQuoteBuilder({
   // ── State ──────────────────────────────────────────────────────
   const [siteItems, setSiteItems] = useState<{id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]>([]);
   const [annotationMeta, setAnnotationMeta] = useState<{id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string;roomName?:string}[]>([]);
+
+  // ── Customer & site (was missing entirely -- save/send had no way to
+  //    know who the quote was for) ──────────────────────────────────
+  const [clientName,  setClientName]  = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [siteAddress, setSiteAddress] = useState("");
+  const [clientId, setClientId] = useState<string | null>(preClientId ?? null);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   // ── AI drawing / AI voice (Files) ─────────────────────────────
   const [drawingFiles, setDrawingFiles]     = useState<File[]>([]);
@@ -380,68 +392,92 @@ export default function RooferQuoteBuilder({
   }
 
   // ── Build + send quote ─────────────────────────────────────────
-  async function buildQuote() {
+  // Previously this was a stub: profile_id was hardcoded to "TODO", there
+  // was no client name/email/address capture at all (hardcoded to ""), and
+  // handleSend just did console.log -- nothing was ever actually saved
+  // against a real account or sent to a client. Rebuilt to match the same
+  // pattern the other 4 trades use.
+  async function saveAndSend(sendEmail: boolean) {
     if (!summary || jobs.length === 0) return;
+    setSaving(true); setSaveMessage(null);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSaveMessage("Not logged in"); setSaving(false); return; }
+    const businessId = await getActiveBusinessId(supabase, user.id);
+    const resolvedClientId = await resolveClientId(supabase, businessId, clientId, clientName, clientEmail, siteAddress);
 
-    const quotePayload = {
-      quoteNumber: generateQuoteNumber(),
-      clientId: preClientId || null,
-      clientName: "",
-      clientAddress: "",
-      date: new Date().toISOString().slice(0, 10),
-      validUntil: new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10),
-      jobs: jobs.map((j, i) => ({
-        index: i + 1,
-        area: j.area,
-        pitch: j.pitchType,
-        style: j.roofStyle,
-        description: j.description,
-        photos: j.photos.length,
-        annotations: j.annotations,
-      })),
-      material: MATERIALS[material],
-      color,
-      labourRate: RATES[labourRate],
-      tier,
-      extras,
-      notes,
-      warranty,
+    for (const m of lib) {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(m.item_key);
+      if (isUuid) {
+        await supabase.from("price_book_items").update({ description: m.label, cost_price: m.unit_cost, trade: "roofer", unit: "ea" }).eq("id", m.item_key).eq("profile_id", businessId);
+      } else {
+        await supabase.from("price_book_items").insert({ profile_id: businessId, supplier: "Custom", description: m.label, cost_price: m.unit_cost, trade: "roofer", unit: "ea" });
+      }
+      await supabase.from("material_items").upsert({ profile_id: businessId, trade: "roofer", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost }, { onConflict: "profile_id,item_key" });
+    }
+
+    const rate = profile.hourly_rate ?? 95;
+    const siteLabourSave   = siteItemsLabourHours(siteItems);
+    const siteMatlsSave    = siteItemsMaterialsTotal(siteItems, effectiveMargin);
+    const siteTotalSave    = Math.round(siteLabourSave * rate + siteMatlsSave);
+    const markupLabourSave = markupLabourHours(preMarkupMaterials);
+    const markupMatlsSave  = markupMaterialsTotal(preMarkupMaterials, effectiveMargin);
+    const markupTotalSave  = Math.round(markupLabourSave * rate + markupMatlsSave);
+    const formulaLabourHrs = summary.labour / rate;
+
+    const { data: quote, error } = await supabase.from("quotes").insert({
+      profile_id: businessId,
+      client_id: resolvedClientId,
+      client_name: clientName,
+      client_email: clientEmail,
+      site_address: siteAddress,
+      trade: "roofer",
+      job_type: `${MATERIALS[material].label} re-roof`,
+      intake_data: {
+        jobs: jobs.map((j, i) => ({
+          index: i + 1, area: j.area, pitch: j.pitchType, style: j.roofStyle,
+          description: j.description, annotations: j.annotations,
+        })),
+        material, color, labourRate, tier, extras, notes, warranty,
+        site_items: siteItems,
+        annotation_meta: annotationMeta.map(a => ({ ...a, frameData: "" })),
+      },
+      labour_hours: formulaLabourHrs + siteLabourSave + markupLabourSave,
+      materials_cost: Math.round(summary.matCost + summary.extrasTotal + summary.colorSurcharge + siteMatlsSave + markupMatlsSave),
+      total_cost: Math.round(summary.total + siteTotalSave + markupTotalSave),
+      payment_terms: PAYMENT_TERM_PRESETS.full_on_completion,
       pricing_tier_id: selectedPricingTierId,
       job_size_tier_id: selectedJobSizeTierId,
-      summary: {
-        totalArea: summary.totalArea,
-        labour: summary.labour,
-        materials: summary.matCost,
-        extras: summary.extrasTotal,
-        colorSurcharge: summary.colorSurcharge,
-        filesAndAnnotationItems: siteTotal,
-        subtotal: summary.subtotal + siteTotal,
-        gst: summary.gst,
-        total: summary.total + siteTotal,
-      },
-      siteItems,
-      markupMaterials: preMarkupMaterials ?? [],
-    };
+      status: sendEmail ? "sent" : "draft",
+      sent_at: sendEmail ? new Date().toISOString() : null,
+      markup_materials: preMarkupMaterials ?? [],
+    }).select().single();
 
-    return quotePayload;
-  }
+    if (error) { setSaveMessage(error.message); setSaving(false); return; }
 
-  async function handleSave() {
-    const payload = await buildQuote();
-    if (!payload) return;
-    setSaving(true);
-    try {
-      const supabase = createClient();
-      await supabase.from("quotes").insert({ ...payload, profile_id: "TODO" });
-    } finally {
-      setSaving(false);
+    for (const job of jobs) {
+      for (const file of job.photos) {
+        const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+        const path = `${businessId}/${quote.id}/${Date.now()}-${safeName}`;
+        const { error: upErr } = await supabase.storage.from("job-files").upload(path, file);
+        if (!upErr) await supabase.from("job_attachments").insert({ quote_id: quote.id, profile_id: businessId, file_name: file.name, storage_path: path, file_type: file.type, file_size: file.size });
+      }
     }
-  }
+    for (const file of drawingFiles) {
+      const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+      const path = `${businessId}/${quote.id}/${Date.now()}-${safeName}`;
+      const { error: upErr } = await supabase.storage.from("job-files").upload(path, file);
+      if (!upErr) await supabase.from("job_attachments").insert({ quote_id: quote.id, profile_id: businessId, file_name: file.name, storage_path: path, file_type: file.type, file_size: file.size });
+    }
 
-  async function handleSend() {
-    const payload = await buildQuote();
-    if (!payload) return;
-    console.log("Send quote:", payload);
+    if (sendEmail) {
+      const res = await fetch("/api/quotes/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quoteId: quote.id }) });
+      if (!res.ok) { const b = await res.json().catch(() => ({})); setSaveMessage(`Saved -- sending failed: ${b.error ?? res.statusText}`); setSaving(false); return; }
+      setSaveMessage(`Sent to ${clientEmail}`);
+    } else {
+      setSaveMessage("Saved as draft");
+    }
+    setSaving(false);
   }
 
   // ── Render ─────────────────────────────────────────────────────
@@ -475,6 +511,14 @@ export default function RooferQuoteBuilder({
           </div>
         )}
       </div>
+
+      {/* Customer & site -- previously missing entirely */}
+      <StepCustomer
+        clientName={clientName} setClientName={setClientName}
+        clientEmail={clientEmail} setClientEmail={setClientEmail}
+        siteAddress={siteAddress} setSiteAddress={setSiteAddress}
+        setClientId={setClientId}
+      />
 
       {/* Live site annotation */}
       <LiveSiteAnnotation
@@ -846,16 +890,17 @@ export default function RooferQuoteBuilder({
 
       {/* ── Actions ──────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row gap-3 pt-4">
-        <button onClick={handleSave} disabled={saving || !summary}
+        <button onClick={() => saveAndSend(false)} disabled={saving || !summary}
           className="flex-1 flex items-center justify-center gap-2 bg-[var(--navy)] text-white font-bold text-[14px] py-3.5 rounded-xl hover:bg-[#121f2b] transition-colors disabled:opacity-40">
           {saving ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
-          {saving ? "Saving..." : "Save quote"}
+          {saving ? "Saving..." : "Save as draft"}
         </button>
-        <button onClick={handleSend} disabled={!summary}
+        <button onClick={() => saveAndSend(true)} disabled={saving || !summary || !clientEmail}
           className="flex-1 flex items-center justify-center gap-2 bg-[var(--amber)] text-[var(--navy)] font-extrabold text-[14px] py-3.5 rounded-xl hover:bg-[var(--amber-deep)] transition-colors disabled:opacity-40">
-          <Phone size={15} /> Send to client
+          <Phone size={15} /> {saving ? "Sending..." : "Send quote to client"}
         </button>
       </div>
+      {saveMessage && <p className="text-[13px] text-center text-[var(--ink-soft)]">{saveMessage}</p>}
     </div>
   );
 }

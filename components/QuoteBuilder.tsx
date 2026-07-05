@@ -15,7 +15,7 @@ import MaterialsEditor from "@/components/MaterialsEditor";
 import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import SiteAnnotationReport from "@/components/SiteAnnotationReport";
-import { siteItemsLabourTotal, siteItemsMaterialsTotal, markupChargeTotal } from "@/lib/quotePricing";
+import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupChargeTotal, markupMaterialsTotal, markupLabourHours } from "@/lib/quotePricing";
 import {
   calcElectricianQuote,
   ELECTRICIAN_DEFAULT_MATERIALS,
@@ -310,9 +310,12 @@ export default function QuoteBuilder({
     }
 
     const extraTotals    = extraLinesTotals(extraLines, rate, effectiveMargin);
-    const siteLabourSave = siteItems.reduce((s, i) => s + i.labourHrs, 0);
-    const siteMatlsSave  = siteItems.reduce((s, i) => s + i.materialsCost * (1 + effectiveMargin / 100), 0);
+    const siteLabourSave = siteItemsLabourHours(siteItems);
+    const siteMatlsSave  = siteItemsMaterialsTotal(siteItems, effectiveMargin);
     const siteTotalSave  = Math.round(siteLabourSave * rate + siteMatlsSave);
+    const markupLabourSave = markupLabourHours(preMarkupMaterials);
+    const markupMatlsSave  = markupMaterialsTotal(preMarkupMaterials, effectiveMargin);
+    const markupTotalSave  = Math.round(markupLabourSave * rate + markupMatlsSave);
 
     const quotePayload: Record<string, unknown> = {
       profile_id: businessId, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail,
@@ -322,9 +325,9 @@ export default function QuoteBuilder({
         site_items:      siteItems,
         annotation_meta: annotationMeta.map(a => ({ ...a, frameData: "" })),
       },
-      labour_hours:   result.labourHours + extraLines.reduce((s, l) => s + l.hours, 0) + siteLabourSave,
-      materials_cost: Math.round(result.materialsCost + extraTotals.materials + siteMatlsSave),
-      total_cost:     result.totalCost + extraTotals.total + siteTotalSave,
+      labour_hours:   result.labourHours + extraLines.reduce((s, l) => s + l.hours, 0) + siteLabourSave + markupLabourSave,
+      materials_cost: Math.round(result.materialsCost + extraTotals.materials + siteMatlsSave + markupMatlsSave),
+      total_cost:     result.totalCost + extraTotals.total + siteTotalSave + markupTotalSave,
       payment_terms:  paymentTerms,
       quote_expires_at: new Date(Date.now() + (profile.default_expiry_days ?? 30) * 86400000).toISOString(),
       status:  sendEmail ? "sent" : "draft",

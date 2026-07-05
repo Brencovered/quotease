@@ -35,6 +35,10 @@ export function siteItemsLabourTotal(items: SiteItem[], rate: number): number {
   return items.reduce((s, i) => s + (i.labourHrs ?? 0) * rate, 0);
 }
 
+export function siteItemsLabourHours(items: SiteItem[]): number {
+  return items.reduce((s, i) => s + (i.labourHrs ?? 0), 0);
+}
+
 export function siteItemsMaterialsTotal(items: SiteItem[], effectiveMarginPct: number): number {
   return items.reduce((s, i) => s + (i.materialsCost ?? 0) * (1 + effectiveMarginPct / 100), 0);
 }
@@ -45,6 +49,10 @@ export function markupMaterialsTotal(items: MarkupMaterial[] | undefined, effect
 
 export function markupLabourTotal(items: MarkupMaterial[] | undefined, rate: number): number {
   return (items ?? []).reduce((s, m) => s + (m.labourHrs ?? 0) * rate, 0);
+}
+
+export function markupLabourHours(items: MarkupMaterial[] | undefined): number {
+  return (items ?? []).reduce((s, m) => s + (m.labourHrs ?? 0), 0);
 }
 
 /** Combined charge-out total (labour + materials-at-margin) for a set of

@@ -14,7 +14,7 @@ import { resolveClientId } from "@/lib/resolveClientId";
 import { getActiveBusinessId } from "@/lib/team";
 import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
-import { siteItemsLabourTotal, siteItemsMaterialsTotal, markupChargeTotal } from "@/lib/quotePricing";
+import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupChargeTotal, markupMaterialsTotal, markupLabourHours } from "@/lib/quotePricing";
 
 type MaterialRow = { item_key: string; label: string; unit_cost: number };
 
@@ -187,6 +187,12 @@ export default function CarpenterQuoteBuilder({
       await supabase.from("material_items").upsert({ profile_id: businessId, trade: "carpenter", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost }, { onConflict: "profile_id,item_key" });
     }
     const extraTotals = extraLinesTotals(extraLines, rate, effectiveMargin);
+    const siteLabourSave   = siteItemsLabourHours(siteItems);
+    const siteMatlsSave    = siteItemsMaterialsTotal(siteItems, effectiveMargin);
+    const siteTotalSave    = Math.round(siteLabourSave * rate + siteMatlsSave);
+    const markupLabourSave = markupLabourHours(preMarkupMaterials);
+    const markupMatlsSave  = markupMaterialsTotal(preMarkupMaterials, effectiveMargin);
+    const markupTotalSave  = Math.round(markupLabourSave * rate + markupMatlsSave);
     const { data: quote, error } = await supabase.from("quotes").insert({
       profile_id: businessId,
       client_id: resolvedClientId,
@@ -195,10 +201,10 @@ export default function CarpenterQuoteBuilder({
       site_address: siteAddress,
       trade: "carpenter",
       job_type: intake.jobType,
-      intake_data: intake,
-      labour_hours: result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0),
-      materials_cost: result.materialsCost + extraTotals.materials,
-      total_cost: result.totalCost + extraTotals.total,
+      intake_data: { ...intake, site_items: siteItems, annotation_meta: annotationMeta.map(a => ({ ...a, frameData: "" })) },
+      labour_hours: result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0) + siteLabourSave + markupLabourSave,
+      materials_cost: result.materialsCost + extraTotals.materials + siteMatlsSave + markupMatlsSave,
+      total_cost: result.totalCost + extraTotals.total + siteTotalSave + markupTotalSave,
       payment_terms: paymentTerms,
       pricing_tier_id: selectedPricingTierId,
       job_size_tier_id: selectedJobSizeTierId,
