@@ -14,6 +14,7 @@ import { resolveClientId } from "@/lib/resolveClientId";
 import { getActiveBusinessId } from "@/lib/team";
 import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
+import { siteItemsLabourTotal, siteItemsMaterialsTotal, markupChargeTotal } from "@/lib/quotePricing";
 
 type MaterialRow = { item_key: string; label: string; unit_cost: number };
 
@@ -117,9 +118,9 @@ export default function CarpenterQuoteBuilder({
 
   const costs = useMemo(() => { const m: Record<string,number> = {}; lib.forEach((r) => (m[r.item_key] = Number(r.unit_cost)||0)); return m; }, [lib]);
   const result = useMemo(() => calcCarpenterQuote(intake, costs, rate, effectiveMargin), [intake, costs, rate, effectiveMargin]);
-  const markupTotal  = (preMarkupMaterials ?? []).reduce((s, m) => s + (m.totalCost ?? 0), 0);
-  const siteLabour   = siteItems.reduce((s, i) => s + i.labourHrs * rate, 0);
-  const siteMaterials = siteItems.reduce((s, i) => s + i.materialsCost * (1 + effectiveMargin / 100), 0);
+  const markupTotal  = markupChargeTotal(preMarkupMaterials, rate, effectiveMargin);
+  const siteLabour   = siteItemsLabourTotal(siteItems, rate);
+  const siteMaterials = siteItemsMaterialsTotal(siteItems, effectiveMargin);
   const siteTotal    = Math.round(siteLabour + siteMaterials);
 
   function set<K extends keyof CarpenterIntake>(k: K, v: CarpenterIntake[K]) { setIntake((p) => ({...p,[k]:v})); }
@@ -150,10 +151,13 @@ export default function CarpenterQuoteBuilder({
       const res = await fetch("/api/quotes/analyze-voice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript, instructions: "This is a carpentry job. Focus on doors, framing, timber runs, and joinery." }),
+        body: JSON.stringify({ transcript, trade: "carpenter", instructions: "This is a carpentry job. Focus on doors, framing, timber runs, and joinery." }),
       });
       const body = await res.json();
       if (!res.ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
+      if (Array.isArray(body.result?.detected_items) && body.result.detected_items.length > 0) {
+        setDetectedItems(body.result.detected_items);
+      }
       setAnalysisResult({ confidence: body.result?.confidence ?? "low", notes: body.result?.notes ?? "" });
     } catch (err) { setAnalysisError(err instanceof Error ? err.message : "Could not reach analysis service."); }
     finally { setAnalyzing(false); }
@@ -312,7 +316,7 @@ export default function CarpenterQuoteBuilder({
                         unit: item.unit,
                         note: "from drawing analysis",
                         materialsCost: item.total ?? 0,
-                        labourHrs: 0,
+                        labourHrs: item.labourHrs,
                       })),
                     ]);
                     setDetectedItems([]);

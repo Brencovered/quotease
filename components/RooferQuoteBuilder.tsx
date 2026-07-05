@@ -2,8 +2,12 @@
 
 import { useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { ChevronDown, ChevronUp, Plus, Trash2, PenLine, Image, FileText, MessageSquare, Maximize2, Camera, SquareCheck, Phone, ArrowRight, Loader2, PlusCircle, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Trash2, PenLine, Image, FileText, MessageSquare, Maximize2, Camera, SquareCheck, Phone, ArrowRight, Loader2, PlusCircle, X, Paperclip, Sparkles } from "lucide-react";
 import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
+import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
+import VoiceNoteRecorder from "./VoiceNoteRecorder";
+import { normalizeForAnalysis } from "@/lib/imageNormalize";
+import { siteItemsLabourTotal, siteItemsMaterialsTotal, markupChargeTotal } from "@/lib/quotePricing";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -102,6 +106,14 @@ export default function RooferQuoteBuilder({
   const [siteItems, setSiteItems] = useState<{id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]>([]);
   const [annotationMeta, setAnnotationMeta] = useState<{id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string;roomName?:string}[]>([]);
 
+  // ── AI drawing / AI voice (Files) ─────────────────────────────
+  const [drawingFiles, setDrawingFiles]     = useState<File[]>([]);
+  const [detectedItems, setDetectedItems]   = useState<DetectedItem[]>([]);
+  const [analyzing, setAnalyzing]           = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<{ confidence: string; notes: string } | null>(null);
+  const [analysisError, setAnalysisError]   = useState<string | null>(null);
+  const [usageLimitReached, setUsageLimitReached] = useState(false);
+
   const [jobs, setJobs] = useState<JobDetail[]>([]);
   const [material, setMaterial] = useState<MaterialType>("colourbond");
   const [color, setColor] = useState<ColorPreference>("monument");
@@ -160,6 +172,51 @@ export default function RooferQuoteBuilder({
 
   function removeJob(id: string) {
     setJobs(prev => prev.filter(j => j.id !== id));
+  }
+
+  function handleDrawingUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    setDrawingFiles((prev) => { const ex = new Set(prev.map((f) => f.name)); return [...prev, ...files.filter((f) => !ex.has(f.name))]; });
+    setAnalysisResult(null); setAnalysisError(null); e.target.value = "";
+  }
+
+  async function runAiAnalysis() {
+    if (!drawingFiles.length) return;
+    setAnalyzing(true); setAnalysisError(null); setAnalysisResult(null);
+    try {
+      const fd = new FormData();
+      const fileForAnalysis = await normalizeForAnalysis(drawingFiles[0]);
+      fd.append("file", fileForAnalysis);
+      fd.append("trade", "roofer");
+      fd.append("instructions", "This is a roofing job. Focus on roof area, guttering, ridge/valley lengths, and any roof-mounted extras.");
+      const res  = await fetch("/api/quotes/analyze-drawing", { method: "POST", body: fd });
+      const body = await res.json();
+      if (!res.ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
+      if (Array.isArray(body.result?.detected_items) && body.result.detected_items.length > 0) {
+        setDetectedItems(body.result.detected_items);
+      }
+      setAnalysisResult({ confidence: body.result?.confidence ?? "low", notes: body.result?.notes ?? "" });
+    } catch (err) { setAnalysisError(err instanceof Error ? err.message : "Could not reach analysis service."); }
+    finally { setAnalyzing(false); }
+  }
+
+  async function onVoiceTranscript(transcript: string) {
+    setAnalyzing(true); setAnalysisError(null); setAnalysisResult(null); setUsageLimitReached(false);
+    try {
+      const res = await fetch("/api/quotes/analyze-voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcript, trade: "roofer", instructions: "This is a roofing job. Focus on roof area, guttering, ridge/valley lengths, and any roof-mounted extras." }),
+      });
+      const body = await res.json();
+      if (!res.ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
+      if (Array.isArray(body.result?.detected_items) && body.result.detected_items.length > 0) {
+        setDetectedItems(body.result.detected_items);
+      }
+      setAnalysisResult({ confidence: body.result?.confidence ?? "low", notes: body.result?.notes ?? "" });
+    } catch (err) { setAnalysisError(err instanceof Error ? err.message : "Could not reach analysis service."); }
+    finally { setAnalyzing(false); }
   }
 
   function updateJob(id: string, patch: Partial<JobDetail>) {
@@ -357,10 +414,13 @@ export default function RooferQuoteBuilder({
         materials: summary.matCost,
         extras: summary.extrasTotal,
         colorSurcharge: summary.colorSurcharge,
-        subtotal: summary.subtotal,
+        filesAndAnnotationItems: siteTotal,
+        subtotal: summary.subtotal + siteTotal,
         gst: summary.gst,
-        total: summary.total,
+        total: summary.total + siteTotal,
       },
+      siteItems,
+      markupMaterials: preMarkupMaterials ?? [],
     };
 
     return quotePayload;
@@ -386,7 +446,12 @@ export default function RooferQuoteBuilder({
 
   // ── Render ─────────────────────────────────────────────────────
 
-  const siteTotal = Math.round(siteItems.reduce((s, i) => s + i.labourHrs * 95 + i.materialsCost, 0));
+  const markupTotal = markupChargeTotal(preMarkupMaterials, profile.hourly_rate ?? 95, effectiveMargin);
+  const siteTotal = Math.round(
+    siteItemsLabourTotal(siteItems, profile.hourly_rate ?? 95)
+    + siteItemsMaterialsTotal(siteItems, effectiveMargin)
+    + markupTotal
+  );
 
   function saveDraft() {
     try {
@@ -432,6 +497,82 @@ export default function RooferQuoteBuilder({
           ]);
         }}
       />
+
+      {/* ── Files: photos, AI drawing analysis, AI voice ────────── */}
+      <div className="space-y-4">
+        <div className="card">
+          <p className="section-tag mb-1">Files</p>
+          <p className="font-semibold text-[17px] mb-1">Upload photos or plans</p>
+          <p className="text-[13px] text-[var(--ink-faint)] mb-4">Roof photos, aerial shots, or existing plans.</p>
+          <label className="flex items-center justify-center gap-2 border-2 border-dashed border-[var(--line)] rounded-xl py-8 cursor-pointer hover:border-[var(--amber)] transition-colors bg-[var(--app-bg)]">
+            <Paperclip size={18} className="text-[var(--ink-faint)]" />
+            <span className="text-[14px] font-semibold text-[var(--ink-soft)]">Add photos or plans</span>
+            <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={handleDrawingUpload} />
+          </label>
+          {drawingFiles.length > 0 && (
+            <div className="mt-3 space-y-2">
+              {drawingFiles.map((f) => (
+                <div key={f.name} className="flex items-center gap-3 bg-[var(--app-bg)] rounded-lg px-3 py-2.5">
+                  <Paperclip size={14} className="text-[var(--ink-faint)] shrink-0" />
+                  <span className="text-[13.5px] flex-1 truncate">{f.name}</span>
+                  <button onClick={() => setDrawingFiles((p) => p.filter((x) => x.name !== f.name))}><X size={14} className="text-[var(--ink-faint)]" /></button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <VoiceNoteRecorder
+          onTranscriptReady={onVoiceTranscript}
+          analyzing={analyzing}
+          analysisError={analysisError}
+          analysisResult={analysisResult}
+          usageLimitReached={usageLimitReached}
+        />
+
+        {drawingFiles.length > 0 && (
+          <div className="card border-2 border-[var(--amber-light)]">
+            <div className="flex items-start gap-3 mb-3">
+              <Sparkles size={18} className="text-[var(--amber-deep)] mt-0.5 shrink-0" />
+              <div>
+                <p className="font-semibold">AI field pre-fill (optional)</p>
+                <p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5">AI reads the photo/plan and notes what it can. You review everything.</p>
+              </div>
+            </div>
+            <button onClick={runAiAnalysis} disabled={analyzing} className="btn-secondary w-full justify-center">
+              <Sparkles size={15} className="text-[var(--amber-deep)]" />{analyzing ? "Reading..." : "Analyse with AI"}
+            </button>
+            {analysisError && <p className="text-[13px] text-[var(--red)] mt-2">{analysisError}</p>}
+          </div>
+        )}
+
+        {detectedItems.length > 0 && analysisResult && (
+          <DrawingAnalysisReviewTable
+            trade="roofer"
+            detectedItems={detectedItems}
+            confidence={analysisResult.confidence as "high" | "medium" | "low"}
+            notes={analysisResult.notes}
+            lib={lib as { item_key: string; label: string; unit_cost: number }[]}
+            onAccept={(items: ReviewLineItem[]) => {
+              setSiteItems((prev) => [
+                ...prev,
+                ...items.map((item) => ({
+                  id: Math.random().toString(36).slice(2),
+                  label: item.label,
+                  qty: item.quantity,
+                  unit: item.unit,
+                  note: "from drawing/voice analysis",
+                  materialsCost: item.total ?? 0,
+                  labourHrs: item.labourHrs,
+                })),
+              ]);
+              setDetectedItems([]);
+              setAnalysisResult(null);
+            }}
+            onDismiss={() => { setDetectedItems([]); setAnalysisResult(null); }}
+          />
+        )}
+      </div>
 
       {/* ── Jobs section ─────────────────────────────────────── */}
       <div className="space-y-3">
@@ -685,9 +826,15 @@ export default function RooferQuoteBuilder({
               <span className="text-[var(--ink-soft)]">GST (10%)</span>
               <span className="font-semibold">${Math.round(summary.gst).toLocaleString()}</span>
             </div>
+            {(siteTotal > 0) && (
+              <div className="flex justify-between">
+                <span className="text-[var(--ink-soft)]">Files &amp; annotation items</span>
+                <span className="font-semibold">${Math.round(siteTotal).toLocaleString()}</span>
+              </div>
+            )}
             <div className="border-t-2 border-[var(--navy)] pt-2 flex justify-between">
               <span className="font-bold text-[var(--ink)]">Total inc. GST</span>
-              <span className="font-display text-[1.4rem] text-[var(--amber-deep)]">${Math.round(summary.total).toLocaleString()}</span>
+              <span className="font-display text-[1.4rem] text-[var(--amber-deep)]">${Math.round(summary.total + siteTotal).toLocaleString()}</span>
             </div>
           </div>
 

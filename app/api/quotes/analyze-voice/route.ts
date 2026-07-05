@@ -1,11 +1,20 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { checkUsage, currentPeriod, type UsageProfile } from "@/lib/aiUsage";
+import { getTradeVoicePrompt } from "@/lib/ai/getTradeVoicePrompt";
+import { DETECTED_ITEMS_SCHEMA } from "@/lib/ai/detectedItemsSchema";
 
 // Shares the same free/add-on quota as drawing analysis (lib/aiUsage.ts) -
 // it's the same underlying cost (one Claude API call) and the same kind of
 // assist, so a separate quota would just be confusing rather than more fair.
-const SYSTEM_PROMPT = `You are helping a tradie turn a voice note recorded on site into a structured quote.
+//
+// This electrician prompt/shape is kept exactly as it was -- QuoteBuilder.tsx
+// autofills its intake form directly from these fixed fields. Every other
+// trade is dispatched dynamically below via getTradeVoicePrompt, returning
+// detected_items instead (previously every non-electrician trade ran through
+// THIS electrician-only prompt and the result was discarded but for a
+// confidence badge -- voice quoting simply didn't work for them).
+const ELECTRICIAN_SYSTEM_PROMPT = `You are helping a tradie turn a voice note recorded on site into a structured quote.
 They walked around describing the job out loud - it'll be informal, may go off on tangents, and won't
 use precise terminology. Extract what you can about an electrical job:
 - Power points (GPOs)
@@ -62,14 +71,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: usage.reason, usageLimitReached: true }, { status: 402 });
   }
 
-  const { transcript, instructions } = await request.json();
+  const { transcript, instructions, trade } = await request.json();
   if (!transcript || typeof transcript !== "string" || transcript.trim().length < 10) {
     return NextResponse.json({ error: "Transcript is too short to extract anything useful from." }, { status: 400 });
   }
 
+  const normalisedTrade = (typeof trade === "string" ? trade : "electrician").toLowerCase().trim();
+  const isElectrician = ["electrician", "electrical", "sparky", ""].includes(normalisedTrade);
+
+  const basePrompt = isElectrician
+    ? ELECTRICIAN_SYSTEM_PROMPT
+    : getTradeVoicePrompt(normalisedTrade) + DETECTED_ITEMS_SCHEMA;
+
   const systemPrompt = instructions?.trim()
-    ? `${SYSTEM_PROMPT}\n\nThe tradie also gave this instruction - follow it:\n"${instructions.trim()}"`
-    : SYSTEM_PROMPT;
+    ? `${basePrompt}\n\nThe tradie also gave this instruction - follow it:\n"${instructions.trim()}"`
+    : basePrompt;
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -93,7 +109,8 @@ export async function POST(request: Request) {
   let parsed;
   try {
     const cleaned = text.replace(/```json\s*|```\s*/g, "").trim();
-    parsed = JSON.parse(cleaned);
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    parsed = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned);
   } catch {
     return NextResponse.json({ error: "Could not parse a response from the voice note." }, { status: 502 });
   }

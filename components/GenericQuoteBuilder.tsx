@@ -13,6 +13,7 @@ import { resolveClientId } from "@/lib/resolveClientId";
 import { getActiveBusinessId } from "@/lib/team";
 import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
+import { siteItemsLabourTotal, siteItemsMaterialsTotal, markupChargeTotal } from "@/lib/quotePricing";
 
 const STEPS = [
   { id: "customer", label: "Customer" },
@@ -90,9 +91,9 @@ export default function GenericQuoteBuilder({
   }), [jobType, description, items, siteAccess]);
 
   const result = useMemo(() => calcGenericQuote(intake, effectiveMargin), [intake, effectiveMargin]);
-  const markupTotal  = (preMarkupMaterials ?? []).reduce((s, m) => s + (m.totalCost ?? 0), 0);
-  const siteLabour   = siteItems.reduce((s, i) => s + i.labourHrs * (profile.hourly_rate ?? 85), 0);
-  const siteMaterials = siteItems.reduce((s, i) => s + i.materialsCost * (1 + effectiveMargin / 100), 0);
+  const markupTotal  = markupChargeTotal(preMarkupMaterials, profile.hourly_rate ?? 85, effectiveMargin);
+  const siteLabour   = siteItemsLabourTotal(siteItems, profile.hourly_rate ?? 85);
+  const siteMaterials = siteItemsMaterialsTotal(siteItems, effectiveMargin);
   const siteTotal    = Math.round(siteLabour + siteMaterials);
   const paymentTerms = termsPreset === "custom" ? [] : PAYMENT_TERM_PRESETS[termsPreset];
 
@@ -141,10 +142,13 @@ export default function GenericQuoteBuilder({
       const res = await fetch("/api/quotes/analyze-voice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript, instructions: `This is a ${template.label.toLowerCase()} job. Focus on what a ${template.label.toLowerCase()} would need to quote from this.` }),
+        body: JSON.stringify({ transcript, trade: tradeKey ?? "generic", instructions: `This is a ${template.label.toLowerCase()} job. Focus on what a ${template.label.toLowerCase()} would need to quote from this.` }),
       });
       const body = await res.json();
       if (!res.ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
+      if (Array.isArray(body.result?.detected_items) && body.result.detected_items.length > 0) {
+        setDetectedItems(body.result.detected_items);
+      }
       setAnalysisResult({ confidence: body.result?.confidence ?? "low", notes: body.result?.notes ?? "" });
     } catch (err) { setAnalysisError(err instanceof Error ? err.message : "Could not reach analysis service."); }
     finally { setAnalyzing(false); }
@@ -324,7 +328,7 @@ export default function GenericQuoteBuilder({
                         unit: item.unit,
                         note: "from drawing analysis",
                         materialsCost: item.total ?? 0,
-                        labourHrs: 0,
+                        labourHrs: item.labourHrs,
                       })),
                     ]);
                     setDetectedItems([]);

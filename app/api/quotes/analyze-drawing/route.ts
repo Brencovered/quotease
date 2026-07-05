@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { checkUsage, currentPeriod, type UsageProfile } from "@/lib/aiUsage";
 import { getTradeSystemPrompt } from "@/lib/ai/getTradeSystemPrompt";
+import { DETECTED_ITEMS_SCHEMA } from "@/lib/ai/detectedItemsSchema";
 
 // Routes through Vercel AI Gateway -- no direct provider keys needed.
 // In production, Vercel injects OIDC auth automatically.
@@ -51,40 +52,9 @@ export async function POST(request: Request) {
   // Get the trade-specific expert system prompt
   const tradePrompt = getTradeSystemPrompt(trade);
 
-  // Spec: return detected items as an array for the review table
-  // instead of pre-filling individual form fields
-  const outputSchema = `
-
-After your expert analysis, output a JSON object with these two fields:
-
-{
-  "detected_items": [
-    { "label": "Downlight", "item_key": "dl", "quantity": <integer>, "unit": "each" },
-    { "label": "Power point (GPO)", "item_key": "gpo", "quantity": <integer>, "unit": "each" },
-    ...
-  ],
-  "notes": "<verification warnings and caveats in trade vernacular>",
-  "confidence": "<high|medium|low>"
-}
-
-Rules for detected_items:
-- Only include items with quantity > 0
-- Collate the same item type into one row (e.g. all downlights = one row with total count)
-- Use these item_key values to match the price book:
-  dl (downlights), gpo (power points), sw (switches), data (data points),
-  exhaust (exhaust fans), smoke (smoke alarms), cable (cable runs, unit=m),
-  conduit (conduit runs, unit=m), sb (switchboard), circuit (new circuits),
-  tap, toilet, basin, shower, hwu, pipe_cold, pipe_hot, pipe_waste,
-  gutter, downpipe, ridge, valley, fascia, skylight, whirlybird, roof_area,
-  wall_frame, door, window, skirting, decking
-- For metre-based items (cable, conduit, pipe runs, gutters), set unit to "m" and estimate total metres
-- For area items (roof sections), set unit to "m2"
-
-Output ONLY the JSON object. No other text before or after it.`;
-
   const systemPrompt = tradePrompt
     + (instructions ? `\n\nAdditional tradie instructions (follow these -- they know their own job):\n"${instructions}"` : "")
-    + outputSchema;
+    + DETECTED_ITEMS_SCHEMA;
 
   const contentBlock = isPdf
     ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } }

@@ -15,6 +15,7 @@ import MaterialsEditor from "@/components/MaterialsEditor";
 import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import SiteAnnotationReport from "@/components/SiteAnnotationReport";
+import { siteItemsLabourTotal, siteItemsMaterialsTotal, markupChargeTotal } from "@/lib/quotePricing";
 import {
   calcElectricianQuote,
   ELECTRICIAN_DEFAULT_MATERIALS,
@@ -186,9 +187,9 @@ export default function QuoteBuilder({
   // The wizard's running total needs to include this too, not just the
   // saved record - otherwise raising a quote from a $244 plan shows $0
   // the whole time you're filling it in, which looks broken.
-  const markupTotal = (preMarkupMaterials ?? []).reduce((s, m) => s + (m.totalCost ?? 0) * (1 + effectiveMargin / 100), 0);
-  const siteLabour    = siteItems.reduce((s, i) => s + i.labourHrs * (rate ?? 95), 0);
-  const siteMaterials = siteItems.reduce((s, i) => s + i.materialsCost * (1 + (effectiveMargin ?? 20) / 100), 0);
+  const markupTotal = markupChargeTotal(preMarkupMaterials, rate ?? 95, effectiveMargin);
+  const siteLabour    = siteItemsLabourTotal(siteItems, rate ?? 95);
+  const siteMaterials = siteItemsMaterialsTotal(siteItems, effectiveMargin ?? 20);
   const siteTotal     = Math.round(siteLabour + siteMaterials);
 
   function set<K extends keyof ElectricianIntake>(key: K, value: ElectricianIntake[K]) {
@@ -435,7 +436,7 @@ export default function QuoteBuilder({
                 unit:         item.unit,
                 note:         "from drawing analysis",
                 materialsCost: item.total ?? 0,
-                labourHrs:    0,
+                labourHrs:    item.labourHrs,
               })),
             ]);
             setDetectedItems([]);
@@ -1069,7 +1070,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
   selectedPricingTier: { id: string; name: string; markup_pct: number } | null;
   selectedJobSizeTier: { id: string; name: string; markup_pct: number } | null;
 }) {
-  const siteMaterials = siteItems.reduce((s, i) => s + i.materialsCost * (1 + (effectiveMargin ?? 20) / 100), 0);
+  const siteMaterials = siteItemsMaterialsTotal(siteItems, effectiveMargin ?? 20);
 
   return (
     <div className="space-y-4">

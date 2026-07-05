@@ -26,11 +26,14 @@ export interface DetectedItem {
   item_key: string;
   quantity: number;
   unit:     string;
+  /** AI's starting estimate of total install time for this row, hours. */
+  labour_hours?: number;
 }
 
 interface ReviewRow extends DetectedItem {
   confirmedQty: number;
   unitPrice:    number | null;
+  confirmedLabourHrs: number;
   /** Real price book product backing this row's price, if any */
   product:      PickerItem | null;
   /** Price typed by hand rather than from the price book */
@@ -44,6 +47,7 @@ export interface ReviewLineItem {
   unit:      string;
   unitPrice: number | null;
   total:     number | null;
+  labourHrs: number;
 }
 
 export default function DrawingAnalysisReviewTable({
@@ -78,6 +82,7 @@ export default function DrawingAnalysisReviewTable({
       ...item,
       confirmedQty: item.quantity,
       unitPrice:    product ? Number(product.unit_cost) : null,
+      confirmedLabourHrs: item.labour_hours ?? 0,
       product,
       manual:       false,
     };
@@ -89,6 +94,10 @@ export default function DrawingAnalysisReviewTable({
 
   function updateQty(idx: number, qty: number) {
     setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, confirmedQty: Math.max(0, qty) } : r)));
+  }
+
+  function updateLabourHrs(idx: number, hrs: number) {
+    setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, confirmedLabourHrs: Math.max(0, hrs) } : r)));
   }
 
   function updatePrice(idx: number, price: number) {
@@ -110,6 +119,8 @@ export default function DrawingAnalysisReviewTable({
   const grandTotal = rows.reduce((s, r) =>
     r.confirmedQty > 0 && r.unitPrice != null ? s + r.confirmedQty * r.unitPrice : s, 0);
 
+  const totalLabourHrs = rows.reduce((s, r) => (r.confirmedQty > 0 ? s + r.confirmedLabourHrs : s), 0);
+
   const hasUnpriced = rows.some((r) => r.unitPrice == null && r.confirmedQty > 0);
   const hasManual   = rows.some((r) => r.manual && r.confirmedQty > 0);
 
@@ -125,6 +136,7 @@ export default function DrawingAnalysisReviewTable({
         unit:      r.unit,
         unitPrice: r.unitPrice,
         total:     r.unitPrice != null ? Math.round(r.confirmedQty * r.unitPrice) : null,
+        labourHrs: r.confirmedLabourHrs,
       }));
     onAccept(lineItems);
   }
@@ -141,7 +153,7 @@ export default function DrawingAnalysisReviewTable({
       <div className="flex items-center justify-between mb-3">
         <div>
           <p className="font-bold text-[14px] text-[var(--ink)]">Drawing analysis results</p>
-          <p className="text-[12px] text-[var(--ink-faint)]">Counts from the drawing, prices from your price book</p>
+          <p className="text-[12px] text-[var(--ink-faint)]">Counts from the drawing, prices from your price book, labour hours estimated -- adjust before adding</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setCollapsed((c) => !c)} className="text-[var(--ink-faint)] p-1">
@@ -165,10 +177,11 @@ export default function DrawingAnalysisReviewTable({
       {!collapsed && (
         <>
           <div className="space-y-1 mb-3">
-            <div className="grid grid-cols-12 gap-1 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-faint)]">
-              <div className="col-span-5">Item</div>
+            <div className="grid grid-cols-[repeat(14,minmax(0,1fr))] gap-1 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-faint)]">
+              <div className="col-span-4">Item</div>
               <div className="col-span-2 text-center">Qty</div>
               <div className="col-span-1 text-center">Unit</div>
+              <div className="col-span-2 text-center">Hrs</div>
               <div className="col-span-3 text-center">Unit price</div>
               <div className="col-span-1"></div>
             </div>
@@ -180,9 +193,9 @@ export default function DrawingAnalysisReviewTable({
             {rows.map((row, idx) => {
               const lineTotal = row.unitPrice != null ? row.confirmedQty * row.unitPrice : null;
               return (
-                <div key={idx} className="grid grid-cols-12 gap-1 items-center bg-[var(--app-bg)] rounded-xl px-2 py-2">
+                <div key={idx} className="grid grid-cols-[repeat(14,minmax(0,1fr))] gap-1 items-center bg-[var(--app-bg)] rounded-xl px-2 py-2">
                   {/* Label + backing product */}
-                  <div className="col-span-5 min-w-0">
+                  <div className="col-span-4 min-w-0">
                     <p className="font-semibold text-[12.5px] text-[var(--ink)] leading-tight">{row.label}</p>
                     {row.product ? (
                       <button
@@ -215,6 +228,19 @@ export default function DrawingAnalysisReviewTable({
                   {/* Unit */}
                   <div className="col-span-1 text-center">
                     <span className="text-[11px] text-[var(--ink-soft)] font-semibold">{row.unit}</span>
+                  </div>
+
+                  {/* Labour hours -- AI estimate, editable, never shown to the customer */}
+                  <div className="col-span-2">
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.25}
+                      value={row.confirmedLabourHrs}
+                      onChange={(e) => updateLabourHrs(idx, Number(e.target.value))}
+                      className="app-field text-center text-[12.5px] py-1.5 w-full"
+                      title="Estimated labour hours for this line"
+                    />
                   </div>
 
                   {/* Price: from product, manual, or picker */}
@@ -252,9 +278,9 @@ export default function DrawingAnalysisReviewTable({
             })}
           </div>
 
-          {grandTotal > 0 && (
+          {(grandTotal > 0 || totalLabourHrs > 0) && (
             <div className="flex items-center justify-between px-2 py-2 border-t border-[var(--line-subtle)] mb-3">
-              <span className="font-bold text-[13px] text-[var(--ink-soft)]">Materials total</span>
+              <span className="font-bold text-[13px] text-[var(--ink-soft)]">Materials total{totalLabourHrs > 0 ? ` + ${totalLabourHrs}hrs labour` : ""}</span>
               <span className="font-display text-[18px] text-[var(--ink)]">${Math.round(grandTotal).toLocaleString()}</span>
             </div>
           )}
