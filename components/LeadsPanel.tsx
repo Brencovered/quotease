@@ -15,6 +15,7 @@ type Request = {
   description: string; budget: string | null; timeline: string | null;
   lead_temperature: string; status: string; num_quotes_wanted: number;
   created_at: string; job_claims: Claim[];
+  additional_details: string | null; photo_urls: string[];
 };
 type Homeowner = { name: string; email: string; phone: string | null };
 
@@ -114,6 +115,7 @@ export default function LeadsPanel({
             <div className="flex gap-3 mt-1.5 flex-wrap">
               {r.budget && <span className="text-[11.5px] text-[var(--ink-faint)]">💰 {r.budget}</span>}
               {r.timeline && <span className="text-[11.5px] text-[var(--ink-faint)]">📅 {r.timeline}</span>}
+              {r.photo_urls?.length > 0 && <span className="text-[11.5px] text-[var(--ink-faint)]">📷 {r.photo_urls.length} photo{r.photo_urls.length !== 1 ? "s" : ""}</span>}
               <span className="text-[11.5px] text-[var(--ink-faint)] flex items-center gap-0.5">
                 <Clock size={10} /> {age < 1 ? "Just now" : `${age}h ago`}
               </span>
@@ -132,6 +134,26 @@ export default function LeadsPanel({
         {isOpen && (
           <div className="mt-4 pt-4 border-t border-[var(--line-subtle)] space-y-3">
             <p className="text-[13px] text-[var(--ink)]">{r.description}</p>
+
+            {r.additional_details && (
+              <div className="bg-[var(--app-bg)] rounded-xl p-3">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-faint)] mb-1">Measurements &amp; details</p>
+                <p className="text-[13px] text-[var(--ink-soft)]">{r.additional_details}</p>
+              </div>
+            )}
+
+            {r.photo_urls?.length > 0 && (
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-faint)] mb-1.5">Photos</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {r.photo_urls.map((url, i) => (
+                    <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                      <img src={url} alt={`Job photo ${i + 1}`} className="w-full h-20 object-cover rounded-lg border border-[var(--line)]" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {cardMsg && (
               <p className="text-[12.5px] font-semibold text-[var(--green)]">{cardMsg}</p>

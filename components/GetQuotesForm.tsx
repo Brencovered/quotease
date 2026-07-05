@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import {
   Home, Building2, User,
-  Search, MapPin, Phone, Mail, FileText, Loader2, Check, Info, Wrench, ChevronRight,
+  Search, MapPin, Phone, Mail, FileText, Loader2, Check, Info, Wrench, ChevronRight, Camera,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -16,6 +16,7 @@ const TRADES = [
 ];
 
 const MIN_JOB_DESC_LENGTH = 10;
+const MAX_PHOTOS = 6;
 
 const JOB_STAGES = [
   { value: "ready", label: "Ready to hire - just need quotes" },
@@ -42,7 +43,7 @@ const BUDGETS = [
 /*  Form state                                                         */
 /* ------------------------------------------------------------------ */
 
-interface FormData {
+interface QuoteFormData {
   trade: string;
   jobDescription: string;
   propertyType: string;
@@ -54,6 +55,7 @@ interface FormData {
   email: string;
   phone: string;
   consent: boolean;
+  additionalDetails: string;
 }
 
 interface UserData {
@@ -109,11 +111,13 @@ export default function GetQuotesForm({ user, homeowner }: { user: UserData | nu
   // rendered (empty) one, tripping a hydration mismatch (React #418).
   // Restoring from localStorage in an effect below avoids that: it only
   // runs after hydration has already completed.
-  const [form, setForm] = useState<FormData>({
+  const [form, setForm] = useState<QuoteFormData>({
     trade: "", jobDescription: "", propertyType: "", timeline: "",
     budget: "", stage: "", location: "", name: "", email: "",
-    phone: "", consent: false,
+    phone: "", consent: false, additionalDetails: "",
   });
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [restoredDraft, setRestoredDraft] = useState(false);
 
   useEffect(() => {
@@ -157,7 +161,7 @@ export default function GetQuotesForm({ user, homeowner }: { user: UserData | nu
   }, [user, homeowner]);
 
   // ── Helpers ──────────────────────────────────────────────────────
-  const update = useCallback((patch: Partial<FormData>) => {
+  const update = useCallback((patch: Partial<QuoteFormData>) => {
     setForm(prev => ({ ...prev, ...patch }));
     // clear error on field change
     for (const key of Object.keys(patch)) {
@@ -207,24 +211,24 @@ export default function GetQuotesForm({ user, homeowner }: { user: UserData | nu
     if (!validateStep(2)) return;
     setSubmitting(true);
     try {
-      const body = {
-        trade: form.trade,
-        job_description: form.jobDescription,
-        property_type: form.propertyType,
-        timeline: form.timeline,
-        budget: form.budget,
-        stage: form.stage,
-        location: form.location,
-        name: form.name,
-        email: form.email,
-        phone: form.phone || null,
-        consent: form.consent,
-      };
+      const fd = new FormData();
+      fd.append("trade", form.trade);
+      fd.append("job_description", form.jobDescription);
+      fd.append("property_type", form.propertyType);
+      fd.append("timeline", form.timeline);
+      fd.append("budget", form.budget);
+      fd.append("stage", form.stage);
+      fd.append("location", form.location);
+      fd.append("name", form.name);
+      fd.append("email", form.email);
+      fd.append("phone", form.phone || "");
+      fd.append("consent", String(form.consent));
+      fd.append("additional_details", form.additionalDetails);
+      for (const photo of photos) fd.append("photos", photo);
 
       const res = await fetch("/api/job-requests", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: fd,
       });
       const data = await res.json().catch(() => ({}));
 
@@ -285,6 +289,66 @@ export default function GetQuotesForm({ user, homeowner }: { user: UserData | nu
                 {form.jobDescription.length} chars
               </span>
             </div>
+          </div>
+
+          {/* Additional details -- measurements, access notes, etc */}
+          <div>
+            <label className="block text-[12.5px] font-bold text-[var(--ink)] mb-2.5">
+              Any measurements or extra details? <span className="text-[var(--ink-faint)] font-medium">(optional)</span>
+            </label>
+            <textarea value={form.additionalDetails} onChange={e => update({ additionalDetails: e.target.value })}
+              placeholder="e.g., 'Ceiling height approx 2.7m', 'Roof area roughly 180m2', 'Access via side gate only'"
+              rows={3}
+              className="app-field text-[13px] resize-none" />
+          </div>
+
+          {/* Photos */}
+          <div>
+            <label className="block text-[12.5px] font-bold text-[var(--ink)] mb-2.5">
+              Photos <span className="text-[var(--ink-faint)] font-medium">(optional, up to {MAX_PHOTOS})</span>
+            </label>
+            <label className="flex items-center justify-center gap-2 border-2 border-dashed border-[var(--line)] rounded-xl py-6 cursor-pointer hover:border-gray-400 transition-colors">
+              <Camera size={16} className="text-[var(--ink-faint)]" />
+              <span className="text-[13px] font-semibold text-[var(--ink-soft)]">Add photos of the job</span>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  const picked = Array.from(e.target.files ?? []);
+                  const tooBig = picked.find((f) => f.size > 10 * 1024 * 1024);
+                  const notImage = picked.find((f) => !f.type.startsWith("image/"));
+                  if (tooBig) { setPhotoError(`${tooBig.name} is too large -- please keep photos under 10MB.`); e.target.value = ""; return; }
+                  if (notImage) { setPhotoError(`${notImage.name} isn't an image file.`); e.target.value = ""; return; }
+                  setPhotoError(null);
+                  setPhotos((prev) => [...prev, ...picked].slice(0, MAX_PHOTOS));
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            {photoError && <p className="text-red-500 text-[12px] mt-1.5 font-medium">{photoError}</p>}
+            {photos.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 mt-2">
+                {photos.map((file, i) => (
+                  <div key={`${file.name}-${i}`} className="relative">
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt={file.name}
+                      className="w-full h-20 object-cover rounded-lg border border-[var(--line)]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setPhotos((prev) => prev.filter((_, j) => j !== i))}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gray-900 text-white flex items-center justify-center text-[11px]"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-[11px] text-[var(--ink-faint)] mt-1.5">Photos help tradies quote more accurately the first time.</p>
           </div>
 
           {/* Property type */}

@@ -2,19 +2,22 @@
  * POST /api/job-requests
  * ------------------------
  * Creates a new lead from the public "Get Quotes" form
- * (components/GetQuotesForm.tsx). This route never existed -- the form
- * was posting to /api/jobs, which is a 404, so every "get quotes" / raise
- * a quote request submission has been silently failing.
+ * (components/GetQuotesForm.tsx).
+ *
+ * Accepts multipart/form-data (not JSON) so photos can come in the same
+ * request as the rest of the job details -- fields are sent as regular
+ * form fields, photos as one or more "photos" file entries.
  *
  * Sibling routes /api/job-requests/{notify,claim,reject} already existed
  * and already expect a real job_requests row with a homeowner_id, trade,
- * suburb, description, budget, timeline, and lead_temperature -- this is
- * the missing piece that actually creates one.
+ * suburb, description, budget, timeline, and lead_temperature.
  *
  * Flow:
  *   1. Create a homeowner_profiles row for the person submitting
  *   2. Create the job_requests row linked to it
- *   3. Fire the existing notify route so matching tradies get emailed
+ *   3. Upload any photos to the job-files bucket under leads/{id}/... and
+ *      save their storage paths on the request
+ *   4. Fire the existing notify route so matching tradies get emailed
  *      (best-effort -- the lead is saved either way, so a notify hiccup
  *      doesn't lose the request itself)
  */
@@ -24,6 +27,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { randomUUID } from "crypto";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_PHOTOS = 6;
+const MAX_PHOTO_BYTES = 10 * 1024 * 1024; // 10MB each
 
 // GetQuotesForm's JOB_STAGES values -> job_requests.lead_temperature.
 // "ready to hire" reads as hot, "planning stage" reads as early -- these
@@ -35,25 +40,31 @@ const STAGE_TO_TEMPERATURE: Record<string, string> = {
   planning: "early",
 };
 
+function str(v: FormDataEntryValue | null): string {
+  return typeof v === "string" ? v.trim() : "";
+}
+
 export async function POST(req: NextRequest) {
-  let body: Record<string, unknown>;
+  let form: FormData;
   try {
-    body = await req.json();
+    form = await req.formData();
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const trade = typeof body.trade === "string" ? body.trade.trim() : "";
-  const jobDescription = typeof body.job_description === "string" ? body.job_description.trim() : "";
-  const propertyType = typeof body.property_type === "string" ? body.property_type.trim() : "";
-  const timeline = typeof body.timeline === "string" ? body.timeline.trim() || null : null;
-  const budget = typeof body.budget === "string" ? body.budget.trim() || null : null;
-  const stage = typeof body.stage === "string" ? body.stage.trim() : "";
-  const location = typeof body.location === "string" ? body.location.trim() : "";
-  const name = typeof body.name === "string" ? body.name.trim() : "";
-  const email = typeof body.email === "string" ? body.email.trim() : "";
-  const phone = typeof body.phone === "string" ? body.phone.trim() || null : null;
-  const consent = body.consent === true;
+  const trade = str(form.get("trade"));
+  const jobDescription = str(form.get("job_description"));
+  const propertyType = str(form.get("property_type"));
+  const timeline = str(form.get("timeline")) || null;
+  const budget = str(form.get("budget")) || null;
+  const stage = str(form.get("stage"));
+  const location = str(form.get("location"));
+  const name = str(form.get("name"));
+  const email = str(form.get("email"));
+  const phone = str(form.get("phone")) || null;
+  const consent = form.get("consent") === "true";
+  const additionalDetails = str(form.get("additional_details")) || null;
+  const photos = form.getAll("photos").filter((f): f is File => f instanceof File && f.size > 0);
 
   if (!trade || !jobDescription || !location || !name || !email) {
     return NextResponse.json({ error: "Please fill in all required fields." }, { status: 400 });
@@ -64,12 +75,23 @@ export async function POST(req: NextRequest) {
   if (!consent) {
     return NextResponse.json({ error: "You must agree to be contacted by tradies about this job." }, { status: 400 });
   }
+  if (photos.length > MAX_PHOTOS) {
+    return NextResponse.json({ error: `Please attach at most ${MAX_PHOTOS} photos.` }, { status: 400 });
+  }
+  for (const p of photos) {
+    if (p.size > MAX_PHOTO_BYTES) {
+      return NextResponse.json({ error: `${p.name} is too large -- please keep photos under 10MB.` }, { status: 400 });
+    }
+    if (!p.type.startsWith("image/")) {
+      return NextResponse.json({ error: `${p.name} isn't an image file.` }, { status: 400 });
+    }
+  }
 
-  // homeowner_profiles/job_requests RLS requires auth.uid() = id, which is
+  // homeowner_profiles/job_requests RLS requires auth.uid() = id, which was
   // designed around a logged-in homeowner portal that doesn't exist yet --
   // this form is a public, no-login "get quotes" flow, so an anonymous
   // session can never satisfy that policy. Use the admin client for these
-  // two inserts; everything written here is validated above first.
+  // writes; everything is validated above first.
   const supabase = createAdminClient();
 
   // property_type has no column of its own on job_requests -- fold it
@@ -100,6 +122,7 @@ export async function POST(req: NextRequest) {
       num_quotes_wanted: 3,
       lead_temperature: STAGE_TO_TEMPERATURE[stage] ?? "warm",
       status: "open",
+      additional_details: additionalDetails,
     })
     .select("id")
     .single();
@@ -107,6 +130,27 @@ export async function POST(req: NextRequest) {
   if (jobError || !jobRequest) {
     console.error("[job-requests] job_requests insert error:", jobError?.message);
     return NextResponse.json({ error: "Could not save your job request. Please try again." }, { status: 500 });
+  }
+
+  // Upload any photos. Best-effort per file -- one bad upload shouldn't
+  // lose the whole lead, which is already saved by this point.
+  if (photos.length > 0) {
+    const paths: string[] = [];
+    for (const photo of photos) {
+      const safeName = photo.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+      const path = `leads/${jobRequest.id}/${Date.now()}-${safeName}`;
+      const { error: uploadError } = await supabase.storage.from("job-files").upload(path, photo, {
+        contentType: photo.type,
+      });
+      if (uploadError) {
+        console.error("[job-requests] photo upload error:", uploadError.message);
+        continue;
+      }
+      paths.push(path);
+    }
+    if (paths.length > 0) {
+      await supabase.from("job_requests").update({ photo_paths: paths }).eq("id", jobRequest.id);
+    }
   }
 
   // Best-effort: notify matching tradies. The lead is already saved, so

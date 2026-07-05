@@ -80,6 +80,20 @@ export default async function LeadsPage() {
 
   const myClaimedIds = myClaims?.map(c => c.request_id) ?? [];
 
+  // Resolve photo_paths into signed URLs -- job-files is a private bucket,
+  // so the client can't just render photo_paths directly.
+  const requestsWithPhotoUrls = await Promise.all(
+    requests.map(async (r) => {
+      if (!r.photo_paths?.length) return { ...r, photo_urls: [] as string[] };
+      const signed = await Promise.all(
+        (r.photo_paths as string[]).map((p: string) =>
+          supabase.storage.from("job-files").createSignedUrl(p, 3600)
+        )
+      );
+      return { ...r, photo_urls: signed.map((s) => s.data?.signedUrl).filter((u): u is string => !!u) };
+    })
+  );
+
   return (
     <>
       <AppHeader />
@@ -91,7 +105,7 @@ export default async function LeadsPage() {
             Claim a lead to get their contact details.
           </p>
         </div>
-        <LeadsPanel requests={requests} myClaimedIds={myClaimedIds} />
+        <LeadsPanel requests={requestsWithPhotoUrls} myClaimedIds={myClaimedIds} />
       </div>
     </>
   );

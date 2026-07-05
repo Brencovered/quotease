@@ -87,8 +87,10 @@ export async function POST(req: NextRequest) {
       <h2>New ${request.trade} lead in ${request.suburb}</h2>
       <p><strong>Stage:</strong> ${tempLabel[request.lead_temperature] ?? request.lead_temperature}</p>
       <p><strong>Job:</strong> ${request.description}</p>
+      ${request.additional_details ? `<p><strong>Details:</strong> ${request.additional_details}</p>` : ""}
       ${request.budget ? `<p><strong>Budget:</strong> ${request.budget}</p>` : ""}
       ${request.timeline ? `<p><strong>Timeline:</strong> ${request.timeline}</p>` : ""}
+      ${request.photo_paths?.length ? `<p><strong>Photos:</strong> ${request.photo_paths.length} attached -- view and claim to see them</p>` : ""}
       <p><strong>Suburb:</strong> ${request.suburb}${request.postcode ? ` ${request.postcode}` : ""}</p>
       <hr/>
       <p>
