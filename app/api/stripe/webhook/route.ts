@@ -46,6 +46,7 @@ export async function POST(request: Request) {
           ? new Date(item.current_period_end * 1000).toISOString()
           : null,
         stripe_subscription_id: subscription.id,
+        cancel_at_period_end: subscription.cancel_at_period_end,
       })
       .eq("id", profileId);
   }
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
     if (subscription.metadata.plan === "ai_addon") {
       await supabase.from("profiles").update({ ai_addon_status: "canceled" }).eq("id", profileId);
     } else {
-      await supabase.from("profiles").update({ subscription_status: "canceled" }).eq("id", profileId);
+      await supabase.from("profiles").update({ subscription_status: "canceled", cancel_at_period_end: false }).eq("id", profileId);
     }
   }
 

@@ -372,6 +372,101 @@ function AccountControlsCard({ profile }: { profile: ProfileRow }) {
           {error ?? (saving ? "Saving..." : savedMsg)}
         </p>
       )}
+
+      <DeleteAccountZone profile={profile} />
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Danger zone: permanent account deletion                            */
+/* ------------------------------------------------------------------ */
+
+function DeleteAccountZone({ profile }: { profile: ProfileRow }) {
+  const [open, setOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  const expected = (profile.business_name ?? "").trim();
+  const matches = confirmText.trim().toLowerCase() === expected.toLowerCase() && expected.length > 0;
+
+  async function handleDelete() {
+    if (!matches) return;
+    setDeleting(true); setError(null);
+    try {
+      const res = await fetch("/api/admin/delete-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profileId: profile.id }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Delete failed");
+      setDone(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Delete failed");
+      setDeleting(false);
+    }
+  }
+
+  if (done) {
+    return (
+      <div className="mt-6 pt-5 border-t border-[var(--line)]">
+        <p className="text-[13px] font-semibold text-[var(--ink)]">Account deleted.</p>
+        <Link href="/admin/tradies" className="text-[12.5px] text-[var(--amber-deep)] hover:underline">Back to tradie list</Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-6 pt-5 border-t border-[var(--line)]">
+      <p className="text-[11px] tracking-[.1em] uppercase text-red-600 font-bold mb-2">Danger zone</p>
+      {!open ? (
+        <button
+          onClick={() => setOpen(true)}
+          className="text-[12.5px] font-semibold px-3 py-1.5 rounded-lg border border-red-300 text-red-600 hover:bg-red-50"
+        >
+          Delete this account
+        </button>
+      ) : (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 max-w-md">
+          <p className="text-[13px] text-red-800 font-semibold mb-1 flex items-center gap-1.5">
+            <AlertTriangle size={14} /> This permanently deletes everything
+          </p>
+          <p className="text-[12.5px] text-red-700 mb-3">
+            All quotes, clients, price book items, job files, and invoices for{" "}
+            <strong>{expected || "this account"}</strong> will be permanently deleted, any active
+            subscription will be canceled immediately, and the login will be removed. This cannot be undone.
+          </p>
+          <p className="text-[12px] text-red-700 mb-2">
+            Type <strong>{expected}</strong> to confirm:
+          </p>
+          <input
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            className="w-full text-[13px] px-2.5 py-1.5 rounded-lg border border-red-300 bg-white mb-3"
+            placeholder={expected}
+          />
+          {error && <p className="text-[12px] text-red-700 mb-2">{error}</p>}
+          <div className="flex gap-2">
+            <button
+              onClick={handleDelete}
+              disabled={!matches || deleting}
+              className="text-[12.5px] font-bold px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-40"
+            >
+              {deleting ? "Deleting..." : "Permanently delete"}
+            </button>
+            <button
+              onClick={() => { setOpen(false); setConfirmText(""); setError(null); }}
+              disabled={deleting}
+              className="text-[12.5px] font-semibold px-3 py-1.5 rounded-lg text-[var(--ink-faint)] hover:text-[var(--ink)]"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

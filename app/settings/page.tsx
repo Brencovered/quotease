@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import SettingsPanel from "@/components/SettingsPanel";
 import XeroConnectPanel from "@/components/XeroConnectPanel";
 import DirectoryPanel from "@/components/DirectoryPanel";
+import AccountDangerZone from "@/components/AccountDangerZone";
 import AppHeader from "@/components/AppHeader";
 import Link from "next/link";
 import { BookOpen, Users } from "lucide-react";
@@ -21,13 +22,18 @@ export default async function SettingsPage() {
     ai_addon_status?: string;
     ai_addon_period?: string | null;
     ai_addon_analyses_used?: number;
+    subscription_status?: string;
+    stripe_subscription_id?: string | null;
+    cancel_at_period_end?: boolean;
+    current_period_end?: string | null;
+    comp_access?: boolean;
   } | null = null;
 
   try {
     const supabase = await createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (userData.user) {
-      const { data } = await supabase.from("profiles").select("id, business_name, contact_email, contact_phone, trades, hourly_rate, materials_margin_pct, default_deposit_pct, default_expiry_days, logo_url, abn, license_number, business_address, bank_account_name, bank_bsb, bank_account_number, accepts_cash, xero_tenant_id, xero_connected_at, xero_account_code, xero_tax_type, ai_free_analyses_used, ai_addon_status, ai_addon_period, ai_addon_analyses_used, directory_enabled, directory_suburb, directory_postcode, directory_bio, directory_website, directory_phone, directory_email").eq("id", userData.user.id).single();
+      const { data } = await supabase.from("profiles").select("id, business_name, contact_email, contact_phone, trades, hourly_rate, materials_margin_pct, default_deposit_pct, default_expiry_days, logo_url, abn, license_number, business_address, bank_account_name, bank_bsb, bank_account_number, accepts_cash, xero_tenant_id, xero_connected_at, xero_account_code, xero_tax_type, ai_free_analyses_used, ai_addon_status, ai_addon_period, ai_addon_analyses_used, directory_enabled, directory_suburb, directory_postcode, directory_bio, directory_website, directory_phone, directory_email, subscription_status, stripe_subscription_id, cancel_at_period_end, current_period_end, comp_access").eq("id", userData.user.id).single();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       profile = data as any;
     }
@@ -79,6 +85,18 @@ export default async function SettingsPage() {
           connected={xeroConnected}
           connectedAt={(profile as Record<string, unknown>)?.xero_connected_at as string | null ?? null}
           tenantId={(profile as Record<string, unknown>)?.xero_tenant_id as string | null ?? null}
+        />
+      </div>
+
+      {/* Danger zone: cancel subscription, delete account */}
+      <div className="page-wrap-narrow pb-0 pt-0">
+        <AccountDangerZone
+          businessName={profile?.business_name ?? ""}
+          subscriptionStatus={profile?.subscription_status ?? null}
+          hasSubscription={!!profile?.stripe_subscription_id}
+          cancelAtPeriodEnd={profile?.cancel_at_period_end ?? false}
+          currentPeriodEnd={profile?.current_period_end ?? null}
+          compAccess={profile?.comp_access ?? false}
         />
       </div>
     </>
