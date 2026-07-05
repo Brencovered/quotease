@@ -52,7 +52,7 @@ export default function AdminBlogPanel({ posts: initialPosts }: { posts: Post[] 
 
   function toast(text: string, ok = true) {
     setMsg({ text, ok });
-    setTimeout(() => setMsg(null), 3000);
+    setTimeout(() => setMsg(null), 4000);
   }
 
   function slugify(s: string) {
@@ -74,16 +74,32 @@ export default function AdminBlogPanel({ posts: initialPosts }: { posts: Post[] 
     if (data) { setEditing(data as PostFull); setView("edit"); }
   }
 
-  /* ── Image upload ────────────────────────────────────────────── */
+  /* ── Image upload via API ───────────────────────────────────── */
   async function uploadImage(file: File, type: "cover" | "avatar"): Promise<string | null> {
     setUploading(true);
-    const ext  = file.name.split(".").pop();
-    const path = `blog/${Date.now()}-${type}.${ext}`;
-    const { error } = await supabase.storage.from("blog-images").upload(path, file, { upsert: true });
-    if (error) { toast("Image upload failed", false); setUploading(false); return null; }
-    const { data: { publicUrl } } = supabase.storage.from("blog-images").getPublicUrl(path);
-    setUploading(false);
-    return publicUrl;
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("type", type);
+
+    try {
+      const res = await fetch("/api/admin/blog/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast(data.error || "Image upload failed", false);
+        return null;
+      }
+      return data.url as string;
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Network error during upload", false);
+      return null;
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function handleCoverUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -100,12 +116,13 @@ export default function AdminBlogPanel({ posts: initialPosts }: { posts: Post[] 
     e.target.value = "";
   }
 
-  /* ── Save post ───────────────────────────────────────────────── */
+  /* ── Save post via API ──────────────────────────────────────── */
   async function save(publish?: boolean) {
     if (!editing) return;
     setSaving(true);
 
     const payload = {
+      id:            editing.id || undefined,
       slug:          editing.slug || slugify(editing.title),
       title:         editing.title,
       excerpt:       editing.excerpt || null,
@@ -120,20 +137,47 @@ export default function AdminBlogPanel({ posts: initialPosts }: { posts: Post[] 
       published_at:  (publish ?? editing.published) && !editing.published_at
         ? new Date().toISOString()
         : editing.published_at,
-      updated_at:    new Date().toISOString(),
     };
 
-    if (editing.id) {
-      const { error } = await supabase.from("blog_posts").update(payload).eq("id", editing.id);
-      if (error) { toast(error.message, false); setSaving(false); return; }
-      setPosts(prev => prev.map(p => p.id === editing.id ? { ...p, ...payload } : p));
-      toast(publish ? "Post published" : "Post saved");
-    } else {
-      const { data, error } = await supabase.from("blog_posts").insert(payload).select().single();
-      if (error) { toast(error.message, false); setSaving(false); return; }
-      setPosts(prev => [data as Post, ...prev]);
-      setEditing(prev => ({ ...prev!, id: data.id }));
-      toast("Post created");
+    try {
+      if (editing.id) {
+        // Update existing
+        const res = await fetch("/api/admin/blog", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          toast(data.error || "Failed to save post", false);
+          setSaving(false);
+          return;
+        }
+        setPosts(prev => prev.map(p => p.id === editing.id ? { ...p, ...data.post } : p));
+        toast(publish ? "Post published" : "Draft saved");
+      } else {
+        // Create new
+        const res = await fetch("/api/admin/blog", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          toast(data.error || "Failed to create post", false);
+          setSaving(false);
+          return;
+        }
+        setPosts(prev => [data.post as Post, ...prev]);
+        setEditing(prev => ({ ...prev!, id: data.post.id }));
+        toast("Post created");
+      }
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Network error", false);
+      setSaving(false);
+      return;
     }
 
     setSaving(false);
@@ -153,7 +197,6 @@ export default function AdminBlogPanel({ posts: initialPosts }: { posts: Post[] 
 
   /* ── Toggle featured ─────────────────────────────────────────── */
   async function toggleFeatured(id: string, current: boolean) {
-    // Only one featured post at a time
     if (!current) {
       await supabase.from("blog_posts").update({ featured: false }).neq("id", id);
       setPosts(prev => prev.map(p => ({ ...p, featured: p.id === id ? true : false })));
@@ -164,16 +207,26 @@ export default function AdminBlogPanel({ posts: initialPosts }: { posts: Post[] 
     toast(current ? "Removed from featured" : "Set as featured");
   }
 
-  /* ── Delete post ─────────────────────────────────────────────── */
+  /* ── Delete post via API ─────────────────────────────────────── */
   async function deletePost(id: string) {
     setDeleting(id);
-    const { error } = await supabase.from("blog_posts").delete().eq("id", id);
-    if (!error) {
+    try {
+      const res = await fetch(`/api/admin/blog?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast(data.error || "Failed to delete", false);
+        setDeleting(null);
+        return;
+      }
+
       setPosts(prev => prev.filter(p => p.id !== id));
       toast("Post deleted");
       if (editing?.id === id) setView("list");
-    } else {
-      toast(error.message, false);
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Network error", false);
     }
     setDeleting(null);
   }
@@ -193,7 +246,7 @@ export default function AdminBlogPanel({ posts: initialPosts }: { posts: Post[] 
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-[1.8rem] text-[var(--ink)]">Blog & Publications</h1>
+          <h1 className="font-display text-[1.8rem] text-[var(--ink)]">Blog &amp; Publications</h1>
           <p className="text-[13.5px] text-[var(--ink-soft)] mt-0.5">{posts.length} posts total</p>
         </div>
         <button onClick={() => openEdit(null)} className="btn-primary flex items-center gap-1.5">
@@ -404,7 +457,7 @@ Add images with ![alt text](https://example.com/image.jpg)"
             <p className="section-tag">Status</p>
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${editing.published ? "bg-green-500" : "bg-[var(--ink-faint)]"}`} />
-              <span className="text-[13px] font-semibold text-[var(--ink)]">
+              <span className="text-[13px] font-semibold text-[var(ink)]">
                 {editing.published ? "Published" : "Draft"}
               </span>
             </div>
