@@ -161,6 +161,15 @@ input[type="radio"] {
   color: var(--amber-deep);
 }
 
+/* Block label — used in the modular blog editor for each block type */
+.block-tag {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
 /* Hide scrollbar utility */
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
