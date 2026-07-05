@@ -102,23 +102,32 @@ export default function GetQuotesForm({ user, homeowner }: { user: UserData | nu
   const { toast, showToast } = useSimpleToast();
 
   // ── Form data (backed by localStorage) ───────────────────────────
-  const [form, setForm] = useState<FormData>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("get-quotes-form");
-        if (saved) return JSON.parse(saved);
-      } catch { /* ignore */ }
-    }
-    return {
-      trade: "", jobDescription: "", propertyType: "", timeline: "",
-      budget: "", stage: "", location: "", name: "", email: "",
-      phone: "", consent: false,
-    };
+  // Must start from the exact same default on server and client --
+  // reading localStorage inside the useState initializer ran during the
+  // client's hydration render too, so a returning visitor with saved
+  // data got a client-rendered form that didn't match the server-
+  // rendered (empty) one, tripping a hydration mismatch (React #418).
+  // Restoring from localStorage in an effect below avoids that: it only
+  // runs after hydration has already completed.
+  const [form, setForm] = useState<FormData>({
+    trade: "", jobDescription: "", propertyType: "", timeline: "",
+    budget: "", stage: "", location: "", name: "", email: "",
+    phone: "", consent: false,
   });
+  const [restoredDraft, setRestoredDraft] = useState(false);
 
   useEffect(() => {
+    try {
+      const saved = localStorage.getItem("get-quotes-form");
+      if (saved) setForm(JSON.parse(saved));
+    } catch { /* ignore */ }
+    setRestoredDraft(true);
+  }, []);
+
+  useEffect(() => {
+    if (!restoredDraft) return; // don't clobber a saved draft with the initial default before it's loaded
     localStorage.setItem("get-quotes-form", JSON.stringify(form));
-  }, [form]);
+  }, [form, restoredDraft]);
 
   // ── Set initial value from URL search params (trade / suburb) ─────
   useEffect(() => {

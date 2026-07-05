@@ -21,6 +21,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { randomUUID } from "crypto";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -78,7 +79,7 @@ export async function POST(req: NextRequest) {
 
   const { data: homeowner, error: homeownerError } = await supabase
     .from("homeowner_profiles")
-    .insert({ name, email, phone, suburb: location || null })
+    .insert({ id: randomUUID(), name, email, phone, suburb: location || null })
     .select("id")
     .single();
 
