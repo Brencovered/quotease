@@ -212,7 +212,7 @@ export default function GetQuotesForm({ user, homeowner }: { user: UserData | nu
         consent: form.consent,
       };
 
-      const res = await fetch("/api/jobs", {
+      const res = await fetch("/api/job-requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
