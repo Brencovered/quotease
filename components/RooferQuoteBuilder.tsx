@@ -11,7 +11,7 @@ import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, ma
 import StepCustomer from "./StepCustomer";
 import { resolveClientId } from "@/lib/resolveClientId";
 import { getActiveBusinessId } from "@/lib/team";
-import { PAYMENT_TERM_PRESETS } from "@/lib/paymentTerms";
+import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -117,6 +117,14 @@ export default function RooferQuoteBuilder({
   const [siteAddress, setSiteAddress] = useState("");
   const [clientId, setClientId] = useState<string | null>(preClientId ?? null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+
+  const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">("full_on_completion");
+  const [customTerms, setCustomTerms] = useState<PaymentTerm[]>([
+    { label: "Deposit", percent: 50, trigger: "acceptance", days: 0 },
+    { label: "Final",   percent: 50, trigger: "completion", days: 7 },
+  ]);
+  const paymentTerms     = termsPreset === "custom" ? customTerms : PAYMENT_TERM_PRESETS[termsPreset];
+  const customTermsTotal = customTerms.reduce((s, t) => s + (Number(t.percent) || 0), 0);
 
   // ── AI drawing / AI voice (Files) ─────────────────────────────
   const [drawingFiles, setDrawingFiles]     = useState<File[]>([]);
@@ -445,7 +453,7 @@ export default function RooferQuoteBuilder({
       labour_hours: formulaLabourHrs + siteLabourSave + markupLabourSave,
       materials_cost: Math.round(summary.matCost + summary.extrasTotal + summary.colorSurcharge + siteMatlsSave + markupMatlsSave),
       total_cost: Math.round(summary.total + siteTotalSave + markupTotalSave),
-      payment_terms: PAYMENT_TERM_PRESETS.full_on_completion,
+      payment_terms: paymentTerms,
       pricing_tier_id: selectedPricingTierId,
       job_size_tier_id: selectedJobSizeTierId,
       status: sendEmail ? "sent" : "draft",
@@ -887,6 +895,37 @@ export default function RooferQuoteBuilder({
           </p>
         </div>
       )}
+
+      <div className="card">
+        <p className="section-tag mb-3">Payment terms</p>
+        <select value={termsPreset} onChange={(e) => setTermsPreset(e.target.value as keyof typeof PAYMENT_TERM_PRESETS | "custom")} className="app-field mb-3">
+          <option value="full_on_completion">100% on completion (14 days)</option>
+          <option value="deposit_50_50">50% deposit, 50% on completion</option>
+          <option value="deposit_30_70">30% deposit, 70% on completion</option>
+          <option value="due_on_invoice">100% due on invoice (7 days)</option>
+          <option value="custom">Custom split</option>
+        </select>
+        {termsPreset !== "custom" ? (
+          <div className="bg-[var(--app-bg)] rounded-xl p-3 space-y-1.5">
+            {paymentTerms.map((t, i) => (
+              <div key={i} className="flex justify-between text-[13.5px]">
+                <span className="text-[var(--ink-soft)]">{t.label}</span>
+                <span className="font-bold tabular">{t.percent}% - ${summary ? Math.round((summary.total + siteTotal) * t.percent / 100).toLocaleString() : 0}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {customTerms.map((t, i) => (
+              <div key={i} className="grid grid-cols-[1fr_60px] gap-2 bg-[var(--app-bg)] rounded-xl p-3">
+                <input value={t.label} onChange={(e) => setCustomTerms((p) => p.map((x, j) => j === i ? { ...x, label: e.target.value } : x))} className="app-field py-2 text-[13px]" />
+                <input type="number" value={t.percent} onChange={(e) => setCustomTerms((p) => p.map((x, j) => j === i ? { ...x, percent: Number(e.target.value) } : x))} className="app-field py-2 text-[13px] text-center" />
+              </div>
+            ))}
+            {customTermsTotal !== 100 && <p className="text-[12.5px] text-[var(--red)] font-semibold">Adds up to {customTermsTotal}% - must total 100%</p>}
+          </div>
+        )}
+      </div>
 
       {/* ── Actions ──────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row gap-3 pt-4">
