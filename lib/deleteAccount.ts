@@ -1,43 +1,81 @@
 /**
  * lib/deleteAccount.ts
  * --------------------
- * Shared logic for permanently deleting a tradie account, used by both
- * the self-service /api/account/delete route and the admin-only
- * /api/admin/delete-account route.
+ * Account deletion is a 30-day soft-delete, not an instant wipe:
  *
- * This is destructive and irreversible: profiles.id cascades (see the
- * foreign keys in supabase/migrations.sql) to quotes, clients, price book
- * items, job attachments, payments, and everything else tied to the
- * account. There's no soft-delete/undo here -- callers are expected to
- * have already confirmed this with the person (see the confirmation UX in
- * AccountDangerZone.tsx and AdminTradieDetailPanel.tsx).
+ *   softDeleteAccount  -- cancels billing immediately, marks the account
+ *                          deleted_at = now(), signs them out. The account
+ *                          and everything in it (quotes, clients, price
+ *                          book) still exists, untouched, in the database.
+ *   restoreAccount     -- clears deleted_at. Available any time before the
+ *                          purge job runs (i.e. within the 30-day window).
+ *                          Does NOT restore a canceled subscription -- the
+ *                          tradie needs to resubscribe if it lapsed.
+ *   purgeAccount       -- the real, irreversible deletion. Only ever
+ *                          called by the daily cron job (30+ days after
+ *                          deleted_at) or an explicit admin "delete now"
+ *                          override. Cascades to quotes, clients, price
+ *                          book items, job attachments, everything tied
+ *                          to the account (see the FK constraints in
+ *                          supabase/migrations.sql), then removes the
+ *                          Supabase Auth user.
+ *
+ * Used by /api/account/delete, /api/account/restore,
+ * /api/admin/delete-account, /api/admin/restore-account, and
+ * /api/cron/purge-deleted-accounts.
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe";
 
-export async function deleteAccount(profileId: string): Promise<{ error?: string }> {
+async function cancelStripeSubscriptions(profileId: string) {
   const admin = createAdminClient();
-
   const { data: profile } = await admin
     .from("profiles")
     .select("stripe_subscription_id, ai_addon_subscription_id")
     .eq("id", profileId)
     .maybeSingle();
 
-  // Cancel any live Stripe subscriptions immediately -- an account that no
-  // longer exists here should not keep billing the tradie's card.
-  if (profile?.stripe_subscription_id || profile?.ai_addon_subscription_id) {
-    const stripe = getStripe();
-    for (const subId of [profile.stripe_subscription_id, profile.ai_addon_subscription_id]) {
-      if (!subId) continue;
-      try {
-        await stripe.subscriptions.cancel(subId);
-      } catch {
-        // Already canceled/doesn't exist on Stripe's side -- fine, keep going.
-      }
+  if (!profile?.stripe_subscription_id && !profile?.ai_addon_subscription_id) return;
+
+  const stripe = getStripe();
+  for (const subId of [profile.stripe_subscription_id, profile.ai_addon_subscription_id]) {
+    if (!subId) continue;
+    try {
+      await stripe.subscriptions.cancel(subId);
+    } catch {
+      // Already canceled/doesn't exist on Stripe's side -- fine, keep going.
     }
   }
+}
+
+export async function softDeleteAccount(profileId: string): Promise<{ error?: string }> {
+  await cancelStripeSubscriptions(profileId);
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("profiles")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", profileId);
+
+  return error ? { error: error.message } : {};
+}
+
+export async function restoreAccount(profileId: string): Promise<{ error?: string }> {
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("profiles")
+    .update({ deleted_at: null })
+    .eq("id", profileId);
+
+  return error ? { error: error.message } : {};
+}
+
+/** Irreversible. Only call from the purge cron job or an explicit admin override. */
+export async function purgeAccount(profileId: string): Promise<{ error?: string }> {
+  const admin = createAdminClient();
+
+  await cancelStripeSubscriptions(profileId);
 
   // team_members.member_user_id has no FK/cascade (it can point to a user
   // under a *different* owner's business), so if this account was a team

@@ -19,6 +19,7 @@ export interface TradieRow {
   trial_ends_at: string | null;
   onboarded_at: string | null;
   created_at: string;
+  deleted_at: string | null;
   last_sign_in_at: string | null;
   quotesCreated: number;
   quotesSent: number;
@@ -52,7 +53,7 @@ export async function getTradieRows(): Promise<TradieRow[]> {
   const [{ data: profiles }, { data: quotes }, { data: materials }, authUsers] = await Promise.all([
     admin
       .from("profiles")
-      .select("id, business_name, contact_email, contact_phone, trades, subscription_status, trial_ends_at, onboarded_at, created_at")
+      .select("id, business_name, contact_email, contact_phone, trades, subscription_status, trial_ends_at, onboarded_at, created_at, deleted_at")
       .order("created_at", { ascending: false }),
     admin.from("quotes").select("profile_id, sent_at, accepted_at, total_cost"),
     admin.from("material_items").select("profile_id"),
@@ -85,6 +86,7 @@ export async function getTradieRows(): Promise<TradieRow[]> {
       trial_ends_at: p.trial_ends_at,
       onboarded_at: p.onboarded_at,
       created_at: p.created_at,
+      deleted_at: p.deleted_at,
       last_sign_in_at: lastSignIn,
       quotesCreated: q.created,
       quotesSent: q.sent,

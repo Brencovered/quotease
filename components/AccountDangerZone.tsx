@@ -170,7 +170,8 @@ function DeleteAccountRow({ businessName }: { businessName: string }) {
       {!open ? (
         <>
           <p className="text-[13px] text-[var(--ink-faint)] mb-2">
-            Permanently deletes your account and everything in it -- quotes, clients, price book, job files. This cannot be undone.
+            Cancels any active subscription immediately and schedules your account -- quotes, clients, price
+            book, job files -- for deletion in 30 days. You can log back in and restore it any time before then.
           </p>
           <button
             onClick={() => setOpen(true)}
@@ -182,11 +183,12 @@ function DeleteAccountRow({ businessName }: { businessName: string }) {
       ) : (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4">
           <p className="text-[13px] text-red-800 font-semibold mb-1 flex items-center gap-1.5">
-            <AlertTriangle size={14} /> This can&apos;t be undone
+            <AlertTriangle size={14} /> Scheduled for deletion in 30 days
           </p>
           <p className="text-[12.5px] text-red-700 mb-3">
-            All quotes, clients, price book items, and job files will be permanently deleted, any active
-            subscription will be canceled immediately, and you&apos;ll be logged out for good.
+            Any active subscription is canceled immediately. Your quotes, clients, price book items, and job
+            files stay untouched for 30 days -- log back in any time before then to restore. After 30 days
+            it&apos;s permanent.
           </p>
           <p className="text-[12px] text-red-700 mb-2">
             Type <strong>{expected}</strong> to confirm:
@@ -204,7 +206,7 @@ function DeleteAccountRow({ businessName }: { businessName: string }) {
               disabled={!matches || deleting}
               className="text-[12.5px] font-bold px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-40"
             >
-              {deleting ? "Deleting..." : "Permanently delete my account"}
+              {deleting ? "Scheduling..." : "Delete my account"}
             </button>
             <button
               onClick={() => { setOpen(false); setConfirmText(""); setError(null); }}

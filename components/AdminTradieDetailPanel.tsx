@@ -36,6 +36,7 @@ interface ProfileRow {
   comp_access?: boolean;
   ai_analyses_limit_override?: number | null;
   ai_free_analyses_used?: number;
+  deleted_at?: string | null;
 }
 
 export default function AdminTradieDetailPanel({
@@ -382,39 +383,96 @@ function AccountControlsCard({ profile }: { profile: ProfileRow }) {
 /* Danger zone: permanent account deletion                            */
 /* ------------------------------------------------------------------ */
 
+function fmtDateTime(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
+}
+
 function DeleteAccountZone({ profile }: { profile: ProfileRow }) {
+  const [deletedAt, setDeletedAt] = useState<string | null>(profile.deleted_at ?? null);
   const [open, setOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
-  const [deleting, setDeleting] = useState(false);
+  const [busy, setBusy] = useState<"soft_delete" | "purge_now" | "restore" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
 
   const expected = (profile.business_name ?? "").trim();
   const matches = confirmText.trim().toLowerCase() === expected.toLowerCase() && expected.length > 0;
 
-  async function handleDelete() {
-    if (!matches) return;
-    setDeleting(true); setError(null);
+  async function callDeleteRoute(action: "soft_delete" | "purge_now") {
+    setBusy(action); setError(null);
     try {
       const res = await fetch("/api/admin/delete-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profileId: profile.id, action }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Delete failed");
+      if (action === "purge_now") {
+        window.location.href = "/admin/tradies";
+      } else {
+        setDeletedAt(new Date().toISOString());
+        setOpen(false);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Delete failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleRestore() {
+    setBusy("restore"); setError(null);
+    try {
+      const res = await fetch("/api/admin/restore-account", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ profileId: profile.id }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Delete failed");
-      setDone(true);
+      if (!res.ok) throw new Error(json.error ?? "Restore failed");
+      setDeletedAt(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Delete failed");
-      setDeleting(false);
+      setError(e instanceof Error ? e.message : "Restore failed");
+    } finally {
+      setBusy(null);
     }
   }
 
-  if (done) {
+  if (deletedAt) {
+    const purgeDate = new Date(new Date(deletedAt).getTime() + 30 * 86400000);
     return (
       <div className="mt-6 pt-5 border-t border-[var(--line)]">
-        <p className="text-[13px] font-semibold text-[var(--ink)]">Account deleted.</p>
-        <Link href="/admin/tradies" className="text-[12.5px] text-[var(--amber-deep)] hover:underline">Back to tradie list</Link>
+        <p className="text-[11px] tracking-[.1em] uppercase text-red-600 font-bold mb-2">Danger zone</p>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 max-w-md">
+          <p className="text-[13px] text-red-800 font-semibold mb-1 flex items-center gap-1.5">
+            <AlertTriangle size={14} /> Scheduled for deletion
+          </p>
+          <p className="text-[12.5px] text-red-700 mb-3">
+            Soft-deleted on {fmtDateTime(deletedAt)}. Will be permanently purged on{" "}
+            <strong>{fmtDateTime(purgeDate.toISOString())}</strong> unless restored before then.
+          </p>
+          {error && <p className="text-[12px] text-red-700 mb-2">{error}</p>}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleRestore}
+              disabled={busy !== null}
+              className="text-[12.5px] font-bold px-3 py-1.5 rounded-lg bg-[var(--navy)] text-white hover:bg-[#121f2b] disabled:opacity-40"
+            >
+              {busy === "restore" ? "Restoring..." : "Restore account"}
+            </button>
+            <button
+              onClick={() => {
+                if (window.confirm(`Permanently delete ${expected || "this account"} right now? This skips the 30-day window and cannot be undone.`)) {
+                  callDeleteRoute("purge_now");
+                }
+              }}
+              disabled={busy !== null}
+              className="text-[12.5px] font-semibold px-3 py-1.5 rounded-lg border border-red-300 text-red-600 hover:bg-red-100 disabled:opacity-40"
+            >
+              {busy === "purge_now" ? "Deleting..." : "Delete now (skip waiting)"}
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -432,12 +490,12 @@ function DeleteAccountZone({ profile }: { profile: ProfileRow }) {
       ) : (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 max-w-md">
           <p className="text-[13px] text-red-800 font-semibold mb-1 flex items-center gap-1.5">
-            <AlertTriangle size={14} /> This permanently deletes everything
+            <AlertTriangle size={14} /> 30-day soft delete
           </p>
           <p className="text-[12.5px] text-red-700 mb-3">
-            All quotes, clients, price book items, job files, and invoices for{" "}
-            <strong>{expected || "this account"}</strong> will be permanently deleted, any active
-            subscription will be canceled immediately, and the login will be removed. This cannot be undone.
+            Cancels any active subscription immediately. Quotes, clients, price book items, and job files for{" "}
+            <strong>{expected || "this account"}</strong> stay untouched for 30 days and can be restored any
+            time before then. After 30 days it&apos;s permanently purged.
           </p>
           <p className="text-[12px] text-red-700 mb-2">
             Type <strong>{expected}</strong> to confirm:
@@ -451,15 +509,15 @@ function DeleteAccountZone({ profile }: { profile: ProfileRow }) {
           {error && <p className="text-[12px] text-red-700 mb-2">{error}</p>}
           <div className="flex gap-2">
             <button
-              onClick={handleDelete}
-              disabled={!matches || deleting}
+              onClick={() => callDeleteRoute("soft_delete")}
+              disabled={!matches || busy !== null}
               className="text-[12.5px] font-bold px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-40"
             >
-              {deleting ? "Deleting..." : "Permanently delete"}
+              {busy === "soft_delete" ? "Deleting..." : "Delete account"}
             </button>
             <button
               onClick={() => { setOpen(false); setConfirmText(""); setError(null); }}
-              disabled={deleting}
+              disabled={busy !== null}
               className="text-[12.5px] font-semibold px-3 py-1.5 rounded-lg text-[var(--ink-faint)] hover:text-[var(--ink)]"
             >
               Cancel

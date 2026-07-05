@@ -85,6 +85,9 @@ export default function AdminTradiesPanel({ rows }: { rows: TradieRow[] }) {
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-semibold text-[14px] text-[var(--ink)] truncate">{r.business_name || "Unnamed business"}</p>
                         <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold uppercase tracking-wide ${sub.bg} ${sub.text}`}>{sub.label}</span>
+                        {r.deleted_at && (
+                          <span className="px-2 py-0.5 rounded-full text-[10.5px] font-bold uppercase tracking-wide bg-red-50 text-red-700">Deleted</span>
+                        )}
                       </div>
                       <p className="text-[12.5px] text-[var(--ink-faint)] truncate">
                         {r.contact_email || "No email"} {r.trades.length > 0 ? `· ${r.trades.join(", ")}` : ""}
