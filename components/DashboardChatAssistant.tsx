@@ -1,18 +1,36 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Sparkles, Send, X, MessageSquare } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Sparkles, Send, X, MessageSquare, ArrowRight, FileText } from "lucide-react";
 import type { DashboardStats, ProfitStats } from "@/lib/dashboardStats";
+
+interface QuoteDraftAction {
+  type: "open_quote_draft";
+  url: string;
+  title: string;
+  itemCount: number;
+  pricedCount: number;
+  estimatedTotal: number;
+}
+interface NavigateAction {
+  type: "navigate";
+  url: string;
+  label: string;
+  reason?: string;
+}
+type AssistantAction = QuoteDraftAction | NavigateAction;
 
 interface Message {
   role:    "user" | "assistant";
   content: string;
+  actions?: AssistantAction[];
 }
 
 const QUICK_PROMPTS = [
   "How is my conversion rate?",
-  "What's my average quote value?",
-  "How fast am I quoting?",
+  "Quote a bathroom rough-in for me",
+  "How do I add a new client?",
   "Where am I losing jobs?",
   "Tips to improve my win rate",
 ];
@@ -30,6 +48,7 @@ export default function DashboardChatAssistant({
   const [loading,  setLoading]  = useState(false);
   const bottomRef  = useRef<HTMLDivElement>(null);
   const inputRef   = useRef<HTMLInputElement>(null);
+  const router     = useRouter();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -65,7 +84,14 @@ ${profit.jobsTracked > 0 ? `- Jobs with profit tracked: ${profit.jobsTracked}
 Here are their current business stats:
 ${statsSummary}
 
-Your job is to help them understand their numbers, identify opportunities, and give actionable advice to grow their trade business. Keep answers short and direct -- they're reading this on a phone. Use dollar signs and percentages where relevant. If data is missing, say so honestly rather than guessing. Speak like a straight-talking business advisor, not a corporate consultant.`;
+Your job is to help them understand their numbers, identify opportunities, give actionable advice, and help them get things done in the app.
+
+You have three tools:
+- search_price_book: look up real items and prices from their own price book. Always use this before create_quote_draft -- never invent a price.
+- create_quote_draft: builds a real, editable draft quote from priced items. Use this whenever they ask you to quote a job (e.g. "quote a bathroom rough-in", "put together a quote for 6 downlights and 4 GPOs"). Search for each item first, include real item_keys where you find a match, and still include items you can't match (just omit item_key) so they can price those themselves -- say so plainly in your reply. The tradie still reviews everything, adds their client's details, and hits send themselves -- you're drafting, not sending.
+- suggest_navigation: when walking them through a task that isn't quote creation (managing a job, checking their price book, inviting a team member, exporting to Xero, etc), offer a button to the actual page rather than just describing where to click.
+
+Keep answers short and direct -- they're reading this on a phone. Use dollar signs and percentages where relevant. If data is missing, say so honestly rather than guessing. Speak like a straight-talking business advisor, not a corporate consultant.`;
 
   async function send() {
     if (!input.trim() || loading) return;
@@ -76,7 +102,7 @@ Your job is to help them understand their numbers, identify opportunities, and g
     setLoading(true);
 
     try {
-      const res = await fetch("/api/ai/chat", {
+      const res = await fetch("/api/ai/business-assistant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -87,7 +113,7 @@ Your job is to help them understand their numbers, identify opportunities, and g
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "AI error");
-      setMessages(prev => [...prev, { role: "assistant", content: data.text ?? "" }]);
+      setMessages(prev => [...prev, { role: "assistant", content: data.text ?? "", actions: data.actions ?? [] }]);
     } catch (e) {
       setMessages(prev => [...prev, {
         role: "assistant",
@@ -150,25 +176,59 @@ Your job is to help them understand their numbers, identify opportunities, and g
               <MessageSquare size={11} className="text-[var(--navy)]" />
             </div>
             <p className="text-[13px] text-[var(--ink-soft)] bg-[var(--app-bg)] border border-[var(--line)] rounded-2xl rounded-tl-sm px-3 py-2.5 leading-relaxed">
-              Ask me anything about your quotes, revenue, win rate, or what to focus on next.
+              Ask me anything about your quotes, revenue, or win rate -- or ask me to quote a job and I&apos;ll put together a draft from your price book.
             </p>
           </div>
         )}
 
         {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start items-start gap-2"}`}>
-            {msg.role === "assistant" && (
-              <div className="w-6 h-6 bg-[var(--amber)] rounded-full flex items-center justify-center shrink-0 mt-0.5">
-                <MessageSquare size={11} className="text-[var(--navy)]" />
+          <div key={i} className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
+            <div className={`flex ${msg.role === "user" ? "justify-end" : "justify-start items-start gap-2"} w-full`}>
+              {msg.role === "assistant" && (
+                <div className="w-6 h-6 bg-[var(--amber)] rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                  <MessageSquare size={11} className="text-[var(--navy)]" />
+                </div>
+              )}
+              <div className={`max-w-[82%] rounded-2xl px-3 py-2.5 text-[13px] leading-relaxed ${
+                msg.role === "user"
+                  ? "bg-[var(--navy)] text-white rounded-tr-sm"
+                  : "bg-[var(--app-bg)] border border-[var(--line)] text-[var(--ink)] rounded-tl-sm"
+              }`}>
+                {msg.content}
+              </div>
+            </div>
+
+            {msg.actions && msg.actions.length > 0 && (
+              <div className="flex flex-col gap-1.5 mt-2 ml-8 w-full max-w-[82%]">
+                {msg.actions.map((action, j) =>
+                  action.type === "open_quote_draft" ? (
+                    <button
+                      key={j}
+                      onClick={() => router.push(action.url)}
+                      className="flex items-center gap-2 bg-[var(--navy)] text-white rounded-xl px-3 py-2.5 text-left hover:bg-[#121f2b] transition-colors"
+                    >
+                      <FileText size={15} className="text-[var(--amber)] shrink-0" />
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-[12.5px] font-bold truncate">{action.title}</span>
+                        <span className="block text-[11px] text-white/70">
+                          {action.itemCount} items{action.pricedCount < action.itemCount ? ` (${action.itemCount - action.pricedCount} need pricing)` : ""} · ~${action.estimatedTotal.toLocaleString()}
+                        </span>
+                      </span>
+                      <ArrowRight size={14} className="shrink-0" />
+                    </button>
+                  ) : (
+                    <button
+                      key={j}
+                      onClick={() => router.push(action.url)}
+                      className="flex items-center gap-2 bg-white border border-[var(--line)] rounded-xl px-3 py-2 text-left hover:border-[var(--navy)] transition-colors"
+                    >
+                      <span className="flex-1 min-w-0 text-[12.5px] font-semibold text-[var(--ink)]">{action.label}</span>
+                      <ArrowRight size={13} className="text-[var(--ink-faint)] shrink-0" />
+                    </button>
+                  )
+                )}
               </div>
             )}
-            <div className={`max-w-[82%] rounded-2xl px-3 py-2.5 text-[13px] leading-relaxed ${
-              msg.role === "user"
-                ? "bg-[var(--navy)] text-white rounded-tr-sm"
-                : "bg-[var(--app-bg)] border border-[var(--line)] text-[var(--ink)] rounded-tl-sm"
-            }`}>
-              {msg.content}
-            </div>
           </div>
         ))}
 
