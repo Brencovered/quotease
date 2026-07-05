@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
       timeline,
       num_quotes_wanted: 3,
       lead_temperature: STAGE_TO_TEMPERATURE[stage] ?? "warm",
-      status: "new",
+      status: "open",
     })
     .select("id")
     .single();
