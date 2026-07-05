@@ -139,7 +139,12 @@ export default function QuoteForm({ listing }: { listing: Listing }) {
         </div>
 
         {error && (
-          <p className="text-[12.5px] text-red-600 font-semibold">{error}</p>
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
+            <p className="text-[12.5px] text-red-700 font-semibold">{error}</p>
+            <p className="text-[11.5px] text-red-500 mt-1">
+              Your request has been saved and our team will follow up. You can also email hello@swiftscope.com.au
+            </p>
+          </div>
         )}
 
         <button
