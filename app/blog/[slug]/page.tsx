@@ -2,7 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import MarketingNav from "@/components/MarketingNav";
-import { ArrowLeft, Calendar, Tag, Clock, BookOpen, Quote, CheckCircle, ArrowRight } from "lucide-react";
+import { ArrowLeft, Calendar, Tag, Clock, BookOpen, Quote, CheckCircle, ArrowRight, BarChart3, ExternalLink } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -11,12 +11,17 @@ export const dynamic = "force-dynamic";
 /* ------------------------------------------------------------------ */
 
 interface ContentBlock {
-  type: "heading" | "paragraph" | "blockquote" | "list" | "hr" | "image" | "cta" | "sources" | "statbox" | "keytakeaways";
+  type: "heading" | "paragraph" | "blockquote" | "list" | "hr" | "image" | "cta" | "sources" | "statbox" | "keytakeaways" | "table" | "graph";
   content?: string;
   items?: string[];
   src?: string;
   alt?: string;
   level?: number;
+  rows?: string[][];
+  headers?: string[];
+  bars?: { label: string; value: number; unit?: string }[];
+  maxValue?: number;
+  graphTitle?: string;
 }
 
 function parseContent(md: string): ContentBlock[] {
@@ -129,6 +134,53 @@ function parseContent(md: string): ContentBlock[] {
         i++;
       }
       blocks.push({ type: "list", items });
+      continue;
+    }
+
+    // Graph block: [graph] ... [/graph]
+    if (line.trim().toLowerCase() === "[graph]") {
+      const graphLines: string[] = [];
+      i++;
+      while (i < lines.length && lines[i].trim().toLowerCase() !== "[/graph]") {
+        graphLines.push(lines[i]);
+        i++;
+      }
+      i++; // skip [/graph]
+
+      const titleLine = graphLines.find(l => l.trim().startsWith("title:"));
+      const graphTitle = titleLine ? titleLine.replace(/^\s*title:\s*/, "").trim() : undefined;
+      const dataLines = graphLines.filter(l => l.includes(":") && !l.trim().startsWith("title:"));
+      const bars = dataLines.map(l => {
+        const idx = l.indexOf(":");
+        const label = l.slice(0, idx).trim();
+        const valStr = l.slice(idx + 1).trim().replace(/[^\d.]/g, "");
+        const unitMatch = l.slice(idx + 1).trim().match(/[^\d.\s].*$/);
+        const value = parseFloat(valStr) || 0;
+        const unit = unitMatch ? unitMatch[0] : "";
+        return { label, value, unit };
+      }).filter(b => b.value > 0);
+
+      const maxValue = bars.length > 0 ? Math.max(...bars.map(b => b.value)) : 100;
+      blocks.push({ type: "graph", bars, maxValue, graphTitle });
+      continue;
+    }
+
+    // Table: lines starting with |
+    if (line.trim().startsWith("|")) {
+      const tableLines: string[] = [];
+      while (i < lines.length && lines[i].trim().startsWith("|")) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      // Remove separator line (| --- | --- |)
+      const dataLines = tableLines.filter(l => !/^\s*\|[\s\-|]+\|\s*$/.test(l));
+      if (dataLines.length >= 1) {
+        const headers = dataLines[0].split("|").map(h => h.trim()).filter(Boolean);
+        const rows = dataLines.slice(1).map(row =>
+          row.split("|").map(c => c.trim()).filter((_, idx) => idx < headers.length)
+        ).filter(r => r.length > 0);
+        blocks.push({ type: "table", headers, rows });
+      }
       continue;
     }
 
@@ -335,6 +387,88 @@ function CTASection() {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Table block                                                       */
+/* ------------------------------------------------------------------ */
+function TableBlock({ headers, rows }: { headers: string[]; rows: string[][] }) {
+  return (
+    <div className="my-8 overflow-x-auto">
+      <table className="w-full border-collapse rounded-xl overflow-hidden shadow-sm">
+        <thead>
+          <tr className="bg-[#0a1722]">
+            {headers.map((h, i) => (
+              <th key={i} className="text-left text-[12px] font-bold tracking-[.1em] uppercase text-[#ffb400] px-4 py-3 border-b-2 border-[#ffb400]">
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, ri) => (
+            <tr key={ri} className={ri % 2 === 0 ? "bg-white" : "bg-[#f8f9fa]"}>
+              {row.map((cell, ci) => (
+                <td key={ci} className="text-[13.5px] text-[#374151] px-4 py-3 border-b border-[#e8ecef] font-medium">
+                  <span dangerouslySetInnerHTML={{ __html: inlineMarkdown(cell) }} />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Graph block                                                       */
+/* ------------------------------------------------------------------ */
+function GraphBlock({ bars, maxValue, graphTitle }: { bars: { label: string; value: number; unit?: string }[]; maxValue: number; graphTitle?: string }) {
+  const max = maxValue || 100;
+  return (
+    <div className="my-8 p-5 sm:p-6 bg-[#f8f9fa] rounded-2xl border border-[#e8ecef]">
+      {graphTitle && (
+        <div className="flex items-center gap-2 mb-5">
+          <BarChart3 size={16} className="text-[#ffb400]" />
+          <span className="font-display text-[13px] tracking-[.1em] uppercase text-[#0a1722]">{graphTitle}</span>
+        </div>
+      )}
+      <div className="space-y-3">
+        {bars.map((bar, i) => {
+          const pct = Math.min((bar.value / max) * 100, 100);
+          return (
+            <div key={i} className="flex items-center gap-3">
+              <span className="flex-shrink-0 w-24 sm:w-32 text-right text-[12.5px] font-semibold text-[#374151] truncate">{bar.label}</span>
+              <div className="flex-1 h-8 bg-white rounded-lg overflow-hidden border border-[#e8ecef] relative">
+                <div
+                  className="h-full rounded-lg flex items-center justify-end pr-2 transition-all duration-700 ease-out"
+                  style={{
+                    width: `${pct}%`,
+                    background: i % 2 === 0
+                      ? "linear-gradient(90deg, #0a1722 0%, #1a2d3d 100%)"
+                      : "linear-gradient(90deg, #ffb400 0%, #e6a200 100%)",
+                    minWidth: pct > 0 ? "32px" : "0",
+                  }}
+                >
+                  {pct > 15 && (
+                    <span className={`text-[11px] font-bold ${i % 2 === 0 ? "text-white" : "text-[#0a1722]"}`}>
+                      {bar.value}{bar.unit}
+                    </span>
+                  )}
+                </div>
+                {pct <= 15 && (
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] font-bold text-[#0a1722]">
+                    {bar.value}{bar.unit}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Reading progress bar                                              */
 /* ------------------------------------------------------------------ */
 function ReadingProgressBar() {
@@ -432,9 +566,9 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
 
       {/* Cover image */}
       {post.cover_url && (
-        <div className="w-full h-[50vh] sm:h-[55vh] overflow-hidden bg-[#f8f9fa] relative">
-          <img src={post.cover_url} alt={post.title} className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+        <div className="w-full h-[28vh] sm:h-[32vh] max-h-[340px] overflow-hidden bg-[#f8f9fa] relative">
+          <img src={post.cover_url} alt={post.title} className="w-full h-full object-cover object-center" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10" />
         </div>
       )}
 
@@ -565,6 +699,16 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
 
                 case "sources":
                   return <SourcesBlock key={i} content={block.content || ""} />;
+
+                case "table":
+                  return block.headers && block.rows ? (
+                    <TableBlock key={i} headers={block.headers} rows={block.rows} />
+                  ) : null;
+
+                case "graph":
+                  return block.bars && block.bars.length > 0 ? (
+                    <GraphBlock key={i} bars={block.bars} maxValue={block.maxValue ?? 100} graphTitle={block.graphTitle} />
+                  ) : null;
 
                 case "paragraph":
                 default: {
