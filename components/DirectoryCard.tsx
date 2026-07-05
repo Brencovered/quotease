@@ -229,6 +229,7 @@ function EnquiryModal({ listing, onClose }: { listing: Listing; onClose: () => v
 
   async function submit() {
     if (!name || !email || !jobType) { setError("Please fill in your name, email and job description."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError("Please enter a valid email address."); return; }
     setSending(true); setError("");
     const res = await fetch("/api/directory/enquire", {
       method: "POST",

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(req: NextRequest) {
   /* ── 1. Validate API key is configured ─────────────────────────── */
@@ -46,9 +47,19 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const toAddress = typeof to_email === "string" && to_email.trim()
-    ? to_email.trim()
-    : "hello@swiftscope.com.au";
+  if (!EMAIL_RE.test(customerEmail)) {
+    return NextResponse.json(
+      { error: "Please enter a valid email address." },
+      { status: 400 }
+    );
+  }
+
+  // Scraped business emails occasionally come through malformed (stray
+  // characters, multiple addresses concatenated, etc). Rather than let a
+  // bad address on file kill every quote request for that listing, fall
+  // back to Swiftscope's own inbox so the enquiry still gets somewhere.
+  const scrapedToEmail = typeof to_email === "string" ? to_email.trim() : "";
+  const toAddress = EMAIL_RE.test(scrapedToEmail) ? scrapedToEmail : "hello@swiftscope.com.au";
 
   /* ── 3. Save enquiry to database (always persist) ──────────────── */
   const supabase = await createClient();

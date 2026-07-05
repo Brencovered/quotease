@@ -24,6 +24,10 @@ export default function QuoteForm({ listing }: { listing: Listing }) {
       setError("Please fill in your name, email and job description.");
       return;
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
     setSending(true);
     setError("");
     const res = await fetch("/api/directory/enquire", {
