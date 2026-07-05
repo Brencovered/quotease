@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import {
   Plus, GripVertical, Trash2, ChevronUp, ChevronDown,
   Type, Image, Quote, List, BarChart3, Table2, Heading1,
   Heading2, Heading3, SeparatorHorizontal, CheckCircle,
-  BookOpen,
+  BookOpen, Bold, Italic, Link2, X,
 } from "lucide-react";
 
 /* ════════════════════════════════════════════════════════════════
@@ -124,8 +124,130 @@ export function createBlock(type: BlockType): ContentBlock {
 }
 
 /* ════════════════════════════════════════════════════════════════
+   FORMATTING TOOLBAR — bold, italic, link insertion
+   ════════════════════════════════════════════════════════════════ */
+
+function FormattingToolbar({
+  content,
+  onChange,
+  textareaRef,
+}: {
+  content: string;
+  onChange: (val: string) => void;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+}) {
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+
+  function getSelection() {
+    const el = textareaRef.current;
+    if (!el) return { start: 0, end: 0, text: "" };
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    return { start, end, text: content.slice(start, end) };
+  }
+
+  function wrapSelection(before: string, after: string) {
+    const el = textareaRef.current;
+    const { start, end, text } = getSelection();
+    const replacement = before + (text || "") + after;
+    const next = content.slice(0, start) + replacement + content.slice(end);
+    onChange(next);
+    // Restore focus and selection after React re-render
+    requestAnimationFrame(() => {
+      if (el) {
+        el.focus();
+        const cursorPos = start + before.length + (text ? text.length : 0);
+        el.setSelectionRange(cursorPos, cursorPos);
+      }
+    });
+  }
+
+  function insertLink() {
+    const { start, end, text } = getSelection();
+    const label = text || "link text";
+    const url = linkUrl || "https://";
+    const linkMarkdown = `[${label}](${url})`;
+    const next = content.slice(0, start) + linkMarkdown + content.slice(end);
+    onChange(next);
+    setLinkOpen(false);
+    setLinkUrl("");
+    requestAnimationFrame(() => {
+      if (textareaRef.current) textareaRef.current.focus();
+    });
+  }
+
+  return (
+    <div className="flex items-center gap-1 mb-1.5 relative">
+      <button
+        onClick={() => wrapSelection("**", "**")}
+        title="Bold"
+        className="p-1.5 rounded-lg hover:bg-[var(--app-bg)] text-[var(--ink-faint)] hover:text-[var(--ink)] transition-colors"
+      >
+        <Bold size={13} />
+      </button>
+      <button
+        onClick={() => wrapSelection("*", "*")}
+        title="Italic"
+        className="p-1.5 rounded-lg hover:bg-[var(--app-bg)] text-[var(--ink-faint)] hover:text-[var(--ink)] transition-colors"
+      >
+        <Italic size={13} />
+      </button>
+      <div className="w-px h-4 bg-[var(--line)] mx-0.5" />
+      <div className="relative">
+        <button
+          onClick={() => setLinkOpen(!linkOpen)}
+          title="Insert link"
+          className={`p-1.5 rounded-lg transition-colors flex items-center gap-1 ${
+            linkOpen
+              ? "bg-[var(--navy)] text-white"
+              : "hover:bg-[var(--app-bg)] text-[var(--ink-faint)] hover:text-[var(--ink)]"
+          }`}
+        >
+          <Link2 size={13} />
+          <span className="text-[11px] font-semibold">Link</span>
+        </button>
+        {linkOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setLinkOpen(false)} />
+            <div className="absolute left-0 top-full mt-1.5 bg-white border border-[var(--line)] rounded-xl shadow-xl z-50 p-3 w-72 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] font-bold text-[var(--ink)]">Insert link</span>
+                <button onClick={() => setLinkOpen(false)} className="text-[var(--ink-faint)] hover:text-[var(--ink)]">
+                  <X size={12} />
+                </button>
+              </div>
+              <input
+                value={linkUrl}
+                onChange={e => setLinkUrl(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); insertLink(); } }}
+                placeholder="https://example.com"
+                className="app-field text-[12px] py-1.5"
+                autoFocus
+              />
+              <button
+                onClick={insertLink}
+                disabled={!linkUrl}
+                className="btn-primary text-[11px] py-1.5 w-full disabled:opacity-40"
+              >
+                Insert link
+              </button>
+              <p className="text-[10px] text-[var(--ink-faint)]">
+                {getSelection().text
+                  ? `Will link: "${getSelection().text.slice(0, 40)}${getSelection().text.length > 40 ? "..." : ""}"`
+                  : "Tip: select text first, then click Link"
+                }
+              </p>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
    BLOCK EDITOR COMPONENTS — one per block type
-   Each shows clearly what fields are needed and what the block does
    ════════════════════════════════════════════════════════════════ */
 
 function HeadingEditor({ block, onChange }: { block: ContentBlock; onChange: (b: ContentBlock) => void }) {
@@ -147,13 +269,19 @@ function HeadingEditor({ block, onChange }: { block: ContentBlock; onChange: (b:
 }
 
 function ParagraphEditor({ block, onChange }: { block: ContentBlock; onChange: (b: ContentBlock) => void }) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <label className="block-tag">Paragraph</label>
-        <span className="text-[10.5px] text-[var(--ink-faint)]">**bold** &nbsp;*italic* &nbsp;[link](url)</span>
       </div>
+      <FormattingToolbar
+        content={block.content}
+        onChange={(val) => onChange({ ...block, content: val })}
+        textareaRef={textareaRef}
+      />
       <textarea
+        ref={textareaRef}
         value={block.content}
         onChange={e => onChange({ ...block, content: e.target.value })}
         rows={5}
@@ -165,10 +293,17 @@ function ParagraphEditor({ block, onChange }: { block: ContentBlock; onChange: (
 }
 
 function BlockquoteEditor({ block, onChange }: { block: ContentBlock; onChange: (b: ContentBlock) => void }) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   return (
     <div className="space-y-2">
       <label className="block-tag">Pull Quote</label>
+      <FormattingToolbar
+        content={block.content}
+        onChange={(val) => onChange({ ...block, content: val })}
+        textareaRef={textareaRef}
+      />
       <textarea
+        ref={textareaRef}
         value={block.content}
         onChange={e => onChange({ ...block, content: e.target.value })}
         rows={3}
@@ -511,7 +646,7 @@ function BlockCard({
       {/* Block header bar */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--line)]/50 bg-[var(--app-bg)] rounded-t-2xl">
         <GripVertical size={14} className="text-[var(--ink-faint)]" />
-        <Icon size={13} className="text-[var(--amber)]" />
+        <Icon size={13} className="text-[var(amber)]" />
         <span className="text-[11px] font-bold text-[var(--ink-soft)] uppercase tracking-wide flex-1">{def?.label ?? block.type}</span>
         <span className="text-[10px] text-[var(--ink-faint)] mr-1">{index + 1} / {total}</span>
         <div className="flex items-center gap-0.5 opacity-0 group-hover/card:opacity-100 transition-opacity">
