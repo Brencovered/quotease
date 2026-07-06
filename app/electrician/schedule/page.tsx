@@ -2,6 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getActiveBusinessId } from "@/lib/team";
 import AppHeader from "@/components/AppHeader";
 import CalendarPanel from "@/components/CalendarPanel";
+import ScheduleWeeklyEmail from "@/components/ScheduleWeeklyEmail";
+
+export const metadata = { title: "Schedule — Swiftscope" };
 
 export default async function SchedulePage() {
   let jobs: Array<Record<string, unknown>> = [];
@@ -37,8 +40,13 @@ export default async function SchedulePage() {
   return (
     <>
       <AppHeader />
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      <CalendarPanel jobs={jobs as any} sendDigestEnabled={sendDigestEnabled} />
+      <main className="page-wrap">
+        <ScheduleWeeklyEmail />
+        <div className="mt-5">
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          <CalendarPanel jobs={jobs as any} sendDigestEnabled={sendDigestEnabled} />
+        </div>
+      </main>
     </>
   );
 }
