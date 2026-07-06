@@ -5,7 +5,7 @@ import DirectoryPanel from "@/components/DirectoryPanel";
 import AccountDangerZone from "@/components/AccountDangerZone";
 import AppHeader from "@/components/AppHeader";
 import Link from "next/link";
-import { BookOpen, Users } from "lucide-react";
+import { BookOpen, Users, Mail } from "lucide-react";
 
 // Always fetch fresh -- Xero OAuth redirect must see updated connection state
 export const dynamic = "force-dynamic";
@@ -73,6 +73,19 @@ export default async function SettingsPage() {
           </p>
           <Link href="/settings/pricebook" className="btn-secondary inline-flex">
             <BookOpen size={14} /> Manage price books
+          </Link>
+        </div>
+
+        {/* Supplier auto-ingestion */}
+        <div className="card mt-0 mb-4">
+          <p className="section-tag mb-1">Suppliers</p>
+          <p className="font-semibold text-[var(--ink)] mb-1">Get a dedicated inbox for each supplier</p>
+          <p className="text-[13px] text-[var(--ink-faint)] mb-3">
+            Add your suppliers and send them a unique email address. Invoices and price lists sent there
+            update your price book automatically.
+          </p>
+          <Link href="/settings/suppliers" className="btn-secondary inline-flex">
+            <Mail size={14} /> Manage suppliers
           </Link>
         </div>
 

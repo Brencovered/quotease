@@ -3,92 +3,13 @@
 import { useState, useRef, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Upload, Trash2, Search, Check, AlertCircle, ChevronDown } from "lucide-react";
+import { SUPPLIER_PRESETS, parseCSV, guessMapping } from "@/lib/priceBookImport";
 
 type PriceBookItem = {
   id: string; supplier: string; sku: string | null;
   description: string; unit: string; cost_price: number;
   trade: string | null; imported_at: string;
 };
-
-// Known supplier CSV formats -- maps their column headers to our fields
-const SUPPLIER_PRESETS: Record<string, {
-  label: string;
-  descCol: string;
-  skuCol: string;
-  priceCol: string;
-  unitCol?: string;
-}> = {
-  reece: {
-    label: "Reece",
-    descCol: "Description",
-    skuCol: "Part Number",
-    priceCol: "Trade Price",
-    unitCol: "UOM",
-  },
-  tradelink: {
-    label: "Tradelink",
-    descCol: "Product Description",
-    skuCol: "Product Code",
-    priceCol: "Net Price",
-    unitCol: "Unit",
-  },
-  middys: {
-    label: "Middy's",
-    descCol: "Description",
-    skuCol: "Stock Code",
-    priceCol: "Price",
-  },
-  rexel: {
-    label: "Rexel",
-    descCol: "Product Name",
-    skuCol: "Material",
-    priceCol: "Net Price",
-    unitCol: "Base Unit",
-  },
-  neca: {
-    label: "NECA / Supply",
-    descCol: "Description",
-    skuCol: "Code",
-    priceCol: "Price",
-  },
-  custom: {
-    label: "Custom / Other",
-    descCol: "",
-    skuCol: "",
-    priceCol: "",
-  },
-};
-
-function parseCSV(text: string): Record<string, string>[] {
-  const lines = text.split(/\r?\n/).filter(l => l.trim());
-  if (lines.length < 2) return [];
-  // Handle quoted fields
-  function splitLine(line: string): string[] {
-    const result: string[] = [];
-    let current = "";
-    let inQuote = false;
-    for (let i = 0; i < line.length; i++) {
-      const c = line[i];
-      if (c === '"') {
-        inQuote = !inQuote;
-      } else if ((c === "," || c === "\t") && !inQuote) {
-        result.push(current.trim());
-        current = "";
-      } else {
-        current += c;
-      }
-    }
-    result.push(current.trim());
-    return result;
-  }
-  const headers = splitLine(lines[0]);
-  return lines.slice(1).map(line => {
-    const values = splitLine(line);
-    const row: Record<string, string> = {};
-    headers.forEach((h, i) => { row[h.trim()] = values[i] ?? ""; });
-    return row;
-  }).filter(row => Object.values(row).some(v => v));
-}
 
 export default function PriceBookPanel({
   items: initial, supplierCounts: initialCounts,
@@ -127,21 +48,11 @@ export default function PriceBookPanel({
       setCsvRows(rows);
       const headers = Object.keys(rows[0]);
       setCsvHeaders(headers);
-      // Auto-fill column mapping from preset
-      const preset = SUPPLIER_PRESETS[csvSupplier];
-      if (preset && preset.descCol) {
-        const findCol = (name: string) => headers.find(h => h.toLowerCase().includes(name.toLowerCase())) ?? "";
-        setMapDesc(headers.find(h => h === preset.descCol) ?? findCol("desc") ?? headers[0] ?? "");
-        setMapSku(headers.find(h => h === preset.skuCol) ?? findCol("code") ?? "");
-        setMapPrice(headers.find(h => h === preset.priceCol) ?? findCol("price") ?? "");
-        setMapUnit(preset.unitCol ? (headers.find(h => h === preset.unitCol) ?? "") : "");
-      } else {
-        // Auto-guess for custom
-        setMapDesc(headers.find(h => /desc/i.test(h)) ?? headers[0] ?? "");
-        setMapSku(headers.find(h => /sku|code|part/i.test(h)) ?? "");
-        setMapPrice(headers.find(h => /price|cost|rate/i.test(h)) ?? "");
-        setMapUnit(headers.find(h => /unit|uom/i.test(h)) ?? "");
-      }
+      const guess = guessMapping(headers, csvSupplier);
+      setMapDesc(guess.descCol);
+      setMapSku(guess.skuCol);
+      setMapPrice(guess.priceCol);
+      setMapUnit(guess.unitCol);
     };
     reader.readAsText(file);
     e.target.value = "";
