@@ -1,12 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
 import { getActiveBusinessId } from "@/lib/team";
-import JobsPanel from "@/components/JobsPanel";
-import QuickJobsPanel from "@/components/QuickJobsPanel";
 import AppHeader from "@/components/AppHeader";
+import JobsPageClient from "./JobsPageClient";
 
 export default async function JobsPage() {
-  let jobs: Array<Record<string, unknown>> = [];
-  let quickJobs: Array<Record<string, unknown>> = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let boardJobs: any[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let quickJobs: any[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let listJobs: any[] = [];
   let teamMembers: Array<{ id: string; name: string | null; email: string }> = [];
 
   try {
@@ -14,23 +17,25 @@ export default async function JobsPage() {
     const { data: userData } = await supabase.auth.getUser();
     if (userData.user) {
       const businessId = await getActiveBusinessId(supabase, userData.user.id);
-      const [{ data }, { data: quickData }, { data: teamRows }] = await Promise.all([
+      const [{ data: allJobs }, { data: quotesData }, { data: teamRows }] = await Promise.all([
+        supabase
+          .from("jobs")
+          .select("id, job_number, client_name, site_address, total_cost, amount_paid, status, source, scheduled_date, scheduled_start, is_recurring_template, recurrence_rule")
+          .eq("profile_id", businessId)
+          .order("created_at", { ascending: false }),
         supabase
           .from("quotes")
           .select("*")
           .eq("profile_id", businessId)
           .eq("status", "accepted")
           .order("accepted_at", { ascending: true }),
-        supabase
-          .from("jobs")
-          .select("*")
-          .eq("profile_id", businessId)
-          .in("source", ["quick", "recurring"])
-          .order("created_at", { ascending: false }),
         supabase.from("team_members").select("id, name, email").eq("owner_profile_id", businessId).eq("status", "active").order("name"),
       ]);
-      if (data) jobs = data;
-      if (quickData) quickJobs = quickData;
+      if (allJobs) {
+        boardJobs = allJobs.filter((j) => !j.is_recurring_template);
+        quickJobs = allJobs.filter((j) => j.source === "quick" || j.source === "recurring");
+      }
+      if (quotesData) listJobs = quotesData;
       if (teamRows) teamMembers = teamRows;
     }
   } catch (err) {
@@ -40,12 +45,7 @@ export default async function JobsPage() {
   return (
     <>
       <AppHeader />
-      <div className="page-wrap">
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        <QuickJobsPanel jobs={quickJobs as any} teamMembers={teamMembers} />
-      </div>
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      <JobsPanel jobs={jobs as any} />
+      <JobsPageClient boardJobs={boardJobs} quickJobs={quickJobs} listJobs={listJobs} teamMembers={teamMembers} />
     </>
   );
 }

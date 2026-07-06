@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Plus, Repeat, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -17,18 +16,6 @@ type QuickJob = {
   source: string;
   is_recurring_template: boolean;
   recurrence_rule: { freq?: string; interval?: number } | null;
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  scheduled: "Scheduled",
-  in_progress: "In progress",
-  on_hold: "On hold",
-  awaiting_sign_off: "Awaiting sign-off",
-  complete: "Complete",
-  invoiced: "Invoiced",
-  partially_paid: "Partially paid",
-  archived: "Archived",
-  cancelled: "Cancelled",
 };
 
 export default function QuickJobsPanel({ jobs: initialJobs, teamMembers }: {
@@ -86,12 +73,11 @@ export default function QuickJobsPanel({ jobs: initialJobs, teamMembers }: {
   }
 
   const templates = jobs.filter((j) => j.is_recurring_template);
-  const regular = jobs.filter((j) => !j.is_recurring_template);
 
   return (
-    <div className="mb-6">
+    <div className="mb-4">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="font-display text-[20px] text-[var(--ink)]">Quick jobs</h2>
+        <h2 className="font-display text-[18px] text-[var(--ink)]">Quick jobs</h2>
         <button onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5 bg-[var(--amber)] text-[var(--navy)] font-extrabold text-[13px] px-4 py-2.5 rounded-xl">
           <Plus size={15} /> Quick job
         </button>
@@ -128,7 +114,7 @@ export default function QuickJobsPanel({ jobs: initialJobs, teamMembers }: {
       )}
 
       {templates.length > 0 && (
-        <div className="mb-3 space-y-2">
+        <div className="space-y-2">
           {templates.map((t) => (
             <div key={t.id} className="card flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 min-w-0">
@@ -140,25 +126,6 @@ export default function QuickJobsPanel({ jobs: initialJobs, teamMembers }: {
               </div>
               <button onClick={() => generateNext(t.id)} disabled={saving} className="btn-secondary text-[12.5px] py-1.5 px-3 whitespace-nowrap">Generate next</button>
             </div>
-          ))}
-        </div>
-      )}
-
-      {regular.length === 0 ? (
-        <p className="text-[13px] text-[var(--ink-faint)]">No quick jobs yet - use this for repeat work and service calls that don&apos;t need a full quote.</p>
-      ) : (
-        <div className="space-y-2">
-          {regular.map((j) => (
-            <Link key={j.id} href={`/electrician/jobs/${j.id}`} className="card flex items-center justify-between gap-3 hover:border-[var(--navy)]">
-              <div className="min-w-0">
-                <p className="font-semibold text-[13.5px] text-[var(--ink)] truncate">{j.client_name || "Unnamed client"} <span className="text-[var(--ink-faint)] font-normal">Job #{j.job_number}</span></p>
-                {j.site_address && <p className="text-[11.5px] text-[var(--ink-faint)] truncate">{j.site_address}</p>}
-              </div>
-              <div className="text-right shrink-0">
-                <p className="font-semibold text-[13.5px] text-[var(--ink)]">${(j.total_cost ?? 0).toLocaleString()}</p>
-                <p className="text-[11px] text-[var(--ink-faint)]">{STATUS_LABELS[j.status] ?? j.status}</p>
-              </div>
-            </Link>
           ))}
         </div>
       )}
