@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { CalendarDays, MapPin, ChevronLeft, ChevronRight, Plus, Bell, Send, Trash2, Pencil } from "lucide-react";
+import { CalendarDays, MapPin, ChevronLeft, ChevronRight, Plus, Bell, Send, Trash2, Pencil, Mail, X, Eye, Loader2 } from "lucide-react";
 
 type ScheduledJob = {
   id: string; client_name: string | null; site_address: string | null;
@@ -27,14 +27,29 @@ type CalEvent = {
   label: string; sub?: string; jobId: string; manualEvent?: ManualEvent;
 };
 
+type DigestPreview = {
+  previewHtml: string | null;
+  recipientCount: number;
+  weekLabel: string;
+  memberBreakdown: Array<{ name: string; email: string; jobCount: number }>;
+};
+
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const DAY_NAMES   = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
 function toDateStr(d: Date) { return d.toISOString().slice(0,10); }
 function getDaysInMonth(y: number, m: number) { return new Date(y, m+1, 0).getDate(); }
 function getFirstDay(y: number, m: number)    { return new Date(y, m, 1).getDay(); }
+function getMonday(d: Date) {
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+  date.setDate(diff);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
 
-export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJob[] }) {
+export default function CalendarPanel({ jobs: initialJobs, sendDigestEnabled }: { jobs: ScheduledJob[]; sendDigestEnabled?: boolean }) {
   const today = new Date();
   const [year,  setYear]  = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
@@ -49,6 +64,15 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
   const [showManualModal, setShowManualModal] = useState(false);
   const [editingManualEvent, setEditingManualEvent] = useState<ManualEvent | null>(null);
   const [manualForm, setManualForm] = useState({ title: "", description: "", event_date: "", event_type: "general", start_time: "", end_time: "", is_all_day: false });
+
+  // Weekly digest state
+  const [showDigestModal, setShowDigestModal] = useState(false);
+  const [digestLoading, setDigestLoading] = useState(false);
+  const [digestSending, setDigestSending] = useState(false);
+  const [digestPreview, setDigestPreview] = useState<DigestPreview | null>(null);
+  const [digestWeekStart, setDigestWeekStart] = useState(toDateStr(getMonday(today)));
+  const [digestError, setDigestError] = useState<string | null>(null);
+  const [digestSent, setDigestSent] = useState(false);
 
   const supabase = createClient();
 
@@ -70,6 +94,56 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
 
   function prevMonth() { if (month===0){setYear(y=>y-1);setMonth(11);}else setMonth(m=>m-1); }
   function nextMonth() { if (month===11){setYear(y=>y+1);setMonth(0);}else setMonth(m=>m+1); }
+
+  // --- Weekly digest handlers ---
+  async function loadDigestPreview() {
+    setDigestLoading(true);
+    setDigestError(null);
+    setDigestSent(false);
+    try {
+      const res = await fetch(`/api/schedule/send-digest?weekStart=${digestWeekStart}`);
+      if (!res.ok) throw new Error("Failed to load preview");
+      const data = await res.json();
+      setDigestPreview(data);
+    } catch (err) {
+      setDigestError(String(err));
+    } finally {
+      setDigestLoading(false);
+    }
+  }
+
+  async function sendDigest() {
+    setDigestSending(true);
+    setDigestError(null);
+    try {
+      const res = await fetch("/api/schedule/send-digest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ weekStart: digestWeekStart }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to send");
+      if (data.warning) {
+        setDigestError(data.warning);
+      } else {
+        setDigestSent(true);
+        setDigestError(null);
+      }
+      // Refresh preview to show updated state
+      await loadDigestPreview();
+    } catch (err) {
+      setDigestError(String(err));
+    } finally {
+      setDigestSending(false);
+    }
+  }
+
+  // When modal opens, load preview
+  useEffect(() => {
+    if (showDigestModal) {
+      loadDigestPreview();
+    }
+  }, [showDigestModal, digestWeekStart]);
 
   const events: CalEvent[] = [];
   for (const j of jobs) {
@@ -210,6 +284,14 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
       <div className="flex items-center justify-between mb-5">
         <h1 className="font-display text-[28px] text-[var(--ink)]">Schedule</h1>
         <div className="flex gap-2">
+          {sendDigestEnabled && (
+            <button
+              onClick={() => setShowDigestModal(true)}
+              className="inline-flex items-center gap-1.5 bg-[var(--navy)] text-white font-extrabold text-[12.5px] px-3 py-2 rounded-xl hover:bg-[var(--ink)] transition-colors"
+            >
+              <Mail size={14} strokeWidth={3} /> Send digest
+            </button>
+          )}
           <button onClick={() => setShowManualModal(true)} className="inline-flex items-center gap-1.5 bg-[var(--amber)] text-[var(--navy)] font-extrabold text-[12.5px] px-3 py-2 rounded-xl hover:bg-[var(--amber-deep)] transition-colors">
             <Plus size={14} strokeWidth={3} /> Add event
           </button>
@@ -231,6 +313,134 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
         Drag a scheduled job onto a different day to reschedule it.
         {rescheduling && <span className="text-[var(--amber-deep)] font-semibold ml-2">Saving...</span>}
       </p>
+
+      {/* Weekly digest modal */}
+      {showDigestModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowDigestModal(false)}>
+          <div className="bg-[var(--surface)] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-[var(--surface)] z-10 flex items-center justify-between p-5 border-b border-[var(--line)]">
+              <div>
+                <h2 className="font-display text-[20px] text-[var(--ink)]">Weekly schedule digest</h2>
+                <p className="text-[12px] text-[var(--ink-faint)] mt-0.5">Email your team their upcoming week at a glance</p>
+              </div>
+              <button onClick={() => setShowDigestModal(false)} className="p-1.5 rounded-lg hover:bg-[var(--app-bg)]">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {/* Week selector */}
+              <div className="flex items-center gap-3">
+                <label className="flex-1">
+                  <span className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Week starting (Monday)</span>
+                  <input
+                    type="date"
+                    value={digestWeekStart}
+                    onChange={(e) => { setDigestWeekStart(e.target.value); setDigestSent(false); }}
+                    className="app-field"
+                  />
+                </label>
+                <button
+                  onClick={() => setDigestWeekStart(toDateStr(getMonday(new Date())))}
+                  className="mt-6 text-[12px] font-bold text-[var(--navy)] border-2 border-[var(--line)] rounded-lg px-3 py-2"
+                >
+                  This week
+                </button>
+              </div>
+
+              {/* Loading */}
+              {digestLoading && (
+                <div className="flex items-center gap-2 py-8 text-[var(--ink-faint)]">
+                  <Loader2 size={16} className="animate-spin" />
+                  <span className="text-[13px]">Loading schedule preview...</span>
+                </div>
+              )}
+
+              {/* Error */}
+              {digestError && (
+                <div className="bg-[var(--red-bg)] border border-[var(--red)] rounded-xl p-4">
+                  <p className="text-[13px] text-[var(--red)] font-semibold">{digestError}</p>
+                </div>
+              )}
+
+              {/* Success */}
+              {digestSent && !digestError && (
+                <div className="bg-[var(--green-bg)] border border-[var(--green)] rounded-xl p-4">
+                  <p className="text-[13px] text-[var(--green)] font-semibold">Weekly digest sent successfully!</p>
+                </div>
+              )}
+
+              {/* Preview */}
+              {digestPreview && !digestLoading && (
+                <>
+                  {digestPreview.recipientCount === 0 ? (
+                    <div className="text-center py-8">
+                      <CalendarDays size={32} className="mx-auto mb-3 text-[var(--ink-faint)]" />
+                      <p className="text-[14px] text-[var(--ink-faint)]">No scheduled jobs with assigned team members for this week.</p>
+                      <p className="text-[12px] text-[var(--ink-faint)] mt-1">Assign team members to scheduled jobs to send a digest.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <p className="text-[13px] text-[var(--ink-soft)]">
+                          <span className="font-bold text-[var(--ink)]">{digestPreview.recipientCount}</span> team member{digestPreview.recipientCount > 1 ? "s" : ""} will receive this email
+                        </p>
+                        <p className="text-[12px] text-[var(--ink-faint)] font-semibold">{digestPreview.weekLabel}</p>
+                      </div>
+
+                      {/* Recipient breakdown */}
+                      <div className="space-y-2">
+                        {digestPreview.memberBreakdown?.map((m) => (
+                          <div key={m.email} className="flex items-center justify-between bg-[var(--app-bg)] rounded-lg px-3 py-2">
+                            <div className="flex items-center gap-2">
+                              <Mail size={13} className="text-[var(--ink-faint)]" />
+                              <span className="text-[13px] font-semibold text-[var(--ink)]">{m.name}</span>
+                            </div>
+                            <span className="text-[11px] font-bold text-[var(--navy)] bg-white rounded-full px-2 py-0.5">{m.jobCount} job{m.jobCount > 1 ? "s" : ""}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Email preview iframe */}
+                      {digestPreview.previewHtml && (
+                        <div>
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <Eye size={13} className="text-[var(--ink-faint)]" />
+                            <span className="text-[11px] font-bold text-[var(--ink-faint)] uppercase tracking-wide">Preview</span>
+                          </div>
+                          <div className="border border-[var(--line)] rounded-xl overflow-hidden">
+                            <iframe
+                              srcDoc={digestPreview.previewHtml}
+                              className="w-full h-[400px]"
+                              title="Weekly digest preview"
+                              sandbox="allow-same-origin"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setShowDigestModal(false)} className="btn-secondary flex-1">Close</button>
+                {digestPreview && digestPreview.recipientCount > 0 && (
+                  <button
+                    onClick={sendDigest}
+                    disabled={digestSending}
+                    className="btn-primary flex-1 inline-flex items-center justify-center gap-1.5"
+                  >
+                    {digestSending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                    {digestSending ? "Sending..." : "Send now"}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Manual event modal */}
       {showManualModal && (
