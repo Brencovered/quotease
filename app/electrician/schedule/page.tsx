@@ -5,12 +5,22 @@ import CalendarPanel from "@/components/CalendarPanel";
 
 export default async function SchedulePage() {
   let jobs: Array<Record<string, unknown>> = [];
+  let sendDigestEnabled = false;
 
   try {
     const supabase = await createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (userData.user) {
       const businessId = await getActiveBusinessId(supabase, userData.user.id);
+
+      // Fetch the digest setting
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("send_weekly_digest")
+        .eq("id", businessId)
+        .single();
+      sendDigestEnabled = profile?.send_weekly_digest ?? false;
+
       // Fetch accepted/paid jobs (schedulable) + sent quotes (for follow-up/expiry events)
       const { data } = await supabase
         .from("quotes")
@@ -28,7 +38,7 @@ export default async function SchedulePage() {
     <>
       <AppHeader />
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      <CalendarPanel jobs={jobs as any} />
+      <CalendarPanel jobs={jobs as any} sendDigestEnabled={sendDigestEnabled} />
     </>
   );
 }
