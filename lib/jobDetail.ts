@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getOrCreateJobForQuote } from "@/lib/jobs";
 
 /**
  * A job detail page is keyed by the job's own id now, not the quote's.
@@ -14,6 +15,15 @@ export async function loadJobDetailData(supabase: SupabaseClient, idParam: strin
   let job = (await supabase.from("jobs").select("*").eq("id", idParam).eq("profile_id", profileId).maybeSingle()).data;
   if (!job) {
     job = (await supabase.from("jobs").select("*").eq("quote_id", idParam).eq("profile_id", profileId).maybeSingle()).data;
+  }
+  // Self-heal: an accepted quote should always have a job, but if job
+  // creation raced or failed at accept-time, create it now rather than
+  // 404ing on a quote that's genuinely won.
+  if (!job) {
+    const { data: quoteCheck } = await supabase.from("quotes").select("id, status").eq("id", idParam).eq("profile_id", profileId).maybeSingle();
+    if (quoteCheck && (quoteCheck.status === "accepted" || quoteCheck.status === "paid")) {
+      job = await getOrCreateJobForQuote(supabase, idParam);
+    }
   }
   if (!job) return null;
   const jobId = job.id;
