@@ -8,6 +8,8 @@ import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import { calcPlumberQuote, PLUMBER_DEFAULT_MATERIALS, type PlumberIntake } from "@/lib/calcPlumber";
 import MaterialsEditor from "@/components/MaterialsEditor";
+import CalcKeyPricingPanel from "@/components/CalcKeyPricingPanel";
+import { resolveCalcCosts, hasRealPriceBook } from "@/lib/resolveCalcCosts";
 import StepCustomer from "./StepCustomer";
 import ExtraJobLines, { type ExtraLine, extraLinesTotals } from "./ExtraJobLines";
 import { resolveClientId } from "@/lib/resolveClientId";
@@ -44,7 +46,7 @@ export default function PlumberQuoteBuilder({
   profile, materials, preClientId, preMarkupMaterials,
   pricingTiers, jobSizeTiers,
 }: {
-  profile: { hourly_rate: number; materials_margin_pct: number };
+  profile: { hourly_rate: number; materials_margin_pct: number; archetype_defaults?: Record<string, string> };
   materials: MaterialRow[];
   preClientId?: string;
   preMarkupMaterials?: Array<{ label: string; quantity: number; unit: string; unitCost: number; totalCost: number }>;
@@ -58,6 +60,28 @@ export default function PlumberQuoteBuilder({
   const [lib, setLib] = useState<MaterialRow[]>(
     materials.length > 0 ? materials : PLUMBER_DEFAULT_MATERIALS.map((m) => ({ ...m }))
   );
+  // Remembered archetype -> real price book product mappings (shared column
+  // across trades, keyed "trade:archetypeKey" / "trade:calc:calcKey").
+  const [archetypeDefaults, setArchetypeDefaults] = useState<Record<string, string>>(
+    profile.archetype_defaults ?? {}
+  );
+  async function saveArchetypeDefault(archetypeKey: string, itemKey: string) {
+    const key = `plumber:${archetypeKey}`;
+    const next = { ...archetypeDefaults, [key]: itemKey };
+    setArchetypeDefaults(next);
+    try {
+      const supabase = createClient();
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+      const businessId = await getActiveBusinessId(supabase, userData.user.id);
+      await supabase.from("profiles").update({ archetype_defaults: next }).eq("id", businessId);
+    } catch (e) {
+      console.error("Failed to save archetype default:", e);
+    }
+  }
+  function saveCalcDefault(calcKey: string, itemKey: string) {
+    saveArchetypeDefault(`calc:${calcKey}`, itemKey);
+  }
 
   const [selectedPricingTierId, setSelectedPricingTierId] = useState<string | null>(null);
   const [selectedJobSizeTierId, setSelectedJobSizeTierId] = useState<string | null>(null);
@@ -119,7 +143,10 @@ export default function PlumberQuoteBuilder({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const costs = useMemo(() => { const m: Record<string,number> = {}; lib.forEach((r) => (m[r.item_key] = Number(r.unit_cost)||0)); return m; }, [lib]);
+  const costs = useMemo(
+    () => resolveCalcCosts("plumber", PLUMBER_DEFAULT_MATERIALS, lib, archetypeDefaults),
+    [lib, archetypeDefaults]
+  );
   const result = useMemo(() => calcPlumberQuote(intake, costs, rate, effectiveMargin), [intake, costs, rate, effectiveMargin]);
   const markupTotal  = markupChargeTotal(preMarkupMaterials, rate, effectiveMargin);
   const siteLabour   = siteItemsLabourTotal(siteItems, rate);
@@ -327,6 +354,8 @@ export default function PlumberQuoteBuilder({
                   confidence={analysisResult.confidence as "high" | "medium" | "low"}
                   notes={analysisResult.notes}
                   lib={lib as { item_key: string; label: string; unit_cost: number }[]}
+                  archetypeDefaults={archetypeDefaults}
+                  onSaveDefault={saveArchetypeDefault}
                   onAccept={(items: ReviewLineItem[]) => {
                     setSiteItems((prev: {id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]) => [
                       ...prev,
@@ -471,7 +500,16 @@ export default function PlumberQuoteBuilder({
         </div>
       )}
 
-      {stepId === "materials" && <MaterialsEditor lib={lib} setLib={setLib} trade="plumber" />}
+      {stepId === "materials" && hasRealPriceBook(lib) && (
+        <CalcKeyPricingPanel
+          trade="plumber"
+          defaults={PLUMBER_DEFAULT_MATERIALS}
+          lib={lib}
+          archetypeDefaults={archetypeDefaults}
+          onSaveDefault={saveCalcDefault}
+        />
+      )}
+      {stepId === "materials" && !hasRealPriceBook(lib) && <MaterialsEditor lib={lib} setLib={setLib} trade="plumber" />}
 
       {stepId === "send" && (
         <div className="space-y-4">

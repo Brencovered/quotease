@@ -89,7 +89,7 @@ function generateQuoteNumber(): string {
 // ── Main component ────────────────────────────────────────────────
 
 interface RooferQuoteBuilderProps {
-  profile: { hourly_rate: number; materials_margin_pct: number; trades?: string[]; onboarded_at?: string | null };
+  profile: { hourly_rate: number; materials_margin_pct: number; trades?: string[]; onboarded_at?: string | null; archetype_defaults?: Record<string, string> };
   materials: { item_key: string; label: string; unit_cost: number }[];
   preClientId?: string;
   preMarkupMaterials?: { label: string; quantity: number; unit: string; unitCost: number; totalCost: number }[];
@@ -105,6 +105,27 @@ export default function RooferQuoteBuilder({
   pricingTiers,
   jobSizeTiers,
 }: RooferQuoteBuilderProps) {
+
+  // Remembered archetype -> real price book product mappings, so AI-detected
+  // items auto-price from the tradie's previous picks instead of coming
+  // back unpriced on every single quote.
+  const [archetypeDefaults, setArchetypeDefaults] = useState<Record<string, string>>(
+    profile.archetype_defaults ?? {}
+  );
+  async function saveArchetypeDefault(archetypeKey: string, itemKey: string) {
+    const key = `roofer:${archetypeKey}`;
+    const next = { ...archetypeDefaults, [key]: itemKey };
+    setArchetypeDefaults(next);
+    try {
+      const supabase = createClient();
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+      const businessId = await getActiveBusinessId(supabase, userData.user.id);
+      await supabase.from("profiles").update({ archetype_defaults: next }).eq("id", businessId);
+    } catch (e) {
+      console.error("Failed to save archetype default:", e);
+    }
+  }
 
   // ── State ──────────────────────────────────────────────────────
   const [siteItems, setSiteItems] = useState<{id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]>([]);
@@ -605,6 +626,8 @@ export default function RooferQuoteBuilder({
             confidence={analysisResult.confidence as "high" | "medium" | "low"}
             notes={analysisResult.notes}
             lib={lib as { item_key: string; label: string; unit_cost: number }[]}
+            archetypeDefaults={archetypeDefaults}
+            onSaveDefault={saveArchetypeDefault}
             onAccept={(items: ReviewLineItem[]) => {
               setSiteItems((prev) => [
                 ...prev,
