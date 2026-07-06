@@ -401,3 +401,15 @@ create table if not exists seo_refresh_log (
 create index if not exists seo_refresh_log_run_at_idx on seo_refresh_log(run_at desc);
 
 alter table seo_refresh_log enable row level security;
+
+-- ============================================================
+-- MIGRATION FIX: Onboarding columns (applied 6 July 2026)
+-- ============================================================
+-- The onboarding page writes suburb, digital_tools, and quote_frequency
+-- to the profiles table, but these columns were never created.
+-- This caused 400 errors that left users stuck on the onboarding screen.
+
+alter table profiles
+  add column if not exists suburb          text,
+  add column if not exists digital_tools   text[],
+  add column if not exists quote_frequency text;
