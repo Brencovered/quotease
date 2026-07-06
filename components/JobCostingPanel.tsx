@@ -15,8 +15,9 @@ type Actuals = {
   recorded_at: string;
 };
 
-export default function JobCostingPanel({ quoteId, quotedHours, quotedMaterials, quotedTotal, hourlyRate, actuals: initial, intakeData }: {
-  quoteId: string;
+export default function JobCostingPanel({ quoteId, jobId, quotedHours, quotedMaterials, quotedTotal, hourlyRate, actuals: initial, intakeData }: {
+  quoteId: string | null;
+  jobId?: string | null;
   quotedHours: number;
   quotedMaterials: number;
   quotedTotal: number;
@@ -51,7 +52,7 @@ export default function JobCostingPanel({ quoteId, quotedHours, quotedMaterials,
     if (!userData.user) { setError("Not signed in"); setSaving(false); return; }
     const { data, error: err } = await supabase
       .from("job_actuals")
-      .insert({ quote_id: quoteId, profile_id: userData.user.id, actual_hours: Number(form.hours) || 0, actual_materials_cost: Number(form.materials) || 0, unexpected_costs: Number(form.unexpected) || 0, notes: form.notes || null })
+      .insert({ quote_id: quoteId || null, job_id: jobId ?? null, profile_id: userData.user.id, actual_hours: Number(form.hours) || 0, actual_materials_cost: Number(form.materials) || 0, unexpected_costs: Number(form.unexpected) || 0, notes: form.notes || null })
       .select().single();
     if (err) { setError(err.message); setSaving(false); return; }
     setActuals((prev) => [...prev, data]);

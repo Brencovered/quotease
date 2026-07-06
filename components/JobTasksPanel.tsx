@@ -20,11 +20,13 @@ interface Task {
 
 export default function JobTasksPanel({
   quoteId,
+  jobId,
   profileId,
   initialTasks,
   teamMembers,
 }: {
-  quoteId: string;
+  quoteId: string | null;
+  jobId?: string | null;
   profileId: string;
   initialTasks: Task[];
   teamMembers: TeamMemberOption[];
@@ -49,7 +51,8 @@ export default function JobTasksPanel({
     const { data, error } = await supabase
       .from("job_tasks")
       .insert({
-        quote_id: quoteId,
+        quote_id: quoteId || null,
+        job_id: jobId ?? null,
         profile_id: profileId,
         title: title.trim(),
         assigned_to_member_id: assignedTo || null,

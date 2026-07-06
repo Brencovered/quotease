@@ -24,7 +24,7 @@ function daysUntil(dateStr: string | null): number | null {
   return Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
 }
 
-export default function CompliancePanel({ quoteId, certs: initial }: { quoteId: string; certs: Cert[] }) {
+export default function CompliancePanel({ quoteId, jobId, certs: initial }: { quoteId: string | null; jobId?: string | null; certs: Cert[] }) {
   const [certs, setCerts] = useState(initial);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -43,7 +43,7 @@ export default function CompliancePanel({ quoteId, certs: initial }: { quoteId: 
     let signedUrl: string | undefined;
     if (certFile) {
       const safeName = certFile.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-      const path = `${userData.user.id}/${quoteId}/cert-${Date.now()}-${safeName}`;
+      const path = `${userData.user.id}/${jobId ?? quoteId}/cert-${Date.now()}-${safeName}`;
       const { error: uploadErr } = await supabase.storage.from("job-files").upload(path, certFile);
       if (!uploadErr) {
         storagePath = path;
@@ -54,7 +54,7 @@ export default function CompliancePanel({ quoteId, certs: initial }: { quoteId: 
 
     const { data, error: err } = await supabase
       .from("compliance_certs")
-      .insert({ quote_id: quoteId, profile_id: userData.user.id, cert_type: form.cert_type, cert_number: form.cert_number || null, issued_date: form.issued_date || null, expiry_date: form.expiry_date || null, notes: form.notes || null, storage_path: storagePath })
+      .insert({ quote_id: quoteId || null, job_id: jobId ?? null, profile_id: userData.user.id, cert_type: form.cert_type, cert_number: form.cert_number || null, issued_date: form.issued_date || null, expiry_date: form.expiry_date || null, notes: form.notes || null, storage_path: storagePath })
       .select().single();
 
     if (err) { setError(err.message); setSaving(false); return; }

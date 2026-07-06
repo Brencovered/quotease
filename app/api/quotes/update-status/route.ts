@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { pushQuoteToXero } from "@/lib/xero";
+import { getOrCreateJobForQuote } from "@/lib/jobs";
 
 const ALLOWED_STATUSES = ["draft", "sent", "accepted", "declined", "paid"];
 
@@ -32,6 +33,27 @@ export async function POST(request: Request) {
     update.completed_at = new Date().toISOString();
   }
 
+  // The moment a quote is accepted it becomes a real job - everything from
+  // here (actuals, tasks, variations, invoicing) should hang off that job,
+  // not off the quote directly.
+  if (status === "accepted" || completeJob || status === "paid") {
+    const job = await getOrCreateJobForQuote(supabase, quoteId);
+    if (job) {
+      const jobUpdate: Record<string, unknown> = {};
+      if (completeJob) {
+        jobUpdate.status = "complete";
+        jobUpdate.completed_at = new Date().toISOString();
+      }
+      if (status === "paid") {
+        jobUpdate.status = "invoiced";
+        jobUpdate.invoiced_at = new Date().toISOString();
+      }
+      if (Object.keys(jobUpdate).length > 0) {
+        await supabase.from("jobs").update(jobUpdate).eq("id", job.id);
+      }
+    }
+  }
+
   // Recording a payment: fetch the current quote first so we can add to
   // amount_paid rather than overwrite it, and flip to "paid" once the
   // running total covers the full amount owed - including approved
@@ -52,7 +74,8 @@ export async function POST(request: Request) {
         update.status = "paid";
         update.paid_at = new Date().toISOString();
       }
-      await supabase.from("payments").insert({ quote_id: quoteId, profile_id: userData.user.id, amount: paymentAmount });
+      const paymentJob = await getOrCreateJobForQuote(supabase, quoteId);
+      await supabase.from("payments").insert({ quote_id: quoteId, job_id: paymentJob?.id ?? null, profile_id: userData.user.id, amount: paymentAmount });
     }
   }
 

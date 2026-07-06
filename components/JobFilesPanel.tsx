@@ -7,7 +7,7 @@ import { Paperclip, Upload, X, FileText } from "lucide-react";
 type Attachment = { id: string; file_name: string; storage_path: string; file_type: string | null; file_size: number | null; signedUrl?: string; created_at: string; };
 export type { Attachment as AttachmentRow };
 
-export default function JobFilesPanel({ quoteId, attachments: initial }: { quoteId: string; attachments: Attachment[] }) {
+export default function JobFilesPanel({ quoteId, jobId, attachments: initial }: { quoteId: string | null; jobId?: string | null; attachments: Attachment[] }) {
   const [attachments, setAttachments] = useState(initial);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,11 +23,11 @@ export default function JobFilesPanel({ quoteId, attachments: initial }: { quote
 
     for (const file of files) {
       const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-      const path = `${userData.user.id}/${quoteId}/${Date.now()}-${safeName}`;
+      const path = `${userData.user.id}/${jobId ?? quoteId}/${Date.now()}-${safeName}`;
       const { error: uploadErr } = await supabase.storage.from("job-files").upload(path, file);
       if (uploadErr) { setError(`Upload failed: ${uploadErr.message}`); continue; }
       const { data: row, error: insertErr } = await supabase.from("job_attachments").insert({
-        quote_id: quoteId, profile_id: userData.user.id, file_name: file.name, storage_path: path, file_type: file.type, file_size: file.size,
+        quote_id: quoteId || null, job_id: jobId ?? null, profile_id: userData.user.id, file_name: file.name, storage_path: path, file_type: file.type, file_size: file.size,
       }).select().single();
       if (!insertErr && row) {
         const { data: signed } = await supabase.storage.from("job-files").createSignedUrl(path, 3600);

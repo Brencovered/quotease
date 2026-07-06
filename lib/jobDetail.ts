@@ -1,17 +1,36 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export async function loadJobDetailData(supabase: SupabaseClient, id: string, profileId: string) {
-  const { data: quote } = await supabase.from("quotes").select("*").eq("id", id).eq("profile_id", profileId).single();
-  if (!quote) return null;
+/**
+ * A job detail page is keyed by the job's own id now, not the quote's.
+ * Quote-sourced jobs still carry a linked `quote` (for scope/PDF/markup
+ * data that genuinely lives on the quote); quick jobs and recurring
+ * occurrences have no quote at all and run on job fields alone.
+ */
+export async function loadJobDetailData(supabase: SupabaseClient, idParam: string, profileId: string) {
+  // Existing links across the app (quotes list, margin dashboard, map,
+  // client history) still point at the quote id. Resolve either shape so
+  // nothing breaks: try it as a job id first, then fall back to treating
+  // it as the quote id a job was created from.
+  let job = (await supabase.from("jobs").select("*").eq("id", idParam).eq("profile_id", profileId).maybeSingle()).data;
+  if (!job) {
+    job = (await supabase.from("jobs").select("*").eq("quote_id", idParam).eq("profile_id", profileId).maybeSingle()).data;
+  }
+  if (!job) return null;
+  const jobId = job.id;
 
-  const [{ data: variations }, { data: actuals }, { data: certs }, { data: followUps }, { data: attachments }, { data: profile }, { data: payments }] = await Promise.all([
-    supabase.from("variations").select("*").eq("quote_id", id).order("created_at"),
-    supabase.from("job_actuals").select("*").eq("quote_id", id).order("recorded_at"),
-    supabase.from("compliance_certs").select("*").eq("quote_id", id).order("created_at"),
-    supabase.from("follow_up_log").select("*").eq("quote_id", id).order("followed_up_at", { ascending: false }),
-    supabase.from("job_attachments").select("*").eq("quote_id", id).order("created_at"),
+  const quotePromise = job.quote_id
+    ? supabase.from("quotes").select("*").eq("id", job.quote_id).single()
+    : Promise.resolve({ data: null });
+
+  const [{ data: quote }, { data: variations }, { data: actuals }, { data: certs }, { data: followUps }, { data: attachments }, { data: profile }, { data: payments }] = await Promise.all([
+    quotePromise,
+    supabase.from("variations").select("*").or(`job_id.eq.${jobId}${job.quote_id ? `,quote_id.eq.${job.quote_id}` : ""}`).order("created_at"),
+    supabase.from("job_actuals").select("*").or(`job_id.eq.${jobId}${job.quote_id ? `,quote_id.eq.${job.quote_id}` : ""}`).order("recorded_at"),
+    supabase.from("compliance_certs").select("*").or(`job_id.eq.${jobId}${job.quote_id ? `,quote_id.eq.${job.quote_id}` : ""}`).order("created_at"),
+    supabase.from("follow_up_log").select("*").or(`job_id.eq.${jobId}${job.quote_id ? `,quote_id.eq.${job.quote_id}` : ""}`).order("followed_up_at", { ascending: false }),
+    supabase.from("job_attachments").select("*").or(`job_id.eq.${jobId}${job.quote_id ? `,quote_id.eq.${job.quote_id}` : ""}`).order("created_at"),
     supabase.from("profiles").select("hourly_rate, materials_margin_pct").eq("id", profileId).single(),
-    supabase.from("payments").select("*").eq("quote_id", id).order("recorded_at"),
+    supabase.from("payments").select("*").or(`job_id.eq.${jobId}${job.quote_id ? `,quote_id.eq.${job.quote_id}` : ""}`).order("recorded_at"),
   ]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -31,7 +50,8 @@ export async function loadJobDetailData(supabase: SupabaseClient, id: string, pr
   );
 
   return {
-    quote,
+    job,
+    quote: quote ?? null,
     variations: variations ?? [],
     actuals: actuals ?? [],
     certsWithUrls,

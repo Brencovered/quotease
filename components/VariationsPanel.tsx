@@ -14,8 +14,9 @@ const STATUS_ICON = { pending: Clock, approved: CheckCircle2, declined: XCircle 
 
 const EMPTY_FORM = { title: "", description: "", labour_hours: "", materials_cost: "" };
 
-export default function VariationsPanel({ quoteId, hourlyRate, margin, variations: initial, quoteTotalCost }: {
-  quoteId: string;
+export default function VariationsPanel({ quoteId, jobId, hourlyRate, margin, variations: initial, quoteTotalCost }: {
+  quoteId: string | null;
+  jobId?: string | null;
   hourlyRate: number;
   margin: number;
   variations: Variation[];
@@ -43,7 +44,7 @@ export default function VariationsPanel({ quoteId, hourlyRate, margin, variation
     if (!userData.user) { setError("Not signed in"); setSaving(false); return; }
     const { data, error: err } = await supabase
       .from("variations")
-      .insert({ quote_id: quoteId, profile_id: userData.user.id, title: form.title, description: form.description, labour_hours: labourHours, materials_cost: materialsWithMargin, total_cost: totalCost, status: "pending" })
+      .insert({ quote_id: quoteId || null, job_id: jobId ?? null, profile_id: userData.user.id, title: form.title, description: form.description, labour_hours: labourHours, materials_cost: materialsWithMargin, total_cost: totalCost, status: "pending" })
       .select().single();
     if (err) { setError(err.message); setSaving(false); return; }
     setVariations((prev) => [...prev, data]);

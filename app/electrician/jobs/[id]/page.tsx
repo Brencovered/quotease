@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { loadJobDetailData } from "@/lib/jobDetail";
 import { getActiveBusinessId } from "@/lib/team";
@@ -14,7 +14,20 @@ import MaterialsChecklistPanel from "@/components/MaterialsChecklistPanel";
 import JobTimeline from "@/components/JobTimeline";
 import JobPlansPanel from "@/components/JobPlansPanel";
 import JobActionsBar from "@/components/JobActionsBar";
+import QuickJobActionsBar from "@/components/QuickJobActionsBar";
 import { humanizeIntake } from "@/lib/scopeOfWorks";
+
+const STATUS_LABELS: Record<string, string> = {
+  scheduled: "Scheduled",
+  in_progress: "In progress",
+  on_hold: "On hold",
+  awaiting_sign_off: "Awaiting sign-off",
+  complete: "Complete",
+  invoiced: "Invoiced",
+  partially_paid: "Partially paid",
+  archived: "Archived",
+  cancelled: "Cancelled",
+};
 
 export default async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -26,32 +39,27 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
 
   const data = await loadJobDetailData(supabase, id, businessId);
   if (!data) notFound();
-  const { quote, variations, actuals, certsWithUrls, attachmentsWithUrls, payments, hourlyRate, marginPct } = data;
+  const { job, quote, variations, actuals, certsWithUrls, attachmentsWithUrls, payments, hourlyRate, marginPct } = data;
 
-  // A quote that hasn't been won yet has no business living at a job URL -
-  // send it back to where it actually belongs.
-  if (quote.status !== "accepted" && quote.status !== "paid") {
-    redirect(`/electrician/quotes/${id}`);
-  }
-
-  const scopeLines = humanizeIntake(quote.intake_data);
-  const labourCost = (quote.total_cost ?? 0) - (quote.materials_cost ?? 0);
+  const scopeLines = quote ? humanizeIntake(quote.intake_data) : [];
+  const labourCost = (job.labour_hours ?? 0) * hourlyRate;
 
   const [{ data: matRows }, { data: teamRows }, { data: taskRows }] = await Promise.all([
-    supabase.from("material_items").select("item_key, label, unit_cost").eq("profile_id", businessId).eq("trade", quote.trade ?? "electrician").order("label"),
+    supabase.from("material_items").select("item_key, label, unit_cost").eq("profile_id", businessId).eq("trade", job.trade ?? "electrician").order("label"),
     supabase.from("team_members").select("id, name, email").eq("owner_profile_id", businessId).eq("status", "active").order("name"),
-    supabase.from("job_tasks").select("*").eq("quote_id", id).order("created_at"),
+    supabase.from("job_tasks").select("*").or(`job_id.eq.${job.id}${quote ? `,quote_id.eq.${quote.id}` : ""}`).order("created_at"),
   ]);
 
   const tradeMaterials: Array<{ item_key: string; label: string; unit_cost: number }> = matRows ?? [];
   const teamMembers: Array<{ id: string; name: string | null; email: string }> = teamRows ?? [];
+  const assignedMember = teamMembers.find((m) => m.id === job.assigned_to_member_id);
 
   let jobPlans: Array<{ id: string; file_name: string; shapes: unknown[]; calibration: unknown; signedUrl?: string }> = [];
-  if (quote.client_id) {
+  if (job.client_id) {
     const { data: plans } = await supabase
       .from("client_plans")
       .select("*")
-      .eq("client_id", quote.client_id)
+      .eq("client_id", job.client_id)
       .order("created_at", { ascending: false });
     jobPlans = await Promise.all(
       (plans ?? []).map(async (p) => {
@@ -61,17 +69,14 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     );
   }
 
-  // Approved variations are extra work the client agreed to, but until now
-  // nothing actually added them to what's owed - Record Payment, the PDF,
-  // and the Xero invoice all silently used only the original quoted total.
-  // Materials added via plan markup carry a real cost and add to what's
-  // owed, same as approved variations - markup_materials is an array of
-  // costed items, not a bare number.
-  const markupMaterials = ((quote.markup_materials as Array<{ totalCost: number }>) ?? []).reduce((sum, m) => sum + (m.totalCost ?? 0), 0);
+  // Approved variations and drawing-markup materials add to what's owed on
+  // top of the original quoted/quick-job total.
+  const markupMaterials = quote ? ((quote.markup_materials as Array<{ totalCost: number }>) ?? []).reduce((sum, m) => sum + (m.totalCost ?? 0), 0) : 0;
   const approvedVariationsTotal = variations
     .filter((v: { status: string; total_cost: number }) => v.status === "approved")
     .reduce((sum: number, v: { total_cost: number }) => sum + (v.total_cost ?? 0), 0);
-  const effectiveTotal = (quote.total_cost ?? 0) + approvedVariationsTotal + markupMaterials;
+  const effectiveTotal = (job.total_cost ?? 0) + approvedVariationsTotal + markupMaterials;
+  const amountPaid = quote ? (quote.amount_paid ?? 0) : (job.amount_paid ?? 0);
 
   return (
     <>
@@ -79,34 +84,35 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
       <main className="page-wrap-narrow">
         <div className="flex items-start justify-between gap-3 mb-4">
           <div>
-            <p className="text-[12px] text-[var(--ink-faint)] mb-1"><Link href="/electrician/jobs" className="hover:underline">Jobs</Link> / {quote.invoice_number ?? id.slice(0, 8)}</p>
-            <h1 className="font-display text-2xl text-[var(--ink)]">{quote.client_name || "Unnamed client"}</h1>
-            {quote.site_address && <p className="text-[13px] text-[var(--ink-faint)] mt-0.5">{quote.site_address}</p>}
+            <p className="text-[12px] text-[var(--ink-faint)] mb-1"><Link href="/electrician/jobs" className="hover:underline">Jobs</Link> / Job #{job.job_number}</p>
+            <h1 className="font-display text-2xl text-[var(--ink)]">{job.client_name || "Unnamed client"}</h1>
+            {job.site_address && <p className="text-[13px] text-[var(--ink-faint)] mt-0.5">{job.site_address}</p>}
           </div>
           <div className="text-right shrink-0">
             <p className="font-display text-2xl text-[var(--ink)]">${effectiveTotal.toLocaleString()}</p>
-            <p className="text-[11px] text-[var(--ink-faint)]">Original: ${(quote.total_cost ?? 0).toLocaleString()}</p>
+            <p className="text-[11px] text-[var(--ink-faint)]">Original: ${(job.total_cost ?? 0).toLocaleString()}</p>
             {approvedVariationsTotal > 0 && <p className="text-[11px] text-[var(--green)]">+${approvedVariationsTotal.toLocaleString()} variations</p>}
             {markupMaterials > 0 && <p className="text-[11px] text-[var(--amber-deep)]">+${markupMaterials.toLocaleString()} from drawings</p>}
-            <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold inline-block mt-1 ${quote.status === "paid" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-800"}`}>
-              {quote.status === "paid" ? "paid" : "active job"}
+            <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold inline-block mt-1 bg-amber-50 text-amber-800">
+              {STATUS_LABELS[job.status] ?? job.status}
             </span>
-            <a href={`/api/quotes/${quote.id}/pdf`} target="_blank" rel="noopener noreferrer" className="block text-[12.5px] font-semibold text-[var(--navy)] underline mt-2">
-              Download PDF
-            </a>
+            {quote && (
+              <a href={`/api/quotes/${quote.id}/pdf`} target="_blank" rel="noopener noreferrer" className="block text-[12.5px] font-semibold text-[var(--navy)] underline mt-2">
+                Download PDF
+              </a>
+            )}
           </div>
         </div>
 
         <div className="bg-[var(--navy)] rounded-xl px-4 py-3 mb-4 flex items-center justify-between gap-3">
           <div>
             <p className="text-[11px] tracking-[.1em] uppercase text-[var(--steel-3)] font-bold">
-              {quote.status === "paid" ? "Job complete & paid" : quote.completed_at ? "Job complete - awaiting payment" : "Active job"}
+              {STATUS_LABELS[job.status] ?? job.status}
             </p>
-            {quote.scheduled_start && (
+            {job.scheduled_start && (
               <p className="text-[13px] text-[var(--steel-1)] mt-0.5">
-                Scheduled {new Date(quote.scheduled_start).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}
-                {quote.estimated_days > 1 ? ` (${quote.estimated_days} days)` : ""}
-                {quote.assigned_to ? ` - ${quote.assigned_to}` : ""}
+                Scheduled {new Date(job.scheduled_start).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}
+                {assignedMember ? ` - ${assignedMember.name || assignedMember.email}` : ""}
               </p>
             )}
           </div>
@@ -121,16 +127,16 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               ))}
             </ul>
           ) : (
-            <p className="text-[13px] text-[var(--ink-faint)] mb-4">No scope details recorded.</p>
+            <p className="text-[13px] text-[var(--ink-faint)] mb-4">{job.title || "No scope details recorded."}</p>
           )}
           <div className="border-t border-[var(--line)] pt-3 space-y-1">
             <div className="flex justify-between text-[13.5px]">
-              <span className="text-[var(--ink-soft)]">Labour ({quote.labour_hours ?? 0} hrs)</span>
+              <span className="text-[var(--ink-soft)]">Labour ({job.labour_hours ?? 0} hrs)</span>
               <span className="font-semibold text-[var(--ink)]">${labourCost.toLocaleString()}</span>
             </div>
             <div className="flex justify-between text-[13.5px]">
               <span className="text-[var(--ink-soft)]">Materials</span>
-              <span className="font-semibold text-[var(--ink)]">${(quote.materials_cost ?? 0).toLocaleString()}</span>
+              <span className="font-semibold text-[var(--ink)]">${(job.materials_cost ?? 0).toLocaleString()}</span>
             </div>
             <div className="flex justify-between text-[14.5px] pt-1 border-t border-[var(--line)]">
               <span className="font-bold text-[var(--ink)]">Total</span>
@@ -138,11 +144,11 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             </div>
             {approvedVariationsTotal > 0 && (
               <p className="text-[11.5px] text-[var(--ink-faint)] text-right">
-                ${(quote.total_cost ?? 0).toLocaleString()} quoted + ${approvedVariationsTotal.toLocaleString()} approved variations
+                ${(job.total_cost ?? 0).toLocaleString()} quoted + ${approvedVariationsTotal.toLocaleString()} approved variations
               </p>
             )}
           </div>
-          {((quote.markup_materials as Array<{ label: string; quantity: number; unit: string; totalCost: number }>) ?? []).length > 0 && (
+          {quote && ((quote.markup_materials as Array<{ label: string; quantity: number; unit: string; totalCost: number }>) ?? []).length > 0 && (
             <div className="border-t border-[var(--line)] pt-3 mt-3">
               <p className="text-[11px] font-bold text-[var(--ink-faint)] uppercase tracking-wide mb-2">From site plans</p>
               <div className="space-y-1.5">
@@ -158,33 +164,47 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         </div>
 
         <div className="flex flex-col gap-4">
-          <JobActionsBar
-            quoteId={quote.id}
-            status={quote.status}
-            totalCost={effectiveTotal}
-            amountPaid={quote.amount_paid ?? 0}
-            hasClientEmail={!!quote.client_email}
-            completedAt={quote.completed_at}
-          />
+          {quote ? (
+            <JobActionsBar
+              quoteId={quote.id}
+              status={quote.status}
+              totalCost={effectiveTotal}
+              amountPaid={amountPaid}
+              hasClientEmail={!!quote.client_email}
+              completedAt={quote.completed_at}
+            />
+          ) : (
+            <QuickJobActionsBar
+              jobId={job.id}
+              status={job.status}
+              totalCost={effectiveTotal}
+              amountPaid={amountPaid}
+              completedAt={job.completed_at}
+            />
+          )}
 
-          <JobBriefPanel
-            quoteId={quote.id}
-            siteNotes={quote.site_notes}
-            scheduledStart={quote.scheduled_start}
-            estimatedDays={quote.estimated_days}
-            assignedTo={quote.assigned_to}
-            assignedToMemberId={quote.assigned_to_member_id}
-            teamMembers={teamMembers}
-          />
+          {quote && (
+            <JobBriefPanel
+              quoteId={quote.id}
+              siteNotes={quote.site_notes}
+              scheduledStart={quote.scheduled_start}
+              estimatedDays={quote.estimated_days}
+              assignedTo={quote.assigned_to}
+              assignedToMemberId={quote.assigned_to_member_id}
+              teamMembers={teamMembers}
+            />
+          )}
 
-          <JobTasksPanel quoteId={quote.id} profileId={businessId} initialTasks={taskRows ?? []} teamMembers={teamMembers} />
+          <JobTasksPanel quoteId={quote?.id ?? null} jobId={job.id} profileId={businessId} initialTasks={taskRows ?? []} teamMembers={teamMembers} />
 
-          <JobPlansPanel quoteId={quote.id} clientId={quote.client_id} plans={jobPlans as never} materials={tradeMaterials} marginPct={marginPct} trade={quote.trade ?? "electrician"} />
+          {quote && (
+            <JobPlansPanel quoteId={quote.id} clientId={quote.client_id} plans={jobPlans as never} materials={tradeMaterials} marginPct={marginPct} trade={job.trade ?? "electrician"} />
+          )}
 
           <JobTimeline
-            acceptedAt={quote.accepted_at}
-            completedAt={quote.completed_at}
-            paidAt={quote.paid_at}
+            acceptedAt={quote?.accepted_at ?? job.created_at}
+            completedAt={job.completed_at}
+            paidAt={job.paid_at ?? quote?.paid_at ?? null}
             variations={variations}
             actuals={actuals}
             attachments={attachmentsWithUrls}
@@ -192,19 +212,22 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             payments={payments}
           />
 
-          <MaterialsChecklistPanel quoteId={quote.id} initialChecklist={quote.materials_checklist ?? []} scopeLines={scopeLines} clientName={quote.client_name} />
-          <JobFilesPanel quoteId={quote.id} attachments={attachmentsWithUrls} />
-          <VariationsPanel quoteId={quote.id} hourlyRate={hourlyRate} margin={marginPct} variations={variations} quoteTotalCost={quote.total_cost ?? 0} />
+          {quote && (
+            <MaterialsChecklistPanel quoteId={quote.id} initialChecklist={quote.materials_checklist ?? []} scopeLines={scopeLines} clientName={job.client_name} />
+          )}
+          <JobFilesPanel quoteId={quote?.id ?? null} jobId={job.id} attachments={attachmentsWithUrls} />
+          <VariationsPanel quoteId={quote?.id ?? null} jobId={job.id} hourlyRate={hourlyRate} margin={marginPct} variations={variations} quoteTotalCost={job.total_cost ?? 0} />
           <JobCostingPanel
-            quoteId={quote.id}
-            quotedHours={quote.labour_hours ?? 0}
-            quotedMaterials={quote.materials_cost ?? 0}
-            quotedTotal={quote.total_cost ?? 0}
+            quoteId={quote?.id ?? null}
+            jobId={job.id}
+            quotedHours={job.labour_hours ?? 0}
+            quotedMaterials={job.materials_cost ?? 0}
+            quotedTotal={job.total_cost ?? 0}
             hourlyRate={hourlyRate}
             actuals={actuals}
-            intakeData={quote.intake_data}
+            intakeData={quote?.intake_data}
           />
-          <CompliancePanel quoteId={quote.id} certs={certsWithUrls as never} />
+          <CompliancePanel quoteId={quote?.id ?? null} jobId={job.id} certs={certsWithUrls as never} />
         </div>
       </main>
     </>
