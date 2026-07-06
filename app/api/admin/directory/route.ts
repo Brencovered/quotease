@@ -1,6 +1,49 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function applyFilters(
+  query: any,
+  params: { trade: string; email: string; phone: string; website: string; rating: string; search: string }
+) {
+  const { trade, email, phone, website, rating, search } = params;
+  let q = query;
+
+  if (trade) q = q.contains("trades", [trade]);
+
+  if (email === "yes") q = q.or("scraped_contact_email.not.is.null,private_email.not.is.null");
+  else if (email === "no") q = q.is("scraped_contact_email", null).is("private_email", null);
+
+  if (phone === "yes") q = q.not("scraped_contact_phone", "is", null);
+  else if (phone === "no") q = q.is("scraped_contact_phone", null);
+
+  if (website === "yes") q = q.not("website_url", "is", null);
+  else if (website === "no") q = q.is("website_url", null);
+
+  if (rating === "yes") q = q.not("google_rating", "is", null);
+  else if (rating === "no") q = q.is("google_rating", null);
+
+  if (search) {
+    const s = `%${search}%`;
+    q = q.or(`business_name.ilike.${s},suburb.ilike.${s},scraped_contact_email.ilike.${s},website_url.ilike.${s}`);
+  }
+
+  return q;
+}
+
+const CSV_COLUMNS = [
+  "business_name", "trades", "suburb", "postcode",
+  "scraped_contact_email", "scraped_contact_phone", "private_email", "website_url",
+  "google_rating", "google_reviews_count", "blurb", "place_id", "created_at",
+] as const;
+
+function csvEscape(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  const s = Array.isArray(value) ? value.join("; ") : String(value);
+  if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const trade = searchParams.get("trade") ?? "";
@@ -9,54 +52,49 @@ export async function GET(req: NextRequest) {
   const website = searchParams.get("website") ?? "";  // "yes" | "no" | ""
   const rating = searchParams.get("rating") ?? "";    // "yes" | "no" | ""
   const search = searchParams.get("search") ?? "";
+  const format = searchParams.get("format") ?? "";
+
+  const admin = createAdminClient();
+
+  if (format === "csv") {
+    // Export mode: same filters, but no 200-row UI cap -- the tradie picks
+    // how many rows they want (up to a safety ceiling), and we page through
+    // Supabase's own 1000-row-per-request limit internally to get there.
+    const EXPORT_CEILING = 10000;
+    const requested = searchParams.get("count") ?? "all";
+    const wantCount = requested === "all" ? EXPORT_CEILING : Math.min(EXPORT_CEILING, Math.max(1, parseInt(requested, 10) || EXPORT_CEILING));
+
+    const rows: Record<string, unknown>[] = [];
+    const PAGE = 1000;
+    for (let from = 0; rows.length < wantCount; from += PAGE) {
+      const to = Math.min(from + PAGE, wantCount) - 1;
+      let query = admin.from("directory_listing").select("*");
+      query = applyFilters(query, { trade, email, phone, website, rating, search });
+      const { data, error } = await query.order("created_at", { ascending: false }).range(from, to);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (!data || data.length === 0) break;
+      rows.push(...data);
+      if (data.length < to - from + 1) break;
+    }
+
+    const header = CSV_COLUMNS.join(",");
+    const lines = rows.map((r) => CSV_COLUMNS.map((c) => csvEscape(r[c])).join(","));
+    const csv = [header, ...lines].join("\n");
+    const stamp = new Date().toISOString().slice(0, 10);
+
+    return new NextResponse(csv, {
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="swiftscope-directory-${stamp}.csv"`,
+      },
+    });
+  }
+
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
   const limit = Math.min(200, Math.max(10, parseInt(searchParams.get("limit") ?? "50", 10)));
 
-  const admin = createAdminClient();
-  let query = admin
-    .from("directory_listing")
-    .select("*", { count: "exact" });
-
-  // Trade filter
-  if (trade) {
-    query = query.contains("trades", [trade]);
-  }
-
-  // Email filter — tri-state: yes / no / all
-  if (email === "yes") {
-    query = query.or("scraped_contact_email.not.is.null,private_email.not.is.null");
-  } else if (email === "no") {
-    query = query.is("scraped_contact_email", null).is("private_email", null);
-  }
-
-  // Phone filter — tri-state
-  if (phone === "yes") {
-    query = query.not("scraped_contact_phone", "is", null);
-  } else if (phone === "no") {
-    query = query.is("scraped_contact_phone", null);
-  }
-
-  // Website filter — tri-state
-  if (website === "yes") {
-    query = query.not("website_url", "is", null);
-  } else if (website === "no") {
-    query = query.is("website_url", null);
-  }
-
-  // Rating filter — tri-state
-  if (rating === "yes") {
-    query = query.not("google_rating", "is", null);
-  } else if (rating === "no") {
-    query = query.is("google_rating", null);
-  }
-
-  // Text search
-  if (search) {
-    const q = `%${search}%`;
-    query = query.or(
-      `business_name.ilike.${q},suburb.ilike.${q},scraped_contact_email.ilike.${q},website_url.ilike.${q}`
-    );
-  }
+  let query = admin.from("directory_listing").select("*", { count: "exact" });
+  query = applyFilters(query, { trade, email, phone, website, rating, search });
 
   // Pagination
   const from = (page - 1) * limit;

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Search, Trash2, Edit2, Check, X, ChevronLeft, ChevronRight,
   Mail, Phone, Globe, Star, Loader2, ExternalLink,
-  Square, CheckSquare, SquareMinus, AlertTriangle,
+  Square, CheckSquare, SquareMinus, AlertTriangle, Download,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -64,6 +64,10 @@ export default function AdminDirectoryPanel() {
 
   // Selection
   const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  // Export
+  const [exportCount, setExportCount] = useState<number | "all">("all");
+  const [exporting, setExporting] = useState(false);
 
   // Editing
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -213,7 +217,41 @@ export default function AdminDirectoryPanel() {
     }
   }
 
-  // Active filters count
+  // Export CSV -- same filters as the current view, but not limited to the
+  // on-screen page: the tradie picks how many rows to pull.
+  async function exportCsv() {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("format", "csv");
+      params.set("count", String(exportCount));
+      if (tradeFilter) params.set("trade", tradeFilter);
+      if (emailFilter !== "all") params.set("email", emailFilter);
+      if (phoneFilter !== "all") params.set("phone", phoneFilter);
+      if (websiteFilter !== "all") params.set("website", websiteFilter);
+      if (ratingFilter !== "all") params.set("rating", ratingFilter);
+      if (search.trim()) params.set("search", search.trim());
+
+      const res = await fetch(`/api/admin/directory?${params}`);
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const stamp = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `swiftscope-directory-${stamp}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      // silently fail
+    } finally {
+      setExporting(false);
+    }
+  }
+
+
   const activeFilterCount = [
     tradeFilter,
     emailFilter !== "all",
@@ -239,17 +277,37 @@ export default function AdminDirectoryPanel() {
           <h1 className="font-display text-2xl text-[var(--ink)]">Directory listings</h1>
           <p className="text-[13px] text-[var(--ink-faint)]">{total.toLocaleString()} listing{total !== 1 ? "s" : ""} total</p>
         </div>
-        {selected.size > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="text-[13px] font-semibold text-[var(--ink-soft)]">{selected.size} selected</span>
-            <button
-              onClick={() => setConfirmDelete(Array.from(selected))}
-              className="flex items-center gap-1.5 bg-red-50 text-red-600 font-semibold text-[12.5px] px-3 py-2 rounded-lg border border-red-200 hover:bg-red-100 transition-colors"
-            >
-              <Trash2 size={13} /> Delete selected
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          {selected.size > 0 && (
+            <>
+              <span className="text-[13px] font-semibold text-[var(--ink-soft)]">{selected.size} selected</span>
+              <button
+                onClick={() => setConfirmDelete(Array.from(selected))}
+                className="flex items-center gap-1.5 bg-red-50 text-red-600 font-semibold text-[12.5px] px-3 py-2 rounded-lg border border-red-200 hover:bg-red-100 transition-colors"
+              >
+                <Trash2 size={13} /> Delete selected
+              </button>
+            </>
+          )}
+          <select
+            value={exportCount}
+            onChange={(e) => setExportCount(e.target.value === "all" ? "all" : Number(e.target.value))}
+            className="app-field text-[13px] w-auto py-2"
+          >
+            <option value="all">Export all matching ({total.toLocaleString()})</option>
+            {[25, 50, 100, 250, 500, 1000, 5000].map((n) => (
+              <option key={n} value={n} disabled={n > total}>First {n.toLocaleString()}</option>
+            ))}
+          </select>
+          <button
+            onClick={exportCsv}
+            disabled={exporting || total === 0}
+            className="flex items-center gap-1.5 bg-[var(--navy)] text-white font-bold text-[12.5px] px-3 py-2 rounded-lg hover:bg-[#0e2233] transition-colors disabled:opacity-40"
+          >
+            {exporting ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+            {exporting ? "Exporting..." : "Download CSV"}
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
