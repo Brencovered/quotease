@@ -8,9 +8,10 @@
  * by product id/SKU with real descriptions.
  *
  * This resolver bridges the two: for each generic calc key, it checks
- * whether the tradie has mapped it to a real price-book product (saved in
- * profiles.archetype_defaults as "<trade>:calc:<key>" -> item_key, set via
- * the price-book picker), and uses that product's real cost if so.
+ * whether the tradie has mapped it to one or more real price-book products
+ * (saved in profiles.archetype_defaults as "<trade>:calc:<key>" -> a JSON
+ * array of item_keys, e.g. a "Power point" line might be a GPO + a cover
+ * plate + an allowance for screws), sums their real costs, and uses that.
  * Otherwise it falls back to the trade's built-in default price so the
  * calculator never silently zeroes out.
  */
@@ -19,6 +20,26 @@ export interface CalcMaterialRow {
   item_key: string;
   label: string;
   unit_cost: number;
+}
+
+/** A calc-key link is stored as either a JSON array of item_keys (current
+ *  format, supports multiple linked products) or a single bare item_key
+ *  string (legacy format, from before multi-item linking existed). */
+export function parseLinkedItemKeys(raw: string | undefined): string[] {
+  if (!raw) return [];
+  if (raw.startsWith("[")) {
+    try {
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr.filter((x) => typeof x === "string" && x) : [];
+    } catch {
+      return [];
+    }
+  }
+  return [raw];
+}
+
+export function serializeLinkedItemKeys(itemKeys: string[]): string {
+  return JSON.stringify(itemKeys.filter(Boolean));
 }
 
 export function resolveCalcCosts(
@@ -43,17 +64,23 @@ export function resolveCalcCosts(
     }
   }
 
-  // 3. Real price-book mapping: if the tradie has explicitly linked this
-  //    calc key to a real product (via the price-book picker), that real
-  //    cost wins over everything else.
+  // 3. Real price-book mapping: if the tradie has explicitly linked one or
+  //    more real products to this calc key, their summed real cost wins
+  //    over everything else.
   for (const key of Object.keys(costs)) {
-    const linkedItemKey = archetypeDefaults[`${trade}:calc:${key}`];
-    if (!linkedItemKey) continue;
-    const product = lib.find((r) => r.item_key === linkedItemKey);
-    if (product) {
+    const linkedItemKeys = parseLinkedItemKeys(archetypeDefaults[`${trade}:calc:${key}`]);
+    if (linkedItemKeys.length === 0) continue;
+    let sum = 0;
+    let matchedAny = false;
+    for (const itemKey of linkedItemKeys) {
+      const product = lib.find((r) => r.item_key === itemKey);
+      if (!product) continue;
       const v = Number(product.unit_cost);
-      if (!isNaN(v)) costs[key] = v;
+      if (isNaN(v)) continue;
+      sum += v;
+      matchedAny = true;
     }
+    if (matchedAny) costs[key] = sum;
   }
 
   return costs;
@@ -65,3 +92,4 @@ export function hasRealPriceBook(lib: CalcMaterialRow[]): boolean {
   const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return lib.some((r) => uuidRe.test(r.item_key));
 }
+

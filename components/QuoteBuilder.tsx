@@ -14,7 +14,8 @@ import { getActiveBusinessId } from "@/lib/team";
 import MaterialsEditor from "@/components/MaterialsEditor";
 import CalcKeyPricingPanel from "@/components/CalcKeyPricingPanel";
 import PriceHint from "@/components/PriceHint";
-import { resolveCalcCosts, hasRealPriceBook } from "@/lib/resolveCalcCosts";
+import PackagePicker from "@/components/PackagePicker";
+import { resolveCalcCosts, hasRealPriceBook, serializeLinkedItemKeys } from "@/lib/resolveCalcCosts";
 import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import SiteAnnotationReport from "@/components/SiteAnnotationReport";
@@ -90,8 +91,8 @@ export default function QuoteBuilder({
       console.error("Failed to save archetype default:", e);
     }
   }
-  function saveCalcDefault(calcKey: string, itemKey: string) {
-    saveArchetypeDefault(`calc:${calcKey}`, itemKey);
+  function saveCalcDefault(calcKey: string, itemKeys: string[]) {
+    saveArchetypeDefault(`calc:${calcKey}`, serializeLinkedItemKeys(itemKeys));
   }
   const [lib, setLib]       = useState<MaterialRow[]>(
     materials.length > 0 ? materials : ELECTRICIAN_DEFAULT_MATERIALS.map((m) => ({ ...m }))
@@ -503,13 +504,16 @@ export default function QuoteBuilder({
       )}
 
       {stepId === "customer" && (
-        <StepCustomer
-          clientName={clientName} setClientName={setClientName}
-          clientEmail={clientEmail} setClientEmail={setClientEmail}
-          siteAddress={siteAddress} setSiteAddress={setSiteAddress}
-          onCeilingHint={(hint) => set("ceilingType", hint as ElectricianIntake["ceilingType"])}
-          setClientId={setClientId}
-        />
+        <>
+          <PackagePicker trade="electrician" />
+          <StepCustomer
+            clientName={clientName} setClientName={setClientName}
+            clientEmail={clientEmail} setClientEmail={setClientEmail}
+            siteAddress={siteAddress} setSiteAddress={setSiteAddress}
+            onCeilingHint={(hint) => set("ceilingType", hint as ElectricianIntake["ceilingType"])}
+            setClientId={setClientId}
+          />
+        </>
       )}
 
       {stepId === "send" && (
@@ -748,7 +752,7 @@ function StepElectrical({ intake, set, lib, setLib, archetypeDefaults, saveCalcD
   lib: MaterialRow[];
   setLib: React.Dispatch<React.SetStateAction<MaterialRow[]>>;
   archetypeDefaults: Record<string, string>;
-  saveCalcDefault: (calcKey: string, itemKey: string) => void;
+  saveCalcDefault: (calcKey: string, itemKeys: string[]) => void;
 }) {
   const [showLib, setShowLib] = useState(false);
   const [csvMessage, setCsvMessage] = useState<string | null>(null);
@@ -770,9 +774,9 @@ function StepElectrical({ intake, set, lib, setLib, archetypeDefaults, saveCalcD
         calcLabel={calcLabel}
         qty={qty}
         price={calcCosts[calcKey] ?? 0}
-        isLinked={!!archetypeDefaults[`electrician:calc:${calcKey}`]}
+        linkedRaw={archetypeDefaults[`electrician:calc:${calcKey}`]}
         lib={lib}
-        onLink={(itemKey) => saveCalcDefault(calcKey, itemKey)}
+        onLink={(itemKeys) => saveCalcDefault(calcKey, itemKeys)}
       />
     );
   }

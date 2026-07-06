@@ -9,8 +9,9 @@ import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import { calcPlumberQuote, PLUMBER_DEFAULT_MATERIALS, type PlumberIntake } from "@/lib/calcPlumber";
 import MaterialsEditor from "@/components/MaterialsEditor";
 import CalcKeyPricingPanel from "@/components/CalcKeyPricingPanel";
-import { resolveCalcCosts, hasRealPriceBook } from "@/lib/resolveCalcCosts";
+import { resolveCalcCosts, hasRealPriceBook, serializeLinkedItemKeys } from "@/lib/resolveCalcCosts";
 import StepCustomer from "./StepCustomer";
+import PackagePicker from "@/components/PackagePicker";
 import ExtraJobLines, { type ExtraLine, extraLinesTotals } from "./ExtraJobLines";
 import { resolveClientId } from "@/lib/resolveClientId";
 import { getActiveBusinessId } from "@/lib/team";
@@ -79,8 +80,8 @@ export default function PlumberQuoteBuilder({
       console.error("Failed to save archetype default:", e);
     }
   }
-  function saveCalcDefault(calcKey: string, itemKey: string) {
-    saveArchetypeDefault(`calc:${calcKey}`, itemKey);
+  function saveCalcDefault(calcKey: string, itemKeys: string[]) {
+    saveArchetypeDefault(`calc:${calcKey}`, serializeLinkedItemKeys(itemKeys));
   }
 
   const [selectedPricingTierId, setSelectedPricingTierId] = useState<string | null>(null);
@@ -291,12 +292,15 @@ export default function PlumberQuoteBuilder({
 
       {/* Step content */}
       {stepId === "customer" && (
-        <StepCustomer
-          clientName={clientName} setClientName={setClientName}
-          clientEmail={clientEmail} setClientEmail={setClientEmail}
-          siteAddress={siteAddress} setSiteAddress={setSiteAddress}
-          setClientId={setClientId}
-        />
+        <>
+          <PackagePicker trade="plumber" />
+          <StepCustomer
+            clientName={clientName} setClientName={setClientName}
+            clientEmail={clientEmail} setClientEmail={setClientEmail}
+            siteAddress={siteAddress} setSiteAddress={setSiteAddress}
+            setClientId={setClientId}
+          />
+        </>
       )}
 
       {stepId === "drawing" && (

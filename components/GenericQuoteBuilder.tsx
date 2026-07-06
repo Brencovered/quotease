@@ -6,6 +6,7 @@ import { PAYMENT_TERM_PRESETS } from "@/lib/paymentTerms";
 import { ChevronRight, ChevronLeft, Check, Plus, Trash2, Paperclip, X, Sparkles, AlertTriangle } from "lucide-react";
 import { calcGenericQuote, GENERIC_TRADE_TEMPLATES, type GenericLineItem, type GenericIntake } from "@/lib/genericTrades";
 import StepCustomer from "./StepCustomer";
+import PackagePicker from "@/components/PackagePicker";
 import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import ExtraJobLines, { type ExtraLine, extraLinesTotals } from "./ExtraJobLines";
@@ -284,12 +285,15 @@ export default function GenericQuoteBuilder({
 
       {/* Step: Customer */}
       {stepId === "customer" && (
-        <StepCustomer
-          clientName={clientName} setClientName={setClientName}
-          clientEmail={clientEmail} setClientEmail={setClientEmail}
-          siteAddress={siteAddress} setSiteAddress={setSiteAddress}
-          setClientId={setClientId}
-        />
+        <>
+          <PackagePicker trade={tradeKey} />
+          <StepCustomer
+            clientName={clientName} setClientName={setClientName}
+            clientEmail={clientEmail} setClientEmail={setClientEmail}
+            siteAddress={siteAddress} setSiteAddress={setSiteAddress}
+            setClientId={setClientId}
+          />
+        </>
       )}
 
       {stepId === "drawing" && (

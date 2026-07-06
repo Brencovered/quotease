@@ -9,6 +9,7 @@ import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupChargeTotal, markupMaterialsTotal, markupLabourHours } from "@/lib/quotePricing";
 import StepCustomer from "./StepCustomer";
+import PackagePicker from "@/components/PackagePicker";
 import { resolveClientId } from "@/lib/resolveClientId";
 import { getActiveBusinessId } from "@/lib/team";
 import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
@@ -542,6 +543,7 @@ export default function RooferQuoteBuilder({
       </div>
 
       {/* Customer & site -- previously missing entirely */}
+      <PackagePicker trade="roofer" />
       <StepCustomer
         clientName={clientName} setClientName={setClientName}
         clientEmail={clientEmail} setClientEmail={setClientEmail}
