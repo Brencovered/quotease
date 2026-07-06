@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { loadJobDetailData } from "@/lib/jobDetail";
-import { getActiveBusinessId } from "@/lib/team";
+import { getTeamContext } from "@/lib/team";
 import { getOrSeedBoardColumns } from "@/lib/jobBoard";
 import AppHeader from "@/components/AppHeader";
 import VariationsPanel from "@/components/VariationsPanel";
@@ -17,6 +17,7 @@ import JobPlansPanel from "@/components/JobPlansPanel";
 import JobActionsBar from "@/components/JobActionsBar";
 import QuickJobActionsBar from "@/components/QuickJobActionsBar";
 import JobProgressStepper from "@/components/JobProgressStepper";
+import TimesheetsPanel from "@/components/TimesheetsPanel";
 import { humanizeIntake } from "@/lib/scopeOfWorks";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -37,7 +38,9 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) notFound();
 
-  const businessId = await getActiveBusinessId(supabase, userData.user.id);
+  const ctx = await getTeamContext(supabase, userData.user.id);
+  const businessId = ctx.businessId;
+  const isAdmin = ctx.isOwner || ctx.role === "admin";
 
   const data = await loadJobDetailData(supabase, id, businessId);
   if (!data) notFound();
@@ -46,11 +49,14 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   const scopeLines = quote ? humanizeIntake(quote.intake_data) : [];
   const labourCost = (job.labour_hours ?? 0) * hourlyRate;
 
-  const [{ data: matRows }, { data: teamRows }, { data: taskRows }, boardColumns] = await Promise.all([
+  const [{ data: matRows }, { data: teamRows }, { data: taskRows }, boardColumns, timesheetEntries] = await Promise.all([
     supabase.from("material_items").select("item_key, label, unit_cost").eq("profile_id", businessId).eq("trade", job.trade ?? "electrician").order("label"),
     supabase.from("team_members").select("id, name, email").eq("owner_profile_id", businessId).eq("status", "active").order("name"),
     supabase.from("job_tasks").select("*").or(`job_id.eq.${job.id}${quote ? `,quote_id.eq.${quote.id}` : ""}`).order("created_at"),
     getOrSeedBoardColumns(supabase, businessId),
+    isAdmin
+      ? supabase.from("timesheets").select("*").eq("job_id", job.id).order("work_date", { ascending: false }).then((r) => r.data ?? [])
+      : Promise.resolve([]),
   ]);
 
   const tradeMaterials: Array<{ item_key: string; label: string; unit_cost: number }> = matRows ?? [];
@@ -236,6 +242,10 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             intakeData={quote?.intake_data}
           />
           <CompliancePanel quoteId={quote?.id ?? null} jobId={job.id} certs={certsWithUrls as never} />
+
+          {isAdmin && (
+            <TimesheetsPanel jobId={job.id} entries={timesheetEntries as never} teamMembers={teamMembers} ownerName={userData.user.email ?? "Owner"} />
+          )}
         </div>
       </main>
     </>

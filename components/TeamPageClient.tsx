@@ -21,6 +21,7 @@ export interface TeamMemberRow {
   status: string;
   invited_at: string;
   joined_at: string | null;
+  hourly_rate: number | null;
 }
 
 export interface PendingInviteRow {
@@ -38,6 +39,8 @@ interface TeamPageClientProps {
   members: TeamMemberRow[];
   pendingInvites: PendingInviteRow[];
   isOwner: boolean;
+  isAdmin: boolean;
+  defaultHourlyRate: number;
   currentUserEmail: string | null;
 }
 
@@ -56,6 +59,8 @@ export default function TeamPageClient({
   members: initialMembers,
   pendingInvites: initialPendingInvites,
   isOwner,
+  isAdmin,
+  defaultHourlyRate,
   currentUserEmail,
 }: TeamPageClientProps) {
   const router = useRouter();
@@ -69,6 +74,9 @@ export default function TeamPageClient({
   const [sendMsg, setSendMsg] = useState("");
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [updatingRoleId, setUpdatingRoleId] = useState<string | null>(null);
+  const [editingRateId, setEditingRateId] = useState<string | null>(null);
+  const [rateDraft, setRateDraft] = useState("");
+  const [savingRateId, setSavingRateId] = useState<string | null>(null);
 
   async function sendInvite(e: React.FormEvent) {
     e.preventDefault();
@@ -122,6 +130,23 @@ export default function TeamPageClient({
     await fetch("/api/team/" + id, { method: "DELETE" });
     setPendingInvites((prev) => prev.filter((i) => i.id !== id));
     setRemovingId(null);
+  }
+
+  async function saveRate(memberId: string) {
+    const rate = Number(rateDraft);
+    if (!rateDraft || isNaN(rate) || rate < 0) { setEditingRateId(null); return; }
+    setSavingRateId(memberId);
+    const res = await fetch("/api/team/set-rate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ memberId, rate }),
+    });
+    setSavingRateId(null);
+    setEditingRateId(null);
+    if (res.ok) {
+      setMembers((prev) => prev.map((m) => (m.id === memberId ? { ...m, hourly_rate: rate } : m)));
+      router.refresh();
+    }
   }
 
   return (
@@ -248,19 +273,47 @@ export default function TeamPageClient({
                       </div>
                     </div>
                   </div>
-                  {isOwner && m.role !== "owner" && (
-                    <div className="flex items-center gap-2 shrink-0">
-                      <select value={m.role} onChange={(e) => updateRole(m.id, e.target.value)} disabled={updatingRoleId === m.id}
-                        className="app-field text-[12px] py-1 w-auto">
-                        <option value="member">Member</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                      <button onClick={() => removeMember(m.id)} disabled={removingId === m.id}
-                        className="p-1.5 rounded-lg hover:bg-[var(--red-bg)] transition-colors disabled:opacity-50">
-                        <Trash2 size={14} className="text-[var(--ink-faint)]" />
-                      </button>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-3 shrink-0">
+                    {isAdmin && (
+                      editingRateId === m.id ? (
+                        <span className="flex items-center gap-1">
+                          <span className="text-[12px] text-[var(--ink-faint)]">$</span>
+                          <input
+                            type="number"
+                            autoFocus
+                            defaultValue={m.hourly_rate ?? defaultHourlyRate}
+                            onChange={(e) => setRateDraft(e.target.value)}
+                            onBlur={() => saveRate(m.id)}
+                            onKeyDown={(e) => e.key === "Enter" && saveRate(m.id)}
+                            className="app-field text-[12px] py-1 w-16"
+                          />
+                          <span className="text-[11px] text-[var(--ink-faint)]">/hr</span>
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => { setEditingRateId(m.id); setRateDraft(String(m.hourly_rate ?? defaultHourlyRate)); }}
+                          disabled={savingRateId === m.id}
+                          className="text-[12px] font-semibold text-[var(--ink-soft)] hover:text-[var(--navy)]"
+                          title="Set this person's hourly labour rate"
+                        >
+                          {savingRateId === m.id ? "Saving..." : `$${m.hourly_rate ?? defaultHourlyRate}/hr${m.hourly_rate == null ? " (default)" : ""}`}
+                        </button>
+                      )
+                    )}
+                    {isOwner && m.role !== "owner" && (
+                      <div className="flex items-center gap-2">
+                        <select value={m.role} onChange={(e) => updateRole(m.id, e.target.value)} disabled={updatingRoleId === m.id}
+                          className="app-field text-[12px] py-1 w-auto">
+                          <option value="member">Member</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                        <button onClick={() => removeMember(m.id)} disabled={removingId === m.id}
+                          className="p-1.5 rounded-lg hover:bg-[var(--red-bg)] transition-colors disabled:opacity-50">
+                          <Trash2 size={14} className="text-[var(--ink-faint)]" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })}
