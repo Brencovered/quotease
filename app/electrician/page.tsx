@@ -183,10 +183,14 @@ export default async function NewQuotePage({
          pricing wherever it exists. */
       if (!tradeParm && activeTrades.length > 0) tradeParm = activeTrades[0];
 
-      if (tradeParm && DEDICATED.includes(tradeParm)) {
+      if (tradeParm) {
         /* Try price_book_items first (CSV uploads + supplier catalog).
            Paginated: PostgREST caps un-limited selects at 1000 rows, which
-           silently dropped over half of a 2200-item catalog. */
+           silently dropped over half of a 2200-item catalog.
+           This used to be gated to DEDICATED trades only -- painter, tiler,
+           landscaper etc. (the "generic" builder trades) never got their
+           uploaded price book at all, no matter what the tradie uploaded.
+           Every trade should quote off real data if it exists. */
         const PAGE = 1000;
         const pbAll: { id: string; description: string; cost_price: number | null }[] = [];
         for (let from = 0; ; from += PAGE) {
@@ -219,8 +223,9 @@ export default async function NewQuotePage({
           if (legacyMats.data && legacyMats.data.length > 0)
             materials = legacyMats.data;
         }
-        /* Fallback to defaults */
-        if (materials.length === 0) {
+        /* Fallback to defaults -- dedicated trades only; generic trades'
+           own template defaults are seeded client-side in GenericQuoteBuilder */
+        if (materials.length === 0 && DEDICATED.includes(tradeParm)) {
           const defaults = DEDICATED_DEFAULTS[tradeParm];
           if (defaults) materials = defaults.map((m) => ({ ...m }));
         }
@@ -373,6 +378,7 @@ export default async function NewQuotePage({
         <GenericQuoteBuilder
           tradeKey={selectedTrade}
           profile={profile}
+          materials={materials}
           preClientId={preClientId}
           preMarkupMaterials={preMarkupMaterials}
           pricingTiers={pricingTiers}

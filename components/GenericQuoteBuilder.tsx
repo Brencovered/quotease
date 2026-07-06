@@ -13,6 +13,7 @@ import { resolveClientId } from "@/lib/resolveClientId";
 import { getActiveBusinessId } from "@/lib/team";
 import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
+import CategoryMaterialPicker, { type PickerItem } from "@/components/CategoryMaterialPicker";
 import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupChargeTotal, markupMaterialsTotal, markupLabourHours } from "@/lib/quotePricing";
 
 const STEPS = [
@@ -29,18 +30,42 @@ function uid() { return `item_${nextId++}`; }
 export default function GenericQuoteBuilder({
   tradeKey,
   profile,
+  materials,
   preClientId,
   preMarkupMaterials,
   pricingTiers,
   jobSizeTiers,
 }: {
   tradeKey: string;
-  profile: { hourly_rate: number; materials_margin_pct: number };
+  profile: { hourly_rate: number; materials_margin_pct: number; archetype_defaults?: Record<string, string> };
+  materials?: { item_key: string; label: string; unit_cost: number }[];
   preClientId?: string;
   preMarkupMaterials?: Array<{ label: string; quantity: number; unit: string; unitCost: number; totalCost: number }>;
   pricingTiers?: Array<{ id: string; name: string; markup_pct: number; sort_order: number }>;
   jobSizeTiers?: Array<{ id: string; name: string; max_days: number | null; markup_pct: number; sort_order: number }>;
 }) {
+  const lib = materials ?? [];
+  const [archetypeDefaults, setArchetypeDefaults] = useState<Record<string, string>>(
+    profile.archetype_defaults ?? {}
+  );
+  async function saveArchetypeDefault(archetypeKey: string, itemKey: string) {
+    const key = `${tradeKey}:${archetypeKey}`;
+    const next = { ...archetypeDefaults, [key]: itemKey };
+    setArchetypeDefaults(next);
+    try {
+      const supabase = createClient();
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+      const businessId = await getActiveBusinessId(supabase, userData.user.id);
+      await supabase.from("profiles").update({ archetype_defaults: next }).eq("id", businessId);
+    } catch (e) {
+      console.error("Failed to save archetype default:", e);
+    }
+  }
+  // Search-the-whole-price-book picker for a materials line item (no fixed
+  // archetype categories for generic trades, so this always shows the full
+  // uploaded price book rather than a pre-filtered slice).
+  const [pickingItemId, setPickingItemId] = useState<string | null>(null);
   const template = GENERIC_TRADE_TEMPLATES[tradeKey] ?? GENERIC_TRADE_TEMPLATES.custom;
   const [margin, setMargin] = useState(profile.materials_margin_pct ?? 20);
 
@@ -320,10 +345,13 @@ export default function GenericQuoteBuilder({
               {analysisError && <p className="text-[13px] text-[var(--red)] mt-2">{analysisError}</p>}
               {detectedItems.length > 0 && analysisResult && (
                 <DrawingAnalysisReviewTable
+                  trade={tradeKey}
                   detectedItems={detectedItems}
                   confidence={analysisResult.confidence as "high" | "medium" | "low"}
                   notes={analysisResult.notes}
-                  lib={[] as { item_key: string; label: string; unit_cost: number }[]}
+                  lib={lib}
+                  archetypeDefaults={archetypeDefaults}
+                  onSaveDefault={saveArchetypeDefault}
                   onAccept={(items: ReviewLineItem[]) => {
                     setSiteItems((prev: {id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]) => [
                       ...prev,
@@ -442,11 +470,40 @@ export default function GenericQuoteBuilder({
               {items.filter((it) => !it.is_labour).map((it) => (
                 <ItemRow key={it.id} item={it} onUpdate={updateItem} onRemove={removeItem} />
               ))}
-              <button onClick={() => addItem(false)}
-                className="w-full flex items-center justify-center gap-1.5 border-2 border-dashed border-[var(--line)] rounded-xl py-2.5 text-[13px] font-semibold text-[var(--ink-faint)] hover:border-[var(--navy)] hover:text-[var(--navy)] transition-colors">
-                <Plus size={14} /> Add material line
-              </button>
+              <div className="flex gap-2">
+                <button onClick={() => addItem(false)}
+                  className="flex-1 flex items-center justify-center gap-1.5 border-2 border-dashed border-[var(--line)] rounded-xl py-2.5 text-[13px] font-semibold text-[var(--ink-faint)] hover:border-[var(--navy)] hover:text-[var(--navy)] transition-colors">
+                  <Plus size={14} /> Add material line
+                </button>
+                {lib.length > 0 && (
+                  <button onClick={() => setPickingItemId("__new__")}
+                    className="flex-1 flex items-center justify-center gap-1.5 border-2 border-dashed border-[var(--amber)] rounded-xl py-2.5 text-[13px] font-semibold text-[var(--amber-deep)] hover:bg-[var(--amber-light)] transition-colors">
+                    <Plus size={14} /> From price book
+                  </button>
+                )}
+              </div>
             </div>
+
+            {pickingItemId && (
+              <CategoryMaterialPicker
+                trade={tradeKey}
+                archetypeKey="__all__"
+                archetypeLabel="material"
+                lib={lib}
+                onSelect={(item: PickerItem) => {
+                  setItems((p) => [...p, {
+                    id: uid(),
+                    label: item.label,
+                    qty: 1,
+                    unit: "ea",
+                    unit_cost: Number(item.unit_cost) || 0,
+                    is_labour: false,
+                  }]);
+                  setPickingItemId(null);
+                }}
+                onClose={() => setPickingItemId(null)}
+              />
+            )}
 
             {/* Running total */}
             <div className="bg-[var(--navy)] rounded-xl p-4 mt-4">

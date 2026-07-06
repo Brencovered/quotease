@@ -12,6 +12,8 @@ import ExtraJobLines, { extraLinesTotals } from "./ExtraJobLines";
 import { resolveClientId } from "@/lib/resolveClientId";
 import { getActiveBusinessId } from "@/lib/team";
 import MaterialsEditor from "@/components/MaterialsEditor";
+import CalcKeyPricingPanel from "@/components/CalcKeyPricingPanel";
+import { resolveCalcCosts, hasRealPriceBook } from "@/lib/resolveCalcCosts";
 import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import SiteAnnotationReport from "@/components/SiteAnnotationReport";
@@ -86,6 +88,9 @@ export default function QuoteBuilder({
     } catch (e) {
       console.error("Failed to save archetype default:", e);
     }
+  }
+  function saveCalcDefault(calcKey: string, itemKey: string) {
+    saveArchetypeDefault(`calc:${calcKey}`, itemKey);
   }
   const [lib, setLib]       = useState<MaterialRow[]>(
     materials.length > 0 ? materials : ELECTRICIAN_DEFAULT_MATERIALS.map((m) => ({ ...m }))
@@ -177,11 +182,10 @@ export default function QuoteBuilder({
   const [analysisError, setAnalysisError]   = useState<string | null>(null);
   const [usageLimitReached, setUsageLimitReached] = useState(false);
 
-  const costs: MaterialCostMap = useMemo(() => {
-    const m: MaterialCostMap = {};
-    lib.forEach((r) => (m[r.item_key] = Number(r.unit_cost) || 0));
-    return m;
-  }, [lib]);
+  const costs: MaterialCostMap = useMemo(
+    () => resolveCalcCosts("electrician", ELECTRICIAN_DEFAULT_MATERIALS, lib, archetypeDefaults),
+    [lib, archetypeDefaults]
+  );
 
   const result = useMemo(() => calcElectricianQuote(intake, costs, rate, effectiveMargin), [intake, costs, rate, effectiveMargin]);
   // The wizard's running total needs to include this too, not just the
@@ -490,7 +494,7 @@ export default function QuoteBuilder({
       )}
 
       {stepId === "electrical" && (
-        <StepElectrical intake={intake} set={set} lib={lib} setLib={setLib} />
+        <StepElectrical intake={intake} set={set} lib={lib} setLib={setLib} archetypeDefaults={archetypeDefaults} saveCalcDefault={saveCalcDefault} />
       )}
 
       {stepId === "site" && (
@@ -737,11 +741,13 @@ function StepJob({
   );
 }
 
-function StepElectrical({ intake, set, lib, setLib }: {
+function StepElectrical({ intake, set, lib, setLib, archetypeDefaults, saveCalcDefault }: {
   intake: ElectricianIntake;
   set: <K extends keyof ElectricianIntake>(k: K, v: ElectricianIntake[K]) => void;
   lib: MaterialRow[];
   setLib: React.Dispatch<React.SetStateAction<MaterialRow[]>>;
+  archetypeDefaults: Record<string, string>;
+  saveCalcDefault: (calcKey: string, itemKey: string) => void;
 }) {
   const [showLib, setShowLib] = useState(false);
   const [csvMessage, setCsvMessage] = useState<string | null>(null);
@@ -999,7 +1005,16 @@ function StepElectrical({ intake, set, lib, setLib }: {
             </div>
             {csvMessage && <p className="text-[12.5px] text-[var(--ink-soft)] mt-3">{csvMessage}</p>}
           </div>
-          <MaterialsEditor lib={lib} setLib={setLib} trade="electrician" />
+          {hasRealPriceBook(lib) && (
+            <CalcKeyPricingPanel
+              trade="electrician"
+              defaults={ELECTRICIAN_DEFAULT_MATERIALS}
+              lib={lib}
+              archetypeDefaults={archetypeDefaults}
+              onSaveDefault={saveCalcDefault}
+            />
+          )}
+          {!hasRealPriceBook(lib) && <MaterialsEditor lib={lib} setLib={setLib} trade="electrician" />}
         </>
       )}
     </div>
