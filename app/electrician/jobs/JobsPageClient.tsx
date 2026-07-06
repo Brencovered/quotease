@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { LayoutGrid, List } from "lucide-react";
-import JobsKanbanBoard, { type BoardJob } from "@/components/JobsKanbanBoard";
+import JobsKanbanBoard, { type BoardJob, type BoardColumn } from "@/components/JobsKanbanBoard";
 import QuickJobsPanel from "@/components/QuickJobsPanel";
 import JobsPanel from "@/components/JobsPanel";
 
@@ -11,6 +11,7 @@ export default function JobsPageClient({
   quickJobs,
   listJobs,
   teamMembers,
+  boardColumns,
 }: {
   boardJobs: BoardJob[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -18,6 +19,7 @@ export default function JobsPageClient({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   listJobs: any[];
   teamMembers: Array<{ id: string; name: string | null; email: string }>;
+  boardColumns: BoardColumn[];
 }) {
   const [view, setView] = useState<"board" | "list">("board");
 
@@ -59,7 +61,7 @@ export default function JobsPageClient({
         {toggle}
       </div>
       <QuickJobsPanel jobs={quickJobs} teamMembers={teamMembers} />
-      <JobsKanbanBoard jobs={boardJobs} />
+      <JobsKanbanBoard jobs={boardJobs} columns={boardColumns} />
     </div>
   );
 }

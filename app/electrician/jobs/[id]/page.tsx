@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { loadJobDetailData } from "@/lib/jobDetail";
 import { getActiveBusinessId } from "@/lib/team";
+import { getOrSeedBoardColumns } from "@/lib/jobBoard";
 import AppHeader from "@/components/AppHeader";
 import VariationsPanel from "@/components/VariationsPanel";
 import JobCostingPanel from "@/components/JobCostingPanel";
@@ -15,6 +16,7 @@ import JobTimeline from "@/components/JobTimeline";
 import JobPlansPanel from "@/components/JobPlansPanel";
 import JobActionsBar from "@/components/JobActionsBar";
 import QuickJobActionsBar from "@/components/QuickJobActionsBar";
+import JobProgressStepper from "@/components/JobProgressStepper";
 import { humanizeIntake } from "@/lib/scopeOfWorks";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -44,10 +46,11 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   const scopeLines = quote ? humanizeIntake(quote.intake_data) : [];
   const labourCost = (job.labour_hours ?? 0) * hourlyRate;
 
-  const [{ data: matRows }, { data: teamRows }, { data: taskRows }] = await Promise.all([
+  const [{ data: matRows }, { data: teamRows }, { data: taskRows }, boardColumns] = await Promise.all([
     supabase.from("material_items").select("item_key, label, unit_cost").eq("profile_id", businessId).eq("trade", job.trade ?? "electrician").order("label"),
     supabase.from("team_members").select("id, name, email").eq("owner_profile_id", businessId).eq("status", "active").order("name"),
     supabase.from("job_tasks").select("*").or(`job_id.eq.${job.id}${quote ? `,quote_id.eq.${quote.id}` : ""}`).order("created_at"),
+    getOrSeedBoardColumns(supabase, businessId),
   ]);
 
   const tradeMaterials: Array<{ item_key: string; label: string; unit_cost: number }> = matRows ?? [];
@@ -77,6 +80,9 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     .reduce((sum: number, v: { total_cost: number }) => sum + (v.total_cost ?? 0), 0);
   const effectiveTotal = (job.total_cost ?? 0) + approvedVariationsTotal + markupMaterials;
   const amountPaid = quote ? (quote.amount_paid ?? 0) : (job.amount_paid ?? 0);
+
+  const ARCHIVE_STATUSES = ["archived", "cancelled"];
+  const stepperColumns = (boardColumns ?? []).filter((c) => !c.statuses.every((s: string) => ARCHIVE_STATUSES.includes(s)));
 
   return (
     <>
@@ -164,6 +170,8 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         </div>
 
         <div className="flex flex-col gap-4">
+          {stepperColumns.length > 0 && <JobProgressStepper jobId={job.id} status={job.status} columns={stepperColumns} />}
+
           {quote ? (
             <JobActionsBar
               quoteId={quote.id}
