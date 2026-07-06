@@ -13,6 +13,7 @@ import { resolveClientId } from "@/lib/resolveClientId";
 import { getActiveBusinessId } from "@/lib/team";
 import MaterialsEditor from "@/components/MaterialsEditor";
 import CalcKeyPricingPanel from "@/components/CalcKeyPricingPanel";
+import PriceHint from "@/components/PriceHint";
 import { resolveCalcCosts, hasRealPriceBook } from "@/lib/resolveCalcCosts";
 import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
@@ -752,6 +753,30 @@ function StepElectrical({ intake, set, lib, setLib, archetypeDefaults, saveCalcD
   const [showLib, setShowLib] = useState(false);
   const [csvMessage, setCsvMessage] = useState<string | null>(null);
 
+  // Live price-book resolution for every field in this step -- shows the
+  // real linked product + running subtotal right under the input instead
+  // of leaving the tradie to trust an abstract number until the very end.
+  const showPriceHints = hasRealPriceBook(lib);
+  const calcCosts = useMemo(
+    () => resolveCalcCosts("electrician", ELECTRICIAN_DEFAULT_MATERIALS, lib, archetypeDefaults),
+    [lib, archetypeDefaults]
+  );
+  function priceHint(calcKey: string | null, calcLabel: string, qty: number) {
+    if (!showPriceHints || !calcKey || qty <= 0) return null;
+    return (
+      <PriceHint
+        trade="electrician"
+        calcKey={calcKey}
+        calcLabel={calcLabel}
+        qty={qty}
+        price={calcCosts[calcKey] ?? 0}
+        isLinked={!!archetypeDefaults[`electrician:calc:${calcKey}`]}
+        lib={lib}
+        onLink={(itemKey) => saveCalcDefault(calcKey, itemKey)}
+      />
+    );
+  }
+
   function downloadCsvTemplate() {
     const rows = ["item_key,label,unit_cost", ...lib.map((m) => `${m.item_key},"${m.label}",${m.unit_cost}`)];
     const blob = new Blob([rows.join("\n")], { type: "text/csv" });
@@ -857,6 +882,7 @@ function StepElectrical({ intake, set, lib, setLib, archetypeDefaults, saveCalcD
           <Check2 checked={intake.switchboardUpgrade} onChange={(v) => set("switchboardUpgrade", v)} label="Upgrade needed" />
           <Check2 checked={intake.threePhase}          onChange={(v) => set("threePhase", v)}          label="3-phase supply" />
         </Row>
+        {priceHint("three_phase", "3-phase supply upgrade", intake.threePhase ? 1 : 0)}
         {intake.switchboardUpgrade && (
           <div className="mt-3 space-y-3 pt-3 border-t border-[var(--line-subtle)]">
             <Field label="RCBO type">
@@ -870,9 +896,14 @@ function StepElectrical({ intake, set, lib, setLib, archetypeDefaults, saveCalcD
                 <option value="full_board">Full RCBO board</option>
                 <option value="per_pole">RCBO per pole</option>
               </select>
+              {!intake.switchboardRcbo && priceHint("sb_rcd", "Switchboard upgrade, RCD", 1)}
+              {intake.switchboardRcbo && intake.switchboardRcboMode === "full_board" && priceHint("sb_rcbo_full", "Switchboard, full RCBO", 1)}
             </Field>
             {intake.switchboardRcbo && intake.switchboardRcboMode === "per_pole" && (
-              <Field label="Number of poles"><Num value={intake.switchboardPoles ?? 12} onChange={(v) => set("switchboardPoles", v)} /></Field>
+              <Field label="Number of poles">
+                <Num value={intake.switchboardPoles ?? 12} onChange={(v) => set("switchboardPoles", v)} />
+                {priceHint("sb_rcbo_per_pole", "Switchboard RCBO per pole", intake.switchboardPoles ?? 12)}
+              </Field>
             )}
           </div>
         )}
@@ -880,20 +911,49 @@ function StepElectrical({ intake, set, lib, setLib, archetypeDefaults, saveCalcD
       <div className="card">
         <p className="section-tag mb-3">Points and circuits</p>
         <div className="grid grid-cols-3 gap-3 mb-3">
-          <Field label="Power pts"><Num value={intake.powerPoints} onChange={(v) => set("powerPoints", v)} /></Field>
-          <Field label="Light pts"><Num value={intake.lightPoints} onChange={(v) => set("lightPoints", v)} /></Field>
-          <Field label="Switches"><Num value={intake.switches}    onChange={(v) => set("switches", v)}    /></Field>
+          <Field label="Power pts">
+            <Num value={intake.powerPoints} onChange={(v) => set("powerPoints", v)} />
+            {priceHint("pp", "Power point", intake.powerPoints)}
+          </Field>
+          <Field label="Light pts">
+            <Num value={intake.lightPoints} onChange={(v) => set("lightPoints", v)} />
+            {priceHint("lp", "Light point", intake.lightPoints)}
+          </Field>
+          <Field label="Switches">
+            <Num value={intake.switches}    onChange={(v) => set("switches", v)}    />
+            {priceHint("sw", "Switch", intake.switches)}
+          </Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Data points"><Num value={intake.dataPoints} onChange={(v) => set("dataPoints", v)} /></Field>
-          <Field label="Ext. circuits"><Num value={intake.externalCircuits} onChange={(v) => set("externalCircuits", v)} /></Field>
+          <Field label="Data points">
+            <Num value={intake.dataPoints} onChange={(v) => set("dataPoints", v)} />
+            {priceHint("data", "Data point", intake.dataPoints)}
+          </Field>
+          <Field label="Ext. circuits">
+            <Num value={intake.externalCircuits} onChange={(v) => set("externalCircuits", v)} />
+            {priceHint("external_circuit", "External circuit", intake.externalCircuits)}
+          </Field>
         </div>
-        <div className="mt-3"><Check2 checked={intake.nbn} onChange={(v) => set("nbn", v)} label="NBN connection point" /></div>
+        <div className="mt-3">
+          <Check2 checked={intake.nbn} onChange={(v) => set("nbn", v)} label="NBN connection point" />
+          {priceHint("nbn", "NBN connection point", intake.nbn ? 1 : 0)}
+        </div>
       </div>
       <div className="card">
         <p className="section-tag mb-3">Lighting</p>
         <div className="grid grid-cols-2 gap-3 mb-3">
-          <Field label="Downlights"><Num value={intake.downlights} onChange={(v) => set("downlights", v)} /></Field>
+          <Field label="Downlights">
+            <Num value={intake.downlights} onChange={(v) => set("downlights", v)} />
+            {priceHint(
+              intake.downlightSupply === "wire_and_fit" ? "dl_client_supply"
+                : intake.downlightSupply === "provisional" ? null
+                : intake.downlightGrade === "standard" ? "dl_standard"
+                : intake.downlightGrade === "premium" ? "dl_premium"
+                : "dl_builder",
+              "Downlight",
+              intake.downlightSupply === "provisional" ? 0 : intake.downlights
+            )}
+          </Field>
           <Field label="Supply">
             <select value={intake.downlightSupply ?? "supply_and_fit"}
               onChange={(e) => set("downlightSupply", e.target.value as ElectricianIntake["downlightSupply"])}
@@ -920,9 +980,18 @@ function StepElectrical({ intake, set, lib, setLib, archetypeDefaults, saveCalcD
         )}
         <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-faint)] mt-4 mb-2">Exhaust fans</p>
         <div className="grid grid-cols-3 gap-3">
-          <Field label="Ceiling"><Num value={exhaustQty("ceiling")} onChange={(v) => setExhaustFan("ceiling", v)} /></Field>
-          <Field label="Ducted"><Num value={exhaustQty("ducted")}  onChange={(v) => setExhaustFan("ducted", v)}  /></Field>
-          <Field label="Inline"><Num value={exhaustQty("inline")}  onChange={(v) => setExhaustFan("inline", v)}  /></Field>
+          <Field label="Ceiling">
+            <Num value={exhaustQty("ceiling")} onChange={(v) => setExhaustFan("ceiling", v)} />
+            {priceHint("exhaust_ceiling", "Exhaust fan, ceiling", exhaustQty("ceiling"))}
+          </Field>
+          <Field label="Ducted">
+            <Num value={exhaustQty("ducted")}  onChange={(v) => setExhaustFan("ducted", v)}  />
+            {priceHint("exhaust_ducted", "Exhaust fan, ducted", exhaustQty("ducted"))}
+          </Field>
+          <Field label="Inline">
+            <Num value={exhaustQty("inline")}  onChange={(v) => setExhaustFan("inline", v)}  />
+            {priceHint("exhaust_inline", "Exhaust fan, inline", exhaustQty("inline"))}
+          </Field>
         </div>
       </div>
       <div className="card">
@@ -936,6 +1005,16 @@ function StepElectrical({ intake, set, lib, setLib, archetypeDefaults, saveCalcD
           <Check2 checked={intake.evCharger}        onChange={(v) => set("evCharger", v)}        label="EV charger" />
           <Check2 checked={intake.solarConnection}  onChange={(v) => set("solarConnection", v)}  label="Solar / battery" />
         </div>
+        {showPriceHints && [intake.applianceOven, intake.applianceCooktop, intake.applianceHwc, intake.applianceAircon, intake.appliancePool].some(Boolean) && (
+          <div className="mb-2">
+            {priceHint(
+              "appliance", "Fixed appliance circuit",
+              [intake.applianceOven, intake.applianceCooktop, intake.applianceHwc, intake.applianceAircon, intake.appliancePool].filter(Boolean).length
+            )}
+          </div>
+        )}
+        {priceHint("ev_charger", "EV charger circuit", intake.evCharger ? 1 : 0)}
+        {priceHint("solar_connection", "Solar/battery connection", intake.solarConnection ? 1 : 0)}
         {customAppliances.length > 0 && (
           <div className="space-y-2 mb-3">
             {customAppliances.map(ca => (
@@ -967,20 +1046,31 @@ function StepElectrical({ intake, set, lib, setLib, archetypeDefaults, saveCalcD
         <p className="section-tag mb-3">Cabling</p>
         <div className="grid grid-cols-3 gap-3 mb-3">
           {(["1.5","2.5","4","6","10"] as const).map(size => (
-            <Field key={size} label={`${size}mm (m)`}><Num value={cableMetres(size)} onChange={(v) => setCableRun(size, v)} /></Field>
+            <Field key={size} label={`${size}mm (m)`}>
+              <Num value={cableMetres(size)} onChange={(v) => setCableRun(size, v)} />
+              {priceHint(`cable_${size.replace(".", "_")}`, `Cable ${size}mm`, cableMetres(size))}
+            </Field>
           ))}
         </div>
-        <Field label="Trenching (m)"><Num value={intake.trenchMetres} onChange={(v) => set("trenchMetres", v)} /></Field>
+        <Field label="Trenching (m)">
+          <Num value={intake.trenchMetres} onChange={(v) => set("trenchMetres", v)} />
+          {priceHint("trench", "Trenching", intake.trenchMetres)}
+        </Field>
       </div>
       <div className="card">
         <p className="section-tag mb-3">Safety and compliance</p>
         <div className="grid grid-cols-2 gap-3 mb-3">
-          <Field label="Smoke alarms"><Num value={intake.smokeAlarms} onChange={(v) => set("smokeAlarms", v)} /></Field>
+          <Field label="Smoke alarms">
+            <Num value={intake.smokeAlarms} onChange={(v) => set("smokeAlarms", v)} />
+            {priceHint("smoke", "Smoke alarm", intake.smokeAlarms)}
+          </Field>
         </div>
         <Row>
           <Check2 checked={intake.ccew}    onChange={(v) => set("ccew", v)}    label="CCEW certificate" />
           <Check2 checked={intake.callout} onChange={(v) => set("callout", v)} label="Call-out fee" />
         </Row>
+        {priceHint("ccew", "Certificate of Compliance", intake.ccew ? 1 : 0)}
+        {priceHint("callout", "Call-out / site survey fee", intake.callout ? 1 : 0)}
         <p className="text-[11.5px] text-[var(--ink-faint)] mt-2">COES is included automatically on all jobs.</p>
       </div>
       <button onClick={() => setShowLib(!showLib)} className="btn-secondary w-full justify-between">
