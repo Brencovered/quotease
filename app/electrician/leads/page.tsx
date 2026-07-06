@@ -2,74 +2,84 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
 import LeadsPanel from "@/components/LeadsPanel";
-import Link from "next/link";
 
 export default async function LeadsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Check directory access
-  const { data: settings } = await supabase
-    .from("tradie_directory_settings")
-    .select("*")
-    .eq("profile_id", user.id)
-    .single();
-
-  const hasAccess = settings?.directory_active;
-
-  if (!hasAccess) {
-    return (
-      <>
-        <AppHeader />
-        <div className="page-wrap-narrow">
-          <div className="card text-center py-12">
-            <p className="text-[32px] mb-3">🔒</p>
-            <p className="font-semibold text-[var(--ink)] mb-1">Directory access required</p>
-            <p className="text-[13.5px] text-[var(--ink-faint)] max-w-xs mx-auto mb-5">
-              Get access to homeowner quote requests in your area. Activate your directory listing to start receiving leads.
-            </p>
-            <Link href="/settings" className="btn-primary inline-flex">
-              Set up directory access
-            </Link>
-          </div>
-        </div>
-      </>
-    );
-  }
-
-  // Get job requests matching this tradie's service suburbs and trade
-  const profile = await supabase
+  // Get the tradie's profile
+  const { data: profile } = await supabase
     .from("profiles")
-    .select("trades")
+    .select("id, trades, suburb, business_name")
     .eq("id", user.id)
     .single();
 
-  const trades = profile.data?.trades ?? [];
-  const serviceSuburbs = settings.service_suburbs ?? [];
-  const leadTemps = settings.lead_temps_wanted ?? ["early","warm","hot"];
+  const trades = (profile?.trades ?? []).map((t: string) => t.toLowerCase());
+  const tradieSuburb = profile?.suburb ?? "";
 
-  // Fetch open requests in their area
+  // Get active lead subscriptions for this tradie
+  const { data: subscriptions } = await supabase
+    .from("lead_subscriptions")
+    .select("trade, suburb, is_active")
+    .eq("profile_id", user.id);
+
+  // Build list of active (trade, suburb) combos they're subscribed to
+  const activeSubs = (subscriptions ?? []).filter((s) => s.is_active);
+
+  // If they have no subscriptions yet but have trades + suburb,
+  // create them on-the-fly (migration path for existing users)
+  if (activeSubs.length === 0 && trades.length > 0 && tradieSuburb) {
+    const newSubs = trades.map((trade: string) => ({
+      profile_id: user.id,
+      trade,
+      suburb: tradieSuburb,
+      is_active: true,
+    }));
+    await supabase.from("lead_subscriptions").upsert(newSubs, {
+      onConflict: "profile_id,trade,suburb",
+      ignoreDuplicates: true,
+    });
+    // Refresh
+    const { data: freshSubs } = await supabase
+      .from("lead_subscriptions")
+      .select("trade, suburb, is_active")
+      .eq("profile_id", user.id);
+    activeSubs.push(...(freshSubs ?? []).filter((s) => s.is_active));
+  }
+
+  // Determine which suburbs and trades to query for
+  const subscribedSuburbs = [...new Set(activeSubs.map((s) => s.suburb))];
+  const subscribedTrades = [...new Set(activeSubs.map((s) => s.trade))];
+
+  // Build the query — match any of their subscribed trade+suburb combos
   let query = supabase
     .from("job_requests")
     .select("*, job_claims(request_id, status)")
-    .in("status", ["open","partially_claimed","fully_claimed"])
-    .in("lead_temperature", leadTemps)
+    .in("status", ["open", "partially_claimed", "fully_claimed"])
     .order("created_at", { ascending: false })
     .limit(50);
 
-  if (trades.length > 0) query = query.in("trade", trades);
+  if (subscribedTrades.length > 0) {
+    query = query.in(
+      "trade",
+      subscribedTrades
+    );
+  }
 
   const { data: allRequests } = await query;
 
-  // Filter by service suburbs client-side
-  const requests = (allRequests ?? []).filter(r =>
-    serviceSuburbs.length === 0 ||
-    serviceSuburbs.some((s: string) =>
-      s.toLowerCase().includes(r.suburb.toLowerCase()) ||
-      r.suburb.toLowerCase().includes(s.toLowerCase())
-    )
-  );
+  // Filter by suburb client-side for fuzzy matching
+  const requests = (allRequests ?? []).filter((r) => {
+    // Must match at least one subscribed suburb
+    if (subscribedSuburbs.length === 0) return true; // Show all if no suburb filter
+    const requestSuburb = (r.suburb ?? "").toLowerCase();
+    return subscribedSuburbs.some(
+      (s) =>
+        s.toLowerCase().includes(requestSuburb) ||
+        requestSuburb.includes(s.toLowerCase())
+    );
+  });
 
   // Get this tradie's claimed request IDs
   const { data: myClaims } = await supabase
@@ -78,10 +88,9 @@ export default async function LeadsPage() {
     .eq("tradie_profile_id", user.id)
     .eq("status", "claimed");
 
-  const myClaimedIds = myClaims?.map(c => c.request_id) ?? [];
+  const myClaimedIds = myClaims?.map((c) => c.request_id) ?? [];
 
-  // Resolve photo_paths into signed URLs -- job-files is a private bucket,
-  // so the client can't just render photo_paths directly.
+  // Resolve photo_paths into signed URLs
   const requestsWithPhotoUrls = await Promise.all(
     requests.map(async (r) => {
       if (!r.photo_paths?.length) return { ...r, photo_urls: [] as string[] };
@@ -90,9 +99,17 @@ export default async function LeadsPage() {
           supabase.storage.from("job-files").createSignedUrl(p, 3600)
         )
       );
-      return { ...r, photo_urls: signed.map((s) => s.data?.signedUrl).filter((u): u is string => !!u) };
+      return {
+        ...r,
+        photo_urls: signed
+          .map((s) => s.data?.signedUrl)
+          .filter((u): u is string => !!u),
+      };
     })
   );
+
+  // Check if they're opted out of all leads
+  const allOptedOut = subscriptions && subscriptions.length > 0 && subscriptions.every((s) => !s.is_active);
 
   return (
     <>
@@ -105,7 +122,41 @@ export default async function LeadsPage() {
             Claim a lead to get their contact details.
           </p>
         </div>
-        <LeadsPanel requests={requestsWithPhotoUrls} myClaimedIds={myClaimedIds} />
+
+        {allOptedOut ? (
+          <div className="card text-center py-12">
+            <p className="text-[32px] mb-3">🔕</p>
+            <p className="font-semibold text-[var(--ink)] mb-1">
+              Lead notifications are paused
+            </p>
+            <p className="text-[13.5px] text-[var(--ink-faint)] max-w-xs mx-auto mb-5">
+              You've opted out of lead notifications. Turn them back on in
+              settings to start receiving leads again.
+            </p>
+            <a href="/settings" className="btn-primary inline-flex">
+              Manage lead preferences
+            </a>
+          </div>
+        ) : activeSubs.length === 0 ? (
+          <div className="card text-center py-12">
+            <p className="text-[32px] mb-3">📍</p>
+            <p className="font-semibold text-[var(--ink)] mb-1">
+              Set your service area
+            </p>
+            <p className="text-[13.5px] text-[var(--ink-faint)] max-w-xs mx-auto mb-5">
+              Add your service suburb and trade in your profile to start
+              receiving leads from homeowners in your area.
+            </p>
+            <a href="/settings" className="btn-primary inline-flex">
+              Update your profile
+            </a>
+          </div>
+        ) : (
+          <LeadsPanel
+            requests={requestsWithPhotoUrls}
+            myClaimedIds={myClaimedIds}
+          />
+        )}
       </div>
     </>
   );

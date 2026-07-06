@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { FREE_ANALYSES_LIMIT, ADDON_MONTHLY_LIMIT, currentPeriod } from "@/lib/aiUsage";
@@ -8,7 +8,7 @@ import { ELECTRICIAN_DEFAULT_MATERIALS } from "@/lib/calc";
 import { PLUMBER_DEFAULT_MATERIALS } from "@/lib/calcPlumber";
 import { CARPENTER_DEFAULT_MATERIALS } from "@/lib/calcCarpenter";
 import { ROOFER_DEFAULT_MATERIALS } from "@/lib/calcRoofer";
-import { Check, Upload, Save } from "lucide-react";
+import { Check, Upload, Save, Bell, BellOff, MapPin } from "lucide-react";
 import { normalizeToPng } from "@/lib/imageNormalize";
 
 const TRADE_SEED: Record<string, readonly { item_key: string; label: string; unit_cost: number }[]> = {
@@ -93,6 +93,61 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
   const [companySaving,  setCompanySaving]  = useState(false);
   const [companySaved,   setCompanySaved]   = useState(false);
   const [companyError,   setCompanyError]   = useState<string | null>(null);
+
+  // Lead subscription state
+  const [leadSubs, setLeadSubs] = useState<Array<{ trade: string; suburb: string; is_active: boolean }>>([]);
+  const [leadSubsLoading, setLeadSubsLoading] = useState(true);
+  const [leadSubsAction, setLeadSubsAction] = useState<string | null>(null);
+
+  // Load lead subscriptions on mount
+  useEffect(() => {
+    async function loadSubs() {
+      try {
+        const res = await fetch("/api/leads/subscription");
+        if (res.ok) {
+          const data = await res.json();
+          setLeadSubs(data.subscriptions ?? []);
+        }
+      } catch {
+        // Silent fail — lead prefs are non-critical
+      } finally {
+        setLeadSubsLoading(false);
+      }
+    }
+    loadSubs();
+  }, []);
+
+  async function toggleAllLeads(active: boolean) {
+    setLeadSubsAction(active ? "subscribing" : "unsubscribing");
+    try {
+      const res = await fetch(`/api/leads/${active ? "subscribe" : "unsubscribe"}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      if (res.ok) {
+        setLeadSubs((prev) => prev.map((s) => ({ ...s, is_active: active })));
+      }
+    } catch {
+      // Silent fail
+    } finally {
+      setLeadSubsAction(null);
+    }
+  }
+
+  async function toggleSingleLead(trade: string, suburb: string, active: boolean) {
+    setLeadSubsAction(`${trade}-${suburb}`);
+    try {
+      const res = await fetch(`/api/leads/${active ? "subscribe" : "unsubscribe"}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trade, suburb }),
+      });
+      if (res.ok) {
+        setLeadSubs((prev) => prev.map((s) => (s.trade === trade && s.suburb === suburb ? { ...s, is_active: active } : s)));
+      }
+    } catch {
+      // Silent fail
+    } finally {
+      setLeadSubsAction(null);
+    }
+  }
 
   async function toggle(key: string) {
     const adding = !trades.includes(key);
@@ -300,6 +355,93 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
           </button>
           {companySaved && <span className="text-[13px] text-[var(--green)] font-semibold flex items-center gap-1"><Check size={13}/>Saved</span>}
         </div>
+      </div>
+
+      {/* Lead preferences */}
+      <div className="card mb-4">
+        <div className="flex items-center gap-2 mb-1">
+          <p className="section-tag">Lead notifications</p>
+          {leadSubsAction === "subscribing" && <span className="text-[12px] text-[var(--ink-faint)]">Activating...</span>}
+          {leadSubsAction === "unsubscribing" && <span className="text-[12px] text-[var(--ink-faint)]">Pausing...</span>}
+        </div>
+        <p className="font-semibold text-[var(--ink)] mb-1">Homeowner quote requests</p>
+        <p className="text-[13px] text-[var(--ink-faint)] mb-3">
+          You're automatically subscribed to leads matching your trade and service area. Claim leads to get homeowner contact details.
+        </p>
+
+        {leadSubsLoading ? (
+          <p className="text-[13px] text-[var(--ink-faint)]">Loading...</p>
+        ) : leadSubs.length === 0 ? (
+          <div className="bg-[var(--app-bg)] rounded-xl p-4 text-center">
+            <MapPin size={20} className="text-[var(--ink-faint)] mx-auto mb-2" />
+            <p className="text-[13px] text-[var(--ink-soft)] font-semibold">No subscriptions yet</p>
+            <p className="text-[12px] text-[var(--ink-faint)]">Set your service suburb and trade to start receiving leads.</p>
+          </div>
+        ) : (
+          <>
+            {/* Master toggle */}
+            {(() => {
+              const allActive = leadSubs.every((s) => s.is_active);
+              const allInactive = leadSubs.every((s) => !s.is_active);
+              return (
+                <div className="flex items-center justify-between bg-[var(--app-bg)] rounded-xl px-4 py-3 mb-3">
+                  <div className="flex items-center gap-2.5">
+                    {allActive ? <Bell size={16} className="text-[var(--green)]" /> : allInactive ? <BellOff size={16} className="text-[var(--ink-faint)]" /> : <Bell size={16} className="text-[var(--amber)]" />}
+                    <div>
+                      <p className="text-[13px] font-semibold text-[var(--ink)]">
+                        {allActive ? "All leads active" : allInactive ? "All leads paused" : "Some leads paused"}
+                      </p>
+                      <p className="text-[11.5px] text-[var(--ink-faint)]">
+                        {leadSubs.filter((s) => s.is_active).length} of {leadSubs.length} subscription{leadSubs.length !== 1 ? "s" : ""} active
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => toggleAllLeads(allInactive)}
+                    disabled={!!leadSubsAction}
+                    className={`text-[12px] font-bold px-3 py-1.5 rounded-lg transition-colors ${
+                      allInactive
+                        ? "bg-[var(--navy)] text-white hover:bg-[var(--navy)]/90"
+                        : "bg-[var(--red-bg)] text-[var(--red)] hover:bg-red-100"
+                    } disabled:opacity-50`}
+                  >
+                    {allInactive ? "Resume all" : "Pause all"}
+                  </button>
+                </div>
+              );
+            })()}
+
+            {/* Individual subscriptions */}
+            <div className="space-y-1.5">
+              {leadSubs.map((sub) => (
+                <div
+                  key={`${sub.trade}-${sub.suburb}`}
+                  className={`flex items-center justify-between rounded-lg px-3 py-2 border ${
+                    sub.is_active ? "border-[var(--line-subtle)] bg-white" : "border-transparent bg-[var(--app-bg)] opacity-60"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-[12.5px] font-semibold text-[var(--ink)] capitalize">{sub.trade}</span>
+                    <span className="text-[var(--ink-faint)]">·</span>
+                    <span className="text-[12.5px] text-[var(--ink-soft)]">{sub.suburb}</span>
+                    {sub.is_active && <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-[var(--green-bg)] text-[var(--green)]">Active</span>}
+                  </div>
+                  <button
+                    onClick={() => toggleSingleLead(sub.trade, sub.suburb, !sub.is_active)}
+                    disabled={!!leadSubsAction}
+                    className={`text-[11px] font-bold px-2.5 py-1 rounded-md transition-colors ${
+                      sub.is_active
+                        ? "text-[var(--ink-faint)] hover:text-[var(--red)] hover:bg-[var(--red-bg)]"
+                        : "text-[var(--navy)] hover:bg-[var(--navy)]/10"
+                    } disabled:opacity-50`}
+                  >
+                    {leadSubsAction === `${sub.trade}-${sub.suburb}` ? "..." : sub.is_active ? "Pause" : "Resume"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Materials pricing - prominent link */}

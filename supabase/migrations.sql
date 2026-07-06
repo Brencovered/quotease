@@ -1,6 +1,6 @@
 -- ============================================================
 -- SWIFTSCOPE v2 MIGRATION
--- Run in Supabase SQL editor after the initial schema.sql
+-- Run this in Supabase SQL editor after the initial schema.sql
 -- ============================================================
 
 -- Client address book
@@ -413,3 +413,230 @@ alter table profiles
   add column if not exists suburb          text,
   add column if not exists digital_tools   text[],
   add column if not exists quote_frequency text;
+
+-- ============================================================
+-- MIGRATION: Lead Generation System (Opt-Out Model)
+-- ============================================================
+-- Creates the complete lead generation infrastructure:
+--   homeowner_profiles, job_requests, job_claims,
+--   lead_subscriptions (opt-out model), lead_matching_log
+--
+-- Opt-out model: Every tradie is auto-subscribed to leads for
+-- their trade + suburb on onboarding. They can opt out later.
+
+-- ── Homeowner profiles ──────────────────────────────────────────────────────
+-- Homeowners who submit quote requests via the Get Quotes form.
+-- Server-only access (no RLS SELECT — service role only).
+
+create table if not exists homeowner_profiles (
+  id          uuid primary key default gen_random_uuid(),
+  name        text not null,
+  email       text not null,
+  phone       text,
+  suburb      text not null,
+  postcode    text,
+  created_at  timestamptz not null default now()
+);
+
+alter table homeowner_profiles enable row level security;
+
+-- ── Job requests (leads) ───────────────────────────────────────────────────
+-- Quote requests submitted by homeowners. Tradies claim these via
+-- the /electrician/leads page.
+
+create table if not exists job_requests (
+  id                   uuid primary key default gen_random_uuid(),
+  homeowner_id         uuid references homeowner_profiles(id) on delete cascade,
+  trade                text not null,
+  suburb               text not null,
+  postcode             text,
+  description          text not null,
+  additional_details   text,
+  budget               text,
+  timeline             text,
+  lead_temperature     text not null default 'warm',
+  status               text not null default 'open',
+  num_quotes_wanted    integer not null default 3,
+  photo_paths          text[] not null default '{}',
+  wider_radius_sent_at timestamptz,
+  consent_given        boolean not null default true,
+  created_at           timestamptz not null default now(),
+  updated_at           timestamptz not null default now()
+);
+
+-- Validate status values
+alter table job_requests add constraint job_requests_status_check
+  check (status in ('open','partially_claimed','fully_claimed','expired'));
+
+-- Validate lead temperature values
+alter table job_requests add constraint job_requests_temp_check
+  check (lead_temperature in ('early','warm','hot'));
+
+-- Indexes for lead matching performance
+create index if not exists idx_job_requests_trade_suburb_status
+  on job_requests(trade, suburb, status);
+
+create index if not exists idx_job_requests_created_at
+  on job_requests(created_at desc);
+
+create index if not exists idx_job_requests_homeowner_id
+  on job_requests(homeowner_id);
+
+-- Auto-update updated_at
+create or replace function update_updated_at_column()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists trg_job_requests_updated_at on job_requests;
+create trigger trg_job_requests_updated_at
+  before update on job_requests
+  for each row execute function update_updated_at_column();
+
+alter table job_requests enable row level security;
+
+-- ── Job claims ─────────────────────────────────────────────────────────────
+-- Tracks which tradie claimed which job request. A request becomes
+-- fully_claimed when num_quotes_wanted claims are active.
+
+create table if not exists job_claims (
+  id                uuid primary key default gen_random_uuid(),
+  request_id        uuid not null references job_requests(id) on delete cascade,
+  tradie_profile_id uuid not null references profiles(id) on delete cascade,
+  status            text not null default 'claimed',
+  rejected_at       timestamptz,
+  claimed_at        timestamptz not null default now()
+);
+
+-- Prevent duplicate active claims from the same tradie
+create unique index if not exists idx_job_claims_unique_active
+  on job_claims(request_id, tradie_profile_id)
+  where status = 'claimed';
+
+create index if not exists idx_job_claims_request_id
+  on job_claims(request_id);
+
+create index if not exists idx_job_claims_tradie_profile_id
+  on job_claims(tradie_profile_id);
+
+-- Validate status
+alter table job_claims add constraint job_claims_status_check
+  check (status in ('claimed','rejected','completed'));
+
+alter table job_claims enable row level security;
+
+create policy "Tradie can view own claims"
+  on job_claims for select
+  using (auth.uid() = tradie_profile_id);
+
+-- ── Lead subscriptions (OPT-OUT MODEL) ────────────────────────────────────
+-- Core table for the opt-out lead model.
+-- Every tradie is auto-subscribed to their trade + suburb on onboarding.
+-- Setting is_active = false opts them out of leads for that combo.
+
+create table if not exists lead_subscriptions (
+  id          uuid primary key default gen_random_uuid(),
+  profile_id  uuid not null references profiles(id) on delete cascade,
+  trade       text not null,
+  suburb      text not null,
+  is_active   boolean not null default true,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now(),
+  unique (profile_id, trade, suburb)
+);
+
+-- Hot-path index: find subscribed tradies for a trade+suburb combo
+create index if not exists idx_lead_subscriptions_match
+  on lead_subscriptions(trade, suburb, is_active)
+  where is_active = true;
+
+create index if not exists idx_lead_subscriptions_profile_id
+  on lead_subscriptions(profile_id);
+
+drop trigger if exists trg_lead_subscriptions_updated_at on lead_subscriptions;
+create trigger trg_lead_subscriptions_updated_at
+  before update on lead_subscriptions
+  for each row execute function update_updated_at_column();
+
+alter table lead_subscriptions enable row level security;
+
+drop policy if exists "Own subscriptions" on lead_subscriptions;
+create policy "Own subscriptions"
+  on lead_subscriptions for all
+  using (auth.uid() = profile_id);
+
+-- ── Auto-subscribe trigger ─────────────────────────────────────────────────
+-- When a profile is created (new signup), automatically subscribe them
+-- to leads for their trade + suburb combination.
+
+create or replace function auto_subscribe_tradie()
+returns trigger as $$
+begin
+  if new.suburb is not null and new.trades is not null and array_length(new.trades, 1) > 0 then
+    -- Insert a subscription row for each trade
+    for i in 1..array_length(new.trades, 1) loop
+      insert into lead_subscriptions (profile_id, trade, suburb, is_active)
+      values (new.id, lower(new.trades[i]), new.suburb, true)
+      on conflict (profile_id, trade, suburb) do nothing;
+    end loop;
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists trg_auto_subscribe on profiles;
+create trigger trg_auto_subscribe
+  after insert on profiles
+  for each row execute function auto_subscribe_tradie();
+
+-- Also trigger on update when suburb or trades change
+create or replace function auto_subscribe_tradie_update()
+returns trigger as $$
+begin
+  if (new.suburb is distinct from old.suburb or new.trades is distinct from old.trades)
+     and new.suburb is not null and new.trades is not null and array_length(new.trades, 1) > 0 then
+    for i in 1..array_length(new.trades, 1) loop
+      insert into lead_subscriptions (profile_id, trade, suburb, is_active)
+      values (new.id, lower(new.trades[i]), new.suburb, true)
+      on conflict (profile_id, trade, suburb) do nothing;
+    end loop;
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists trg_auto_subscribe_update on profiles;
+create trigger trg_auto_subscribe_update
+  after update on profiles
+  for each row execute function auto_subscribe_tradie_update();
+
+-- ── Lead matching log ──────────────────────────────────────────────────────
+-- Audit trail: tracks which tradies were notified about which leads.
+-- Useful for debugging, analytics, and compliance.
+
+create table if not exists lead_matching_log (
+  id           uuid primary key default gen_random_uuid(),
+  request_id   uuid not null references job_requests(id) on delete cascade,
+  profile_id   uuid not null references profiles(id) on delete cascade,
+  notified_at  timestamptz not null default now(),
+  email_sent   boolean not null default false,
+  claim_status text not null default 'pending'
+);
+
+create index if not exists idx_lead_matching_log_request
+  on lead_matching_log(request_id);
+
+create index if not exists idx_lead_matching_log_profile
+  on lead_matching_log(profile_id);
+
+create index if not exists idx_lead_matching_log_notified
+  on lead_matching_log(notified_at desc);
+
+-- Validate claim_status
+alter table lead_matching_log add constraint lead_matching_log_status_check
+  check (claim_status in ('pending','claimed','ignored'));
+
+alter table lead_matching_log enable row level security;

@@ -5,16 +5,21 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY!;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL!;
 
 async function sendEmail(to: string, subject: string, html: string) {
-  await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from: "Swiftscope Leads <noreply@swiftscope.com.au>",
-      to: [to],
-      subject,
-      html,
-    }),
-  });
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: "Swiftscope Leads <noreply@swiftscope.com.au>",
+        to: [to],
+        subject,
+        html,
+      }),
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -32,91 +37,151 @@ export async function POST(req: NextRequest) {
 
   if (!request) return NextResponse.json({ error: "Request not found" }, { status: 404 });
 
-  // Find tradies who:
-  // 1. Have directory active
-  // 2. Match the trade
-  // 3. Have the suburb in their service area (or wider radius)
-  // 4. Want this lead temperature
-  const { data: settings } = await supabase
-    .from("tradie_directory_settings")
-    .select("profile_id, service_suburbs, lead_temps_wanted")
-    .eq("directory_active", true)
-    .contains("lead_temps_wanted", [request.lead_temperature]);
+  const requestTrade = request.trade?.toLowerCase() ?? "";
+  const requestSuburb = request.suburb ?? "";
 
-  if (!settings?.length) {
-    // No tradies set up yet -- still notify team
-    await sendEmail("team@swiftscope.com.au",
-      `New ${request.trade} lead - ${request.suburb} (no matched tradies yet)`,
-      `<p>A new lead was submitted but no tradies matched yet.</p><p><strong>Trade:</strong> ${request.trade}</p><p><strong>Suburb:</strong> ${request.suburb}</p><p><strong>Job:</strong> ${request.description}</p>`
-    );
-    return NextResponse.json({ ok: true, sent: 0 });
+  // ── OPT-OUT MODEL: Find subscribed tradies ─────────────────────────
+  // Strategy:
+  // 1. First, try lead_subscriptions (explicit opt-out table)
+  // 2. Fall back to profiles with matching trades who haven't opted out
+  // 3. If wider radius, match by trade only (broader suburb search)
+
+  let profileIds: string[] = [];
+
+  // Try 1: Active subscriptions in lead_subscriptions
+  let subQuery = supabase
+    .from("lead_subscriptions")
+    .select("profile_id")
+    .eq("trade", requestTrade)
+    .eq("is_active", true);
+
+  if (!widerRadius) {
+    // Exact suburb match (case-insensitive)
+    subQuery = subQuery.ilike("suburb", `%${requestSuburb}%`);
   }
 
-  // Filter to tradies whose service suburbs include the request suburb
-  // In wider radius mode we skip the suburb filter
-  const eligible = widerRadius
-    ? settings
-    : settings.filter(s =>
-        s.service_suburbs?.some((sub: string) =>
-          sub.toLowerCase().includes(request.suburb.toLowerCase()) ||
-          request.suburb.toLowerCase().includes(sub.toLowerCase())
-        )
-      );
+  const { data: subs } = await subQuery;
 
-  if (!eligible.length) return NextResponse.json({ ok: true, sent: 0 });
+  if (subs && subs.length > 0) {
+    profileIds = subs.map((s) => s.profile_id);
+  } else {
+    // Try 2: Fall back to profiles with matching trades
+    // Exclude profiles that have explicitly opted out (is_active = false in lead_subscriptions)
+    const { data: optedOut } = await supabase
+      .from("lead_subscriptions")
+      .select("profile_id")
+      .eq("trade", requestTrade)
+      .eq("is_active", false);
 
-  // Get their profile emails
-  const profileIds = eligible.map(s => s.profile_id);
+    const optedOutIds = new Set((optedOut ?? []).map((o) => o.profile_id));
+
+    // Find profiles whose trades array contains the request trade
+    const { data: matchingProfiles } = await supabase
+      .from("profiles")
+      .select("id, trades, suburb")
+      .contains("trades", [requestTrade]);
+
+    if (matchingProfiles && matchingProfiles.length > 0) {
+      const filtered = widerRadius
+        ? matchingProfiles
+        : matchingProfiles.filter((p) => {
+            if (!p.suburb) return false;
+            const ps = p.suburb.toLowerCase();
+            const rs = requestSuburb.toLowerCase();
+            return ps.includes(rs) || rs.includes(ps);
+          });
+
+      profileIds = filtered
+        .map((p) => p.id)
+        .filter((id) => !optedOutIds.has(id));
+    }
+  }
+
+  if (!profileIds.length) {
+    // No tradies matched — notify team so they can manually route or follow up
+    await sendEmail(
+      "team@swiftscope.com.au",
+      `New ${request.trade} lead - ${request.suburb} (no matched tradies)`,
+      `<p>A new lead was submitted but no tradies matched yet.</p>
+       <p><strong>Trade:</strong> ${request.trade}</p>
+       <p><strong>Suburb:</strong> ${request.suburb}</p>
+       <p><strong>Job:</strong> ${request.description}</p>
+       <p><strong>Tips:</strong> Check if the suburb needs normalizing, or if tradies need to be added for this area.</p>`
+    );
+    return NextResponse.json({ ok: true, sent: 0, reason: "no_matching_tradies" });
+  }
+
+  // Get profile details for email
   const { data: profiles } = await supabase
     .from("profiles")
     .select("id, business_name, contact_email")
     .in("id", profileIds);
 
-  if (!profiles?.length) return NextResponse.json({ ok: true, sent: 0 });
+  if (!profiles?.length) {
+    return NextResponse.json({ ok: true, sent: 0, reason: "no_emails" });
+  }
 
-  const tempLabel: Record<string,string> = {
-    early: "🟡 Early stage",
-    warm:  "🟠 Warm - interested in speaking soon",
-    hot:   "🔴 Hot - budget approved, ready to go",
+  const tempLabel: Record<string, string> = {
+    early: "Early stage",
+    warm:  "Warm — interested in speaking soon",
+    hot:   "Hot — budget approved, ready to go",
   };
 
   let sent = 0;
+  const notifiedAt = new Date().toISOString();
+
   for (const profile of profiles) {
     if (!profile.contact_email) continue;
+
     const html = `
-      <h2>New ${request.trade} lead in ${request.suburb}</h2>
-      <p><strong>Stage:</strong> ${tempLabel[request.lead_temperature] ?? request.lead_temperature}</p>
-      <p><strong>Job:</strong> ${request.description}</p>
-      ${request.additional_details ? `<p><strong>Details:</strong> ${request.additional_details}</p>` : ""}
-      ${request.budget ? `<p><strong>Budget:</strong> ${request.budget}</p>` : ""}
-      ${request.timeline ? `<p><strong>Timeline:</strong> ${request.timeline}</p>` : ""}
-      ${request.photo_paths?.length ? `<p><strong>Photos:</strong> ${request.photo_paths.length} attached -- view and claim to see them</p>` : ""}
-      <p><strong>Suburb:</strong> ${request.suburb}${request.postcode ? ` ${request.postcode}` : ""}</p>
-      <hr/>
-      <p>
-        <a href="${APP_URL}/electrician/leads" style="background:#ffb400;color:#0a1722;padding:12px 24px;border-radius:8px;font-weight:bold;text-decoration:none;">
-          View and claim this request →
-        </a>
-      </p>
-      <p style="color:#888;font-size:12px;margin-top:16px">
-        You're receiving this because you have directory access on Swiftscope.
-        <a href="${APP_URL}/settings">Manage your lead preferences</a>
-      </p>
+      <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
+        <div style="background: #0a1722; color: white; padding: 20px 24px; border-radius: 12px 12px 0 0;">
+          <h1 style="margin: 0; font-size: 18px; color: #ffb400;">New ${request.trade} lead in ${request.suburb}</h1>
+        </div>
+        <div style="background: #f8f9fa; padding: 24px; border-radius: 0 0 12px 12px;">
+          <p style="margin: 0 0 8px;"><strong style="color: #0a1722;">Stage:</strong> <span style="color: ${request.lead_temperature === 'hot' ? '#dc2626' : request.lead_temperature === 'warm' ? '#ea580c' : '#ca8a04'}">${tempLabel[request.lead_temperature] ?? request.lead_temperature}</span></p>
+          <p style="margin: 0 0 8px;"><strong style="color: #0a1722;">Job:</strong> ${request.description}</p>
+          ${request.additional_details ? `<p style="margin: 0 0 8px;"><strong style="color: #0a1722;">Details:</strong> ${request.additional_details}</p>` : ""}
+          ${request.budget ? `<p style="margin: 0 0 8px;"><strong style="color: #0a1722;">Budget:</strong> ${request.budget}</p>` : ""}
+          ${request.timeline ? `<p style="margin: 0 0 8px;"><strong style="color: #0a1722;">Timeline:</strong> ${request.timeline}</p>` : ""}
+          ${request.photo_paths?.length ? `<p style="margin: 0 0 16px;"><strong style="color: #0a1722;">Photos:</strong> ${request.photo_paths.length} attached — view and claim to see them</p>` : ""}
+          <p style="margin: 0 0 24px;"><strong style="color: #0a1722;">Suburb:</strong> ${request.suburb}${request.postcode ? ` ${request.postcode}` : ""}</p>
+          <a href="${APP_URL}/electrician/leads" style="display: inline-block; background: #ffb400; color: #0a1722; padding: 14px 28px; border-radius: 10px; font-weight: bold; text-decoration: none; font-size: 15px;">
+            View and claim this lead →
+          </a>
+          <p style="color: #9ca3af; font-size: 12px; margin-top: 24px; line-height: 1.5;">
+            You're receiving this because you're subscribed to ${request.trade} leads in ${request.suburb} on Swiftscope.
+            Every tradie is auto-subscribed by default. <a href="${APP_URL}/settings" style="color: #0a1722; text-decoration: underline;">Manage your lead preferences</a> to opt out.
+          </p>
+        </div>
+      </div>
     `;
-    await sendEmail(
+
+    const emailSent = await sendEmail(
       profile.contact_email,
-      `New ${request.trade} lead - ${request.suburb} (${tempLabel[request.lead_temperature] ?? ""})`,
+      `New ${request.trade} lead — ${request.suburb} (${tempLabel[request.lead_temperature] ?? ""})`,
       html
     );
-    sent++;
+
+    // Log the notification
+    await supabase.from("lead_matching_log").insert({
+      request_id: requestId,
+      profile_id: profile.id,
+      notified_at: notifiedAt,
+      email_sent: emailSent,
+      claim_status: "pending",
+    });
+
+    if (emailSent) sent++;
   }
 
   // If wider radius, mark the request
   if (widerRadius) {
-    await supabase.from("job_requests")
-      .update({ wider_radius_sent_at: new Date().toISOString() })
+    await supabase
+      .from("job_requests")
+      .update({ wider_radius_sent_at: notifiedAt })
       .eq("id", requestId);
   }
 
-  return NextResponse.json({ ok: true, sent });
+  return NextResponse.json({ ok: true, sent, total: profiles.length });
 }

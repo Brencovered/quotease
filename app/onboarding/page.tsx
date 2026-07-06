@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   Upload, Download, SkipForward, ArrowRight, ArrowLeft,
   Check, Package, Monitor, Smartphone, ClipboardList,
   HardHat, PenTool, FileText, Wrench, TrendingUp,
-  Loader2, Sparkles,
+  Loader2, Sparkles, MapPin, AlertCircle,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -43,9 +43,10 @@ const QUOTE_FREQUENCY_OPTIONS = [
 ];
 
 const STEPS = [
-  { n: 1, label: "Materials" },
-  { n: 2, label: "Tools you use" },
-  { n: 3, label: "How you quote" },
+  { n: 1, label: "Your area" },
+  { n: 2, label: "Materials" },
+  { n: 3, label: "Tools you use" },
+  { n: 4, label: "How you quote" },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -60,16 +61,39 @@ export default function OnboardingPage() {
   const [completed, setCompleted] = useState(false);
   const [redirectCountdown, setRedirectCountdown] = useState(5);
 
-  // Step 1: Materials upload
+  // Step 2: Materials upload
   const [csvMessage, setCsvMessage] = useState<string | null>(null);
   const [hasUploaded, setHasUploaded] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  // Step 2: Digital tools
+  // Step 3: Digital tools
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
 
-  // Step 3: Quote frequency
+  // Step 4: Quote frequency
   const [quoteFrequency, setQuoteFrequency] = useState("");
+
+  // Error handling
+  const [error, setError] = useState<string | null>(null);
+
+  // Suburb (pre-filled from profile if available)
+  const [suburb, setSuburb] = useState("");
+
+  // Prevent redirect loops
+  const hasRedirected = useRef(false);
+
+  // Load existing profile data on mount
+  useEffect(() => {
+    async function loadProfile() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: profile } = await supabase.from("profiles").select("suburb, digital_tools, quote_frequency").eq("id", user.id).single();
+      if (profile?.suburb) setSuburb(profile.suburb);
+      if (profile?.digital_tools) setSelectedTools(profile.digital_tools);
+      if (profile?.quote_frequency) setQuoteFrequency(profile.quote_frequency);
+    }
+    loadProfile();
+  }, []);
 
   // Auto-redirect after completion
   useEffect(() => {
@@ -128,35 +152,73 @@ export default function OnboardingPage() {
   }
 
   async function finish() {
+    if (hasRedirected.current) return;
     setSaving(true);
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setSaving(false); return; }
+    setError(null);
 
-    // Save onboarding responses to profile
-    const updates: Record<string, unknown> = {
-      onboarded_at: new Date().toISOString(),
-      digital_tools: selectedTools.length > 0 ? selectedTools : null,
-      quote_frequency: quoteFrequency || null,
-    };
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setSaving(false);
+        setError("You appear to be signed out. Please sign in again.");
+        return;
+      }
 
-    await supabase.from("profiles").update(updates).eq("id", user.id);
-    setCompleted(true);
+      // Save onboarding responses to profile
+      const updates: Record<string, unknown> = {
+        onboarded_at: new Date().toISOString(),
+        suburb: suburb.trim() || null,
+        digital_tools: selectedTools.length > 0 ? selectedTools : null,
+        quote_frequency: quoteFrequency || null,
+      };
+
+      const { error: updateErr } = await supabase.from("profiles").update(updates).eq("id", user.id);
+      if (updateErr) {
+        console.error("[Onboarding] Profile update failed:", updateErr);
+        setError(`Failed to save your profile: ${updateErr.message}. Please try again.`);
+        setSaving(false);
+        return;
+      }
+
+      // Auto-subscribe to leads for this trade + suburb (opt-out model)
+      const { data: profile } = await supabase.from("profiles").select("trades").eq("id", user.id).single();
+      const trades = profile?.trades ?? [];
+      if (suburb.trim() && trades.length > 0) {
+        const subs = trades.map((trade: string) => ({
+          profile_id: user.id,
+          trade: trade.toLowerCase(),
+          suburb: suburb.trim(),
+          is_active: true,
+        }));
+        // Upsert subscriptions — ignore conflicts
+        await supabase.from("lead_subscriptions").upsert(subs, { onConflict: "profile_id,trade,suburb", ignoreDuplicates: false });
+      }
+
+      hasRedirected.current = true;
+      setCompleted(true);
+    } catch (err: any) {
+      console.error("[Onboarding] Unexpected error:", err);
+      setError(`Something went wrong: ${err?.message ?? "Unknown error"}. Please try again.`);
+      setSaving(false);
+    }
   }
 
   function handleContinue() {
-    if (step < 3) {
+    if (step < 4) {
       setStep((s) => s + 1);
       setCsvMessage(null);
+      setError(null);
     } else {
       finish();
     }
   }
 
   function handleSkip() {
-    if (step < 3) {
+    if (step < 4) {
       setStep((s) => s + 1);
       setCsvMessage(null);
+      setError(null);
     } else {
       finish();
     }
@@ -209,6 +271,11 @@ export default function OnboardingPage() {
       <div className="bg-[var(--navy)] px-6 py-4 flex items-center justify-between shrink-0">
         <span className="font-display text-[15px] tracking-widest text-white">SWIFTSCOPE</span>
         <span className="text-[12px] text-[var(--steel-3)] font-semibold">Step {step} of {STEPS.length}</span>
+        {error && (
+          <div className="flex items-center gap-1.5 text-red-400 text-[12px] font-bold">
+            <AlertCircle size={12} /> Error — see below
+          </div>
+        )}
       </div>
 
       {/* Progress */}
@@ -235,9 +302,45 @@ export default function OnboardingPage() {
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-lg mx-auto px-4 py-8">
 
-          {/* ── STEP 1: Upload supplier pricing ── */}
+          {/* ── STEP 1: Service suburb ── */}
           {step === 1 && (
             <div className="stepEnter" key="step1">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-11 h-11 rounded-xl bg-[var(--navy)] flex items-center justify-center">
+                  <MapPin size={20} className="text-[var(--amber)]" />
+                </div>
+                <div>
+                  <h1 className="font-display text-[26px] text-[var(--ink)]">Where do you work?</h1>
+                  <p className="text-[13px] text-[var(--ink-faint)]">This helps us send you relevant leads</p>
+                </div>
+              </div>
+
+              <p className="text-[14px] text-[var(--ink-soft)] leading-relaxed mb-6">
+                Enter the main suburb or area you service. Homeowners requesting quotes in this area will be matched to you automatically. You can always change this later in settings.
+              </p>
+
+              <div className="mb-6">
+                <label className="block text-[12px] font-bold uppercase tracking-wide text-[var(--ink-faint)] mb-2">
+                  Primary service suburb
+                </label>
+                <input
+                  type="text"
+                  value={suburb}
+                  onChange={(e) => setSuburb(e.target.value)}
+                  placeholder="e.g. Marrickville, Richmond, Bondi"
+                  className="w-full rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-[14px] text-[var(--ink)] placeholder:text-[var(--ink-faint)] focus:border-[var(--navy)] focus:outline-none transition-colors"
+                />
+              </div>
+
+              <TipBox icon={Sparkles}>
+                Lead matching is automatic — every tradie receives leads for their trade and suburb by default. You can opt out anytime in settings.
+              </TipBox>
+            </div>
+          )}
+
+          {/* ── STEP 2: Upload supplier pricing ── */}
+          {step === 2 && (
+            <div className="stepEnter" key="step2">
               <div className="flex items-center gap-3 mb-5">
                 <div className="w-11 h-11 rounded-xl bg-[var(--navy)] flex items-center justify-center">
                   <Package size={20} className="text-[var(--amber)]" />
@@ -283,9 +386,9 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* ── STEP 2: Digital tools ── */}
-          {step === 2 && (
-            <div className="stepEnter" key="step2">
+          {/* ── STEP 3: Digital tools ── */}
+          {step === 3 && (
+            <div className="stepEnter" key="step3">
               <div className="flex items-center gap-3 mb-5">
                 <div className="w-11 h-11 rounded-xl bg-[var(--navy)] flex items-center justify-center">
                   <Monitor size={20} className="text-[var(--amber)]" />
@@ -328,9 +431,9 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* ── STEP 3: How often do you quote from site? ── */}
-          {step === 3 && (
-            <div className="stepEnter" key="step3">
+          {/* ── STEP 4: How often do you quote from site? ── */}
+          {step === 4 && (
+            <div className="stepEnter" key="step4">
               <div className="flex items-center gap-3 mb-5">
                 <div className="w-11 h-11 rounded-xl bg-[var(--navy)] flex items-center justify-center">
                   <HardHat size={20} className="text-[var(--amber)]" />
@@ -371,23 +474,40 @@ export default function OnboardingPage() {
             </div>
           )}
 
+          {/* Error banner */}
+          {error && (
+            <div className="mt-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3">
+              <div className="flex items-start gap-2.5">
+                <AlertCircle size={16} className="text-red-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[13px] font-bold text-red-800">{error}</p>
+                  <button onClick={() => setError(null)} className="text-[11px] text-red-600 hover:text-red-800 font-semibold mt-1 underline">
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Navigation */}
           <div className="flex gap-3 mt-6">
             {step > 1 && (
-              <button onClick={() => setStep((s) => s - 1)} className="btn-secondary flex items-center gap-1.5">
+              <button onClick={() => { setStep((s) => s - 1); setError(null); }} className="btn-secondary flex items-center gap-1.5">
                 <ArrowLeft size={14} /> Back
               </button>
             )}
-            <button onClick={handleContinue} disabled={step === 3 && !quoteFrequency && saving}
+            <button onClick={handleContinue} disabled={step === 4 && saving}
               className="btn-primary flex-1 disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-[1.02] active:scale-[0.98]">
-              {saving ? <><Loader2 size={14} className="animate-spin" /> Saving...</> : step === 3 ? "Start quoting" : <>Continue <ArrowRight size={14} /></>}
+              {saving ? <><Loader2 size={14} className="animate-spin" /> Saving...</> : step === 4 ? "Start quoting" : <>Continue <ArrowRight size={14} /></>}
             </button>
           </div>
 
-          <button onClick={handleSkip}
-            className="w-full text-center text-[13px] text-[var(--ink-faint)] hover:text-[var(--ink-soft)] mt-3 py-2 transition-colors font-semibold flex items-center justify-center gap-1.5">
-            <SkipForward size={13} /> Skip this step
-          </button>
+          {step < 4 && (
+            <button onClick={handleSkip}
+              className="w-full text-center text-[13px] text-[var(--ink-faint)] hover:text-[var(--ink-soft)] mt-3 py-2 transition-colors font-semibold flex items-center justify-center gap-1.5">
+              <SkipForward size={13} /> Skip this step
+            </button>
+          )}
         </div>
       </div>
     </div>
