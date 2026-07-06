@@ -8,7 +8,7 @@ import { ELECTRICIAN_DEFAULT_MATERIALS } from "@/lib/calc";
 import { PLUMBER_DEFAULT_MATERIALS } from "@/lib/calcPlumber";
 import { CARPENTER_DEFAULT_MATERIALS } from "@/lib/calcCarpenter";
 import { ROOFER_DEFAULT_MATERIALS } from "@/lib/calcRoofer";
-import { Check, Upload, Save, Bell, BellOff, MapPin } from "lucide-react";
+import { Check, Upload, Save, Bell, BellOff, MapPin, Mail, Loader2 } from "lucide-react";
 import { normalizeToPng } from "@/lib/imageNormalize";
 
 const TRADE_SEED: Record<string, readonly { item_key: string; label: string; unit_cost: number }[]> = {
@@ -43,6 +43,7 @@ type Profile = {
   contact_phone?: string | null; bank_account_name?: string | null; bank_bsb?: string | null; bank_account_number?: string | null;
   accepts_cash?: boolean; default_deposit_pct?: number | null; default_expiry_days?: number;
   hourly_rate?: number | null; materials_margin_pct?: number | null;
+  send_weekly_digest?: boolean;
 } | null;
 
 function RateSaveButton() {
@@ -94,6 +95,11 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
   const [companySaved,   setCompanySaved]   = useState(false);
   const [companyError,   setCompanyError]   = useState<string | null>(null);
 
+  // Weekly digest state
+  const [sendWeeklyDigest, setSendWeeklyDigest] = useState(profile?.send_weekly_digest ?? false);
+  const [digestSaving, setDigestSaving] = useState(false);
+  const [digestSaved, setDigestSaved] = useState(false);
+
   // Lead subscription state
   const [leadSubs, setLeadSubs] = useState<Array<{ trade: string; suburb: string; is_active: boolean }>>([]);
   const [leadSubsLoading, setLeadSubsLoading] = useState(true);
@@ -116,6 +122,28 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
     }
     loadSubs();
   }, []);
+
+  async function toggleWeeklyDigest() {
+    const next = !sendWeeklyDigest;
+    setDigestSaving(true);
+    setDigestSaved(false);
+    try {
+      const res = await fetch("/api/profile/send-digest-setting", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: next }),
+      });
+      if (res.ok) {
+        setSendWeeklyDigest(next);
+        setDigestSaved(true);
+        setTimeout(() => setDigestSaved(false), 2000);
+      }
+    } catch {
+      // Silent fail
+    } finally {
+      setDigestSaving(false);
+    }
+  }
 
   async function toggleAllLeads(active: boolean) {
     setLeadSubsAction(active ? "subscribing" : "unsubscribing");
@@ -355,6 +383,48 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
           </button>
           {companySaved && <span className="text-[13px] text-[var(--green)] font-semibold flex items-center gap-1"><Check size={13}/>Saved</span>}
         </div>
+      </div>
+
+      {/* Weekly schedule digest */}
+      <div className="card mb-4">
+        <div className="flex items-center gap-2 mb-1">
+          <p className="section-tag">Schedule emails</p>
+          {digestSaving && <Loader2 size={12} className="animate-spin text-[var(--ink-faint)]" />}
+          {digestSaved && <span className="text-[12px] text-[var(--green)] font-semibold flex items-center gap-1"><Check size={12}/>Saved</span>}
+        </div>
+        <p className="font-semibold text-[var(--ink)] mb-1">Weekly team schedule digest</p>
+        <p className="text-[13px] text-[var(--ink-faint)] mb-3">
+          Send a weekly email to your team members showing where they are scheduled to work. Each person only sees their own assigned jobs.
+        </p>
+        <div className="flex items-center justify-between bg-[var(--app-bg)] rounded-xl px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <Mail size={16} className={sendWeeklyDigest ? "text-[var(--green)]" : "text-[var(--ink-faint)]"} />
+            <div>
+              <p className="text-[13px] font-semibold text-[var(--ink)]">
+                {sendWeeklyDigest ? "Enabled" : "Disabled"}
+              </p>
+              <p className="text-[11.5px] text-[var(--ink-faint)]">
+                {sendWeeklyDigest
+                  ? "Send digest button will appear on the schedule page"
+                  : "Team won't receive schedule emails"}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={toggleWeeklyDigest}
+            disabled={digestSaving}
+            className={`text-[12px] font-bold px-3 py-1.5 rounded-lg transition-colors ${
+              sendWeeklyDigest
+                ? "bg-[var(--red-bg)] text-[var(--red)] hover:bg-red-100"
+                : "bg-[var(--navy)] text-white hover:bg-[var(--navy)]/90"
+            } disabled:opacity-50`}
+          >
+            {sendWeeklyDigest ? "Disable" : "Enable"}
+          </button>
+        </div>
+        <p className="text-[11.5px] text-[var(--ink-faint)] mt-2">
+          Go to the <Link href="/electrician/schedule" className="text-[var(--navy)] font-semibold underline">schedule page</Link> to send the digest when you're ready.
+        </p>
       </div>
 
       {/* Lead preferences */}
