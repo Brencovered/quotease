@@ -54,7 +54,6 @@ const NAV_ALLOWLIST: Record<string, string> = {
   "/electrician/schedule": "Schedule",
   "/electrician/margins": "Job costing & margins",
   "/electrician/dashboard": "Dashboard",
-  "/electrician/comms": "Brochures & reminders",
   "/electrician/leads": "Leads",
   "/electrician/export": "Xero export",
   "/settings": "Settings",

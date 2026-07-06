@@ -200,10 +200,6 @@ export default function DashboardPanel({ stats, profit }: Props) {
           <span className="flex items-center gap-2"><Package size={16} className="text-[var(--amber-deep)]" /> Packages</span>
           <span className="text-[11px] font-bold text-[var(--ink-faint)] bg-[var(--app-bg)] rounded-full px-2 py-0.5">{packageCount} ready</span>
         </Link>
-        <Link href="/electrician/comms" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
-          <span className="flex items-center gap-2"><Bell size={16} className="text-purple-500" /> Comms</span>
-          <ArrowUpRight size={14} className="text-[var(--ink-faint)]" />
-        </Link>
         <Link href="/electrician/margins" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
           <span className="flex items-center gap-2"><TrendingUp size={16} className="text-[var(--green)]" /> Profit detail</span>
           <ArrowUpRight size={14} className="text-[var(--ink-faint)]" />

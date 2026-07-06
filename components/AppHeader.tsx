@@ -131,10 +131,6 @@ export default function AppHeader() {
             <UsersRound size={17} strokeWidth={isActive("/electrician/team") ? 2.2 : 1.8} />
             Team
           </Link>
-          <Link href="/electrician/comms" className={navLinkClasses("/electrician/comms")}>
-            <TrendingUp size={17} strokeWidth={isActive("/electrician/comms") ? 2.2 : 1.8} />
-            Comms
-          </Link>
 
           {/* More (collapsible) */}
           <button
