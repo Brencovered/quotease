@@ -271,15 +271,12 @@ export default function CarpenterQuoteBuilder({
       </div>
 
       {stepId === "customer" && (
-        <>
-          <PackagePicker trade="carpenter" />
-          <StepCustomer
-            clientName={clientName} setClientName={setClientName}
-            clientEmail={clientEmail} setClientEmail={setClientEmail}
-            siteAddress={siteAddress} setSiteAddress={setSiteAddress}
-            setClientId={setClientId}
-          />
-        </>
+        <StepCustomer
+          clientName={clientName} setClientName={setClientName}
+          clientEmail={clientEmail} setClientEmail={setClientEmail}
+          siteAddress={siteAddress} setSiteAddress={setSiteAddress}
+          setClientId={setClientId}
+        />
       )}
 
       {stepId === "drawing" && (
@@ -426,6 +423,7 @@ export default function CarpenterQuoteBuilder({
 
       {stepId === "doors" && (
         <div className="space-y-4">
+          <PackagePicker trade="carpenter" />
           <div className="card">
             <p className="section-tag mb-3">Doors</p>
             <div className="grid grid-cols-2 gap-3 mb-3">

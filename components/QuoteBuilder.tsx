@@ -504,16 +504,13 @@ export default function QuoteBuilder({
       )}
 
       {stepId === "customer" && (
-        <>
-          <PackagePicker trade="electrician" />
-          <StepCustomer
-            clientName={clientName} setClientName={setClientName}
-            clientEmail={clientEmail} setClientEmail={setClientEmail}
-            siteAddress={siteAddress} setSiteAddress={setSiteAddress}
-            onCeilingHint={(hint) => set("ceilingType", hint as ElectricianIntake["ceilingType"])}
-            setClientId={setClientId}
-          />
-        </>
+        <StepCustomer
+          clientName={clientName} setClientName={setClientName}
+          clientEmail={clientEmail} setClientEmail={setClientEmail}
+          siteAddress={siteAddress} setSiteAddress={setSiteAddress}
+          onCeilingHint={(hint) => set("ceilingType", hint as ElectricianIntake["ceilingType"])}
+          setClientId={setClientId}
+        />
       )}
 
       {stepId === "send" && (
@@ -846,6 +843,8 @@ function StepElectrical({ intake, set, lib, setLib, archetypeDefaults, saveCalcD
 
   return (
     <div className="space-y-4">
+
+      <PackagePicker trade="electrician" />
 
       {/* AI pre-fill summary -- show what was detected from drawing/voice */}
       {(intake.powerPoints > 0 || intake.lightPoints > 0 || intake.switches > 0 ||

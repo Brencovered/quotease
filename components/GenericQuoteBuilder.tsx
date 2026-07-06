@@ -285,15 +285,12 @@ export default function GenericQuoteBuilder({
 
       {/* Step: Customer */}
       {stepId === "customer" && (
-        <>
-          <PackagePicker trade={tradeKey} />
-          <StepCustomer
-            clientName={clientName} setClientName={setClientName}
-            clientEmail={clientEmail} setClientEmail={setClientEmail}
-            siteAddress={siteAddress} setSiteAddress={setSiteAddress}
-            setClientId={setClientId}
-          />
-        </>
+        <StepCustomer
+          clientName={clientName} setClientName={setClientName}
+          clientEmail={clientEmail} setClientEmail={setClientEmail}
+          siteAddress={siteAddress} setSiteAddress={setSiteAddress}
+          setClientId={setClientId}
+        />
       )}
 
       {stepId === "drawing" && (
@@ -448,6 +445,7 @@ export default function GenericQuoteBuilder({
       {/* Step: Items */}
       {stepId === "items" && (
         <div className="space-y-4">
+          <PackagePicker trade={tradeKey} />
           <div className="card">
             <div className="flex items-center justify-between mb-3">
               <p className="section-tag">Line items</p>

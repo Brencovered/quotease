@@ -543,7 +543,6 @@ export default function RooferQuoteBuilder({
       </div>
 
       {/* Customer & site -- previously missing entirely */}
-      <PackagePicker trade="roofer" />
       <StepCustomer
         clientName={clientName} setClientName={setClientName}
         clientEmail={clientEmail} setClientEmail={setClientEmail}
@@ -653,6 +652,7 @@ export default function RooferQuoteBuilder({
 
       {/* ── Jobs section ─────────────────────────────────────── */}
       <div className="space-y-3">
+        <PackagePicker trade="roofer" />
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-[14px] text-[var(--ink)] flex items-center gap-2">
             <FileText size={16} className="text-[var(--amber-deep)]" /> Jobs ({jobs.length})
