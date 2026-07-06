@@ -4,10 +4,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const trade = searchParams.get("trade") ?? "";
-  const hasEmail = searchParams.get("hasEmail") === "true";
-  const hasPhone = searchParams.get("hasPhone") === "true";
-  const hasWebsite = searchParams.get("hasWebsite") === "true";
-  const hasRating = searchParams.get("hasRating") === "true";
+  const email = searchParams.get("email") ?? "";      // "yes" | "no" | ""
+  const phone = searchParams.get("phone") ?? "";      // "yes" | "no" | ""
+  const website = searchParams.get("website") ?? "";  // "yes" | "no" | ""
+  const rating = searchParams.get("rating") ?? "";    // "yes" | "no" | ""
   const search = searchParams.get("search") ?? "";
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
   const limit = Math.min(200, Math.max(10, parseInt(searchParams.get("limit") ?? "50", 10)));
@@ -22,18 +22,32 @@ export async function GET(req: NextRequest) {
     query = query.contains("trades", [trade]);
   }
 
-  // Has filters
-  if (hasEmail) {
+  // Email filter — tri-state: yes / no / all
+  if (email === "yes") {
     query = query.or("scraped_contact_email.not.is.null,private_email.not.is.null");
+  } else if (email === "no") {
+    query = query.is("scraped_contact_email", null).is("private_email", null);
   }
-  if (hasPhone) {
+
+  // Phone filter — tri-state
+  if (phone === "yes") {
     query = query.not("scraped_contact_phone", "is", null);
+  } else if (phone === "no") {
+    query = query.is("scraped_contact_phone", null);
   }
-  if (hasWebsite) {
+
+  // Website filter — tri-state
+  if (website === "yes") {
     query = query.not("website_url", "is", null);
+  } else if (website === "no") {
+    query = query.is("website_url", null);
   }
-  if (hasRating) {
+
+  // Rating filter — tri-state
+  if (rating === "yes") {
     query = query.not("google_rating", "is", null);
+  } else if (rating === "no") {
+    query = query.is("google_rating", null);
   }
 
   // Text search
