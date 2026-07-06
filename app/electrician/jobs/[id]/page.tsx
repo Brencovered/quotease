@@ -12,6 +12,7 @@ import JobFilesPanel from "@/components/JobFilesPanel";
 import JobBriefPanel from "@/components/JobBriefPanel";
 import JobTasksPanel from "@/components/JobTasksPanel";
 import MaterialsChecklistPanel from "@/components/MaterialsChecklistPanel";
+import JobLineItemsPanel from "@/components/JobLineItemsPanel";
 import JobTimeline from "@/components/JobTimeline";
 import JobPlansPanel from "@/components/JobPlansPanel";
 import JobActionsBar from "@/components/JobActionsBar";
@@ -46,11 +47,12 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   const scopeLines = quote ? humanizeIntake(quote.intake_data) : [];
   const labourCost = (job.labour_hours ?? 0) * hourlyRate;
 
-  const [{ data: matRows }, { data: teamRows }, { data: taskRows }, boardColumns] = await Promise.all([
+  const [{ data: matRows }, { data: teamRows }, { data: taskRows }, boardColumns, { data: lineItems }] = await Promise.all([
     supabase.from("material_items").select("item_key, label, unit_cost").eq("profile_id", businessId).eq("trade", job.trade ?? "electrician").order("label"),
     supabase.from("team_members").select("id, name, email").eq("owner_profile_id", businessId).eq("status", "active").order("name"),
     supabase.from("job_tasks").select("*").or(`job_id.eq.${job.id}${quote ? `,quote_id.eq.${quote.id}` : ""}`).order("created_at"),
     getOrSeedBoardColumns(supabase, businessId),
+    supabase.from("job_line_items").select("*").eq("job_id", job.id).order("sort_order", { ascending: true }).order("created_at", { ascending: true }),
   ]);
 
   const tradeMaterials: Array<{ item_key: string; label: string; unit_cost: number }> = matRows ?? [];
@@ -129,7 +131,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           {scopeLines.length > 0 ? (
             <ul className="grid sm:grid-cols-2 gap-y-1 gap-x-4 mb-4">
               {scopeLines.map((line) => (
-                <li key={line} className="text-[13.5px] text-[var(--ink-soft)]">• {line}</li>
+                <li key={line} className="text-[13.5px] text-[var(--ink-soft)]">{line}</li>
               ))}
             </ul>
           ) : (
@@ -171,6 +173,13 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
 
         <div className="flex flex-col gap-4">
           {stepperColumns.length > 0 && <JobProgressStepper jobId={job.id} status={job.status} columns={stepperColumns} />}
+
+          {/* Quote item progress tracker */}
+          <JobLineItemsPanel
+            jobId={job.id}
+            initialItems={lineItems ?? []}
+            scopeLines={scopeLines}
+          />
 
           {quote ? (
             <JobActionsBar
