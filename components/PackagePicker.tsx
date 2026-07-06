@@ -80,12 +80,12 @@ export default function PackagePicker({ trade }: { trade: string }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="w-full flex items-center justify-between gap-2 bg-[var(--amber-light)] border border-[var(--amber)]/30 rounded-xl px-4 py-3 hover:bg-[var(--amber)]/10 transition-colors mb-4"
+        className="w-full flex items-center justify-between gap-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl px-4 py-3 hover:border-[var(--navy)]/40 transition-colors mb-4 shadow-sm"
       >
-        <span className="flex items-center gap-2 text-[13.5px] font-bold text-[var(--amber-deep)]">
-          <Package size={16} /> Start from a saved package
+        <span className="flex items-center gap-2 text-[13.5px] font-bold text-[var(--ink)]">
+          <Package size={16} className="text-[var(--navy)]" /> Start from a saved package
         </span>
-        <ChevronRight size={15} className="text-[var(--amber-deep)]" />
+        <ChevronRight size={15} className="text-[var(--ink-faint)]" />
       </button>
 
       {open && (
