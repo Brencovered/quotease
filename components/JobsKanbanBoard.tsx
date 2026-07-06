@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MoreVertical, Repeat, Settings2, Plus, Trash2, X, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
+import LineItemProgressBadge from "./LineItemProgressBadge";
+import type { LineItemStatus } from "./JobLineItemsPanel";
 
 export type BoardJob = {
   id: string;
@@ -51,6 +53,8 @@ const COLOR_STYLES: Record<string, { bg: string; text: string; dot: string }> = 
 
 const ARCHIVE_STATUSES = ["archived", "cancelled"];
 
+type LineItemsMap = Record<string, { status: LineItemStatus }[]>;
+
 export default function JobsKanbanBoard({ jobs: initialJobs, columns: initialColumns }: { jobs: BoardJob[]; columns: BoardColumn[] }) {
   const router = useRouter();
   const [jobs, setJobs] = useState(initialJobs);
@@ -60,6 +64,30 @@ export default function JobsKanbanBoard({ jobs: initialJobs, columns: initialCol
   const [showArchived, setShowArchived] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [lineItemsMap, setLineItemsMap] = useState<LineItemsMap>({});
+
+  useEffect(() => {
+    const visibleJobIds = jobs.filter((j) => !ARCHIVE_STATUSES.includes(j.status)).map((j) => j.id);
+    if (visibleJobIds.length === 0) return;
+    let cancelled = false;
+    async function loadLineItems() {
+      const results: LineItemsMap = {};
+      await Promise.all(
+        visibleJobIds.map(async (jobId) => {
+          try {
+            const res = await fetch(`/api/job-line-items?jobId=${jobId}`);
+            if (res.ok) {
+              const data = await res.json();
+              results[jobId] = (data.items ?? []).map((item: { status: LineItemStatus }) => ({ status: item.status }));
+            }
+          } catch { /* skip */ }
+        })
+      );
+      if (!cancelled) setLineItemsMap(results);
+    }
+    loadLineItems();
+    return () => { cancelled = true; };
+  }, [jobs]);
 
   const visibleColumns = columns.filter((c) => !c.statuses.every((s) => ARCHIVE_STATUSES.includes(s)));
   const archivedCount = jobs.filter((j) => ARCHIVE_STATUSES.includes(j.status)).length;
@@ -129,6 +157,7 @@ export default function JobsKanbanBoard({ jobs: initialJobs, columns: initialCol
                 {colJobs.map((j) => {
                   const isPrimary = j.status === col.statuses[0];
                   const subBadge = !isPrimary ? STATUS_LABELS[j.status] : null;
+                  const lineItems = lineItemsMap[j.id] ?? [];
                   return (
                     <div
                       key={j.id}
@@ -168,6 +197,11 @@ export default function JobsKanbanBoard({ jobs: initialJobs, columns: initialCol
                         </div>
                       </div>
                       {j.site_address && <p className="text-[11px] text-[var(--ink-faint)] truncate mb-1">{j.site_address}</p>}
+                      {lineItems.length > 0 && (
+                        <div className="mb-1.5">
+                          <LineItemProgressBadge items={lineItems} size="sm" />
+                        </div>
+                      )}
                       <div className="flex items-center justify-between">
                         <p className="text-[13px] font-semibold text-[var(--ink)]">${(j.total_cost ?? 0).toLocaleString()}</p>
                         {j.source !== "quote" && (
