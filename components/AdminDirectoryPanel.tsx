@@ -29,6 +29,8 @@ interface DirectoryListing {
   created_at: string;
 }
 
+type TriState = "all" | "yes" | "no";
+
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
 /* ------------------------------------------------------------------ */
@@ -52,13 +54,13 @@ export default function AdminDirectoryPanel() {
   const [limit, setLimit] = useState(50);
   const [loading, setLoading] = useState(true);
 
-  // Filters
+  // Filters — tri-state: "all" | "yes" | "no"
   const [search, setSearch] = useState("");
   const [tradeFilter, setTradeFilter] = useState("");
-  const [hasEmail, setHasEmail] = useState(false);
-  const [hasPhone, setHasPhone] = useState(false);
-  const [hasWebsite, setHasWebsite] = useState(false);
-  const [hasRating, setHasRating] = useState(false);
+  const [emailFilter, setEmailFilter] = useState<TriState>("all");
+  const [phoneFilter, setPhoneFilter] = useState<TriState>("all");
+  const [websiteFilter, setWebsiteFilter] = useState<TriState>("all");
+  const [ratingFilter, setRatingFilter] = useState<TriState>("all");
 
   // Selection
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -80,10 +82,10 @@ export default function AdminDirectoryPanel() {
     params.set("page", String(page));
     params.set("limit", String(limit));
     if (tradeFilter) params.set("trade", tradeFilter);
-    if (hasEmail) params.set("hasEmail", "true");
-    if (hasPhone) params.set("hasPhone", "true");
-    if (hasWebsite) params.set("hasWebsite", "true");
-    if (hasRating) params.set("hasRating", "true");
+    if (emailFilter !== "all") params.set("email", emailFilter);
+    if (phoneFilter !== "all") params.set("phone", phoneFilter);
+    if (websiteFilter !== "all") params.set("website", websiteFilter);
+    if (ratingFilter !== "all") params.set("rating", ratingFilter);
     if (search.trim()) params.set("search", search.trim());
 
     try {
@@ -98,7 +100,7 @@ export default function AdminDirectoryPanel() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, tradeFilter, hasEmail, hasPhone, hasWebsite, hasRating, search]);
+  }, [page, limit, tradeFilter, emailFilter, phoneFilter, websiteFilter, ratingFilter, search]);
 
   useEffect(() => {
     fetchListings();
@@ -108,7 +110,7 @@ export default function AdminDirectoryPanel() {
   useEffect(() => {
     setPage(1);
     setSelected(new Set());
-  }, [tradeFilter, hasEmail, hasPhone, hasWebsite, hasRating, search, limit]);
+  }, [tradeFilter, emailFilter, phoneFilter, websiteFilter, ratingFilter, search, limit]);
 
   // Selection helpers
   const allSelected = listings.length > 0 && listings.every((l) => selected.has(l.id));
@@ -212,7 +214,22 @@ export default function AdminDirectoryPanel() {
   }
 
   // Active filters count
-  const activeFilterCount = [tradeFilter, hasEmail, hasPhone, hasWebsite, hasRating].filter(Boolean).length;
+  const activeFilterCount = [
+    tradeFilter,
+    emailFilter !== "all",
+    phoneFilter !== "all",
+    websiteFilter !== "all",
+    ratingFilter !== "all",
+  ].filter(Boolean).length;
+
+  function clearAllFilters() {
+    setTradeFilter("");
+    setEmailFilter("all");
+    setPhoneFilter("all");
+    setWebsiteFilter("all");
+    setRatingFilter("all");
+    setSearch("");
+  }
 
   return (
     <div>
@@ -236,7 +253,8 @@ export default function AdminDirectoryPanel() {
       </div>
 
       {/* Filters */}
-      <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-4 mb-4">
+      <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-4 mb-4 space-y-3">
+        {/* Row 1: Search + Trade + Page size */}
         <div className="flex flex-wrap gap-3 items-end">
           {/* Search */}
           <div className="relative flex-1 min-w-[200px]">
@@ -262,14 +280,6 @@ export default function AdminDirectoryPanel() {
             ))}
           </select>
 
-          {/* Has toggles */}
-          <div className="flex flex-wrap gap-1.5">
-            <FilterToggle active={hasEmail} onClick={() => setHasEmail((v) => !v)} icon={Mail} label="Email" />
-            <FilterToggle active={hasPhone} onClick={() => setHasPhone((v) => !v)} icon={Phone} label="Phone" />
-            <FilterToggle active={hasWebsite} onClick={() => setHasWebsite((v) => !v)} icon={Globe} label="Web" />
-            <FilterToggle active={hasRating} onClick={() => setHasRating((v) => !v)} icon={Star} label="Rating" />
-          </div>
-
           {/* Page size */}
           <select
             value={limit}
@@ -284,19 +294,40 @@ export default function AdminDirectoryPanel() {
           {/* Clear */}
           {activeFilterCount > 0 && (
             <button
-              onClick={() => {
-                setTradeFilter("");
-                setHasEmail(false);
-                setHasPhone(false);
-                setHasWebsite(false);
-                setHasRating(false);
-                setSearch("");
-              }}
+              onClick={clearAllFilters}
               className="text-[12.5px] font-semibold text-[var(--ink-faint)] hover:text-[var(--ink)] px-2 py-1.5"
             >
               Clear {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""}
             </button>
           )}
+        </div>
+
+        {/* Row 2: Tri-state filters */}
+        <div className="flex flex-wrap gap-3">
+          <TriStateFilter
+            label="Email"
+            value={emailFilter}
+            onChange={setEmailFilter}
+            icon={Mail}
+          />
+          <TriStateFilter
+            label="Phone"
+            value={phoneFilter}
+            onChange={setPhoneFilter}
+            icon={Phone}
+          />
+          <TriStateFilter
+            label="Website"
+            value={websiteFilter}
+            onChange={setWebsiteFilter}
+            icon={Globe}
+          />
+          <TriStateFilter
+            label="Rating"
+            value={ratingFilter}
+            onChange={setRatingFilter}
+            icon={Star}
+          />
         </div>
       </div>
 
@@ -625,31 +656,58 @@ export default function AdminDirectoryPanel() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Sub-components                                                     */
+/*  Tri-State Filter — All | Has | No                                  */
 /* ------------------------------------------------------------------ */
 
-function FilterToggle({
-  active,
-  onClick,
-  icon: Icon,
+function TriStateFilter({
   label,
+  value,
+  onChange,
+  icon: Icon,
 }: {
-  active: boolean;
-  onClick: () => void;
-  icon: typeof Mail;
   label: string;
+  value: TriState;
+  onChange: (v: TriState) => void;
+  icon: typeof Mail;
 }) {
   return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11.5px] font-semibold transition-all ${
-        active
-          ? "border-[var(--amber)] bg-[var(--amber-light)] text-[var(--amber-deep)]"
-          : "border-[var(--line)] bg-white text-[var(--ink-faint)] hover:border-[var(--ink-faint)]"
-      }`}
-    >
-      <Icon size={11} />
-      {label}
-    </button>
+    <div className="flex items-center gap-1.5">
+      <span className="flex items-center gap-1 text-[11px] font-semibold text-[var(--ink-soft)] mr-0.5">
+        <Icon size={11} className="text-[var(--amber)]" />
+        {label}
+      </span>
+      <div className="flex rounded-lg border border-[var(--line)] overflow-hidden">
+        <button
+          onClick={() => onChange("all")}
+          className={`px-2 py-1 text-[11px] font-semibold transition-colors ${
+            value === "all"
+              ? "bg-[var(--navy)] text-white"
+              : "bg-white text-[var(--ink-faint)] hover:bg-[var(--app-bg)]"
+          }`}
+        >
+          All
+        </button>
+        <button
+          onClick={() => onChange("yes")}
+          className={`px-2 py-1 text-[11px] font-semibold border-l border-[var(--line)] transition-colors ${
+            value === "yes"
+              ? "bg-green-50 text-green-700 border-green-200"
+              : "bg-white text-[var(--ink-faint)] hover:bg-[var(--app-bg)]"
+          }`}
+        >
+          Has
+        </button>
+        <button
+          onClick={() => onChange("no")}
+          className={`px-2 py-1 text-[11px] font-semibold border-l border-[var(--line)] transition-colors ${
+            value === "no"
+              ? "bg-red-50 text-red-600 border-red-200"
+              : "bg-white text-[var(--ink-faint)] hover:bg-[var(--app-bg)]"
+          }`}
+        >
+          No
+        </button>
+      </div>
+    </div>
   );
 }
