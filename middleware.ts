@@ -94,11 +94,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   }
 
   // Content Security Policy
-  // NOTE: When adding new external image sources, add them to img-src.
-  // Current external sources:
-  //   - images.unsplash.com (hero background on landing page)
-  //   - *.supabase.co (user-uploaded files, drawings)
-  //   - www.google-analytics.com (GA4 tracking pixel)
+  // NOTE: When adding new external sources, add them to the relevant directive.
   const csp = [
     "default-src 'self'",
     "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com",
@@ -106,6 +102,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
     "img-src 'self' data: blob: https://images.unsplash.com https://*.supabase.co https://www.google-analytics.com",
     "font-src 'self'",
     "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com https://api.anthropic.com https://www.google-analytics.com https://api.stripe.com https://api.xero.com https://identity.xero.com",
+    "manifest-src 'self'",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self' https://checkout.stripe.com",
