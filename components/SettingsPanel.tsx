@@ -115,7 +115,7 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
           setLeadSubs(data.subscriptions ?? []);
         }
       } catch {
-        // Silent fail — lead prefs are non-critical
+        // Silent fail - lead prefs are non-critical
       } finally {
         setLeadSubsLoading(false);
       }
@@ -492,7 +492,7 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-[12.5px] font-semibold text-[var(--ink)] capitalize">{sub.trade}</span>
-                    <span className="text-[var(--ink-faint)]">·</span>
+                    <span className="text-[var(--ink-faint)]">.</span>
                     <span className="text-[12.5px] text-[var(--ink-soft)]">{sub.suburb}</span>
                     {sub.is_active && <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-[var(--green-bg)] text-[var(--green)]">Active</span>}
                   </div>
@@ -552,8 +552,6 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
           </p>
         </div>
       </div>
-
-      {/* Xero connect is handled by XeroConnectPanel in settings/page.tsx */}
 
       {/* AI addon - lower priority */}
       <div className="card mb-4">
