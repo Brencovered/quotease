@@ -15,7 +15,7 @@ export default async function TeamSettingsPage() {
 
   const ctx = await getTeamContext(supabase, user.id);
 
-  if (!ctx.isOwner) {
+  if (!ctx.isOwner && ctx.role !== "admin") {
     return (
       <>
         <AppHeader />
@@ -24,9 +24,9 @@ export default async function TeamSettingsPage() {
             <ArrowLeft size={14} /> Back to Settings
           </Link>
           <div className="card text-center py-12">
-            <p className="font-semibold text-[var(--ink)] mb-1">Owner access only</p>
+            <p className="font-semibold text-[var(--ink)] mb-1">Owner or admin access only</p>
             <p className="text-[13.5px] text-[var(--ink-faint)] max-w-xs mx-auto">
-              You&apos;re a team member on {ctx.businessName ?? "this account"} -- only the account owner can manage the team.
+              You&apos;re a team member on {ctx.businessName ?? "this account"} -- only the account owner or an admin can manage the team.
             </p>
           </div>
         </div>
@@ -37,7 +37,7 @@ export default async function TeamSettingsPage() {
   const { data: members } = await supabase
     .from("team_members")
     .select("id, email, name, role, status, invited_at, joined_at")
-    .eq("owner_profile_id", user.id)
+    .eq("owner_profile_id", ctx.businessId)
     .neq("status", "removed")
     .order("invited_at", { ascending: false });
 

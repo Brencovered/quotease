@@ -265,10 +265,19 @@ export async function middleware(request: NextRequest) {
   // 5. Soft-deleted account check
   // ------------------------------------------------------------------
 
+  // Account deletion is a business-level action (see /api/account/delete
+  // and /api/account/restore - both owner/admin gated). Checking only the
+  // logged-in individual's own deleted_at meant that if an admin deleted
+  // the business, every OTHER team member (and the owner, on their own
+  // login) would sail straight past this check and keep using an account
+  // that's supposed to be shut down - the deletion only "took" for
+  // whichever single login happened to match the deleted profile row.
+  const businessId = await getActiveBusinessId(supabase, user.id);
+
   const { data: profileCheck } = await supabase
     .from("profiles")
     .select("deleted_at")
-    .eq("id", user.id)
+    .eq("id", businessId)
     .maybeSingle();
 
   if (
@@ -304,7 +313,6 @@ export async function middleware(request: NextRequest) {
   // bouncing between /onboarding and /billing forever, unable to reach
   // any real page, while the business they work for was fully set up
   // and subscribed the whole time.
-  const businessId = await getActiveBusinessId(supabase, user.id);
 
   // Fetch the business's profile for subscription and onboarding status
   const { data: profile } = await supabase

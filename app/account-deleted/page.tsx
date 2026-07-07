@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import AccountDeletedPanel from "@/components/AccountDeletedPanel";
+import { getTeamContext } from "@/lib/team";
 
 // Always fetch fresh -- deleted_at can change (restore) between visits.
 export const dynamic = "force-dynamic";
@@ -12,10 +13,17 @@ export default async function AccountDeletedPage() {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) redirect("/login");
 
+  // Deletion is a business-level action (see middleware.ts) - checking
+  // the individual's own profile here would create a redirect loop for
+  // a team member: middleware sends them here because the BUSINESS is
+  // deleted, but their own individual profile was never touched, so
+  // this page would immediately bounce them back to /electrician.
+  const ctx = await getTeamContext(supabase, userData.user.id);
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("business_name, deleted_at")
-    .eq("id", userData.user.id)
+    .eq("id", ctx.businessId)
     .single();
 
   // Not actually deleted (e.g. already restored in another tab) -- nothing
@@ -30,6 +38,7 @@ export default async function AccountDeletedPage() {
       businessName={profile.business_name ?? "your account"}
       deletedAtIso={profile.deleted_at}
       purgeDateIso={purgeDate.toISOString()}
+      canRestore={ctx.isOwner || ctx.role === "admin"}
     />
   );
 }

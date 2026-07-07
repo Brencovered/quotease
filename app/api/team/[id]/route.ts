@@ -1,14 +1,15 @@
 /**
  * POST /api/team/[id] -- update role, remove, or resend invite for a team member
  * --------------------------------------------------------------------------------
- * Owner-only (enforced by RLS -- the "Owner manages team" policy already
- * restricts updates/deletes on team_members to auth.uid() = owner_profile_id).
+ * Owner or admin only (enforced by RLS -- "Owner manages team" and
+ * "Admin manages team" policies).
  *
  * Body: { action: "remove" } | { action: "set_role", role: "admin" | "member" } | { action: "resend" }
  */
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getTeamContext } from "@/lib/team";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
@@ -20,6 +21,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  const ctx = await getTeamContext(supabase, userData.user.id);
+  if (!ctx.isOwner && ctx.role !== "admin") {
+    return NextResponse.json({ error: "Only the owner or an admin can manage the team." }, { status: 403 });
+  }
+
   const body = (await request.json()) as { action?: string; role?: string };
 
   if (body.action === "remove") {
@@ -27,7 +33,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       .from("team_members")
       .update({ status: "removed" })
       .eq("id", id)
-      .eq("owner_profile_id", userData.user.id);
+      .eq("owner_profile_id", ctx.businessId);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ ok: true });
   }
@@ -38,7 +44,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       .from("team_members")
       .update({ role })
       .eq("id", id)
-      .eq("owner_profile_id", userData.user.id);
+      .eq("owner_profile_id", ctx.businessId);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ ok: true });
   }
@@ -48,12 +54,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       .from("team_members")
       .select("email, name, invite_token, status")
       .eq("id", id)
-      .eq("owner_profile_id", userData.user.id)
+      .eq("owner_profile_id", ctx.businessId)
       .single();
     if (error || !invite) return NextResponse.json({ error: "Invite not found" }, { status: 404 });
     if (invite.status !== "invited") return NextResponse.json({ error: "Already accepted" }, { status: 400 });
 
-    const { data: profile } = await supabase.from("profiles").select("business_name").eq("id", userData.user.id).single();
+    const { data: profile } = await supabase.from("profiles").select("business_name").eq("id", ctx.businessId).single();
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
     const acceptUrl = `${appUrl}/team/accept/${invite.invite_token}`;
     const businessName = profile?.business_name || "their Swiftscope account";

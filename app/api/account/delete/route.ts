@@ -1,7 +1,7 @@
 /**
  * POST /api/account/delete
  * -------------------------
- * Self-service. Soft-deletes the account: cancels any active Stripe
+ * Owner or admin only. Soft-deletes the account: cancels any active Stripe
  * subscriptions immediately and marks deleted_at = now(). Nothing is
  * actually removed -- the tradie (or an admin) can restore within 30 days
  * via /api/account/restore. After 30 days the daily purge cron
@@ -14,6 +14,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { softDeleteAccount } from "@/lib/deleteAccount";
+import { getTeamContext } from "@/lib/team";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -22,12 +23,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  const ctx = await getTeamContext(supabase, userData.user.id);
+  if (!ctx.isOwner && ctx.role !== "admin") {
+    return NextResponse.json({ error: "Only the owner or an admin can delete this account." }, { status: 403 });
+  }
+
   const { confirmBusinessName } = (await request.json().catch(() => ({}))) as { confirmBusinessName?: string };
 
   const { data: profile } = await supabase
     .from("profiles")
     .select("business_name")
-    .eq("id", userData.user.id)
+    .eq("id", ctx.businessId)
     .single();
 
   const expected = (profile?.business_name ?? "").trim().toLowerCase();
@@ -35,7 +41,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Business name didn't match -- account not deleted." }, { status: 400 });
   }
 
-  const result = await softDeleteAccount(userData.user.id);
+  const result = await softDeleteAccount(ctx.businessId);
   if (result.error) {
     return NextResponse.json({ error: result.error }, { status: 500 });
   }

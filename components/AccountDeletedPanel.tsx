@@ -12,10 +12,12 @@ function fmtDate(iso: string): string {
 export default function AccountDeletedPanel({
   businessName,
   purgeDateIso,
+  canRestore,
 }: {
   businessName: string;
   deletedAtIso: string;
   purgeDateIso: string;
+  canRestore: boolean;
 }) {
   const router = useRouter();
   const [restoring, setRestoring] = useState(false);
@@ -56,16 +58,24 @@ export default function AccountDeletedPanel({
           This account will be permanently deleted -- quotes, clients, price book, everything -- on{" "}
           <strong>{fmtDate(purgeDateIso)}</strong>.
         </p>
-        <p className="text-[13px] text-[var(--ink-faint)] mb-5">
-          Until then, nothing has been removed. Restore your account to pick up right where you left off.
-        </p>
+        {canRestore ? (
+          <p className="text-[13px] text-[var(--ink-faint)] mb-5">
+            Until then, nothing has been removed. Restore your account to pick up right where you left off.
+          </p>
+        ) : (
+          <p className="text-[13px] text-[var(--ink-faint)] mb-5">
+            Until then, nothing has been removed. Only the account owner or an admin can restore it -- get in touch with them if you need this account back.
+          </p>
+        )}
 
         {error && <p className="text-[13px] text-red-600 mb-3">{error}</p>}
 
         <div className="flex flex-col gap-2">
-          <button onClick={handleRestore} disabled={restoring} className="btn-primary">
-            {restoring ? "Restoring..." : "Restore my account"}
-          </button>
+          {canRestore && (
+            <button onClick={handleRestore} disabled={restoring} className="btn-primary">
+              {restoring ? "Restoring..." : "Restore my account"}
+            </button>
+          )}
           <button
             onClick={handleSignOut}
             className="text-[13px] font-semibold text-[var(--ink-faint)] hover:text-[var(--ink)] py-2"

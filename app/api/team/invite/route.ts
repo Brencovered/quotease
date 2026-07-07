@@ -1,15 +1,17 @@
 /**
  * POST /api/team/invite
  * ----------------------
- * Owner-only. Creates a team_members row (status "invited") and emails the
- * person an accept link. If they already have a Swiftscope login, accepting
- * just links their existing account -- no second signup needed.
+ * Owner or admin only. Creates a team_members row (status "invited") and
+ * emails the person an accept link. If they already have a Swiftscope
+ * login, accepting just links their existing account -- no second signup
+ * needed.
  *
  * Body: { email: string, name?: string, role?: "admin" | "member" }
  */
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getTeamContext } from "@/lib/team";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
@@ -18,6 +20,11 @@ export async function POST(request: Request) {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const ctx = await getTeamContext(supabase, userData.user.id);
+  if (!ctx.isOwner && ctx.role !== "admin") {
+    return NextResponse.json({ error: "Only the owner or an admin can invite team members." }, { status: 403 });
   }
 
   const { email, name, role } = (await request.json()) as { email?: string; name?: string; role?: string };
@@ -32,13 +39,13 @@ export async function POST(request: Request) {
   const { data: profile } = await supabase
     .from("profiles")
     .select("business_name")
-    .eq("id", userData.user.id)
+    .eq("id", ctx.businessId)
     .single();
 
   const { data: invite, error } = await supabase
     .from("team_members")
     .insert({
-      owner_profile_id: userData.user.id,
+      owner_profile_id: ctx.businessId,
       email: cleanEmail,
       name: name?.trim() || null,
       role: role === "admin" ? "admin" : "member",
