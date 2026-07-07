@@ -204,6 +204,10 @@ export default function DashboardPanel({ stats, profit }: Props) {
           <span className="flex items-center gap-2"><TrendingUp size={16} className="text-[var(--green)]" /> Profit detail</span>
           <ArrowUpRight size={14} className="text-[var(--ink-faint)]" />
         </Link>
+        <Link href="/electrician/reports" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
+          <span className="flex items-center gap-2"><Briefcase size={16} className="text-[var(--navy)]" /> Reports</span>
+          <ArrowUpRight size={14} className="text-[var(--ink-faint)]" />
+        </Link>
       </div>
     </div>
     <DashboardChatAssistant stats={stats} profit={profit} />
