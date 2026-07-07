@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -293,7 +293,6 @@ function MobileTeaser() {
 /*  Main login form                                                    */
 /* ------------------------------------------------------------------ */
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next");
 
@@ -322,10 +321,14 @@ function LoginForm() {
         setError(error.message);
         return;
       }
-      router.push(
-        next && next.startsWith("/") ? next : "/electrician/dashboard"
-      );
-      router.refresh();
+      const target = next && next.startsWith("/") ? next : "/electrician/dashboard";
+      // A full navigation (not router.push) guarantees the browser sends
+      // the just-set session cookie on the very next request. Using
+      // router.push here raced with cookie propagation - middleware
+      // (which reads the session server-side) would sometimes see no
+      // session yet on the first attempt and silently redirect back to
+      // login, meaning the tradie had to click "Log in" twice.
+      window.location.href = target;
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Could not reach the server."

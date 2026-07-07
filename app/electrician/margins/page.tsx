@@ -5,7 +5,7 @@ import MarginDashboardPanel from "@/components/MarginDashboardPanel";
 
 export default async function MarginsPage() {
   let rows: Array<{
-    id: string; client_name: string | null; trade: string | null;
+    id: string; job_id?: string | null; client_name: string | null; trade: string | null;
     total_cost: number; quotedHours: number; actualHours: number; actualMaterials: number; unexpectedCosts: number;
   }> = [];
   let hourlyRate = 95;
@@ -25,15 +25,28 @@ export default async function MarginsPage() {
         .in("status", ["accepted", "paid"]);
 
       if (jobs && jobs.length > 0) {
-        const { data: actuals } = await supabase
-          .from("job_actuals")
-          .select("quote_id, actual_hours, actual_materials_cost, unexpected_costs")
-          .in("quote_id", jobs.map((j) => j.id));
+        const [{ data: actuals }, { data: jobRows }] = await Promise.all([
+          supabase
+            .from("job_actuals")
+            .select("quote_id, actual_hours, actual_materials_cost, unexpected_costs")
+            .in("quote_id", jobs.map((j) => j.id)),
+          // These rows are quotes (accepted/paid), so `id` is the quote's
+          // id - but the panel links through to /electrician/jobs/[id],
+          // which needs the real job's id (a separate record created
+          // from the quote via quote_id).
+          supabase
+            .from("jobs")
+            .select("id, quote_id")
+            .eq("profile_id", businessId)
+            .in("quote_id", jobs.map((j) => j.id)),
+        ]);
+        const jobIdByQuoteId = new Map((jobRows ?? []).map((j) => [j.quote_id as string, j.id as string]));
 
         rows = jobs.map((j) => {
           const jobActuals = (actuals ?? []).filter((a) => a.quote_id === j.id);
           return {
             id: j.id,
+            job_id: jobIdByQuoteId.get(j.id) ?? null,
             client_name: j.client_name,
             trade: j.trade,
             total_cost: j.total_cost ?? 0,

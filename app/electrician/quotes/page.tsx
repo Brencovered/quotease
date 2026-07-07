@@ -25,8 +25,25 @@ export default async function QuotesPage() {
           .eq("id", businessId)
           .single(),
       ]);
+
       if (dbQuotes) quotes = dbQuotes;
       xeroConnected = !!profile?.xero_tenant_id;
+
+      // A quote's own id and its job's id are different records (jobs
+      // are a separate table, created from a quote via quote_id, with
+      // their own auto-generated id) - accepted/paid quotes link
+      // through to /electrician/jobs/[jobId], not /electrician/jobs/[quoteId].
+      // Reusing the quote's id there 404s, since no job shares that id.
+      const acceptedOrPaidIds = quotes.filter((q) => q.status === "accepted" || q.status === "paid").map((q) => q.id as string);
+      if (acceptedOrPaidIds.length > 0) {
+        const { data: jobRows } = await supabase
+          .from("jobs")
+          .select("id, quote_id")
+          .eq("profile_id", businessId)
+          .in("quote_id", acceptedOrPaidIds);
+        const jobIdByQuoteId = new Map((jobRows ?? []).map((j) => [j.quote_id, j.id]));
+        quotes = quotes.map((q) => ({ ...q, job_id: jobIdByQuoteId.get(q.id as string) ?? null }));
+      }
     }
   } catch (err) {
     console.error("Quotes page:", err);

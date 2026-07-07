@@ -5,7 +5,7 @@ import Link from "next/link";
 import { TrendingDown, TrendingUp, ArrowUpDown, Info, ClipboardList, ChevronRight } from "lucide-react";
 
 type Row = {
-  id: string; client_name: string | null; trade: string | null;
+  id: string; job_id?: string | null; client_name: string | null; trade: string | null;
   total_cost: number; quotedHours: number; actualHours: number; actualMaterials: number; unexpectedCosts: number;
 };
 
@@ -71,7 +71,7 @@ export default function MarginDashboardPanel({ rows, hourlyRate }: { rows: Row[]
           </p>
           <div className="space-y-1">
             {notLogged.slice(0, 5).map((j) => (
-              <Link key={j.id} href={`/electrician/jobs/${j.id}`}
+              <Link key={j.id} href={j.job_id ? `/electrician/jobs/${j.job_id}` : `/electrician/quotes/${j.id}`}
                 className="flex items-center justify-between gap-2 py-2 px-2.5 -mx-2.5 rounded-lg hover:bg-[var(--app-bg)] transition-colors">
                 <span className="text-[13px] font-medium text-[var(--ink-soft)] truncate">{j.client_name || "Unnamed client"}</span>
                 <span className="flex items-center gap-1 text-[12px] text-[var(--ink-faint)] shrink-0">
@@ -110,7 +110,7 @@ export default function MarginDashboardPanel({ rows, hourlyRate }: { rows: Row[]
 
           <div className="card p-0 overflow-hidden mb-4">
             {scored.map((r) => (
-              <Link key={r.id} href={`/electrician/jobs/${r.id}`}
+              <Link key={r.id} href={r.job_id ? `/electrician/jobs/${r.job_id}` : `/electrician/quotes/${r.id}`}
                 className="block px-4 py-3 border-b border-[var(--line-subtle)] last:border-0 hover:bg-[var(--app-bg)] transition-colors">
                 <div className="flex items-center justify-between gap-3 mb-1.5">
                   <div className="min-w-0">

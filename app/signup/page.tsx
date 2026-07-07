@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState, useMemo } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -146,7 +146,6 @@ function MobileTeaser() {
 /*  Main signup form                                                   */
 /* ------------------------------------------------------------------ */
 function SignupForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next");
 
@@ -184,8 +183,10 @@ function SignupForm() {
           suburb: suburb.trim() || null,
           trades: [trade],
         }).eq("id", data.session.user.id);
-        router.push("/onboarding");
-        router.refresh();
+        // Full navigation (not router.push) so the session cookie set by
+        // signUp is guaranteed present when middleware checks it on the
+        // very next request - same fix as the login page.
+        window.location.href = "/onboarding";
       } else {
         setCheckEmail(true);
       }

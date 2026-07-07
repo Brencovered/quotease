@@ -7,6 +7,7 @@ import "leaflet/dist/leaflet.css";
 
 type Job = {
   id: string;
+  job_id?: string | null;
   client_name: string | null;
   site_address: string | null;
   status: string;
@@ -55,7 +56,7 @@ export default function MapPanel({ jobs }: { jobs: Job[] }) {
              <p style="font-weight:700;margin:0 0 2px;">${job.client_name ?? "Unnamed client"}</p>
              <p style="font-size:12px;color:#666;margin:0 0 6px;">${job.site_address ?? ""}</p>
              <p style="font-weight:700;margin:0 0 6px;">$${(job.total_cost ?? 0).toLocaleString()}</p>
-             <a href="/electrician/quotes/${job.id}" style="color:#0a1722;font-weight:600;font-size:12.5px;text-decoration:underline;">View job →</a>
+             <a href="/electrician/${job.job_id ? `jobs/${job.job_id}` : `quotes/${job.id}`}" style="color:#0a1722;font-weight:600;font-size:12.5px;text-decoration:underline;">View job →</a>
            </div>`
         );
         bounds.push([job.site_lat!, job.site_lng!]);
@@ -96,7 +97,7 @@ export default function MapPanel({ jobs }: { jobs: Job[] }) {
             {jobs.map((j) => (
               <Link
                 key={j.id}
-                href={`/electrician/jobs/${j.id}`}
+                href={j.job_id ? `/electrician/jobs/${j.job_id}` : `/electrician/quotes/${j.id}`}
                 className="flex items-center justify-between bg-[var(--surface)] border border-[var(--line)] rounded-lg px-3 py-2.5 text-[13px]"
               >
                 <span className="text-[var(--ink)] font-medium truncate">{j.client_name ?? "Unnamed"}</span>

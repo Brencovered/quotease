@@ -57,6 +57,15 @@ export default function XeroConnectPanel({
             Accepted quotes are automatically pushed to Xero when you click &ldquo;Sync to Xero&rdquo;
             on the Export page or from any job page.
           </p>
+
+          <p className="text-[11.5px] text-[var(--ink-faint)] flex items-start gap-1.5 bg-[var(--app-bg)] rounded-lg px-3 py-2.5">
+            <AlertCircle size={13} className="shrink-0 mt-[1px]" />
+            <span>
+              Xero connections can occasionally drop on Xero&apos;s side - we can&apos;t control that
+              part. We check and refresh your connection automatically every day to keep it warm,
+              and you&apos;ll get a notification here if it ever needs reconnecting.
+            </span>
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
