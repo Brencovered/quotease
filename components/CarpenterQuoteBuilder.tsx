@@ -17,7 +17,7 @@ import { resolveClientId } from "@/lib/resolveClientId";
 import { getActiveBusinessId } from "@/lib/team";
 import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
-import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupChargeTotal, markupMaterialsTotal, markupLabourHours } from "@/lib/quotePricing";
+import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupChargeTotal, markupMaterialsTotal, markupLabourHours, markupLabourTotal } from "@/lib/quotePricing";
 
 type MaterialRow = { item_key: string; label: string; unit_cost: number };
 
@@ -149,6 +149,18 @@ export default function CarpenterQuoteBuilder({
   const siteMaterials = siteItemsMaterialsTotal(siteItems, effectiveMargin);
   const siteTotal    = Math.round(siteLabour + siteMaterials);
 
+  // See QuoteBuilder.tsx for the full explanation: without this, hours
+  // from a selected package or plan takeoff never showed in the "Labour"
+  // figure while building the quote (only their dollar value was charged,
+  // mislabelled as "Materials").
+  const extraTotalsForDisplay = extraLinesTotals(extraLines, rate, effectiveMargin);
+  const extraHoursForDisplay  = extraLines.reduce((s, l) => s + l.hours, 0);
+  const markupLabourHrs    = markupLabourHours(preMarkupMaterials);
+  const markupMaterialsOnly = markupMaterialsTotal(preMarkupMaterials, effectiveMargin);
+  const displayLabourHours = Math.round((result.labourHours + extraHoursForDisplay + markupLabourHrs) * 10) / 10;
+  const displayLabourDollar = Math.round(result.labourHours * rate) + extraTotalsForDisplay.labour + Math.round(markupLabourTotal(preMarkupMaterials, rate));
+  const displayMaterialsDollar = Math.round(result.materialsCost + extraTotalsForDisplay.materials + markupMaterialsOnly);
+
   function set<K extends keyof CarpenterIntake>(k: K, v: CarpenterIntake[K]) { setIntake((p) => ({...p,[k]:v})); }
 
   async function runAiAnalysis() {
@@ -260,8 +272,8 @@ export default function CarpenterQuoteBuilder({
       <div className="sticky top-12 sm:top-0 z-30 mb-4 -mx-4 sm:mx-0 px-4 sm:px-0">
         <div className="bg-[var(--navy)] rounded-none sm:rounded-2xl px-5 py-3 flex items-center justify-between" style={{boxShadow:"0 4px 20px rgba(10,23,34,.18)"}}>
           <div className="flex gap-5">
-            <div><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Labour</p><p className="font-display text-[18px] text-white leading-tight">{result.labourHours}h</p></div>
-            <div><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Materials</p><p className="font-display text-[18px] text-white leading-tight">${(result.materialsCost + markupTotal + Math.round(siteMaterials)).toLocaleString()}</p></div>
+            <div><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Labour</p><p className="font-display text-[18px] text-white leading-tight">{displayLabourHours}h</p></div>
+            <div><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Materials</p><p className="font-display text-[18px] text-white leading-tight">${displayMaterialsDollar.toLocaleString()}</p></div>
           </div>
           <div className="text-right"><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Total</p><p className="font-display text-[24px] text-[var(--amber)] leading-tight">${(result.totalCost + markupTotal + siteTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total).toLocaleString()}</p></div>
         </div>
@@ -485,9 +497,10 @@ export default function CarpenterQuoteBuilder({
           <div className="bg-[var(--navy)] rounded-2xl p-5">
             <p className="text-[11px] text-[var(--steel-3)] font-bold uppercase tracking-wider mb-3">Quote summary</p>
             <div className="space-y-2">
-              <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Labour ({result.labourHours}h)</span><span className="text-white font-semibold tabular">${Math.round(result.labourHours*rate).toLocaleString()}</span></div>
-              <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Materials</span><span className="text-white font-semibold tabular">${(result.materialsCost + markupTotal).toLocaleString()}</span></div>
-              <div className="border-t border-white/10 pt-2 flex justify-between"><span className="text-white font-bold">Total</span><span className="font-display text-[24px] text-[var(--amber)] tabular">${(result.totalCost + markupTotal).toLocaleString()}</span></div>
+              <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Labour ({displayLabourHours}h)</span><span className="text-white font-semibold tabular">${displayLabourDollar.toLocaleString()}</span></div>
+              <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Materials</span><span className="text-white font-semibold tabular">${displayMaterialsDollar.toLocaleString()}</span></div>
+              {siteTotal > 0 && <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">On-site items</span><span className="text-white font-semibold tabular">${siteTotal.toLocaleString()}</span></div>}
+              <div className="border-t border-white/10 pt-2 flex justify-between"><span className="text-white font-bold">Total</span><span className="font-display text-[24px] text-[var(--amber)] tabular">${(result.totalCost + markupTotal + siteTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total).toLocaleString()}</span></div>
             </div>
           </div>
           <div className="card">
@@ -512,7 +525,7 @@ export default function CarpenterQuoteBuilder({
               <option value="custom">Custom split</option>
             </select>
             <div className="bg-[var(--app-bg)] rounded-xl p-3 space-y-1.5">
-              {paymentTerms.map((t,i) => <div key={i} className="flex justify-between text-[13.5px]"><span className="text-[var(ink-soft)]">{t.label}</span><span className="font-bold tabular">{t.percent}% - ${Math.round((result.totalCost+markupTotal)*t.percent/100).toLocaleString()}</span></div>)}
+              {paymentTerms.map((t,i) => <div key={i} className="flex justify-between text-[13.5px]"><span className="text-[var(ink-soft)]">{t.label}</span><span className="font-bold tabular">{t.percent}% - ${Math.round((result.totalCost + markupTotal + siteTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total)*t.percent/100).toLocaleString()}</span></div>)}
             </div>
             {termsPreset === "custom" && customTermsTotal !== 100 && <p className="text-[12.5px] text-[var(--red)] font-semibold mt-1">Adds up to {customTermsTotal}% - must total 100%</p>}
           </div>

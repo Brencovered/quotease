@@ -19,7 +19,7 @@ import { resolveCalcCosts, hasRealPriceBook, serializeLinkedItemKeys } from "@/l
 import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import SiteAnnotationReport from "@/components/SiteAnnotationReport";
-import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupChargeTotal, markupMaterialsTotal, markupLabourHours } from "@/lib/quotePricing";
+import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupChargeTotal, markupMaterialsTotal, markupLabourHours, markupLabourTotal } from "@/lib/quotePricing";
 import {
   calcElectricianQuote,
   ELECTRICIAN_DEFAULT_MATERIALS,
@@ -197,6 +197,23 @@ export default function QuoteBuilder({
   const siteLabour    = siteItemsLabourTotal(siteItems, rate ?? 95);
   const siteMaterials = siteItemsMaterialsTotal(siteItems, effectiveMargin ?? 20);
   const siteTotal     = Math.round(siteLabour + siteMaterials);
+
+  // Displayed Labour/Materials split, covering every source EXCEPT on-site
+  // items (which already have their own correctly-bucketed "On-site items"
+  // line below and shouldn't be double-counted here) - base intake, extra
+  // job lines, and markup materials from a plan or package. Without this,
+  // hours from a selected package or plan takeoff silently vanished from
+  // the "Labour" figure shown while building the quote (its dollar value
+  // was still charged, just mislabelled as "Materials"), and a client
+  // couldn't tell how many hours a job with a package attached would
+  // actually take.
+  const extraTotalsForDisplay = extraLinesTotals(extraLines, rate, effectiveMargin);
+  const extraHoursForDisplay  = extraLines.reduce((s, l) => s + l.hours, 0);
+  const markupLabourHrs    = markupLabourHours(preMarkupMaterials);
+  const markupMaterialsOnly = markupMaterialsTotal(preMarkupMaterials, effectiveMargin);
+  const displayLabourHours = Math.round((result.labourHours + extraHoursForDisplay + markupLabourHrs) * 10) / 10;
+  const displayLabourDollar = Math.round(result.labourHours * rate) + extraTotalsForDisplay.labour + Math.round(markupLabourTotal(preMarkupMaterials, rate));
+  const displayMaterialsDollar = Math.round(result.materialsCost + extraTotalsForDisplay.materials + markupMaterialsOnly);
 
   function set<K extends keyof ElectricianIntake>(key: K, value: ElectricianIntake[K]) {
     setIntake((prev) => ({ ...prev, [key]: value }));
@@ -387,11 +404,11 @@ export default function QuoteBuilder({
           <div className="flex gap-5">
             <div>
               <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Labour</p>
-              <p className="font-display text-[18px] text-white leading-tight">{result.labourHours}h</p>
+              <p className="font-display text-[18px] text-white leading-tight">{displayLabourHours}h</p>
             </div>
             <div>
               <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Materials</p>
-              <p className="font-display text-[18px] text-white leading-tight">${(result.materialsCost + markupTotal + extraLinesTotals(extraLines, rate, effectiveMargin).materials + Math.round(siteMaterials)).toLocaleString()}</p>
+              <p className="font-display text-[18px] text-white leading-tight">${displayMaterialsDollar.toLocaleString()}</p>
             </div>
           </div>
           <div className="text-right">
@@ -523,6 +540,7 @@ export default function QuoteBuilder({
           extraLines={extraLines} setExtraLines={setExtraLines} rate={rate} margin={margin}
           effectiveMargin={effectiveMargin}
           markupTotal={markupTotal} siteItems={siteItems} setSiteItems={setSiteItems} siteTotal={siteTotal} annotationMeta={annotationMeta}
+          displayLabourDollar={displayLabourDollar} displayMaterialsDollar={displayMaterialsDollar} markupMaterialsOnly={markupMaterialsOnly}
           selectedPricingTier={selectedPricingTier}
           selectedJobSizeTier={selectedJobSizeTier}
         />
@@ -1161,6 +1179,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
   clientName, clientEmail, siteAddress,
   saving, saveMessage, savedQuoteId, onSave,
   extraLines, setExtraLines, rate, margin, effectiveMargin, markupTotal, siteItems, setSiteItems, siteTotal, annotationMeta,
+  displayLabourDollar, displayMaterialsDollar, markupMaterialsOnly,
   selectedPricingTier, selectedJobSizeTier }: {
   intake: ElectricianIntake;
   result: { labourHours: number; materialsCost: number; totalCost: number };
@@ -1178,6 +1197,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
   setSiteItems: React.Dispatch<React.SetStateAction<{id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]>>;
   siteTotal: number;
   annotationMeta: {id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string}[];
+  displayLabourDollar: number; displayMaterialsDollar: number; markupMaterialsOnly: number;
   selectedPricingTier: { id: string; name: string; markup_pct: number } | null;
   selectedJobSizeTier: { id: string; name: string; markup_pct: number } | null;
 }) {
@@ -1236,10 +1256,10 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
       <div className="bg-[var(--navy)] rounded-2xl p-5">
         <p className="text-[11px] text-[var(--steel-3)] font-bold uppercase tracking-wider mb-3">Quote summary</p>
         <div className="space-y-2">
-          <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Labour</span><span className="text-white font-semibold tabular">${Math.round(result.labourHours * rate).toLocaleString()}</span></div>
-          <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Materials</span><span className="text-white font-semibold tabular">${Math.round(result.materialsCost + markupTotal + extraLinesTotals(extraLines, rate, effectiveMargin).materials).toLocaleString()}</span></div>
+          <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Labour</span><span className="text-white font-semibold tabular">${displayLabourDollar.toLocaleString()}</span></div>
+          <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Materials</span><span className="text-white font-semibold tabular">${displayMaterialsDollar.toLocaleString()}</span></div>
           {siteTotal > 0 && <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">On-site items</span><span className="text-white font-semibold tabular">${siteTotal.toLocaleString()}</span></div>}
-          {markupTotal > 0 && <div className="flex justify-between text-[12.5px]"><span className="text-[var(--steel-3)]">incl. ${markupTotal.toLocaleString()} from site plans</span></div>}
+          {markupMaterialsOnly > 0 && <div className="flex justify-between text-[12.5px]"><span className="text-[var(--steel-3)]">incl. ${Math.round(markupMaterialsOnly).toLocaleString()} materials from a plan/package</span></div>}
           <div className="border-t border-white/10 pt-2 flex justify-between">
             <span className="text-white font-bold text-[15px]">Total</span>
             <span className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total + siteTotal).toLocaleString()}</span>
