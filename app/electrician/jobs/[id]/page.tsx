@@ -110,9 +110,12 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             </span>
             {quote && (
               <a href={`/api/quotes/${quote.id}/pdf`} target="_blank" rel="noopener noreferrer" className="block text-[12.5px] font-semibold text-[var(--navy)] underline mt-2">
-                Download PDF
+                Download quote PDF
               </a>
             )}
+            <a href={`/api/jobs/${job.id}/invoice-pdf`} target="_blank" rel="noopener noreferrer" className="block text-[12.5px] font-semibold text-[var(--navy)] underline mt-1">
+              Download invoice
+            </a>
           </div>
         </div>
 
