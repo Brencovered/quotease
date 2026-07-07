@@ -7,6 +7,7 @@ import MapPanel from "@/components/MapPanel";
 export default async function MapPage() {
   let jobs: Array<{
     id: string;
+    job_id?: string | null;
     client_name: string | null;
     site_address: string | null;
     status: string;
@@ -29,6 +30,21 @@ export default async function MapPage() {
 
       if (data) {
         jobs = data;
+
+        // These rows are quotes (accepted/paid ones, standing in for
+        // "jobs" here), so `id` is the quote's id - but the map links
+        // through to /electrician/jobs/[id], which needs the actual
+        // job's id (a separate record created from the quote via
+        // quote_id). Keep `id` as the quote id for the geocoding update
+        // below and carry the real job id separately for the link.
+        const { data: jobRows } = await supabase
+          .from("jobs")
+          .select("id, quote_id")
+          .eq("profile_id", businessId)
+          .in("quote_id", jobs.map((j) => j.id));
+        const jobIdByQuoteId = new Map((jobRows ?? []).map((j) => [j.quote_id as string, j.id as string]));
+        jobs = jobs.map((j) => ({ ...j, job_id: jobIdByQuoteId.get(j.id) ?? null }));
+
         // Geocode anything missing coordinates, one at a time (Nominatim's
         // usage policy asks for max 1 request/second) - and persist the
         // result so this only ever happens once per job, not on every

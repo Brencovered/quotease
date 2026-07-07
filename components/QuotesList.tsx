@@ -14,6 +14,7 @@ type Quote = {
   invoice_number: string | null; xero_exported_at: string | null;
   completed_at: string | null; created_at: string;
   follow_up_at: string | null; quote_expires_at: string | null; sent_at: string | null;
+  job_id?: string | null;
 };
 
 const STATUS: Record<string, { label: string; bg: string; text: string; icon: typeof FileText }> = {
@@ -28,6 +29,18 @@ const FILTERS = ["all","draft","sent","accepted","paid","declined"];
 
 function daysUntil(d: string | null) { if (!d) return null; return Math.ceil((new Date(d).getTime() - Date.now()) / 86400000); }
 function daysAgo(d: string | null)   { if (!d) return null; return Math.floor((Date.now() - new Date(d).getTime()) / 86400000); }
+
+// Accepted/paid quotes link through to their job - but the job is a
+// separate record with its own id (created from the quote via
+// quote_id), not the same id as the quote itself. Fall back to the
+// quote detail page if a job hasn't been created for it yet (shouldn't
+// normally happen, but better than a 404 if it does).
+function quoteHref(q: Quote): string {
+  if ((q.status === "accepted" || q.status === "paid") && q.job_id) {
+    return `/electrician/jobs/${q.job_id}`;
+  }
+  return `/electrician/quotes/${q.id}`;
+}
 
 export default function QuotesList({ quotes: initial, xeroConnected }: { quotes: Quote[]; xeroConnected?: boolean }) {
   const [quotes]  = useState(initial);
@@ -194,7 +207,7 @@ export default function QuotesList({ quotes: initial, xeroConnected }: { quotes:
               <div className="flex items-start gap-3">
                 <div className="flex-1 min-w-0">
                   <Link
-                    href={q.status === "accepted" || q.status === "paid" ? `/electrician/jobs/${q.id}` : `/electrician/quotes/${q.id}`}
+                    href={quoteHref(q)}
                     className="font-bold text-[15px] text-[var(--ink)] hover:underline block truncate"
                   >
                     {q.client_name || "Unnamed client"}
@@ -222,7 +235,7 @@ export default function QuotesList({ quotes: initial, xeroConnected }: { quotes:
               {/* Actions */}
               <div className="flex gap-2 mt-3 flex-wrap items-center">
                 <Link
-                  href={q.status === "accepted" || q.status === "paid" ? `/electrician/jobs/${q.id}` : `/electrician/quotes/${q.id}`}
+                  href={quoteHref(q)}
                   className="btn-secondary text-[12.5px] py-1.5 px-3"
                 >
                   Open →

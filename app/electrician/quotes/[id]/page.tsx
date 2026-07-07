@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { loadJobDetailData } from "@/lib/jobDetail";
 import { getActiveBusinessId } from "@/lib/team";
+import { getOrCreateJobForQuote } from "@/lib/jobs";
 import AppHeader from "@/components/AppHeader";
 import FollowUpPanel from "@/components/FollowUpPanel";
 import JobFilesPanel from "@/components/JobFilesPanel";
@@ -27,7 +28,15 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
   const { quote, followUps, attachmentsWithUrls, marginPct } = data;
 
   if (quote.status === "accepted" || quote.status === "paid") {
-    redirect(`/electrician/jobs/${id}`);
+    // The job is a separate record with its own id (created from the
+    // quote via quote_id) - redirecting to /electrician/jobs/[id] using
+    // the QUOTE's id 404s, since no job shares that id.
+    // getOrCreateJobForQuote also self-heals the case where a quote was
+    // marked accepted/paid but a job was never created for it.
+    const job = await getOrCreateJobForQuote(supabase, id);
+    if (job) redirect(`/electrician/jobs/${job.id}`);
+    // No job and couldn't create one (e.g. the quote's business is
+    // missing) - fall through and show the quote page rather than 404.
   }
 
   const scopeLines = humanizeIntake(quote.intake_data);

@@ -20,6 +20,21 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
 
   if (!client) notFound();
 
+  // A quote's own id and its job's id are different records (jobs are a
+  // separate table, created from a quote via quote_id, with their own
+  // auto-generated id) - linking to /electrician/jobs/[quoteId] 404s,
+  // since no job shares that id.
+  const acceptedOrPaidIds = (quotes ?? []).filter((q) => q.status === "accepted" || q.status === "paid").map((q) => q.id);
+  let jobIdByQuoteId = new Map<string, string>();
+  if (acceptedOrPaidIds.length > 0) {
+    const { data: jobRows } = await supabase
+      .from("jobs")
+      .select("id, quote_id")
+      .eq("profile_id", businessId)
+      .in("quote_id", acceptedOrPaidIds);
+    jobIdByQuoteId = new Map((jobRows ?? []).map((j) => [j.quote_id as string, j.id as string]));
+  }
+
   const plansWithUrls = await Promise.all(
     (plans ?? []).map(async (p) => {
       const { data: signed } = await supabase.storage.from("job-files").createSignedUrl(p.storage_path, 3600 * 24 * 7);
@@ -53,10 +68,11 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
               <div className="divide-y divide-[var(--line-subtle)]">
                 {quotes.map((q) => {
                   const isJob = q.status === "accepted" || q.status === "paid";
+                  const jobId = jobIdByQuoteId.get(q.id);
                   return (
                     <Link
                       key={q.id}
-                      href={isJob ? `/electrician/jobs/${q.id}` : `/electrician/quotes/${q.id}`}
+                      href={isJob && jobId ? `/electrician/jobs/${jobId}` : `/electrician/quotes/${q.id}`}
                       className="flex items-center justify-between py-2.5 hover:bg-[var(--app-bg)] -mx-2 px-2 rounded-lg"
                     >
                       <div>
