@@ -4,6 +4,7 @@ import XeroConnectPanel from "@/components/XeroConnectPanel";
 import DirectoryPanel from "@/components/DirectoryPanel";
 import AccountDangerZone from "@/components/AccountDangerZone";
 import AppHeader from "@/components/AppHeader";
+import PushNotificationToggle from "@/components/PushNotificationToggle";
 import Link from "next/link";
 import { BookOpen, Users } from "lucide-react";
 
@@ -59,6 +60,10 @@ export default async function SettingsPage() {
           <Link href="/settings/team" className="btn-secondary inline-flex">
             <Users size={14} /> Manage team
           </Link>
+        </div>
+
+        <div className="mb-4">
+          <PushNotificationToggle />
         </div>
       </div>
 

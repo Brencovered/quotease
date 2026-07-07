@@ -48,6 +48,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
   // succeeds - a missing celebration email shouldn't block the real action.
   const apiKey = process.env.RESEND_API_KEY;
   const profile = quote.profiles as unknown as { business_name?: string; contact_email?: string } | null;
+
+  const { sendPushToBusiness } = await import("@/lib/push");
+  await sendPushToBusiness(supabase, quote.profile_id, {
+    title: action === "accept" ? "Quote accepted! 🎉" : "Quote declined",
+    body:
+      action === "accept"
+        ? `${quote.client_name ?? "A client"} accepted your quote for $${(quote.total_cost ?? 0).toLocaleString()}`
+        : `${quote.client_name ?? "A client"} declined your quote for $${(quote.total_cost ?? 0).toLocaleString()}`,
+    url: "/electrician/jobs",
+  }).catch(() => null);
+
   if (apiKey && profile?.contact_email) {
     try {
       const subject =

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { pushQuoteToXero } from "@/lib/xero";
 import { getOrCreateJobForQuote } from "@/lib/jobs";
 
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
   // variations, which previously weren't counted here at all.
   if (typeof paymentAmount === "number" && paymentAmount > 0) {
     const [{ data: existing }, { data: approvedVariations }] = await Promise.all([
-      supabase.from("quotes").select("amount_paid, total_cost, markup_materials").eq("id", quoteId).eq("profile_id", userData.user.id).single(),
+      supabase.from("quotes").select("amount_paid, total_cost, markup_materials, client_name").eq("id", quoteId).eq("profile_id", userData.user.id).single(),
       supabase.from("variations").select("total_cost").eq("quote_id", quoteId).eq("status", "approved"),
     ]);
 
@@ -76,6 +77,13 @@ export async function POST(request: Request) {
       }
       const paymentJob = await getOrCreateJobForQuote(supabase, quoteId);
       await supabase.from("payments").insert({ quote_id: quoteId, job_id: paymentJob?.id ?? null, profile_id: userData.user.id, amount: paymentAmount });
+
+      const { sendPushToBusiness } = await import("@/lib/push");
+      await sendPushToBusiness(createAdminClient(), userData.user.id, {
+        title: "Payment received 💰",
+        body: `$${paymentAmount.toLocaleString()} from ${existing.client_name ?? "a client"}`,
+        url: paymentJob ? `/electrician/jobs/${paymentJob.id}` : "/electrician/jobs",
+      }).catch(() => null);
     }
   }
 

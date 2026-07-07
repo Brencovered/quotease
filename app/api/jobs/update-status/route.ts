@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const ALLOWED_STATUSES = ["scheduled", "in_progress", "on_hold", "awaiting_sign_off", "complete", "invoiced", "partially_paid", "archived", "cancelled"];
 
@@ -48,6 +49,13 @@ export async function POST(request: Request) {
       update.status = "partially_paid";
     }
     await supabase.from("payments").insert({ job_id: jobId, profile_id: job.profile_id, amount: paymentAmount });
+
+    const { sendPushToBusiness } = await import("@/lib/push");
+    await sendPushToBusiness(createAdminClient(), job.profile_id, {
+      title: "Payment received 💰",
+      body: `$${paymentAmount.toLocaleString()} from ${job.client_name ?? "a client"} (Job #${job.job_number})`,
+      url: `/electrician/jobs/${jobId}`,
+    }).catch(() => null);
   }
 
   const { error } = await supabase.from("jobs").update(update).eq("id", jobId);
