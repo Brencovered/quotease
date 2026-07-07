@@ -18,6 +18,7 @@ import { getActiveBusinessId } from "@/lib/team";
 import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupChargeTotal, markupMaterialsTotal, markupLabourHours, markupLabourTotal } from "@/lib/quotePricing";
+import { MaterialSearchAdd, ScopeItemsList, type ScopeItem } from "@/components/ScopeOfWorkStep";
 
 type MaterialRow = { item_key: string; label: string; unit_cost: number };
 
@@ -35,8 +36,7 @@ const STEPS = [
   { id: "customer",  label: "Customer"  },
   { id: "drawing",   label: "Files"     },
   { id: "job",       label: "Job"       },
-  { id: "doors",     label: "Doors"     },
-  { id: "timber",    label: "Timber"    },
+  { id: "scope",     label: "Scope"     },
   { id: "materials", label: "Materials" },
   { id: "send",      label: "Send"      },
 ];
@@ -108,7 +108,7 @@ export default function CarpenterQuoteBuilder({
   ]);
   const paymentTerms = termsPreset === "custom" ? customTerms : PAYMENT_TERM_PRESETS[termsPreset];
   const customTermsTotal = customTerms.reduce((s, t) => s + (Number(t.percent)||0), 0);
-  const [siteItems,     setSiteItems]     = useState<{id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]>([]);
+  const [siteItems,     setSiteItems]     = useState<ScopeItem[]>([]);
   const [annotationMeta, setAnnotationMeta] = useState<{id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string;roomName?:string}[]>([]);
   const [extraLines, setExtraLines] = useState<ExtraLine[]>([]);
   const [saving, setSaving] = useState(false);
@@ -433,50 +433,18 @@ export default function CarpenterQuoteBuilder({
         </div>
       )}
 
-      {stepId === "doors" && (
+      {stepId === "scope" && (
         <div className="space-y-4">
           <PackagePicker trade="carpenter" />
           <div className="card">
-            <p className="section-tag mb-3">Doors</p>
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <Field label="Internal doors"><Num value={intake.internalDoors} onChange={(v) => set("internalDoors", v)}/></Field>
-              <Field label="External doors"><Num value={intake.externalDoors} onChange={(v) => set("externalDoors", v)}/></Field>
-              <Field label="Frames only (no door)"><Num value={intake.doorFramesOnly} onChange={(v) => set("doorFramesOnly", v)}/></Field>
+            <p className="section-tag mb-3">Materials &amp; labour</p>
+            <p className="text-[12.5px] text-[var(--ink-faint)] mb-3">
+              Items from a package, plan markup, voice, live annotate, or drawing extract show up here automatically. Search below to add anything else, or build the whole scope manually.
+            </p>
+            <div className="mb-3">
+              <MaterialSearchAdd lib={lib} onAdd={(item) => setSiteItems((prev) => [...prev, { ...item, id: Math.random().toString(36).slice(2) }])} />
             </div>
-          </div>
-          <div className="card">
-            <p className="section-tag mb-3">Trim and mouldings</p>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Skirting (metres)"><Num value={intake.skirtingMetres} onChange={(v) => set("skirtingMetres", v)}/></Field>
-              <Field label="Architrave (metres)"><Num value={intake.architraveMetres} onChange={(v) => set("architraveMetres", v)}/></Field>
-            </div>
-          </div>
-          <div className="card">
-            <p className="section-tag mb-3">Fitout</p>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Robe shelving (metres)"><Num value={intake.robeShelvingLm} onChange={(v) => set("robeShelvingLm", v)}/></Field>
-              <Field label="Fascia / barge (metres)"><Num value={intake.fasciaLm} onChange={(v) => set("fasciaLm", v)}/></Field>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {stepId === "timber" && (
-        <div className="space-y-4">
-          <div className="card">
-            <p className="section-tag mb-3">Framing</p>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="New stud walls (3m runs)"><Num value={intake.newWallFrames} onChange={(v) => set("newWallFrames", v)}/></Field>
-              <Field label="Framing timber (LM)"><Num value={intake.framingTimberLm} onChange={(v) => set("framingTimberLm", v)}/></Field>
-              <Field label="Ply sheets"><Num value={intake.plywoodSheets} onChange={(v) => set("plywoodSheets", v)}/></Field>
-            </div>
-          </div>
-          <div className="card">
-            <p className="section-tag mb-3">Decking</p>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Deck area (sqm)"><Num value={intake.deckingSqm} onChange={(v) => set("deckingSqm", v)}/></Field>
-              <Field label="Bearer / joist (LM)"><Num value={intake.deckingBeamLm} onChange={(v) => set("deckingBeamLm", v)}/></Field>
-            </div>
+            <ScopeItemsList items={siteItems} setItems={setSiteItems} />
           </div>
         </div>
       )}

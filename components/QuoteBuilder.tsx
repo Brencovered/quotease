@@ -20,6 +20,7 @@ import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import SiteAnnotationReport from "@/components/SiteAnnotationReport";
 import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupChargeTotal, markupMaterialsTotal, markupLabourHours, markupLabourTotal } from "@/lib/quotePricing";
+import { MaterialSearchAdd, ScopeItemsList, type ScopeItem } from "@/components/ScopeOfWorkStep";
 import {
   calcElectricianQuote,
   ELECTRICIAN_DEFAULT_MATERIALS,
@@ -51,8 +52,7 @@ const STEPS = [
   { id: "customer",   label: "Customer" },
   { id: "drawing",    label: "Files" },
   { id: "job",        label: "Job" },
-  { id: "electrical", label: "Electrical" },
-  { id: "site",       label: "Site" },
+  { id: "scope",      label: "Scope" },
   { id: "send",       label: "Send" },
 ];
 
@@ -141,7 +141,7 @@ export default function QuoteBuilder({
   const customTermsTotal = customTerms.reduce((s, t) => s + (Number(t.percent) || 0), 0);
 
   const [extraLines, setExtraLines]   = useState<{id:string;label:string;hours:number;materialsCost:number;note:string}[]>([]);
-  const [siteItems, setSiteItems]     = useState<{id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]>([]);
+  const [siteItems, setSiteItems]     = useState<ScopeItem[]>([]);
   const [annotationMeta, setAnnotationMeta] = useState<{id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string}[]>([]);
   const [saving, setSaving]         = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -284,17 +284,31 @@ export default function QuoteBuilder({
         return;
       }
       const r = body.result;
-      setIntake((prev) => ({
-        ...prev,
-        powerPoints:       r.power_points      ?? prev.powerPoints,
-        lightPoints:       r.light_points       ?? prev.lightPoints,
-        switches:          r.switches           ?? prev.switches,
-        downlights:        r.downlights         ?? prev.downlights,
-        switchboardUpgrade: r.switchboard_upgrade ?? prev.switchboardUpgrade,
-        threePhase:        r.three_phase        ?? prev.threePhase,
-        dataPoints:        r.data_points        ?? prev.dataPoints,
-        smokeAlarms:       r.smoke_alarms       ?? prev.smokeAlarms,
-      }));
+      // Voice quote used to write straight into fixed count fields
+      // (powerPoints, lightPoints, etc.) that no longer have any UI -
+      // these now become scope items, same as plan markup / live
+      // annotate / drawing extract, priced from the tradie's own linked
+      // costs where available. Smoke alarms stays a Condition (it's a
+      // compliance/labour-multiplier input, not a material line).
+      const newItems: Omit<ScopeItem, "id">[] = [];
+      const addVoiceItem = (label: string, qty: number | undefined, calcKey: string, hrsPerUnit: number, unit = "each") => {
+        if (!qty || qty <= 0) return;
+        const unitCost = costs[calcKey] ?? 0;
+        newItems.push({ label, qty, unit, note: "from voice quote", materialsCost: Math.round(unitCost * qty * 100) / 100, labourHrs: Math.round(hrsPerUnit * qty * 100) / 100 });
+      };
+      addVoiceItem("Power point", r.power_points, "pp", 0.4);
+      addVoiceItem("Light point", r.light_points, "lp", 0.5);
+      addVoiceItem("Switch", r.switches, "sw", 0.3);
+      addVoiceItem("Downlight", r.downlights, "dl_client_supply", 0.4);
+      addVoiceItem("Data point", r.data_points, "data", 0.5);
+      if (r.switchboard_upgrade) newItems.push({ label: "Switchboard upgrade", qty: 1, unit: "each", note: "from voice quote", materialsCost: costs["switchboard_upgrade"] ?? 0, labourHrs: 3 });
+      if (r.three_phase) newItems.push({ label: "3-phase supply upgrade", qty: 1, unit: "each", note: "from voice quote", materialsCost: costs["three_phase"] ?? 0, labourHrs: 2 });
+      if (newItems.length > 0) {
+        setSiteItems((prev) => [...prev, ...newItems.map((it) => ({ ...it, id: Math.random().toString(36).slice(2) }))]);
+      }
+      if (typeof r.smoke_alarms === "number") {
+        setIntake((prev) => ({ ...prev, smokeAlarms: r.smoke_alarms }));
+      }
       setAnalysisResult({ confidence: r.confidence ?? "medium", notes: r.notes ?? "" });
     } catch (err) {
       setAnalysisError(err instanceof Error ? err.message : "Could not reach the voice analysis service.");
@@ -512,12 +526,12 @@ export default function QuoteBuilder({
         />
       )}
 
-      {stepId === "electrical" && (
-        <StepElectrical intake={intake} set={set} lib={lib} setLib={setLib} archetypeDefaults={archetypeDefaults} saveCalcDefault={saveCalcDefault} />
-      )}
-
-      {stepId === "site" && (
-        <StepSite intake={intake} set={set} />
+      {stepId === "scope" && (
+        <StepScope
+          intake={intake} set={set}
+          siteItems={siteItems} setSiteItems={setSiteItems}
+          lib={lib}
+        />
       )}
 
       {stepId === "customer" && (
@@ -761,386 +775,18 @@ function StepJob({
   );
 }
 
-function StepElectrical({ intake, set, lib, setLib, archetypeDefaults, saveCalcDefault }: {
+function StepScope({ intake, set, siteItems, setSiteItems, lib }: {
   intake: ElectricianIntake;
   set: <K extends keyof ElectricianIntake>(k: K, v: ElectricianIntake[K]) => void;
+  siteItems: ScopeItem[];
+  setSiteItems: React.Dispatch<React.SetStateAction<ScopeItem[]>>;
   lib: MaterialRow[];
-  setLib: React.Dispatch<React.SetStateAction<MaterialRow[]>>;
-  archetypeDefaults: Record<string, string>;
-  saveCalcDefault: (calcKey: string, itemKeys: string[]) => void;
-}) {
-  const [showLib, setShowLib] = useState(false);
-  const [csvMessage, setCsvMessage] = useState<string | null>(null);
-
-  // Live price-book resolution for every field in this step -- shows the
-  // real linked product + running subtotal right under the input instead
-  // of leaving the tradie to trust an abstract number until the very end.
-  const showPriceHints = hasRealPriceBook(lib);
-  const calcCosts = useMemo(
-    () => resolveCalcCosts("electrician", ELECTRICIAN_DEFAULT_MATERIALS, lib, archetypeDefaults),
-    [lib, archetypeDefaults]
-  );
-  function priceHint(calcKey: string | null, calcLabel: string, qty: number) {
-    if (!showPriceHints || !calcKey || qty <= 0) return null;
-    return (
-      <PriceHint
-        trade="electrician"
-        calcKey={calcKey}
-        calcLabel={calcLabel}
-        qty={qty}
-        price={calcCosts[calcKey] ?? 0}
-        linkedRaw={archetypeDefaults[`electrician:calc:${calcKey}`]}
-        lib={lib}
-        onLink={(itemKeys) => saveCalcDefault(calcKey, itemKeys)}
-      />
-    );
-  }
-
-  function downloadCsvTemplate() {
-    const rows = ["item_key,label,unit_cost", ...lib.map((m) => `${m.item_key},"${m.label}",${m.unit_cost}`)];
-    const blob = new Blob([rows.join("\n")], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = "swiftscope-price-template.csv"; a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function handleCsvUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const text = String(reader.result ?? "");
-      const lines = text.split(/\r?\n/).filter((l) => l.trim());
-      const header = lines[0]?.toLowerCase().split(",") ?? [];
-      const keyIdx = header.findIndex((h) => h.includes("key") || h.includes("item"));
-      const costIdx = header.findIndex((h) => h.includes("cost") || h.includes("price"));
-      if (keyIdx === -1 || costIdx === -1) { setCsvMessage("Couldn't find item and cost columns - try the template."); return; }
-      let matched = 0; const updates = new Map<string, number>();
-      for (const line of lines.slice(1)) {
-        const cols = line.split(",");
-        const key = cols[keyIdx]?.trim().replace(/^"|"$/g, "");
-        const cost = parseFloat(cols[costIdx]?.replace(/[^0-9.]/g, "") ?? "");
-        if (key && !isNaN(cost)) updates.set(key, cost);
-      }
-      setLib((prev) => prev.map((m) => { if (updates.has(m.item_key)) { matched++; return { ...m, unit_cost: updates.get(m.item_key)! }; } return m; }));
-      setCsvMessage(matched > 0 ? `Updated ${matched} price${matched === 1 ? "" : "s"}.` : "No matching items found.");
-      e.target.value = "";
-    };
-    reader.readAsText(file);
-  }
-
-  const exhaustFans: import("@/lib/calc").ExhaustFanEntry[] = intake.exhaustFans ?? [];
-  function setExhaustFan(type: import("@/lib/calc").ExhaustFanType, qty: number) {
-    const updated = exhaustFans.filter(e => e.type !== type);
-    if (qty > 0) updated.push({ type, qty });
-    set("exhaustFans", updated);
-  }
-  function exhaustQty(type: import("@/lib/calc").ExhaustFanType) {
-    return exhaustFans.find(e => e.type === type)?.qty ?? 0;
-  }
-
-  const cableRuns: import("@/lib/calc").CableRun[] = intake.cableRuns ?? [];
-  function setCableRun(size: import("@/lib/calc").CableRun["size"], metres: number) {
-    const updated = cableRuns.filter(r => r.size !== size);
-    if (metres > 0) updated.push({ size, metres });
-    set("cableRuns", updated);
-  }
-  function cableMetres(size: import("@/lib/calc").CableRun["size"]) {
-    return cableRuns.find(r => r.size === size)?.metres ?? 0;
-  }
-
-  const customAppliances: import("@/lib/calc").CustomAppliance[] = intake.customAppliances ?? [];
-  function addCustomAppliance() {
-    set("customAppliances", [...customAppliances, { id: Math.random().toString(36).slice(2), label: "", phase: "single", amps: 20 }]);
-  }
-  function updateCustomAppliance(id: string, patch: Partial<import("@/lib/calc").CustomAppliance>) {
-    set("customAppliances", customAppliances.map(a => a.id === id ? { ...a, ...patch } : a));
-  }
-  function removeCustomAppliance(id: string) {
-    set("customAppliances", customAppliances.filter(a => a.id !== id));
-  }
-
-  return (
-    <div className="space-y-4">
-
-      <PackagePicker trade="electrician" />
-
-      {/* AI pre-fill summary -- show what was detected from drawing/voice */}
-      {(intake.powerPoints > 0 || intake.lightPoints > 0 || intake.switches > 0 ||
-        intake.downlights > 0 || intake.dataPoints > 0 || intake.smokeAlarms > 0 ||
-        (intake.cableRuns ?? []).some((r) => r.metres > 0) ||
-        (intake.exhaustFans ?? []).some((e) => e.qty > 0) ||
-        intake.switchboardUpgrade || intake.threePhase) && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700 mb-2">
-            Detected from drawing or voice — review and adjust
-          </p>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
-            {([
-              ["Power points",  intake.powerPoints],
-              ["Light points",  intake.lightPoints],
-              ["Switches",      intake.switches],
-              ["Downlights",    intake.downlights],
-              ["Data points",   intake.dataPoints],
-              ["Smoke alarms",  intake.smokeAlarms],
-              ["Ext. circuits", intake.externalCircuits],
-              ["Cable (2.5mm)", (intake.cableRuns ?? []).find(r => r.size === "2.5")?.metres ?? 0],
-              ["Exhaust fans",  (intake.exhaustFans ?? []).reduce((s, e) => s + e.qty, 0)],
-            ] as [string, number][]).filter(([, v]) => v > 0).map(([label, val]) => (
-              <div key={label} className="flex items-center justify-between py-0.5">
-                <span className="text-[12px] text-amber-700">{label}</span>
-                <span className="text-[12.5px] font-bold text-amber-900">{val}</span>
-              </div>
-            ))}
-            {intake.switchboardUpgrade && <div className="col-span-2 text-[12px] font-semibold text-amber-800 py-0.5">Switchboard upgrade detected</div>}
-            {intake.threePhase && <div className="col-span-2 text-[12px] font-semibold text-amber-800 py-0.5">3-phase detected</div>}
-          </div>
-        </div>
-      )}
-
-      <div className="card">
-        <p className="section-tag mb-3">Switchboard</p>
-        <Row>
-          <Check2 checked={intake.switchboardUpgrade} onChange={(v) => set("switchboardUpgrade", v)} label="Upgrade needed" />
-          <Check2 checked={intake.threePhase}          onChange={(v) => set("threePhase", v)}          label="3-phase supply" />
-        </Row>
-        {priceHint("three_phase", "3-phase supply upgrade", intake.threePhase ? 1 : 0)}
-        {intake.switchboardUpgrade && (
-          <div className="mt-3 space-y-3 pt-3 border-t border-[var(--line-subtle)]">
-            <Field label="RCBO type">
-              <select value={intake.switchboardRcbo ? (intake.switchboardRcboMode ?? "full_board") : "rcd"}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === "rcd") { set("switchboardRcbo", false); }
-                  else { set("switchboardRcbo", true); set("switchboardRcboMode", val as "full_board" | "per_pole"); }
-                }} className="app-field">
-                <option value="rcd">RCD upgrade only</option>
-                <option value="full_board">Full RCBO board</option>
-                <option value="per_pole">RCBO per pole</option>
-              </select>
-              {!intake.switchboardRcbo && priceHint("sb_rcd", "Switchboard upgrade, RCD", 1)}
-              {intake.switchboardRcbo && intake.switchboardRcboMode === "full_board" && priceHint("sb_rcbo_full", "Switchboard, full RCBO", 1)}
-            </Field>
-            {intake.switchboardRcbo && intake.switchboardRcboMode === "per_pole" && (
-              <Field label="Number of poles">
-                <Num value={intake.switchboardPoles ?? 12} onChange={(v) => set("switchboardPoles", v)} />
-                {priceHint("sb_rcbo_per_pole", "Switchboard RCBO per pole", intake.switchboardPoles ?? 12)}
-              </Field>
-            )}
-          </div>
-        )}
-      </div>
-      <div className="card">
-        <p className="section-tag mb-3">Points and circuits</p>
-        <div className="grid grid-cols-3 gap-3 mb-3">
-          <Field label="Power pts">
-            <Num value={intake.powerPoints} onChange={(v) => set("powerPoints", v)} />
-            {priceHint("pp", "Power point", intake.powerPoints)}
-          </Field>
-          <Field label="Light pts">
-            <Num value={intake.lightPoints} onChange={(v) => set("lightPoints", v)} />
-            {priceHint("lp", "Light point", intake.lightPoints)}
-          </Field>
-          <Field label="Switches">
-            <Num value={intake.switches}    onChange={(v) => set("switches", v)}    />
-            {priceHint("sw", "Switch", intake.switches)}
-          </Field>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Data points">
-            <Num value={intake.dataPoints} onChange={(v) => set("dataPoints", v)} />
-            {priceHint("data", "Data point", intake.dataPoints)}
-          </Field>
-          <Field label="Ext. circuits">
-            <Num value={intake.externalCircuits} onChange={(v) => set("externalCircuits", v)} />
-            {priceHint("external_circuit", "External circuit", intake.externalCircuits)}
-          </Field>
-        </div>
-        <div className="mt-3">
-          <Check2 checked={intake.nbn} onChange={(v) => set("nbn", v)} label="NBN connection point" />
-          {priceHint("nbn", "NBN connection point", intake.nbn ? 1 : 0)}
-        </div>
-      </div>
-      <div className="card">
-        <p className="section-tag mb-3">Lighting</p>
-        <div className="grid grid-cols-2 gap-3 mb-3">
-          <Field label="Downlights">
-            <Num value={intake.downlights} onChange={(v) => set("downlights", v)} />
-            {priceHint(
-              intake.downlightSupply === "wire_and_fit" ? "dl_client_supply"
-                : intake.downlightSupply === "provisional" ? null
-                : intake.downlightGrade === "standard" ? "dl_standard"
-                : intake.downlightGrade === "premium" ? "dl_premium"
-                : "dl_builder",
-              "Downlight",
-              intake.downlightSupply === "provisional" ? 0 : intake.downlights
-            )}
-          </Field>
-          <Field label="Supply">
-            <select value={intake.downlightSupply ?? "supply_and_fit"}
-              onChange={(e) => set("downlightSupply", e.target.value as ElectricianIntake["downlightSupply"])}
-              className="app-field">
-              <option value="supply_and_fit">Supply &amp; fit</option>
-              <option value="wire_and_fit">Wire &amp; fit only (client supply)</option>
-              <option value="provisional">Provisional sum</option>
-            </select>
-          </Field>
-        </div>
-        {intake.downlightSupply !== "wire_and_fit" && intake.downlightSupply !== "provisional" && (
-          <Field label="Grade">
-            <select value={intake.downlightGrade}
-              onChange={(e) => set("downlightGrade", e.target.value as ElectricianIntake["downlightGrade"])}
-              className="app-field">
-              <option value="builder">Builder grade</option>
-              <option value="standard">Standard</option>
-              <option value="premium">Premium / smart</option>
-            </select>
-          </Field>
-        )}
-        {intake.downlightSupply === "provisional" && (
-          <Field label="Provisional sum ($)"><Num value={intake.downlightProvisional ?? 0} onChange={(v) => set("downlightProvisional", v)} /></Field>
-        )}
-        <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--ink-faint)] mt-4 mb-2">Exhaust fans</p>
-        <div className="grid grid-cols-3 gap-3">
-          <Field label="Ceiling">
-            <Num value={exhaustQty("ceiling")} onChange={(v) => setExhaustFan("ceiling", v)} />
-            {priceHint("exhaust_ceiling", "Exhaust fan, ceiling", exhaustQty("ceiling"))}
-          </Field>
-          <Field label="Ducted">
-            <Num value={exhaustQty("ducted")}  onChange={(v) => setExhaustFan("ducted", v)}  />
-            {priceHint("exhaust_ducted", "Exhaust fan, ducted", exhaustQty("ducted"))}
-          </Field>
-          <Field label="Inline">
-            <Num value={exhaustQty("inline")}  onChange={(v) => setExhaustFan("inline", v)}  />
-            {priceHint("exhaust_inline", "Exhaust fan, inline", exhaustQty("inline"))}
-          </Field>
-        </div>
-      </div>
-      <div className="card">
-        <p className="section-tag mb-3">Fixed appliances</p>
-        <div className="grid grid-cols-2 gap-x-4 mb-3">
-          <Check2 checked={intake.applianceOven}    onChange={(v) => set("applianceOven", v)}    label="Oven" />
-          <Check2 checked={intake.applianceCooktop} onChange={(v) => set("applianceCooktop", v)} label="Cooktop" />
-          <Check2 checked={intake.applianceHwc}     onChange={(v) => set("applianceHwc", v)}     label="Hot water" />
-          <Check2 checked={intake.applianceAircon}  onChange={(v) => set("applianceAircon", v)}  label="Aircon" />
-          <Check2 checked={intake.appliancePool}    onChange={(v) => set("appliancePool", v)}    label="Pool / spa" />
-          <Check2 checked={intake.evCharger}        onChange={(v) => set("evCharger", v)}        label="EV charger" />
-          <Check2 checked={intake.solarConnection}  onChange={(v) => set("solarConnection", v)}  label="Solar / battery" />
-        </div>
-        {showPriceHints && [intake.applianceOven, intake.applianceCooktop, intake.applianceHwc, intake.applianceAircon, intake.appliancePool].some(Boolean) && (
-          <div className="mb-2">
-            {priceHint(
-              "appliance", "Fixed appliance circuit",
-              [intake.applianceOven, intake.applianceCooktop, intake.applianceHwc, intake.applianceAircon, intake.appliancePool].filter(Boolean).length
-            )}
-          </div>
-        )}
-        {priceHint("ev_charger", "EV charger circuit", intake.evCharger ? 1 : 0)}
-        {priceHint("solar_connection", "Solar/battery connection", intake.solarConnection ? 1 : 0)}
-        {customAppliances.length > 0 && (
-          <div className="space-y-2 mb-3">
-            {customAppliances.map(ca => (
-              <div key={ca.id} className="flex items-center gap-2 bg-[var(--app-bg)] rounded-xl p-2">
-                <input value={ca.label} onChange={e => updateCustomAppliance(ca.id, { label: e.target.value })}
-                  placeholder="e.g. Sauna" className="app-field text-[13px] flex-1" />
-                <select value={ca.phase} onChange={e => updateCustomAppliance(ca.id, { phase: e.target.value as "single"|"three" })}
-                  className="app-field text-[13px] w-28">
-                  <option value="single">Single phase</option>
-                  <option value="three">3-phase</option>
-                </select>
-                <div className="flex items-center gap-1">
-                  <input type="number" value={ca.amps} onChange={e => updateCustomAppliance(ca.id, { amps: Number(e.target.value) })}
-                    className="app-field text-[13px] w-16 text-right" min={1} />
-                  <span className="text-[12px] text-[var(--ink-faint)]">A</span>
-                </div>
-                <button onClick={() => removeCustomAppliance(ca.id)} className="text-[var(--ink-faint)] hover:text-[var(--red)] p-1">
-                  <X size={14} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-        <button onClick={addCustomAppliance} className="btn-secondary text-[12.5px] py-2 w-full justify-center">
-          <Plus size={13} /> Add custom appliance
-        </button>
-      </div>
-      <div className="card">
-        <p className="section-tag mb-3">Cabling</p>
-        <div className="grid grid-cols-3 gap-3 mb-3">
-          {(["1.5","2.5","4","6","10"] as const).map(size => (
-            <Field key={size} label={`${size}mm (m)`}>
-              <Num value={cableMetres(size)} onChange={(v) => setCableRun(size, v)} />
-              {priceHint(`cable_${size.replace(".", "_")}`, `Cable ${size}mm`, cableMetres(size))}
-            </Field>
-          ))}
-        </div>
-        <Field label="Trenching (m)">
-          <Num value={intake.trenchMetres} onChange={(v) => set("trenchMetres", v)} />
-          {priceHint("trench", "Trenching", intake.trenchMetres)}
-        </Field>
-      </div>
-      <div className="card">
-        <p className="section-tag mb-3">Safety and compliance</p>
-        <div className="grid grid-cols-2 gap-3 mb-3">
-          <Field label="Smoke alarms">
-            <Num value={intake.smokeAlarms} onChange={(v) => set("smokeAlarms", v)} />
-            {priceHint("smoke", "Smoke alarm", intake.smokeAlarms)}
-          </Field>
-        </div>
-        <Row>
-          <Check2 checked={intake.ccew}    onChange={(v) => set("ccew", v)}    label="CCEW certificate" />
-          <Check2 checked={intake.callout} onChange={(v) => set("callout", v)} label="Call-out fee" />
-        </Row>
-        {priceHint("ccew", "Certificate of Compliance", intake.ccew ? 1 : 0)}
-        {priceHint("callout", "Call-out / site survey fee", intake.callout ? 1 : 0)}
-        <p className="text-[11.5px] text-[var(--ink-faint)] mt-2">COES is included automatically on all jobs.</p>
-      </div>
-      <button onClick={() => setShowLib(!showLib)} className="btn-secondary w-full justify-between">
-        <span>Material unit prices</span>
-        <ChevronRight size={15} className={`transition-transform ${showLib ? "rotate-90" : ""}`} />
-      </button>
-      {showLib && (
-        <>
-          <div className="card">
-            <p className="section-tag mb-1">Sync from your supplier</p>
-            <p className="text-[12px] text-[var(--ink-faint)] mb-3">
-              Most suppliers (Middys, Rexel, Tradelink) let you export your trade pricing as CSV. Upload it here and every quote uses real prices.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <label className="btn-secondary text-[12.5px] py-2 px-3 cursor-pointer">
-                <Upload size={13} /> Upload supplier price CSV
-                <input type="file" accept=".csv" className="hidden" onChange={handleCsvUpload} />
-              </label>
-              <button onClick={downloadCsvTemplate} className="text-[12.5px] font-semibold text-[var(--navy)] underline px-2">
-                Download template
-              </button>
-            </div>
-            {csvMessage && <p className="text-[12.5px] text-[var(--ink-soft)] mt-3">{csvMessage}</p>}
-          </div>
-          {hasRealPriceBook(lib) && (
-            <CalcKeyPricingPanel
-              trade="electrician"
-              defaults={ELECTRICIAN_DEFAULT_MATERIALS}
-              lib={lib}
-              archetypeDefaults={archetypeDefaults}
-              onSaveDefault={saveCalcDefault}
-            />
-          )}
-          {!hasRealPriceBook(lib) && <MaterialsEditor lib={lib} setLib={setLib} trade="electrician" />}
-        </>
-      )}
-    </div>
-  );
-}
-
-function StepSite({ intake, set }: {
-  intake: ElectricianIntake;
-  set: <K extends keyof ElectricianIntake>(k: K, v: ElectricianIntake[K]) => void;
 }) {
   return (
     <div className="space-y-4">
       <div className="card">
-        <p className="section-tag mb-3">Access</p>
-        <div className="grid grid-cols-1 gap-3">
+        <p className="section-tag mb-3">Conditions</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Roof cavity access">
             <select value={intake.roofAccess} onChange={(e) => set("roofAccess", Number(e.target.value) as ElectricianIntake["roofAccess"])} className="app-field">
               <option value={1}>No roof work needed</option>
@@ -1164,17 +810,26 @@ function StepSite({ intake, set }: {
               <option value="difficult">Difficult</option>
             </select>
           </Field>
+          <Field label="Smoke alarms to interconnect"><Num value={intake.smokeAlarms} onChange={(v) => set("smokeAlarms", v)} /></Field>
+        </div>
+        <div className="mt-3">
+          <Row><Check2 checked={intake.multistorey} onChange={(v) => set("multistorey", v)} label="Multi-storey" /></Row>
         </div>
       </div>
+
       <div className="card">
-        <p className="section-tag mb-3">Compliance and alarms</p>
-        <Field label="Smoke alarms to interconnect" className="mb-3"><Num value={intake.smokeAlarms} onChange={(v) => set("smokeAlarms", v)} /></Field>
-        <Row><Check2 checked={intake.multistorey} onChange={(v) => set("multistorey", v)} label="Multi-storey" /></Row>
+        <p className="section-tag mb-3">Materials &amp; labour</p>
+        <p className="text-[12.5px] text-[var(--ink-faint)] mb-3">
+          Items from plan markup, voice, live annotate, or drawing extract show up here automatically. Search below to add anything else, or build the whole scope manually.
+        </p>
+        <div className="mb-3">
+          <MaterialSearchAdd lib={lib} onAdd={(item) => setSiteItems((prev) => [...prev, { ...item, id: Math.random().toString(36).slice(2) }])} />
+        </div>
+        <ScopeItemsList items={siteItems} setItems={setSiteItems} />
       </div>
     </div>
   );
 }
-
 function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTerms, setCustomTerms, customTermsTotal,
   clientName, clientEmail, siteAddress,
   saving, saveMessage, savedQuoteId, onSave,
