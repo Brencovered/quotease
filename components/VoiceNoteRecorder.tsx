@@ -42,6 +42,11 @@ export default function VoiceNoteRecorder({
   const [speechDetected, setSpeechDetected] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const finalRef = useRef("");
+  // What the transcript was BEFORE this recognition session started (e.g.
+  // from an earlier recording segment if the tradie stopped and resumed).
+  // Kept separate from the running total so each onresult call can safely
+  // rebuild "this session's finalized text" from scratch every time.
+  const sessionBaseRef = useRef("");
 
   const getRecognition = useCallback((): SpeechRecognitionLike | null => {
     if (typeof window === "undefined") return null;
@@ -71,8 +76,9 @@ export default function VoiceNoteRecorder({
       return;
     }
 
-    // If restarting, keep previous transcript
-    finalRef.current = transcript;
+    // If restarting, keep previous transcript as the base for this new
+    // recognition session (see onresult below for why it's kept separate).
+    sessionBaseRef.current = transcript ? transcript + " " : "";
 
     recognition.continuous = true;
     recognition.interimResults = true;
@@ -84,16 +90,26 @@ export default function VoiceNoteRecorder({
 
     recognition.onresult = (event) => {
       setSpeechDetected(true);
+      // Deliberately ignore event.resultIndex and re-scan every result from
+      // 0 each time. Safari (especially iOS) doesn't reliably advance
+      // resultIndex, so trusting it and appending with += re-added
+      // already-finalized words on every subsequent event -- "install"
+      // becoming "install install install..." as recognition progressed.
+      // Rebuilding fresh from event.results (which holds the full history
+      // for this recognition session) and only ever ASSIGNING (never +=)
+      // makes this correct regardless of what the browser reports.
+      let finalThisSession = "";
       let interim = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      for (let i = 0; i < event.results.length; i++) {
         const result = event.results[i];
         if (result.isFinal) {
-          finalRef.current += result[0].transcript + " ";
+          finalThisSession += result[0].transcript + " ";
         } else {
           interim += result[0].transcript;
         }
       }
-      setLiveText(finalRef.current + interim);
+      finalRef.current = (sessionBaseRef.current + finalThisSession).trim();
+      setLiveText([finalRef.current, interim].filter(Boolean).join(" "));
     };
 
     recognition.onerror = (event) => {
