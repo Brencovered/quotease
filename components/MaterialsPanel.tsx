@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Box, Building2, Package, Tag, Layers, ShoppingBag } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveBusinessId } from "@/lib/team";
 import MaterialsCatalog, { MaterialModal, CsvUploadModal } from "./materials/MaterialsCatalog";
 import SuppliersView from "./materials/SuppliersView";
 import PackagesView from "./materials/PackagesView";
@@ -77,18 +78,30 @@ export default function MaterialsPanel() {
         router.push("/login");
         return;
       }
-      setBusinessId(user.id);
+      // Packages and the hourly-rate lookup below use `businessId`
+      // directly via client-side Supabase calls (unlike Materials/
+      // Suppliers/Pricing tiers/Job size tiers/Bundles, which all go
+      // through /api/* routes that already resolve this server-side).
+      // For a solo owner account user.id and the business id are the
+      // same, so using the raw id here was invisible - but for a team
+      // member they're NOT the same, and using user.id meant any package
+      // a team member created got siloed under their own individual id:
+      // invisible to the business owner, other team members, and the
+      // quote builder itself (which correctly resolves the shared
+      // business id via getActiveBusinessId).
+      const resolvedBusinessId = await getActiveBusinessId(supabase, user.id);
+      setBusinessId(resolvedBusinessId);
 
       const { data: profile } = await supabase
         .from("profiles")
         .select("hourly_rate")
-        .eq("id", user.id)
+        .eq("id", resolvedBusinessId)
         .single();
       if (profile?.hourly_rate) {
         setHourlyRate(profile.hourly_rate);
       }
 
-      await loadPackages(user.id);
+      await loadPackages(resolvedBusinessId);
       setPackagesLoading(false);
 
       await loadPricingTiers();
