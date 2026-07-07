@@ -19,6 +19,12 @@ type Props = {
 
 type Step = "idle" | "confirm" | "payment_method" | "bank" | "cash" | "card" | "done_bank" | "done_cash" | "done_card" | "declined";
 
+// Card payments are UI-only until Stripe is wired up (mockCardPay below is a
+// setTimeout, not a real charge). Keep this false in production so clients
+// are never shown a payment option that doesn't actually move money.
+// Flip to true once a real Stripe PaymentIntent flow replaces mockCardPay().
+const CARD_PAYMENTS_ENABLED = false;
+
 function termAmount(t: PaymentTerm, total: number) {
   return Math.round((t.percent / 100) * total);
 }
@@ -149,7 +155,7 @@ export default function QuoteResponseButtons({
     const methods = [
       hasBankDetails  && { id: "bank", icon: Building2,  label: "Bank transfer",  sub: `BSB ${bankBsb} · Acc ${bankAccount}` },
       acceptsCash     && { id: "cash", icon: Banknote,   label: "Cash on completion", sub: "Pay when the job is done" },
-      { id: "card",   icon: CreditCard, label: "Pay by card",    sub: "Visa, Mastercard - secure payment" },
+      CARD_PAYMENTS_ENABLED && { id: "card", icon: CreditCard, label: "Pay by card", sub: "Visa, Mastercard - secure payment" },
     ].filter(Boolean) as { id: string; icon: typeof Building2; label: string; sub: string }[];
 
     return (
