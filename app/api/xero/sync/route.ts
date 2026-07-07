@@ -24,7 +24,27 @@ async function getValidAccessToken(profile: {
       client_secret: XERO_CLIENT_SECRET,
     }),
   });
-  if (!res.ok) throw new Error("Failed to refresh Xero token");
+  if (!res.ok) {
+    // Xero rotates refresh tokens on every use - if this one's already
+    // been consumed (a previous refresh succeeded but this stale token
+    // is being retried), or the connection was revoked/expired on
+    // Xero's side, refresh will fail with invalid_grant. Previously this
+    // just threw and crashed the whole route with an unhandled 500 -
+    // clear the dead connection so Settings correctly shows
+    // "not connected" instead of a stale "connected" state that
+    // silently fails on every sync attempt, and surface a clear,
+    // actionable message instead of a raw error.
+    const errBody = await res.text().catch(() => "");
+    console.error("[xero] refresh token rejected:", res.status, errBody.slice(0, 300));
+    await supabase.from("profiles").update({
+      xero_tenant_id:        null,
+      xero_access_token:     null,
+      xero_refresh_token:    null,
+      xero_token_expires_at: null,
+      xero_connected_at:     null,
+    }).eq("id", profile.id);
+    throw new Error("XERO_RECONNECT_REQUIRED");
+  }
   const tokens = await res.json();
   await supabase.from("profiles").update({
     xero_access_token:     tokens.access_token,
@@ -129,7 +149,19 @@ export async function POST(req: NextRequest) {
 
   if (!quotes?.length) return NextResponse.json({ error: "No quotes found" }, { status: 404 });
 
-  const accessToken = await getValidAccessToken(profile as never, supabase);
+  let accessToken: string;
+  try {
+    accessToken = await getValidAccessToken(profile as never, supabase);
+  } catch (err) {
+    if (err instanceof Error && err.message === "XERO_RECONNECT_REQUIRED") {
+      return NextResponse.json(
+        { error: "Your Xero connection has expired. Please reconnect Xero in Settings and try again." },
+        { status: 400 }
+      );
+    }
+    console.error("[xero/sync] unexpected error getting access token:", err);
+    return NextResponse.json({ error: "Couldn't connect to Xero right now - try again shortly." }, { status: 502 });
+  }
   const tenantId    = profile.xero_tenant_id;
   const results: { quoteId: string; xeroInvoiceId?: string; error?: string }[] = [];
 
