@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getActiveBusinessId } from "@/lib/team";
 
 /**
  * POST /api/leads/unsubscribe
@@ -14,6 +15,7 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const businessId = await getActiveBusinessId(supabase, user.id);
 
   const { trade, suburb } = await req.json().catch(() => ({}));
 
@@ -22,7 +24,7 @@ export async function POST(req: NextRequest) {
     const { error } = await supabase
       .from("lead_subscriptions")
       .update({ is_active: false })
-      .eq("profile_id", user.id)
+      .eq("profile_id", businessId)
       .eq("trade", trade.toLowerCase())
       .ilike("suburb", suburb.trim());
 
@@ -34,7 +36,7 @@ export async function POST(req: NextRequest) {
   const { error } = await supabase
     .from("lead_subscriptions")
     .update({ is_active: false })
-    .eq("profile_id", user.id)
+    .eq("profile_id", businessId)
     .eq("is_active", true);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });

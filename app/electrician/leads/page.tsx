@@ -2,17 +2,23 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
 import LeadsPanel from "@/components/LeadsPanel";
+import { getActiveBusinessId } from "@/lib/team";
 
 export default async function LeadsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  // Leads are a business-wide resource (subscriptions, claims) - a team
+  // member should see and claim leads for the business they work for,
+  // not have their own empty, siloed subscription set.
+  const businessId = await getActiveBusinessId(supabase, user.id);
+
   // Get the tradie's profile
   const { data: profile } = await supabase
     .from("profiles")
     .select("id, trades, suburb, business_name")
-    .eq("id", user.id)
+    .eq("id", businessId)
     .single();
 
   const trades = (profile?.trades ?? []).map((t: string) => t.toLowerCase());
@@ -22,7 +28,7 @@ export default async function LeadsPage() {
   const { data: subscriptions } = await supabase
     .from("lead_subscriptions")
     .select("trade, suburb, is_active")
-    .eq("profile_id", user.id);
+    .eq("profile_id", businessId);
 
   // Build list of active (trade, suburb) combos they're subscribed to
   const activeSubs = (subscriptions ?? []).filter((s) => s.is_active);
@@ -31,7 +37,7 @@ export default async function LeadsPage() {
   // create them on-the-fly (migration path for existing users)
   if (activeSubs.length === 0 && trades.length > 0 && tradieSuburb) {
     const newSubs = trades.map((trade: string) => ({
-      profile_id: user.id,
+      profile_id: businessId,
       trade,
       suburb: tradieSuburb,
       is_active: true,
@@ -44,7 +50,7 @@ export default async function LeadsPage() {
     const { data: freshSubs } = await supabase
       .from("lead_subscriptions")
       .select("trade, suburb, is_active")
-      .eq("profile_id", user.id);
+      .eq("profile_id", businessId);
     activeSubs.push(...(freshSubs ?? []).filter((s) => s.is_active));
   }
 
@@ -85,7 +91,7 @@ export default async function LeadsPage() {
   const { data: myClaims } = await supabase
     .from("job_claims")
     .select("request_id")
-    .eq("tradie_profile_id", user.id)
+    .eq("tradie_profile_id", businessId)
     .eq("status", "claimed");
 
   const myClaimedIds = myClaims?.map((c) => c.request_id) ?? [];

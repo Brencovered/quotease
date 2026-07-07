@@ -8,17 +8,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const { id } = await params;
 
     const { createClient } = await import("@/lib/supabase/server");
+    const { getActiveBusinessId } = await import("@/lib/team");
     const supabase = await createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
+    const businessId = await getActiveBusinessId(supabase, userData.user.id);
 
     const { data: quote, error } = await supabase
       .from("quotes")
       .select("*")
       .eq("id", id)
-      .eq("profile_id", userData.user.id)
+      .eq("profile_id", businessId)
       .single();
 
     if (error || !quote) {
@@ -28,7 +30,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const { data: profile } = await supabase
       .from("profiles")
       .select("business_name, contact_email, contact_phone, abn, license_number, business_address, terms_and_conditions, logo_url, bank_account_name, bank_bsb, bank_account_number, accepts_cash")
-      .eq("id", userData.user.id)
+      .eq("id", businessId)
       .single();
 
     let logoBytes: Uint8Array | null = null;

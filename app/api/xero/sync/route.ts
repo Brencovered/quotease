@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getActiveBusinessId } from "@/lib/team";
 
 const XERO_CLIENT_ID     = process.env.XERO_CLIENT_ID!;
 const XERO_CLIENT_SECRET = process.env.XERO_CLIENT_SECRET!;
@@ -102,6 +103,10 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // Xero is connected once per business (one tenant, one token pair) - a
+  // team member syncing invoices should use the business's connection,
+  // not look for one under their own individual profile.
+  const businessId = await getActiveBusinessId(supabase, user.id);
 
   const { quoteIds } = await req.json() as { quoteIds: string[] };
   if (!quoteIds?.length) return NextResponse.json({ error: "No quote IDs" }, { status: 400 });
@@ -109,7 +114,7 @@ export async function POST(req: NextRequest) {
   const { data: profile } = await supabase
     .from("profiles")
     .select("id, xero_tenant_id, xero_access_token, xero_refresh_token, xero_token_expires_at, business_name, xero_account_code, xero_tax_type")
-    .eq("id", user.id)
+    .eq("id", businessId)
     .single();
 
   if (!profile?.xero_tenant_id || !profile?.xero_access_token) {
@@ -120,7 +125,7 @@ export async function POST(req: NextRequest) {
     .from("quotes")
     .select("id, client_name, client_email, site_address, trade, job_type, total_cost, markup_materials, status, invoice_number, accepted_at, paid_at")
     .in("id", quoteIds)
-    .eq("profile_id", user.id);
+    .eq("profile_id", businessId);
 
   if (!quotes?.length) return NextResponse.json({ error: "No quotes found" }, { status: 404 });
 
@@ -136,7 +141,7 @@ export async function POST(req: NextRequest) {
 
       // Get or create the Xero contact -- never duplicates
       const xeroContactId = await getOrCreateXeroContact(
-        accessToken, tenantId, user.id,
+        accessToken, tenantId, businessId,
         clientEmail, clientName, supabase
       );
 

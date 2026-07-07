@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getActiveBusinessId } from "@/lib/team";
 
 // Requires a RESEND_API_KEY env var (https://resend.com) and a verified sending domain.
 export async function POST(request: Request) {
@@ -13,12 +14,13 @@ export async function POST(request: Request) {
   if (!userData.user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
+  const businessId = await getActiveBusinessId(supabase, userData.user.id);
 
   const { data: quote, error: quoteError } = await supabase
     .from("quotes")
     .select("*, profiles!quotes_profile_id_fkey(business_name, contact_email, contact_phone, logo_url, branding_primary_color, branding_tagline, brochure_title, brochure_tagline, brochure_color, brochure_tcs, brochure_custom_text)")
     .eq("id", quoteId)
-    .eq("profile_id", userData.user.id)
+    .eq("profile_id", businessId)
     .single();
 
   if (quoteError || !quote) {

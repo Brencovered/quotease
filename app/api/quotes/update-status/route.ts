@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { pushQuoteToXero } from "@/lib/xero";
 import { getOrCreateJobForQuote } from "@/lib/jobs";
+import { getActiveBusinessId } from "@/lib/team";
 
 const ALLOWED_STATUSES = ["draft", "sent", "accepted", "declined", "paid"];
 
@@ -19,6 +20,7 @@ export async function POST(request: Request) {
   if (!userData.user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
+  const businessId = await getActiveBusinessId(supabase, userData.user.id);
 
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
 
@@ -61,7 +63,7 @@ export async function POST(request: Request) {
   // variations, which previously weren't counted here at all.
   if (typeof paymentAmount === "number" && paymentAmount > 0) {
     const [{ data: existing }, { data: approvedVariations }] = await Promise.all([
-      supabase.from("quotes").select("amount_paid, total_cost, markup_materials, client_name").eq("id", quoteId).eq("profile_id", userData.user.id).single(),
+      supabase.from("quotes").select("amount_paid, total_cost, markup_materials, client_name").eq("id", quoteId).eq("profile_id", businessId).single(),
       supabase.from("variations").select("total_cost").eq("quote_id", quoteId).eq("status", "approved"),
     ]);
 
@@ -76,10 +78,10 @@ export async function POST(request: Request) {
         update.paid_at = new Date().toISOString();
       }
       const paymentJob = await getOrCreateJobForQuote(supabase, quoteId);
-      await supabase.from("payments").insert({ quote_id: quoteId, job_id: paymentJob?.id ?? null, profile_id: userData.user.id, amount: paymentAmount });
+      await supabase.from("payments").insert({ quote_id: quoteId, job_id: paymentJob?.id ?? null, profile_id: businessId, amount: paymentAmount });
 
       const { sendPushToBusiness } = await import("@/lib/push");
-      await sendPushToBusiness(createAdminClient(), userData.user.id, {
+      await sendPushToBusiness(createAdminClient(), businessId, {
         title: "Payment received 💰",
         body: `$${paymentAmount.toLocaleString()} from ${existing.client_name ?? "a client"}`,
         url: paymentJob ? `/electrician/jobs/${paymentJob.id}` : "/electrician/jobs",
@@ -91,7 +93,7 @@ export async function POST(request: Request) {
     .from("quotes")
     .update(update)
     .eq("id", quoteId)
-    .eq("profile_id", userData.user.id);
+    .eq("profile_id", businessId);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -106,7 +108,7 @@ export async function POST(request: Request) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("id, xero_connected, xero_tenant_id, xero_access_token, xero_refresh_token, xero_token_expires_at")
-      .eq("id", userData.user.id)
+      .eq("id", businessId)
       .single();
     const { data: quote } = await supabase
       .from("quotes")

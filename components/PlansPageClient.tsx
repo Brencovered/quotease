@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveBusinessId } from "@/lib/team";
 import PlanMarkup, { type PlanShape, type CalibrationLine, type MaterialItem } from "./PlanMarkup";
 import DrawingAnalysisPanel from "./DrawingAnalysisPanel";
 import { Upload, X, Plus, FileText, ChevronRight, Check, User } from "lucide-react";
@@ -59,13 +60,14 @@ export default function PlansPageClient({
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setUploadError("Not signed in"); setUploadSaving(false); return; }
+    const businessId = await getActiveBusinessId(supabase, user.id);
 
     let clientId = selectedClientId;
     if (selectedClientId === "__new__") {
       if (!newClientName.trim()) { setUploadError("Enter a client name"); setUploadSaving(false); return; }
       const { data: newClient, error: clientErr } = await supabase
         .from("clients")
-        .insert({ profile_id: user.id, name: newClientName.trim(), billing_address: newClientAddr.trim() || null })
+        .insert({ profile_id: businessId, name: newClientName.trim(), billing_address: newClientAddr.trim() || null })
         .select().single();
       if (clientErr || !newClient) { setUploadError(clientErr?.message ?? "Failed to create client"); setUploadSaving(false); return; }
       clientId = newClient.id;
@@ -78,7 +80,7 @@ export default function PlansPageClient({
     if (storageErr) { setUploadError(storageErr.message); setUploadSaving(false); return; }
 
     const { data: plan, error: planErr } = await supabase.from("client_plans")
-      .insert({ client_id: clientId, profile_id: user.id, file_name: uploadFile.name, storage_path: path, label: newPlanLabel.trim() || null })
+      .insert({ client_id: clientId, profile_id: businessId, file_name: uploadFile.name, storage_path: path, label: newPlanLabel.trim() || null })
       .select().single();
     if (planErr || !plan) { setUploadError(planErr?.message ?? "Failed to save plan"); setUploadSaving(false); return; }
 
@@ -223,11 +225,12 @@ export default function PlansPageClient({
                     const supabase = createClient();
                     const { data: { user } } = await supabase.auth.getUser();
                     if (!user) { setUploadSaving(false); return; }
+                    const businessId = await getActiveBusinessId(supabase, user.id);
                     const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
                     const path = `${user.id}/plans/${clientId}/${Date.now()}-${safeName}`;
                     await supabase.storage.from("job-files").upload(path, file);
                     const { data: plan } = await supabase.from("client_plans")
-                      .insert({ client_id: clientId, profile_id: user.id, file_name: file.name, storage_path: path })
+                      .insert({ client_id: clientId, profile_id: businessId, file_name: file.name, storage_path: path })
                       .select().single();
                     if (plan) {
                       const { data: signed } = await supabase.storage.from("job-files").createSignedUrl(path, 3600 * 24);

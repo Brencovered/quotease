@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getActiveBusinessId } from "@/lib/team";
 
 export async function POST(req: NextRequest) {
   const { requestId } = await req.json();
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Claims belong to the business, not the individual team member who
+  // clicked "claim" - otherwise a claim made by one team member would be
+  // invisible to the owner and everyone else on the team.
+  const businessId = await getActiveBusinessId(supabase, user.id);
 
   // Get request and current claim count
   const { data: request } = await supabase
@@ -27,7 +33,7 @@ export async function POST(req: NextRequest) {
   // Create the claim
   const { error: claimErr } = await supabase.from("job_claims").insert({
     request_id:        requestId,
-    tradie_profile_id: user.id,
+    tradie_profile_id: businessId,
     status:            "claimed",
   });
   if (claimErr) return NextResponse.json({ error: claimErr.message }, { status: 400 });

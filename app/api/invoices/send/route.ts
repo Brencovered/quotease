@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getActiveBusinessId } from "@/lib/team";
 
 export async function POST(request: Request) {
   const { quoteId } = await request.json();
@@ -8,12 +9,13 @@ export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  const businessId = await getActiveBusinessId(supabase, userData.user.id);
 
   const { data: quote } = await supabase
     .from("quotes")
     .select("*, profiles!quotes_profile_id_fkey(business_name, contact_email, contact_phone, logo_url, hourly_rate)")
     .eq("id", quoteId)
-    .eq("profile_id", userData.user.id)
+    .eq("profile_id", businessId)
     .single();
 
   if (!quote) return NextResponse.json({ error: "Quote not found" }, { status: 404 });

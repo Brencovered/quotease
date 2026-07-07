@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveBusinessId } from "@/lib/team";
 import { ShieldCheck, Plus, AlertTriangle, Upload } from "lucide-react";
 
 type Cert = {
@@ -38,6 +39,7 @@ export default function CompliancePanel({ quoteId, jobId, certs: initial }: { qu
     const supabase = createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) { setError("Not signed in"); setSaving(false); return; }
+    const businessId = await getActiveBusinessId(supabase, userData.user.id);
 
     let storagePath: string | null = null;
     let signedUrl: string | undefined;
@@ -54,7 +56,7 @@ export default function CompliancePanel({ quoteId, jobId, certs: initial }: { qu
 
     const { data, error: err } = await supabase
       .from("compliance_certs")
-      .insert({ quote_id: quoteId || null, job_id: jobId ?? null, profile_id: userData.user.id, cert_type: form.cert_type, cert_number: form.cert_number || null, issued_date: form.issued_date || null, expiry_date: form.expiry_date || null, notes: form.notes || null, storage_path: storagePath })
+      .insert({ quote_id: quoteId || null, job_id: jobId ?? null, profile_id: businessId, cert_type: form.cert_type, cert_number: form.cert_number || null, issued_date: form.issued_date || null, expiry_date: form.expiry_date || null, notes: form.notes || null, storage_path: storagePath })
       .select().single();
 
     if (err) { setError(err.message); setSaving(false); return; }

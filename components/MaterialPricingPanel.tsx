@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveBusinessId } from "@/lib/team";
 import { Download, Upload, Save, RotateCcw, Check, AlertCircle, Plus, Trash2 } from "lucide-react";
 import { ELECTRICIAN_DEFAULT_MATERIALS } from "@/lib/calc";
 import { PLUMBER_DEFAULT_MATERIALS } from "@/lib/calcPlumber";
@@ -40,9 +41,10 @@ export default function MaterialPricingPanel({ trades }: { trades: string[] }) {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
+    const businessId = await getActiveBusinessId(supabase, user.id);
     const { data } = await supabase
       .from("material_items").select("item_key,label,unit_cost,trade")
-      .eq("profile_id", user.id).eq("trade", trade).order("label");
+      .eq("profile_id", businessId).eq("trade", trade).order("label");
     if (data && data.length > 0) {
       setRows(data.map((r) => ({ ...r })));
     } else {
@@ -74,15 +76,16 @@ export default function MaterialPricingPanel({ trades }: { trades: string[] }) {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setError("Not signed in"); setSaving(false); return; }
+    const businessId = await getActiveBusinessId(supabase, user.id);
 
     // Filter out blank rows
     const valid = rows.filter((r) => r.label.trim());
 
     // Delete all existing for this trade then re-insert
-    await supabase.from("material_items").delete().eq("profile_id", user.id).eq("trade", activeTrade);
+    await supabase.from("material_items").delete().eq("profile_id", businessId).eq("trade", activeTrade);
     if (valid.length > 0) {
       const { error: insertErr } = await supabase.from("material_items").insert(
-        valid.map((r) => ({ profile_id: user.id, trade: activeTrade, item_key: r.item_key, label: r.label, unit_cost: r.unit_cost }))
+        valid.map((r) => ({ profile_id: businessId, trade: activeTrade, item_key: r.item_key, label: r.label, unit_cost: r.unit_cost }))
       );
       if (insertErr) { setError(insertErr.message); setSaving(false); return; }
     }

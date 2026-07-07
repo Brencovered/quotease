@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveBusinessId } from "@/lib/team";
 import { Plus, CheckCircle2, XCircle, Clock } from "lucide-react";
 import type { Variation } from "@/lib/variations";
 
@@ -42,9 +43,10 @@ export default function VariationsPanel({ quoteId, jobId, hourlyRate, margin, va
     const supabase = createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) { setError("Not signed in"); setSaving(false); return; }
+    const businessId = await getActiveBusinessId(supabase, userData.user.id);
     const { data, error: err } = await supabase
       .from("variations")
-      .insert({ quote_id: quoteId || null, job_id: jobId ?? null, profile_id: userData.user.id, title: form.title, description: form.description, labour_hours: labourHours, materials_cost: materialsWithMargin, total_cost: totalCost, status: "pending" })
+      .insert({ quote_id: quoteId || null, job_id: jobId ?? null, profile_id: businessId, title: form.title, description: form.description, labour_hours: labourHours, materials_cost: materialsWithMargin, total_cost: totalCost, status: "pending" })
       .select().single();
     if (err) { setError(err.message); setSaving(false); return; }
     setVariations((prev) => [...prev, data]);

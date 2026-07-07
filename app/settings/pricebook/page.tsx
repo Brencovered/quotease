@@ -2,16 +2,19 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
 import PriceBookPanel from "@/components/PriceBookPanel";
+import { getActiveBusinessId } from "@/lib/team";
 
 export default async function PriceBookPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const businessId = await getActiveBusinessId(supabase, user.id);
+
   const { data: items } = await supabase
     .from("price_book_items")
     .select("id, supplier, sku, description, unit, cost_price, trade, imported_at")
-    .eq("profile_id", user.id)
+    .eq("profile_id", businessId)
     .order("supplier")
     .order("description");
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getActiveBusinessId } from "@/lib/team";
 
 /**
  * POST /api/leads/subscribe
@@ -11,6 +12,7 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const businessId = await getActiveBusinessId(supabase, user.id);
 
   const { trade, suburb } = await req.json().catch(() => ({}));
 
@@ -20,7 +22,7 @@ export async function POST(req: NextRequest) {
       .from("lead_subscriptions")
       .upsert(
         {
-          profile_id: user.id,
+          profile_id: businessId,
           trade: trade.toLowerCase(),
           suburb: suburb.trim(),
           is_active: true,
@@ -36,7 +38,7 @@ export async function POST(req: NextRequest) {
   const { error } = await supabase
     .from("lead_subscriptions")
     .update({ is_active: true })
-    .eq("profile_id", user.id)
+    .eq("profile_id", businessId)
     .eq("is_active", false);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });

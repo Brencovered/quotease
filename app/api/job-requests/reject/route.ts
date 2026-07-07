@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getActiveBusinessId } from "@/lib/team";
 
 export async function POST(req: NextRequest) {
   const { requestId } = await req.json();
@@ -7,11 +8,13 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const businessId = await getActiveBusinessId(supabase, user.id);
+
   // Mark claim as rejected
   await supabase.from("job_claims")
     .update({ status: "rejected", rejected_at: new Date().toISOString() })
     .eq("request_id", requestId)
-    .eq("tradie_profile_id", user.id);
+    .eq("tradie_profile_id", businessId);
 
   // Reopen a slot on the request
   const { data: request } = await supabase

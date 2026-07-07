@@ -124,7 +124,7 @@ export async function POST(request: Request) {
   /* ---- get user's trade ---- */
   let defaultTrade = "electrician";
   try {
-    const { data: profile } = await supabase.from("profiles").select("trade").eq("id", userData.user.id).single();
+    const { data: profile } = await supabase.from("profiles").select("trade").eq("id", businessId).single();
     if (profile?.trade) defaultTrade = profile.trade;
   } catch { /* ignore */ }
 

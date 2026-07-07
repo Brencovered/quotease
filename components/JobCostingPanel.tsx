@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveBusinessId } from "@/lib/team";
 import { TrendingUp, TrendingDown, Minus, Lightbulb, ArrowRight } from "lucide-react";
 import { generateCostingInsight } from "@/lib/jobInsights";
 
@@ -50,9 +51,10 @@ export default function JobCostingPanel({ quoteId, jobId, quotedHours, quotedMat
     const supabase = createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) { setError("Not signed in"); setSaving(false); return; }
+    const businessId = await getActiveBusinessId(supabase, userData.user.id);
     const { data, error: err } = await supabase
       .from("job_actuals")
-      .insert({ quote_id: quoteId || null, job_id: jobId ?? null, profile_id: userData.user.id, actual_hours: Number(form.hours) || 0, actual_materials_cost: Number(form.materials) || 0, unexpected_costs: Number(form.unexpected) || 0, notes: form.notes || null })
+      .insert({ quote_id: quoteId || null, job_id: jobId ?? null, profile_id: businessId, actual_hours: Number(form.hours) || 0, actual_materials_cost: Number(form.materials) || 0, unexpected_costs: Number(form.unexpected) || 0, notes: form.notes || null })
       .select().single();
     if (err) { setError(err.message); setSaving(false); return; }
     setActuals((prev) => [...prev, data]);

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveBusinessId } from "@/lib/team";
 import { Search, User } from "lucide-react";
 
 type Client = { id: string; name: string; email: string | null; billing_address: string | null };
@@ -29,10 +30,11 @@ export default function ClientPicker({
       const supabase = createClient();
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return;
+      const businessId = await getActiveBusinessId(supabase, userData.user.id);
       const { data } = await supabase
         .from("clients")
         .select("id, name, email, billing_address")
-        .eq("profile_id", userData.user.id)
+        .eq("profile_id", businessId)
         .ilike("name", `%${value.trim()}%`)
         .limit(5);
       setResults(data ?? []);

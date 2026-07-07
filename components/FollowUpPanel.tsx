@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveBusinessId } from "@/lib/team";
 import { Bell, Phone, Mail, MessageSquare, Users, Check } from "lucide-react";
 
 type FollowUp = { id: string; method: string; notes: string | null; followed_up_at: string; };
@@ -34,9 +35,10 @@ export default function FollowUpPanel({ quoteId, followUps: initial, followUpAt,
     const supabase = createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) { setSaving(false); return; }
+    const businessId = await getActiveBusinessId(supabase, userData.user.id);
     const { data, error } = await supabase
       .from("follow_up_log")
-      .insert({ quote_id: quoteId, profile_id: userData.user.id, method, notes: notes || null })
+      .insert({ quote_id: quoteId, profile_id: businessId, method, notes: notes || null })
       .select().single();
     if (!error && data) {
       setFollowUps((prev) => [data, ...prev]);

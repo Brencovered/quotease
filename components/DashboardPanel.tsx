@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveBusinessId } from "@/lib/team";
 import type { DashboardStats, ProfitStats } from "@/lib/dashboardStats";
 import DashboardChatAssistant from "@/components/DashboardChatAssistant";
 import {
@@ -33,7 +34,8 @@ export default function DashboardPanel({ stats, profit }: Props) {
     async function fetchPackages() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { count } = await supabase.from("packages").select("*", { count: "exact", head: true }).eq("profile_id", user.id).eq("status", "active");
+      const businessId = await getActiveBusinessId(supabase, user.id);
+      const { count } = await supabase.from("packages").select("*", { count: "exact", head: true }).eq("profile_id", businessId).eq("status", "active");
       setPackageCount(count ?? 0);
     }
     fetchPackages();

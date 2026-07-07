@@ -2,16 +2,19 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
 import ExportPanel from "@/components/ExportPanel";
+import { getActiveBusinessId } from "@/lib/team";
 
 export default async function ExportPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const businessId = await getActiveBusinessId(supabase, user.id);
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("business_name, abn, hourly_rate")
-    .eq("id", user.id)
+    .eq("id", businessId)
     .single();
 
   // Fetch all accepted/paid quotes with job actuals and variations
@@ -24,7 +27,7 @@ export default async function ExportPage() {
       sent_at, accepted_at, completed_at, paid_at, created_at,
       scheduled_date
     `)
-    .eq("profile_id", user.id)
+    .eq("profile_id", businessId)
     .in("status", ["accepted", "paid"])
     .order("created_at", { ascending: false });
 

@@ -3,6 +3,7 @@ import AppHeader from "@/components/AppHeader";
 import MaterialPricingPanel from "@/components/MaterialPricingPanel";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { getActiveBusinessId } from "@/lib/team";
 
 export default async function MaterialsPage() {
   let trades: string[] = ["electrician"];
@@ -13,10 +14,11 @@ export default async function MaterialsPage() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
+      const businessId = await getActiveBusinessId(supabase, user.id);
       const { data: profile } = await supabase
         .from("profiles")
         .select("trades, hourly_rate, materials_margin_pct")
-        .eq("id", user.id)
+        .eq("id", businessId)
         .single();
       if (profile) {
         trades     = profile.trades ?? ["electrician"];

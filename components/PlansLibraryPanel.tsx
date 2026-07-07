@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveBusinessId } from "@/lib/team";
 import { Upload, X } from "lucide-react";
 import PlanMarkup, { type PlanShape, type CalibrationLine } from "./PlanMarkup";
 
@@ -27,6 +28,7 @@ export default function PlansLibraryPanel({ clientId, plans: initial }: { client
     const supabase = createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) { setUploading(false); return; }
+    const businessId = await getActiveBusinessId(supabase, userData.user.id);
 
     const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
     const path = `${userData.user.id}/plans/${clientId}/${Date.now()}-${safeName}`;
@@ -35,7 +37,7 @@ export default function PlansLibraryPanel({ clientId, plans: initial }: { client
 
     const { data: plan } = await supabase
       .from("client_plans")
-      .insert({ client_id: clientId, profile_id: userData.user.id, file_name: file.name, storage_path: path })
+      .insert({ client_id: clientId, profile_id: businessId, file_name: file.name, storage_path: path })
       .select()
       .single();
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveBusinessId } from "@/lib/team";
 import { CalendarDays, MapPin, ChevronLeft, ChevronRight, Plus, Bell, Send, Trash2, Pencil } from "lucide-react";
 
 type ScheduledJob = {
@@ -57,9 +58,10 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
     const endOfMonth = `${year}-${String(month + 1).padStart(2, "0")}-${getDaysInMonth(year, month)}`;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+    const businessId = await getActiveBusinessId(supabase, user.id);
     const { data } = await supabase.from("calendar_events")
       .select("id, title, description, event_date, event_type, start_time, end_time, is_all_day")
-      .eq("profile_id", user.id)
+      .eq("profile_id", businessId)
       .gte("event_date", startOfMonth)
       .lte("event_date", endOfMonth)
       .order("event_date");
@@ -119,8 +121,9 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
     if (!manualForm.title.trim() || !manualForm.event_date) return;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+    const businessId = await getActiveBusinessId(supabase, user.id);
     const payload = {
-      profile_id: user.id,
+      profile_id: businessId,
       title: manualForm.title.trim(),
       description: manualForm.description.trim() || null,
       event_date: manualForm.event_date,

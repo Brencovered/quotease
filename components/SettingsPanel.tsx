@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveBusinessId } from "@/lib/team";
 import { FREE_ANALYSES_LIMIT, ADDON_MONTHLY_LIMIT, currentPeriod } from "@/lib/aiUsage";
 import { ELECTRICIAN_DEFAULT_MATERIALS } from "@/lib/calc";
 import { PLUMBER_DEFAULT_MATERIALS } from "@/lib/calcPlumber";
@@ -57,10 +58,11 @@ function RateSaveButton() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
+      const businessId = await getActiveBusinessId(supabase, user.id);
       await supabase.from("profiles").update({
         hourly_rate: isNaN(rate)   ? 95 : rate,
         materials_margin_pct: isNaN(margin) ? 20 : margin,
-      }).eq("id", user.id);
+      }).eq("id", businessId);
     }
     setSaving(false); setSaved(true);
     setTimeout(() => setSaved(false), 2500);
@@ -156,10 +158,11 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      await supabase.from("profiles").update({ trades: next }).eq("id", user.id);
+      const businessId = await getActiveBusinessId(supabase, user.id);
+      await supabase.from("profiles").update({ trades: next }).eq("id", businessId);
       if (adding && TRADE_SEED[key]) {
         await supabase.from("material_items").upsert(
-          TRADE_SEED[key].map((m) => ({ profile_id: user.id, trade: key, item_key: m.item_key, label: m.label, unit_cost: m.unit_cost })),
+          TRADE_SEED[key].map((m) => ({ profile_id: businessId, trade: key, item_key: m.item_key, label: m.label, unit_cost: m.unit_cost })),
           { onConflict: "profile_id,item_key" }
         );
       }
@@ -178,6 +181,7 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setCompanyError("Not signed in"); setCompanySaving(false); return; }
+    const businessId = await getActiveBusinessId(supabase, user.id);
 
     let logoUrl: string | undefined;
     if (logoFile) {
@@ -202,7 +206,7 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
       bank_account_number: bankAccountNumber || null, accepts_cash: acceptsCash,
       default_deposit_pct: defaultDepositPct, default_expiry_days: defaultExpiryDays,
       ...(logoUrl ? { logo_url: logoUrl } : {}),
-    }).eq("id", user.id);
+    }).eq("id", businessId);
 
     if (error) setCompanyError(error.message);
     else { setCompanySaved(true); setTimeout(() => setCompanySaved(false), 2000); }

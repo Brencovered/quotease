@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getActiveBusinessId } from "@/lib/team";
 import { checkUsage, currentPeriod, type UsageProfile } from "@/lib/aiUsage";
 import { getTradeVoicePrompt } from "@/lib/ai/getTradeVoicePrompt";
 import { DETECTED_ITEMS_SCHEMA } from "@/lib/ai/detectedItemsSchema";
@@ -56,11 +57,15 @@ export async function POST(request: Request) {
   if (!userData.user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
+  // AI usage quota is per-business, not per-login - otherwise a team
+  // member gets (or is blocked by) their own separate, meaningless quota
+  // instead of the business's real one.
+  const businessId = await getActiveBusinessId(supabase, userData.user.id);
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("ai_free_analyses_used, ai_addon_status, ai_addon_period, ai_addon_analyses_used, ai_analyses_limit_override")
-    .eq("id", userData.user.id)
+    .eq("id", businessId)
     .single();
   if (profileError || !profile) {
     return NextResponse.json({ error: "Could not load account" }, { status: 500 });
@@ -116,14 +121,14 @@ export async function POST(request: Request) {
   }
 
   if (usage.via === "free") {
-    await supabase.from("profiles").update({ ai_free_analyses_used: profile.ai_free_analyses_used + 1 }).eq("id", userData.user.id);
+    await supabase.from("profiles").update({ ai_free_analyses_used: profile.ai_free_analyses_used + 1 }).eq("id", businessId);
   } else {
     const period = currentPeriod();
     const periodMatches = profile.ai_addon_period === period;
     await supabase
       .from("profiles")
       .update({ ai_addon_period: period, ai_addon_analyses_used: periodMatches ? profile.ai_addon_analyses_used + 1 : 1 })
-      .eq("id", userData.user.id);
+      .eq("id", businessId);
   }
 
   return NextResponse.json({ result: parsed, usage: { via: usage.via } });

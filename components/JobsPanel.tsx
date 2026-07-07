@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Briefcase, Hammer, Wallet, CheckCircle2, X, Upload, Plus, ChevronRight, Send } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveBusinessId } from "@/lib/team";
 
 type PaymentTerm = { label: string; percent: number; trigger: string; days: number };
 type Job = {
@@ -38,7 +39,8 @@ export default function JobsPanel({ jobs: initialJobs }: { jobs: Job[] }) {
     async function fetchProfile() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase.from("profiles").select("hourly_rate").eq("id", user.id).single();
+      const businessId = await getActiveBusinessId(supabase, user.id);
+      const { data } = await supabase.from("profiles").select("hourly_rate").eq("id", businessId).single();
       if (data?.hourly_rate) setHourlyRate(data.hourly_rate);
     }
     fetchProfile();
@@ -76,11 +78,12 @@ export default function JobsPanel({ jobs: initialJobs }: { jobs: Job[] }) {
     setUploadingId(jobId); setAttError(null);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setAttError("Not signed in"); setUploadingId(null); return; }
+    const businessId = await getActiveBusinessId(supabase, user.id);
     const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
     const path = `${user.id}/${jobId}/${Date.now()}-${safeName}`;
     const { error: upErr } = await supabase.storage.from("job-files").upload(path, file);
     if (upErr) { setAttError(`Upload failed: ${upErr.message}`); setUploadingId(null); return; }
-    const { data: row } = await supabase.from("job_attachments").insert({ quote_id: jobId, profile_id: user.id, file_name: file.name, storage_path: path, file_type: file.type, file_size: file.size }).select().single();
+    const { data: row } = await supabase.from("job_attachments").insert({ quote_id: jobId, profile_id: businessId, file_name: file.name, storage_path: path, file_type: file.type, file_size: file.size }).select().single();
     if (row) {
       const { data: signed } = await supabase.storage.from("job-files").createSignedUrl(path, 3600);
       setAttachments((p) => ({ ...p, [jobId]: [...(p[jobId] ?? []), { ...row, signedUrl: signed?.signedUrl }] }));

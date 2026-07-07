@@ -30,6 +30,7 @@
 
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { getActiveBusinessId } from "@/lib/team";
 
 /* ------------------------------------------------------------------ */
 /*  Route classification                                               */
@@ -296,11 +297,20 @@ export async function middleware(request: NextRequest) {
   // 7. Subscription + onboarding check (protected + auth-only pages)
   // ------------------------------------------------------------------
 
-  // Fetch the user's profile for subscription and onboarding status
+  // Onboarding and subscription are business-level concepts. A team
+  // member's own individual profile row never goes through the tradie
+  // onboarding wizard and has no real subscription of its own - checking
+  // it directly meant a genuinely active team member could get stuck
+  // bouncing between /onboarding and /billing forever, unable to reach
+  // any real page, while the business they work for was fully set up
+  // and subscribed the whole time.
+  const businessId = await getActiveBusinessId(supabase, user.id);
+
+  // Fetch the business's profile for subscription and onboarding status
   const { data: profile } = await supabase
     .from("profiles")
     .select("subscription_status, trial_ends_at, comp_access, onboarded_at")
-    .eq("id", user.id)
+    .eq("id", businessId)
     .single();
 
   // Onboarding check: if not onboarded, redirect to /onboarding

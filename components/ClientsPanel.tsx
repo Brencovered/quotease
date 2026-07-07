@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveBusinessId } from "@/lib/team";
 import { User, Phone, Mail, MapPin, Plus, ChevronDown, ChevronUp, Pencil, X, Upload, Download } from "lucide-react";
 import type { Client } from "@/lib/clients";
 
@@ -43,6 +44,7 @@ export default function ClientsPanel({ clients: initial }: { clients: Client[] }
     const supabase = createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) { setError("Not signed in"); setCsvImporting(false); return; }
+    const businessId = await getActiveBusinessId(supabase, userData.user.id);
 
     const text   = await file.text();
     const lines  = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
@@ -72,7 +74,7 @@ export default function ClientsPanel({ clients: initial }: { clients: Client[] }
       if (!name) { skipped++; continue; }
 
       const row = {
-        profile_id:      userData.user.id,
+        profile_id:      businessId,
         name,
         email:           idx("email")           >= 0 ? cols[idx("email")]?.replace(/"/g,"").trim() || null           : null,
         phone:           idx("phone")           >= 0 ? cols[idx("phone")]?.replace(/"/g,"").trim() || null           : null,
@@ -112,6 +114,7 @@ export default function ClientsPanel({ clients: initial }: { clients: Client[] }
     const supabase = createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) { setError("Not signed in"); setSaving(false); return; }
+    const businessId = await getActiveBusinessId(supabase, userData.user.id);
 
     if (editId) {
       const { data, error: err } = await supabase
@@ -125,7 +128,7 @@ export default function ClientsPanel({ clients: initial }: { clients: Client[] }
     } else {
       const { data, error: err } = await supabase
         .from("clients")
-        .insert({ ...form, profile_id: userData.user.id })
+        .insert({ ...form, profile_id: businessId })
         .select()
         .single();
       if (err) { setError(err.message); setSaving(false); return; }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe";
+import { getActiveBusinessId } from "@/lib/team";
 
 export async function POST(request: Request) {
   const priceId = process.env.STRIPE_PRICE_AI_ADDON;
@@ -13,11 +14,12 @@ export async function POST(request: Request) {
   if (!userData.user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
+  const businessId = await getActiveBusinessId(supabase, userData.user.id);
 
   const { data: profile } = await supabase
     .from("profiles")
     .select("stripe_customer_id, contact_email, business_name")
-    .eq("id", userData.user.id)
+    .eq("id", businessId)
     .single();
 
   const stripe = getStripe();
@@ -27,10 +29,10 @@ export async function POST(request: Request) {
     const customer = await stripe.customers.create({
       email: profile?.contact_email ?? userData.user.email ?? undefined,
       name: profile?.business_name ?? undefined,
-      metadata: { profile_id: userData.user.id },
+      metadata: { profile_id: businessId },
     });
     customerId = customer.id;
-    await supabase.from("profiles").update({ stripe_customer_id: customerId }).eq("id", userData.user.id);
+    await supabase.from("profiles").update({ stripe_customer_id: customerId }).eq("id", businessId);
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
@@ -42,7 +44,7 @@ export async function POST(request: Request) {
     customer: customerId,
     line_items: [{ price: priceId, quantity: 1 }],
     subscription_data: {
-      metadata: { profile_id: userData.user.id, plan: "ai_addon" },
+      metadata: { profile_id: businessId, plan: "ai_addon" },
     },
     success_url: `${appUrl}/settings?addon=success`,
     cancel_url: `${appUrl}/settings?addon=canceled`,

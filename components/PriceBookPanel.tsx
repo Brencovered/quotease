@@ -2,6 +2,7 @@
 
 import { useState, useRef, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveBusinessId } from "@/lib/team";
 import { Upload, Trash2, Search, Check, AlertCircle, ChevronDown } from "lucide-react";
 
 type PriceBookItem = {
@@ -154,10 +155,11 @@ export default function PriceBookPanel({
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setImporting(false); return; }
+    const businessId = await getActiveBusinessId(supabase, user.id);
 
     const records = csvRows
       .map(row => ({
-        profile_id:  user.id,
+        profile_id:  businessId,
         supplier:    csvSupplier,
         sku:         mapSku ? (row[mapSku] || null) : null,
         description: row[mapDesc]?.trim() ?? "",
@@ -174,7 +176,7 @@ export default function PriceBookPanel({
 
     // Delete existing items for this supplier first
     await supabase.from("price_book_items").delete()
-      .eq("profile_id", user.id).eq("supplier", csvSupplier);
+      .eq("profile_id", businessId).eq("supplier", csvSupplier);
 
     // Insert in batches of 500
     for (let i = 0; i < records.length; i += 500) {
@@ -185,7 +187,7 @@ export default function PriceBookPanel({
     // Refresh items
     const { data: fresh } = await supabase.from("price_book_items")
       .select("id, supplier, sku, description, unit, cost_price, trade, imported_at")
-      .eq("profile_id", user.id).order("supplier").order("description");
+      .eq("profile_id", businessId).order("supplier").order("description");
     setItems(fresh ?? []);
 
     const newCounts = { ...counts, [csvSupplier]: records.length };
@@ -198,7 +200,8 @@ export default function PriceBookPanel({
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    await supabase.from("price_book_items").delete().eq("profile_id", user.id).eq("supplier", sup);
+    const businessId = await getActiveBusinessId(supabase, user.id);
+    await supabase.from("price_book_items").delete().eq("profile_id", businessId).eq("supplier", sup);
     setItems(prev => prev.filter(i => i.supplier !== sup));
     setCounts(prev => { const n = {...prev}; delete n[sup]; return n; });
   }

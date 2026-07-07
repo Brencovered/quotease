@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveBusinessId } from "@/lib/team";
 import { Check, Globe } from "lucide-react";
 
 export default function DirectoryPanel({
@@ -32,6 +33,7 @@ export default function DirectoryPanel({
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaving(false); return; }
+    const businessId = await getActiveBusinessId(supabase, user.id);
     await supabase.from("profiles").update({
       directory_enabled:  enabled,
       directory_suburb:   suburb  || null,
@@ -40,7 +42,7 @@ export default function DirectoryPanel({
       directory_website:  website || null,
       directory_phone:    phone   || null,
       directory_email:    email   || null,
-    }).eq("id", user.id);
+    }).eq("id", businessId);
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
