@@ -1,6 +1,13 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveBusinessId } from "@/lib/team";
+import {
+  getCachedPriceBook,
+  getCachedLegacyMaterials,
+  getCachedPricingTiers,
+  getCachedJobSizeTiers,
+  getCachedProfile,
+} from "@/lib/cache";
 import { ELECTRICIAN_DEFAULT_MATERIALS } from "@/lib/calc";
 import { PLUMBER_DEFAULT_MATERIALS } from "@/lib/calcPlumber";
 import { CARPENTER_DEFAULT_MATERIALS } from "@/lib/calcCarpenter";
@@ -35,6 +42,121 @@ const DEFAULT_JOB_SIZE_TIERS = [
   { name: "Large", max_days: null, markup_pct: -3, sort_order: 2 },
 ];
 
+/* ── helpers for optional package / bundle / plan / markup data ── */
+
+async function loadPackage(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  businessId: string,
+  packageId: string | undefined,
+  tradeParm: string | undefined
+) {
+  if (!packageId) return null;
+  const { data: pkg } = await supabase
+    .from("packages")
+    .select("*, package_items(*)")
+    .eq("id", packageId)
+    .eq("profile_id", businessId)
+    .single();
+
+  if (!pkg) return null;
+
+  const items = (pkg.package_items ?? []) as Array<{
+    label: string; qty: number; unit_cost: number; unit: string;
+  }>;
+  const preMarkup = items
+    .filter((i) => i.label)
+    .map((i) => ({
+      label: i.label,
+      quantity: i.qty,
+      unit: i.unit ?? "ea",
+      unitCost: i.unit_cost,
+      totalCost: Math.round(i.qty * i.unit_cost),
+    }));
+
+  // Packages carry a single labour_hours estimate for the whole package
+  if (pkg.labour_hours) {
+    if (preMarkup.length > 0) {
+      preMarkup[0] = { ...preMarkup[0], labourHrs: pkg.labour_hours };
+    } else {
+      preMarkup.push({
+        label: "Package labour",
+        quantity: 0,
+        unit: "",
+        unitCost: 0,
+        totalCost: 0,
+        labourHrs: pkg.labour_hours,
+      });
+    }
+  }
+
+  return { preMarkup, trade: pkg.trade as string, labourHours: pkg.labour_hours as number | null };
+}
+
+async function loadBundle(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  businessId: string,
+  bundleId: string | undefined,
+  tradeParm: string | undefined
+) {
+  if (!bundleId) return { materials: [] as Array<{ label: string; quantity: number; unit: string; unitCost: number; totalCost: number }>, trade: tradeParm };
+
+  const { data: bundle } = await supabase
+    .from("material_bundles")
+    .select("*, material_bundle_items(*)")
+    .eq("id", bundleId)
+    .eq("profile_id", businessId)
+    .eq("status", "active")
+    .single();
+
+  if (!bundle) return { materials: [] as Array<{ label: string; quantity: number; unit: string; unitCost: number; totalCost: number }>, trade: tradeParm };
+
+  const items = (bundle.material_bundle_items ?? []) as Array<{
+    label: string; qty: number; unit: string; unit_cost: number;
+  }>;
+
+  return {
+    materials: items
+      .filter((i) => i.label)
+      .map((i) => ({
+        label: i.label,
+        quantity: i.qty,
+        unit: i.unit ?? "ea",
+        unitCost: i.unit_cost ?? 0,
+        totalCost: Math.round(i.qty * (i.unit_cost ?? 0)),
+      })),
+    trade: bundle.trade as string,
+  };
+}
+
+async function loadPlanMarkup(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  businessId: string,
+  planId: string | undefined
+) {
+  if (!planId) return [];
+  const { data: plan } = await supabase
+    .from("client_plans")
+    .select("shapes")
+    .eq("id", planId)
+    .eq("profile_id", businessId)
+    .single();
+
+  const shapes = (plan?.shapes as Array<{
+    label: string; material_label: string; unit_cost: number;
+    margin_pct: number; qty: number; unit: string;
+  }>) ?? [];
+
+  return shapes
+    .filter((s) => s.material_label || s.label)
+    .map((s) => ({
+      label: s.material_label || s.label,
+      quantity: s.qty,
+      unit: s.unit,
+      unitCost: +(s.unit_cost * (1 + s.margin_pct / 100)).toFixed(2),
+      totalCost: Math.round(s.qty * s.unit_cost * (1 + s.margin_pct / 100)),
+    }));
+}
+
 export default async function NewQuotePage({
   searchParams,
 }: {
@@ -56,281 +178,134 @@ export default async function NewQuotePage({
     bundle_id: bundleId,
   } = await searchParams;
 
-  let profile: {
-    hourly_rate: number;
-    materials_margin_pct: number;
-    trades?: string[];
-    onboarded_at?: string | null;
-  } = { hourly_rate: 95, materials_margin_pct: 20 };
-  let materials: { item_key: string; label: string; unit_cost: number }[] = [];
-  let activeTrades: string[] = [];
-  let needsOnboarding = false;
-  let preMarkupMaterials: Array<{
-    label: string;
-    quantity: number;
-    unit: string;
-    unitCost: number;
-    totalCost: number;
-    labourHrs?: number;
-  }> = [];
+  const supabase = await createClient();
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) redirect("/login");
 
-  // Material bundle loading via ?bundle_id=xxx
-  let bundleMaterials: Array<{
-    label: string; quantity: number; unit: string; unitCost: number; totalCost: number;
-  }> = [];
+  const businessId = await getActiveBusinessId(supabase, userData.user.id);
+  const isTeamMember = businessId !== userData.user.id;
 
-  let pricingTiers: { id: string; name: string; markup_pct: number; sort_order: number }[] = [];
-  let jobSizeTiers: { id: string; name: string; max_days: number | null; markup_pct: number; sort_order: number }[] = [];
+  /* ── 1. Profile (cached) ── */
+  const dbProfile = await getCachedProfile(supabase, businessId);
 
-  try {
-    const supabase = await createClient();
-    const { data: userData } = await supabase.auth.getUser();
-    if (userData.user) {
-      const businessId = await getActiveBusinessId(
-        supabase,
-        userData.user.id
-      );
-      const isTeamMember = businessId !== userData.user.id;
-      const { data: dbProfile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", businessId)
-        .single();
-      if (dbProfile) {
-        if (!dbProfile.onboarded_at && !isTeamMember) {
-          needsOnboarding = true;
-        } else {
-          profile = dbProfile;
-          activeTrades = dbProfile.trades ?? [];
-        }
-      }
-
-      // Fetch pricing tiers (auto-seed defaults if empty)
-      const { data: ptData } = await supabase
-        .from("pricing_tiers")
-        .select("id, name, markup_pct, sort_order")
-        .eq("profile_id", businessId)
-        .order("sort_order", { ascending: true });
-      if (ptData && ptData.length > 0) {
-        pricingTiers = ptData;
-      } else {
-        pricingTiers = DEFAULT_PRICING_TIERS.map((t, i) => ({ ...t, id: `default-pt-${i}`, profile_id: businessId }));
-      }
-
-      // Fetch job size tiers (auto-seed defaults if empty)
-      const { data: jstData } = await supabase
-        .from("job_size_tiers")
-        .select("id, name, max_days, markup_pct, sort_order")
-        .eq("profile_id", businessId)
-        .order("sort_order", { ascending: true });
-      if (jstData && jstData.length > 0) {
-        jobSizeTiers = jstData;
-      } else {
-        jobSizeTiers = DEFAULT_JOB_SIZE_TIERS.map((t, i) => ({ ...t, id: `default-jst-${i}`, profile_id: businessId }));
-      }
-
-      let pkgForMaterials: {
-        items: unknown;
-        trade: string;
-        labourHours: number | null;
-      } | null = null;
-
-      if (packageId) {
-        const { data: pkg } = await supabase
-          .from("packages")
-          .select("*, package_items(*)")
-          .eq("id", packageId)
-          .eq("profile_id", businessId)
-          .single();
-        if (pkg) {
-          pkgForMaterials = {
-            items: pkg.package_items,
-            trade: pkg.trade,
-            labourHours: pkg.labour_hours,
-          };
-          if (!tradeParm) tradeParm = pkg.trade;
-        }
-      }
-
-      // Material bundle loading via ?bundle_id=xxx
-      if (bundleId) {
-        const { data: bundle } = await supabase
-          .from("material_bundles")
-          .select("*, material_bundle_items(*)")
-          .eq("id", bundleId)
-          .eq("profile_id", businessId)
-          .eq("status", "active")
-          .single();
-        if (bundle) {
-          const items = (bundle.material_bundle_items ?? []) as Array<{
-            label: string; qty: number; unit: string; unit_cost: number;
-          }>;
-          bundleMaterials = items
-            .filter((i) => i.label)
-            .map((i) => ({
-              label: i.label,
-              quantity: i.qty,
-              unit: i.unit ?? "ea",
-              unitCost: i.unit_cost ?? 0,
-              totalCost: Math.round(i.qty * (i.unit_cost ?? 0)),
-            }));
-          if (!tradeParm) tradeParm = bundle.trade;
-        }
-      }
-
-      /* Default the trade to the tradie's first active trade if the URL
-         didn't specify one and no package/bundle set it. Without this, a
-         plain visit to the new-quote page skipped the price book load
-         entirely and fell back to hardcoded default materials with made-up
-         prices -- quote items MUST come from the tradie's real supplier
-         pricing wherever it exists. */
-      if (!tradeParm && activeTrades.length > 0) tradeParm = activeTrades[0];
-
-      if (tradeParm) {
-        /* Try price_book_items first (CSV uploads + supplier catalog).
-           Paginated: PostgREST caps un-limited selects at 1000 rows, which
-           silently dropped over half of a 2200-item catalog.
-           This used to be gated to DEDICATED trades only -- painter, tiler,
-           landscaper etc. (the "generic" builder trades) never got their
-           uploaded price book at all, no matter what the tradie uploaded.
-           Every trade should quote off real data if it exists. */
-        const PAGE = 1000;
-        const pbAll: { id: string; description: string; cost_price: number | null }[] = [];
-        for (let from = 0; ; from += PAGE) {
-          const { data: pageData, error: pageErr } = await supabase
-            .from("price_book_items")
-            .select("id,description,cost_price")
-            .eq("profile_id", businessId)
-            .eq("trade", tradeParm)
-            .order("description")
-            .range(from, from + PAGE - 1);
-          if (pageErr || !pageData || pageData.length === 0) break;
-          pbAll.push(...pageData);
-          if (pageData.length < PAGE) break;
-        }
-        if (pbAll.length > 0) {
-          materials = pbAll.map((m) => ({
-            item_key: m.id,
-            label: m.description,
-            unit_cost: m.cost_price ?? 0,
-          }));
-        }
-        /* Fallback to legacy material_items */
-        if (materials.length === 0) {
-          const legacyMats = await supabase
-            .from("material_items")
-            .select("*")
-            .eq("profile_id", businessId)
-            .eq("trade", tradeParm)
-            .order("label");
-          if (legacyMats.data && legacyMats.data.length > 0)
-            materials = legacyMats.data;
-        }
-        /* Fallback to defaults -- dedicated trades only; generic trades'
-           own template defaults are seeded client-side in GenericQuoteBuilder */
-        if (materials.length === 0 && DEDICATED.includes(tradeParm)) {
-          const defaults = DEDICATED_DEFAULTS[tradeParm];
-          if (defaults) materials = defaults.map((m) => ({ ...m }));
-        }
-      }
-
-      if (planId) {
-        const { data: plan } = await supabase
-          .from("client_plans")
-          .select("shapes")
-          .eq("id", planId)
-          .eq("profile_id", businessId)
-          .single();
-        const shapes =
-          (plan?.shapes as Array<{
-            label: string;
-            material_label: string;
-            unit_cost: number;
-            margin_pct: number;
-            qty: number;
-            unit: string;
-          }>) ?? [];
-        preMarkupMaterials = shapes
-          .filter((s) => s.material_label || s.label)
-          .map((s) => ({
-            label: s.material_label || s.label,
-            quantity: s.qty,
-            unit: s.unit,
-            unitCost: +(s.unit_cost * (1 + s.margin_pct / 100)).toFixed(2),
-            totalCost: Math.round(
-              s.qty * s.unit_cost * (1 + s.margin_pct / 100)
-            ),
-          }));
-      } else if (pkgForMaterials) {
-        const items =
-          (pkgForMaterials.items as Array<{
-            label: string;
-            qty: number;
-            unit_cost: number;
-            unit: string;
-          }>) ?? [];
-        preMarkupMaterials = items
-          .filter((i) => i.label)
-          .map((i) => ({
-            label: i.label,
-            quantity: i.qty,
-            unit: i.unit ?? "ea",
-            unitCost: i.unit_cost,
-            totalCost: Math.round(i.qty * i.unit_cost),
-          }));
-
-        // Packages carry a single labour_hours estimate for the whole
-        // package (not per material line), so attach it to the first
-        // line - or a synthetic zero-cost line if the package has no
-        // materials at all - so it flows through markupLabourHours() /
-        // markupChargeTotal() the same way per-item takeoff hours
-        // already do. Without this, starting a quote from a package
-        // added its materials cost to the quote but silently dropped
-        // its labour hours entirely - the wizard never even read
-        // pkg.labour_hours beyond using it to detect the trade.
-        if (pkgForMaterials.labourHours) {
-          if (preMarkupMaterials.length > 0) {
-            preMarkupMaterials[0] = { ...preMarkupMaterials[0], labourHrs: pkgForMaterials.labourHours };
-          } else {
-            preMarkupMaterials = [{
-              label: "Package labour",
-              quantity: 0,
-              unit: "",
-              unitCost: 0,
-              totalCost: 0,
-              labourHrs: pkgForMaterials.labourHours,
-            }];
-          }
-        }
-      } else if (preMarkup) {
-        const lump = parseInt(preMarkup);
-        if (lump)
-          preMarkupMaterials = [
-            {
-              label: "Materials from plan markup",
-              quantity: 1,
-              unit: "lot",
-              unitCost: lump,
-              totalCost: lump,
-            },
-          ];
-      }
-
-      // Merge bundle materials if no other pre-markup materials exist
-      if (bundleMaterials.length > 0 && preMarkupMaterials.length === 0) {
-        preMarkupMaterials = bundleMaterials;
-      }
-    }
-  } catch (err) {
-    console.error("New quote page error:", err);
+  if (!dbProfile) {
+    // extreme fallback — shouldn't happen for a logged-in user
+    return (
+      <>
+        <AppHeader />
+        <main className="page-wrap-narrow py-12 text-center">
+          <p className="text-[var(--ink-faint)]">Something went wrong loading your profile.</p>
+        </main>
+      </>
+    );
   }
 
-  if (needsOnboarding) redirect("/onboarding");
+  if (!dbProfile.onboarded_at && !isTeamMember) {
+    redirect("/onboarding");
+  }
+
+  const activeTrades = dbProfile.trades ?? [];
+
+  /* ── 2. Default the trade ── */
+  if (!tradeParm && activeTrades.length > 0) tradeParm = activeTrades[0];
 
   const selectedTrade =
     tradeParm && activeTrades.includes(tradeParm)
       ? tradeParm
       : (activeTrades[0] ?? "electrician");
+
+  /* ── 3. Fetch EVERYTHING in parallel ── */
+  const [
+    pricingTiers,
+    jobSizeTiers,
+    pkgData,
+    bundleData,
+    planMaterials,
+  ] = await Promise.all([
+    getCachedPricingTiers(supabase, businessId),
+    getCachedJobSizeTiers(supabase, businessId),
+    loadPackage(supabase, businessId, packageId, tradeParm),
+    loadBundle(supabase, businessId, bundleId, tradeParm),
+    loadPlanMarkup(supabase, businessId, planId),
+  ]);
+
+  /* ── 4. Resolve trade from package/bundle ── */
+  let effectiveTrade = selectedTrade;
+  if (pkgData?.trade) effectiveTrade = pkgData.trade;
+  if (bundleData.trade) effectiveTrade = bundleData.trade;
+
+  /* ── 5. Resolve pre-markup materials ── */
+  let preMarkupMaterials: Array<{
+    label: string; quantity: number; unit: string; unitCost: number;
+    totalCost: number; labourHrs?: number;
+  }> = [];
+
+  if (pkgData?.preMarkup && pkgData.preMarkup.length > 0) {
+    preMarkupMaterials = pkgData.preMarkup;
+  } else if (planMaterials.length > 0) {
+    preMarkupMaterials = planMaterials;
+  } else if (preMarkup) {
+    const lump = parseInt(preMarkup);
+    if (lump) {
+      preMarkupMaterials = [{
+        label: "Materials from plan markup",
+        quantity: 1,
+        unit: "lot",
+        unitCost: lump,
+        totalCost: lump,
+      }];
+    }
+  }
+
+  // Bundle materials merge in only if nothing else filled the slot
+  if (bundleData.materials.length > 0 && preMarkupMaterials.length === 0) {
+    preMarkupMaterials = bundleData.materials;
+  }
+
+  /* ── 6. Load materials (cached, single query — no loop) ── */
+  let materials: { item_key: string; label: string; unit_cost: number }[] = [];
+
+  if (effectiveTrade) {
+    // Try price_book_items first (single query, cached)
+    const pbItems = await getCachedPriceBook(supabase, businessId, effectiveTrade);
+    if (pbItems.length > 0) {
+      materials = pbItems.map((m) => ({
+        item_key: m.id,
+        label: m.description,
+        unit_cost: m.cost_price ?? 0,
+      }));
+    }
+
+    // Fallback to legacy material_items (cached)
+    if (materials.length === 0) {
+      const legacyItems = await getCachedLegacyMaterials(supabase, businessId, effectiveTrade);
+      if (legacyItems.length > 0) {
+        materials = legacyItems;
+      }
+    }
+
+    // Fallback to hardcoded defaults
+    if (materials.length === 0 && DEDICATED.includes(effectiveTrade)) {
+      const defaults = DEDICATED_DEFAULTS[effectiveTrade];
+      if (defaults) materials = defaults.map((m) => ({ ...m }));
+    }
+  }
+
+  /* ── 7. Build tier objects for the builder ── */
+  const resolvedPricingTiers = pricingTiers.length > 0
+    ? pricingTiers
+    : DEFAULT_PRICING_TIERS.map((t, i) => ({ ...t, id: `default-pt-${i}` }));
+
+  const resolvedJobSizeTiers = jobSizeTiers.length > 0
+    ? jobSizeTiers
+    : DEFAULT_JOB_SIZE_TIERS.map((t, i) => ({ ...t, id: `default-jst-${i}` }));
+
+  const profile = {
+    hourly_rate: dbProfile.hourly_rate ?? 95,
+    materials_margin_pct: dbProfile.materials_margin_pct ?? 20,
+    trades: dbProfile.trades,
+    onboarded_at: dbProfile.onboarded_at,
+  };
 
   return (
     <>
@@ -367,8 +342,8 @@ export default async function NewQuotePage({
           materials={materials}
           preClientId={preClientId}
           preMarkupMaterials={preMarkupMaterials}
-          pricingTiers={pricingTiers}
-          jobSizeTiers={jobSizeTiers}
+          pricingTiers={resolvedPricingTiers}
+          jobSizeTiers={resolvedJobSizeTiers}
         />
       )}
       {selectedTrade === "plumber" && (
@@ -377,8 +352,8 @@ export default async function NewQuotePage({
           materials={materials}
           preClientId={preClientId}
           preMarkupMaterials={preMarkupMaterials}
-          pricingTiers={pricingTiers}
-          jobSizeTiers={jobSizeTiers}
+          pricingTiers={resolvedPricingTiers}
+          jobSizeTiers={resolvedJobSizeTiers}
         />
       )}
       {selectedTrade === "carpenter" && (
@@ -387,8 +362,8 @@ export default async function NewQuotePage({
           materials={materials}
           preClientId={preClientId}
           preMarkupMaterials={preMarkupMaterials}
-          pricingTiers={pricingTiers}
-          jobSizeTiers={jobSizeTiers}
+          pricingTiers={resolvedPricingTiers}
+          jobSizeTiers={resolvedJobSizeTiers}
         />
       )}
       {selectedTrade === "roofer" && (
@@ -397,8 +372,8 @@ export default async function NewQuotePage({
           materials={materials}
           preClientId={preClientId}
           preMarkupMaterials={preMarkupMaterials}
-          pricingTiers={pricingTiers}
-          jobSizeTiers={jobSizeTiers}
+          pricingTiers={resolvedPricingTiers}
+          jobSizeTiers={resolvedJobSizeTiers}
         />
       )}
       {!DEDICATED.includes(selectedTrade) && (
@@ -408,8 +383,8 @@ export default async function NewQuotePage({
           materials={materials}
           preClientId={preClientId}
           preMarkupMaterials={preMarkupMaterials}
-          pricingTiers={pricingTiers}
-          jobSizeTiers={jobSizeTiers}
+          pricingTiers={resolvedPricingTiers}
+          jobSizeTiers={resolvedJobSizeTiers}
         />
       )}
     </>

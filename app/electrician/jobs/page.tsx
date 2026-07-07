@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getActiveBusinessId } from "@/lib/team";
-import { getOrSeedBoardColumns } from "@/lib/jobBoard";
+import { getCachedBoardColumns } from "@/lib/cache";
 import AppHeader from "@/components/AppHeader";
 import JobsPageClient from "./JobsPageClient";
 
@@ -20,6 +20,8 @@ export default async function JobsPage() {
     const { data: userData } = await supabase.auth.getUser();
     if (userData.user) {
       const businessId = await getActiveBusinessId(supabase, userData.user.id);
+
+      /* ── All queries in parallel ── */
       const [{ data: allJobs }, { data: quotesData }, { data: teamRows }, columns] = await Promise.all([
         supabase
           .from("jobs")
@@ -33,8 +35,9 @@ export default async function JobsPage() {
           .eq("status", "accepted")
           .order("accepted_at", { ascending: true }),
         supabase.from("team_members").select("id, name, email").eq("owner_profile_id", businessId).eq("status", "active").order("name"),
-        getOrSeedBoardColumns(supabase, businessId),
+        getCachedBoardColumns(supabase, businessId),
       ]);
+
       if (allJobs) {
         boardJobs = allJobs.filter((j) => !j.is_recurring_template);
         quickJobs = allJobs.filter((j) => j.source === "quick" || j.source === "recurring");
