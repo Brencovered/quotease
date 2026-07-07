@@ -2,7 +2,8 @@
 
 import { Search, Filter, Star, ArrowUpDown, Locate } from "lucide-react";
 import Link from "next/link";
-import { useCallback } from "react";
+import { useCallback, useTransition } from "react";
+import { useRouter } from "next/navigation";
 
 const ALL_TRADES = [
   "electrician", "plumber", "builder", "roofer", "painter", "carpenter",
@@ -67,15 +68,38 @@ export default function DirectorySearchForm({
   count,
 }: DirectorySearchFormProps) {
   const activeSort = sort ?? "rating";
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+
+  // Client-side navigation with scroll: false - a native <form> submit
+  // (the previous approach) does a full browser page reload, which
+  // resets scroll to the top by default. That's exactly why changing
+  // trade (or any filter) sent the tradie back to the top of the page
+  // instead of staying where they were looking at results.
+  const navigate = useCallback((form: HTMLFormElement) => {
+    const formData = new FormData(form);
+    const params = new URLSearchParams();
+    for (const [key, value] of formData.entries()) {
+      if (typeof value === "string" && value) params.set(key, value);
+    }
+    const qs = params.toString();
+    startTransition(() => {
+      router.push(qs ? `/directory?${qs}` : "/directory", { scroll: false });
+    });
+  }, [router]);
 
   const handleChange = useCallback((e: React.FormEvent<HTMLFormElement>) => {
-    const form = e.currentTarget;
-    setTimeout(() => form.submit(), 0);
-  }, []);
+    navigate(e.currentTarget);
+  }, [navigate]);
+
+  const handleSubmit = useCallback((e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    navigate(e.currentTarget);
+  }, [navigate]);
 
   return (
     <div id="listings" className="sticky top-0 z-20 border-b shadow-sm" style={{ background: "var(--surface)", borderColor: "var(--line)" }}>
-      <form method="GET" className="max-w-6xl mx-auto px-6 py-3 flex flex-wrap gap-2 items-center" onChange={handleChange}>
+      <form className="max-w-6xl mx-auto px-6 py-3 flex flex-wrap gap-2 items-center" onChange={handleChange} onSubmit={handleSubmit}>
         <select name="trade" defaultValue={trade ?? ""} className="app-field text-[13px] w-auto bg-white pl-3 pr-2">
           <option value="">All trades</option>
           {ALL_TRADES.map((t) => (
