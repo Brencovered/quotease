@@ -71,6 +71,7 @@ export default async function NewQuotePage({
     unit: string;
     unitCost: number;
     totalCost: number;
+    labourHrs?: number;
   }> = [];
 
   // Material bundle loading via ?bundle_id=xxx
@@ -131,6 +132,7 @@ export default async function NewQuotePage({
       let pkgForMaterials: {
         items: unknown;
         trade: string;
+        labourHours: number | null;
       } | null = null;
 
       if (packageId) {
@@ -144,6 +146,7 @@ export default async function NewQuotePage({
           pkgForMaterials = {
             items: pkg.package_items,
             trade: pkg.trade,
+            labourHours: pkg.labour_hours,
           };
           if (!tradeParm) tradeParm = pkg.trade;
         }
@@ -275,6 +278,30 @@ export default async function NewQuotePage({
             unitCost: i.unit_cost,
             totalCost: Math.round(i.qty * i.unit_cost),
           }));
+
+        // Packages carry a single labour_hours estimate for the whole
+        // package (not per material line), so attach it to the first
+        // line - or a synthetic zero-cost line if the package has no
+        // materials at all - so it flows through markupLabourHours() /
+        // markupChargeTotal() the same way per-item takeoff hours
+        // already do. Without this, starting a quote from a package
+        // added its materials cost to the quote but silently dropped
+        // its labour hours entirely - the wizard never even read
+        // pkg.labour_hours beyond using it to detect the trade.
+        if (pkgForMaterials.labourHours) {
+          if (preMarkupMaterials.length > 0) {
+            preMarkupMaterials[0] = { ...preMarkupMaterials[0], labourHrs: pkgForMaterials.labourHours };
+          } else {
+            preMarkupMaterials = [{
+              label: "Package labour",
+              quantity: 0,
+              unit: "",
+              unitCost: 0,
+              totalCost: 0,
+              labourHrs: pkgForMaterials.labourHours,
+            }];
+          }
+        }
       } else if (preMarkup) {
         const lump = parseInt(preMarkup);
         if (lump)
