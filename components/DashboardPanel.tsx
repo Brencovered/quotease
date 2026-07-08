@@ -85,7 +85,7 @@ export default function DashboardPanel({ stats, profit }: Props) {
       {(followUpsDue > 0 || expiringSoon > 0) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
           {followUpsDue > 0 && (
-            <Link href="/electrician/quotes?status=sent" className="flex items-center gap-3 bg-[var(--blue-bg)] border border-blue-200 rounded-xl px-4 py-3">
+            <Link prefetch={false} href="/electrician/quotes?status=sent" className="flex items-center gap-3 bg-[var(--blue-bg)] border border-blue-200 rounded-xl px-4 py-3">
               <Bell size={16} className="text-[var(--blue)] shrink-0" />
               <div>
                 <p className="text-[13px] font-bold text-[var(--blue)]">{followUpsDue} follow-up{followUpsDue !== 1 ? "s" : ""} due</p>
@@ -94,7 +94,7 @@ export default function DashboardPanel({ stats, profit }: Props) {
             </Link>
           )}
           {expiringSoon > 0 && (
-            <Link href="/electrician/quotes?status=sent" className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+            <Link prefetch={false} href="/electrician/quotes?status=sent" className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
               <AlertTriangle size={16} className="text-amber-600 shrink-0" />
               <div>
                 <p className="text-[13px] font-bold text-amber-800">{expiringSoon} quote{expiringSoon !== 1 ? "s" : ""} expired</p>
@@ -186,27 +186,27 @@ export default function DashboardPanel({ stats, profit }: Props) {
 
       {/* Quick actions */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        <Link href="/electrician" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
+        <Link prefetch={false} href="/electrician" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
           <span className="flex items-center gap-2"><Zap size={16} className="text-[var(--amber)]" /> New quote</span>
           <ArrowUpRight size={14} className="text-[var(--ink-faint)]" />
         </Link>
-        <Link href="/electrician/jobs" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
+        <Link prefetch={false} href="/electrician/jobs" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
           <span className="flex items-center gap-2"><Briefcase size={16} className="text-[var(--blue)]" /> Jobs ({stats.activeJobsCount ?? 0})</span>
           <ArrowUpRight size={14} className="text-[var(--ink-faint)]" />
         </Link>
-        <Link href="/electrician/schedule" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
+        <Link prefetch={false} href="/electrician/schedule" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
           <span className="flex items-center gap-2"><CalendarDays size={16} className="text-[var(--green)]" /> Schedule</span>
           <ArrowUpRight size={14} className="text-[var(--ink-faint)]" />
         </Link>
-        <Link href="/electrician/packages" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
+        <Link prefetch={false} href="/electrician/packages" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
           <span className="flex items-center gap-2"><Package size={16} className="text-[var(--amber-deep)]" /> Packages</span>
           <span className="text-[11px] font-bold text-[var(--ink-faint)] bg-[var(--app-bg)] rounded-full px-2 py-0.5">{packageCount} ready</span>
         </Link>
-        <Link href="/electrician/margins" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
+        <Link prefetch={false} href="/electrician/margins" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
           <span className="flex items-center gap-2"><TrendingUp size={16} className="text-[var(--green)]" /> Profit detail</span>
           <ArrowUpRight size={14} className="text-[var(--ink-faint)]" />
         </Link>
-        <Link href="/electrician/reports" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
+        <Link prefetch={false} href="/electrician/reports" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
           <span className="flex items-center gap-2"><Briefcase size={16} className="text-[var(--navy)]" /> Reports</span>
           <ArrowUpRight size={14} className="text-[var(--ink-faint)]" />
         </Link>
