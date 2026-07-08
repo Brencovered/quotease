@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getTeamContext } from "@/lib/team";
 import { computeReportStats } from "@/lib/reportStats";
+import { markOnboardingMilestone } from "@/lib/onboarding";
 import AppHeader from "@/components/AppHeader";
 import ReportsPanel from "@/components/ReportsPanel";
 
@@ -34,6 +35,9 @@ export default async function ReportsPage() {
       ]);
 
       stats = computeReportStats(jobs ?? [], payments ?? [], teamRows ?? [], timesheetRows ?? []);
+
+      // Day 7 onboarding milestone -- fire-and-forget, never block the page.
+      markOnboardingMilestone(supabase, businessId, "report_viewed_at").catch(() => {});
     }
   } catch (err) {
     console.error("Reports page:", err);

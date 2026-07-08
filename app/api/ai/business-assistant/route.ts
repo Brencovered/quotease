@@ -43,6 +43,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveBusinessId } from "@/lib/team";
+import { markOnboardingMilestone } from "@/lib/onboarding";
 
 const MAX_TOOL_ROUNDS = 4;
 
@@ -140,6 +141,11 @@ export async function POST(req: NextRequest) {
   if (!userData.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const businessId = await getActiveBusinessId(supabase, userData.user.id);
+
+  // Day 6 onboarding milestone -- no other clean signal that someone has
+  // actually used the assistant, so record it here. Fire-and-forget: never
+  // let this block or fail the real chat response.
+  markOnboardingMilestone(supabase, businessId, "ai_assistant_used_at").catch(() => {});
 
   const { messages, system } = (await req.json()) as {
     messages: { role: "user" | "assistant"; content: unknown }[];

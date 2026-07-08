@@ -1,12 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
 import { computeDashboardStats, computeProfitStats } from "@/lib/dashboardStats";
 import { getActiveBusinessId } from "@/lib/team";
+import { getOnboardingProgress, type OnboardingProgress } from "@/lib/onboarding";
 import AppHeader from "@/components/AppHeader";
 import DashboardPanel from "@/components/DashboardPanel";
+import TrialOnboardingWidget from "@/components/TrialOnboardingWidget";
 
 export default async function DashboardPage() {
   let stats = computeDashboardStats([]);
   let profit = computeProfitStats([], [], 95);
+  let onboardingProgress: OnboardingProgress | null = null;
 
   try {
     const supabase = await createClient();
@@ -25,6 +28,7 @@ export default async function DashboardPage() {
         stats = computeDashboardStats(quotes);
         profit = computeProfitStats(quotes, actuals ?? [], profile?.hourly_rate ?? 95);
       }
+      onboardingProgress = await getOnboardingProgress(supabase, businessId);
     }
   } catch (err) {
     console.error("Dashboard page:", err);
@@ -33,6 +37,9 @@ export default async function DashboardPage() {
   return (
     <>
       <AppHeader />
+      <div className="page-wrap pt-4">
+        {onboardingProgress && <TrialOnboardingWidget initialProgress={onboardingProgress} />}
+      </div>
       <DashboardPanel stats={stats} profit={profit} />
     </>
   );
