@@ -320,22 +320,22 @@ export default async function DirectoryPage({
             {(trade || suburb || reviews || rating) && (
               <div className="flex flex-wrap gap-2 mb-4">
                 {trade && (
-                  <Link href={buildUrl({ trade: undefined })} className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full bg-[var(--navy)] text-white hover:opacity-80 transition-opacity">
+                  <Link href={buildUrl({ trade: undefined })} scroll={false} className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full bg-[var(--navy)] text-white hover:opacity-80 transition-opacity">
                     {TRADE_LABELS[trade]} <span className="opacity-60">&times;</span>
                   </Link>
                 )}
                 {suburb && (
-                  <Link href={buildUrl({ suburb: undefined })} className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full bg-[var(--navy)] text-white hover:opacity-80 transition-opacity">
+                  <Link href={buildUrl({ suburb: undefined })} scroll={false} className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full bg-[var(--navy)] text-white hover:opacity-80 transition-opacity">
                     {suburb} <span className="opacity-60">&times;</span>
                   </Link>
                 )}
                 {reviews && (
-                  <Link href={buildUrl({ reviews: undefined })} className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full bg-[var(--amber)] text-[var(--navy)] hover:opacity-80 transition-opacity">
+                  <Link href={buildUrl({ reviews: undefined })} scroll={false} className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full bg-[var(--amber)] text-[var(--navy)] hover:opacity-80 transition-opacity">
                     {({"1-10": "1-10 reviews", "10-50": "10-50 reviews", "50-100": "50-100 reviews", "100-500": "100-500 reviews", "500+": "500+ reviews"} as Record<string,string>)[reviews] ?? reviews} <span className="opacity-60">&times;</span>
                   </Link>
                 )}
                 {rating && (
-                  <Link href={buildUrl({ rating: undefined })} className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full bg-[var(--green-bg)] text-[var(--green)] hover:opacity-80 transition-opacity">
+                  <Link href={buildUrl({ rating: undefined })} scroll={false} className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full bg-[var(--green-bg)] text-[var(--green)] hover:opacity-80 transition-opacity">
                     {({"4.5": "4.5+ stars", "4.0": "4.0+ stars", "3.5": "3.5+ stars"} as Record<string,string>)[rating] ?? rating} <span className="opacity-60">&times;</span>
                   </Link>
                 )}
@@ -344,13 +344,13 @@ export default async function DirectoryPage({
 
             {/* Trade filter pills */}
             <div className="flex flex-wrap gap-2 mb-6">
-              <Link href={buildUrl({ trade: undefined })}
+              <Link href={buildUrl({ trade: undefined })} scroll={false}
                 className={`px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold border transition-colors ${!trade ? "bg-[#0a1722] text-white border-[#0a1722]" : "bg-white hover:border-[#8b96a8]"}`}
                 style={trade ? { borderColor: "var(--line)", color: "var(--ink-soft)" } : {}}>
                 All trades
               </Link>
               {ALL_TRADES.map((t) => (
-                <Link key={t} href={buildUrl({ trade: t })}
+                <Link key={t} href={buildUrl({ trade: t })} scroll={false}
                   className={`px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold border transition-colors ${trade === t ? "bg-[#0a1722] text-white border-[#0a1722]" : "bg-white hover:border-[#8b96a8]"}`}
                   style={trade !== t ? { borderColor: "var(--line)", color: "var(--ink-soft)" } : {}}>
                   {TRADE_LABELS[t]}
