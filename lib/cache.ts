@@ -6,20 +6,32 @@
  * (user edits them manually), so a 5-minute TTL is safe.
  * After any write, the page router.refresh() invalidates the
  * client-side cache and the next server hit fetches fresh data.
+ *
+ * IMPORTANT: these functions create their own admin Supabase client
+ * internally rather than receiving the caller's client as a parameter.
+ * unstable_cache incorporates a serialization of every argument into
+ * its cache key - passing a live Supabase client object in (as the
+ * original version of this file did) means a complex, non-serializable
+ * object with no bearing on what should actually be cached becomes
+ * part of the key, which is a well-known unstable_cache footgun (silent
+ * cache-key weirdness, not a caught error). Every query here already
+ * filters explicitly by profile_id (businessId), which is the ONLY
+ * thing that should differentiate cache entries - using an admin
+ * client to run them is safe specifically because that businessId was
+ * already correctly resolved (via getActiveBusinessId) before it ever
+ * reaches these functions, and every query re-applies that filter
+ * itself rather than relying on RLS to scope it.
  */
 
 import { unstable_cache } from "next/cache";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /* ------------------------------------------------------------------ */
 /*  Price book items (the biggest payload on the new-quote page)       */
 /* ------------------------------------------------------------------ */
 export const getCachedPriceBook = unstable_cache(
-  async (
-    supabase: SupabaseClient,
-    businessId: string,
-    trade: string
-  ) => {
+  async (businessId: string, trade: string) => {
+    const supabase = createAdminClient();
     const { data, error } = await supabase
       .from("price_book_items")
       .select("id,description,cost_price")
@@ -42,11 +54,8 @@ export const getCachedPriceBook = unstable_cache(
 /*  Legacy material_items (fallback when price_book is empty)          */
 /* ------------------------------------------------------------------ */
 export const getCachedLegacyMaterials = unstable_cache(
-  async (
-    supabase: SupabaseClient,
-    businessId: string,
-    trade: string
-  ) => {
+  async (businessId: string, trade: string) => {
+    const supabase = createAdminClient();
     const { data, error } = await supabase
       .from("material_items")
       .select("*")
@@ -68,7 +77,8 @@ export const getCachedLegacyMaterials = unstable_cache(
 /*  Pricing tiers                                                      */
 /* ------------------------------------------------------------------ */
 export const getCachedPricingTiers = unstable_cache(
-  async (supabase: SupabaseClient, businessId: string) => {
+  async (businessId: string) => {
+    const supabase = createAdminClient();
     const { data, error } = await supabase
       .from("pricing_tiers")
       .select("id, name, markup_pct, sort_order")
@@ -89,7 +99,8 @@ export const getCachedPricingTiers = unstable_cache(
 /*  Job size tiers                                                     */
 /* ------------------------------------------------------------------ */
 export const getCachedJobSizeTiers = unstable_cache(
-  async (supabase: SupabaseClient, businessId: string) => {
+  async (businessId: string) => {
+    const supabase = createAdminClient();
     const { data, error } = await supabase
       .from("job_size_tiers")
       .select("id, name, max_days, markup_pct, sort_order")
@@ -112,7 +123,8 @@ export const getCachedJobSizeTiers = unstable_cache(
 import { getOrSeedBoardColumns, type BoardColumn } from "./jobBoard";
 
 export const getCachedBoardColumns = unstable_cache(
-  async (supabase: SupabaseClient, profileId: string): Promise<BoardColumn[]> => {
+  async (profileId: string): Promise<BoardColumn[]> => {
+    const supabase = createAdminClient();
     return getOrSeedBoardColumns(supabase, profileId);
   },
   ["board-columns"],
@@ -123,7 +135,8 @@ export const getCachedBoardColumns = unstable_cache(
 /*  Profile (lightweight — just the fields we need)                    */
 /* ------------------------------------------------------------------ */
 export const getCachedProfile = unstable_cache(
-  async (supabase: SupabaseClient, businessId: string) => {
+  async (businessId: string) => {
+    const supabase = createAdminClient();
     const { data, error } = await supabase
       .from("profiles")
       .select("hourly_rate, materials_margin_pct, trades, onboarded_at, business_name, abn, license_number, business_address, contact_phone, terms_and_conditions, logo_url, contact_email, default_deposit_pct, default_expiry_days, hourly_rate, materials_margin_pct")

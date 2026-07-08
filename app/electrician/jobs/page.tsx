@@ -35,7 +35,7 @@ export default async function JobsPage() {
           .eq("status", "accepted")
           .order("accepted_at", { ascending: true }),
         supabase.from("team_members").select("id, name, email").eq("owner_profile_id", businessId).eq("status", "active").order("name"),
-        getCachedBoardColumns(supabase, businessId),
+        getCachedBoardColumns(businessId),
       ]);
 
       if (allJobs) {

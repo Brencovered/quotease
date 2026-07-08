@@ -12,11 +12,7 @@ import { ELECTRICIAN_DEFAULT_MATERIALS } from "@/lib/calc";
 import { PLUMBER_DEFAULT_MATERIALS } from "@/lib/calcPlumber";
 import { CARPENTER_DEFAULT_MATERIALS } from "@/lib/calcCarpenter";
 import { ROOFER_DEFAULT_MATERIALS } from "@/lib/calcRoofer";
-import QuoteBuilder from "@/components/QuoteBuilder";
-import PlumberQuoteBuilder from "@/components/PlumberQuoteBuilder";
-import CarpenterQuoteBuilder from "@/components/CarpenterQuoteBuilder";
-import RooferQuoteBuilder from "@/components/RooferQuoteBuilder";
-import GenericQuoteBuilder from "@/components/GenericQuoteBuilder";
+import QuoteBuilderDynamic from "@/components/QuoteBuilderDynamic";
 import AppHeader from "@/components/AppHeader";
 import Link from "next/link";
 import { ALL_TRADES } from "@/lib/genericTrades";
@@ -63,7 +59,9 @@ async function loadPackage(
   const items = (pkg.package_items ?? []) as Array<{
     label: string; qty: number; unit_cost: number; unit: string;
   }>;
-  const preMarkup = items
+  const preMarkup: Array<{
+    label: string; quantity: number; unit: string; unitCost: number; totalCost: number; labourHrs?: number;
+  }> = items
     .filter((i) => i.label)
     .map((i) => ({
       label: i.label,
@@ -186,7 +184,7 @@ export default async function NewQuotePage({
   const isTeamMember = businessId !== userData.user.id;
 
   /* ── 1. Profile (cached) ── */
-  const dbProfile = await getCachedProfile(supabase, businessId);
+  const dbProfile = await getCachedProfile(businessId);
 
   if (!dbProfile) {
     // extreme fallback — shouldn't happen for a logged-in user
@@ -222,8 +220,8 @@ export default async function NewQuotePage({
     bundleData,
     planMaterials,
   ] = await Promise.all([
-    getCachedPricingTiers(supabase, businessId),
-    getCachedJobSizeTiers(supabase, businessId),
+    getCachedPricingTiers(businessId),
+    getCachedJobSizeTiers(businessId),
     loadPackage(supabase, businessId, packageId, tradeParm),
     loadBundle(supabase, businessId, bundleId, tradeParm),
     loadPlanMarkup(supabase, businessId, planId),
@@ -267,7 +265,7 @@ export default async function NewQuotePage({
 
   if (effectiveTrade) {
     // Try price_book_items first (single query, cached)
-    const pbItems = await getCachedPriceBook(supabase, businessId, effectiveTrade);
+    const pbItems = await getCachedPriceBook(businessId, effectiveTrade);
     if (pbItems.length > 0) {
       materials = pbItems.map((m) => ({
         item_key: m.id,
@@ -278,7 +276,7 @@ export default async function NewQuotePage({
 
     // Fallback to legacy material_items (cached)
     if (materials.length === 0) {
-      const legacyItems = await getCachedLegacyMaterials(supabase, businessId, effectiveTrade);
+      const legacyItems = await getCachedLegacyMaterials(businessId, effectiveTrade);
       if (legacyItems.length > 0) {
         materials = legacyItems;
       }
@@ -316,7 +314,7 @@ export default async function NewQuotePage({
             <span className="text-[12px] font-bold text-[var(--ink-faint)] uppercase tracking-wide mr-1 shrink-0">
               Trade:
             </span>
-            {activeTrades.map((t) => {
+            {activeTrades.map((t: string) => {
               const meta = ALL_TRADES.find((x) => x.key === t);
               return (
                 <Link
@@ -336,57 +334,15 @@ export default async function NewQuotePage({
         </div>
       )}
 
-      {selectedTrade === "electrician" && (
-        <QuoteBuilder
-          profile={profile}
-          materials={materials}
-          preClientId={preClientId}
-          preMarkupMaterials={preMarkupMaterials}
-          pricingTiers={resolvedPricingTiers}
-          jobSizeTiers={resolvedJobSizeTiers}
-        />
-      )}
-      {selectedTrade === "plumber" && (
-        <PlumberQuoteBuilder
-          profile={profile}
-          materials={materials}
-          preClientId={preClientId}
-          preMarkupMaterials={preMarkupMaterials}
-          pricingTiers={resolvedPricingTiers}
-          jobSizeTiers={resolvedJobSizeTiers}
-        />
-      )}
-      {selectedTrade === "carpenter" && (
-        <CarpenterQuoteBuilder
-          profile={profile}
-          materials={materials}
-          preClientId={preClientId}
-          preMarkupMaterials={preMarkupMaterials}
-          pricingTiers={resolvedPricingTiers}
-          jobSizeTiers={resolvedJobSizeTiers}
-        />
-      )}
-      {selectedTrade === "roofer" && (
-        <RooferQuoteBuilder
-          profile={profile}
-          materials={materials}
-          preClientId={preClientId}
-          preMarkupMaterials={preMarkupMaterials}
-          pricingTiers={resolvedPricingTiers}
-          jobSizeTiers={resolvedJobSizeTiers}
-        />
-      )}
-      {!DEDICATED.includes(selectedTrade) && (
-        <GenericQuoteBuilder
-          tradeKey={selectedTrade}
-          profile={profile}
-          materials={materials}
-          preClientId={preClientId}
-          preMarkupMaterials={preMarkupMaterials}
-          pricingTiers={resolvedPricingTiers}
-          jobSizeTiers={resolvedJobSizeTiers}
-        />
-      )}
+      <QuoteBuilderDynamic
+        tradeKey={selectedTrade}
+        profile={profile}
+        materials={materials}
+        preClientId={preClientId}
+        preMarkupMaterials={preMarkupMaterials}
+        pricingTiers={resolvedPricingTiers}
+        jobSizeTiers={resolvedJobSizeTiers}
+      />
     </>
   );
 }
