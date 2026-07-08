@@ -32,5 +32,16 @@ export async function GET() {
     .eq("status", "sent")
     .lt("follow_up_at", new Date().toISOString());
 
-  return NextResponse.json({ count: count ?? 0 });
+  // This route was consistently the single slowest request on every
+  // page (1.2-2.7s in live measurements, on a table with only 15 rows -
+  // not explained by query cost, more likely connection/runtime
+  // overhead specific to this route). It's called on every single page
+  // load via AppHeader's global nav, so even without root-causing that
+  // fully, a short private cache means the slow path only actually
+  // runs once every couple of minutes per browser instead of on every
+  // navigation - the badge doesn't need to be second-fresh.
+  return NextResponse.json(
+    { count: count ?? 0 },
+    { headers: { "Cache-Control": "private, max-age=120, stale-while-revalidate=300" } }
+  );
 }

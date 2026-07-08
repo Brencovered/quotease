@@ -22,9 +22,11 @@ type Homeowner = { name: string; email: string; phone: string | null };
 export default function LeadsPanel({
   requests,
   myClaimedIds,
+  now,
 }: {
   requests: Request[];
   myClaimedIds: string[];
+  now: number;
 }) {
   const [expanded,  setExpanded]  = useState<string | null>(null);
   const [claiming,  setClaiming]  = useState<string | null>(null);
@@ -89,7 +91,7 @@ export default function LeadsPanel({
     const homeowner  = revealed[r.id];
     const cardMsg    = msg[r.id];
     const isFull     = r.status === "fully_claimed" && !isClaimed;
-    const age        = Math.floor((Date.now() - new Date(r.created_at).getTime()) / 3600000);
+    const age        = Math.floor((now - new Date(r.created_at).getTime()) / 3600000);
 
     return (
       <div className={`card border-l-4 ${isClaimed ? "border-l-[var(--green)]" : isFull ? "border-l-[var(--line)]" : "border-l-[var(--amber)]"}`}>

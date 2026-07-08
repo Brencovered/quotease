@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 
-export default function BillingPanel({ trialEndsAt, isSubscribed }: { trialEndsAt: string | null; isSubscribed: boolean }) {
+export default function BillingPanel({ trialEndsAt, isSubscribed, now }: { trialEndsAt: string | null; isSubscribed: boolean; now: number }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // `now` is passed in from the server rather than calling Date.now()
+  // independently here - see components/QuotesList.tsx for the full
+  // explanation (this exact pattern caused a real production crash there).
   const trialDaysLeft = trialEndsAt
-    ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / 86400000))
+    ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - now) / 86400000))
     : 0;
   const trialExpired = !!trialEndsAt && trialDaysLeft === 0 && !isSubscribed;
 

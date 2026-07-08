@@ -244,7 +244,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             actuals={actuals}
             intakeData={quote?.intake_data}
           />
-          <CompliancePanel quoteId={quote?.id ?? null} jobId={job.id} certs={certsWithUrls as never} />
+          <CompliancePanel quoteId={quote?.id ?? null} jobId={job.id} certs={certsWithUrls as never} now={Date.now()} />
 
           {isAdmin && (
             <TimesheetsPanel jobId={job.id} entries={timesheetEntries as never} teamMembers={teamMembers} ownerName={userData.user.email ?? "Owner"} />

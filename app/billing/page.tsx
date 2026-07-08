@@ -32,7 +32,7 @@ export default async function BillingPage() {
   return (
     <>
       <AppHeader />
-      <BillingPanel trialEndsAt={trialEndsAt} isSubscribed={isSubscribed} />
+      <BillingPanel trialEndsAt={trialEndsAt} isSubscribed={isSubscribed} now={Date.now()} />
     </>
   );
 }

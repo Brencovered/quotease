@@ -20,12 +20,19 @@ const CERT_TYPES = ["CCEW", "COC", "ESC", "Energy Safe Victoria", "Other"];
 
 const EMPTY_FORM = { cert_type: "CCEW", cert_number: "", issued_date: "", expiry_date: "", notes: "" };
 
-function daysUntil(dateStr: string | null): number | null {
+// `now` is passed in from the server rather than calling Date.now()
+// independently here - server render and client hydration happen at
+// genuinely different moments, and if an expiry date sits right on a
+// day boundary, computing it separately in each pass can flip which
+// certs show the "expiring soon" warning between the two passes. A
+// frozen server-computed timestamp eliminates that mismatch (this
+// exact bug caused a real production crash on the Quotes list).
+function daysUntil(dateStr: string | null, now: number): number | null {
   if (!dateStr) return null;
-  return Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
+  return Math.ceil((new Date(dateStr).getTime() - now) / 86400000);
 }
 
-export default function CompliancePanel({ quoteId, jobId, certs: initial }: { quoteId: string | null; jobId?: string | null; certs: Cert[] }) {
+export default function CompliancePanel({ quoteId, jobId, certs: initial, now }: { quoteId: string | null; jobId?: string | null; certs: Cert[]; now: number }) {
   const [certs, setCerts] = useState(initial);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -116,7 +123,7 @@ export default function CompliancePanel({ quoteId, jobId, certs: initial }: { qu
 
       <div className="space-y-2">
         {certs.map((c) => {
-          const days = daysUntil(c.expiry_date);
+          const days = daysUntil(c.expiry_date, now);
           const expiring = days !== null && days >= 0 && days <= 30;
           const expired = days !== null && days < 0;
           return (

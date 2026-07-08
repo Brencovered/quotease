@@ -14,21 +14,17 @@ export default async function LeadsPage() {
   // not have their own empty, siloed subscription set.
   const businessId = await getActiveBusinessId(supabase, user.id);
 
-  // Get the tradie's profile
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, trades, suburb, business_name")
-    .eq("id", businessId)
-    .single();
+  // Profile and subscriptions don't depend on each other - fetch both at
+  // once instead of one after another. (Previously fully sequential:
+  // profile, then subscriptions, then job_requests, then myClaims - each
+  // waiting on the last even though most don't actually depend on it.)
+  const [{ data: profile }, { data: subscriptions }] = await Promise.all([
+    supabase.from("profiles").select("id, trades, suburb, business_name").eq("id", businessId).single(),
+    supabase.from("lead_subscriptions").select("trade, suburb, is_active").eq("profile_id", businessId),
+  ]);
 
   const trades = (profile?.trades ?? []).map((t: string) => t.toLowerCase());
   const tradieSuburb = profile?.suburb ?? "";
-
-  // Get active lead subscriptions for this tradie
-  const { data: subscriptions } = await supabase
-    .from("lead_subscriptions")
-    .select("trade, suburb, is_active")
-    .eq("profile_id", businessId);
 
   // Build list of active (trade, suburb) combos they're subscribed to
   const activeSubs = (subscriptions ?? []).filter((s) => s.is_active);
@@ -73,7 +69,11 @@ export default async function LeadsPage() {
     );
   }
 
-  const { data: allRequests } = await query;
+  // job_requests and myClaims are also independent of each other.
+  const [{ data: allRequests }, { data: myClaims }] = await Promise.all([
+    query,
+    supabase.from("job_claims").select("request_id").eq("tradie_profile_id", businessId).eq("status", "claimed"),
+  ]);
 
   // Filter by suburb client-side for fuzzy matching
   const requests = (allRequests ?? []).filter((r) => {
@@ -86,13 +86,6 @@ export default async function LeadsPage() {
         requestSuburb.includes(s.toLowerCase())
     );
   });
-
-  // Get this tradie's claimed request IDs
-  const { data: myClaims } = await supabase
-    .from("job_claims")
-    .select("request_id")
-    .eq("tradie_profile_id", businessId)
-    .eq("status", "claimed");
 
   const myClaimedIds = myClaims?.map((c) => c.request_id) ?? [];
 
@@ -161,6 +154,7 @@ export default async function LeadsPage() {
           <LeadsPanel
             requests={requestsWithPhotoUrls}
             myClaimedIds={myClaimedIds}
+            now={Date.now()}
           />
         )}
       </div>

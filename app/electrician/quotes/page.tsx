@@ -54,7 +54,7 @@ export default async function QuotesPage() {
       <AppHeader />
       <Suspense>
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        <QuotesList quotes={quotes as any} xeroConnected={xeroConnected} />
+        <QuotesList quotes={quotes as any} xeroConnected={xeroConnected} now={Date.now()} />
       </Suspense>
     </>
   );
