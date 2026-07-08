@@ -39,16 +39,37 @@ export default function JobPlansPanel({
       .eq("id", planId);
   }, []);
 
+  function shapesToMarkupItems(shapes: PlanShape[]) {
+    return shapes
+      .filter((s) => s.material_label || s.label)
+      .map((s) => ({
+        label: s.material_label || s.label,
+        quantity: s.qty,
+        unit: s.unit,
+        // Raw cost only, no per-shape margin baked in - the quote's own
+        // effective margin applies once, uniformly, wherever this total
+        // gets used downstream.
+        unitCost: s.unit_cost,
+        totalCost: Math.round(s.qty * s.unit_cost),
+      }));
+  }
+
   async function handleShapesChange(planId: string, shapes: PlanShape[], cal: CalibrationLine | null) {
     // Update local state
     setPlans((prev) => prev.map((p) => p.id === planId ? { ...p, shapes, calibration: cal } : p));
     // Persist shapes to plan
     await save(planId, shapes, cal);
-    // Roll up total across all plans and push to quote
+    // Roll up itemized materials across ALL plans on this job (not just
+    // the one just edited) and push the full array to the quote's
+    // markup_materials - the shape every reader of this field expects
+    // (Xero sync, invoice PDF, quote/job detail pages). Overwriting this
+    // with a bare rolled-up number instead of an array silently broke
+    // all of those.
     const allShapes = plans.map((p) => p.id === planId ? { ...p, shapes } : p).flatMap(p => p.shapes);
-    const total = allShapes.reduce((s, sh) => s + Math.round(sh.qty * sh.unit_cost * (1 + sh.margin_pct / 100)), 0);
+    const items = shapesToMarkupItems(allShapes);
+    const total = items.reduce((s, i) => s + i.totalCost, 0);
     const supabase = createClient();
-    await supabase.from("quotes").update({ markup_materials: total }).eq("id", quoteId);
+    await supabase.from("quotes").update({ markup_materials: items }).eq("id", quoteId);
     setSavedMsg(`Drawing costs updated: $${total.toLocaleString()}`);
     setTimeout(() => setSavedMsg(null), 3000);
   }

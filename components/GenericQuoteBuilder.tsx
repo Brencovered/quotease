@@ -15,7 +15,7 @@ import { getActiveBusinessId } from "@/lib/team";
 import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import CategoryMaterialPicker, { type PickerItem } from "@/components/CategoryMaterialPicker";
-import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupChargeTotal, markupMaterialsTotal, markupLabourHours, markupLabourTotal } from "@/lib/quotePricing";
+import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
 
 const STEPS = [
   { id: "customer", label: "Customer" },
@@ -34,6 +34,7 @@ export default function GenericQuoteBuilder({
   materials,
   preClientId,
   preMarkupMaterials,
+  preMarkupSource,
   pricingTiers,
   jobSizeTiers,
 }: {
@@ -41,7 +42,8 @@ export default function GenericQuoteBuilder({
   profile: { hourly_rate: number; materials_margin_pct: number; archetype_defaults?: Record<string, string> };
   materials?: { item_key: string; label: string; unit_cost: number }[];
   preClientId?: string;
-  preMarkupMaterials?: Array<{ label: string; quantity: number; unit: string; unitCost: number; totalCost: number }>;
+  preMarkupMaterials?: Array<{ label: string; quantity: number; unit: string; unitCost: number; totalCost: number; labourHrs?: number }>;
+  preMarkupSource?: "package" | "plan markup" | "material bundle";
   pricingTiers?: Array<{ id: string; name: string; markup_pct: number; sort_order: number }>;
   jobSizeTiers?: Array<{ id: string; name: string; max_days: number | null; markup_pct: number; sort_order: number }>;
 }) {
@@ -106,7 +108,9 @@ export default function GenericQuoteBuilder({
   const [analysisResult, setAnalysisResult] = useState<{ confidence: string; notes: string } | null>(null);
   const [usageLimitReached, setUsageLimitReached] = useState(false);
   const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">("full_on_completion");
-  const [siteItems,     setSiteItems]     = useState<{id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]>([]);
+  const [siteItems,     setSiteItems]     = useState<{id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]>(
+    () => markupMaterialsToScopeItems(preMarkupMaterials, preMarkupSource ?? "plan markup")
+  );
   const [annotationMeta, setAnnotationMeta] = useState<{id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string;roomName?:string}[]>([]);
   const [extraLines, setExtraLines]   = useState<ExtraLine[]>([]);
   const [saving,      setSaving]      = useState(false);
@@ -117,30 +121,25 @@ export default function GenericQuoteBuilder({
   }), [jobType, description, items, siteAccess]);
 
   const result = useMemo(() => calcGenericQuote(intake, effectiveMargin), [intake, effectiveMargin]);
-  const markupTotal  = markupChargeTotal(preMarkupMaterials, profile.hourly_rate ?? 85, effectiveMargin);
+  // Package / plan-markup / bundle materials are seeded into siteItems on
+  // mount, so siteTotal below already covers them - no separate markup*
+  // bucket needed any more.
   const siteLabour   = siteItemsLabourTotal(siteItems, profile.hourly_rate ?? 85);
   const siteMaterials = siteItemsMaterialsTotal(siteItems, effectiveMargin);
   const siteTotal    = Math.round(siteLabour + siteMaterials);
   const paymentTerms = termsPreset === "custom" ? [] : PAYMENT_TERM_PRESETS[termsPreset];
 
-  // See QuoteBuilder.tsx for the full explanation: without this, hours
-  // from a selected package or plan takeoff never showed in the "Labour"
-  // figure while building the quote (only their dollar value was charged,
-  // mislabelled as "Materials"). Generic trades derive their base labour
-  // dollar figure as totalCost - materialsCost (calcGenericQuote doesn't
-  // multiply hours by a rate directly - line items already carry their
-  // own per-hour cost), so that's used as the base here instead of
-  // labourHours * rate.
+  // Generic trades derive their base labour dollar figure as totalCost -
+  // materialsCost (calcGenericQuote doesn't multiply hours by a rate
+  // directly - line items already carry their own per-hour cost).
   const genericRate = profile.hourly_rate ?? 85;
   const extraTotalsForDisplay = extraLinesTotals(extraLines, genericRate, effectiveMargin);
   const extraHoursForDisplay  = extraLines.reduce((s, l) => s + l.hours, 0);
-  const markupLabourHrs    = markupLabourHours(preMarkupMaterials);
-  const markupMaterialsOnly = markupMaterialsTotal(preMarkupMaterials, effectiveMargin);
   const baseLabourDollar = result.totalCost - result.materialsCost;
-  const displayLabourHours = Math.round((result.labourHours + extraHoursForDisplay + markupLabourHrs) * 10) / 10;
-  const displayLabourDollar = Math.round(baseLabourDollar) + extraTotalsForDisplay.labour + Math.round(markupLabourTotal(preMarkupMaterials, genericRate));
-  const displayMaterialsDollar = Math.round(result.materialsCost + extraTotalsForDisplay.materials + markupMaterialsOnly);
-  const displayGrandTotal = result.totalCost + markupTotal + siteTotal + extraTotalsForDisplay.total;
+  const displayLabourHours = Math.round((result.labourHours + extraHoursForDisplay) * 10) / 10;
+  const displayLabourDollar = Math.round(baseLabourDollar) + extraTotalsForDisplay.labour;
+  const displayMaterialsDollar = Math.round(result.materialsCost + extraTotalsForDisplay.materials);
+  const displayGrandTotal = result.totalCost + siteTotal + extraTotalsForDisplay.total;
 
   function addItem(isLabour: boolean) {
     setItems((p) => [...p, {
@@ -219,9 +218,6 @@ export default function GenericQuoteBuilder({
     const siteLabourSave   = siteItemsLabourHours(siteItems);
     const siteMatlsSave    = siteItemsMaterialsTotal(siteItems, effectiveMargin);
     const siteTotalSave    = Math.round(siteLabourSave * (profile.hourly_rate ?? 85) + siteMatlsSave);
-    const markupLabourSave = markupLabourHours(preMarkupMaterials);
-    const markupMatlsSave  = markupMaterialsTotal(preMarkupMaterials, effectiveMargin);
-    const markupTotalSave  = Math.round(markupLabourSave * (profile.hourly_rate ?? 85) + markupMatlsSave);
     const { data: quote, error } = await supabase.from("quotes").insert({
       profile_id:    businessId,
       client_id:     resolvedClientId,
@@ -231,13 +227,15 @@ export default function GenericQuoteBuilder({
       trade:         tradeKey,
       job_type:      jobType,
       intake_data:   { ...intakeData, site_items: siteItems, annotation_meta: annotationMeta.map(a => ({ ...a, frameData: "" })) },
-      labour_hours:  result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0) + siteLabourSave + markupLabourSave,
-      materials_cost: result.materialsCost + extraTotals.materials + siteMatlsSave + markupMatlsSave,
-      total_cost:    result.totalCost + extraTotals.total + siteTotalSave + markupTotalSave,
+      labour_hours:  result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0) + siteLabourSave,
+      materials_cost: result.materialsCost + extraTotals.materials + siteMatlsSave,
+      total_cost:    result.totalCost + extraTotals.total + siteTotalSave,
       payment_terms: paymentTerms,
       pricing_tier_id: selectedPricingTierId,
       job_size_tier_id: selectedJobSizeTierId,
-      markup_materials: preMarkupMaterials ?? [],
+      // Package/plan/bundle materials now live in site_items (above) so
+      // they show up as itemized, editable lines in the Scope step.
+      markup_materials: [],
       status:        sendEmail ? "sent" : "draft",
       sent_at:       sendEmail ? new Date().toISOString() : null,
     }).select().single();

@@ -7,7 +7,7 @@ import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
-import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupChargeTotal, markupMaterialsTotal, markupLabourHours } from "@/lib/quotePricing";
+import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
 import StepCustomer from "./StepCustomer";
 import PackagePicker from "@/components/PackagePicker";
 import { resolveClientId } from "@/lib/resolveClientId";
@@ -93,7 +93,8 @@ interface RooferQuoteBuilderProps {
   profile: { hourly_rate: number; materials_margin_pct: number; trades?: string[]; onboarded_at?: string | null; archetype_defaults?: Record<string, string> };
   materials: { item_key: string; label: string; unit_cost: number }[];
   preClientId?: string;
-  preMarkupMaterials?: { label: string; quantity: number; unit: string; unitCost: number; totalCost: number }[];
+  preMarkupMaterials?: { label: string; quantity: number; unit: string; unitCost: number; totalCost: number; labourHrs?: number }[];
+  preMarkupSource?: "package" | "plan markup" | "material bundle";
   pricingTiers?: Array<{ id: string; name: string; markup_pct: number; sort_order: number }>;
   jobSizeTiers?: Array<{ id: string; name: string; max_days: number | null; markup_pct: number; sort_order: number }>;
 }
@@ -103,6 +104,7 @@ export default function RooferQuoteBuilder({
   materials: lib,
   preClientId,
   preMarkupMaterials,
+  preMarkupSource,
   pricingTiers,
   jobSizeTiers,
 }: RooferQuoteBuilderProps) {
@@ -129,7 +131,9 @@ export default function RooferQuoteBuilder({
   }
 
   // ── State ──────────────────────────────────────────────────────
-  const [siteItems, setSiteItems] = useState<{id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]>([]);
+  const [siteItems, setSiteItems] = useState<{id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]>(
+    () => markupMaterialsToScopeItems(preMarkupMaterials, preMarkupSource ?? "plan markup")
+  );
   const [annotationMeta, setAnnotationMeta] = useState<{id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string;roomName?:string}[]>([]);
 
   // ── Customer & site (was missing entirely -- save/send had no way to
@@ -450,9 +454,6 @@ export default function RooferQuoteBuilder({
     const siteLabourSave   = siteItemsLabourHours(siteItems);
     const siteMatlsSave    = siteItemsMaterialsTotal(siteItems, effectiveMargin);
     const siteTotalSave    = Math.round(siteLabourSave * rate + siteMatlsSave);
-    const markupLabourSave = markupLabourHours(preMarkupMaterials);
-    const markupMatlsSave  = markupMaterialsTotal(preMarkupMaterials, effectiveMargin);
-    const markupTotalSave  = Math.round(markupLabourSave * rate + markupMatlsSave);
     const formulaLabourHrs = summary.labour / rate;
 
     const { data: quote, error } = await supabase.from("quotes").insert({
@@ -472,15 +473,17 @@ export default function RooferQuoteBuilder({
         site_items: siteItems,
         annotation_meta: annotationMeta.map(a => ({ ...a, frameData: "" })),
       },
-      labour_hours: formulaLabourHrs + siteLabourSave + markupLabourSave,
-      materials_cost: Math.round(summary.matCost + summary.extrasTotal + summary.colorSurcharge + siteMatlsSave + markupMatlsSave),
-      total_cost: Math.round(summary.total + siteTotalSave + markupTotalSave),
+      labour_hours: formulaLabourHrs + siteLabourSave,
+      materials_cost: Math.round(summary.matCost + summary.extrasTotal + summary.colorSurcharge + siteMatlsSave),
+      total_cost: Math.round(summary.total + siteTotalSave),
       payment_terms: paymentTerms,
       pricing_tier_id: selectedPricingTierId,
       job_size_tier_id: selectedJobSizeTierId,
       status: sendEmail ? "sent" : "draft",
       sent_at: sendEmail ? new Date().toISOString() : null,
-      markup_materials: preMarkupMaterials ?? [],
+      // Package/plan/bundle materials now live in site_items (above) so
+      // they show up as itemized, editable lines in the Scope step.
+      markup_materials: [],
     }).select().single();
 
     if (error) { setSaveMessage(error.message); setSaving(false); return; }
@@ -512,11 +515,9 @@ export default function RooferQuoteBuilder({
 
   // ── Render ─────────────────────────────────────────────────────
 
-  const markupTotal = markupChargeTotal(preMarkupMaterials, profile.hourly_rate ?? 95, effectiveMargin);
   const siteTotal = Math.round(
     siteItemsLabourTotal(siteItems, profile.hourly_rate ?? 95)
     + siteItemsMaterialsTotal(siteItems, effectiveMargin)
-    + markupTotal
   );
 
   function saveDraft() {

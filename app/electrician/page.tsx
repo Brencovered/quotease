@@ -150,8 +150,13 @@ async function loadPlanMarkup(
       label: s.material_label || s.label,
       quantity: s.qty,
       unit: s.unit,
-      unitCost: +(s.unit_cost * (1 + s.margin_pct / 100)).toFixed(2),
-      totalCost: Math.round(s.qty * s.unit_cost * (1 + s.margin_pct / 100)),
+      // Raw cost only -- no per-shape margin baked in here. The quote's
+      // effective margin gets applied once, uniformly, when these are
+      // merged into the wizard's siteItems list. Baking margin in here
+      // AND applying the wizard's margin on top double-charged the
+      // client for every plan-markup material.
+      unitCost: s.unit_cost,
+      totalCost: Math.round(s.qty * s.unit_cost),
     }));
 }
 
@@ -238,10 +243,14 @@ export default async function NewQuotePage({
     totalCost: number; labourHrs?: number;
   }> = [];
 
+  let preMarkupSource: "package" | "plan markup" | "material bundle" = "plan markup";
+
   if (pkgData?.preMarkup && pkgData.preMarkup.length > 0) {
     preMarkupMaterials = pkgData.preMarkup;
+    preMarkupSource = "package";
   } else if (planMaterials.length > 0) {
     preMarkupMaterials = planMaterials;
+    preMarkupSource = "plan markup";
   } else if (preMarkup) {
     const lump = parseInt(preMarkup);
     if (lump) {
@@ -252,12 +261,14 @@ export default async function NewQuotePage({
         unitCost: lump,
         totalCost: lump,
       }];
+      preMarkupSource = "plan markup";
     }
   }
 
   // Bundle materials merge in only if nothing else filled the slot
   if (bundleData.materials.length > 0 && preMarkupMaterials.length === 0) {
     preMarkupMaterials = bundleData.materials;
+    preMarkupSource = "material bundle";
   }
 
   /* ── 6. Load materials (cached, single query — no loop) ── */
@@ -340,6 +351,7 @@ export default async function NewQuotePage({
         materials={materials}
         preClientId={preClientId}
         preMarkupMaterials={preMarkupMaterials}
+        preMarkupSource={preMarkupSource}
         pricingTiers={resolvedPricingTiers}
         jobSizeTiers={resolvedJobSizeTiers}
       />

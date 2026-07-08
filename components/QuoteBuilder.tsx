@@ -19,7 +19,7 @@ import { resolveCalcCosts, hasRealPriceBook, serializeLinkedItemKeys } from "@/l
 import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import SiteAnnotationReport from "@/components/SiteAnnotationReport";
-import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupChargeTotal, markupMaterialsTotal, markupLabourHours, markupLabourTotal } from "@/lib/quotePricing";
+import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
 import { MaterialSearchAdd, ScopeItemsList, type ScopeItem } from "@/components/ScopeOfWorkStep";
 import {
   calcElectricianQuote,
@@ -57,13 +57,14 @@ const STEPS = [
 ];
 
 export default function QuoteBuilder({
-  profile, materials, preClientId, preMarkupMaterials,
+  profile, materials, preClientId, preMarkupMaterials, preMarkupSource,
   pricingTiers, jobSizeTiers,
 }: {
   profile: { hourly_rate: number; materials_margin_pct: number; default_deposit_pct?: number | null; default_expiry_days?: number; archetype_defaults?: Record<string, string> };
   materials: MaterialRow[];
   preClientId?: string;
-  preMarkupMaterials?: Array<{ label: string; quantity: number; unit: string; unitCost: number; totalCost: number }>;
+  preMarkupMaterials?: Array<{ label: string; quantity: number; unit: string; unitCost: number; totalCost: number; labourHrs?: number }>;
+  preMarkupSource?: "package" | "plan markup" | "material bundle";
   pricingTiers?: Array<{ id: string; name: string; markup_pct: number; sort_order: number }>;
   jobSizeTiers?: Array<{ id: string; name: string; max_days: number | null; markup_pct: number; sort_order: number }>;
 }) {
@@ -141,7 +142,9 @@ export default function QuoteBuilder({
   const customTermsTotal = customTerms.reduce((s, t) => s + (Number(t.percent) || 0), 0);
 
   const [extraLines, setExtraLines]   = useState<{id:string;label:string;hours:number;materialsCost:number;note:string}[]>([]);
-  const [siteItems, setSiteItems]     = useState<ScopeItem[]>([]);
+  const [siteItems, setSiteItems]     = useState<ScopeItem[]>(
+    () => markupMaterialsToScopeItems(preMarkupMaterials, preMarkupSource ?? "plan markup")
+  );
   const [annotationMeta, setAnnotationMeta] = useState<{id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string}[]>([]);
   const [saving, setSaving]         = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -190,30 +193,22 @@ export default function QuoteBuilder({
   );
 
   const result = useMemo(() => calcElectricianQuote(intake, costs, rate, effectiveMargin), [intake, costs, rate, effectiveMargin]);
-  // The wizard's running total needs to include this too, not just the
-  // saved record - otherwise raising a quote from a $244 plan shows $0
-  // the whole time you're filling it in, which looks broken.
-  const markupTotal = markupChargeTotal(preMarkupMaterials, rate ?? 95, effectiveMargin);
+  // Package / plan-markup / bundle materials are seeded into siteItems on
+  // mount (see useState above), so siteTotal below already covers them -
+  // no separate markup* bucket needed any more.
   const siteLabour    = siteItemsLabourTotal(siteItems, rate ?? 95);
   const siteMaterials = siteItemsMaterialsTotal(siteItems, effectiveMargin ?? 20);
   const siteTotal     = Math.round(siteLabour + siteMaterials);
 
   // Displayed Labour/Materials split, covering every source EXCEPT on-site
   // items (which already have their own correctly-bucketed "On-site items"
-  // line below and shouldn't be double-counted here) - base intake, extra
-  // job lines, and markup materials from a plan or package. Without this,
-  // hours from a selected package or plan takeoff silently vanished from
-  // the "Labour" figure shown while building the quote (its dollar value
-  // was still charged, just mislabelled as "Materials"), and a client
-  // couldn't tell how many hours a job with a package attached would
-  // actually take.
+  // line below and shouldn't be double-counted here) - base intake and
+  // extra job lines only.
   const extraTotalsForDisplay = extraLinesTotals(extraLines, rate, effectiveMargin);
   const extraHoursForDisplay  = extraLines.reduce((s, l) => s + l.hours, 0);
-  const markupLabourHrs    = markupLabourHours(preMarkupMaterials);
-  const markupMaterialsOnly = markupMaterialsTotal(preMarkupMaterials, effectiveMargin);
-  const displayLabourHours = Math.round((result.labourHours + extraHoursForDisplay + markupLabourHrs) * 10) / 10;
-  const displayLabourDollar = Math.round(result.labourHours * rate) + extraTotalsForDisplay.labour + Math.round(markupLabourTotal(preMarkupMaterials, rate));
-  const displayMaterialsDollar = Math.round(result.materialsCost + extraTotalsForDisplay.materials + markupMaterialsOnly);
+  const displayLabourHours = Math.round((result.labourHours + extraHoursForDisplay) * 10) / 10;
+  const displayLabourDollar = Math.round(result.labourHours * rate) + extraTotalsForDisplay.labour;
+  const displayMaterialsDollar = Math.round(result.materialsCost + extraTotalsForDisplay.materials);
 
   function set<K extends keyof ElectricianIntake>(key: K, value: ElectricianIntake[K]) {
     setIntake((prev) => ({ ...prev, [key]: value }));
@@ -350,9 +345,6 @@ export default function QuoteBuilder({
     const siteLabourSave = siteItemsLabourHours(siteItems);
     const siteMatlsSave  = siteItemsMaterialsTotal(siteItems, effectiveMargin);
     const siteTotalSave  = Math.round(siteLabourSave * rate + siteMatlsSave);
-    const markupLabourSave = markupLabourHours(preMarkupMaterials);
-    const markupMatlsSave  = markupMaterialsTotal(preMarkupMaterials, effectiveMargin);
-    const markupTotalSave  = Math.round(markupLabourSave * rate + markupMatlsSave);
 
     const quotePayload: Record<string, unknown> = {
       profile_id: businessId, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail,
@@ -362,14 +354,19 @@ export default function QuoteBuilder({
         site_items:      siteItems,
         annotation_meta: annotationMeta.map(a => ({ ...a, frameData: "" })),
       },
-      labour_hours:   result.labourHours + extraLines.reduce((s, l) => s + l.hours, 0) + siteLabourSave + markupLabourSave,
-      materials_cost: Math.round(result.materialsCost + extraTotals.materials + siteMatlsSave + markupMatlsSave),
-      total_cost:     result.totalCost + extraTotals.total + siteTotalSave + markupTotalSave,
+      labour_hours:   result.labourHours + extraLines.reduce((s, l) => s + l.hours, 0) + siteLabourSave,
+      materials_cost: Math.round(result.materialsCost + extraTotals.materials + siteMatlsSave),
+      total_cost:     result.totalCost + extraTotals.total + siteTotalSave,
       payment_terms:  paymentTerms,
       quote_expires_at: new Date(Date.now() + (profile.default_expiry_days ?? 30) * 86400000).toISOString(),
       status:  sendEmail ? "sent" : "draft",
       sent_at: sendEmail ? new Date().toISOString() : null,
-      markup_materials: preMarkupMaterials ?? [],
+      // Package/plan/bundle materials now live in site_items (above) so
+      // they show up as itemized, editable lines in the Scope step. This
+      // field stays empty for new quotes - keep it writable for older
+      // readers (Xero sync, invoice PDF, quote/job detail pages) that
+      // still check it, but there's nothing left to duplicate into it.
+      markup_materials: [],
     };
 
     // Opt-in: only send tier IDs to DB if user explicitly selected them
@@ -427,7 +424,7 @@ export default function QuoteBuilder({
           </div>
           <div className="text-right">
             <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Total</p>
-            <p className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total + siteTotal).toLocaleString()}</p>
+            <p className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + extraLinesTotals(extraLines, rate, effectiveMargin).total + siteTotal).toLocaleString()}</p>
           </div>
         </div>
       </div>
@@ -535,13 +532,16 @@ export default function QuoteBuilder({
       )}
 
       {stepId === "customer" && (
-        <StepCustomer
-          clientName={clientName} setClientName={setClientName}
-          clientEmail={clientEmail} setClientEmail={setClientEmail}
-          siteAddress={siteAddress} setSiteAddress={setSiteAddress}
-          onCeilingHint={(hint) => set("ceilingType", hint as ElectricianIntake["ceilingType"])}
-          setClientId={setClientId}
-        />
+        <>
+          <PackagePicker trade="electrician" />
+          <StepCustomer
+            clientName={clientName} setClientName={setClientName}
+            clientEmail={clientEmail} setClientEmail={setClientEmail}
+            siteAddress={siteAddress} setSiteAddress={setSiteAddress}
+            onCeilingHint={(hint) => set("ceilingType", hint as ElectricianIntake["ceilingType"])}
+            setClientId={setClientId}
+          />
+        </>
       )}
 
       {stepId === "send" && (
@@ -553,8 +553,8 @@ export default function QuoteBuilder({
           saving={saving} saveMessage={saveMessage} savedQuoteId={savedQuoteId} onSave={saveAndSend}
           extraLines={extraLines} setExtraLines={setExtraLines} rate={rate} margin={margin}
           effectiveMargin={effectiveMargin}
-          markupTotal={markupTotal} siteItems={siteItems} setSiteItems={setSiteItems} siteTotal={siteTotal} annotationMeta={annotationMeta}
-          displayLabourDollar={displayLabourDollar} displayMaterialsDollar={displayMaterialsDollar} markupMaterialsOnly={markupMaterialsOnly}
+          siteItems={siteItems} setSiteItems={setSiteItems} siteTotal={siteTotal} annotationMeta={annotationMeta}
+          displayLabourDollar={displayLabourDollar} displayMaterialsDollar={displayMaterialsDollar}
           selectedPricingTier={selectedPricingTier}
           selectedJobSizeTier={selectedJobSizeTier}
         />
@@ -820,7 +820,7 @@ function StepScope({ intake, set, siteItems, setSiteItems, lib }: {
       <div className="card">
         <p className="section-tag mb-3">Materials &amp; labour</p>
         <p className="text-[12.5px] text-[var(--ink-faint)] mb-3">
-          Items from plan markup, voice, live annotate, or drawing extract show up here automatically. Search below to add anything else, or build the whole scope manually.
+          Items from a package, plan markup, voice, live annotate, or drawing extract show up here automatically. Search below to add anything else, or build the whole scope manually.
         </p>
         <div className="mb-3">
           <MaterialSearchAdd lib={lib} onAdd={(item) => setSiteItems((prev) => [...prev, { ...item, id: Math.random().toString(36).slice(2) }])} />
@@ -833,8 +833,8 @@ function StepScope({ intake, set, siteItems, setSiteItems, lib }: {
 function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTerms, setCustomTerms, customTermsTotal,
   clientName, clientEmail, siteAddress,
   saving, saveMessage, savedQuoteId, onSave,
-  extraLines, setExtraLines, rate, margin, effectiveMargin, markupTotal, siteItems, setSiteItems, siteTotal, annotationMeta,
-  displayLabourDollar, displayMaterialsDollar, markupMaterialsOnly,
+  extraLines, setExtraLines, rate, margin, effectiveMargin, siteItems, setSiteItems, siteTotal, annotationMeta,
+  displayLabourDollar, displayMaterialsDollar,
   selectedPricingTier, selectedJobSizeTier }: {
   intake: ElectricianIntake;
   result: { labourHours: number; materialsCost: number; totalCost: number };
@@ -847,12 +847,12 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
   onSave: (send: boolean) => void;
   extraLines: {id:string;label:string;hours:number;materialsCost:number;note:string}[];
   setExtraLines: React.Dispatch<React.SetStateAction<{id:string;label:string;hours:number;materialsCost:number;note:string}[]>>;
-  rate: number; margin: number; effectiveMargin: number; markupTotal: number;
+  rate: number; margin: number; effectiveMargin: number;
   siteItems: {id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[];
   setSiteItems: React.Dispatch<React.SetStateAction<{id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]>>;
   siteTotal: number;
   annotationMeta: {id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string}[];
-  displayLabourDollar: number; displayMaterialsDollar: number; markupMaterialsOnly: number;
+  displayLabourDollar: number; displayMaterialsDollar: number;
   selectedPricingTier: { id: string; name: string; markup_pct: number } | null;
   selectedJobSizeTier: { id: string; name: string; markup_pct: number } | null;
 }) {
@@ -914,10 +914,9 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
           <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Labour</span><span className="text-white font-semibold tabular">${displayLabourDollar.toLocaleString()}</span></div>
           <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Materials</span><span className="text-white font-semibold tabular">${displayMaterialsDollar.toLocaleString()}</span></div>
           {siteTotal > 0 && <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">On-site items</span><span className="text-white font-semibold tabular">${siteTotal.toLocaleString()}</span></div>}
-          {markupMaterialsOnly > 0 && <div className="flex justify-between text-[12.5px]"><span className="text-[var(--steel-3)]">incl. ${Math.round(markupMaterialsOnly).toLocaleString()} materials from a plan/package</span></div>}
           <div className="border-t border-white/10 pt-2 flex justify-between">
             <span className="text-white font-bold text-[15px]">Total</span>
-            <span className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total + siteTotal).toLocaleString()}</span>
+            <span className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + extraLinesTotals(extraLines, rate, effectiveMargin).total + siteTotal).toLocaleString()}</span>
           </div>
         </div>
       </div>
@@ -942,7 +941,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
             {paymentTerms.map((t, i) => (
               <div key={i} className="flex justify-between text-[13.5px]">
                 <span className="text-[var(--ink-soft)]">{t.label}</span>
-                <span className="font-bold text-[var(--ink)] tabular">{t.percent}% - ${Math.round(((result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total + (siteTotal ?? 0)) * t.percent) / 100).toLocaleString()}</span>
+                <span className="font-bold text-[var(--ink)] tabular">{t.percent}% - ${Math.round(((result.totalCost + extraLinesTotals(extraLines, rate, effectiveMargin).total + (siteTotal ?? 0)) * t.percent) / 100).toLocaleString()}</span>
               </div>
             ))}
           </div>
