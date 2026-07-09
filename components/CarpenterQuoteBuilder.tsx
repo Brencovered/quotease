@@ -114,6 +114,10 @@ export default function CarpenterQuoteBuilder({
   );
   const [annotationMeta, setAnnotationMeta] = useState<{id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string;roomName?:string}[]>([]);
   const [extraLines, setExtraLines] = useState<ExtraLine[]>([]);
+  // Direct manual override for anything the formula doesn't capture -
+  // roof cavity time, confined-space work, or the calculated hours just
+  // being wrong for this job.
+  const [manualLabourHrs, setManualLabourHrs] = useState(0);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [savedQuoteId, setSavedQuoteId] = useState<string | null>(null);
@@ -138,6 +142,7 @@ export default function CarpenterQuoteBuilder({
       if (saved.extraLines)  setExtraLines(saved.extraLines);
       if (saved.siteItems)   setSiteItems(saved.siteItems);
       if (saved.annotationMeta) setAnnotationMeta(saved.annotationMeta);
+      if (saved.manualLabourHrs != null) setManualLabourHrs(saved.manualLabourHrs);
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -156,8 +161,8 @@ export default function CarpenterQuoteBuilder({
 
   const extraTotalsForDisplay = extraLinesTotals(extraLines, rate, effectiveMargin);
   const extraHoursForDisplay  = extraLines.reduce((s, l) => s + l.hours, 0);
-  const displayLabourHours = Math.round((result.labourHours + extraHoursForDisplay) * 10) / 10;
-  const displayLabourDollar = Math.round(result.labourHours * rate) + extraTotalsForDisplay.labour;
+  const displayLabourHours = Math.round((result.labourHours + extraHoursForDisplay + manualLabourHrs) * 10) / 10;
+  const displayLabourDollar = Math.round(result.labourHours * rate) + extraTotalsForDisplay.labour + Math.round(manualLabourHrs * rate);
   const displayMaterialsDollar = Math.round(result.materialsCost + extraTotalsForDisplay.materials);
 
   function set<K extends keyof CarpenterIntake>(k: K, v: CarpenterIntake[K]) { setIntake((p) => ({...p,[k]:v})); }
@@ -202,7 +207,7 @@ export default function CarpenterQuoteBuilder({
 
   function saveDraft() {
     try {
-      sessionStorage.setItem("swiftscope_quote_draft", JSON.stringify({ clientName, clientEmail, siteAddress, intake, step, extraLines, siteItems, annotationMeta }));
+      sessionStorage.setItem("swiftscope_quote_draft", JSON.stringify({ clientName, clientEmail, siteAddress, intake, step, extraLines, siteItems, annotationMeta, manualLabourHrs }));
       if (lib) sessionStorage.setItem("swiftscope_price_book", JSON.stringify(lib));
     } catch {}
   }
@@ -238,10 +243,10 @@ export default function CarpenterQuoteBuilder({
       site_address: siteAddress,
       trade: "carpenter",
       job_type: intake.jobType,
-      intake_data: { ...intake, site_items: siteItems, annotation_meta: annotationMeta.map(a => ({ ...a, frameData: "" })) },
-      labour_hours: result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0) + siteLabourSave,
+      intake_data: { ...intake, site_items: siteItems, manual_labour_hours: manualLabourHrs, annotation_meta: annotationMeta.map(a => ({ ...a, frameData: "" })) },
+      labour_hours: result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0) + siteLabourSave + manualLabourHrs,
       materials_cost: result.materialsCost + extraTotals.materials + siteMatlsSave,
-      total_cost: result.totalCost + extraTotals.total + siteTotalSave,
+      total_cost: result.totalCost + extraTotals.total + siteTotalSave + Math.round(manualLabourHrs * rate),
       payment_terms: paymentTerms,
       pricing_tier_id: selectedPricingTierId,
       job_size_tier_id: selectedJobSizeTierId,
@@ -276,7 +281,7 @@ export default function CarpenterQuoteBuilder({
             <div><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Labour</p><p className="font-display text-[18px] text-white leading-tight">{displayLabourHours}h</p></div>
             <div><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Materials</p><p className="font-display text-[18px] text-white leading-tight">${displayMaterialsDollar.toLocaleString()}</p></div>
           </div>
-          <div className="text-right"><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Total</p><p className="font-display text-[24px] text-[var(--amber)] leading-tight">${(result.totalCost + siteTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total).toLocaleString()}</p></div>
+          <div className="text-right"><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Total</p><p className="font-display text-[24px] text-[var(--amber)] leading-tight">${(result.totalCost + siteTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total + Math.round(manualLabourHrs * rate)).toLocaleString()}</p></div>
         </div>
       </div>
       <div className="flex items-center gap-1 mb-5 overflow-x-auto hide-scrollbar pb-1">
@@ -430,6 +435,14 @@ export default function CarpenterQuoteBuilder({
           <div className="card">
             <p className="section-tag mb-3">Site access</p>
             <Field label="Overall site access"><select value={intake.siteAccess} onChange={(e) => set("siteAccess", e.target.value as CarpenterIntake["siteAccess"])} className="app-field"><option value="easy">Easy</option><option value="moderate">Moderate</option><option value="difficult">Difficult</option></select></Field>
+            <div className="mt-4 pt-4 border-t border-[var(--line-subtle)]">
+              <Field label="Extra labour hours (manual adjustment)">
+                <Num value={manualLabourHrs} onChange={setManualLabourHrs} step={0.5} />
+              </Field>
+              <p className="text-[12px] text-[var(--ink-faint)] mt-1.5">
+                Working at height above already adjusts hours automatically, but if this job needs more (or less) time - roof cavity access, a confined space, anything the formula doesn&apos;t capture - add it here. Added straight to the quote total, on top of everything else.
+              </p>
+            </div>
           </div>
         </div>
       )}
@@ -469,7 +482,7 @@ export default function CarpenterQuoteBuilder({
               <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Labour ({displayLabourHours}h)</span><span className="text-white font-semibold tabular">${displayLabourDollar.toLocaleString()}</span></div>
               <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Materials</span><span className="text-white font-semibold tabular">${displayMaterialsDollar.toLocaleString()}</span></div>
               {siteTotal > 0 && <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">On-site items</span><span className="text-white font-semibold tabular">${siteTotal.toLocaleString()}</span></div>}
-              <div className="border-t border-white/10 pt-2 flex justify-between"><span className="text-white font-bold">Total</span><span className="font-display text-[24px] text-[var(--amber)] tabular">${(result.totalCost + siteTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total).toLocaleString()}</span></div>
+              <div className="border-t border-white/10 pt-2 flex justify-between"><span className="text-white font-bold">Total</span><span className="font-display text-[24px] text-[var(--amber)] tabular">${(result.totalCost + siteTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total + Math.round(manualLabourHrs * rate)).toLocaleString()}</span></div>
             </div>
           </div>
           <div className="card">
@@ -494,7 +507,7 @@ export default function CarpenterQuoteBuilder({
               <option value="custom">Custom split</option>
             </select>
             <div className="bg-[var(--app-bg)] rounded-xl p-3 space-y-1.5">
-              {paymentTerms.map((t,i) => <div key={i} className="flex justify-between text-[13.5px]"><span className="text-[var(ink-soft)]">{t.label}</span><span className="font-bold tabular">{t.percent}% - ${Math.round((result.totalCost + siteTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total)*t.percent/100).toLocaleString()}</span></div>)}
+              {paymentTerms.map((t,i) => <div key={i} className="flex justify-between text-[13.5px]"><span className="text-[var(ink-soft)]">{t.label}</span><span className="font-bold tabular">{t.percent}% - ${Math.round((result.totalCost + siteTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total + Math.round(manualLabourHrs * rate))*t.percent/100).toLocaleString()}</span></div>)}
             </div>
             {termsPreset === "custom" && customTermsTotal !== 100 && <p className="text-[12.5px] text-[var(--red)] font-semibold mt-1">Adds up to {customTermsTotal}% - must total 100%</p>}
           </div>
@@ -518,8 +531,8 @@ export default function CarpenterQuoteBuilder({
 function Field({ label, children, className="" }: { label: string; children: React.ReactNode; className?: string }) {
   return <label className={`block ${className}`}><span className="block text-[12.5px] font-semibold text-[var(ink-soft)] mb-1.5">{label}</span>{children}</label>;
 }
-function Num({ value, onChange }: { value: number; onChange: (v: number) => void }) {
-  return <input type="number" inputMode="numeric" min={0} value={value} onChange={(e) => onChange(Number(e.target.value))} className="app-field"/>;
+function Num({ value, onChange, step }: { value: number; onChange: (v: number) => void; step?: number }) {
+  return <input type="number" inputMode="numeric" min={0} step={step ?? 1} value={value} onChange={(e) => onChange(Number(e.target.value))} className="app-field"/>;
 }
 function Chk({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return <label className="flex items-center gap-3 py-2.5 cursor-pointer"><input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)}/><span className="text-[14.5px] text-[var(ink)]">{label}</span></label>;

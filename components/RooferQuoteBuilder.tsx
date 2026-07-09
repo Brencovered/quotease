@@ -135,6 +135,10 @@ export default function RooferQuoteBuilder({
     () => markupMaterialsToScopeItems(preMarkupMaterials, preMarkupSource ?? "plan markup")
   );
   const [annotationMeta, setAnnotationMeta] = useState<{id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string;roomName?:string}[]>([]);
+  // Direct manual override for anything the formula doesn't capture -
+  // confined roof-space access, steep pitch beyond the standard options,
+  // or the calculated hours just being wrong for this job.
+  const [manualLabourHrs, setManualLabourHrs] = useState(0);
 
   // ── Customer & site (was missing entirely -- save/send had no way to
   //    know who the quote was for) ──────────────────────────────────
@@ -474,11 +478,12 @@ export default function RooferQuoteBuilder({
         })),
         material, color, labourRate, tier, extras, notes, warranty,
         site_items: siteItems,
+        manual_labour_hours: manualLabourHrs,
         annotation_meta: annotationMeta.map(a => ({ ...a, frameData: "" })),
       },
-      labour_hours: formulaLabourHrs + siteLabourSave,
+      labour_hours: formulaLabourHrs + siteLabourSave + manualLabourHrs,
       materials_cost: Math.round(summary.matCost + summary.extrasTotal + summary.colorSurcharge + siteMatlsSave),
-      total_cost: Math.round(summary.total + siteTotalSave),
+      total_cost: Math.round(summary.total + siteTotalSave + manualLabourHrs * rate),
       payment_terms: paymentTerms,
       pricing_tier_id: selectedPricingTierId,
       job_size_tier_id: selectedJobSizeTierId,
@@ -521,11 +526,12 @@ export default function RooferQuoteBuilder({
   const siteTotal = Math.round(
     siteItemsLabourTotal(siteItems, profile.hourly_rate ?? 95)
     + siteItemsMaterialsTotal(siteItems, effectiveMargin)
+    + manualLabourHrs * (profile.hourly_rate ?? 95)
   );
 
   function saveDraft() {
     try {
-      sessionStorage.setItem("swiftscope_quote_draft", JSON.stringify({ siteItems, annotationMeta }));
+      sessionStorage.setItem("swiftscope_quote_draft", JSON.stringify({ siteItems, annotationMeta, manualLabourHrs }));
       if (lib) sessionStorage.setItem("swiftscope_price_book", JSON.stringify(lib));
     } catch {}
   }
@@ -862,6 +868,15 @@ export default function RooferQuoteBuilder({
           <label className="label-field text-[11px]">Warranty text</label>
           <input type="text" value={warranty} onChange={e => setWarranty(e.target.value)}
             className="app-field text-[13px]" />
+        </div>
+        <div>
+          <label className="label-field text-[11px]">Extra labour hours (manual adjustment)</label>
+          <input type="number" min={0} step={0.5} value={manualLabourHrs}
+            onChange={e => setManualLabourHrs(Math.max(0, Number(e.target.value) || 0))}
+            className="app-field text-[13px]" />
+          <p className="text-[12px] text-[var(--ink-faint)] mt-1.5">
+            Steep pitch and roof style are already priced into the formula above, but if this job needs more time - confined roof-space access, an especially awkward site, anything the formula doesn&apos;t capture - add it here. Added straight to the quote total, on top of everything else.
+          </p>
         </div>
       </div>
 

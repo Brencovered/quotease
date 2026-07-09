@@ -142,6 +142,13 @@ export default function QuoteBuilder({
   const customTermsTotal = customTerms.reduce((s, t) => s + (Number(t.percent) || 0), 0);
 
   const [extraLines, setExtraLines]   = useState<{id:string;label:string;hours:number;materialsCost:number;note:string}[]>([]);
+  // Direct manual override for anything the formula above doesn't capture
+  // - roof cavity time, confined-space work, or the calculated hours just
+  // being wrong for this particular job. The archetype formula only ever
+  // derives hours from counts x per-unit estimates x access multipliers;
+  // this is the tradie's own correction on top of that, always visible,
+  // no separate "additional job" needed just to bump the hours.
+  const [manualLabourHrs, setManualLabourHrs] = useState(0);
   const [siteItems, setSiteItems]     = useState<ScopeItem[]>(
     () => markupMaterialsToScopeItems(preMarkupMaterials, preMarkupSource ?? "plan markup")
   );
@@ -158,7 +165,7 @@ export default function QuoteBuilder({
   function saveDraft() {
     try {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
-        clientName, clientEmail, siteAddress, intake, step, extraLines, siteItems, annotationMeta,
+        clientName, clientEmail, siteAddress, intake, step, extraLines, siteItems, annotationMeta, manualLabourHrs,
       }));
     } catch {}
   }
@@ -177,6 +184,7 @@ export default function QuoteBuilder({
       if (saved.extraLines)  setExtraLines(saved.extraLines);
       if (saved.siteItems)   setSiteItems(saved.siteItems);
       if (saved.annotationMeta) setAnnotationMeta(saved.annotationMeta);
+      if (saved.manualLabourHrs != null) setManualLabourHrs(saved.manualLabourHrs);
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -206,8 +214,8 @@ export default function QuoteBuilder({
   // extra job lines only.
   const extraTotalsForDisplay = extraLinesTotals(extraLines, rate, effectiveMargin);
   const extraHoursForDisplay  = extraLines.reduce((s, l) => s + l.hours, 0);
-  const displayLabourHours = Math.round((result.labourHours + extraHoursForDisplay) * 10) / 10;
-  const displayLabourDollar = Math.round(result.labourHours * rate) + extraTotalsForDisplay.labour;
+  const displayLabourHours = Math.round((result.labourHours + extraHoursForDisplay + manualLabourHrs) * 10) / 10;
+  const displayLabourDollar = Math.round(result.labourHours * rate) + extraTotalsForDisplay.labour + Math.round(manualLabourHrs * rate);
   const displayMaterialsDollar = Math.round(result.materialsCost + extraTotalsForDisplay.materials);
 
   function set<K extends keyof ElectricianIntake>(key: K, value: ElectricianIntake[K]) {
@@ -354,11 +362,12 @@ export default function QuoteBuilder({
       intake_data: {
         ...intake,
         site_items:      siteItems,
+        manual_labour_hours: manualLabourHrs,
         annotation_meta: annotationMeta.map(a => ({ ...a, frameData: "" })),
       },
-      labour_hours:   result.labourHours + extraLines.reduce((s, l) => s + l.hours, 0) + siteLabourSave,
+      labour_hours:   result.labourHours + extraLines.reduce((s, l) => s + l.hours, 0) + siteLabourSave + manualLabourHrs,
       materials_cost: Math.round(result.materialsCost + extraTotals.materials + siteMatlsSave),
-      total_cost:     result.totalCost + extraTotals.total + siteTotalSave,
+      total_cost:     result.totalCost + extraTotals.total + siteTotalSave + Math.round(manualLabourHrs * rate),
       payment_terms:  paymentTerms,
       quote_expires_at: new Date(Date.now() + (profile.default_expiry_days ?? 30) * 86400000).toISOString(),
       status:  sendEmail ? "sent" : "draft",
@@ -426,7 +435,7 @@ export default function QuoteBuilder({
           </div>
           <div className="text-right">
             <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Total</p>
-            <p className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + extraLinesTotals(extraLines, rate, effectiveMargin).total + siteTotal).toLocaleString()}</p>
+            <p className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + extraLinesTotals(extraLines, rate, effectiveMargin).total + siteTotal + Math.round(manualLabourHrs * rate)).toLocaleString()}</p>
           </div>
         </div>
       </div>
@@ -530,6 +539,7 @@ export default function QuoteBuilder({
           intake={intake} set={set}
           siteItems={siteItems} setSiteItems={setSiteItems}
           lib={lib}
+          manualLabourHrs={manualLabourHrs} setManualLabourHrs={setManualLabourHrs}
         />
       )}
 
@@ -556,7 +566,7 @@ export default function QuoteBuilder({
           extraLines={extraLines} setExtraLines={setExtraLines} rate={rate} margin={margin}
           effectiveMargin={effectiveMargin}
           siteItems={siteItems} setSiteItems={setSiteItems} siteTotal={siteTotal} annotationMeta={annotationMeta}
-          displayLabourDollar={displayLabourDollar} displayMaterialsDollar={displayMaterialsDollar}
+          displayLabourDollar={displayLabourDollar} displayMaterialsDollar={displayMaterialsDollar} manualLabourHrs={manualLabourHrs}
           selectedPricingTier={selectedPricingTier}
           selectedJobSizeTier={selectedJobSizeTier}
         />
@@ -777,12 +787,14 @@ function StepJob({
   );
 }
 
-function StepScope({ intake, set, siteItems, setSiteItems, lib }: {
+function StepScope({ intake, set, siteItems, setSiteItems, lib, manualLabourHrs, setManualLabourHrs }: {
   intake: ElectricianIntake;
   set: <K extends keyof ElectricianIntake>(k: K, v: ElectricianIntake[K]) => void;
   siteItems: ScopeItem[];
   setSiteItems: React.Dispatch<React.SetStateAction<ScopeItem[]>>;
   lib: MaterialRow[];
+  manualLabourHrs: number;
+  setManualLabourHrs: React.Dispatch<React.SetStateAction<number>>;
 }) {
   return (
     <div className="space-y-4">
@@ -817,6 +829,14 @@ function StepScope({ intake, set, siteItems, setSiteItems, lib }: {
         <div className="mt-3">
           <Row><Check2 checked={intake.multistorey} onChange={(v) => set("multistorey", v)} label="Multi-storey" /></Row>
         </div>
+        <div className="mt-4 pt-4 border-t border-[var(--line-subtle)]">
+          <Field label="Extra labour hours (manual adjustment)">
+            <Num value={manualLabourHrs} onChange={setManualLabourHrs} step={0.5} />
+          </Field>
+          <p className="text-[12px] text-[var(--ink-faint)] mt-1.5">
+            Roof cavity and subfloor access above already adjust hours automatically, but if this job needs more (or less) time than that - a tighter confined space, awkward scaffolding, anything the formula doesn&apos;t capture - add it here. Added straight to the quote total, on top of everything else.
+          </p>
+        </div>
       </div>
 
       <div className="card">
@@ -836,7 +856,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
   clientName, clientEmail, siteAddress,
   saving, saveMessage, savedQuoteId, onSave,
   extraLines, setExtraLines, rate, margin, effectiveMargin, siteItems, setSiteItems, siteTotal, annotationMeta,
-  displayLabourDollar, displayMaterialsDollar,
+  displayLabourDollar, displayMaterialsDollar, manualLabourHrs,
   selectedPricingTier, selectedJobSizeTier }: {
   intake: ElectricianIntake;
   result: { labourHours: number; materialsCost: number; totalCost: number };
@@ -854,7 +874,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
   setSiteItems: React.Dispatch<React.SetStateAction<{id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]>>;
   siteTotal: number;
   annotationMeta: {id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string}[];
-  displayLabourDollar: number; displayMaterialsDollar: number;
+  displayLabourDollar: number; displayMaterialsDollar: number; manualLabourHrs: number;
   selectedPricingTier: { id: string; name: string; markup_pct: number } | null;
   selectedJobSizeTier: { id: string; name: string; markup_pct: number } | null;
 }) {
@@ -918,7 +938,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
           {siteTotal > 0 && <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">On-site items</span><span className="text-white font-semibold tabular">${siteTotal.toLocaleString()}</span></div>}
           <div className="border-t border-white/10 pt-2 flex justify-between">
             <span className="text-white font-bold text-[15px]">Total</span>
-            <span className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + extraLinesTotals(extraLines, rate, effectiveMargin).total + siteTotal).toLocaleString()}</span>
+            <span className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + extraLinesTotals(extraLines, rate, effectiveMargin).total + siteTotal + Math.round(manualLabourHrs * rate)).toLocaleString()}</span>
           </div>
         </div>
       </div>
@@ -943,7 +963,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
             {paymentTerms.map((t, i) => (
               <div key={i} className="flex justify-between text-[13.5px]">
                 <span className="text-[var(--ink-soft)]">{t.label}</span>
-                <span className="font-bold text-[var(--ink)] tabular">{t.percent}% - ${Math.round(((result.totalCost + extraLinesTotals(extraLines, rate, effectiveMargin).total + (siteTotal ?? 0)) * t.percent) / 100).toLocaleString()}</span>
+                <span className="font-bold text-[var(--ink)] tabular">{t.percent}% - ${Math.round(((result.totalCost + extraLinesTotals(extraLines, rate, effectiveMargin).total + (siteTotal ?? 0) + Math.round(manualLabourHrs * rate)) * t.percent) / 100).toLocaleString()}</span>
               </div>
             ))}
           </div>
@@ -973,8 +993,8 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
 function Field({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
   return <label className={`block ${className}`}><span className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">{label}</span>{children}</label>;
 }
-function Num({ value, onChange }: { value: number; onChange: (v: number) => void }) {
-  return <input type="number" inputMode="numeric" min={0} value={value} onChange={(e) => onChange(Number(e.target.value))} className="app-field" />;
+function Num({ value, onChange, step }: { value: number; onChange: (v: number) => void; step?: number }) {
+  return <input type="number" inputMode="numeric" min={0} step={step ?? 1} value={value} onChange={(e) => onChange(Number(e.target.value))} className="app-field" />;
 }
 function Check2({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return <label className="flex items-center gap-3 py-2.5 cursor-pointer"><input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} /><span className="text-[14.5px] text-[var(--ink)]">{label}</span></label>;
