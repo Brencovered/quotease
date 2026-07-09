@@ -41,60 +41,52 @@ export async function POST(req: NextRequest) {
   const requestSuburb = request.suburb ?? "";
 
   // ── OPT-OUT MODEL: Find subscribed tradies ─────────────────────────
-  // Strategy:
-  // 1. First, try lead_subscriptions (explicit opt-out table)
-  // 2. Fall back to profiles with matching trades who haven't opted out
-  // 3. If wider radius, match by trade only (broader suburb search)
-
+  // Every profile with a matching trade is a candidate by default -
+  // that's what "opt-out" means. Only exclude a profile if it has an
+  // explicit is_active=false row in lead_subscriptions for this trade.
+  //
+  // Previously this checked lead_subscriptions FIRST and, if it found
+  // ANY active row for this trade (which happens automatically for
+  // every onboarded tradie - see app/onboarding/page.tsx), used ONLY
+  // those rows as the candidate list - completely skipping every other
+  // same-trade tradie who never got a subscription row created (missing
+  // suburb at signup, team members, accounts created before this
+  // feature existed). Since the moment one tradie for a trade has a row,
+  // every other opted-in-by-default tradie for that trade silently
+  // stopped receiving leads. There's no UI to subscribe to extra
+  // suburbs beyond the one auto-created at onboarding, so matching
+  // directly against profiles.trades/profiles.suburb is equivalent to
+  // what an active subscription row represents anyway - just without
+  // requiring the row to exist.
   let profileIds: string[] = [];
 
-  // Try 1: Active subscriptions in lead_subscriptions
-  let subQuery = supabase
+  const { data: optedOut } = await supabase
     .from("lead_subscriptions")
     .select("profile_id")
     .eq("trade", requestTrade)
-    .eq("is_active", true);
+    .eq("is_active", false);
 
-  if (!widerRadius) {
-    // Exact suburb match (case-insensitive)
-    subQuery = subQuery.ilike("suburb", `%${requestSuburb}%`);
-  }
+  const optedOutIds = new Set((optedOut ?? []).map((o) => o.profile_id));
 
-  const { data: subs } = await subQuery;
+  // Find profiles whose trades array contains the request trade
+  const { data: matchingProfiles } = await supabase
+    .from("profiles")
+    .select("id, trades, suburb")
+    .contains("trades", [requestTrade]);
 
-  if (subs && subs.length > 0) {
-    profileIds = subs.map((s) => s.profile_id);
-  } else {
-    // Try 2: Fall back to profiles with matching trades
-    // Exclude profiles that have explicitly opted out (is_active = false in lead_subscriptions)
-    const { data: optedOut } = await supabase
-      .from("lead_subscriptions")
-      .select("profile_id")
-      .eq("trade", requestTrade)
-      .eq("is_active", false);
+  if (matchingProfiles && matchingProfiles.length > 0) {
+    const filtered = widerRadius
+      ? matchingProfiles
+      : matchingProfiles.filter((p) => {
+          if (!p.suburb) return false;
+          const ps = p.suburb.toLowerCase();
+          const rs = requestSuburb.toLowerCase();
+          return ps.includes(rs) || rs.includes(ps);
+        });
 
-    const optedOutIds = new Set((optedOut ?? []).map((o) => o.profile_id));
-
-    // Find profiles whose trades array contains the request trade
-    const { data: matchingProfiles } = await supabase
-      .from("profiles")
-      .select("id, trades, suburb")
-      .contains("trades", [requestTrade]);
-
-    if (matchingProfiles && matchingProfiles.length > 0) {
-      const filtered = widerRadius
-        ? matchingProfiles
-        : matchingProfiles.filter((p) => {
-            if (!p.suburb) return false;
-            const ps = p.suburb.toLowerCase();
-            const rs = requestSuburb.toLowerCase();
-            return ps.includes(rs) || rs.includes(ps);
-          });
-
-      profileIds = filtered
-        .map((p) => p.id)
-        .filter((id) => !optedOutIds.has(id));
-    }
+    profileIds = filtered
+      .map((p) => p.id)
+      .filter((id) => !optedOutIds.has(id));
   }
 
   if (!profileIds.length) {
