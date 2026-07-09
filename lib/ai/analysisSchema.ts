@@ -888,8 +888,34 @@ export function parseAnalysisResponse(rawText: string): DrawingAnalysisResult {
   }
 
   // Build final result
+  const validItemUnits = new Set<string>(["each", "m", "m2", "m3", "hr", "lot", "point"]);
+  const validConfidenceValues = new Set<string>(["high", "medium", "low"]);
+  const detectedItems: DetectedItem[] = items.map((item, i) => {
+    const quantity = typeof item.quantity === "number" ? item.quantity : Number(item.quantity);
+    if (!Number.isFinite(quantity)) {
+      throw new AnalysisParseError(`detected_items[${i}].quantity is not a valid number. Received: ${JSON.stringify(item.quantity)}`);
+    }
+    const labourHours = typeof item.labour_hours === "number" ? item.labour_hours : Number(item.labour_hours);
+    if (!Number.isFinite(labourHours)) {
+      throw new AnalysisParseError(`detected_items[${i}].labour_hours is not a valid number. Received: ${JSON.stringify(item.labour_hours)}`);
+    }
+    const unit = typeof item.unit === "string" && validItemUnits.has(item.unit) ? item.unit as ItemUnit : "each";
+    const itemConfidence = typeof item.confidence === "string" && validConfidenceValues.has(item.confidence)
+      ? item.confidence as ItemConfidence
+      : "low"; // an unrecognised confidence value is itself a signal this item needs review
+    return {
+      label:        typeof item.label === "string" ? item.label : String(item.label ?? ""),
+      item_key:     typeof item.item_key === "string" ? item.item_key : String(item.item_key ?? ""),
+      quantity,
+      unit,
+      labour_hours: labourHours,
+      confidence:   itemConfidence,
+      notes:        typeof item.notes === "string" ? item.notes : undefined,
+    };
+  });
+
   const result: DrawingAnalysisResult = {
-    detected_items: items as DetectedItem[],
+    detected_items: detectedItems,
     notes: typeof obj.notes === "string" ? obj.notes : "",
     confidence,
     project_metadata: projectMetadata,

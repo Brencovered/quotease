@@ -665,7 +665,14 @@ CREATE TABLE IF NOT EXISTS ai_drawing_analyses (
 );
 
 ALTER TABLE ai_drawing_analyses ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Own analyses" ON ai_drawing_analyses FOR ALL USING (auth.uid() = profile_id);
+
+-- Team-aware, matching the accessible_business_ids() pattern used by every
+-- other business-scoped table in this project - not raw auth.uid() =
+-- profile_id, which would block every team-member-initiated analysis from
+-- ever being logged (their own auth.uid() differs from the business's
+-- profile_id/businessId that analyze-drawing/route.ts actually inserts).
+CREATE POLICY "Team can manage own business analyses" ON ai_drawing_analyses
+  FOR ALL USING (profile_id IN (SELECT accessible_business_ids(auth.uid())));
 
 -- Index for analytics queries
 CREATE INDEX IF NOT EXISTS idx_ai_analyses_profile_trade ON ai_drawing_analyses(profile_id, trade);

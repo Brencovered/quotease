@@ -48,8 +48,14 @@ interface ProfileWithUsage {
 /** JSON-serialisable usage summary returned in the 200 response. */
 interface UsageResponse {
   via: "free" | "addon";
-  remainingFree: number;
-  remainingAddon: number;
+  // checkUsage() (lib/aiUsage.ts) only ever populates ONE of these,
+  // matching whichever quota bucket the request drew from - declaring
+  // them as required `number` meant TypeScript should have caught every
+  // "addon" response silently omitting remainingFree (and vice versa)
+  // from the JSON entirely (JSON.stringify drops undefined keys), but
+  // this project has `ignoreBuildErrors: true` so it shipped anyway.
+  remainingFree?: number;
+  remainingAddon?: number;
 }
 
 /** JSON-serialisable validation summary for the 200 response. */
@@ -231,9 +237,29 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     // ── 13. Return success ───────────────────────────────────────────────────
+    // analysis.result.confidence is now a weighted breakdown object
+    // ({overall, score, dimensions, reasoning}) computed in
+    // lib/ai/drawingAnalysis.ts. Every existing frontend call site
+    // (QuoteBuilder, CarpenterQuoteBuilder, PlumberQuoteBuilder,
+    // RooferQuoteBuilder, GenericQuoteBuilder, VoiceNoteRecorder) still
+    // reads `result.confidence` expecting a plain "high"|"medium"|"low"
+    // string - they even force-cast it (`as "high"|"medium"|"low"`) and
+    // render it directly in a badge/banner. Replacing it with an object
+    // would have shown "[object Object]" (or worse) in every one of
+    // those, with nothing in the type system catching it since this
+    // project has `ignoreBuildErrors: true`. Keep the field frontend
+    // code already depends on as the plain overall string, and expose
+    // the full weighted breakdown under a new field for future UI work.
+    const { confidence: confidenceBreakdown, ...resultRest } = analysis.result;
+    const resultForResponse = {
+      ...resultRest,
+      confidence: confidenceBreakdown.overall,
+      confidenceDetail: confidenceBreakdown,
+    };
+
     return NextResponse.json(
       {
-        result: analysis.result,
+        result: resultForResponse,
         model: analysis.model,
         usage: usageResponse,
         validation: validationResponse,
