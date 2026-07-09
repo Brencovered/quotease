@@ -396,6 +396,7 @@ function handlePipelineError(err: unknown): NextResponse {
     return errorResponse(502, {
       error: err.message,
       code: err.code,
+      canRetry: err.code === "RESPONSE_TRUNCATED",
     });
   }
 

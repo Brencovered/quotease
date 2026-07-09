@@ -135,7 +135,15 @@ const FALLBACK_MODEL = "claude-haiku-4-5-20251001";
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 
 /** Maximum tokens for the analysis response. */
-const MAX_TOKENS = 2000;
+// 2000 was nowhere near enough for a drawing with a realistic number of
+// detected items - each one carries a verbose `notes` field (required
+// whenever confidence is "low", and often present at "medium" too), and
+// a busy multi-room electrical/plumbing drawing can easily produce 15-30+
+// items. Hitting the cap mid-response truncates the JSON output, which
+// then fails to parse with a confusing "Unexpected token" / "Expected
+// ',' or ']'" error that gives no indication the real cause was running
+// out of tokens, not a malformed response.
+const MAX_TOKENS = 8000;
 
 /** Anthropic API version header. */
 const ANTHROPIC_VERSION = "2023-06-01";
@@ -288,6 +296,20 @@ async function callClaude(
 
   // ── Parse success ────────────────────────────────────────────────────────
   const data = (await response.json()) as Record<string, unknown>;
+
+  // A response cut short by the token limit produces truncated JSON that
+  // fails to parse downstream with a confusing, misleading error
+  // ("Expected ',' or ']'...") that gives no hint the real cause was
+  // running out of tokens rather than a malformed response. Catch it
+  // here instead, where we actually know why.
+  if (data.stop_reason === "max_tokens") {
+    throw new AnalysisError(
+      "The AI's response was cut off because it ran out of space before finishing " +
+      "(this drawing likely has more detected items than usual). Try again, or split " +
+      "the drawing into smaller sections and analyse each separately.",
+      "RESPONSE_TRUNCATED"
+    );
+  }
 
   // Extract text from content blocks
   const contentBlocks = data.content;
