@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
 import LeadsPanel from "@/components/LeadsPanel";
 import { getActiveBusinessId } from "@/lib/team";
+import { resolvePostcode } from "@/lib/resolvePostcode";
 
 export default async function LeadsPage() {
   const supabase = await createClient();
@@ -19,23 +20,30 @@ export default async function LeadsPage() {
   // profile, then subscriptions, then job_requests, then myClaims - each
   // waiting on the last even though most don't actually depend on it.)
   const [{ data: profile }, { data: subscriptions }] = await Promise.all([
-    supabase.from("profiles").select("id, trades, suburb, business_name").eq("id", businessId).single(),
+    supabase.from("profiles").select("id, trades, suburb, directory_suburb, directory_postcode, business_name").eq("id", businessId).single(),
     supabase.from("lead_subscriptions").select("trade, suburb, is_active").eq("profile_id", businessId),
   ]);
 
   const trades = (profile?.trades ?? []).map((t: string) => t.toLowerCase());
-  const tradieSuburb = profile?.suburb ?? "";
+  // Prefer the service suburb set at onboarding, but fall back to the
+  // directory-listing suburb/postcode - plenty of profiles have set one
+  // of those via the "list your business" panel without ever having a
+  // plain `suburb` value, and previously that meant they never got a
+  // lead_subscriptions row and always hit the "Set your service area"
+  // empty state despite already having a usable location on file.
+  const tradieSuburb = profile?.suburb || profile?.directory_suburb || "";
+  const tradiePostcode = profile?.directory_postcode || (await resolvePostcode(supabase, tradieSuburb));
 
   // Build list of active (trade, suburb) combos they're subscribed to
   const activeSubs = (subscriptions ?? []).filter((s) => s.is_active);
 
-  // If they have no subscriptions yet but have trades + suburb,
-  // create them on-the-fly (migration path for existing users)
-  if (activeSubs.length === 0 && trades.length > 0 && tradieSuburb) {
+  // If they have no subscriptions yet but have trades + a usable
+  // location, create them on-the-fly (migration path for existing users)
+  if (activeSubs.length === 0 && trades.length > 0 && (tradieSuburb || tradiePostcode)) {
     const newSubs = trades.map((trade: string) => ({
       profile_id: businessId,
       trade,
-      suburb: tradieSuburb,
+      suburb: tradieSuburb || tradiePostcode || "",
       is_active: true,
     }));
     await supabase.from("lead_subscriptions").upsert(newSubs, {
@@ -75,10 +83,13 @@ export default async function LeadsPage() {
     supabase.from("job_claims").select("request_id").eq("tradie_profile_id", businessId).eq("status", "claimed"),
   ]);
 
-  // Filter by suburb client-side for fuzzy matching
+  // Filter by location client-side. Postcode is the real match key
+  // (same reasoning as /directory and the scraper) - fall back to fuzzy
+  // suburb text only for older requests that predate postcode being
+  // captured at creation time.
   const requests = (allRequests ?? []).filter((r) => {
-    // Must match at least one subscribed suburb
-    if (subscribedSuburbs.length === 0) return true; // Show all if no suburb filter
+    if (subscribedSuburbs.length === 0) return true; // Show all if no location filter
+    if (r.postcode && tradiePostcode) return r.postcode === tradiePostcode;
     const requestSuburb = (r.suburb ?? "").toLowerCase();
     return subscribedSuburbs.some(
       (s) =>

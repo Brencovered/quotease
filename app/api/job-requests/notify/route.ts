@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { resolvePostcode } from "@/lib/resolvePostcode";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY!;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL!;
@@ -39,6 +40,10 @@ export async function POST(req: NextRequest) {
 
   const requestTrade = request.trade?.toLowerCase() ?? "";
   const requestSuburb = request.suburb ?? "";
+  // The "Get Quotes" form only asks for a free-text suburb, so most
+  // requests don't have request.postcode set at creation time even now -
+  // resolve it the same way if it's missing.
+  const requestPostcode = request.postcode || (await resolvePostcode(supabase, requestSuburb));
 
   // ── OPT-OUT MODEL: Find subscribed tradies ─────────────────────────
   // Every profile with a matching trade is a candidate by default -
@@ -71,18 +76,38 @@ export async function POST(req: NextRequest) {
   // Find profiles whose trades array contains the request trade
   const { data: matchingProfiles } = await supabase
     .from("profiles")
-    .select("id, trades, suburb")
+    .select("id, trades, suburb, directory_postcode")
     .contains("trades", [requestTrade]);
 
   if (matchingProfiles && matchingProfiles.length > 0) {
-    const filtered = widerRadius
-      ? matchingProfiles
-      : matchingProfiles.filter((p) => {
-          if (!p.suburb) return false;
-          const ps = p.suburb.toLowerCase();
-          const rs = requestSuburb.toLowerCase();
-          return ps.includes(rs) || rs.includes(ps);
-        });
+    let filtered = matchingProfiles;
+
+    if (!widerRadius) {
+      // Postcode is the real, canonical match key (same reasoning as the
+      // /directory search page and admin scraper: suburb text is
+      // inconsistent - typos, "Mt" vs "Mount", missing entirely). Most
+      // tradie profiles only have a service suburb typed at onboarding,
+      // not a postcode directly, so resolve one per profile (preferring
+      // directory_postcode if they've already set one via the directory
+      // listing panel) the same way the request's postcode is resolved.
+      const withPostcodes = await Promise.all(
+        matchingProfiles.map(async (p) => ({
+          profile: p,
+          postcode: p.directory_postcode || (await resolvePostcode(supabase, p.suburb)),
+        }))
+      );
+
+      filtered = requestPostcode
+        ? withPostcodes.filter((p) => p.postcode === requestPostcode).map((p) => p.profile)
+        : // Couldn't resolve a postcode for the request at all - fall back
+          // to fuzzy suburb text so matching doesn't just stop working.
+          matchingProfiles.filter((p) => {
+            if (!p.suburb) return false;
+            const ps = p.suburb.toLowerCase();
+            const rs = requestSuburb.toLowerCase();
+            return ps.includes(rs) || rs.includes(ps);
+          });
+    }
 
     profileIds = filtered
       .map((p) => p.id)
