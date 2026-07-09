@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Search, Plus, Trash2 } from "lucide-react";
 
 export type ScopeItem = {
@@ -107,57 +107,120 @@ export function ScopeItemsList({ items, setItems }: {
 
   return (
     <div className="space-y-2">
-      {items.map((item) => {
-        const unitCost = item.qty > 0 ? item.materialsCost / item.qty : item.materialsCost;
-        return (
-          <div key={item.id} className="flex items-center gap-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl px-3 py-2.5">
-            <input
-              value={item.label}
-              onChange={(e) => update(item.id, { label: e.target.value })}
-              className="flex-1 min-w-0 bg-transparent text-[13.5px] font-medium text-[var(--ink)] focus:outline-none"
-            />
-            <input
-              type="number"
-              value={item.qty}
-              onChange={(e) => {
-                const qty = Math.max(0, Number(e.target.value) || 0);
-                update(item.id, { qty, materialsCost: Math.round(unitCost * qty * 100) / 100 });
-              }}
-              className="w-14 bg-[var(--app-bg)] rounded-lg text-center text-[13px] py-1"
-              title="Quantity"
-            />
-            <span className="text-[11px] text-[var(--ink-faint)] w-8">{item.unit}</span>
-            <div className="flex items-center gap-1 w-24">
-              <span className="text-[12px] text-[var(--ink-faint)]">$</span>
-              <input
-                type="number"
-                value={unitCost || 0}
-                onChange={(e) => {
-                  const newUnitCost = Math.max(0, Number(e.target.value) || 0);
-                  update(item.id, { materialsCost: Math.round(newUnitCost * item.qty * 100) / 100 });
-                }}
-                className="w-full bg-[var(--app-bg)] rounded-lg text-center text-[13px] py-1"
-                title="Unit cost"
-              />
-            </div>
-            <div className="flex items-center gap-1 w-20">
-              <input
-                type="number"
-                step="0.25"
-                value={item.labourHrs || 0}
-                onChange={(e) => update(item.id, { labourHrs: Math.max(0, Number(e.target.value) || 0) })}
-                className="w-full bg-[var(--app-bg)] rounded-lg text-center text-[13px] py-1"
-                title="Labour hours"
-              />
-              <span className="text-[11px] text-[var(--ink-faint)]">hrs</span>
-            </div>
-            <span className="text-[13px] font-semibold text-[var(--ink)] w-16 text-right">${item.materialsCost.toLocaleString()}</span>
-            <button type="button" onClick={() => remove(item.id)} className="text-[var(--ink-faint)] hover:text-[var(--red)] p-1">
-              <Trash2 size={14} />
-            </button>
-          </div>
-        );
-      })}
+      {items.map((item) => (
+        <ScopeItemRow key={item.id} item={item} update={update} remove={remove} />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * A single editable row. Quantity, unit cost, and labour hours each get
+ * their own local text state so the field can sit empty mid-edit (normal
+ * on mobile: clear the digits, then type new ones) WITHOUT that transient
+ * empty state forcing its way into the shared item data.
+ *
+ * The bug this fixes: unit cost isn't stored directly - it's derived as
+ * materialsCost / qty for display. The old inline version recomputed
+ * materialsCost = unitCost * qty on every qty keystroke, including the
+ * moment the field was cleared (qty -> 0), which zeroed materialsCost
+ * too. On the very next render, with qty back at 0, the derived unit
+ * cost collapsed to materialsCost (now also 0) - permanently. Typing a
+ * new quantity afterwards multiplied that zeroed unit cost by the new
+ * qty, so the price stayed stuck at $0 no matter what you typed next.
+ * unitCostRef below remembers the last genuine (qty > 0) unit cost, so
+ * a momentarily-empty qty field never destroys it.
+ */
+function ScopeItemRow({ item, update, remove }: {
+  item: ScopeItem;
+  update: (id: string, patch: Partial<ScopeItem>) => void;
+  remove: (id: string) => void;
+}) {
+  const initialUnitCost = item.qty > 0 ? item.materialsCost / item.qty : item.materialsCost;
+  const unitCostRef = useRef(initialUnitCost);
+
+  const [qtyText, setQtyText] = useState(String(item.qty));
+  const [unitCostText, setUnitCostText] = useState(String(Math.round(initialUnitCost * 100) / 100));
+  const [hrsText, setHrsText] = useState(String(item.labourHrs || 0));
+
+  // Keep local text and the sticky unit-cost ref in sync if the item
+  // changes from elsewhere (e.g. a plan-markup re-import, or another
+  // row's edit that happens to touch this one) - but not on every
+  // render, or the user could never clear a field to retype it.
+  useEffect(() => {
+    setQtyText(String(item.qty));
+    setHrsText(String(item.labourHrs || 0));
+    if (item.qty > 0) {
+      unitCostRef.current = item.materialsCost / item.qty;
+      setUnitCostText(String(Math.round(unitCostRef.current * 100) / 100));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.id]);
+
+  function commitQty(raw: string) {
+    setQtyText(raw);
+    if (raw.trim() === "") return; // field is mid-edit (cleared to retype) - don't touch shared state yet
+    const qty = Math.max(0, Number(raw) || 0);
+    update(item.id, { qty, materialsCost: Math.round(unitCostRef.current * qty * 100) / 100 });
+  }
+
+  function commitUnitCost(raw: string) {
+    setUnitCostText(raw);
+    if (raw.trim() === "") return;
+    const newUnitCost = Math.max(0, Number(raw) || 0);
+    unitCostRef.current = newUnitCost;
+    update(item.id, { materialsCost: Math.round(newUnitCost * item.qty * 100) / 100 });
+  }
+
+  function commitHrs(raw: string) {
+    setHrsText(raw);
+    if (raw.trim() === "") return;
+    update(item.id, { labourHrs: Math.max(0, Number(raw) || 0) });
+  }
+
+  return (
+    <div className="flex items-center gap-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl px-3 py-2.5">
+      <input
+        value={item.label}
+        onChange={(e) => update(item.id, { label: e.target.value })}
+        className="flex-1 min-w-0 bg-transparent text-[13.5px] font-medium text-[var(--ink)] focus:outline-none"
+      />
+      <input
+        type="number"
+        value={qtyText}
+        onChange={(e) => commitQty(e.target.value)}
+        onBlur={() => { if (qtyText.trim() === "") commitQty("0"); }}
+        className="w-14 bg-[var(--app-bg)] rounded-lg text-center text-[13px] py-1"
+        title="Quantity"
+      />
+      <span className="text-[11px] text-[var(--ink-faint)] w-8">{item.unit}</span>
+      <div className="flex items-center gap-1 w-24">
+        <span className="text-[12px] text-[var(--ink-faint)]">$</span>
+        <input
+          type="number"
+          value={unitCostText}
+          onChange={(e) => commitUnitCost(e.target.value)}
+          onBlur={() => { if (unitCostText.trim() === "") commitUnitCost("0"); }}
+          className="w-full bg-[var(--app-bg)] rounded-lg text-center text-[13px] py-1"
+          title="Unit cost"
+        />
+      </div>
+      <div className="flex items-center gap-1 w-20">
+        <input
+          type="number"
+          step="0.25"
+          value={hrsText}
+          onChange={(e) => commitHrs(e.target.value)}
+          onBlur={() => { if (hrsText.trim() === "") commitHrs("0"); }}
+          className="w-full bg-[var(--app-bg)] rounded-lg text-center text-[13px] py-1"
+          title="Labour hours"
+        />
+        <span className="text-[11px] text-[var(--ink-faint)]">hrs</span>
+      </div>
+      <span className="text-[13px] font-semibold text-[var(--ink)] w-16 text-right">${item.materialsCost.toLocaleString()}</span>
+      <button type="button" onClick={() => remove(item.id)} className="text-[var(--ink-faint)] hover:text-[var(--red)] p-1">
+        <Trash2 size={14} />
+      </button>
     </div>
   );
 }
