@@ -226,15 +226,18 @@ export default function PlumberQuoteBuilder({
     if (!user) { setSaveMessage("Not logged in"); setSaving(false); return; }
     const businessId = await getActiveBusinessId(supabase, user.id);
     const resolvedClientId = await resolveClientId(supabase, businessId, clientId, clientName, clientEmail, siteAddress);
-    for (const m of lib) {
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(m.item_key);
-      if (isUuid) {
-        await supabase.from("price_book_items").update({ description: m.label, cost_price: m.unit_cost, trade: "plumber", unit: "ea" }).eq("id", m.item_key).eq("profile_id", businessId);
-      } else {
-        await supabase.from("price_book_items").insert({ profile_id: businessId, supplier: "Custom", description: m.label, cost_price: m.unit_cost, trade: "plumber", unit: "ea" });
-      }
-      await supabase.from("material_items").upsert({ profile_id: businessId, trade: "plumber", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost }, { onConflict: "profile_id,item_key" });
-    }
+    // See QuoteBuilder.tsx for the full explanation: only seed materials
+    // that aren't already real price-book rows. Re-syncing the entire lib
+    // unchanged, one sequential round trip per item, was the actual cause
+    // of slow saves for anyone with a real price book.
+    const isUuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const itemsNeedingSeed = lib.filter((m) => !isUuidRe.test(m.item_key));
+    await Promise.all(
+      itemsNeedingSeed.flatMap((m) => [
+        supabase.from("price_book_items").insert({ profile_id: businessId, supplier: "Custom", description: m.label, cost_price: m.unit_cost, trade: "plumber", unit: "ea" }),
+        supabase.from("material_items").upsert({ profile_id: businessId, trade: "plumber", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost }, { onConflict: "profile_id,item_key" }),
+      ])
+    );
     const extraTotals = extraLinesTotals(extraLines, rate, effectiveMargin);
     const siteLabourSave   = siteItemsLabourHours(siteItems);
     const siteMatlsSave    = siteItemsMaterialsTotal(siteItems, effectiveMargin);

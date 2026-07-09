@@ -322,24 +322,26 @@ export default function QuoteBuilder({
 
     const resolvedClientId = await resolveClientId(supabase, businessId, clientId, clientName, clientEmail, siteAddress);
 
-    for (const m of lib) {
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(m.item_key);
-      if (isUuid) {
-        await supabase.from("price_book_items").update({
-          description: m.label, cost_price: m.unit_cost, trade: "electrician", unit: "ea",
-        }).eq("id", m.item_key).eq("profile_id", businessId);
-      } else {
-        await supabase.from("price_book_items").insert({
+    // Only seed materials that aren't already real price-book rows (i.e.
+    // the default archetype materials shown before a tradie has any real
+    // price book). Every save was previously re-writing the ENTIRE lib -
+    // hundreds of items for anyone with a real price book, none of which
+    // had actually changed since lib is never mutated in this component -
+    // two sequential round trips per item, on every single save. That was
+    // the actual cause of "save to draft takes ages".
+    const isUuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const itemsNeedingSeed = lib.filter((m) => !isUuidRe.test(m.item_key));
+    await Promise.all(
+      itemsNeedingSeed.flatMap((m) => [
+        supabase.from("price_book_items").insert({
           profile_id: businessId, supplier: "Custom", description: m.label, cost_price: m.unit_cost, trade: "electrician", unit: "ea",
-        });
-      }
-    }
-    for (const m of lib) {
-      await supabase.from("material_items").upsert(
-        { profile_id: businessId, trade: "electrician", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost },
-        { onConflict: "profile_id,item_key" }
-      );
-    }
+        }),
+        supabase.from("material_items").upsert(
+          { profile_id: businessId, trade: "electrician", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost },
+          { onConflict: "profile_id,item_key" }
+        ),
+      ])
+    );
 
     const extraTotals    = extraLinesTotals(extraLines, rate, effectiveMargin);
     const siteLabourSave = siteItemsLabourHours(siteItems);
