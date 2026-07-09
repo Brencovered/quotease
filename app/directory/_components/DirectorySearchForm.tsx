@@ -50,7 +50,7 @@ const RADIUS_OPTIONS = [
 
 interface DirectorySearchFormProps {
   trade: string | undefined;
-  suburb: string | undefined;
+  postcode: string | undefined;
   reviews: string | undefined;
   rating: string | undefined;
   sort: string | undefined;
@@ -60,7 +60,7 @@ interface DirectorySearchFormProps {
 
 export default function DirectorySearchForm({
   trade,
-  suburb,
+  postcode,
   reviews,
   rating,
   sort,
@@ -111,9 +111,10 @@ export default function DirectorySearchForm({
           <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] z-10" />
           <input
             type="text"
-            name="suburb"
-            defaultValue={suburb ?? ""}
-            placeholder="Suburb or postcode..."
+            name="postcode"
+            defaultValue={postcode ?? ""}
+            placeholder="Postcode, e.g. 3199"
+            inputMode="numeric"
             className="app-field pl-8 pr-3 text-[13px] w-full bg-white"
           />
         </div>
@@ -166,7 +167,7 @@ export default function DirectorySearchForm({
           Search
         </button>
 
-        {(trade || suburb || reviews || rating || sort || radius) && (
+        {(trade || postcode || reviews || rating || sort || radius) && (
           <Link href="/directory" className="text-[13px] font-semibold hover:opacity-70 transition-opacity" style={{ color: "var(--ink-faint)" }}>
             Clear all
           </Link>
@@ -175,7 +176,7 @@ export default function DirectorySearchForm({
         <span className="text-[12px] ml-auto hidden sm:block" style={{ color: "var(--ink-faint)" }}>
           {count} result{count !== 1 ? "s" : ""}
           {trade ? ` - ${TRADE_LABELS[trade] ?? trade}` : ""}
-          {suburb ? ` - ${suburb}` : ""}
+          {postcode ? ` - ${postcode}` : ""}
           {radius ? ` - ${RADIUS_OPTIONS.find((r) => r.value === radius)?.label ?? radius}` : ""}
           {reviews ? ` - ${REVIEW_RANGES.find((r) => r.value === reviews)?.label ?? reviews}` : ""}
           {rating ? ` - ${RATING_OPTIONS.find((r) => r.value === rating)?.label ?? rating}` : ""}

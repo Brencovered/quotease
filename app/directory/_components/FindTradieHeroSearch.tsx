@@ -60,7 +60,7 @@ export default function FindTradieHeroSearch({
 }: FindTradieHeroSearchProps) {
   const router = useRouter();
   const [trade, setTrade] = useState("");
-  const [suburb, setSuburb] = useState("");
+  const [postcode, setPostcode] = useState("");
   const [radius, setRadius] = useState("25");
   const [error, setError] = useState("");
 
@@ -69,19 +69,19 @@ export default function FindTradieHeroSearch({
       e.preventDefault();
       setError("");
 
-      if (!suburb.trim()) {
-        setError("Please enter your suburb or postcode");
+      if (!postcode.trim()) {
+        setError("Please enter your postcode");
         return;
       }
 
       const params = new URLSearchParams();
       if (trade) params.set("trade", trade);
-      params.set("suburb", suburb.trim());
+      params.set("postcode", postcode.trim());
       params.set("radius", radius);
 
       router.push(`/directory?${params.toString()}`);
     },
-    [trade, suburb, radius, router]
+    [trade, postcode, radius, router]
   );
 
   return (
@@ -167,13 +167,13 @@ export default function FindTradieHeroSearch({
                 </div>
               </div>
 
-              {/* Suburb input */}
+              {/* Postcode input */}
               <div className="sm:col-span-4 relative">
                 <label
-                  htmlFor="suburb"
+                  htmlFor="postcode"
                   className="block text-[12px] font-bold text-[var(--ink-soft)] mb-1.5"
                 >
-                  Suburb
+                  Postcode
                 </label>
                 <div className="relative">
                   <MapPin
@@ -181,14 +181,15 @@ export default function FindTradieHeroSearch({
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] pointer-events-none"
                   />
                   <input
-                    id="suburb"
+                    id="postcode"
                     type="text"
-                    value={suburb}
+                    inputMode="numeric"
+                    value={postcode}
                     onChange={(e) => {
-                      setSuburb(e.target.value);
+                      setPostcode(e.target.value);
                       if (error) setError("");
                     }}
-                    placeholder="Enter your suburb or postcode"
+                    placeholder="e.g. 3199"
                     className="app-field text-[14px] pl-9 pr-3 bg-white w-full"
                   />
                 </div>

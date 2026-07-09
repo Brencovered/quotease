@@ -103,6 +103,7 @@ export default async function DirectoryPage({
 }: {
   searchParams: Promise<{
     trade?: string;
+    postcode?: string;
     suburb?: string;
     reviews?: string;
     rating?: string;
@@ -111,7 +112,7 @@ export default async function DirectoryPage({
     radius?: string;
   }>;
 }) {
-  const { trade, suburb, reviews, rating, sort, page: pageParam, radius } = await searchParams;
+  const { trade, postcode: postcodeParam, suburb: suburbParam, reviews, rating, sort, page: pageParam, radius } = await searchParams;
   const page = parseInt(pageParam ?? "1");
   const perPage = 24;
   const from = (page - 1) * perPage;
@@ -126,35 +127,76 @@ export default async function DirectoryPage({
   // Trade filter
   if (trade) query = query.contains("trades", [trade]);
 
-  // Location filter - resolves to postcode, not raw suburb text. The
-  // scraped suburb field is inconsistent (482 distinct suburb strings vs
-  // only 387 distinct postcodes across the same 2711 listings - typos,
-  // "Mt" vs "Mount", etc.), so a plain suburb ilike search misses listings
-  // in the same postal area that happen to have a differently-spelled
-  // suburb string. Postcode is the clean, canonical field (already
-  // indexed for exactly this) and every other listing sharing that
-  // postcode should show up regardless of how its suburb was scraped.
-  if (suburb) {
-    const trimmed = suburb.trim();
-    if (/^\d+$/.test(trimmed)) {
-      // Typed directly as a postcode (or partial one).
-      query = query.ilike("postcode", `${trimmed}%`);
+  // Location filter - postcode is the primary, canonical search field
+  // (the scraped suburb field is inconsistent: 482 distinct suburb
+  // strings vs only 387 distinct postcodes across the same 2711 listings
+  // - typos, "Mt" vs "Mount", etc). `suburb` is still accepted here only
+  // because hundreds of programmatic SEO landing pages
+  // (app/[tradeSuburb]) already link into this page with `?suburb=` -
+  // it's resolved to postcode(s) the same way, never surfaced as its own
+  // search field in the UI any more.
+  const postcode = postcodeParam?.trim();
+  const suburb = suburbParam?.trim();
+  const radiusKm = radius ? parseFloat(radius) : NaN;
+  const hasRadius = !isNaN(radiusKm) && radiusKm > 0;
+
+  // Resolve the search term to one or more postcodes, and (if a radius is
+  // set) a centre point to measure distance from.
+  let resolvedPostcodes: string[] = [];
+  if (postcode) {
+    resolvedPostcodes = [postcode];
+  } else if (suburb) {
+    if (/^\d+$/.test(suburb)) {
+      resolvedPostcodes = [suburb];
     } else {
       const { data: postcodeRows } = await supabase
         .from("directory_listing")
         .select("postcode")
-        .ilike("suburb", `%${trimmed}%`)
+        .ilike("suburb", `%${suburb}%`)
         .not("postcode", "is", null);
-      const postcodes = Array.from(new Set((postcodeRows ?? []).map((r) => r.postcode).filter((p): p is string => !!p)));
-      if (postcodes.length > 0) {
-        query = query.in("postcode", postcodes);
-      } else {
-        // Couldn't resolve any postcode for this text (typo, or a suburb
-        // not in our data at all) - fall back to the raw suburb match so
-        // the search doesn't silently return every listing.
-        query = query.ilike("suburb", `%${trimmed}%`);
+      resolvedPostcodes = Array.from(new Set((postcodeRows ?? []).map((r) => r.postcode).filter((p): p is string => !!p)));
+    }
+  }
+
+  if (hasRadius && resolvedPostcodes.length > 0) {
+    // Real distance-based search: find the centre point for the searched
+    // postcode(s) (averaging if a suburb name resolved to more than one),
+    // then pull every listing within radiusKm of that point via the
+    // haversine RPC. directory_listing has lat/lng on every row already.
+    const centroids = await Promise.all(
+      resolvedPostcodes.map((pc) => supabase.rpc("directory_postcode_centroid", { p_postcode: pc }))
+    );
+    const points = centroids
+      .map((c) => c.data?.[0])
+      .filter((p): p is { lat: number; lng: number } => !!p && p.lat != null && p.lng != null);
+
+    if (points.length > 0) {
+      const centerLat = points.reduce((s, p) => s + p.lat, 0) / points.length;
+      const centerLng = points.reduce((s, p) => s + p.lng, 0) / points.length;
+      const { data: nearbyIds } = await supabase.rpc("directory_listings_within_radius", {
+        center_lat: centerLat, center_lng: centerLng, radius_km: radiusKm,
+      });
+      const ids = (nearbyIds ?? []).map((r: { id: string }) => r.id);
+      // No matches within radius - use an impossible filter rather than
+      // silently dropping the location filter and returning everything.
+      query = query.in("id", ids.length > 0 ? ids : ["00000000-0000-0000-0000-000000000000"]);
+    } else {
+      // Couldn't resolve a centre point at all (unknown postcode/suburb) -
+      // fall through to a plain postcode match so search doesn't silently
+      // return every listing.
+      if (/^\d+$/.test(resolvedPostcodes[0] ?? "")) {
+        query = query.ilike("postcode", `${resolvedPostcodes[0]}%`);
       }
     }
+  } else if (postcode) {
+    query = query.ilike("postcode", `${postcode}%`);
+  } else if (resolvedPostcodes.length > 0) {
+    query = query.in("postcode", resolvedPostcodes);
+  } else if (suburb) {
+    // Couldn't resolve any postcode for this suburb text at all (typo, or
+    // not in our data) - fall back to the raw suburb match so search
+    // doesn't silently return everything.
+    query = query.ilike("suburb", `%${suburb}%`);
   }
 
   // Review count range filter
@@ -198,6 +240,7 @@ export default async function DirectoryPage({
   function buildUrl(params: Record<string, string | undefined>): string {
     const sp = new URLSearchParams();
     if (trade) sp.set("trade", trade);
+    if (postcode) sp.set("postcode", postcode);
     if (suburb) sp.set("suburb", suburb);
     if (reviews) sp.set("reviews", reviews);
     if (rating) sp.set("rating", rating);
@@ -212,7 +255,7 @@ export default async function DirectoryPage({
   }
 
   /* Determine if user has performed a search */
-  const hasActiveFilters = !!(trade || suburb || reviews || rating);
+  const hasActiveFilters = !!(trade || postcode || suburb || reviews || rating);
 
   return (
     <main className="min-h-screen" style={{ background: "var(--app-bg)" }}>
@@ -328,7 +371,7 @@ export default async function DirectoryPage({
           {/* Sticky Search Bar */}
           <DirectorySearchForm
             trade={trade}
-            suburb={suburb}
+            postcode={postcode ?? suburb}
             reviews={reviews}
             rating={rating}
             sort={sort}
@@ -345,16 +388,16 @@ export default async function DirectoryPage({
             )}
 
             {/* Active filters summary */}
-            {(trade || suburb || reviews || rating) && (
+            {(trade || postcode || suburb || reviews || rating) && (
               <div className="flex flex-wrap gap-2 mb-4">
                 {trade && (
                   <Link href={buildUrl({ trade: undefined })} scroll={false} className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full bg-[var(--navy)] text-white hover:opacity-80 transition-opacity">
                     {TRADE_LABELS[trade]} <span className="opacity-60">&times;</span>
                   </Link>
                 )}
-                {suburb && (
-                  <Link href={buildUrl({ suburb: undefined })} scroll={false} className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full bg-[var(--navy)] text-white hover:opacity-80 transition-opacity">
-                    {suburb} <span className="opacity-60">&times;</span>
+                {(postcode || suburb) && (
+                  <Link href={buildUrl({ postcode: undefined, suburb: undefined })} scroll={false} className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full bg-[var(--navy)] text-white hover:opacity-80 transition-opacity">
+                    {postcode ?? suburb} <span className="opacity-60">&times;</span>
                   </Link>
                 )}
                 {reviews && (
