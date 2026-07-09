@@ -1,17 +1,19 @@
 /**
- * drawingValidation.ts
- *
- * Image quality validation module for the SwiftScope AI drawing analysis pipeline.
+ * drawingValidation.ts — Image quality validation for AI drawing analysis
  *
  * Validates uploaded building drawings/plans (images and PDFs) before they are
- * sent to Claude AI for symbol detection and quantity extraction. Provides
- * actionable feedback to tradies so they can re-upload higher-quality files
- * when needed.
+ * sent to Claude AI. Provides actionable feedback to tradies.
+ *
+ * Uses jimp (pure JavaScript, no native dependencies) instead of sharp to
+ * avoid serverless runtime crashes from native binary loading failures.
+ * jimp is lazily imported inside validateDrawing() so it only loads when needed.
  *
  * @module drawingValidation
  */
 
-import sharp from "sharp";
+// NOTE: No top-level imports of image-processing libraries.
+// jimp is imported dynamically inside validateDrawing() to avoid
+// serverless cold-start crashes from native binary loading.
 
 // ---------------------------------------------------------------------------
 // Types
@@ -72,9 +74,6 @@ const MEDIUM_THRESHOLD = 1600;
 const PDF_PAGE_COUNT_MEDIUM = 20;
 const PDF_PAGE_COUNT_LOW = 50;
 
-/** Blur-detection entropy threshold (empirically tuned). */
-const BLUR_ENTROPY_THRESHOLD = 3.0;
-
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -82,9 +81,8 @@ const BLUR_ENTROPY_THRESHOLD = 3.0;
 /**
  * Validates a drawing file (image or PDF) for AI analysis quality.
  *
- * Checks file type, size, resolution, blur, page count (PDF), and estimates
- * token cost. Returns a {@link ValidationResult} that includes human-readable
- * issues and actionable guidance for the uploader.
+ * Checks file type, size, resolution, page count (PDF), and estimates
+ * token cost. Returns a {@link ValidationResult} with actionable guidance.
  *
  * **Scoring rules (images):**
  * - shortest side < 400 px  → `rejected`
@@ -143,15 +141,17 @@ export async function validateDrawing(
     });
   }
 
-  // --- 3. Image-specific validation ----------------------------------------
+  // --- 3. Image-specific validation (lazy jimp, serverless-safe) -----------
   const isImage = mimeType.startsWith("image/");
   const isPdf = mimeType === "application/pdf";
 
   if (isImage) {
     try {
-      const metadata = await sharp(buffer).metadata();
-      const width = metadata.width ?? 0;
-      const height = metadata.height ?? 0;
+      // Lazy-load jimp to avoid serverless cold-start crashes
+      const { Jimp } = await import("jimp");
+      const image = await Jimp.read(buffer);
+      const width = image.bitmap.width;
+      const height = image.bitmap.height;
       dimensions = { width, height };
 
       if (width === 0 || height === 0) {
@@ -175,25 +175,17 @@ export async function validateDrawing(
         }
       }
 
-      // Blur detection
-      try {
-        const stats = await sharp(buffer).stats();
-        const imageSharpness = stats.sharpness;
-        const imageEntropy = stats.entropy;
-
-        if (imageSharpness < 0.5) {
+      // Basic quality heuristic: detect heavy compression from file size vs pixels
+      if (dimensions && score === "high") {
+        const pixelCount = dimensions.width * dimensions.height;
+        const bytesPerPixel = buffer.length / pixelCount;
+        // Less than 0.3 bytes per pixel suggests heavy compression
+        if (bytesPerPixel < 0.3 && pixelCount > 1_000_000) {
           issues.push(
-            `Image appears blurry (sharpness ${imageSharpness?.toFixed(3)}, entropy ${imageEntropy?.toFixed(2)}).`
+            "Image appears heavily compressed. Fine details like small symbols may be lost."
           );
-          if (score === "high") score = "medium";
-        } else if (imageEntropy < BLUR_ENTROPY_THRESHOLD) {
-          issues.push(
-            `Image has very low detail (entropy ${imageEntropy?.toFixed(2)}). It may be blurry or a blank page.`
-          );
-          if (score === "high") score = "medium";
+          score = "medium";
         }
-      } catch {
-        issues.push("Could not perform blur detection - proceeding anyway.");
       }
     } catch (imgErr) {
       const msg = imgErr instanceof Error ? imgErr.message : String(imgErr);
@@ -284,7 +276,8 @@ function countPdfPages(buffer: Buffer): number {
     const raw = buffer.toString("latin1");
     const pageMatches = raw.match(/\/Type\s*\/Page\b/g);
     const pagesNodeMatches = raw.match(/\/Type\s*\/Pages\b/g);
-    const pageCount = (pageMatches?.length ?? 0) - (pagesNodeMatches?.length ?? 0);
+    const pageCount =
+      (pageMatches?.length ?? 0) - (pagesNodeMatches?.length ?? 0);
     return Math.max(pageCount, 0);
   } catch {
     return 0;
@@ -302,12 +295,13 @@ function estimateTokensInternal(
     const w = dimensions?.width ?? 0;
     const h = dimensions?.height ?? 0;
     if (w > 0 && h > 0) {
-      estimate = Math.ceil((w * h / 1000) * TOKENS_PER_1000PX2);
+      estimate = Math.ceil((w * h) / 1000 * TOKENS_PER_1000PX2);
     } else {
       estimate = 50_000;
     }
   } else if (mimeType === "application/pdf") {
-    estimate = (pageCount && pageCount > 0 ? pageCount : 1) * TOKENS_PER_PDF_PAGE;
+    estimate =
+      (pageCount && pageCount > 0 ? pageCount : 1) * TOKENS_PER_PDF_PAGE;
   }
   return Math.min(estimate, MAX_TOKEN_DISPLAY);
 }
@@ -320,19 +314,30 @@ function generateGuidance(
 ): string {
   if (score === "rejected") {
     if (issues.some((i) => i.includes("Unsupported"))) {
-      return "This file type is not supported. Please upload JPEG, PNG, WebP, GIF, or PDF files only.";
+      return (
+        "This file type is not supported. Please upload JPEG, PNG, WebP, GIF, or PDF files only."
+      );
     }
     if (issues.some((i) => i.includes("File size"))) {
-      return "This file is too large. Compress the image or split the PDF into smaller parts.";
+      return (
+        "This file is too large. Compress the image or split the PDF into smaller parts."
+      );
     }
     if (dimensions) {
       const shortest = Math.min(dimensions.width, dimensions.height);
-      return `This image is too small for reliable symbol detection (${dimensions.width}x${dimensions.height}px, shortest side ${shortest}px). Re-scan at 200 DPI or higher, or take the photo closer to the plan.`;
+      return (
+        `This image is too small for reliable symbol detection (${dimensions.width}x${dimensions.height}px, ` +
+        `shortest side ${shortest}px). Re-scan at 200 DPI or higher, or take the photo closer to the plan.`
+      );
     }
     if (issues.some((i) => i.includes("corrupt"))) {
-      return "The file could not be read. It may be corrupt - try re-saving or re-exporting it.";
+      return (
+        "The file could not be read. It may be corrupt - try re-saving or re-exporting it."
+      );
     }
-    return "This file does not meet the minimum quality requirements. Please try a different upload.";
+    return (
+      "This file does not meet the minimum quality requirements. Please try a different upload."
+    );
   }
 
   if (score === "low" || score === "medium") {
@@ -340,16 +345,33 @@ function generateGuidance(
     if (dimensions) {
       const shortest = Math.min(dimensions.width, dimensions.height);
       if (shortest < LOW_THRESHOLD) {
-        parts.push("This image is low resolution. The AI may miss small symbols or text. For best results, re-scan at 200 DPI or take the photo closer to the plan.");
+        parts.push(
+          "This image is low resolution. The AI may miss small symbols or text. " +
+            "For best results, re-scan at 200 DPI or take the photo closer to the plan."
+        );
       } else if (shortest < MEDIUM_THRESHOLD) {
-        parts.push("Image resolution is moderate. Most symbols should be readable, but very small text may be missed.");
+        parts.push(
+          "Image resolution is moderate. Most symbols should be readable, but very small text may be missed."
+        );
       }
     }
-    if (issues.some((i) => i.includes("blurry") || i.includes("entropy") || i.includes("sharpness"))) {
-      parts.push("The image appears blurry. Ensure good lighting and hold the camera steady when photographing plans.");
+    if (
+      issues.some(
+        (i) =>
+          i.includes("compressed") ||
+          i.includes("blurry") ||
+          i.includes("entropy") ||
+          i.includes("sharpness")
+      )
+    ) {
+      parts.push(
+        "The image appears to have quality issues. Ensure good lighting and scan at a higher resolution."
+      );
     }
     if (pageCount && pageCount > PDF_PAGE_COUNT_MEDIUM) {
-      parts.push(`This PDF has ${pageCount} pages. For best results, upload only the relevant sheets (floor plans, lighting/electrical plans, and the legend).`);
+      parts.push(
+        `This PDF has ${pageCount} pages. For best results, upload only the relevant sheets (floor plans, lighting/electrical plans, and the legend).`
+      );
     }
     return parts.join(" ");
   }
@@ -361,6 +383,9 @@ function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
   const k = 1024;
   const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
+  const i = Math.min(
+    Math.floor(Math.log(bytes) / Math.log(k)),
+    sizes.length - 1
+  );
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
 }
