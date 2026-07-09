@@ -120,12 +120,22 @@ export default async function DirectoryPage({
 
   const supabase = await createClient();
 
-  let query = supabase
-    .from("directory_listing")
-    .select("*", { count: "exact" });
-
   // Trade filter
-  if (trade) query = query.contains("trades", [trade]);
+  const activeSort = sort ?? "rating";
+
+  // Review count range filter (parsed once, used by both search paths)
+  let minReviews: number | undefined;
+  let maxReviews: number | undefined;
+  if (reviews) {
+    if (reviews === "500+") {
+      minReviews = 500;
+    } else if (reviews.includes("-")) {
+      const [min, max] = reviews.split("-").map(Number);
+      if (!isNaN(min)) minReviews = min;
+      if (!isNaN(max)) maxReviews = max;
+    }
+  }
+  const minRating = rating ? parseFloat(rating) : undefined;
 
   // Location filter - postcode is the primary, canonical search field
   // (the scraped suburb field is inconsistent: 482 distinct suburb
@@ -158,11 +168,19 @@ export default async function DirectoryPage({
     }
   }
 
+  let listings: Listing[] | null = null;
+  let error: { message: string } | null = null;
+  let count = 0;
+
   if (hasRadius && resolvedPostcodes.length > 0) {
     // Real distance-based search: find the centre point for the searched
     // postcode(s) (averaging if a suburb name resolved to more than one),
-    // then pull every listing within radiusKm of that point via the
-    // haversine RPC. directory_listing has lat/lng on every row already.
+    // then delegate trade/rating/review/sort/pagination filtering to a
+    // single combined RPC. Doing the radius filter client-side (fetch
+    // matching ids, then `.in("id", ids)`) blows past request URL length
+    // limits the moment a wide radius matches hundreds of listings (e.g.
+    // 830 matches at 25km around a Melbourne postcode) - that surfaced as
+    // "Bad Request". The RPC runs entirely server-side over POST instead.
     const centroids = await Promise.all(
       resolvedPostcodes.map((pc) => supabase.rpc("directory_postcode_centroid", { p_postcode: pc }))
     );
@@ -173,67 +191,70 @@ export default async function DirectoryPage({
     if (points.length > 0) {
       const centerLat = points.reduce((s, p) => s + p.lat, 0) / points.length;
       const centerLng = points.reduce((s, p) => s + p.lng, 0) / points.length;
-      const { data: nearbyIds } = await supabase.rpc("directory_listings_within_radius", {
+      const rpcArgs = {
         center_lat: centerLat, center_lng: centerLng, radius_km: radiusKm,
-      });
-      const ids = (nearbyIds ?? []).map((r: { id: string }) => r.id);
-      // No matches within radius - use an impossible filter rather than
-      // silently dropping the location filter and returning everything.
-      query = query.in("id", ids.length > 0 ? ids : ["00000000-0000-0000-0000-000000000000"]);
+        p_trade: trade ?? null,
+        p_min_rating: minRating ?? null,
+        p_min_reviews: minReviews ?? null,
+        p_max_reviews: maxReviews ?? null,
+      };
+      const [listRes, countRes] = await Promise.all([
+        supabase.rpc("directory_search_nearby", { ...rpcArgs, p_sort: activeSort, p_limit: perPage, p_offset: from }),
+        supabase.rpc("directory_search_nearby_count", rpcArgs),
+      ]);
+      listings = (listRes.data as Listing[] | null) ?? [];
+      error = listRes.error ?? countRes.error ?? null;
+      count = (countRes.data as number | null) ?? 0;
     } else {
       // Couldn't resolve a centre point at all (unknown postcode/suburb) -
-      // fall through to a plain postcode match so search doesn't silently
-      // return every listing.
-      if (/^\d+$/.test(resolvedPostcodes[0] ?? "")) {
-        query = query.ilike("postcode", `${resolvedPostcodes[0]}%`);
-      }
-    }
-  } else if (postcode) {
-    query = query.ilike("postcode", `${postcode}%`);
-  } else if (resolvedPostcodes.length > 0) {
-    query = query.in("postcode", resolvedPostcodes);
-  } else if (suburb) {
-    // Couldn't resolve any postcode for this suburb text at all (typo, or
-    // not in our data) - fall back to the raw suburb match so search
-    // doesn't silently return everything.
-    query = query.ilike("suburb", `%${suburb}%`);
-  }
-
-  // Review count range filter
-  if (reviews) {
-    if (reviews === "500+") {
-      query = query.gte("google_reviews_count", 500);
-    } else if (reviews.includes("-")) {
-      const [min, max] = reviews.split("-").map(Number);
-      if (!isNaN(min)) query = query.gte("google_reviews_count", min);
-      if (!isNaN(max)) query = query.lt("google_reviews_count", max);
+      // fall through to a plain postcode match below so search doesn't
+      // silently return every listing.
     }
   }
 
-  // Minimum rating filter
-  if (rating) {
-    const minRating = parseFloat(rating);
-    if (!isNaN(minRating)) query = query.gte("google_rating", minRating);
+  if (listings === null) {
+    // Normal (non-radius, or unresolvable-location) search path.
+    let query = supabase
+      .from("directory_listing")
+      .select("*", { count: "exact" });
+
+    if (trade) query = query.contains("trades", [trade]);
+
+    if (postcode) {
+      query = query.ilike("postcode", `${postcode}%`);
+    } else if (resolvedPostcodes.length > 0) {
+      query = query.in("postcode", resolvedPostcodes);
+    } else if (suburb) {
+      // Couldn't resolve any postcode for this suburb text at all (typo,
+      // or not in our data) - fall back to the raw suburb match so
+      // search doesn't silently return everything.
+      query = query.ilike("suburb", `%${suburb}%`);
+    }
+
+    if (minReviews !== undefined) query = query.gte("google_reviews_count", minReviews);
+    if (maxReviews !== undefined) query = query.lt("google_reviews_count", maxReviews);
+    if (minRating !== undefined && !isNaN(minRating)) query = query.gte("google_rating", minRating);
+
+    if (activeSort === "reviews") {
+      query = query
+        .order("google_reviews_count", { ascending: false, nullsFirst: false })
+        .order("google_rating", { ascending: false, nullsFirst: false });
+    } else if (activeSort === "name") {
+      query = query.order("business_name", { ascending: true });
+    } else {
+      query = query
+        .order("google_rating", { ascending: false, nullsFirst: false })
+        .order("google_reviews_count", { ascending: false, nullsFirst: false });
+    }
+
+    query = query.range(from, to);
+
+    const result = await query;
+    listings = result.data as Listing[] | null;
+    error = result.error;
+    count = result.count ?? 0;
   }
 
-  // Sorting
-  const activeSort = sort ?? "rating";
-  if (activeSort === "reviews") {
-    query = query
-      .order("google_reviews_count", { ascending: false, nullsFirst: false })
-      .order("google_rating", { ascending: false, nullsFirst: false });
-  } else if (activeSort === "name") {
-    query = query.order("business_name", { ascending: true });
-  } else {
-    // default: highest rated
-    query = query
-      .order("google_rating", { ascending: false, nullsFirst: false })
-      .order("google_reviews_count", { ascending: false, nullsFirst: false });
-  }
-
-  query = query.range(from, to);
-
-  const { data: listings, error, count } = await query;
   const totalPages = Math.ceil((count ?? 0) / perPage);
 
   // Helper to build URLs preserving other filters
