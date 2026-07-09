@@ -70,7 +70,7 @@ export default function FindTradieHeroSearch({
       setError("");
 
       if (!suburb.trim()) {
-        setError("Please enter your suburb");
+        setError("Please enter your suburb or postcode");
         return;
       }
 
@@ -188,7 +188,7 @@ export default function FindTradieHeroSearch({
                       setSuburb(e.target.value);
                       if (error) setError("");
                     }}
-                    placeholder="Enter your suburb"
+                    placeholder="Enter your suburb or postcode"
                     className="app-field text-[14px] pl-9 pr-3 bg-white w-full"
                   />
                 </div>

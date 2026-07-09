@@ -113,7 +113,7 @@ export default function DirectorySearchForm({
             type="text"
             name="suburb"
             defaultValue={suburb ?? ""}
-            placeholder="Suburb..."
+            placeholder="Suburb or postcode..."
             className="app-field pl-8 pr-3 text-[13px] w-full bg-white"
           />
         </div>

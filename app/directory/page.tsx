@@ -126,8 +126,36 @@ export default async function DirectoryPage({
   // Trade filter
   if (trade) query = query.contains("trades", [trade]);
 
-  // Suburb filter
-  if (suburb) query = query.ilike("suburb", `%${suburb}%`);
+  // Location filter - resolves to postcode, not raw suburb text. The
+  // scraped suburb field is inconsistent (482 distinct suburb strings vs
+  // only 387 distinct postcodes across the same 2711 listings - typos,
+  // "Mt" vs "Mount", etc.), so a plain suburb ilike search misses listings
+  // in the same postal area that happen to have a differently-spelled
+  // suburb string. Postcode is the clean, canonical field (already
+  // indexed for exactly this) and every other listing sharing that
+  // postcode should show up regardless of how its suburb was scraped.
+  if (suburb) {
+    const trimmed = suburb.trim();
+    if (/^\d+$/.test(trimmed)) {
+      // Typed directly as a postcode (or partial one).
+      query = query.ilike("postcode", `${trimmed}%`);
+    } else {
+      const { data: postcodeRows } = await supabase
+        .from("directory_listing")
+        .select("postcode")
+        .ilike("suburb", `%${trimmed}%`)
+        .not("postcode", "is", null);
+      const postcodes = Array.from(new Set((postcodeRows ?? []).map((r) => r.postcode).filter((p): p is string => !!p)));
+      if (postcodes.length > 0) {
+        query = query.in("postcode", postcodes);
+      } else {
+        // Couldn't resolve any postcode for this text (typo, or a suburb
+        // not in our data at all) - fall back to the raw suburb match so
+        // the search doesn't silently return every listing.
+        query = query.ilike("suburb", `%${trimmed}%`);
+      }
+    }
+  }
 
   // Review count range filter
   if (reviews) {
