@@ -821,6 +821,12 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             <Link href="/features" className="text-[13px] font-semibold text-white/50 hover:text-[#ffb400] transition-colors">
               Features
             </Link>
+            <Link href="/terms" className="text-[13px] font-semibold text-white/50 hover:text-[#ffb400] transition-colors">
+              Terms
+            </Link>
+            <Link href="/privacy" className="text-[13px] font-semibold text-white/50 hover:text-[#ffb400] transition-colors">
+              Privacy
+            </Link>
             <Link href="/signup" className="text-[13px] font-semibold text-[#ffb400] hover:text-white transition-colors">
               Sign up free
             </Link>

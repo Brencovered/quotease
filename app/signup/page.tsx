@@ -311,6 +311,13 @@ function SignupForm() {
                       <div className="bg-[var(--red-bg)] border border-red-200 rounded-lg px-3 py-2.5 text-[13px] text-[var(--red)] font-semibold">{error}</div>
                     )}
 
+                    <p className="text-[12px] text-[var(--ink-faint)] leading-snug">
+                      By creating an account, you agree to our{" "}
+                      <Link href="/terms" target="_blank" className="text-[var(--navy)] font-semibold hover:underline">Terms of Use</Link>{" "}
+                      and{" "}
+                      <Link href="/privacy" target="_blank" className="text-[var(--navy)] font-semibold hover:underline">Privacy Policy</Link>.
+                    </p>
+
                     <button type="submit" disabled={loading} className="btn-primary mt-1">
                       {loading ? "Creating account..." : <>Create account <ArrowRight size={16} /></>}
                     </button>

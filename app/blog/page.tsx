@@ -139,6 +139,8 @@ export default async function BlogPage() {
             <Link href="/" className="hover:text-white transition-colors">Home</Link>
             <Link href="/features" className="hover:text-white transition-colors">Features</Link>
             <Link href="/signup" className="hover:text-white transition-colors">Sign up</Link>
+            <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
+            <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
           </div>
         </div>
       </div>
