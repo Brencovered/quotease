@@ -165,6 +165,15 @@ export default function CarpenterQuoteBuilder({
   const displayLabourDollar = Math.round(result.labourHours * rate) + extraTotalsForDisplay.labour + Math.round(manualLabourHrs * rate);
   const displayMaterialsDollar = Math.round(result.materialsCost + extraTotalsForDisplay.materials);
 
+  // Sticky header only: no room there for a separate "on-site items" chip
+  // (that breakdown appears further down), so its Labour/Materials figures
+  // must fold in package/plan-markup/site items too, or a package-only
+  // quote shows misleading near-zero Labour/Materials up top while Total
+  // (which already includes siteTotal) looks correct.
+  const headerLabourHours = Math.round((displayLabourHours + siteItemsLabourHours(siteItems)) * 10) / 10;
+  const headerLabourDollar = displayLabourDollar + Math.round(siteLabour);
+  const headerMaterialsDollar = displayMaterialsDollar + Math.round(siteMaterials);
+
   function set<K extends keyof CarpenterIntake>(k: K, v: CarpenterIntake[K]) { setIntake((p) => ({...p,[k]:v})); }
 
   async function runAiAnalysis() {
@@ -278,8 +287,8 @@ export default function CarpenterQuoteBuilder({
       <div className="sticky top-12 sm:top-0 z-30 mb-4 -mx-4 sm:mx-0 px-4 sm:px-0">
         <div className="bg-[var(--navy)] rounded-none sm:rounded-2xl px-5 py-3 flex items-center justify-between" style={{boxShadow:"0 4px 20px rgba(10,23,34,.18)"}}>
           <div className="flex gap-5">
-            <div><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Labour</p><p className="font-display text-[18px] text-white leading-tight">{displayLabourHours}h</p></div>
-            <div><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Materials</p><p className="font-display text-[18px] text-white leading-tight">${displayMaterialsDollar.toLocaleString()}</p></div>
+            <div><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Labour</p><p className="font-display text-[18px] text-white leading-tight">{headerLabourHours}h</p></div>
+            <div><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Materials</p><p className="font-display text-[18px] text-white leading-tight">${headerMaterialsDollar.toLocaleString()}</p></div>
           </div>
           <div className="text-right"><p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Total</p><p className="font-display text-[24px] text-[var(--amber)] leading-tight">${(result.totalCost + siteTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total + Math.round(manualLabourHrs * rate)).toLocaleString()}</p></div>
         </div>

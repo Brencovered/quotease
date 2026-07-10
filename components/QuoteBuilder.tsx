@@ -218,6 +218,16 @@ export default function QuoteBuilder({
   const displayLabourDollar = Math.round(result.labourHours * rate) + extraTotalsForDisplay.labour + Math.round(manualLabourHrs * rate);
   const displayMaterialsDollar = Math.round(result.materialsCost + extraTotalsForDisplay.materials);
 
+  // Sticky header only: it has no room for a separate "on-site items" chip
+  // like the Review step breakdown does, so its Labour/Materials figures
+  // must fold in package/plan-markup/drawing/voice/live-annotate items too
+  // -- otherwise a package-only quote shows misleading near-zero Labour and
+  // Materials up top while Total (which already includes siteTotal) looks
+  // correct, making it seem like labour/materials "aren't applied".
+  const headerLabourHours = Math.round((displayLabourHours + siteItemsLabourHours(siteItems)) * 10) / 10;
+  const headerLabourDollar = displayLabourDollar + Math.round(siteLabour);
+  const headerMaterialsDollar = displayMaterialsDollar + Math.round(siteMaterials);
+
   function set<K extends keyof ElectricianIntake>(key: K, value: ElectricianIntake[K]) {
     setIntake((prev) => ({ ...prev, [key]: value }));
   }
@@ -426,11 +436,11 @@ export default function QuoteBuilder({
           <div className="flex gap-5">
             <div>
               <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Labour</p>
-              <p className="font-display text-[18px] text-white leading-tight">{displayLabourHours}h</p>
+              <p className="font-display text-[18px] text-white leading-tight">{headerLabourHours}h</p>
             </div>
             <div>
               <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Materials</p>
-              <p className="font-display text-[18px] text-white leading-tight">${displayMaterialsDollar.toLocaleString()}</p>
+              <p className="font-display text-[18px] text-white leading-tight">${headerMaterialsDollar.toLocaleString()}</p>
             </div>
           </div>
           <div className="text-right">

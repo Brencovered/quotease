@@ -141,6 +141,15 @@ export default function GenericQuoteBuilder({
   const displayMaterialsDollar = Math.round(result.materialsCost + extraTotalsForDisplay.materials);
   const displayGrandTotal = result.totalCost + siteTotal + extraTotalsForDisplay.total;
 
+  // Sticky header only: no room there for a separate "on-site items" chip
+  // (that breakdown appears further down), so its Labour/Materials figures
+  // must fold in package/plan-markup/site items too, or a package-only
+  // quote shows misleading near-zero Labour/Materials up top while Total
+  // (which already includes siteTotal) looks correct.
+  const headerLabourHours = Math.round((displayLabourHours + siteItemsLabourHours(siteItems)) * 10) / 10;
+  const headerLabourDollar = displayLabourDollar + Math.round(siteLabour);
+  const headerMaterialsDollar = displayMaterialsDollar + Math.round(siteMaterials);
+
   function addItem(isLabour: boolean) {
     setItems((p) => [...p, {
       id: uid(),
@@ -272,11 +281,11 @@ export default function GenericQuoteBuilder({
           <div className="flex gap-5">
             <div>
               <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Labour</p>
-              <p className="font-display text-[18px] text-white leading-tight">{displayLabourHours}h</p>
+              <p className="font-display text-[18px] text-white leading-tight">{headerLabourHours}h</p>
             </div>
             <div>
               <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Materials</p>
-              <p className="font-display text-[18px] text-white leading-tight">${displayMaterialsDollar.toLocaleString()}</p>
+              <p className="font-display text-[18px] text-white leading-tight">${headerMaterialsDollar.toLocaleString()}</p>
             </div>
           </div>
           <div className="text-right">
