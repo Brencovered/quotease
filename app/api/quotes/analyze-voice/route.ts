@@ -4,6 +4,7 @@ import { getActiveBusinessId } from "@/lib/team";
 import { checkUsage, currentPeriod, type UsageProfile } from "@/lib/aiUsage";
 import { getTradeVoicePrompt } from "@/lib/ai/getTradeVoicePrompt";
 import { DETECTED_ITEMS_SCHEMA } from "@/lib/ai/detectedItemsSchema";
+import { checkRateLimit, rateLimitResponseInit } from "@/lib/rateLimit";
 
 // Shares the same free/add-on quota as drawing analysis (lib/aiUsage.ts) -
 // it's the same underlying cost (one Claude API call) and the same kind of
@@ -57,6 +58,10 @@ export async function POST(request: Request) {
   if (!userData.user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
+
+  const rl = checkRateLimit(`analyze-voice:${userData.user.id}`, 15, 10 * 60 * 1000);
+  const rlBlocked = rateLimitResponseInit(rl);
+  if (rlBlocked) return NextResponse.json(rlBlocked.body, rlBlocked.init);
   // AI usage quota is per-business, not per-login - otherwise a team
   // member gets (or is blocked by) their own separate, meaningless quota
   // instead of the business's real one.

@@ -44,6 +44,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveBusinessId } from "@/lib/team";
 import { markOnboardingMilestone } from "@/lib/onboarding";
+import { checkRateLimit, rateLimitResponseInit } from "@/lib/rateLimit";
 
 const MAX_TOOL_ROUNDS = 4;
 
@@ -139,6 +140,10 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const rl = checkRateLimit(`business-assistant:${userData.user.id}`, 30, 10 * 60 * 1000);
+  const rlBlocked = rateLimitResponseInit(rl);
+  if (rlBlocked) return NextResponse.json(rlBlocked.body, rlBlocked.init);
 
   const businessId = await getActiveBusinessId(supabase, userData.user.id);
 

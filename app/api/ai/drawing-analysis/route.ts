@@ -20,6 +20,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { MODELS } from "@/lib/ai/gateway";
 import { getTradeSystemPrompt } from "@/lib/ai/getTradeSystemPrompt";
+import { checkRateLimit, rateLimitResponseInit } from "@/lib/rateLimit";
 
 // ── Schema ─────────────────────────────────────────────────────────────────
 
@@ -46,6 +47,10 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const rl = checkRateLimit(`drawing-analysis:${user.id}`, 10, 10 * 60 * 1000);
+  const rlBlocked = rateLimitResponseInit(rl);
+  if (rlBlocked) return NextResponse.json(rlBlocked.body, rlBlocked.init);
 
   const formData    = await req.formData();
   const imageFile   = formData.get("image") as File | null;

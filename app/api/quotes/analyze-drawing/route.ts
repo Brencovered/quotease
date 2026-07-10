@@ -26,6 +26,7 @@ import {
   type AnalysisSuccess,
 } from "@/lib/ai/drawingAnalysis";
 import { normalizeTrade } from "@/lib/ai/tradeGates";
+import { checkRateLimit, rateLimitResponseInit } from "@/lib/rateLimit";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  TYPES
@@ -111,6 +112,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     if (authError || !authUser) {
       return errorResponse(401, { error: "Unauthorized — please sign in." });
+    }
+
+    const rl = checkRateLimit(`analyze-drawing:${authUser.id}`, 10, 10 * 60 * 1000);
+    if (!rl.allowed) {
+      const blocked = rateLimitResponseInit(rl)!;
+      return errorResponse(blocked.init.status, blocked.body);
     }
 
     // ── 2. Get active business ID ────────────────────────────────────────────
