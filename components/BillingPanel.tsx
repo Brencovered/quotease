@@ -51,7 +51,7 @@ export default function BillingPanel({ trialEndsAt, isSubscribed, now }: { trial
         </p>
       ) : trialExpired ? (
         <p className="text-[14px] text-[var(--ink-faint)] leading-relaxed mb-4">
-          Your 3-day free trial has ended. Subscribe to keep quoting - no setup, cancel any time.
+          Your 7-day free trial has ended. Subscribe to keep quoting - no setup, cancel any time.
         </p>
       ) : (
         <p className="text-[14px] text-[var(--ink-faint)] leading-relaxed mb-4">
