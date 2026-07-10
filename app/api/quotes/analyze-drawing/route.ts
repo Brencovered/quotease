@@ -176,19 +176,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       });
     }
 
-    // ── 7. Get API key ───────────────────────────────────────────────────────
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      console.error("[analyze-drawing] ANTHROPIC_API_KEY is not configured");
-      return errorResponse(500, {
-        error: "AI analysis is not configured on the server.",
-      });
-    }
-
-    // ── 8. Read file to buffer ───────────────────────────────────────────────
+    // ── 7. Read file to buffer ───────────────────────────────────────────────
     const fileBuffer = Buffer.from(await file.arrayBuffer());
 
-    // ── 9. Run analysis pipeline ─────────────────────────────────────────────
+    // ── 8. Run analysis pipeline ─────────────────────────────────────────────
     const analysis: AnalysisSuccess = await analyzeDrawing({
       fileBuffer,
       mimeType: file.type,
@@ -197,12 +188,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       profileTrades: profile.trades ?? [],
       businessId,
       userId: authUser.id,
-      anthropicApiKey: apiKey,
     });
 
     const totalTime = Date.now() - requestStartTime;
 
-    // ── 10. Build response ───────────────────────────────────────────────────
+    // ── 9. Build response ───────────────────────────────────────────────────
     const usageResponse: UsageResponse = {
       via: usage.via,
       remainingFree: usage.remainingFree,
@@ -221,12 +211,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       isRegistered: analysis.gate.isRegistered,
     };
 
-    // ── 11. Update usage counters (fire-and-forget) ──────────────────────────
+    // ── 10. Update usage counters (fire-and-forget) ──────────────────────────
     updateUsageCounters(supabase, profile, usage).catch((err) => {
       console.error("[analyze-drawing] Usage counter update failed:", err);
     });
 
-    // ── 12. Log analysis to ai_drawing_analyses (fire-and-forget) ────────────
+    // ── 11. Log analysis to ai_drawing_analyses (fire-and-forget) ────────────
     logAnalysis(supabase, {
       profileId: businessId,
       trade: normalizeTrade(trade),
@@ -243,7 +233,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       console.error("[analyze-drawing] Analysis logging failed:", err);
     });
 
-    // ── 13. Return success ───────────────────────────────────────────────────
+    // ── 12. Return success ───────────────────────────────────────────────────
     // analysis.result.confidence is now a weighted breakdown object
     // ({overall, score, dimensions, reasoning}) computed in
     // lib/ai/drawingAnalysis.ts. Every existing frontend call site

@@ -13,6 +13,7 @@
  * @module lib/ai/drawingAnalysis
  */
 
+import { generateText, APICallError } from "ai";
 import { validateDrawing, type ValidationResult } from "./drawingValidation";
 import { checkTradeGate, normalizeTrade, type TradeGateResult } from "./tradeGates";
 import {
@@ -96,8 +97,6 @@ export interface AnalysisParams {
   businessId: string;
   /** Authenticated user ID (for logging). */
   userId: string;
-  /** Anthropic API key (pulled from env by the route handler). */
-  anthropicApiKey: string;
 }
 
 /** Successful analysis result with full metadata. */
@@ -126,13 +125,10 @@ export interface AnalysisSuccess {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Primary vision model — used for both images and PDFs. */
-const PRIMARY_MODEL = "claude-sonnet-4-6";
+const PRIMARY_MODEL = "anthropic/claude-sonnet-4.6";
 
 /** Fallback model used when the primary model returns a 5xx or rate-limit error. */
-const FALLBACK_MODEL = "claude-haiku-4-5-20251001";
-
-/** Anthropic Messages API endpoint. */
-const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
+const FALLBACK_MODEL = "anthropic/claude-haiku-4.5";
 
 /** Maximum tokens for the analysis response. */
 // 2000 was nowhere near enough for a drawing with a realistic number of
@@ -144,9 +140,6 @@ const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 // ',' or ']'" error that gives no indication the real cause was running
 // out of tokens, not a malformed response.
 const MAX_TOKENS = 8000;
-
-/** Anthropic API version header. */
-const ANTHROPIC_VERSION = "2023-06-01";
 
 /** Supported MIME types for upload. */
 const SUPPORTED_MIME_TYPES = [
@@ -187,122 +180,78 @@ function qualityScoreToNumeric(score: ValidationResult["score"]): number {
 }
 
 /**
- * Build the user message content array for the Anthropic Messages API.
- *
- * Images are sent as `type: "image"` with base64 source.
- * PDFs are sent as `type: "document"` with base64 source.
+ * Build the user message content array for the AI SDK (routed through the
+ * Vercel AI Gateway). Both images and PDFs use the `file` content part --
+ * `image` parts are deprecated in favour of `file` with an image media type.
  */
 function buildUserContent(
   base64Data: string,
   mimeType: string
-): Array<{
-  type: string;
-  source?: { type: string; media_type: string; data: string };
-}> {
-  if (mimeType === "application/pdf") {
-    return [
-      {
-        type: "document",
-        source: {
-          type: "base64",
-          media_type: "application/pdf",
-          data: base64Data,
-        },
-      },
-    ];
-  }
-
-  // Image types
+): Array<{ type: "file"; data: string; mediaType: string }> {
   return [
     {
-      type: "image",
-      source: {
-        type: "base64",
-        media_type: mimeType,
-        data: base64Data,
-      },
+      type: "file",
+      data: base64Data,
+      mediaType: mimeType,
     },
   ];
 }
 
 /**
- * Call the Anthropic Messages API with automatic fallback to a cheaper model
- * on server errors or rate limits.
+ * Call Claude through the Vercel AI Gateway, with automatic fallback to a
+ * cheaper model if the primary model call fails.
  *
- * @param apiKey   — Anthropic API key.
- * @param model    — Primary model name.
+ * @param model    — Primary model name (Gateway string, e.g. "anthropic/claude-sonnet-4.6").
  * @param system   — System prompt text.
- * @param content  — User message content array (image/document).
+ * @param content  — User message content array (image/PDF as a `file` part).
  * @returns Raw text content from the assistant message.
  * @throws AnalysisError on permanent failure.
  */
 async function callClaude(
-  apiKey: string,
   model: string,
   system: string,
-  content: Array<{ type: string; source?: { type: string; media_type: string; data: string } }>
+  content: Array<{ type: "file"; data: string; mediaType: string }>
 ): Promise<{ text: string; modelUsed: string }> {
-  const body = {
-    model,
-    max_tokens: MAX_TOKENS,
-    system,
-    messages: [
-      {
-        role: "user" as const,
-        content,
-      },
-    ],
-  };
-
-  // ── Attempt 1: primary model ─────────────────────────────────────────────
-  let response = await fetch(ANTHROPIC_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": ANTHROPIC_VERSION,
+  const messages = [
+    {
+      role: "user" as const,
+      content,
     },
-    body: JSON.stringify(body),
-  });
+  ];
 
-  // ── Fallback: 5xx or rate-limit (429) ────────────────────────────────────
-  if (!response.ok && (response.status >= 500 || response.status === 429)) {
-    body.model = FALLBACK_MODEL;
-    response = await fetch(ANTHROPIC_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": ANTHROPIC_VERSION,
-      },
-      body: JSON.stringify(body),
-    });
-  }
-
-  // ── Handle errors ────────────────────────────────────────────────────────
-  if (!response.ok) {
-    let errorDetail = "";
-    try {
-      const errorJson = (await response.json()) as Record<string, unknown>;
-      errorDetail = JSON.stringify(errorJson);
-    } catch {
-      errorDetail = await response.text();
+  let result;
+  let modelUsed = model;
+  try {
+    result = await generateText({ model, system, messages, maxOutputTokens: MAX_TOKENS });
+  } catch (err) {
+    // Fallback: 5xx or rate-limit (429), same as the retry policy this
+    // replaced. Anything else (e.g. a 4xx from a malformed request) isn't
+    // worth retrying on a different model, so it's rethrown as-is.
+    const isRetryable =
+      err instanceof APICallError && (err.statusCode === undefined || err.statusCode >= 500 || err.statusCode === 429);
+    if (!isRetryable) {
+      throw new AnalysisError(
+        `Anthropic API error: ${err instanceof Error ? err.message : String(err)}`,
+        "ANTHROPIC_API_ERROR"
+      );
     }
-    throw new AnalysisError(
-      `Anthropic API error (${response.status}): ${errorDetail}`,
-      `ANTHROPIC_API_${response.status}`
-    );
+    try {
+      modelUsed = FALLBACK_MODEL;
+      result = await generateText({ model: FALLBACK_MODEL, system, messages, maxOutputTokens: MAX_TOKENS });
+    } catch (fallbackErr) {
+      throw new AnalysisError(
+        `Anthropic API error (both models failed): ${fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)}`,
+        "ANTHROPIC_API_ERROR"
+      );
+    }
   }
-
-  // ── Parse success ────────────────────────────────────────────────────────
-  const data = (await response.json()) as Record<string, unknown>;
 
   // A response cut short by the token limit produces truncated JSON that
   // fails to parse downstream with a confusing, misleading error
   // ("Expected ',' or ']'...") that gives no hint the real cause was
   // running out of tokens rather than a malformed response. Catch it
   // here instead, where we actually know why.
-  if (data.stop_reason === "max_tokens") {
+  if (result.finishReason === "length") {
     throw new AnalysisError(
       "The AI's response was cut off because it ran out of space before finishing " +
       "(this drawing likely has more detected items than usual). Try again, or split " +
@@ -311,33 +260,14 @@ async function callClaude(
     );
   }
 
-  // Extract text from content blocks
-  const contentBlocks = data.content;
-  if (Array.isArray(contentBlocks)) {
-    const textBlocks = contentBlocks
-      .filter(
-        (block: unknown): block is { type: string; text?: string } =>
-          typeof block === "object" &&
-          block !== null &&
-          (block as Record<string, unknown>).type === "text"
-      )
-      .map((block) => block.text ?? "")
-      .filter(Boolean);
-
-    if (textBlocks.length > 0) {
-      return { text: textBlocks.join("\n"), modelUsed: body.model };
-    }
+  if (!result.text) {
+    throw new AnalysisError(
+      "Empty or unrecognised response structure from Anthropic API.",
+      "EMPTY_RESPONSE"
+    );
   }
 
-  // Some responses have text directly on data.text
-  if (typeof data.text === "string" && data.text.length > 0) {
-    return { text: data.text, modelUsed: body.model };
-  }
-
-  throw new AnalysisError(
-    "Empty or unrecognised response structure from Anthropic API.",
-    "EMPTY_RESPONSE"
-  );
+  return { text: result.text, modelUsed };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -378,13 +308,12 @@ async function callClaude(
  *   profileTrades: ["electrician", "plumber"],
  *   businessId: "profile-uuid",
  *   userId: "auth-uuid",
- *   anthropicApiKey: process.env.ANTHROPIC_API_KEY!,
  * });
  * console.log(analysis.result.detected_items);
  * ```
  */
 export async function analyzeDrawing(params: AnalysisParams): Promise<AnalysisSuccess> {
-  const { fileBuffer, mimeType, trade, instructions, profileTrades, anthropicApiKey } =
+  const { fileBuffer, mimeType, trade, instructions, profileTrades } =
     params;
 
   const timing: AnalysisSuccess["timing"] = {
@@ -419,7 +348,6 @@ export async function analyzeDrawing(params: AnalysisParams): Promise<AnalysisSu
   const userContent = buildUserContent(base64Data, mimeType);
 
   const { text: rawText, modelUsed } = await callClaude(
-    anthropicApiKey,
     PRIMARY_MODEL,
     systemPrompt,
     userContent
