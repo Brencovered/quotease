@@ -235,7 +235,6 @@ export async function POST(req: NextRequest) {
           return { ok: false, errMsg: `Xero error ${res.status} -- check your connection in Settings and try again` };
         }
 
-        console.log("Xero invoice response:", JSON.stringify(data).slice(0, 500));
         const inv = (data?.Invoices as {InvoiceID?: string; InvoiceNumber?: string}[])?.[0];
 
         if (!res.ok || !inv?.InvoiceID) {
