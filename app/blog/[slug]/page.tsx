@@ -535,13 +535,14 @@ function TableOfContents({ blocks }: { blocks: ContentBlock[] }) {
 /*  Main Page                                                         */
 /* ------------------------------------------------------------------ */
 
-export default async function BlogPostPage({ params }: { params: { slug: string } }) {
+export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
   const admin = createAdminClient();
 
   const { data: post } = await admin
     .from("blog_posts")
     .select("*")
-    .eq("slug", params.slug)
+    .eq("slug", slug)
     .eq("published", true)
     .single();
 

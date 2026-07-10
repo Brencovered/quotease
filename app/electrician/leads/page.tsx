@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import AppHeader from "@/components/AppHeader";
 import LeadsPanel from "@/components/LeadsPanel";
 import { getActiveBusinessId } from "@/lib/team";
@@ -140,12 +141,12 @@ export default async function LeadsPage() {
               Lead notifications are paused
             </p>
             <p className="text-[13.5px] text-[var(--ink-faint)] max-w-xs mx-auto mb-5">
-              You've opted out of lead notifications. Turn them back on in
+              You&apos;ve opted out of lead notifications. Turn them back on in
               settings to start receiving leads again.
             </p>
-            <a href="/settings" className="btn-primary inline-flex">
+            <Link href="/settings" className="btn-primary inline-flex">
               Manage lead preferences
-            </a>
+            </Link>
           </div>
         ) : activeSubs.length === 0 ? (
           <div className="card text-center py-12">
@@ -157,9 +158,9 @@ export default async function LeadsPage() {
               Add your service suburb and trade in your profile to start
               receiving leads from homeowners in your area.
             </p>
-            <a href="/settings" className="btn-primary inline-flex">
+            <Link href="/settings" className="btn-primary inline-flex">
               Update your profile
-            </a>
+            </Link>
           </div>
         ) : (
           <LeadsPanel

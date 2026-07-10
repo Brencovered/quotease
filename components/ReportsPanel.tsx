@@ -10,7 +10,7 @@ export default function ReportsPanel({ stats, isAdmin }: { stats: ReportStats; i
   return (
     <div className="page-wrap">
       <h1 className="font-display text-[28px] text-[var(--ink)] mb-1">Reports</h1>
-      <p className="text-[13px] text-[var(--ink-faint)] mb-5">What actually happened, not just what's in the pipeline.</p>
+      <p className="text-[13px] text-[var(--ink-faint)] mb-5">What actually happened, not just what&apos;s in the pipeline.</p>
 
       {/* Key stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
