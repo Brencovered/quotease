@@ -41,14 +41,15 @@ export default function PrivacyPolicyPage() {
             <strong>Before you publish this:</strong> this policy is a working draft prepared to align with the
             Australian Privacy Principles (Privacy Act 1988 (Cth)) and the New Zealand Privacy Act 2020. It is
             not legal advice. Have it reviewed by a qualified Australian and/or New Zealand privacy lawyer before
-            relying on it, and fill in the bracketed placeholders (registered entity name, ABN, and registered
+            relying on it, and fill in the bracketed placeholders (your full legal name as the registered sole
+            trader, ABN, and business
             address) with your actual business details before this goes live.
           </p>
         </div>
 
         <Section id="overview" title="1. Overview">
           <p>
-            This policy applies to <strong>[Your registered business/company name], ABN [insert ABN]</strong> trading
+            This policy applies to <strong>[Your full legal name], ABN [insert ABN]</strong> trading
             as Swiftscope (&quot;<strong>Swiftscope</strong>&quot;, &quot;<strong>we</strong>&quot;, &quot;<strong>us</strong>&quot;), and covers the
             swiftscope.com.au website, the Swiftscope quoting and job management platform, and any related
             mobile or desktop experience (together, the &quot;<strong>Service</strong>&quot;).
@@ -286,9 +287,9 @@ export default function PrivacyPolicyPage() {
             For any question about this policy or how we handle personal information, contact:
           </p>
           <p>
-            <strong>[Your registered business/company name]</strong><br />
+            <strong>[Your full legal name]</strong><br />
             ABN: [insert ABN]<br />
-            Registered address: [insert address]<br />
+            Business address: [insert address]<br />
             Email: <a href="mailto:privacy@swiftscope.com.au" className="text-[#c98600] underline font-semibold">privacy@swiftscope.com.au</a>
           </p>
         </Section>

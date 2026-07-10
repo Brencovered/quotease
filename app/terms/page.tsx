@@ -41,15 +41,15 @@ export default function TermsOfUsePage() {
             <strong>Before you publish this:</strong> this is a working draft written to cover the ground a
             SaaS terms of use document for an Australian/NZ business typically needs (acceptable use, liability,
             IP, termination, governing law). It is not legal advice. Have it reviewed by a qualified Australian
-            and/or New Zealand lawyer before relying on it, and fill in the bracketed placeholders (registered
-            entity name, ABN, and registered address) with your actual business details.
+            and/or New Zealand lawyer before relying on it, and fill in the bracketed placeholders (your full
+            legal name as the registered sole trader, ABN, and business address) with your actual details.
           </p>
         </div>
 
         <Section id="acceptance" title="1. Acceptance of these terms">
           <p>
             These Terms of Use (&quot;<strong>Terms</strong>&quot;) are a legal agreement between you (and, if
-            applicable, the business you represent) and <strong>[Your registered business/company name], ABN
+            applicable, the business you represent) and <strong>[Your full legal name], ABN
             [insert ABN]</strong> trading as Swiftscope (&quot;<strong>Swiftscope</strong>&quot;, &quot;<strong>we</strong>&quot;,
             &quot;<strong>us</strong>&quot;), governing your access to and use of the swiftscope.com.au website and the
             Swiftscope quoting and job management platform (together, the &quot;<strong>Service</strong>&quot;).
@@ -241,9 +241,9 @@ export default function TermsOfUsePage() {
             Questions about these Terms can be sent to:
           </p>
           <p>
-            <strong>[Your registered business/company name]</strong><br />
+            <strong>[Your full legal name]</strong><br />
             ABN: [insert ABN]<br />
-            Registered address: [insert address]<br />
+            Business address: [insert address]<br />
             Email: <a href="mailto:support@swiftscope.com.au" className="text-[#c98600] underline font-semibold">support@swiftscope.com.au</a>
           </p>
         </Section>
