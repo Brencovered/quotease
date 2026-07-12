@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const rl = checkRateLimit(`ai-chat:${user.id}`, 30, 10 * 60 * 1000);
+  const rl = await checkRateLimit(`ai-chat:${user.id}`, 30, 10 * 60 * 1000);
   const rlBlocked = rateLimitResponseInit(rl);
   if (rlBlocked) return NextResponse.json(rlBlocked.body, rlBlocked.init);
 

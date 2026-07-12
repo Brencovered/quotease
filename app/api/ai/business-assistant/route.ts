@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const rl = checkRateLimit(`business-assistant:${userData.user.id}`, 30, 10 * 60 * 1000);
+  const rl = await checkRateLimit(`business-assistant:${userData.user.id}`, 30, 10 * 60 * 1000);
   const rlBlocked = rateLimitResponseInit(rl);
   if (rlBlocked) return NextResponse.json(rlBlocked.body, rlBlocked.init);
 

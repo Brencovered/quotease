@@ -114,7 +114,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return errorResponse(401, { error: "Unauthorized — please sign in." });
     }
 
-    const rl = checkRateLimit(`analyze-drawing:${authUser.id}`, 10, 10 * 60 * 1000);
+    const rl = await checkRateLimit(`analyze-drawing:${authUser.id}`, 10, 10 * 60 * 1000);
     if (!rl.allowed) {
       const blocked = rateLimitResponseInit(rl)!;
       return errorResponse(blocked.init.status, blocked.body);

@@ -81,7 +81,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const rl = checkRateLimit(`analyze-voice:${userData.user.id}`, 15, 10 * 60 * 1000);
+  const rl = await checkRateLimit(`analyze-voice:${userData.user.id}`, 15, 10 * 60 * 1000);
   const rlBlocked = rateLimitResponseInit(rl);
   if (rlBlocked) return NextResponse.json(rlBlocked.body, rlBlocked.init);
   // AI usage quota is per-business, not per-login - otherwise a team
