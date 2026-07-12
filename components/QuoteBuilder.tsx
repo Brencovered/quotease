@@ -19,7 +19,7 @@ import { resolveCalcCosts, hasRealPriceBook, serializeLinkedItemKeys } from "@/l
 import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import SiteAnnotationReport from "@/components/SiteAnnotationReport";
-import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupChargeTotal, markupMaterialsTotal, markupLabourHours, markupLabourTotal } from "@/lib/quotePricing";
+import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
 import { MaterialSearchAdd, ScopeItemsList, type ScopeItem } from "@/components/ScopeOfWorkStep";
 import {
   calcElectricianQuote,
@@ -57,13 +57,14 @@ const STEPS = [
 ];
 
 export default function QuoteBuilder({
-  profile, materials, preClientId, preMarkupMaterials,
+  profile, materials, preClientId, preMarkupMaterials, preMarkupSource,
   pricingTiers, jobSizeTiers,
 }: {
   profile: { hourly_rate: number; materials_margin_pct: number; default_deposit_pct?: number | null; default_expiry_days?: number; archetype_defaults?: Record<string, string> };
   materials: MaterialRow[];
   preClientId?: string;
-  preMarkupMaterials?: Array<{ label: string; quantity: number; unit: string; unitCost: number; totalCost: number }>;
+  preMarkupMaterials?: Array<{ label: string; quantity: number; unit: string; unitCost: number; totalCost: number; labourHrs?: number }>;
+  preMarkupSource?: "package" | "plan markup" | "material bundle";
   pricingTiers?: Array<{ id: string; name: string; markup_pct: number; sort_order: number }>;
   jobSizeTiers?: Array<{ id: string; name: string; max_days: number | null; markup_pct: number; sort_order: number }>;
 }) {
@@ -141,7 +142,16 @@ export default function QuoteBuilder({
   const customTermsTotal = customTerms.reduce((s, t) => s + (Number(t.percent) || 0), 0);
 
   const [extraLines, setExtraLines]   = useState<{id:string;label:string;hours:number;materialsCost:number;note:string}[]>([]);
-  const [siteItems, setSiteItems]     = useState<ScopeItem[]>([]);
+  // Direct manual override for anything the formula above doesn't capture
+  // - roof cavity time, confined-space work, or the calculated hours just
+  // being wrong for this particular job. The archetype formula only ever
+  // derives hours from counts x per-unit estimates x access multipliers;
+  // this is the tradie's own correction on top of that, always visible,
+  // no separate "additional job" needed just to bump the hours.
+  const [manualLabourHrs, setManualLabourHrs] = useState(0);
+  const [siteItems, setSiteItems]     = useState<ScopeItem[]>(
+    () => markupMaterialsToScopeItems(preMarkupMaterials, preMarkupSource ?? "plan markup")
+  );
   const [annotationMeta, setAnnotationMeta] = useState<{id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string}[]>([]);
   const [saving, setSaving]         = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -155,7 +165,7 @@ export default function QuoteBuilder({
   function saveDraft() {
     try {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
-        clientName, clientEmail, siteAddress, intake, step, extraLines, siteItems, annotationMeta,
+        clientName, clientEmail, siteAddress, intake, step, extraLines, siteItems, annotationMeta, manualLabourHrs,
       }));
     } catch {}
   }
@@ -174,6 +184,7 @@ export default function QuoteBuilder({
       if (saved.extraLines)  setExtraLines(saved.extraLines);
       if (saved.siteItems)   setSiteItems(saved.siteItems);
       if (saved.annotationMeta) setAnnotationMeta(saved.annotationMeta);
+      if (saved.manualLabourHrs != null) setManualLabourHrs(saved.manualLabourHrs);
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -190,30 +201,32 @@ export default function QuoteBuilder({
   );
 
   const result = useMemo(() => calcElectricianQuote(intake, costs, rate, effectiveMargin), [intake, costs, rate, effectiveMargin]);
-  // The wizard's running total needs to include this too, not just the
-  // saved record - otherwise raising a quote from a $244 plan shows $0
-  // the whole time you're filling it in, which looks broken.
-  const markupTotal = markupChargeTotal(preMarkupMaterials, rate ?? 95, effectiveMargin);
+  // Package / plan-markup / bundle materials are seeded into siteItems on
+  // mount (see useState above), so siteTotal below already covers them -
+  // no separate markup* bucket needed any more.
   const siteLabour    = siteItemsLabourTotal(siteItems, rate ?? 95);
   const siteMaterials = siteItemsMaterialsTotal(siteItems, effectiveMargin ?? 20);
   const siteTotal     = Math.round(siteLabour + siteMaterials);
 
   // Displayed Labour/Materials split, covering every source EXCEPT on-site
   // items (which already have their own correctly-bucketed "On-site items"
-  // line below and shouldn't be double-counted here) - base intake, extra
-  // job lines, and markup materials from a plan or package. Without this,
-  // hours from a selected package or plan takeoff silently vanished from
-  // the "Labour" figure shown while building the quote (its dollar value
-  // was still charged, just mislabelled as "Materials"), and a client
-  // couldn't tell how many hours a job with a package attached would
-  // actually take.
+  // line below and shouldn't be double-counted here) - base intake and
+  // extra job lines only.
   const extraTotalsForDisplay = extraLinesTotals(extraLines, rate, effectiveMargin);
   const extraHoursForDisplay  = extraLines.reduce((s, l) => s + l.hours, 0);
-  const markupLabourHrs    = markupLabourHours(preMarkupMaterials);
-  const markupMaterialsOnly = markupMaterialsTotal(preMarkupMaterials, effectiveMargin);
-  const displayLabourHours = Math.round((result.labourHours + extraHoursForDisplay + markupLabourHrs) * 10) / 10;
-  const displayLabourDollar = Math.round(result.labourHours * rate) + extraTotalsForDisplay.labour + Math.round(markupLabourTotal(preMarkupMaterials, rate));
-  const displayMaterialsDollar = Math.round(result.materialsCost + extraTotalsForDisplay.materials + markupMaterialsOnly);
+  const displayLabourHours = Math.round((result.labourHours + extraHoursForDisplay + manualLabourHrs) * 10) / 10;
+  const displayLabourDollar = Math.round(result.labourHours * rate) + extraTotalsForDisplay.labour + Math.round(manualLabourHrs * rate);
+  const displayMaterialsDollar = Math.round(result.materialsCost + extraTotalsForDisplay.materials);
+
+  // Sticky header only: it has no room for a separate "on-site items" chip
+  // like the Review step breakdown does, so its Labour/Materials figures
+  // must fold in package/plan-markup/drawing/voice/live-annotate items too
+  // -- otherwise a package-only quote shows misleading near-zero Labour and
+  // Materials up top while Total (which already includes siteTotal) looks
+  // correct, making it seem like labour/materials "aren't applied".
+  const headerLabourHours = Math.round((displayLabourHours + siteItemsLabourHours(siteItems)) * 10) / 10;
+  const headerLabourDollar = displayLabourDollar + Math.round(siteLabour);
+  const headerMaterialsDollar = displayMaterialsDollar + Math.round(siteMaterials);
 
   function set<K extends keyof ElectricianIntake>(key: K, value: ElectricianIntake[K]) {
     setIntake((prev) => ({ ...prev, [key]: value }));
@@ -327,32 +340,31 @@ export default function QuoteBuilder({
 
     const resolvedClientId = await resolveClientId(supabase, businessId, clientId, clientName, clientEmail, siteAddress);
 
-    for (const m of lib) {
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(m.item_key);
-      if (isUuid) {
-        await supabase.from("price_book_items").update({
-          description: m.label, cost_price: m.unit_cost, trade: "electrician", unit: "ea",
-        }).eq("id", m.item_key).eq("profile_id", businessId);
-      } else {
-        await supabase.from("price_book_items").insert({
+    // Only seed materials that aren't already real price-book rows (i.e.
+    // the default archetype materials shown before a tradie has any real
+    // price book). Every save was previously re-writing the ENTIRE lib -
+    // hundreds of items for anyone with a real price book, none of which
+    // had actually changed since lib is never mutated in this component -
+    // two sequential round trips per item, on every single save. That was
+    // the actual cause of "save to draft takes ages".
+    const isUuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const itemsNeedingSeed = lib.filter((m) => !isUuidRe.test(m.item_key));
+    await Promise.all(
+      itemsNeedingSeed.flatMap((m) => [
+        supabase.from("price_book_items").insert({
           profile_id: businessId, supplier: "Custom", description: m.label, cost_price: m.unit_cost, trade: "electrician", unit: "ea",
-        });
-      }
-    }
-    for (const m of lib) {
-      await supabase.from("material_items").upsert(
-        { profile_id: businessId, trade: "electrician", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost },
-        { onConflict: "profile_id,item_key" }
-      );
-    }
+        }),
+        supabase.from("material_items").upsert(
+          { profile_id: businessId, trade: "electrician", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost },
+          { onConflict: "profile_id,item_key" }
+        ),
+      ])
+    );
 
     const extraTotals    = extraLinesTotals(extraLines, rate, effectiveMargin);
     const siteLabourSave = siteItemsLabourHours(siteItems);
     const siteMatlsSave  = siteItemsMaterialsTotal(siteItems, effectiveMargin);
     const siteTotalSave  = Math.round(siteLabourSave * rate + siteMatlsSave);
-    const markupLabourSave = markupLabourHours(preMarkupMaterials);
-    const markupMatlsSave  = markupMaterialsTotal(preMarkupMaterials, effectiveMargin);
-    const markupTotalSave  = Math.round(markupLabourSave * rate + markupMatlsSave);
 
     const quotePayload: Record<string, unknown> = {
       profile_id: businessId, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail,
@@ -360,16 +372,22 @@ export default function QuoteBuilder({
       intake_data: {
         ...intake,
         site_items:      siteItems,
+        manual_labour_hours: manualLabourHrs,
         annotation_meta: annotationMeta.map(a => ({ ...a, frameData: "" })),
       },
-      labour_hours:   result.labourHours + extraLines.reduce((s, l) => s + l.hours, 0) + siteLabourSave + markupLabourSave,
-      materials_cost: Math.round(result.materialsCost + extraTotals.materials + siteMatlsSave + markupMatlsSave),
-      total_cost:     result.totalCost + extraTotals.total + siteTotalSave + markupTotalSave,
+      labour_hours:   result.labourHours + extraLines.reduce((s, l) => s + l.hours, 0) + siteLabourSave + manualLabourHrs,
+      materials_cost: Math.round(result.materialsCost + extraTotals.materials + siteMatlsSave),
+      total_cost:     result.totalCost + extraTotals.total + siteTotalSave + Math.round(manualLabourHrs * rate),
       payment_terms:  paymentTerms,
       quote_expires_at: new Date(Date.now() + (profile.default_expiry_days ?? 30) * 86400000).toISOString(),
       status:  sendEmail ? "sent" : "draft",
       sent_at: sendEmail ? new Date().toISOString() : null,
-      markup_materials: preMarkupMaterials ?? [],
+      // Package/plan/bundle materials now live in site_items (above) so
+      // they show up as itemized, editable lines in the Scope step. This
+      // field stays empty for new quotes - keep it writable for older
+      // readers (Xero sync, invoice PDF, quote/job detail pages) that
+      // still check it, but there's nothing left to duplicate into it.
+      markup_materials: [],
     };
 
     // Opt-in: only send tier IDs to DB if user explicitly selected them
@@ -418,16 +436,16 @@ export default function QuoteBuilder({
           <div className="flex gap-5">
             <div>
               <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Labour</p>
-              <p className="font-display text-[18px] text-white leading-tight">{displayLabourHours}h</p>
+              <p className="font-display text-[18px] text-white leading-tight">{headerLabourHours}h</p>
             </div>
             <div>
               <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Materials</p>
-              <p className="font-display text-[18px] text-white leading-tight">${displayMaterialsDollar.toLocaleString()}</p>
+              <p className="font-display text-[18px] text-white leading-tight">${headerMaterialsDollar.toLocaleString()}</p>
             </div>
           </div>
           <div className="text-right">
             <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Total</p>
-            <p className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total + siteTotal).toLocaleString()}</p>
+            <p className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + extraLinesTotals(extraLines, rate, effectiveMargin).total + siteTotal + Math.round(manualLabourHrs * rate)).toLocaleString()}</p>
           </div>
         </div>
       </div>
@@ -531,17 +549,21 @@ export default function QuoteBuilder({
           intake={intake} set={set}
           siteItems={siteItems} setSiteItems={setSiteItems}
           lib={lib}
+          manualLabourHrs={manualLabourHrs} setManualLabourHrs={setManualLabourHrs}
         />
       )}
 
       {stepId === "customer" && (
-        <StepCustomer
-          clientName={clientName} setClientName={setClientName}
-          clientEmail={clientEmail} setClientEmail={setClientEmail}
-          siteAddress={siteAddress} setSiteAddress={setSiteAddress}
-          onCeilingHint={(hint) => set("ceilingType", hint as ElectricianIntake["ceilingType"])}
-          setClientId={setClientId}
-        />
+        <>
+          <PackagePicker trade="electrician" />
+          <StepCustomer
+            clientName={clientName} setClientName={setClientName}
+            clientEmail={clientEmail} setClientEmail={setClientEmail}
+            siteAddress={siteAddress} setSiteAddress={setSiteAddress}
+            onCeilingHint={(hint) => set("ceilingType", hint as ElectricianIntake["ceilingType"])}
+            setClientId={setClientId}
+          />
+        </>
       )}
 
       {stepId === "send" && (
@@ -553,8 +575,8 @@ export default function QuoteBuilder({
           saving={saving} saveMessage={saveMessage} savedQuoteId={savedQuoteId} onSave={saveAndSend}
           extraLines={extraLines} setExtraLines={setExtraLines} rate={rate} margin={margin}
           effectiveMargin={effectiveMargin}
-          markupTotal={markupTotal} siteItems={siteItems} setSiteItems={setSiteItems} siteTotal={siteTotal} annotationMeta={annotationMeta}
-          displayLabourDollar={displayLabourDollar} displayMaterialsDollar={displayMaterialsDollar} markupMaterialsOnly={markupMaterialsOnly}
+          siteItems={siteItems} setSiteItems={setSiteItems} siteTotal={siteTotal} annotationMeta={annotationMeta}
+          displayLabourDollar={displayLabourDollar} displayMaterialsDollar={displayMaterialsDollar} manualLabourHrs={manualLabourHrs}
           selectedPricingTier={selectedPricingTier}
           selectedJobSizeTier={selectedJobSizeTier}
         />
@@ -775,12 +797,14 @@ function StepJob({
   );
 }
 
-function StepScope({ intake, set, siteItems, setSiteItems, lib }: {
+function StepScope({ intake, set, siteItems, setSiteItems, lib, manualLabourHrs, setManualLabourHrs }: {
   intake: ElectricianIntake;
   set: <K extends keyof ElectricianIntake>(k: K, v: ElectricianIntake[K]) => void;
   siteItems: ScopeItem[];
   setSiteItems: React.Dispatch<React.SetStateAction<ScopeItem[]>>;
   lib: MaterialRow[];
+  manualLabourHrs: number;
+  setManualLabourHrs: React.Dispatch<React.SetStateAction<number>>;
 }) {
   return (
     <div className="space-y-4">
@@ -815,12 +839,20 @@ function StepScope({ intake, set, siteItems, setSiteItems, lib }: {
         <div className="mt-3">
           <Row><Check2 checked={intake.multistorey} onChange={(v) => set("multistorey", v)} label="Multi-storey" /></Row>
         </div>
+        <div className="mt-4 pt-4 border-t border-[var(--line-subtle)]">
+          <Field label="Extra labour hours (manual adjustment)">
+            <Num value={manualLabourHrs} onChange={setManualLabourHrs} step={0.5} />
+          </Field>
+          <p className="text-[12px] text-[var(--ink-faint)] mt-1.5">
+            Roof cavity and subfloor access above already adjust hours automatically, but if this job needs more (or less) time than that - a tighter confined space, awkward scaffolding, anything the formula doesn&apos;t capture - add it here. Added straight to the quote total, on top of everything else.
+          </p>
+        </div>
       </div>
 
       <div className="card">
         <p className="section-tag mb-3">Materials &amp; labour</p>
         <p className="text-[12.5px] text-[var(--ink-faint)] mb-3">
-          Items from plan markup, voice, live annotate, or drawing extract show up here automatically. Search below to add anything else, or build the whole scope manually.
+          Items from a package, plan markup, voice, live annotate, or drawing extract show up here automatically. Search below to add anything else, or build the whole scope manually.
         </p>
         <div className="mb-3">
           <MaterialSearchAdd lib={lib} onAdd={(item) => setSiteItems((prev) => [...prev, { ...item, id: Math.random().toString(36).slice(2) }])} />
@@ -833,8 +865,8 @@ function StepScope({ intake, set, siteItems, setSiteItems, lib }: {
 function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTerms, setCustomTerms, customTermsTotal,
   clientName, clientEmail, siteAddress,
   saving, saveMessage, savedQuoteId, onSave,
-  extraLines, setExtraLines, rate, margin, effectiveMargin, markupTotal, siteItems, setSiteItems, siteTotal, annotationMeta,
-  displayLabourDollar, displayMaterialsDollar, markupMaterialsOnly,
+  extraLines, setExtraLines, rate, margin, effectiveMargin, siteItems, setSiteItems, siteTotal, annotationMeta,
+  displayLabourDollar, displayMaterialsDollar, manualLabourHrs,
   selectedPricingTier, selectedJobSizeTier }: {
   intake: ElectricianIntake;
   result: { labourHours: number; materialsCost: number; totalCost: number };
@@ -847,12 +879,12 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
   onSave: (send: boolean) => void;
   extraLines: {id:string;label:string;hours:number;materialsCost:number;note:string}[];
   setExtraLines: React.Dispatch<React.SetStateAction<{id:string;label:string;hours:number;materialsCost:number;note:string}[]>>;
-  rate: number; margin: number; effectiveMargin: number; markupTotal: number;
+  rate: number; margin: number; effectiveMargin: number;
   siteItems: {id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[];
   setSiteItems: React.Dispatch<React.SetStateAction<{id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]>>;
   siteTotal: number;
   annotationMeta: {id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string}[];
-  displayLabourDollar: number; displayMaterialsDollar: number; markupMaterialsOnly: number;
+  displayLabourDollar: number; displayMaterialsDollar: number; manualLabourHrs: number;
   selectedPricingTier: { id: string; name: string; markup_pct: number } | null;
   selectedJobSizeTier: { id: string; name: string; markup_pct: number } | null;
 }) {
@@ -914,10 +946,9 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
           <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Labour</span><span className="text-white font-semibold tabular">${displayLabourDollar.toLocaleString()}</span></div>
           <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Materials</span><span className="text-white font-semibold tabular">${displayMaterialsDollar.toLocaleString()}</span></div>
           {siteTotal > 0 && <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">On-site items</span><span className="text-white font-semibold tabular">${siteTotal.toLocaleString()}</span></div>}
-          {markupMaterialsOnly > 0 && <div className="flex justify-between text-[12.5px]"><span className="text-[var(--steel-3)]">incl. ${Math.round(markupMaterialsOnly).toLocaleString()} materials from a plan/package</span></div>}
           <div className="border-t border-white/10 pt-2 flex justify-between">
             <span className="text-white font-bold text-[15px]">Total</span>
-            <span className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total + siteTotal).toLocaleString()}</span>
+            <span className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + extraLinesTotals(extraLines, rate, effectiveMargin).total + siteTotal + Math.round(manualLabourHrs * rate)).toLocaleString()}</span>
           </div>
         </div>
       </div>
@@ -942,7 +973,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
             {paymentTerms.map((t, i) => (
               <div key={i} className="flex justify-between text-[13.5px]">
                 <span className="text-[var(--ink-soft)]">{t.label}</span>
-                <span className="font-bold text-[var(--ink)] tabular">{t.percent}% - ${Math.round(((result.totalCost + markupTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total + (siteTotal ?? 0)) * t.percent) / 100).toLocaleString()}</span>
+                <span className="font-bold text-[var(--ink)] tabular">{t.percent}% - ${Math.round(((result.totalCost + extraLinesTotals(extraLines, rate, effectiveMargin).total + (siteTotal ?? 0) + Math.round(manualLabourHrs * rate)) * t.percent) / 100).toLocaleString()}</span>
               </div>
             ))}
           </div>
@@ -972,8 +1003,8 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
 function Field({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
   return <label className={`block ${className}`}><span className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">{label}</span>{children}</label>;
 }
-function Num({ value, onChange }: { value: number; onChange: (v: number) => void }) {
-  return <input type="number" inputMode="numeric" min={0} value={value} onChange={(e) => onChange(Number(e.target.value))} className="app-field" />;
+function Num({ value, onChange, step }: { value: number; onChange: (v: number) => void; step?: number }) {
+  return <input type="number" inputMode="numeric" min={0} step={step ?? 1} value={value} onChange={(e) => onChange(Number(e.target.value))} className="app-field" />;
 }
 function Check2({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return <label className="flex items-center gap-3 py-2.5 cursor-pointer"><input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} /><span className="text-[14.5px] text-[var(--ink)]">{label}</span></label>;

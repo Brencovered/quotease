@@ -118,7 +118,7 @@ function SignupRightPanel() {
         </div>
 
         <p className="reveal text-[13px] font-semibold text-[#8b96a1]">
-          <span className="text-white">3-day free trial</span> - then just <span style={{ color: "var(--amber)" }}>$45/month</span>
+          <span className="text-white">7-day free trial</span> - then just <span style={{ color: "var(--amber)" }}>$45/month</span>
         </p>
       </div>
     </div>
@@ -132,7 +132,7 @@ function MobileTeaser() {
       <div className="relative z-10 text-center">
         <span className="text-[10px] font-bold tracking-[.2em] uppercase text-[var(--amber)]">Swiftscope for Tradies</span>
         <h2 className="font-display text-[1.8rem] text-white leading-tight mt-2 mb-2">Join 200+ tradies winning more jobs</h2>
-        <p className="text-[12.5px] text-[#8b96a1] mb-4">3-day free trial - then $45/month flat</p>
+        <p className="text-[12.5px] text-[#8b96a1] mb-4">7-day free trial - then $45/month flat</p>
         <div className="flex items-center justify-center gap-4 text-[11px] font-semibold text-[#8b96a1]">
           <span className="flex items-center gap-1"><Shield size={11} style={{ color: "var(--amber)" }} /> No credit card</span>
           <span className="flex items-center gap-1"><X size={11} style={{ color: "var(--amber)" }} /> Cancel anytime</span>
@@ -231,7 +231,7 @@ function SignupForm() {
               <>
                 <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-8 shadow-sm">
                   <h1 className="font-display text-[26px] text-[var(--ink)] mb-1">Create your account</h1>
-                  <p className="text-[13.5px] text-[var(--ink-faint)] mb-6">3-day free trial. $45/month after that.</p>
+                  <p className="text-[13.5px] text-[var(--ink-faint)] mb-6">7-day free trial. $45/month after that.</p>
 
                   <form onSubmit={handleSubmit} className="space-y-3">
                     {/* Business name */}
@@ -311,6 +311,13 @@ function SignupForm() {
                       <div className="bg-[var(--red-bg)] border border-red-200 rounded-lg px-3 py-2.5 text-[13px] text-[var(--red)] font-semibold">{error}</div>
                     )}
 
+                    <p className="text-[12px] text-[var(--ink-faint)] leading-snug">
+                      By creating an account, you agree to our{" "}
+                      <Link href="/terms" target="_blank" className="text-[var(--navy)] font-semibold hover:underline">Terms of Use</Link>{" "}
+                      and{" "}
+                      <Link href="/privacy" target="_blank" className="text-[var(--navy)] font-semibold hover:underline">Privacy Policy</Link>.
+                    </p>
+
                     <button type="submit" disabled={loading} className="btn-primary mt-1">
                       {loading ? "Creating account..." : <>Create account <ArrowRight size={16} /></>}
                     </button>
@@ -344,7 +351,7 @@ export default function SignupPage() {
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center">
           <h1 className="font-display text-[26px] text-[var(--ink)] mb-1">Start your free trial</h1>
-          <p className="text-[13.5px] text-[var(--ink-faint)]">3-day free trial - $45/month flat - cancel anytime</p>
+          <p className="text-[13.5px] text-[var(--ink-faint)]">7-day free trial - $45/month flat - cancel anytime</p>
         </div>
       </div>
     }>

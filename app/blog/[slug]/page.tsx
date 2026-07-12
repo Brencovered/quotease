@@ -203,14 +203,48 @@ function parseContent(md: string): ContentBlock[] {
   return blocks;
 }
 
+/**
+ * Escape HTML special characters in raw text before any markdown-to-HTML
+ * transformation runs. Blog content is admin-authored (via BlogEditor),
+ * not public-submitted, but it still renders to every visitor via
+ * dangerouslySetInnerHTML below -- if a post ever contains literal HTML
+ * (pasted from somewhere, or an AI-assisted draft that wasn't reviewed
+ * closely), it would otherwise pass straight through unescaped. None of
+ * the markdown syntax below (*, `, [, ], (, )) is affected by escaping,
+ * so this doesn't change how any legitimate post renders.
+ */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
+ * Only allow URL schemes that can't execute script when clicked --
+ * http(s), mailto, in-page anchors, and relative paths. Escaping HTML
+ * characters alone doesn't stop a `javascript:` URI from being written
+ * into an href/src, since that's a URL-scheme problem, not a markup
+ * problem -- this closes that gap for both <a href> and <img src>.
+ */
+function sanitizeUrl(url: string): string {
+  const trimmed = url.trim();
+  if (/^(https?:|mailto:)/i.test(trimmed) || /^[/#]/.test(trimmed)) {
+    return trimmed;
+  }
+  return "#";
+}
+
 function inlineMarkdown(text: string): string {
   if (!text) return "";
-  return text
+  return escapeHtml(text)
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
     .replace(/`(.+?)`/g, "<code>$1</code>")
-    .replace(/!\[(.+?)\]\((.+?)\)/g, '<img src="$2" alt="$1" class="rounded-xl my-6" />')
-    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-[#ffb400] hover:underline font-semibold">$1</a>');
+    .replace(/!\[(.+?)\]\((.+?)\)/g, (_m, alt, src) => `<img src="${sanitizeUrl(src)}" alt="${alt}" class="rounded-xl my-6" />`)
+    .replace(/\[(.+?)\]\((.+?)\)/g, (_m, label, href) => `<a href="${sanitizeUrl(href)}" target="_blank" rel="noopener noreferrer" class="text-[#ffb400] hover:underline font-semibold">${label}</a>`);
 }
 
 /* ------------------------------------------------------------------ */
@@ -535,13 +569,14 @@ function TableOfContents({ blocks }: { blocks: ContentBlock[] }) {
 /*  Main Page                                                         */
 /* ------------------------------------------------------------------ */
 
-export default async function BlogPostPage({ params }: { params: { slug: string } }) {
+export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
   const admin = createAdminClient();
 
   const { data: post } = await admin
     .from("blog_posts")
     .select("*")
-    .eq("slug", params.slug)
+    .eq("slug", slug)
     .eq("published", true)
     .single();
 
@@ -785,6 +820,12 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
             </Link>
             <Link href="/features" className="text-[13px] font-semibold text-white/50 hover:text-[#ffb400] transition-colors">
               Features
+            </Link>
+            <Link href="/terms" className="text-[13px] font-semibold text-white/50 hover:text-[#ffb400] transition-colors">
+              Terms
+            </Link>
+            <Link href="/privacy" className="text-[13px] font-semibold text-white/50 hover:text-[#ffb400] transition-colors">
+              Privacy
             </Link>
             <Link href="/signup" className="text-[13px] font-semibold text-[#ffb400] hover:text-white transition-colors">
               Sign up free

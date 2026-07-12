@@ -2,24 +2,27 @@
  * POST /api/admin/scrape
  * ----------------------
  * Unified scraper pipeline that replaces 6 separate Python scripts.
- * Now supports multiple trades per suburb scrape. AUSTRALIA-ONLY.
+ * Now supports multiple trades per postcode scrape. AUSTRALIA-ONLY.
  *
  * 4-step pipeline per trade:
- *   1. Google Places Text Search (paginated, up to 60 results, region=au)
+ *   1. Google Places Nearby Search (paginated, up to 60 results), hard
+ *      radius-bounded around the postcode's geocoded centre point - the
+ *      same postcode + radius model the /directory search page uses.
  *   2. Google Place Details per result (rating, phone, photos, website)
  *   3. Website scrape for email (mailto + regex) and logo (og:image, favicon, etc.)
  *   4. Supabase upsert into directory_listing table
  *
- * Body:  { trade: string | string[], suburb: string }
- * Response: { success, suburb, tradesScraped, totalPlacesFound, totalEnriched,
- *             totalNew, totalUpdated, totalWithEmail, totalWithPhone,
- *             totalWithRating, totalWithLogo, perTrade[], results[] }
+ * Body:  { trade: string | string[], postcode: string, radiusKm?: number }
+ * Response: { success, postcode, radiusKm, tradesScraped, totalPlacesFound,
+ *             totalEnriched, totalNew, totalUpdated, totalWithEmail,
+ *             totalWithPhone, totalWithRating, totalWithLogo, perTrade[], results[] }
  */
 
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/admin";
+import { geocodeAddress } from "@/lib/geocode";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -27,13 +30,20 @@ import { isAdminEmail } from "@/lib/admin";
 
 interface ScrapeRequest {
   trade: string | string[];
-  suburb: string;
+  postcode: string;
+  radiusKm?: number;
 }
 
 interface GooglePlaceResult {
   place_id: string;
   name: string;
-  formatted_address: string;
+  // Nearby Search returns `vicinity` (a short address), not
+  // `formatted_address` - the full address only comes back from the
+  // Place Details call each result already gets in step 2, so this is
+  // optional here and unused for AU-filtering (the hard radius already
+  // guarantees that).
+  formatted_address?: string;
+  vicinity?: string;
   geometry?: {
     location: { lat: number; lng: number };
   };
@@ -90,10 +100,14 @@ interface PerTradeSummary {
 // ---------------------------------------------------------------------------
 
 const GOOGLE_API_KEY = process.env.GOOGLE_PLACES_API_KEY!;
-const GOOGLE_TEXTSEARCH_URL =
-  "https://maps.googleapis.com/maps/api/place/textsearch/json";
+const GOOGLE_NEARBY_URL =
+  "https://maps.googleapis.com/maps/api/place/nearbysearch/json";
 const GOOGLE_DETAILS_URL =
   "https://maps.googleapis.com/maps/api/place/details/json";
+
+// Nearby Search's hard cap - requests above this are clamped.
+const MAX_RADIUS_METRES = 50000;
+const DEFAULT_RADIUS_KM = 15;
 
 const USER_AGENTS = [
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.0 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.0",
@@ -176,26 +190,31 @@ function resolveUrl(url: string, base: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Step 1: Google Places Text Search (paginated, up to 60 results, AU only)
+// Step 1: Google Places Nearby Search (paginated, up to 60 results),
+// hard-bounded to radiusMetres around a lat/lng centre point - real
+// geographic filtering, not a free-text suburb-name guess.
 // ---------------------------------------------------------------------------
 
-async function searchPlaces(trade: string, suburb: string): Promise<GooglePlaceResult[]> {
+async function searchPlacesNearby(
+  trade: string, centerLat: number, centerLng: number, radiusMetres: number
+): Promise<GooglePlaceResult[]> {
   const results: GooglePlaceResult[] = [];
   let nextPageToken: string | undefined;
 
   for (let page = 0; page < 3; page++) {
     const params = new URLSearchParams({
-      query: `${trade} in ${suburb} Australia`,
+      keyword: trade,
+      location: `${centerLat},${centerLng}`,
+      radius: String(Math.min(radiusMetres, MAX_RADIUS_METRES)),
       key: GOOGLE_API_KEY,
-      region: "au",
     });
     if (nextPageToken) params.set("pagetoken", nextPageToken);
 
     try {
-      const res = await fetch(`${GOOGLE_TEXTSEARCH_URL}?${params.toString()}`, {
+      const res = await fetch(`${GOOGLE_NEARBY_URL}?${params.toString()}`, {
         signal: AbortSignal.timeout(15000),
       });
-      if (!res.ok) { console.error(`[scrape] Text search HTTP ${res.status}`); break; }
+      if (!res.ok) { console.error(`[scrape] Nearby search HTTP ${res.status}`); break; }
 
       const data = (await res.json()) as {
         results: GooglePlaceResult[];
@@ -213,7 +232,7 @@ async function searchPlaces(trade: string, suburb: string): Promise<GooglePlaceR
       if (!nextPageToken) break;
       await sleep(2000);
     } catch (err) {
-      console.error("[scrape] Text search error:", err); break;
+      console.error("[scrape] Nearby search error:", err); break;
     }
   }
   return results;
@@ -353,14 +372,17 @@ async function fetchWebsiteHtml(url: string): Promise<string | null> {
 
 async function runTradeScrape(
   trade: string,
-  suburb: string,
+  postcode: string,
+  centerLat: number,
+  centerLng: number,
+  radiusMetres: number,
   existingIds: Set<string>,
   admin: ReturnType<typeof createAdminClient>,
 ): Promise<{ results: ScrapeResultItem[]; summary: PerTradeSummary }> {
-  console.log(`[scrape] --- ${trade} in ${suburb} ---`);
+  console.log(`[scrape] --- ${trade} near postcode ${postcode} (${radiusMetres / 1000}km) ---`);
 
   // Step 1
-  const searchResults = await searchPlaces(trade, suburb);
+  const searchResults = await searchPlacesNearby(trade, centerLat, centerLng, radiusMetres);
   console.log(`[scrape] ${trade}: found ${searchResults.length} places (raw)`);
 
   if (searchResults.length === 0) {
@@ -375,19 +397,20 @@ async function runTradeScrape(
   let skippedNonAu = 0;
 
   for (const place of searchResults) {
-    const addr = parseAustralianAddress(place.formatted_address);
-
-    // Skip non-Australian businesses
-    if (!addr.isAustralian) {
-      skippedNonAu++;
-      console.log(`[scrape] Skipping non-AU: ${place.name} (${place.formatted_address})`);
-      continue;
-    }
-
+    // Nearby Search is already hard-bounded to radiusMetres around an AU
+    // postcode's centre point, so there's no free-text-search ambiguity
+    // to pre-filter here (unlike the old "trade in suburb Australia" text
+    // search, which could match places anywhere in the world with a
+    // similarly-named suburb). The AU/suburb/postcode check happens once
+    // Place Details returns the real formatted_address, below.
     const item: PlaceDetails = {
       placeId: place.place_id, name: place.name,
-      formattedAddress: place.formatted_address,
-      suburb: addr.suburb, postcode: addr.postcode,
+      formattedAddress: place.vicinity ?? place.formatted_address ?? "",
+      // Fall back to the postcode we searched around - Place Details
+      // (below) will normally overwrite this with the real, precise
+      // suburb/postcode, but if that call ever fails we still want a
+      // sane postcode on the record rather than leaving it blank.
+      suburb: "", postcode: postcode,
       latitude: place.geometry?.location.lat ?? 0,
       longitude: place.geometry?.location.lng ?? 0,
       rating: null, reviewsCount: null, phone: null,
@@ -506,10 +529,24 @@ export async function POST(request: Request) {
   catch { return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 }); }
 
   const rawTrade = body.trade;
-  const suburb = body.suburb?.trim();
+  const postcode = body.postcode?.trim();
 
-  if (!rawTrade || !suburb) {
-    return NextResponse.json({ error: "trade and suburb are required" }, { status: 400 });
+  if (!rawTrade || !postcode) {
+    return NextResponse.json({ error: "trade and postcode are required" }, { status: 400 });
+  }
+  if (!/^\d{4}$/.test(postcode)) {
+    return NextResponse.json({ error: "postcode must be a 4-digit Australian postcode" }, { status: 400 });
+  }
+
+  const radiusKm = body.radiusKm && body.radiusKm > 0 ? body.radiusKm : DEFAULT_RADIUS_KM;
+  const radiusMetres = Math.min(radiusKm * 1000, MAX_RADIUS_METRES);
+
+  // Resolve the postcode to a centre point once - every trade in this
+  // request searches around the same point. Same model as the
+  // /directory search page: postcode -> geocode -> radius search.
+  const center = await geocodeAddress(`${postcode} Australia`);
+  if (!center) {
+    return NextResponse.json({ error: `Could not resolve a location for postcode ${postcode}` }, { status: 400 });
   }
 
   // Normalise trades into array
@@ -534,7 +571,7 @@ export async function POST(request: Request) {
   const perTrade: PerTradeSummary[] = [];
 
   for (const trade of trades) {
-    const { results, summary } = await runTradeScrape(trade, suburb, existingIds, admin);
+    const { results, summary } = await runTradeScrape(trade, postcode, center.lat, center.lng, radiusMetres, existingIds, admin);
     allResults.push(...results);
     perTrade.push(summary);
   }
@@ -550,7 +587,8 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     success: true,
-    suburb,
+    postcode,
+    radiusKm,
     tradesScraped: trades.length,
     totalPlacesFound: perTrade.reduce((s, t) => s + t.placesFound, 0),
     totalEnriched: perTrade.reduce((s, t) => s + t.enriched, 0),

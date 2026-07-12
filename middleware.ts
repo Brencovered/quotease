@@ -135,7 +135,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Start with a mutable response so Supabase can set refreshed cookies
-  let response = NextResponse.next({ request });
+  const response = NextResponse.next({ request });
 
   // ------------------------------------------------------------------
   // 1. Determine route type

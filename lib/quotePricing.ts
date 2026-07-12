@@ -66,3 +66,33 @@ export function markupChargeTotal(items: MarkupMaterial[] | undefined, rate: num
 export function siteItemsChargeTotal(items: SiteItem[], rate: number, effectiveMarginPct: number): number {
   return siteItemsLabourTotal(items, rate) + siteItemsMaterialsTotal(items, effectiveMarginPct);
 }
+
+/**
+ * Converts package / plan-markup / material-bundle items into the same
+ * ScopeItem shape used by the Scope step's "Materials & labour" list, so
+ * they show up as itemized, editable/removable lines the tradie can
+ * actually see and verify -- instead of being silently folded into a
+ * single lump-sum total with no itemized display anywhere in the wizard.
+ *
+ * `totalCost` here must already be the RAW (pre-margin) cost -- the same
+ * contract as every other ScopeItem.materialsCost, since the effective
+ * margin gets applied once, uniformly, by siteItemsMaterialsTotal. Any
+ * per-item margin baked in upstream (e.g. old plan-markup shapes) must be
+ * stripped before calling this, or margin will be double-applied.
+ */
+export function markupMaterialsToScopeItems(
+  items: MarkupMaterial[] | undefined,
+  source: "package" | "plan markup" | "material bundle"
+): Array<{ id: string; label: string; qty: number; unit: string; note: string; materialsCost: number; labourHrs: number }> {
+  return (items ?? [])
+    .filter((i) => i.label)
+    .map((i) => ({
+      id: `markup-${Math.random().toString(36).slice(2)}`,
+      label: i.label,
+      qty: i.quantity,
+      unit: i.unit,
+      note: `from ${source}`,
+      materialsCost: i.totalCost ?? 0,
+      labourHrs: i.labourHrs ?? 0,
+    }));
+}

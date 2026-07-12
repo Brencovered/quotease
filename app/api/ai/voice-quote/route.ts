@@ -24,6 +24,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { generateObjectWithFallback, MODELS } from "@/lib/ai/gateway";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit, rateLimitResponseInit } from "@/lib/rateLimit";
 
 // ── Schema ────────────────────────────────────────────────────────────────────
 
@@ -68,6 +69,10 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const rl = await checkRateLimit(`voice-quote:${user.id}`, 15, 10 * 60 * 1000);
+  const rlBlocked = rateLimitResponseInit(rl);
+  if (rlBlocked) return NextResponse.json(rlBlocked.body, rlBlocked.init);
 
   const body = await req.json();
   const { transcript, trade = "electrician" } = body as {

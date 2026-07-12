@@ -7,7 +7,7 @@ import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
-import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupChargeTotal, markupMaterialsTotal, markupLabourHours } from "@/lib/quotePricing";
+import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
 import StepCustomer from "./StepCustomer";
 import PackagePicker from "@/components/PackagePicker";
 import { resolveClientId } from "@/lib/resolveClientId";
@@ -93,7 +93,8 @@ interface RooferQuoteBuilderProps {
   profile: { hourly_rate: number; materials_margin_pct: number; trades?: string[]; onboarded_at?: string | null; archetype_defaults?: Record<string, string> };
   materials: { item_key: string; label: string; unit_cost: number }[];
   preClientId?: string;
-  preMarkupMaterials?: { label: string; quantity: number; unit: string; unitCost: number; totalCost: number }[];
+  preMarkupMaterials?: { label: string; quantity: number; unit: string; unitCost: number; totalCost: number; labourHrs?: number }[];
+  preMarkupSource?: "package" | "plan markup" | "material bundle";
   pricingTiers?: Array<{ id: string; name: string; markup_pct: number; sort_order: number }>;
   jobSizeTiers?: Array<{ id: string; name: string; max_days: number | null; markup_pct: number; sort_order: number }>;
 }
@@ -103,6 +104,7 @@ export default function RooferQuoteBuilder({
   materials: lib,
   preClientId,
   preMarkupMaterials,
+  preMarkupSource,
   pricingTiers,
   jobSizeTiers,
 }: RooferQuoteBuilderProps) {
@@ -129,8 +131,14 @@ export default function RooferQuoteBuilder({
   }
 
   // ── State ──────────────────────────────────────────────────────
-  const [siteItems, setSiteItems] = useState<{id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]>([]);
+  const [siteItems, setSiteItems] = useState<{id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]>(
+    () => markupMaterialsToScopeItems(preMarkupMaterials, preMarkupSource ?? "plan markup")
+  );
   const [annotationMeta, setAnnotationMeta] = useState<{id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string;roomName?:string}[]>([]);
+  // Direct manual override for anything the formula doesn't capture -
+  // confined roof-space access, steep pitch beyond the standard options,
+  // or the calculated hours just being wrong for this job.
+  const [manualLabourHrs, setManualLabourHrs] = useState(0);
 
   // ── Customer & site (was missing entirely -- save/send had no way to
   //    know who the quote was for) ──────────────────────────────────
@@ -436,23 +444,23 @@ export default function RooferQuoteBuilder({
     const businessId = await getActiveBusinessId(supabase, user.id);
     const resolvedClientId = await resolveClientId(supabase, businessId, clientId, clientName, clientEmail, siteAddress);
 
-    for (const m of lib) {
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(m.item_key);
-      if (isUuid) {
-        await supabase.from("price_book_items").update({ description: m.label, cost_price: m.unit_cost, trade: "roofer", unit: "ea" }).eq("id", m.item_key).eq("profile_id", businessId);
-      } else {
-        await supabase.from("price_book_items").insert({ profile_id: businessId, supplier: "Custom", description: m.label, cost_price: m.unit_cost, trade: "roofer", unit: "ea" });
-      }
-      await supabase.from("material_items").upsert({ profile_id: businessId, trade: "roofer", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost }, { onConflict: "profile_id,item_key" });
-    }
+    // See QuoteBuilder.tsx for the full explanation: only seed materials
+    // that aren't already real price-book rows. Re-syncing the entire lib
+    // unchanged, one sequential round trip per item, was the actual cause
+    // of slow saves for anyone with a real price book.
+    const isUuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const itemsNeedingSeed = lib.filter((m) => !isUuidRe.test(m.item_key));
+    await Promise.all(
+      itemsNeedingSeed.flatMap((m) => [
+        supabase.from("price_book_items").insert({ profile_id: businessId, supplier: "Custom", description: m.label, cost_price: m.unit_cost, trade: "roofer", unit: "ea" }),
+        supabase.from("material_items").upsert({ profile_id: businessId, trade: "roofer", item_key: m.item_key, label: m.label, unit_cost: m.unit_cost }, { onConflict: "profile_id,item_key" }),
+      ])
+    );
 
     const rate = profile.hourly_rate ?? 95;
     const siteLabourSave   = siteItemsLabourHours(siteItems);
     const siteMatlsSave    = siteItemsMaterialsTotal(siteItems, effectiveMargin);
     const siteTotalSave    = Math.round(siteLabourSave * rate + siteMatlsSave);
-    const markupLabourSave = markupLabourHours(preMarkupMaterials);
-    const markupMatlsSave  = markupMaterialsTotal(preMarkupMaterials, effectiveMargin);
-    const markupTotalSave  = Math.round(markupLabourSave * rate + markupMatlsSave);
     const formulaLabourHrs = summary.labour / rate;
 
     const { data: quote, error } = await supabase.from("quotes").insert({
@@ -470,17 +478,20 @@ export default function RooferQuoteBuilder({
         })),
         material, color, labourRate, tier, extras, notes, warranty,
         site_items: siteItems,
+        manual_labour_hours: manualLabourHrs,
         annotation_meta: annotationMeta.map(a => ({ ...a, frameData: "" })),
       },
-      labour_hours: formulaLabourHrs + siteLabourSave + markupLabourSave,
-      materials_cost: Math.round(summary.matCost + summary.extrasTotal + summary.colorSurcharge + siteMatlsSave + markupMatlsSave),
-      total_cost: Math.round(summary.total + siteTotalSave + markupTotalSave),
+      labour_hours: formulaLabourHrs + siteLabourSave + manualLabourHrs,
+      materials_cost: Math.round(summary.matCost + summary.extrasTotal + summary.colorSurcharge + siteMatlsSave),
+      total_cost: Math.round(summary.total + siteTotalSave + manualLabourHrs * rate),
       payment_terms: paymentTerms,
       pricing_tier_id: selectedPricingTierId,
       job_size_tier_id: selectedJobSizeTierId,
       status: sendEmail ? "sent" : "draft",
       sent_at: sendEmail ? new Date().toISOString() : null,
-      markup_materials: preMarkupMaterials ?? [],
+      // Package/plan/bundle materials now live in site_items (above) so
+      // they show up as itemized, editable lines in the Scope step.
+      markup_materials: [],
     }).select().single();
 
     if (error) { setSaveMessage(error.message); setSaving(false); return; }
@@ -512,16 +523,15 @@ export default function RooferQuoteBuilder({
 
   // ── Render ─────────────────────────────────────────────────────
 
-  const markupTotal = markupChargeTotal(preMarkupMaterials, profile.hourly_rate ?? 95, effectiveMargin);
   const siteTotal = Math.round(
     siteItemsLabourTotal(siteItems, profile.hourly_rate ?? 95)
     + siteItemsMaterialsTotal(siteItems, effectiveMargin)
-    + markupTotal
+    + manualLabourHrs * (profile.hourly_rate ?? 95)
   );
 
   function saveDraft() {
     try {
-      sessionStorage.setItem("swiftscope_quote_draft", JSON.stringify({ siteItems, annotationMeta }));
+      sessionStorage.setItem("swiftscope_quote_draft", JSON.stringify({ siteItems, annotationMeta, manualLabourHrs }));
       if (lib) sessionStorage.setItem("swiftscope_price_book", JSON.stringify(lib));
     } catch {}
   }
@@ -858,6 +868,15 @@ export default function RooferQuoteBuilder({
           <label className="label-field text-[11px]">Warranty text</label>
           <input type="text" value={warranty} onChange={e => setWarranty(e.target.value)}
             className="app-field text-[13px]" />
+        </div>
+        <div>
+          <label className="label-field text-[11px]">Extra labour hours (manual adjustment)</label>
+          <input type="number" min={0} step={0.5} value={manualLabourHrs}
+            onChange={e => setManualLabourHrs(Math.max(0, Number(e.target.value) || 0))}
+            className="app-field text-[13px]" />
+          <p className="text-[12px] text-[var(--ink-faint)] mt-1.5">
+            Steep pitch and roof style are already priced into the formula above, but if this job needs more time - confined roof-space access, an especially awkward site, anything the formula doesn&apos;t capture - add it here. Added straight to the quote total, on top of everything else.
+          </p>
         </div>
       </div>
 

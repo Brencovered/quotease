@@ -71,7 +71,7 @@ export default function PackagePicker({ trade }: { trade: string }) {
     })();
   }, [open, loaded, trade]);
 
-  function usePackage(pkg: PkgSummary) {
+  function selectPackage(pkg: PkgSummary) {
     router.push(`?package_id=${pkg.id}&trade=${trade}`);
     setOpen(false);
   }
@@ -110,7 +110,7 @@ export default function PackagePicker({ trade }: { trade: string }) {
               {packages.map((pkg) => (
                 <button
                   key={pkg.id}
-                  onClick={() => usePackage(pkg)}
+                  onClick={() => selectPackage(pkg)}
                   className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[var(--app-bg)]"
                 >
                   <p className="text-[13.5px] font-bold text-[var(--ink)]">{pkg.title}</p>

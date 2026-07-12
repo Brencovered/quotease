@@ -1,9 +1,37 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveBusinessId } from "@/lib/team";
 import { checkUsage, currentPeriod, type UsageProfile } from "@/lib/aiUsage";
 import { getTradeVoicePrompt } from "@/lib/ai/getTradeVoicePrompt";
 import { DETECTED_ITEMS_SCHEMA } from "@/lib/ai/detectedItemsSchema";
+import { checkRateLimit, rateLimitResponseInit } from "@/lib/rateLimit";
+import { generateObjectWithFallback, MODELS } from "@/lib/ai/gateway";
+
+const ElectricianVoiceSchema = z.object({
+  power_points: z.number().int(),
+  light_points: z.number().int(),
+  switches: z.number().int(),
+  downlights: z.number().int(),
+  switchboard_upgrade: z.boolean(),
+  three_phase: z.boolean(),
+  data_points: z.number().int(),
+  smoke_alarms: z.number().int(),
+  confidence: z.enum(["high", "medium", "low"]),
+  notes: z.string(),
+});
+
+const DetectedItemsVoiceSchema = z.object({
+  detected_items: z.array(z.object({
+    label: z.string(),
+    item_key: z.string(),
+    quantity: z.number(),
+    unit: z.string(),
+    labour_hours: z.number(),
+  })),
+  notes: z.string(),
+  confidence: z.enum(["high", "medium", "low"]),
+});
 
 // Shares the same free/add-on quota as drawing analysis (lib/aiUsage.ts) -
 // it's the same underlying cost (one Claude API call) and the same kind of
@@ -47,16 +75,15 @@ If the transcript doesn't actually describe an electrical job, set confidence to
 rather than inventing numbers.`;
 
 export async function POST(request: Request) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: "ANTHROPIC_API_KEY is not configured on this deployment" }, { status: 500 });
-  }
-
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
+
+  const rl = await checkRateLimit(`analyze-voice:${userData.user.id}`, 15, 10 * 60 * 1000);
+  const rlBlocked = rateLimitResponseInit(rl);
+  if (rlBlocked) return NextResponse.json(rlBlocked.body, rlBlocked.init);
   // AI usage quota is per-business, not per-login - otherwise a team
   // member gets (or is blocked by) their own separate, meaningless quota
   // instead of the business's real one.
@@ -92,32 +119,29 @@ export async function POST(request: Request) {
     ? `${basePrompt}\n\nThe tradie also gave this instruction - follow it:\n"${instructions.trim()}"`
     : basePrompt;
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 500,
-      system: systemPrompt,
-      messages: [{ role: "user", content: `Voice note transcript:\n\n"${transcript}"` }],
-    }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    return NextResponse.json({ error: `Claude API error: ${body}` }, { status: 502 });
-  }
-
-  const data = await res.json();
-  const text = data.content?.find((b: { type: string }) => b.type === "text")?.text ?? "";
-
-  let parsed;
+  let parsed: Record<string, unknown>;
   try {
-    const cleaned = text.replace(/```json\s*|```\s*/g, "").trim();
-    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-    parsed = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned);
-  } catch {
-    return NextResponse.json({ error: "Could not parse a response from the voice note." }, { status: 502 });
+    if (isElectrician) {
+      const result = await generateObjectWithFallback({
+        primaryModel: MODELS.SONNET,
+        fallbackModel: MODELS.HAIKU,
+        system: systemPrompt,
+        prompt: `Voice note transcript:\n\n"${transcript}"`,
+        schema: ElectricianVoiceSchema,
+      });
+      parsed = result.object;
+    } else {
+      const result = await generateObjectWithFallback({
+        primaryModel: MODELS.SONNET,
+        fallbackModel: MODELS.HAIKU,
+        system: systemPrompt,
+        prompt: `Voice note transcript:\n\n"${transcript}"`,
+        schema: DetectedItemsVoiceSchema,
+      });
+      parsed = result.object;
+    }
+  } catch (err) {
+    return NextResponse.json({ error: `Claude API error: ${err instanceof Error ? err.message : "unknown"}` }, { status: 502 });
   }
 
   if (usage.via === "free") {

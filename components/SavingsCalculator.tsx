@@ -320,7 +320,7 @@ export default function SavingsCalculator() {
             href="/signup"
             className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-10 py-4 rounded-xl hover:opacity-90"
           >
-            Start free 3-day trial <ArrowRight size={15} />
+            Start free 7-day trial <ArrowRight size={15} />
           </Link>
         </div>
       )}
@@ -333,7 +333,7 @@ export default function SavingsCalculator() {
             Your current spend is ${total}/mo. Swiftscope is $39/mo and adds quoting, job management, scheduling, and Xero sync in one place.
           </p>
           <Link href="/signup" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-8 py-3.5 rounded-xl hover:opacity-90">
-            Start free 3-day trial <ArrowRight size={14} />
+            Start free 7-day trial <ArrowRight size={14} />
           </Link>
         </div>
       )}

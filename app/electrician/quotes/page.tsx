@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveBusinessId } from "@/lib/team";
 import QuotesList from "@/components/QuotesList";
@@ -52,10 +51,8 @@ export default async function QuotesPage() {
   return (
     <>
       <AppHeader />
-      <Suspense>
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        <QuotesList quotes={quotes as any} xeroConnected={xeroConnected} />
-      </Suspense>
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      <QuotesList quotes={quotes as any} xeroConnected={xeroConnected} now={Date.now()} />
     </>
   );
 }

@@ -126,6 +126,8 @@ export default function HowItWorksPage() {
               <Link href="/directory" className="hover:text-white transition-colors">Directory</Link>
               <Link href="/login" className="hover:text-white transition-colors">Log in</Link>
               <Link href="/signup" className="hover:text-white transition-colors">Sign up</Link>
+              <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
+              <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
             </div>
           </div>
         </div>

@@ -25,6 +25,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { randomUUID } from "crypto";
+import { resolvePostcode } from "@/lib/resolvePostcode";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_PHOTOS = 6;
@@ -116,6 +117,12 @@ export async function POST(req: NextRequest) {
       homeowner_id: homeowner.id,
       trade,
       suburb: location,
+      // The "Get Quotes" form only ever collects free-text suburb - no
+      // postcode field exists on it. Resolve one anyway (embedded 4-digit
+      // code, or a lookup against the directory's suburb/postcode table)
+      // so leads have a real, matchable postcode instead of relying on
+      // fuzzy suburb-text matching downstream.
+      postcode: await resolvePostcode(supabase, location),
       description,
       budget,
       timeline,

@@ -1302,7 +1302,7 @@ function CameraPage() {
 
 export default function CameraPageWrapper() {
   return (
-    <Suspense>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-[13.5px] text-[var(--ink-faint)]">Loading...</div>}>
       <CameraPage />
     </Suspense>
   );

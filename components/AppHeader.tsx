@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 
 const NAV = [
-  { href: "/electrician/dashboard", icon: LayoutDashboard, label: "Home" },
+  { href: "/electrician/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/electrician/materials", icon: Package,          label: "Materials" },
   { href: "/electrician/jobs",      icon: Briefcase,        label: "Jobs" },
   { href: "/electrician",           icon: Plus,             label: "Quote",   fab: true },

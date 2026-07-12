@@ -15,7 +15,6 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = "Swiftscope <noreply@swiftscope.com.au>";
 
 function getWeekRange(weekOffset: number) {
@@ -50,6 +49,13 @@ function htmlEscape(str: string) {
 }
 
 export async function POST(request: Request) {
+  // Instantiated here, not at module scope -- module-scope instantiation
+  // throws at build time (during Next's "Collecting page data" static
+  // analysis pass, which imports every route module) in any environment
+  // where RESEND_API_KEY isn't set, which fails the whole build rather
+  // than just this route at request time.
+  const resend = new Resend(process.env.RESEND_API_KEY);
+
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) {

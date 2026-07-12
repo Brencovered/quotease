@@ -27,8 +27,18 @@ const STATUS: Record<string, { label: string; bg: string; text: string; icon: ty
 
 const FILTERS = ["all","draft","sent","accepted","paid","declined"];
 
-function daysUntil(d: string | null) { if (!d) return null; return Math.ceil((new Date(d).getTime() - Date.now()) / 86400000); }
-function daysAgo(d: string | null)   { if (!d) return null; return Math.floor((Date.now() - new Date(d).getTime()) / 86400000); }
+// `now` is passed in from the server (see app/electrician/quotes/page.tsx)
+// rather than calling Date.now() independently here. Server render and
+// client hydration happen at genuinely different moments (today's own
+// measurements showed multi-second gaps under load) - if a quote's
+// follow-up/expiry date sits right on a day boundary, calling Date.now()
+// separately in each pass could tip a quote in or out of the "overdue"/
+// "expired" bucket between the server's render and the client's hydration,
+// which is a real (not just cosmetic) mismatch: a whole card moving
+// section, not just a text label differing. Using one frozen timestamp
+// for both passes eliminates the entire class of mismatch.
+function daysUntil(d: string | null, now: number) { if (!d) return null; return Math.ceil((new Date(d).getTime() - now) / 86400000); }
+function daysAgo(d: string | null, now: number)   { if (!d) return null; return Math.floor((now - new Date(d).getTime()) / 86400000); }
 
 // Accepted/paid quotes link through to their job - but the job is a
 // separate record with its own id (created from the quote via
@@ -42,7 +52,7 @@ function quoteHref(q: Quote): string {
   return `/electrician/quotes/${q.id}`;
 }
 
-export default function QuotesList({ quotes: initial, xeroConnected }: { quotes: Quote[]; xeroConnected?: boolean }) {
+export default function QuotesList({ quotes: initial, xeroConnected, now }: { quotes: Quote[]; xeroConnected?: boolean; now: number }) {
   const [quotes]  = useState(initial);
   const searchParams = useSearchParams();
   const initialFilter = searchParams.get("status");
@@ -60,9 +70,9 @@ export default function QuotesList({ quotes: initial, xeroConnected }: { quotes:
   }
 
   const filtered = filter === "all" ? quotes : quotes.filter((q) => q.status === filter);
-  const overdueFollowUps = quotes.filter((q) => q.status === "sent" && q.follow_up_at && daysUntil(q.follow_up_at)! < 0);
-  const expiredQuotes    = quotes.filter((q) => q.status === "sent" && q.quote_expires_at && daysUntil(q.quote_expires_at)! < 0);
-  const noFollowUp       = quotes.filter((q) => q.status === "sent" && !q.follow_up_at && daysAgo(q.sent_at)! >= 3);
+  const overdueFollowUps = quotes.filter((q) => q.status === "sent" && q.follow_up_at && daysUntil(q.follow_up_at, now)! < 0);
+  const expiredQuotes    = quotes.filter((q) => q.status === "sent" && q.quote_expires_at && daysUntil(q.quote_expires_at, now)! < 0);
+  const noFollowUp       = quotes.filter((q) => q.status === "sent" && !q.follow_up_at && daysAgo(q.sent_at, now)! >= 3);
   const notExported      = quotes.filter((q) => q.status === "accepted" && !q.xero_exported_at);
 
   async function callUpdate(body: Record<string, unknown>) {
@@ -200,8 +210,8 @@ export default function QuotesList({ quotes: initial, xeroConnected }: { quotes:
           const s    = STATUS[q.status] ?? STATUS.draft;
           const Icon = s.icon;
           const owing = (q.total_cost ?? 0) - (q.amount_paid ?? 0);
-          const expDays = daysUntil(q.quote_expires_at);
-          const followDays = daysUntil(q.follow_up_at);
+          const expDays = daysUntil(q.quote_expires_at, now);
+          const followDays = daysUntil(q.follow_up_at, now);
           return (
             <div key={q.id} className="card">
               <div className="flex items-start gap-3">

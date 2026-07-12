@@ -51,7 +51,7 @@ export default function Home() {
               </Link>
             </div>
             <div className="flex flex-wrap gap-6 text-[13px] font-semibold text-[#8aa4b4]">
-              <span>3-day free trial - then $45/month</span>
+              <span>7-day free trial - then $45/month</span>
               <span className="text-[#2a3a47]">|</span>
               <span>Unlimited users</span>
               <span className="text-[#2a3a47]">|</span>
@@ -215,7 +215,7 @@ export default function Home() {
                 ))}
               </div>
               <Link href="/signup" className="flex items-center justify-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] py-4 rounded-xl hover:opacity-90 transition-opacity">
-                Start free trial - 3 days, no card <ArrowRight size={15} />
+                Start free trial - 7 days, no card <ArrowRight size={15} />
               </Link>
             </div>
           </div>
@@ -243,7 +243,7 @@ export default function Home() {
                   <span className="font-display text-[4rem] leading-none text-[#ffb400]">$45</span>
                   <span className="text-[#7e94a2] text-[16px] font-bold mb-2">/month</span>
                 </div>
-                <p className="text-[#7e94a2] text-[13px] mb-6">3-day free trial. No card needed.</p>
+                <p className="text-[#7e94a2] text-[13px] mb-6">7-day free trial. No card needed.</p>
                 <div className="space-y-2.5 mb-8">
                   {["Unlimited quotes and jobs","Unlimited team members","Job management and scheduling","Drawing markup","Xero live sync","Client portal and online acceptance"].map(f => (
                     <div key={f} className="flex items-center gap-2.5 text-[13.5px] text-white">
@@ -329,6 +329,8 @@ export default function Home() {
               <Link href="/get-quotes" className="hover:text-white transition-colors">Get quotes</Link>
               <Link href="/login" className="hover:text-white transition-colors">Log in</Link>
               <Link href="/signup" className="hover:text-white transition-colors">Sign up</Link>
+              <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
+              <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
             </div>
           </div>
         </div>

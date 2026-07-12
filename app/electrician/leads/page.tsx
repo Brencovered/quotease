@@ -1,8 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import AppHeader from "@/components/AppHeader";
 import LeadsPanel from "@/components/LeadsPanel";
 import { getActiveBusinessId } from "@/lib/team";
+import { resolvePostcode } from "@/lib/resolvePostcode";
 
 export default async function LeadsPage() {
   const supabase = await createClient();
@@ -14,32 +16,35 @@ export default async function LeadsPage() {
   // not have their own empty, siloed subscription set.
   const businessId = await getActiveBusinessId(supabase, user.id);
 
-  // Get the tradie's profile
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, trades, suburb, business_name")
-    .eq("id", businessId)
-    .single();
+  // Profile and subscriptions don't depend on each other - fetch both at
+  // once instead of one after another. (Previously fully sequential:
+  // profile, then subscriptions, then job_requests, then myClaims - each
+  // waiting on the last even though most don't actually depend on it.)
+  const [{ data: profile }, { data: subscriptions }] = await Promise.all([
+    supabase.from("profiles").select("id, trades, suburb, directory_suburb, directory_postcode, business_name").eq("id", businessId).single(),
+    supabase.from("lead_subscriptions").select("trade, suburb, is_active").eq("profile_id", businessId),
+  ]);
 
   const trades = (profile?.trades ?? []).map((t: string) => t.toLowerCase());
-  const tradieSuburb = profile?.suburb ?? "";
-
-  // Get active lead subscriptions for this tradie
-  const { data: subscriptions } = await supabase
-    .from("lead_subscriptions")
-    .select("trade, suburb, is_active")
-    .eq("profile_id", businessId);
+  // Prefer the service suburb set at onboarding, but fall back to the
+  // directory-listing suburb/postcode - plenty of profiles have set one
+  // of those via the "list your business" panel without ever having a
+  // plain `suburb` value, and previously that meant they never got a
+  // lead_subscriptions row and always hit the "Set your service area"
+  // empty state despite already having a usable location on file.
+  const tradieSuburb = profile?.suburb || profile?.directory_suburb || "";
+  const tradiePostcode = profile?.directory_postcode || (await resolvePostcode(supabase, tradieSuburb));
 
   // Build list of active (trade, suburb) combos they're subscribed to
   const activeSubs = (subscriptions ?? []).filter((s) => s.is_active);
 
-  // If they have no subscriptions yet but have trades + suburb,
-  // create them on-the-fly (migration path for existing users)
-  if (activeSubs.length === 0 && trades.length > 0 && tradieSuburb) {
+  // If they have no subscriptions yet but have trades + a usable
+  // location, create them on-the-fly (migration path for existing users)
+  if (activeSubs.length === 0 && trades.length > 0 && (tradieSuburb || tradiePostcode)) {
     const newSubs = trades.map((trade: string) => ({
       profile_id: businessId,
       trade,
-      suburb: tradieSuburb,
+      suburb: tradieSuburb || tradiePostcode || "",
       is_active: true,
     }));
     await supabase.from("lead_subscriptions").upsert(newSubs, {
@@ -73,12 +78,19 @@ export default async function LeadsPage() {
     );
   }
 
-  const { data: allRequests } = await query;
+  // job_requests and myClaims are also independent of each other.
+  const [{ data: allRequests }, { data: myClaims }] = await Promise.all([
+    query,
+    supabase.from("job_claims").select("request_id").eq("tradie_profile_id", businessId).eq("status", "claimed"),
+  ]);
 
-  // Filter by suburb client-side for fuzzy matching
+  // Filter by location client-side. Postcode is the real match key
+  // (same reasoning as /directory and the scraper) - fall back to fuzzy
+  // suburb text only for older requests that predate postcode being
+  // captured at creation time.
   const requests = (allRequests ?? []).filter((r) => {
-    // Must match at least one subscribed suburb
-    if (subscribedSuburbs.length === 0) return true; // Show all if no suburb filter
+    if (subscribedSuburbs.length === 0) return true; // Show all if no location filter
+    if (r.postcode && tradiePostcode) return r.postcode === tradiePostcode;
     const requestSuburb = (r.suburb ?? "").toLowerCase();
     return subscribedSuburbs.some(
       (s) =>
@@ -86,13 +98,6 @@ export default async function LeadsPage() {
         requestSuburb.includes(s.toLowerCase())
     );
   });
-
-  // Get this tradie's claimed request IDs
-  const { data: myClaims } = await supabase
-    .from("job_claims")
-    .select("request_id")
-    .eq("tradie_profile_id", businessId)
-    .eq("status", "claimed");
 
   const myClaimedIds = myClaims?.map((c) => c.request_id) ?? [];
 
@@ -136,12 +141,12 @@ export default async function LeadsPage() {
               Lead notifications are paused
             </p>
             <p className="text-[13.5px] text-[var(--ink-faint)] max-w-xs mx-auto mb-5">
-              You've opted out of lead notifications. Turn them back on in
+              You&apos;ve opted out of lead notifications. Turn them back on in
               settings to start receiving leads again.
             </p>
-            <a href="/settings" className="btn-primary inline-flex">
+            <Link href="/settings" className="btn-primary inline-flex">
               Manage lead preferences
-            </a>
+            </Link>
           </div>
         ) : activeSubs.length === 0 ? (
           <div className="card text-center py-12">
@@ -153,14 +158,15 @@ export default async function LeadsPage() {
               Add your service suburb and trade in your profile to start
               receiving leads from homeowners in your area.
             </p>
-            <a href="/settings" className="btn-primary inline-flex">
+            <Link href="/settings" className="btn-primary inline-flex">
               Update your profile
-            </a>
+            </Link>
           </div>
         ) : (
           <LeadsPanel
             requests={requestsWithPhotoUrls}
             myClaimedIds={myClaimedIds}
+            now={Date.now()}
           />
         )}
       </div>

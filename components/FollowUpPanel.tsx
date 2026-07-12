@@ -10,11 +10,12 @@ type FollowUp = { id: string; method: string; notes: string | null; followed_up_
 const METHOD_ICON = { email: Mail, phone: Phone, sms: MessageSquare, in_person: Users };
 const METHOD_LABEL = { email: "Email", phone: "Phone call", sms: "SMS", in_person: "In person" };
 
-export default function FollowUpPanel({ quoteId, followUps: initial, followUpAt, expiresAt }: {
+export default function FollowUpPanel({ quoteId, followUps: initial, followUpAt, expiresAt, now }: {
   quoteId: string;
   followUps: FollowUp[];
   followUpAt: string | null;
   expiresAt: string | null;
+  now: number;
 }) {
   const [followUps, setFollowUps] = useState(initial);
   const [showLog, setShowLog] = useState(false);
@@ -25,8 +26,12 @@ export default function FollowUpPanel({ quoteId, followUps: initial, followUpAt,
   const [expiryDate, setExpiryDate] = useState(expiresAt?.slice(0, 10) ?? "");
   const [dateSaving, setDateSaving] = useState(false);
 
-  const daysUntilFollowUp = followUpAt ? Math.ceil((new Date(followUpAt).getTime() - Date.now()) / 86400000) : null;
-  const daysUntilExpiry = expiresAt ? Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86400000) : null;
+  // `now` is passed in from the server rather than calling Date.now()
+  // independently here - see components/QuotesList.tsx for the full
+  // explanation of why this matters (this exact pattern caused a real
+  // production crash there).
+  const daysUntilFollowUp = followUpAt ? Math.ceil((new Date(followUpAt).getTime() - now) / 86400000) : null;
+  const daysUntilExpiry = expiresAt ? Math.ceil((new Date(expiresAt).getTime() - now) / 86400000) : null;
   const overdue = daysUntilFollowUp !== null && daysUntilFollowUp < 0;
   const expired = daysUntilExpiry !== null && daysUntilExpiry < 0;
 

@@ -348,7 +348,7 @@ function BoardEditor({ columns, onClose, onSave }: { columns: BoardColumn[]; onC
         </div>
 
         {unassigned.length > 0 && (
-          <p className="text-[12px] text-[var(--red)] mb-3">Not shown on any column: {unassigned.map((s) => STATUS_LABELS[s]).join(", ")}. Jobs in these stages won't appear on the board.</p>
+          <p className="text-[12px] text-[var(--red)] mb-3">Not shown on any column: {unassigned.map((s) => STATUS_LABELS[s]).join(", ")}. Jobs in these stages won&apos;t appear on the board.</p>
         )}
 
         <button onClick={addColumn} className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--navy)] mb-4">

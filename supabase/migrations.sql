@@ -640,3 +640,40 @@ alter table lead_matching_log add constraint lead_matching_log_status_check
   check (claim_status in ('pending','claimed','ignored'));
 
 alter table lead_matching_log enable row level security;
+
+-- ============================================================
+-- MIGRATION: AI Drawing Analysis tracking + per-trade gating
+-- Adds logging table for drawing analyses with confidence
+-- scoring and query quality metrics.
+-- ============================================================
+
+-- Track per-trade drawing analysis usage for insights and gating
+CREATE TABLE IF NOT EXISTS ai_drawing_analyses (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  profile_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  trade text NOT NULL,
+  file_type text NOT NULL,
+  file_size integer NOT NULL,
+  image_quality_score text NOT NULL, -- high, medium, low, rejected
+  query_score text NOT NULL,         -- optimized, good, needs_work, minimal
+  overall_confidence text NOT NULL,  -- high, medium, low
+  detected_items_count integer NOT NULL DEFAULT 0,
+  model text NOT NULL,
+  via text NOT NULL,                 -- free, addon
+  processing_time_ms integer,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE ai_drawing_analyses ENABLE ROW LEVEL SECURITY;
+
+-- Team-aware, matching the accessible_business_ids() pattern used by every
+-- other business-scoped table in this project - not raw auth.uid() =
+-- profile_id, which would block every team-member-initiated analysis from
+-- ever being logged (their own auth.uid() differs from the business's
+-- profile_id/businessId that analyze-drawing/route.ts actually inserts).
+CREATE POLICY "Team can manage own business analyses" ON ai_drawing_analyses
+  FOR ALL USING (profile_id IN (SELECT accessible_business_ids(auth.uid())));
+
+-- Index for analytics queries
+CREATE INDEX IF NOT EXISTS idx_ai_analyses_profile_trade ON ai_drawing_analyses(profile_id, trade);
+CREATE INDEX IF NOT EXISTS idx_ai_analyses_created ON ai_drawing_analyses(created_at);

@@ -370,7 +370,7 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
         </div>
         <p className="font-semibold text-[var(--ink)] mb-1">Homeowner quote requests</p>
         <p className="text-[13px] text-[var(--ink-faint)] mb-3">
-          You're automatically subscribed to leads matching your trade and service area. Claim leads to get homeowner contact details.
+          You&apos;re automatically subscribed to leads matching your trade and service area. Claim leads to get homeowner contact details.
         </p>
 
         {leadSubsLoading ? (
@@ -502,7 +502,7 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
             {freeLeft > 0
               ? `${freeLeft} free analysis${freeLeft !== 1 ? "es" : ""} remaining for now.`
               : `You've used your ${FREE_ANALYSES_LIMIT} free analyses for now.`}{" "}
-            3-day free trial - $45/month after that.
+            7-day free trial - $45/month after that.
           </p>
         )}
       </div>

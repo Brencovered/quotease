@@ -15,7 +15,8 @@ interface ScrapeRecord {
   id: string;
   date: string;
   trades: string[];
-  suburb: string;
+  postcode: string;
+  radiusKm: number;
   placesFound: number;
   enriched: number;
   newCount: number;
@@ -38,7 +39,8 @@ interface PerTradeResult {
 
 interface ScrapeApiResponse {
   success: boolean;
-  suburb: string;
+  postcode: string;
+  radiusKm: number;
   tradesScraped: number;
   totalPlacesFound: number;
   totalEnriched: number;
@@ -80,6 +82,7 @@ const TRADE_COLORS: Record<string, string> = {
 };
 
 const RESULT_OPTIONS = [10, 20, 50];
+const RADIUS_OPTIONS = [5, 10, 15, 25, 50];
 
 const STAT_CONFIGS: { label: string; key: keyof StatsApiResponse; icon: React.ElementType }[] = [
   { label: "Total tradies", key: "total", icon: Database },
@@ -119,7 +122,8 @@ function formatDuration(ms: number): string {
 
 export default function AdminScraperPage() {
   const [selectedTrades, setSelectedTrades] = useState<string[]>(["electrician"]);
-  const [suburb, setSuburb] = useState("");
+  const [postcode, setPostcode] = useState("");
+  const [radiusKm, setRadiusKm] = useState(15);
   const [numResults, setNumResults] = useState(20);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -172,8 +176,12 @@ export default function AdminScraperPage() {
 
   /* ---- run scrape ---- */
   const handleScrape = async () => {
-    if (selectedTrades.length === 0 || !suburb.trim()) {
-      setError("Please select at least one trade and enter a suburb.");
+    if (selectedTrades.length === 0 || !postcode.trim()) {
+      setError("Please select at least one trade and enter a postcode.");
+      return;
+    }
+    if (!/^\d{4}$/.test(postcode.trim())) {
+      setError("Postcode must be a 4-digit Australian postcode.");
       return;
     }
 
@@ -187,13 +195,13 @@ export default function AdminScraperPage() {
     const tradeList = selectedTrades.length === TRADES.length
       ? "All trades"
       : `${selectedTrades.length} trade${selectedTrades.length > 1 ? "s" : ""}`;
-    log(`Starting scrape: ${tradeList} in ${suburb.trim()}...`);
+    log(`Starting scrape: ${tradeList} within ${radiusKm}km of ${postcode.trim()}...`);
 
     try {
       const res = await fetch("/api/admin/scrape", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ trade: selectedTrades, suburb: suburb.trim(), limit: numResults }),
+        body: JSON.stringify({ trade: selectedTrades, postcode: postcode.trim(), radiusKm, limit: numResults }),
       });
 
       if (!res.ok) {
@@ -216,7 +224,7 @@ export default function AdminScraperPage() {
 
       const record: ScrapeRecord = {
         id: generateId(), date: new Date().toISOString(),
-        trades: selectedTrades, suburb: suburb.trim(),
+        trades: selectedTrades, postcode: postcode.trim(), radiusKm,
         placesFound: data.totalPlacesFound, enriched: data.totalEnriched,
         newCount: data.totalNew, updatedCount: data.totalUpdated,
         withEmail: data.totalWithEmail, withPhone: data.totalWithPhone,
@@ -247,7 +255,7 @@ export default function AdminScraperPage() {
       <div className="mb-6">
         <h1 className="font-display text-2xl text-[var(--ink)]">Tradie Scraper</h1>
         <p className="text-[13px] text-[var(--ink-soft)]">
-          Find and import tradies from Google Places. Select one or more trades and a suburb.
+          Find and import tradies from Google Places. Select one or more trades and a postcode.
         </p>
       </div>
 
@@ -304,16 +312,29 @@ export default function AdminScraperPage() {
                 </div>
               </div>
 
-              {/* Suburb */}
+              {/* Postcode */}
               <div>
-                <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Suburb</label>
+                <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Postcode</label>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--ink-faint)] pointer-events-none" />
                   <input
-                    type="text" value={suburb} onChange={(e) => setSuburb(e.target.value)}
-                    placeholder="e.g. Seaford VIC" disabled={loading}
+                    type="text" inputMode="numeric" value={postcode} onChange={(e) => setPostcode(e.target.value)}
+                    placeholder="e.g. 3199" disabled={loading}
                     className="app-field pl-9 py-2.5 text-[14px] w-full"
                   />
+                </div>
+              </div>
+
+              {/* Radius */}
+              <div>
+                <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Radius</label>
+                <div className="relative">
+                  <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--ink-faint)] pointer-events-none" />
+                  <select value={radiusKm} onChange={(e) => setRadiusKm(Number(e.target.value))}
+                    disabled={loading} className="app-field pl-9 py-2.5 text-[14px] appearance-none w-full">
+                    {RADIUS_OPTIONS.map((r) => <option key={r} value={r}>{r} km</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--ink-faint)] pointer-events-none" />
                 </div>
               </div>
 
@@ -399,7 +420,7 @@ export default function AdminScraperPage() {
                     {t}
                   </span>
                 ))}
-                <span className="text-[12px] text-[var(--ink-faint)]">· {lastResult.suburb}</span>
+                <span className="text-[12px] text-[var(--ink-faint)]">· {lastResult.postcode} ({lastResult.radiusKm}km)</span>
               </div>
             </div>
           )}
@@ -422,7 +443,7 @@ export default function AdminScraperPage() {
                     <tr className="border-b border-[var(--line-subtle)] text-[var(--ink-faint)] text-[11.5px] font-semibold uppercase tracking-wide">
                       <th className="text-left px-5 py-2.5">Date</th>
                       <th className="text-left px-4 py-2.5">Trades</th>
-                      <th className="text-left px-4 py-2.5">Suburb</th>
+                      <th className="text-left px-4 py-2.5">Postcode</th>
                       <th className="text-right px-4 py-2.5 tabular">Found</th>
                       <th className="text-right px-4 py-2.5 tabular">New</th>
                       <th className="text-right px-4 py-2.5 tabular">Updated</th>
@@ -448,7 +469,7 @@ export default function AdminScraperPage() {
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-[var(--ink-soft)]">{s.suburb}</td>
+                        <td className="px-4 py-3 text-[var(--ink-soft)]">{s.postcode} <span className="text-[var(--ink-faint)]">({s.radiusKm}km)</span></td>
                         <td className="px-4 py-3 text-right font-semibold tabular text-[var(--ink)]">{s.placesFound}</td>
                         <td className="px-4 py-3 text-right font-semibold tabular text-[var(--green)]">{s.newCount}</td>
                         <td className="px-4 py-3 text-right font-semibold tabular text-[var(--blue)]">{s.updatedCount}</td>
