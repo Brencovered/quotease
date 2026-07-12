@@ -124,7 +124,6 @@ export async function proxyToReece(
     const response = await fetch(url, {
       method: "GET",
       headers,
-      // @ts-expect-error - next.js fetch option
       cache: "no-store",
     });
 

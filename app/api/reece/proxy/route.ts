@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Build the endpoint path
-  let endpointPath = REECE_ENDPOINTS[endpointKey];
+  let endpointPath: string = REECE_ENDPOINTS[endpointKey];
 
   // Add query params if present (e.g. requestToken for link-application)
   if (requestToken) {

@@ -179,7 +179,7 @@ export default function ReeceIntegrationPanel() {
               <span className="shrink-0 w-6 h-6 rounded-full bg-[var(--blue-bg)] text-[var(--blue)] text-[11px] font-bold flex items-center justify-center">
                 4
               </span>
-              <span>Click "Test Connection" below</span>
+              <span>Click &quot;Test Connection&quot; below</span>
             </li>
           </ol>
 
@@ -225,7 +225,7 @@ export default function ReeceIntegrationPanel() {
               {testResult.connected ? <Check size={14} /> : <AlertCircle size={14} />}
               {testResult.message}
             </div>
-            {testResult.details && (
+            {testResult.details !== undefined && testResult.details !== null && (
               <pre className="text-[11px] opacity-80 overflow-auto max-h-40 mt-2 bg-black/5 rounded-lg p-2">
                 {JSON.stringify(testResult.details, null, 2)}
               </pre>
@@ -267,7 +267,7 @@ export default function ReeceIntegrationPanel() {
             ))}
           </div>
 
-          {proxyResult && (
+          {proxyResult !== undefined && proxyResult !== null && (
             <div className="mt-3">
               <p className="text-[11px] font-semibold text-[var(--ink-faint)] mb-1 uppercase tracking-wide">
                 Response
@@ -288,7 +288,7 @@ export default function ReeceIntegrationPanel() {
           ServiceM8, Fergus, AroFlo and others are registered Reece Technology
           Partners with a standardised OAuth flow. When Reece approves
           Swiftscope, users will click{" "}
-          <strong>"Connect to Reece"</strong> and authorise via a popup — no
+          <strong>&quot;Connect to Reece&quot;</strong> and authorise via a popup — no
           manual cookie copying.
         </p>
 
