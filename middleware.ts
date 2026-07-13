@@ -134,6 +134,31 @@ function isAdminEmail(email: string | undefined): boolean {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // ------------------------------------------------------------------
+  // 0. Canonicalise host: redirect the production Vercel alias domains
+  //    to the real custom domain.
+  // ------------------------------------------------------------------
+  // These specific hostnames are the fixed production aliases Vercel
+  // assigns to this project (confirmed via the project's domains list) --
+  // NOT the per-deployment preview URLs (which have unique hashes/branch
+  // names and must keep working unredirected for reviewing branches
+  // before merge). Without this, the same content is independently
+  // browsable/indexable under multiple hostnames, which muddies which
+  // URL search engines and social scrapers treat as authoritative --
+  // canonical tags already point at www.swiftscope.com.au, but an actual
+  // redirect removes any ambiguity rather than relying on a hint.
+  const CANONICAL_HOST = "www.swiftscope.com.au";
+  const VERCEL_ALIAS_HOSTS = new Set([
+    "quotease.vercel.app",
+    "quotease-brennorris360-3348s-projects.vercel.app",
+    "quotease-git-main-brennorris360-3348s-projects.vercel.app",
+  ]);
+  const requestHost = request.headers.get("host") ?? "";
+  if (VERCEL_ALIAS_HOSTS.has(requestHost)) {
+    const canonicalUrl = new URL(request.nextUrl.pathname + request.nextUrl.search, `https://${CANONICAL_HOST}`);
+    return NextResponse.redirect(canonicalUrl, 308);
+  }
+
   // Start with a mutable response so Supabase can set refreshed cookies
   const response = NextResponse.next({ request });
 
