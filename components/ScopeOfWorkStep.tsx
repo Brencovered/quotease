@@ -3,6 +3,16 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Search, Plus, Trash2 } from "lucide-react";
 
+export type ScopeItemSource =
+  | "manual" | "annotation" | "drawing" | "voice"
+  | "package" | "plan_markup" | "material_bundle" | "extra";
+
+const SOURCE_LABELS: Record<ScopeItemSource, string> = {
+  manual: "Manual", annotation: "Site annotation", drawing: "Drawing takeoff",
+  voice: "Voice note", package: "Package", plan_markup: "Plan markup",
+  material_bundle: "Material bundle", extra: "Extra",
+};
+
 export type ScopeItem = {
   id: string;
   label: string;
@@ -11,6 +21,17 @@ export type ScopeItem = {
   note: string;
   materialsCost: number; // TOTAL line cost (qty * unit cost), not per-unit
   labourHrs: number;     // TOTAL hours for this line, not per-unit
+  /** Which of the five entry channels created this line - shown as a
+   *  small caption so a tradie can see at a glance where a number came
+   *  from. Optional/undefined for older saved quotes predating this. */
+  source?: ScopeItemSource;
+  /** True once a person edits this line by hand after it was added.
+   *  Nothing currently re-runs a channel's pricing over an existing
+   *  line, so this doesn't guard against an overwrite loop today - but
+   *  it's the flag the PRD's "Global Rule for All Channels" calls for,
+   *  and it's what a future recalculation pass must check before ever
+   *  touching a line automatically. */
+  overridden?: boolean;
 };
 
 type MaterialRow = { item_key: string; label: string; unit_cost: number };
@@ -33,7 +54,7 @@ export function MaterialSearchAdd({ lib, onAdd }: { lib: MaterialRow[]; onAdd: (
   }, [query, lib]);
 
   function add(m: MaterialRow) {
-    onAdd({ label: m.label, qty: 1, unit: "ea", note: "", materialsCost: m.unit_cost, labourHrs: 0 });
+    onAdd({ label: m.label, qty: 1, unit: "ea", note: "", materialsCost: m.unit_cost, labourHrs: 0, source: "manual" });
     setQuery("");
     setOpen(false);
   }
@@ -69,7 +90,7 @@ export function MaterialSearchAdd({ lib, onAdd }: { lib: MaterialRow[]; onAdd: (
           )}
           <button
             type="button"
-            onClick={() => { onAdd({ label: query.trim(), qty: 1, unit: "ea", note: "", materialsCost: 0, labourHrs: 0 }); setQuery(""); setOpen(false); }}
+            onClick={() => { onAdd({ label: query.trim(), qty: 1, unit: "ea", note: "", materialsCost: 0, labourHrs: 0, source: "manual" }); setQuery(""); setOpen(false); }}
             className="w-full flex items-center gap-2 text-left px-3 py-2.5 text-[12.5px] font-semibold text-[var(--amber-deep)] hover:bg-[var(--app-bg)]"
           >
             <Plus size={13} /> Add &quot;{query.trim()}&quot; as a custom item
@@ -91,7 +112,7 @@ export function ScopeItemsList({ items, setItems }: {
   setItems: React.Dispatch<React.SetStateAction<ScopeItem[]>>;
 }) {
   function update(id: string, patch: Partial<ScopeItem>) {
-    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
+    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch, overridden: true } : it)));
   }
   function remove(id: string) {
     setItems((prev) => prev.filter((it) => it.id !== id));
@@ -180,11 +201,20 @@ function ScopeItemRow({ item, update, remove }: {
 
   return (
     <div className="flex items-center gap-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl px-3 py-2.5">
-      <input
-        value={item.label}
-        onChange={(e) => update(item.id, { label: e.target.value })}
-        className="flex-1 min-w-0 bg-transparent text-[13.5px] font-medium text-[var(--ink)] focus:outline-none"
-      />
+      <div className="flex-1 min-w-0">
+        <input
+          value={item.label}
+          onChange={(e) => update(item.id, { label: e.target.value })}
+          className="w-full bg-transparent text-[13.5px] font-medium text-[var(--ink)] focus:outline-none"
+        />
+        {(item.source || item.overridden) && (
+          <p className="text-[10.5px] text-[var(--ink-faint)] leading-tight">
+            {item.source && item.source !== "manual" ? SOURCE_LABELS[item.source] : null}
+            {item.source && item.source !== "manual" && item.overridden ? " — " : null}
+            {item.overridden ? "edited" : null}
+          </p>
+        )}
+      </div>
       <input
         type="number"
         value={qtyText}

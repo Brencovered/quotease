@@ -307,15 +307,15 @@ export default function QuoteBuilder({
       const addVoiceItem = (label: string, qty: number | undefined, calcKey: string, hrsPerUnit: number, unit = "each") => {
         if (!qty || qty <= 0) return;
         const unitCost = costs[calcKey] ?? 0;
-        newItems.push({ label, qty, unit, note: "from voice quote", materialsCost: Math.round(unitCost * qty * 100) / 100, labourHrs: Math.round(hrsPerUnit * qty * 100) / 100 });
+        newItems.push({ label, qty, unit, note: "from voice quote", materialsCost: Math.round(unitCost * qty * 100) / 100, labourHrs: Math.round(hrsPerUnit * qty * 100) / 100, source: "voice" });
       };
       addVoiceItem("Power point", r.power_points, "pp", 0.4);
       addVoiceItem("Light point", r.light_points, "lp", 0.5);
       addVoiceItem("Switch", r.switches, "sw", 0.3);
       addVoiceItem("Downlight", r.downlights, "dl_client_supply", 0.4);
       addVoiceItem("Data point", r.data_points, "data", 0.5);
-      if (r.switchboard_upgrade) newItems.push({ label: "Switchboard upgrade", qty: 1, unit: "each", note: "from voice quote", materialsCost: costs["switchboard_upgrade"] ?? 0, labourHrs: 3 });
-      if (r.three_phase) newItems.push({ label: "3-phase supply upgrade", qty: 1, unit: "each", note: "from voice quote", materialsCost: costs["three_phase"] ?? 0, labourHrs: 2 });
+      if (r.switchboard_upgrade) newItems.push({ label: "Switchboard upgrade", qty: 1, unit: "each", note: "from voice quote", materialsCost: costs["switchboard_upgrade"] ?? 0, labourHrs: 3, source: "voice" });
+      if (r.three_phase) newItems.push({ label: "3-phase supply upgrade", qty: 1, unit: "each", note: "from voice quote", materialsCost: costs["three_phase"] ?? 0, labourHrs: 2, source: "voice" });
       if (newItems.length > 0) {
         setSiteItems((prev) => [...prev, ...newItems.map((it) => ({ ...it, id: Math.random().toString(36).slice(2) }))]);
       }
@@ -495,6 +495,7 @@ export default function QuoteBuilder({
                 note:         "from drawing analysis",
                 materialsCost: item.total ?? 0,
                 labourHrs:    item.labourHrs,
+                source:       "drawing" as const,
               })),
             ]);
             setDetectedItems([]);
@@ -517,6 +518,7 @@ export default function QuoteBuilder({
                 note: item.notes,
                 materialsCost: (item as {materialsCost?: number}).materialsCost ?? 0,
                 labourHrs: (item as {labourHrs?: number}).labourHrs ?? 0,
+                source: "annotation" as const,
               })),
             ]);
           }}

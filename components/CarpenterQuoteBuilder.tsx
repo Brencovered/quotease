@@ -126,6 +126,7 @@ export default function CarpenterQuoteBuilder({
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [detectedItems, setDetectedItems] = useState<DetectedItem[]>([]);
   const [analysisResult, setAnalysisResult] = useState<{ confidence: string; notes: string } | null>(null);
+  const [analysisSource, setAnalysisSource] = useState<"drawing" | "voice">("drawing");
   const [usageLimitReached, setUsageLimitReached] = useState(false);
 
   // Restore draft state from sessionStorage (survives camera navigation)
@@ -178,7 +179,7 @@ export default function CarpenterQuoteBuilder({
 
   async function runAiAnalysis() {
     if (!drawingFiles.length) return;
-    setAnalyzing(true); setAnalysisError(null); setAnalysisResult(null);
+    setAnalyzing(true); setAnalysisError(null); setAnalysisResult(null); setAnalysisSource("drawing");
     try {
       const fd = new FormData();
       const fileForAnalysis = await normalizeForAnalysis(drawingFiles[0]);
@@ -197,7 +198,7 @@ export default function CarpenterQuoteBuilder({
   }
 
   async function onVoiceTranscript(transcript: string) {
-    setAnalyzing(true); setAnalysisError(null); setAnalysisResult(null); setUsageLimitReached(false);
+    setAnalyzing(true); setAnalysisError(null); setAnalysisResult(null); setUsageLimitReached(false); setAnalysisSource("voice");
     try {
       const res = await fetch("/api/quotes/analyze-voice", {
         method: "POST",
@@ -326,6 +327,7 @@ export default function CarpenterQuoteBuilder({
                   note: item.notes,
                   materialsCost: (item as {materialsCost?: number}).materialsCost ?? 0,
                   labourHrs: (item as {labourHrs?: number}).labourHrs ?? 0,
+                  source: "annotation" as const,
                 })),
               ]);
             }}
@@ -377,9 +379,10 @@ export default function CarpenterQuoteBuilder({
                         label: item.label,
                         qty: item.quantity,
                         unit: item.unit,
-                        note: "from drawing analysis",
+                        note: analysisSource === "voice" ? "from voice quote" : "from drawing analysis",
                         materialsCost: item.total ?? 0,
                         labourHrs: item.labourHrs,
+                        source: analysisSource,
                       })),
                     ]);
                     setDetectedItems([]);
