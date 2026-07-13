@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import GetQuotesForm from "@/components/GetQuotesForm";
 import MarketingNav from "@/components/MarketingNav";
 import Link from "next/link";
+import { LEADS_ENABLED } from "@/lib/featureFlags";
 import {
   Star,
   ShieldCheck,
@@ -253,6 +254,15 @@ function BottomCTA() {
 /* ------------------------------------------------------------------ */
 
 export default async function GetQuotesPage() {
+  // Leads flow is off for now (see lib/featureFlags.ts) -- redirect to the
+  // directory rather than 404ing or leaving a dead-end page live for
+  // anyone with an old link, a bookmark, or an indexed search result.
+  // Nothing below this line was touched; flip LEADS_ENABLED back to true
+  // to bring this page back with no other changes needed.
+  if (!LEADS_ENABLED) {
+    redirect("/directory");
+  }
+
   const supabase = await createClient();
   const {
     data: { user },

@@ -2,7 +2,7 @@ import Link from "next/link";
 import {
   Star, MapPin, Phone, Globe, Mail, Check, Shield,
   ShieldCheck, MessageSquare, ExternalLink, Wrench,
-  Building2, Users, ArrowRight, Search,
+  Building2, Users, Search,
 } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -414,9 +414,6 @@ export default async function TradieProfilePage({
             <div className="flex flex-col sm:flex-row gap-3 shrink-0">
               <Link href="/directory" className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-7 py-3.5 rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2 whitespace-nowrap">
                 <Search size={15} /> Browse full directory
-              </Link>
-              <Link href="/get-quotes" className="bg-white/10 text-white font-bold text-[14px] px-7 py-3.5 rounded-xl hover:bg-white/20 transition-colors flex items-center justify-center gap-2 whitespace-nowrap">
-                Get quotes <ArrowRight size={15} />
               </Link>
             </div>
           </div>

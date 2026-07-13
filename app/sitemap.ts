@@ -30,6 +30,7 @@
 import { MetadataRoute } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { tradeToSlug, suburbToSlug } from "@/lib/seo/meta";
+import { LEADS_ENABLED } from "@/lib/featureFlags";
 
 // The site's canonical host is www -- the apex domain 301s to it. Sitemap
 // URLs must be the final canonical form; URLs that redirect get flagged in
@@ -56,7 +57,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages: MetadataRoute.Sitemap = [
     { url: BASE_URL,                       changeFrequency: "weekly",  priority: 1.0 },
     { url: `${BASE_URL}/directory`,        changeFrequency: "daily",   priority: 0.9 },
-    { url: `${BASE_URL}/get-quotes`,       changeFrequency: "monthly", priority: 0.8 },
+    ...(LEADS_ENABLED ? [{ url: `${BASE_URL}/get-quotes`, changeFrequency: "monthly" as const, priority: 0.8 }] : []),
     { url: `${BASE_URL}/features`,         changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE_URL}/how-it-works`,     changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE_URL}/signup`,           changeFrequency: "monthly", priority: 0.6 },

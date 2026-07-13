@@ -39,9 +39,9 @@ export default function HowItWorksPage() {
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { n:"01", icon:FileText, title:"Post your job", body:"Tell us the trade, your suburb, and what needs doing. Takes 2 minutes. Budget and timeline optional." },
-              { n:"02", icon:Users, title:"Get up to 3 quotes", body:"Matched local tradies claim your request and contact you directly. No bidding war. No spam. Just real tradies." },
-              { n:"03", icon:Star, title:"Hire with confidence", body:"Every tradie on Swiftscope runs their business here. See their Google rating before you pick up the phone." },
+              { n:"01", icon:FileText, title:"Search your suburb", body:"Filter by trade and suburb to see every curated listing in your area. Takes seconds." },
+              { n:"02", icon:Users, title:"Compare ratings", body:"Real Google ratings on every listing, right there in the directory. No dodgy reviews, no bidding war." },
+              { n:"03", icon:Star, title:"Contact them directly", body:"Call, email, or visit their website - straight from their profile. No middleman, no waiting on a match." },
             ].map(s => (
               <div key={s.n} className="bg-[#f8f9fa] rounded-2xl p-7 border border-[#e8ecef]">
                 <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
@@ -54,8 +54,8 @@ export default function HowItWorksPage() {
             ))}
           </div>
           <div className="text-center mt-10">
-            <Link href="/get-quotes" className="inline-flex items-center gap-2 bg-[#0a1722] text-white font-extrabold text-[15px] px-10 py-4 rounded-xl hover:opacity-90">
-              Post a job - it&apos;s free <ArrowRight size={15} />
+            <Link href="/directory" className="inline-flex items-center gap-2 bg-[#0a1722] text-white font-extrabold text-[15px] px-10 py-4 rounded-xl hover:opacity-90">
+              Browse the directory <ArrowRight size={15} />
             </Link>
           </div>
         </div>

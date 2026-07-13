@@ -374,11 +374,8 @@ export default async function DirectoryPage({
           </div>
 
           <div className="reveal flex flex-wrap gap-3">
-            <Link href="/get-quotes" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-7 py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors">
-              Get quotes <ArrowRight size={15} />
-            </Link>
-            <Link href="#listings" className="inline-flex items-center gap-2 text-white font-bold text-[14px] px-7 py-3.5 rounded-xl border border-white/25 hover:border-white/50 hover:bg-white/5 transition-all">
-              Browse directory
+            <Link href="#listings" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-7 py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors">
+              Browse directory <ArrowRight size={15} />
             </Link>
           </div>
         </div>
@@ -523,11 +520,11 @@ export default async function DirectoryPage({
                 <div className="relative">
                   <h2 className="font-display text-[2rem] sm:text-[2.6rem] text-white mb-3">Ready to find the right tradie?</h2>
                   <p className="text-[14px] sm:text-[15px] max-w-lg mx-auto mb-8 text-[#8b96a1]">
-                    Post your job for free and get up to 3 quotes from local tradies. No obligation, no spam.
+                    Browse curated tradie profiles with real Google ratings. Free, always.
                   </p>
                   <div className="flex flex-wrap justify-center gap-3">
-                    <Link href="/get-quotes" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-8 py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors">
-                      Get quotes <ArrowRight size={15} />
+                    <Link href="#listings" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-8 py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors">
+                      Browse directory <ArrowRight size={15} />
                     </Link>
                     <Link href="/signup" className="inline-flex items-center gap-2 text-white font-bold text-[14px] px-8 py-3.5 rounded-xl border border-white/25 hover:border-white/50 hover:bg-white/5 transition-all">
                       List your business
@@ -620,11 +617,11 @@ export default async function DirectoryPage({
                 <div className="relative">
                   <h2 className="font-display text-[2rem] sm:text-[2.6rem] text-white mb-3">Ready to find the right tradie?</h2>
                   <p className="text-[14px] sm:text-[15px] max-w-lg mx-auto mb-8 text-[#8b96a1]">
-                    Post your job for free and get up to 3 quotes from local tradies. No obligation, no spam.
+                    Browse curated tradie profiles with real Google ratings. Free, always.
                   </p>
                   <div className="flex flex-wrap justify-center gap-3">
-                    <Link href="/get-quotes" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-8 py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors">
-                      Get quotes <ArrowRight size={15} />
+                    <Link href="#listings" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-8 py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors">
+                      Browse directory <ArrowRight size={15} />
                     </Link>
                     <Link href="/signup" className="inline-flex items-center gap-2 text-white font-bold text-[14px] px-8 py-3.5 rounded-xl border border-white/25 hover:border-white/50 hover:bg-white/5 transition-all">
                       List your business

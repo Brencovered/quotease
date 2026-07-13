@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
+import { LEADS_ENABLED } from "@/lib/featureFlags";
 
 /**
  * Shared top nav for the marketing site (home, /features, /how-it-works).
@@ -31,9 +32,11 @@ export default function MarketingNav({ transparent = false }: { transparent?: bo
           <Link href="/directory" className="text-white/85 hover:text-white font-semibold text-[13.5px] px-4 py-2 rounded-lg border border-white/20 hover:border-white/40 transition-colors">
             Find a tradie
           </Link>
-          <Link href="/get-quotes" className="text-white/85 hover:text-white font-semibold text-[13.5px] px-4 py-2 rounded-lg border border-white/20 hover:border-white/40 transition-colors">
-            Get a quote
-          </Link>
+          {LEADS_ENABLED && (
+            <Link href="/get-quotes" className="text-white/85 hover:text-white font-semibold text-[13.5px] px-4 py-2 rounded-lg border border-white/20 hover:border-white/40 transition-colors">
+              Get a quote
+            </Link>
+          )}
           <Link href="/login" className="text-white/75 hover:text-white font-semibold text-[13.5px] px-3 py-2 transition-colors">
             Log in
           </Link>
@@ -55,7 +58,9 @@ export default function MarketingNav({ transparent = false }: { transparent?: bo
           <Link href="/how-it-works" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">How it works</Link>
           <Link href="/blog" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Blog</Link>
           <Link href="/directory" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Find a tradie</Link>
-          <Link href="/get-quotes" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Get a quote</Link>
+          {LEADS_ENABLED && (
+            <Link href="/get-quotes" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Get a quote</Link>
+          )}
           <Link href="/login" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Log in</Link>
           <Link href="/signup" onClick={() => setOpen(false)} className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-5 py-3 rounded-xl text-center mt-2">
             Sign up free

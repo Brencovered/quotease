@@ -10,6 +10,7 @@ import {
 import MarketingNav from "@/components/MarketingNav";
 import FaqSchema, { SWIFTSCOPE_FAQS } from "@/components/seo/FaqSchema";
 import { homepageMeta } from "@/lib/seo/meta";
+import { LEADS_ENABLED } from "@/lib/featureFlags";
 
 export const metadata: Metadata = homepageMeta();
 
@@ -46,7 +47,7 @@ export default function Home() {
               <Link href="/signup" className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[16px] px-8 py-4 rounded-xl hover:bg-[#e89e00] transition-colors" style={{ boxShadow:"0 12px 32px rgba(255,180,0,.3)" }}>
                 I&apos;m a tradie - start free
               </Link>
-              <Link href="/get-quotes" className="text-white font-bold text-[16px] px-6 py-4 rounded-xl border border-white/25 hover:border-white/50 transition-colors flex items-center gap-2">
+              <Link href="/directory" className="text-white font-bold text-[16px] px-6 py-4 rounded-xl border border-white/25 hover:border-white/50 transition-colors flex items-center gap-2">
                 I need a tradie <ArrowRight size={16} />
               </Link>
             </div>
@@ -172,14 +173,15 @@ export default function Home() {
               <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-2">Homeowners &amp; Builders</p>
               <h3 className="font-display text-[1.8rem] text-[#0a1722] mb-3">Find and hire the right tradie</h3>
               <p className="text-[15px] text-[#5a6a78] leading-relaxed mb-6">
-                Post your job once. Up to 3 matched local tradies respond with quotes.
-                No lead auction. No dodgy reviews. Every listing is curated by Swiftscope.
+                Browse curated tradie profiles by trade and suburb. Real Google ratings on
+                every listing, no lead auction, no dodgy reviews - just tradies who run
+                their business here.
               </p>
               <div className="space-y-3 mb-8">
                 {[
-                  "Post a job in 2 minutes",
-                  "Up to 3 quotes from local tradies",
+                  "Search by trade and suburb",
                   "Real Google ratings on every listing",
+                  "Contact tradies directly - call, email or visit their site",
                   "Free for homeowners, always",
                 ].map(f => (
                   <div key={f} className="flex items-center gap-3 text-[14px] font-semibold text-[#0a1722]">
@@ -187,8 +189,8 @@ export default function Home() {
                   </div>
                 ))}
               </div>
-              <Link href="/get-quotes" className="flex items-center justify-center gap-2 bg-[#0a1722] text-white font-extrabold text-[15px] py-4 rounded-xl hover:opacity-90 transition-opacity">
-                Get quotes from local tradies <ArrowRight size={15} />
+              <Link href="/directory" className="flex items-center justify-center gap-2 bg-[#0a1722] text-white font-extrabold text-[15px] py-4 rounded-xl hover:opacity-90 transition-opacity">
+                Browse the directory <ArrowRight size={15} />
               </Link>
             </div>
 
@@ -313,9 +315,9 @@ export default function Home() {
           <div className="bg-white/[0.04] rounded-2xl p-8 border border-white/10">
             <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Homeowners</p>
             <h3 className="font-display text-[1.8rem] text-white mb-2">Need something done?</h3>
-            <p className="text-[#8aa4b4] text-[14px] mb-6">Post your job and get up to 3 quotes from local tradies.</p>
-            <Link href="/get-quotes" className="inline-flex items-center gap-2 bg-white text-[#0a1722] font-extrabold text-[15px] px-8 py-4 rounded-xl hover:opacity-90">
-              Get quotes - it&apos;s free <ArrowRight size={15} />
+            <p className="text-[#8aa4b4] text-[14px] mb-6">Browse curated tradie profiles in your suburb, free, always.</p>
+            <Link href="/directory" className="inline-flex items-center gap-2 bg-white text-[#0a1722] font-extrabold text-[15px] px-8 py-4 rounded-xl hover:opacity-90">
+              Find a tradie <ArrowRight size={15} />
             </Link>
           </div>
         </div>
@@ -326,7 +328,9 @@ export default function Home() {
               <Link href="/features" className="hover:text-white transition-colors">Features</Link>
               <Link href="/how-it-works" className="hover:text-white transition-colors">How it works</Link>
               <Link href="/directory" className="hover:text-white transition-colors">Directory</Link>
-              <Link href="/get-quotes" className="hover:text-white transition-colors">Get quotes</Link>
+              {LEADS_ENABLED && (
+                <Link href="/get-quotes" className="hover:text-white transition-colors">Get quotes</Link>
+              )}
               <Link href="/login" className="hover:text-white transition-colors">Log in</Link>
               <Link href="/signup" className="hover:text-white transition-colors">Sign up</Link>
               <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>

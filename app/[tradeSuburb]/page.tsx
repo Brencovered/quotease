@@ -104,15 +104,12 @@ export default async function TradeSuburbPage({ params }: PageProps) {
           </h1>
           <p className="text-[16px] text-[#8aa4b4] max-w-xl mb-6">
             {listingCount > 0
-              ? `Compare ${listingCount} local ${tradePlural.toLowerCase()} in ${suburb}${avgRating ? ` with an average rating of ${avgRating.toFixed(1)} stars` : ""}. Get free quotes from curated listings.`
-              : `Looking for a ${tradeSingular.toLowerCase()} in ${suburb}? Post your job and get quotes from local tradies as they join Swiftscope.`}
+              ? `Compare ${listingCount} local ${tradePlural.toLowerCase()} in ${suburb}${avgRating ? ` with an average rating of ${avgRating.toFixed(1)} stars` : ""}. Curated listings, real Google ratings.`
+              : `Looking for a ${tradeSingular.toLowerCase()} in ${suburb}? Browse nearby suburbs, or check back soon as more tradies join Swiftscope.`}
           </p>
           <div className="flex flex-wrap gap-3">
-            <Link href={`/get-quotes?trade=${parsed.trade}&suburb=${encodeURIComponent(suburb)}`} className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-7 py-3.5 rounded-xl hover:opacity-90">
-              Get free quotes <ArrowRight size={15} />
-            </Link>
-            <Link href={`/directory?trade=${parsed.trade}&suburb=${encodeURIComponent(suburb)}`} className="inline-flex items-center gap-2 text-white font-bold text-[15px] px-6 py-3.5 rounded-xl border border-white/25 hover:border-white/50">
-              Browse all {listingCount > 0 ? listingCount : ""} listings
+            <Link href={`/directory?trade=${parsed.trade}&suburb=${encodeURIComponent(suburb)}`} className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-7 py-3.5 rounded-xl hover:opacity-90">
+              Browse all {listingCount > 0 ? listingCount : ""} listings <ArrowRight size={15} />
             </Link>
           </div>
           {totalReviews > 0 && (
@@ -171,10 +168,10 @@ export default async function TradeSuburbPage({ params }: PageProps) {
           <div className="max-w-5xl mx-auto px-6 py-16 text-center">
             <p className="font-display text-[1.6rem] text-[#0a1722] mb-2">No {tradePlural.toLowerCase()} listed in {suburb} yet</p>
             <p className="text-[14px] text-[#5a6a78] max-w-md mx-auto mb-6">
-              Be the first to know when one joins, or post your job now - tradies from nearby suburbs may still be able to help.
+              Check back soon as more tradies join Swiftscope, or browse {tradePlural.toLowerCase()} in nearby suburbs.
             </p>
-            <Link href={`/get-quotes?trade=${parsed.trade}&suburb=${encodeURIComponent(suburb)}`} className="inline-flex items-center gap-2 bg-[#0a1722] text-white font-extrabold text-[15px] px-7 py-3.5 rounded-xl hover:opacity-90">
-              Post your job <ArrowRight size={15} />
+            <Link href={`/directory?trade=${parsed.trade}`} className="inline-flex items-center gap-2 bg-[#0a1722] text-white font-extrabold text-[15px] px-7 py-3.5 rounded-xl hover:opacity-90">
+              Browse {tradePlural.toLowerCase()} nearby <ArrowRight size={15} />
             </Link>
           </div>
         </div>
@@ -218,9 +215,9 @@ export default async function TradeSuburbPage({ params }: PageProps) {
           <h3 className="font-display text-[1.8rem] sm:text-[2.2rem] text-white mb-3">
             Need a {tradeSingular.toLowerCase()} in {suburb}?
           </h3>
-          <p className="text-[#8aa4b4] text-[14px] mb-6">Get up to 3 free quotes from local tradies.</p>
-          <Link href={`/get-quotes?trade=${parsed.trade}&suburb=${encodeURIComponent(suburb)}`} className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-8 py-4 rounded-xl hover:opacity-90">
-            Get free quotes <ArrowRight size={15} />
+          <p className="text-[#8aa4b4] text-[14px] mb-6">Browse curated {tradePlural.toLowerCase()} in {suburb}, free, always.</p>
+          <Link href={`/directory?trade=${parsed.trade}&suburb=${encodeURIComponent(suburb)}`} className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-8 py-4 rounded-xl hover:opacity-90">
+            Browse {tradePlural.toLowerCase()} in {suburb} <ArrowRight size={15} />
           </Link>
         </div>
       </div>
