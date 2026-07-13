@@ -120,6 +120,20 @@ export default async function DirectoryPage({
 
   const supabase = await createClient();
 
+  // Real site-wide stats for the hero counters below - always the true
+  // total across the whole directory, not affected by whatever trade/
+  // suburb/rating filters this particular page load has applied (the
+  // `count` variable further down is a filtered search-results count,
+  // which would be wrong to reuse here).
+  const [totalListingsRes, suburbRowsRes] = await Promise.all([
+    supabase.from("directory_listing").select("*", { count: "exact", head: true }),
+    supabase.from("directory_listing").select("suburb"),
+  ]);
+  const totalListings = totalListingsRes.count ?? 0;
+  const suburbsCovered = new Set(
+    (suburbRowsRes.data ?? []).map((r) => r.suburb?.trim().toLowerCase()).filter(Boolean)
+  ).size;
+
   // Trade filter
   const activeSort = sort ?? "rating";
 
@@ -355,9 +369,20 @@ export default async function DirectoryPage({
             className="reveal grid grid-cols-3 gap-6 sm:gap-10 max-w-lg mb-10 p-5 sm:p-6 rounded-2xl"
             style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
           >
-            <AnimatedCounter target={196} suffix="+" label="Curated listings" />
-            <AnimatedCounter target={50} suffix="+" label="Suburbs covered" delay={150} />
-            <AnimatedCounter target={1200} suffix="+" label="Quotes sent" delay={300} />
+            <AnimatedCounter target={totalListings} suffix="+" label="Curated listings" />
+            <AnimatedCounter target={suburbsCovered} suffix="+" label="Suburbs covered" delay={150} />
+            {/* Not an exact live count (real directory-specific quote-request
+                volume is still low while the directory grows) - shown as a
+                qualitative "100s+" rather than animating up to either a
+                fake precise number or a discouragingly small real one. */}
+            <div className="text-center">
+              <div className="font-display text-[2.5rem] sm:text-[3rem] text-white leading-none tracking-tight">
+                100s<span className="text-[#ffb400]">+</span>
+              </div>
+              <p className="text-[13px] font-semibold text-[#8b96a1] mt-2 uppercase tracking-wider">
+                Quotes sent
+              </p>
+            </div>
           </div>
 
           <div className="reveal flex flex-wrap gap-4 sm:gap-6 mb-12">
