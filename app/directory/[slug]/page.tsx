@@ -13,6 +13,9 @@ import { tradieListingMeta } from "@/lib/seo/meta";
 import { getGoogleReviewsUrl } from "@/lib/seo/gbp";
 import PhotoGallery from "./_components/PhotoGallery";
 import QuoteForm from "./_components/QuoteForm";
+import ListingLogo from "./_components/ListingLogo";
+import ReviewsSection from "./_components/ReviewsSection";
+import { getPlaceReviews } from "@/lib/googleReviews";
 
 /**
  * Temporarily off: with few tradies in the directory yet, a homeowner
@@ -125,6 +128,7 @@ export default async function TradieProfilePage({
   const tradeLabel = (primaryTrade && TRADE_LABELS[primaryTrade]) ?? primaryTrade;
   const domain    = listing.website_url ? domainFromUrl(listing.website_url) : null;
   const photos    = listing.photo_references?.filter(Boolean) ?? [];
+  const reviews   = listing.place_id ? await getPlaceReviews(listing.place_id) : [];
 
   return (
     <main className="min-h-screen bg-[var(--app-bg)]">
@@ -282,6 +286,8 @@ export default async function TradieProfilePage({
 
             {photos.length > 0 && <PhotoGallery photos={photos} name={listing.business_name} />}
 
+            <ReviewsSection reviews={reviews} />
+
             {QUOTE_REQUESTS_ENABLED && (
               <div id="quote-form">
                 <QuoteForm listing={{ id: listing.id, business_name: listing.business_name, scraped_contact_email: listing.scraped_contact_email }} />
@@ -295,16 +301,7 @@ export default async function TradieProfilePage({
               {/* Business Info Card */}
               <div className="bg-white rounded-2xl border border-gray-100 p-5 reveal">
                 <div className="flex items-center justify-center h-24 bg-gray-50 rounded-xl mb-4 overflow-hidden">
-                  {listing.logo_url ? (
-                    <img src={listing.logo_url} alt={listing.business_name} className="max-h-20 max-w-[80%] object-contain" />
-                  ) : (
-                    <div className="text-center">
-                      <div className="w-12 h-12 rounded-xl mx-auto mb-1 flex items-center justify-center" style={{ background: accent }}>
-                        <Wrench size={20} className="text-white" />
-                      </div>
-                      <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">Swiftscope</p>
-                    </div>
-                  )}
+                  <ListingLogo logoUrl={listing.logo_url} businessName={listing.business_name} accent={accent} />
                 </div>
                 <h3 className="font-bold text-[15px] text-gray-900 text-center mb-1">{listing.business_name}</h3>
                 {listing.google_rating && (
