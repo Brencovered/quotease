@@ -12,7 +12,9 @@ const nextConfig: NextConfig = {
 
   images: {
     formats: ["image/webp", "image/avif"],
-    remotePatterns: [],
+    remotePatterns: [
+      { protocol: "https", hostname: "images.unsplash.com" },
+    ],
   },
 
   webpack: (config, { isServer }) => {

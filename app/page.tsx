@@ -24,7 +24,7 @@ export default function Home() {
       <div className="relative h-screen min-h-[700px] max-h-[960px] flex items-end bg-[#0a1722]">
         <MarketingNav transparent />
         <div className="absolute inset-0 z-0">
-          <Image src={HERO_IMG} alt="Tradie on site" fill className="object-cover object-center" priority unoptimized />
+          <Image src={HERO_IMG} alt="Tradie on site" fill sizes="100vw" className="object-cover object-center" priority />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0a1722] via-[#0a1722]/50 to-[#0a1722]/20" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#0a1722]/70 to-transparent" />
         </div>
