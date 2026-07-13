@@ -5,19 +5,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveBusinessId } from "@/lib/team";
 import { FREE_ANALYSES_LIMIT, ADDON_MONTHLY_LIMIT, currentPeriod } from "@/lib/aiUsage";
-import { ELECTRICIAN_DEFAULT_MATERIALS } from "@/lib/calc";
-import { PLUMBER_DEFAULT_MATERIALS } from "@/lib/calcPlumber";
-import { CARPENTER_DEFAULT_MATERIALS } from "@/lib/calcCarpenter";
-import { ROOFER_DEFAULT_MATERIALS } from "@/lib/calcRoofer";
 import { Check, Upload, Save, Bell, BellOff, MapPin } from "lucide-react";
 import { normalizeToPng } from "@/lib/imageNormalize";
-
-const TRADE_SEED: Record<string, readonly { item_key: string; label: string; unit_cost: number }[]> = {
-  electrician: ELECTRICIAN_DEFAULT_MATERIALS,
-  plumber:     PLUMBER_DEFAULT_MATERIALS,
-  carpenter:   CARPENTER_DEFAULT_MATERIALS,
-  roofer:      ROOFER_DEFAULT_MATERIALS,
-};
 
 const TRADES = [
   { key: "electrician", label: "Electrician",     badge: "Full" },
@@ -75,9 +64,7 @@ function RateSaveButton() {
 }
 
 export default function SettingsPanel({ profile }: { profile: Profile }) {
-  const [trades,         setTrades]         = useState<string[]>(profile?.trades ?? []);
-  const [tradeSaving,    setTradeSaving]    = useState(false);
-  const [tradeSaved,     setTradeSaved]     = useState(false);
+  const trades = profile?.trades ?? [];
 
   const [abn,            setAbn]            = useState(profile?.abn ?? "");
   const [licenceNumber,  setLicenceNumber]  = useState(profile?.license_number ?? "");
@@ -151,26 +138,6 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
     }
   }
 
-  async function selectTrade(key: string) {
-    if (trades.length === 1 && trades[0] === key) return; // already selected
-    const next = [key];
-    setTrades(next); setTradeSaving(true); setTradeSaved(false);
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const businessId = await getActiveBusinessId(supabase, user.id);
-      await supabase.from("profiles").update({ trades: next }).eq("id", businessId);
-      if (TRADE_SEED[key]) {
-        await supabase.from("material_items").upsert(
-          TRADE_SEED[key].map((m) => ({ profile_id: businessId, trade: key, item_key: m.item_key, label: m.label, unit_cost: m.unit_cost })),
-          { onConflict: "profile_id,item_key" }
-        );
-      }
-    }
-    setTradeSaving(false); setTradeSaved(true);
-    setTimeout(() => setTradeSaved(false), 2000);
-  }
-
   function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return;
     setLogoFile(file); setLogoPreview(URL.createObjectURL(file));
@@ -233,29 +200,15 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
         </div>
       </div>
 
-      {/* Trades */}
+      {/* Trade (read-only -- set once at onboarding) */}
       <div className="card mb-4">
-        <div className="flex items-center justify-between mb-1">
-          <p className="section-tag">Trade</p>
-          {tradeSaving && <span className="text-[12px] text-[var(--ink-faint)]">Saving...</span>}
-          {tradeSaved  && <span className="text-[12px] text-[var(--green)] font-semibold flex items-center gap-1"><Check size={12}/>Saved</span>}
-        </div>
+        <p className="section-tag mb-1">Trade</p>
         <p className="font-semibold text-[var(--ink)] mb-1">Your trade</p>
-        <p className="text-[13px] text-[var(--ink-faint)] mb-3">Swiftscope is tailored to one trade per account -- quote builder, price book, and materials all match whichever you pick here.</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {TRADES.map((t) => {
-            const on = trades.includes(t.key);
-            return (
-              <button key={t.key} onClick={() => !tradeSaving && selectTrade(t.key)} disabled={tradeSaving}
-                className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 font-semibold transition-colors text-left ${
-                  on ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] text-[var(--ink)] hover:border-[var(--navy)]/40"
-                }`}>
-                <span className="text-[13px] flex-1">{t.label}</span>
-                {t.badge && <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${on ? "bg-[var(--amber)] text-[var(--navy)]" : "bg-[var(--amber-light)] text-[var(--amber-deep)]"}`}>{t.badge}</span>}
-                {on && !t.badge && <Check size={12} className="text-[var(--amber)] shrink-0" />}
-              </button>
-            );
-          })}
+        <p className="text-[13px] text-[var(--ink-faint)] mb-3">
+          Set when you signed up -- your quote builder, price book, and materials are all tailored to this trade. Contact support if you need it changed.
+        </p>
+        <div className="flex items-center gap-2 rounded-xl border-2 border-[var(--navy)] bg-[var(--navy)] text-white px-3 py-2.5 font-semibold w-fit">
+          <span className="text-[13px]">{TRADES.find((t) => t.key === trades[0])?.label ?? "Not set"}</span>
         </div>
       </div>
 

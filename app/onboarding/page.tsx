@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { seedDefaultMaterials } from "@/lib/tradeMaterialSeed";
 import {
   Upload, Download, SkipForward, ArrowRight, ArrowLeft,
   Check, Package, Monitor, Smartphone, ClipboardList,
@@ -248,6 +249,14 @@ export default function OnboardingPage() {
         }));
         // Upsert subscriptions — ignore conflicts
         await supabase.from("lead_subscriptions").upsert(subs, { onConflict: "profile_id,trade,suburb", ignoreDuplicates: false });
+      }
+
+      // Seed starter price-book defaults for the account's trade -- this
+      // used to run from Settings whenever a trade was toggled on, but
+      // trade is now fixed at onboarding, so this is the one reliable
+      // place it happens for every account.
+      if (trades[0]) {
+        await seedDefaultMaterials(supabase, user.id, trades[0]);
       }
 
       hasRedirected.current = true;
