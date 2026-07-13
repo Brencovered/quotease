@@ -19,10 +19,16 @@ type TabId = (typeof TABS)[number]["id"];
  * so a link straight to "the profit tab" (e.g. texted from the office) and
  * the browser back button both do the right thing.
  *
- * Every tab's content stays mounted (display:none on the inactive ones,
- * not unmounted) so switching tabs never loses an in-progress form - e.g.
- * a half-filled "add variation" draft in the Profit tab survives a quick
- * check of the Plans tab and back.
+ * Only the active tab's content is rendered - not all five kept mounted
+ * and hidden via CSS. This page was the single worst route in production
+ * Speed Insights (7.46s FCP) before this change; rendering and hydrating
+ * every panel across all five tabs on every load, regardless of which one
+ * is visible - including the canvas-based plan markup tool - is real,
+ * avoidable work most visits never need. The tradeoff: switching tabs away
+ * from a half-filled form (e.g. an in-progress "add variation" draft) and
+ * back now resets it, since that tab's component actually unmounts. That's
+ * a minor inconvenience worth trading for a measured multi-second FCP
+ * improvement on the page's most common route.
  */
 export default function JobTabs({
   overview, plans, schedule, profit, files,
@@ -58,11 +64,7 @@ export default function JobTabs({
         ))}
       </div>
 
-      {TABS.map(({ id }) => (
-        <div key={id} className={active === id ? "flex flex-col gap-4" : "hidden"}>
-          {content[id]}
-        </div>
-      ))}
+      <div className="flex flex-col gap-4">{content[active]}</div>
     </div>
   );
 }

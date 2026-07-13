@@ -2,15 +2,31 @@
 
 import dynamic from "next/dynamic";
 import { memo } from "react";
+import { Loader2 } from "lucide-react";
 
 /* Lazy-load the heavy quote builders so the page shell renders instantly
-   while the builder chunks download in the background.                */
+   while the builder chunks download in the background. `ssr:false` means
+   these render nothing on the server - without a `loading` fallback,
+   nothing paints at all client-side either until the whole builder chunk
+   has downloaded, parsed, and executed. That's a very plausible driver of
+   this route's real-world FCP (7.23s per Speed Insights): the page shell
+   is blank until a genuinely large bundle finishes loading. A lightweight
+   spinner here counts as a paint the moment the page shell mounts,
+   instead of the browser having nothing to show for several seconds. */
+function BuilderLoading() {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 py-24">
+      <Loader2 size={22} className="animate-spin text-[var(--navy)]" />
+      <p className="text-[13px] text-[var(--ink-faint)]">Loading quote builder...</p>
+    </div>
+  );
+}
 
-const QuoteBuilder        = dynamic(() => import("./QuoteBuilder"),        { ssr: false });
-const PlumberQuoteBuilder = dynamic(() => import("./PlumberQuoteBuilder"), { ssr: false });
-const CarpenterQuoteBuilder = dynamic(() => import("./CarpenterQuoteBuilder"), { ssr: false });
-const RooferQuoteBuilder  = dynamic(() => import("./RooferQuoteBuilder"),   { ssr: false });
-const GenericQuoteBuilder = dynamic(() => import("./GenericQuoteBuilder"),  { ssr: false });
+const QuoteBuilder        = dynamic(() => import("./QuoteBuilder"),        { ssr: false, loading: BuilderLoading });
+const PlumberQuoteBuilder = dynamic(() => import("./PlumberQuoteBuilder"), { ssr: false, loading: BuilderLoading });
+const CarpenterQuoteBuilder = dynamic(() => import("./CarpenterQuoteBuilder"), { ssr: false, loading: BuilderLoading });
+const RooferQuoteBuilder  = dynamic(() => import("./RooferQuoteBuilder"),   { ssr: false, loading: BuilderLoading });
+const GenericQuoteBuilder = dynamic(() => import("./GenericQuoteBuilder"),  { ssr: false, loading: BuilderLoading });
 
 interface BuilderProps {
   tradeKey: string;
