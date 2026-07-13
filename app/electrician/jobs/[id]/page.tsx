@@ -18,6 +18,7 @@ import JobActionsBar from "@/components/JobActionsBar";
 import QuickJobActionsBar from "@/components/QuickJobActionsBar";
 import JobProgressStepper from "@/components/JobProgressStepper";
 import TimesheetsPanel from "@/components/TimesheetsPanel";
+import JobTabs from "@/components/JobTabs";
 import { humanizeIntake } from "@/lib/scopeOfWorks";
 import { getCachedPriceBook, getCachedLegacyMaterials } from "@/lib/cache";
 
@@ -100,6 +101,22 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
 
   const ARCHIVE_STATUSES = ["archived", "cancelled"];
   const stepperColumns = (boardColumns ?? []).filter((c) => !c.statuses.every((s: string) => ARCHIVE_STATUSES.includes(s)));
+
+  // Live margin for the Profit tab - same actuals aggregation JobCostingPanel
+  // does internally, but weighed against effectiveTotal (quoted + approved
+  // variations + drawing markup materials), not just the original quoted
+  // total, since variations and markup materials are real revenue too.
+  // Pre-actuals there's no honest "real" margin to show yet - cost isn't
+  // tracked until a tradie logs it - so that state gets a plain "job value"
+  // line instead of a fabricated percentage.
+  const hasActuals = actuals.length > 0;
+  const totalActualHours = actuals.reduce((s: number, a: { actual_hours: number }) => s + (a.actual_hours ?? 0), 0);
+  const totalActualMaterials = actuals.reduce((s: number, a: { actual_materials_cost: number }) => s + (a.actual_materials_cost ?? 0), 0);
+  const totalUnexpected = actuals.reduce((s: number, a: { unexpected_costs?: number }) => s + (a.unexpected_costs ?? 0), 0);
+  const totalActualCost = totalActualHours * hourlyRate + totalActualMaterials + totalUnexpected;
+  const liveMargin = effectiveTotal - totalActualCost;
+  const liveMarginPct = effectiveTotal > 0 ? Math.round((liveMargin / effectiveTotal) * 100) : 0;
+  const marginTone = liveMarginPct >= 15 ? "green" : liveMarginPct >= 0 ? "amber" : "red";
 
   return (
     <>
@@ -189,78 +206,122 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           )}
         </div>
 
-        <div className="flex flex-col gap-4">
-          {stepperColumns.length > 0 && <JobProgressStepper jobId={job.id} status={job.status} columns={stepperColumns} />}
+        <JobTabs
+          overview={
+            <>
+              {stepperColumns.length > 0 && <JobProgressStepper jobId={job.id} status={job.status} columns={stepperColumns} />}
 
-          {quote ? (
-            <JobActionsBar
-              quoteId={quote.id}
-              status={quote.status}
-              totalCost={effectiveTotal}
-              amountPaid={amountPaid}
-              hasClientEmail={!!quote.client_email}
-              completedAt={quote.completed_at}
-            />
-          ) : (
-            <QuickJobActionsBar
-              jobId={job.id}
-              status={job.status}
-              totalCost={effectiveTotal}
-              amountPaid={amountPaid}
-              completedAt={job.completed_at}
-            />
-          )}
+              {quote ? (
+                <JobActionsBar
+                  quoteId={quote.id}
+                  status={quote.status}
+                  totalCost={effectiveTotal}
+                  amountPaid={amountPaid}
+                  hasClientEmail={!!quote.client_email}
+                  completedAt={quote.completed_at}
+                />
+              ) : (
+                <QuickJobActionsBar
+                  jobId={job.id}
+                  status={job.status}
+                  totalCost={effectiveTotal}
+                  amountPaid={amountPaid}
+                  completedAt={job.completed_at}
+                />
+              )}
 
-          {quote && (
-            <JobBriefPanel
-              quoteId={quote.id}
-              siteNotes={quote.site_notes}
-              scheduledStart={quote.scheduled_start}
-              estimatedDays={quote.estimated_days}
-              assignedTo={quote.assigned_to}
-              assignedToMemberId={quote.assigned_to_member_id}
-              teamMembers={teamMembers}
-            />
-          )}
+              <JobTasksPanel quoteId={quote?.id ?? null} jobId={job.id} profileId={businessId} initialTasks={taskRows ?? []} teamMembers={teamMembers} />
 
-          <JobTasksPanel quoteId={quote?.id ?? null} jobId={job.id} profileId={businessId} initialTasks={taskRows ?? []} teamMembers={teamMembers} />
+              <JobTimeline
+                acceptedAt={quote?.accepted_at ?? job.created_at}
+                completedAt={job.completed_at}
+                paidAt={job.paid_at ?? quote?.paid_at ?? null}
+                variations={variations}
+                actuals={actuals}
+                attachments={attachmentsWithUrls}
+                certs={certsWithUrls as never}
+                payments={payments}
+              />
+            </>
+          }
+          plans={
+            <>
+              {quote ? (
+                <JobPlansPanel quoteId={quote.id} clientId={quote.client_id} plans={jobPlans as never} materials={tradeMaterials} marginPct={marginPct} trade={job.trade ?? "electrician"} />
+              ) : (
+                <p className="text-[13px] text-[var(--ink-faint)]">Plan markup needs a linked quote - this job was created without one.</p>
+              )}
+              {quote && (
+                <MaterialsChecklistPanel quoteId={quote.id} initialChecklist={quote.materials_checklist ?? []} scopeLines={scopeLines} clientName={job.client_name} />
+              )}
+            </>
+          }
+          schedule={
+            <>
+              {quote ? (
+                <JobBriefPanel
+                  quoteId={quote.id}
+                  siteNotes={quote.site_notes}
+                  scheduledStart={quote.scheduled_start}
+                  estimatedDays={quote.estimated_days}
+                  assignedTo={quote.assigned_to}
+                  assignedToMemberId={quote.assigned_to_member_id}
+                  teamMembers={teamMembers}
+                />
+              ) : (
+                <p className="text-[13px] text-[var(--ink-faint)]">Scheduling needs a linked quote - this job was created without one.</p>
+              )}
+              <Link href="/electrician/schedule" className="flex items-center justify-center gap-1.5 text-[13px] font-semibold text-[var(--navy)] border-2 border-[var(--line)] rounded-xl py-2.5 hover:border-[var(--navy)]">
+                View full schedule calendar
+              </Link>
+            </>
+          }
+          profit={
+            <>
+              {hasActuals ? (
+                <div className={`rounded-xl p-4 sm:p-5 border ${marginTone === "green" ? "bg-green-50 border-green-200" : marginTone === "amber" ? "bg-amber-50 border-amber-200" : "bg-red-50 border-red-200"}`}>
+                  <p className={`text-[11px] tracking-[.12em] uppercase font-bold mb-1 ${marginTone === "green" ? "text-green-700" : marginTone === "amber" ? "text-amber-700" : "text-red-700"}`}>Live margin</p>
+                  <div className="flex items-end justify-between flex-wrap gap-3">
+                    <div>
+                      <p className={`font-display text-4xl ${marginTone === "green" ? "text-green-700" : marginTone === "amber" ? "text-amber-700" : "text-red-600"}`}>{liveMarginPct}%</p>
+                      <p className={`text-[13.5px] font-semibold ${marginTone === "green" ? "text-green-700" : marginTone === "amber" ? "text-amber-700" : "text-red-600"}`}>{liveMargin >= 0 ? "+" : "-"}${Math.abs(liveMargin).toLocaleString()}</p>
+                    </div>
+                    <div className="text-right text-[12.5px] text-[var(--ink-faint)] leading-relaxed">
+                      <p>${effectiveTotal.toLocaleString()} job value</p>
+                      <p>−${totalActualCost.toLocaleString()} actual cost so far</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-[var(--app-bg)] border border-[var(--line)] rounded-xl p-4">
+                  <p className="text-[13.5px] font-semibold text-[var(--ink)]">Job value: ${effectiveTotal.toLocaleString()}</p>
+                  <p className="text-[12.5px] text-[var(--ink-faint)] mt-1">Log actual hours and materials below to see your live margin on this job.</p>
+                </div>
+              )}
 
-          {quote && (
-            <JobPlansPanel quoteId={quote.id} clientId={quote.client_id} plans={jobPlans as never} materials={tradeMaterials} marginPct={marginPct} trade={job.trade ?? "electrician"} />
-          )}
-
-          <JobTimeline
-            acceptedAt={quote?.accepted_at ?? job.created_at}
-            completedAt={job.completed_at}
-            paidAt={job.paid_at ?? quote?.paid_at ?? null}
-            variations={variations}
-            actuals={actuals}
-            attachments={attachmentsWithUrls}
-            certs={certsWithUrls as never}
-            payments={payments}
-          />
-
-          {quote && (
-            <MaterialsChecklistPanel quoteId={quote.id} initialChecklist={quote.materials_checklist ?? []} scopeLines={scopeLines} clientName={job.client_name} />
-          )}
-          <JobFilesPanel quoteId={quote?.id ?? null} jobId={job.id} attachments={attachmentsWithUrls} />
-          <VariationsPanel quoteId={quote?.id ?? null} jobId={job.id} hourlyRate={hourlyRate} margin={marginPct} variations={variations} quoteTotalCost={job.total_cost ?? 0} lib={tradeMaterials} />
-          <JobCostingPanel
-            quoteId={quote?.id ?? null}
-            jobId={job.id}
-            quotedHours={job.labour_hours ?? 0}
-            quotedMaterials={job.materials_cost ?? 0}
-            quotedTotal={job.total_cost ?? 0}
-            hourlyRate={hourlyRate}
-            actuals={actuals}
-            intakeData={quote?.intake_data}
-          />
-          <CompliancePanel quoteId={quote?.id ?? null} jobId={job.id} certs={certsWithUrls as never} now={Date.now()} />
-
-          {isAdmin && (
-            <TimesheetsPanel jobId={job.id} entries={timesheetEntries as never} teamMembers={teamMembers} ownerName={userData.user.email ?? "Owner"} />
-          )}
-        </div>
+              <VariationsPanel quoteId={quote?.id ?? null} jobId={job.id} hourlyRate={hourlyRate} margin={marginPct} variations={variations} quoteTotalCost={job.total_cost ?? 0} lib={tradeMaterials} />
+              <JobCostingPanel
+                quoteId={quote?.id ?? null}
+                jobId={job.id}
+                quotedHours={job.labour_hours ?? 0}
+                quotedMaterials={job.materials_cost ?? 0}
+                quotedTotal={job.total_cost ?? 0}
+                hourlyRate={hourlyRate}
+                actuals={actuals}
+                intakeData={quote?.intake_data}
+              />
+              {isAdmin && (
+                <TimesheetsPanel jobId={job.id} entries={timesheetEntries as never} teamMembers={teamMembers} ownerName={userData.user.email ?? "Owner"} />
+              )}
+            </>
+          }
+          files={
+            <>
+              <JobFilesPanel quoteId={quote?.id ?? null} jobId={job.id} attachments={attachmentsWithUrls} />
+              <CompliancePanel quoteId={quote?.id ?? null} jobId={job.id} certs={certsWithUrls as never} now={Date.now()} />
+            </>
+          }
+        />
       </main>
     </>
   );
