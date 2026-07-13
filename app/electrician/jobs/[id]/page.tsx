@@ -244,7 +244,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             <MaterialsChecklistPanel quoteId={quote.id} initialChecklist={quote.materials_checklist ?? []} scopeLines={scopeLines} clientName={job.client_name} />
           )}
           <JobFilesPanel quoteId={quote?.id ?? null} jobId={job.id} attachments={attachmentsWithUrls} />
-          <VariationsPanel quoteId={quote?.id ?? null} jobId={job.id} hourlyRate={hourlyRate} margin={marginPct} variations={variations} quoteTotalCost={job.total_cost ?? 0} />
+          <VariationsPanel quoteId={quote?.id ?? null} jobId={job.id} hourlyRate={hourlyRate} margin={marginPct} variations={variations} quoteTotalCost={job.total_cost ?? 0} lib={tradeMaterials} />
           <JobCostingPanel
             quoteId={quote?.id ?? null}
             jobId={job.id}

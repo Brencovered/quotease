@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveBusinessId } from "@/lib/team";
-import { Plus, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Plus, CheckCircle2, XCircle, Clock, Search, Minus } from "lucide-react";
 import type { Variation } from "@/lib/variations";
 
 const STATUS_STYLE = {
@@ -15,19 +15,28 @@ const STATUS_ICON = { pending: Clock, approved: CheckCircle2, declined: XCircle 
 
 const EMPTY_FORM = { title: "", description: "", labour_hours: "", materials_cost: "" };
 
-export default function VariationsPanel({ quoteId, jobId, hourlyRate, margin, variations: initial, quoteTotalCost }: {
+type CatalogItem = { item_key: string; label: string; unit_cost: number };
+
+export default function VariationsPanel({ quoteId, jobId, hourlyRate, margin, variations: initial, quoteTotalCost, lib = [] }: {
   quoteId: string | null;
   jobId?: string | null;
   hourlyRate: number;
   margin: number;
   variations: Variation[];
   quoteTotalCost: number;
+  /** The business's price book / materials - same array the quote builder
+   *  and plan markup already use (price_book_items first, legacy
+   *  material_items as fallback). Optional so older callers don't break;
+   *  the catalog search just doesn't show anything without it. */
+  lib?: CatalogItem[];
 }) {
   const [variations, setVariations] = useState(initial);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [catalogQuery, setCatalogQuery] = useState("");
+  const [catalogOpen, setCatalogOpen] = useState(false);
 
   const labourHours = Number(form.labour_hours) || 0;
   const materialsRaw = Number(form.materials_cost) || 0;
@@ -35,6 +44,32 @@ export default function VariationsPanel({ quoteId, jobId, hourlyRate, margin, va
   const totalCost = labourHours * hourlyRate + materialsWithMargin;
 
   const approvedTotal = variations.filter((v) => v.status === "approved").reduce((sum, v) => sum + v.total_cost, 0);
+
+  // Debounced-in-effect isn't needed here - filtering an already-loaded
+  // in-memory array is instant either way, no network round trip per
+  // keystroke like a real catalog API would need.
+  const catalogResults = useMemo(() => {
+    const q = catalogQuery.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return lib.filter((m) => m.label.toLowerCase().includes(q)).slice(0, 8);
+  }, [catalogQuery, lib]);
+
+  function pickCatalogItem(item: CatalogItem) {
+    setForm((f) => ({
+      ...f,
+      title: f.title.trim() ? f.title : item.label,
+      materials_cost: String(Math.round((materialsRaw + item.unit_cost) * 100) / 100),
+    }));
+    setCatalogQuery("");
+    setCatalogOpen(false);
+  }
+
+  function stepLabourHours(delta: number) {
+    setForm((f) => {
+      const next = Math.max(0, (Number(f.labour_hours) || 0) + delta);
+      return { ...f, labour_hours: String(Math.round(next * 100) / 100) };
+    });
+  }
 
   async function addVariation() {
     if (!form.title.trim()) { setError("Title is required"); return; }
@@ -81,6 +116,41 @@ export default function VariationsPanel({ quoteId, jobId, hourlyRate, margin, va
 
       {showForm && (
         <div className="bg-[var(--app-bg)] rounded-xl p-3 mb-4 space-y-2">
+          {lib.length > 0 && (
+            <div className="relative">
+              <span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1">Search price book</span>
+              <div className="relative">
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--ink-faint)]" />
+                <input
+                  value={catalogQuery}
+                  onChange={(e) => { setCatalogQuery(e.target.value); setCatalogOpen(true); }}
+                  onFocus={() => setCatalogOpen(true)}
+                  placeholder="Type to find a material or item..."
+                  className="app-field pl-8 text-[13px]"
+                />
+              </div>
+              {catalogOpen && catalogQuery.trim().length >= 2 && (
+                <div className="absolute z-20 left-0 right-0 mt-1 bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-lg max-h-56 overflow-y-auto">
+                  {catalogResults.length === 0 ? (
+                    <p className="text-[12px] text-[var(--ink-faint)] px-3 py-2.5">No matches in your price book.</p>
+                  ) : (
+                    catalogResults.map((m) => (
+                      <button
+                        key={m.item_key}
+                        type="button"
+                        onClick={() => pickCatalogItem(m)}
+                        className="w-full flex items-center justify-between text-left px-3 py-2 hover:bg-[var(--app-bg)] border-b border-[var(--line)] last:border-0"
+                      >
+                        <span className="text-[12.5px] text-[var(--ink)] truncate pr-2">{m.label}</span>
+                        <span className="text-[12px] font-semibold text-[var(--ink-faint)] whitespace-nowrap">${m.unit_cost.toLocaleString()}</span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <label className="block"><span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1">Title *</span>
             <input value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} className="app-field" placeholder="e.g. Additional power point in kitchen" />
           </label>
@@ -88,8 +158,21 @@ export default function VariationsPanel({ quoteId, jobId, hourlyRate, margin, va
             <textarea value={form.description} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} rows={2} className="app-field text-[13px]" placeholder="Details of the additional work..." />
           </label>
           <div className="grid grid-cols-2 gap-2">
-            <label className="block"><span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1">Labour hours</span>
-              <input type="number" min={0} step={0.5} value={form.labour_hours} onChange={(e) => setForm(f => ({ ...f, labour_hours: e.target.value }))} className="app-field" placeholder="0" />
+            <label className="block">
+              <span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1">Labour hours</span>
+              <div className="flex items-center gap-1.5">
+                <button type="button" onClick={() => stepLabourHours(-0.25)} className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border-2 border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--navy)] hover:text-[var(--navy)]" aria-label="Decrease 15 minutes">
+                  <Minus size={13} />
+                </button>
+                <input
+                  type="number" min={0} step={0.25} value={form.labour_hours}
+                  onChange={(e) => setForm(f => ({ ...f, labour_hours: e.target.value }))}
+                  className="app-field text-center flex-1 min-w-0" placeholder="0"
+                />
+                <button type="button" onClick={() => stepLabourHours(0.25)} className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border-2 border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--navy)] hover:text-[var(--navy)]" aria-label="Increase 15 minutes">
+                  <Plus size={13} />
+                </button>
+              </div>
             </label>
             <label className="block"><span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1">Materials (ex margin)</span>
               <input type="number" min={0} value={form.materials_cost} onChange={(e) => setForm(f => ({ ...f, materials_cost: e.target.value }))} className="app-field" placeholder="0" />
@@ -139,3 +222,4 @@ export default function VariationsPanel({ quoteId, jobId, hourlyRate, margin, va
     </div>
   );
 }
+
