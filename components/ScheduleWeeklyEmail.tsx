@@ -83,6 +83,7 @@ export default function ScheduleWeeklyEmail() {
           onClick={sendEmails}
           disabled={sending}
           className="btn-primary text-[12.5px] py-1.5 px-3 inline-flex items-center gap-1.5"
+          style={{ width: "auto" }}
         >
           {sending ? (
             <>

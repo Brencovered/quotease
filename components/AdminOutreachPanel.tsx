@@ -439,6 +439,7 @@ export default function AdminOutreachPanel({
                       onClick={() => setConfirm(true)}
                       disabled={!selected.size || !subject.trim() || !html.trim()}
                       className="btn-primary px-5 py-2.5 shrink-0 disabled:opacity-40"
+                      style={{ width: "auto" }}
                     >
                       <Send size={13} /> Send
                     </button>

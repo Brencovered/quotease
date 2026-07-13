@@ -264,6 +264,7 @@ Keep answers short and direct -- they're reading this on a phone. Use dollar sig
             onClick={send}
             disabled={!input.trim() || loading}
             className="btn-primary px-3 py-2.5 shrink-0"
+            style={{ width: "auto" }}
           >
             <Send size={14} />
           </button>

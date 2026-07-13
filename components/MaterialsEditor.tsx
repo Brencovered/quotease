@@ -102,7 +102,8 @@ export default function MaterialsEditor({
           <button
             onClick={() => addItem(newLabel, Number(newCost) || 0)}
             disabled={!newLabel.trim()}
-            className="btn-primary text-[12.5px] py-2 px-3 shrink-0">
+            className="btn-primary text-[12.5px] py-2 px-3 shrink-0"
+            style={{ width: "auto" }}>
             <Plus size={13} /> Add
           </button>
         </div>

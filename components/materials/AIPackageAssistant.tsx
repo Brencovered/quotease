@@ -366,6 +366,7 @@ Rules:
                 onClick={send}
                 disabled={!input.trim() || loading}
                 className="btn-primary px-3 py-2.5 shrink-0"
+                style={{ width: "auto" }}
               >
                 <Send size={14} />
               </button>

@@ -111,7 +111,7 @@ export default function PushNotificationToggle() {
           </span>
         )}
         {status === "off" && (
-          <button onClick={enable} className="btn-primary text-[12.5px] py-1.5 px-3 inline-flex items-center gap-1.5">
+          <button onClick={enable} className="btn-primary text-[12.5px] py-1.5 px-3 inline-flex items-center gap-1.5" style={{ width: "auto" }}>
             <Bell size={13} /> Enable on this device
           </button>
         )}
