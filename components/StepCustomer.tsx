@@ -64,7 +64,7 @@ export default function StepCustomer({ clientName, setClientName, clientEmail, s
               }}
             />
           </Field>
-          <Field label="Client email">
+          <Field label="Client email (required to send the quote)">
             <input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className="app-field" placeholder="jane@email.com" />
           </Field>
           <div>

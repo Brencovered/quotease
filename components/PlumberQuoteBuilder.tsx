@@ -570,6 +570,9 @@ export default function PlumberQuoteBuilder({
           </div>
           <div className="space-y-3">
             <button onClick={() => saveAndSend(true)} disabled={saving || !clientEmail} className="btn-primary">{saving ? "Sending..." : "Send quote to client"}</button>
+            {!clientEmail && !saving && (
+              <p className="text-[12.5px] font-semibold text-[var(--amber-deep)] text-center -mt-2">Add a client email (Customer &amp; site step) to send - or save as a draft for now</p>
+            )}
             <button onClick={() => saveAndSend(false)} disabled={saving} className="btn-secondary w-full justify-center">Save as draft</button>
             {saveMessage && <div className={`rounded-xl px-4 py-3 text-[13.5px] font-semibold text-center ${saveMessage.includes("fail") ? "bg-[var(--red-bg)] text-[var(--red)]" : "bg-green-50 text-green-600"}`}>{saveMessage}</div>}
             {savedQuoteId && (<a href={`/api/quotes/${savedQuoteId}/pdf`} target="_blank" rel="noopener noreferrer" className="btn-secondary w-full justify-center block text-center">Download PDF</a>)}

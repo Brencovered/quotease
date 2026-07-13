@@ -649,6 +649,9 @@ export default function GenericQuoteBuilder({
             <button onClick={() => saveAndSend(true)} disabled={saving || !clientEmail} className="btn-primary">
               {saving ? "Sending..." : "Send quote to client"}
             </button>
+            {!clientEmail && !saving && (
+              <p className="text-[12.5px] font-semibold text-[var(--amber-deep)] text-center -mt-2">Add a client email to send - or save as a draft for now</p>
+            )}
             <button onClick={() => saveAndSend(false)} disabled={saving} className="btn-secondary w-full justify-center">
               Save as draft
             </button>

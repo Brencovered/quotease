@@ -9,7 +9,7 @@ import {
   Check, Package, Monitor, Smartphone, ClipboardList,
   HardHat, PenTool, FileText, Wrench, TrendingUp,
   Loader2, Sparkles, MapPin, AlertCircle, Users, FileUp,
-  ExternalLink, X, Minus, Plus,
+  ExternalLink, X, Minus, Plus, Globe,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -19,7 +19,7 @@ import {
 const DIGITAL_TOOLS = [
   { key: "fergus",      label: "Fergus",           icon: ClipboardList },
   { key: "servicem8",   label: "ServiceM8",        icon: Smartphone },
-  { key: "hipages",     label: "HiPages",          icon: Search },
+  { key: "hipages",     label: "HiPages",          icon: Globe },
   { key: "groundplan",  label: "GroundPlan",       icon: PenTool },
   { key: "simpro",      label: "SimPro",           icon: Monitor },
   { key: "tradify",     label: "Tradify",          icon: FileText },
@@ -28,14 +28,6 @@ const DIGITAL_TOOLS = [
   { key: "myob",        label: "MYOB",             icon: TrendingUp },
   { key: "none",        label: "Nothing yet - pen and paper", icon: PenTool },
 ];
-
-function Search(props: { size?: number; className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={props.size ?? 16} height={props.size ?? 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
-      <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
-    </svg>
-  );
-}
 
 const QUOTE_FREQUENCY_OPTIONS = [
   { key: "daily",    label: "Daily",       desc: "I quote on nearly every job" },
@@ -211,6 +203,22 @@ export default function OnboardingPage() {
       setUploading(false);
       e.target.value = "";
     }
+  }
+
+  function downloadCsvTemplate() {
+    const rows = [
+      ["description", "sku", "cost_price", "supplier", "unit", "trade"],
+      ["Downlight, standard", "DL-STD-01", "35", "Example Electrical", "each", "electrician"],
+      ["2.5mm TPS cable", "CBL-25TPS", "2.10", "Example Electrical", "metre", "electrician"],
+    ];
+    const csv = rows.map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "swiftscope-price-book-template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   async function finish() {
@@ -612,7 +620,7 @@ export default function OnboardingPage() {
                   )}
 
                   <div className="flex items-center gap-2 mb-6">
-                    <button onClick={() => {}} className="text-[12px] text-[var(--ink-faint)] hover:text-[var(--ink-soft)] font-semibold flex items-center gap-1 transition-colors">
+                    <button onClick={downloadCsvTemplate} className="text-[12px] text-[var(--ink-faint)] hover:text-[var(--ink-soft)] font-semibold flex items-center gap-1 transition-colors">
                       <Download size={12} /> Download a template
                     </button>
                     <span className="text-[var(--line-subtle)]">|</span>
@@ -687,7 +695,7 @@ export default function OnboardingPage() {
                         {on && <div className="w-2.5 h-2.5 rounded-full bg-[var(--amber)]" />}
                       </div>
                       <div>
-                        <p className={`font-bold text-[14px] ${on ? "text-white" : "text-[var(ink)]"}`}>{opt.label}</p>
+                        <p className={`font-bold text-[14px] ${on ? "text-white" : "text-[var(--ink)]"}`}>{opt.label}</p>
                         <p className={`text-[12px] ${on ? "text-[var(--steel-2)]" : "text-[var(--ink-faint)]"}`}>{opt.desc}</p>
                       </div>
                     </button>

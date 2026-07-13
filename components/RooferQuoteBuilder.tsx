@@ -1003,6 +1003,9 @@ export default function RooferQuoteBuilder({
           <Phone size={15} /> {saving ? "Sending..." : "Send quote to client"}
         </button>
       </div>
+      {!clientEmail && !saving && (
+        <p className="text-[12.5px] font-semibold text-[var(--amber-deep)] text-center">Add a client email (Customer &amp; site step) to send - or save as a draft for now</p>
+      )}
       {saveMessage && <p className="text-[13px] text-center text-[var(--ink-soft)]">{saveMessage}</p>}
     </div>
   );
