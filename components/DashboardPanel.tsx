@@ -15,8 +15,6 @@ import {
   Zap,
   Briefcase,
   CalendarDays,
-  Bell,
-  AlertTriangle,
   Package,
   Clock,
 } from "lucide-react";
@@ -40,9 +38,6 @@ export default function DashboardPanel({ stats, profit }: Props) {
     }
     fetchPackages();
   }, [supabase]);
-
-  const followUpsDue = stats.overdueFollowUps ?? 0;
-  const expiringSoon = stats.expiredQuotes ?? 0;
 
   return (
     <>
@@ -80,30 +75,6 @@ export default function DashboardPanel({ stats, profit }: Props) {
           <p className="font-display text-[24px] text-[var(--ink)]">{stats.winRate ?? 0}%</p>
         </div>
       </div>
-
-      {/* Alerts */}
-      {(followUpsDue > 0 || expiringSoon > 0) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-          {followUpsDue > 0 && (
-            <Link prefetch={false} href="/electrician/quotes?status=sent" className="flex items-center gap-3 bg-[var(--blue-bg)] border border-blue-200 rounded-xl px-4 py-3">
-              <Bell size={16} className="text-[var(--blue)] shrink-0" />
-              <div>
-                <p className="text-[13px] font-bold text-[var(--blue)]">{followUpsDue} follow-up{followUpsDue !== 1 ? "s" : ""} due</p>
-                <p className="text-[11px] text-blue-600">Check sent quotes</p>
-              </div>
-            </Link>
-          )}
-          {expiringSoon > 0 && (
-            <Link prefetch={false} href="/electrician/quotes?status=sent" className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-              <AlertTriangle size={16} className="text-amber-600 shrink-0" />
-              <div>
-                <p className="text-[13px] font-bold text-amber-800">{expiringSoon} quote{expiringSoon !== 1 ? "s" : ""} expired</p>
-                <p className="text-[11px] text-amber-600">Send reminders</p>
-              </div>
-            </Link>
-          )}
-        </div>
-      )}
 
       {/* Status breakdown */}
       <div className="card mb-6">
