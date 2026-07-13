@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { Star, Quote } from "lucide-react";
 import type { GoogleReview } from "@/lib/googleReviews";
 
@@ -15,6 +18,33 @@ function ReviewStars({ rating }: { rating: number }) {
   );
 }
 
+// Google's profile_photo_url values occasionally 404 or get rate-limited
+// hotlinked from googleusercontent.com -- same broken-image risk as the
+// listing logo, so this needs the same onError fallback rather than a raw
+// <img>.
+function ReviewAvatar({ src, name }: { src: string | null; name: string }) {
+  const [failed, setFailed] = useState(false);
+
+  if (!src || failed) {
+    return (
+      <div className="w-9 h-9 rounded-full shrink-0 bg-gray-100 flex items-center justify-center">
+        <Quote size={14} className="text-gray-400" />
+      </div>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={name}
+      className="w-9 h-9 rounded-full shrink-0 object-cover"
+      referrerPolicy="no-referrer"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 export default function ReviewsSection({ reviews }: { reviews: GoogleReview[] }) {
   if (reviews.length === 0) return null;
 
@@ -27,19 +57,7 @@ export default function ReviewsSection({ reviews }: { reviews: GoogleReview[] })
         {reviews.slice(0, 5).map((review, i) => (
           <div key={`${review.authorName}-${review.time}-${i}`} className={i > 0 ? "pt-5 border-t border-gray-100" : ""}>
             <div className="flex items-start gap-3">
-              {review.authorPhotoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={review.authorPhotoUrl}
-                  alt=""
-                  className="w-9 h-9 rounded-full shrink-0 object-cover"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <div className="w-9 h-9 rounded-full shrink-0 bg-gray-100 flex items-center justify-center">
-                  <Quote size={14} className="text-gray-400" />
-                </div>
-              )}
+              <ReviewAvatar src={review.authorPhotoUrl} name={review.authorName} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="font-bold text-[13.5px] text-gray-900">{review.authorName}</p>
@@ -58,3 +76,4 @@ export default function ReviewsSection({ reviews }: { reviews: GoogleReview[] })
     </div>
   );
 }
+

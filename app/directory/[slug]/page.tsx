@@ -16,6 +16,7 @@ import QuoteForm from "./_components/QuoteForm";
 import ListingLogo from "./_components/ListingLogo";
 import ReviewsSection from "./_components/ReviewsSection";
 import { getPlaceReviews } from "@/lib/googleReviews";
+import TradieSchema from "@/components/seo/TradieSchema";
 
 /**
  * Temporarily off: with few tradies in the directory yet, a homeowner
@@ -416,6 +417,22 @@ export default async function TradieProfilePage({
           </div>
         </div>
       </section>
+
+      <TradieSchema
+        businessName={listing.business_name}
+        trade={primaryTrade ?? "builder"}
+        suburb={listing.suburb ?? ""}
+        postcode={listing.postcode}
+        phone={listing.scraped_contact_phone}
+        website={listing.website_url}
+        logo={listing.logo_url}
+        googleRating={listing.google_rating}
+        reviewCount={listing.google_reviews_count}
+        lat={listing.latitude}
+        lng={listing.longitude}
+        slug={listing.id}
+        reviews={reviews}
+      />
     </main>
   );
 }

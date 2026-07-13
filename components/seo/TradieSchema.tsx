@@ -36,6 +36,7 @@ interface TradieSchemaProps {
   lat?: number | null;
   lng?: number | null;
   slug: string; // used to build the canonical URL
+  reviews?: Array<{ authorName: string; rating: number; text: string; time: number }>;
 }
 
 // Maps internal trade keys to Schema.org @type values.
@@ -74,6 +75,7 @@ export default function TradieSchema({
   lat,
   lng,
   slug,
+  reviews,
 }: TradieSchemaProps) {
   const schemaType = TRADE_SCHEMA_TYPE[trade.toLowerCase()] ?? "LocalBusiness";
   const canonicalUrl = `${BASE_URL}/directory/${slug}`;
@@ -118,6 +120,25 @@ export default function TradieSchema({
         bestRating: "5",
         worstRating: "1",
       },
+    }),
+    // Individual reviews, when we have real text to attach (via the Places
+    // API's Place Details reviews field) rather than just the aggregate
+    // number -- schema.org's Review type expects actual review content,
+    // not a synthesized one, so this is only emitted when genuine text
+    // exists for each entry.
+    ...(reviews && reviews.length > 0 && {
+      review: reviews.slice(0, 5).map((r) => ({
+        "@type": "Review",
+        author: { "@type": "Person", name: r.authorName },
+        datePublished: new Date(r.time * 1000).toISOString().slice(0, 10),
+        reviewBody: r.text,
+        reviewRating: {
+          "@type": "Rating",
+          ratingValue: r.rating,
+          bestRating: "5",
+          worstRating: "1",
+        },
+      })),
     }),
   };
 
