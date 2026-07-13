@@ -112,18 +112,36 @@ export default async function TradieProfilePage({
     .from("directory_listing").select("*").eq("id", slug).single();
   if (!listing) notFound();
 
-  /* Similar tradies */
+  /* Similar tradies - always geographically scoped. The previous query
+     used an OR between trade-match and suburb-match, so a trade match
+     alone (with zero location constraint) was enough to surface a
+     tiler from anywhere in the country whenever there weren't 3 exact
+     suburb matches - which is exactly how a Townsville tiler ended up
+     showing Melbourne-suburb tilers as "similar." Never fall back to
+     an unconstrained trade-only match; if nothing nearby exists yet,
+     showing fewer (or zero) results is correct, not a bug. */
   const primaryTrade = listing.trades?.[0];
-  let similarQuery = supabase.from("directory_listing").select("*")
-    .neq("id", listing.id).limit(3);
-  if (primaryTrade) {
-    similarQuery = similarQuery.or(
-      `trades.cs.{${primaryTrade}},suburb.eq.${listing.suburb}`
-    );
-  } else if (listing.suburb) {
-    similarQuery = similarQuery.eq("suburb", listing.suburb);
+  let similar: Listing[] = [];
+
+  async function topUp(filters: { suburb?: string; postcode?: string; trade?: string }) {
+    if (similar.length >= 3) return;
+    const excludeIds = [listing.id, ...similar.map((s) => s.id)];
+    let q = supabase.from("directory_listing").select("*").not("id", "in", `(${excludeIds.join(",")})`);
+    if (filters.suburb) q = q.eq("suburb", filters.suburb);
+    if (filters.postcode) q = q.eq("postcode", filters.postcode);
+    if (filters.trade) q = q.contains("trades", [filters.trade]);
+    const { data } = await q.limit(3 - similar.length);
+    if (data) similar = [...similar, ...(data as Listing[])];
   }
-  const { data: similar } = await similarQuery;
+
+  // 1. Same suburb + same trade (the actually-relevant case)
+  if (listing.suburb && primaryTrade) await topUp({ suburb: listing.suburb, trade: primaryTrade });
+  // 2. Same suburb, any trade
+  if (listing.suburb) await topUp({ suburb: listing.suburb });
+  // 3. Same postcode + same trade (a slightly wider net within the same immediate area)
+  if (listing.postcode && primaryTrade) await topUp({ postcode: listing.postcode, trade: primaryTrade });
+  // 4. Same postcode, any trade
+  if (listing.postcode) await topUp({ postcode: listing.postcode });
 
   const accent    = (primaryTrade && TRADE_COLORS[primaryTrade]) || "#0a1722";
   const tradeLabel = (primaryTrade && TRADE_LABELS[primaryTrade]) ?? primaryTrade;
