@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import { getActiveBusinessId } from "@/lib/team";
 import SettingsPanel from "@/components/SettingsPanel";
 import XeroConnectPanel from "@/components/XeroConnectPanel";
 import DirectoryPanel from "@/components/DirectoryPanel";
@@ -35,13 +34,33 @@ export default async function SettingsPage() {
     const supabase = await createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (userData.user) {
-      // A team member's own auth id is NOT the business - they should see
-      // and edit the shared business profile, not their own individual
-      // (likely blank) profile row.
-      const businessId = await getActiveBusinessId(supabase, userData.user.id);
-      const { data } = await supabase.from("profiles").select("id, business_name, contact_email, contact_phone, trades, hourly_rate, materials_margin_pct, default_deposit_pct, default_expiry_days, logo_url, abn, license_number, business_address, bank_account_name, bank_bsb, bank_account_number, accepts_cash, xero_tenant_id, xero_connected_at, xero_account_code, xero_tax_type, ai_free_analyses_used, ai_addon_status, ai_addon_period, ai_addon_analyses_used, directory_enabled, directory_suburb, directory_postcode, directory_bio, directory_website, directory_phone, directory_email, subscription_status, stripe_subscription_id, cancel_at_period_end, current_period_end, comp_access").eq("id", businessId).single();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      profile = data as any;
+      const userId = userData.user.id;
+      const PROFILE_COLUMNS =
+        "id, business_name, contact_email, contact_phone, trades, hourly_rate, materials_margin_pct, default_deposit_pct, default_expiry_days, logo_url, abn, license_number, business_address, bank_account_name, bank_bsb, bank_account_number, accepts_cash, xero_tenant_id, xero_connected_at, xero_account_code, xero_tax_type, ai_free_analyses_used, ai_addon_status, ai_addon_period, ai_addon_analyses_used, directory_enabled, directory_suburb, directory_postcode, directory_bio, directory_website, directory_phone, directory_email, subscription_status, stripe_subscription_id, cancel_at_period_end, current_period_end, comp_access";
+
+      // Previously: getActiveBusinessId() (one round trip) then the profile
+      // fetch (a second round trip), fully sequential even though only the
+      // *result* of the first query is needed, not anything about the
+      // current request. Instead, check team membership and fetch this
+      // user's own profile row at the same time - for the common case (a
+      // business owner with no team, i.e. no team_members row) the second
+      // query already IS the right profile, so this removes a full
+      // round-trip from the critical path. Only an actual invited team
+      // member pays for a third query, to fetch their owner's profile
+      // instead of their own (usually blank) one.
+      const [{ data: membership }, { data: ownProfile }] = await Promise.all([
+        supabase.from("team_members").select("owner_profile_id").eq("member_user_id", userId).eq("status", "active").maybeSingle(),
+        supabase.from("profiles").select(PROFILE_COLUMNS).eq("id", userId).single(),
+      ]);
+
+      if (membership?.owner_profile_id && membership.owner_profile_id !== userId) {
+        const { data } = await supabase.from("profiles").select(PROFILE_COLUMNS).eq("id", membership.owner_profile_id).single();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        profile = data as any;
+      } else {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        profile = ownProfile as any;
+      }
     }
   } catch (err) {
     console.error("Settings page: continuing without profile data -", err);

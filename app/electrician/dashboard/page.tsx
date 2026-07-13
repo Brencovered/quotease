@@ -19,7 +19,15 @@ export default async function DashboardPage() {
     const { data: userData } = await supabase.auth.getUser();
     if (userData.user) {
       const businessId = await getActiveBusinessId(supabase, userData.user.id);
-      const [{ data: quotes }, { data: actuals }, { data: profile }, { data: jobs }, { data: timesheets }, { data: teamMembers }] = await Promise.all([
+      const [
+        { data: quotes },
+        { data: actuals },
+        { data: profile },
+        { data: jobs },
+        { data: timesheets },
+        { data: teamMembers },
+        onboarding,
+      ] = await Promise.all([
         supabase
           .from("quotes")
           .select("id, client_name, status, total_cost, amount_paid, created_at, follow_up_at, quote_expires_at, sent_at, labour_hours, materials_cost")
@@ -32,7 +40,14 @@ export default async function DashboardPage() {
           .eq("profile_id", businessId),
         supabase.from("timesheets").select("job_id").eq("profile_id", businessId),
         supabase.from("team_members").select("id, name, status").eq("owner_profile_id", businessId),
+        // Previously awaited separately *after* the six queries above -
+        // an independent 12-query batch (see lib/onboarding.ts) that only
+        // needs businessId, so there was no real reason for it to wait.
+        // Running it in the same Promise.all halves this page's total
+        // server-side wait time (two round-trip batches -> one).
+        getOnboardingProgress(supabase, businessId),
       ]);
+      onboardingProgress = onboarding;
       if (quotes) {
         stats = computeDashboardStats(quotes);
         profit = computeProfitStats(quotes, actuals ?? [], profile?.hourly_rate ?? 95);
@@ -43,7 +58,6 @@ export default async function DashboardPage() {
         timesheets: timesheets ?? [],
         teamMembers: teamMembers ?? [],
       });
-      onboardingProgress = await getOnboardingProgress(supabase, businessId);
     }
   } catch (err) {
     console.error("Dashboard page:", err);

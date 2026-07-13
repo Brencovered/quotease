@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { unstable_cache } from "next/cache";
 import {
   Search,
   Shield,
@@ -13,12 +14,37 @@ import {
   Sparkles,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import DirectoryCard from "@/components/DirectoryCard";
 import { directoryMeta } from "@/lib/seo/meta";
 import MarketingNav from "@/components/MarketingNav";
 import AnimatedCounter from "./_components/AnimatedCounter";
 import DirectorySearchForm from "./_components/DirectorySearchForm";
 import FindTradieHeroSearch from "./_components/FindTradieHeroSearch";
+
+// Sitewide hero counters (total listings, suburbs covered) don't depend on
+// searchParams at all - every visitor to /directory sees the same two
+// numbers regardless of what they're searching for. Before this, they were
+// re-fetched (a full count query + a full-table suburb scan) on literally
+// every request, blocking the very first byte of the response before the
+// hero could render. Cached for 10 minutes instead - these numbers only
+// need to be "roughly current", not live-to-the-second.
+const getDirectoryHeroStats = unstable_cache(
+  async () => {
+    const admin = createAdminClient();
+    const [totalListingsRes, suburbRowsRes] = await Promise.all([
+      admin.from("directory_listing").select("*", { count: "exact", head: true }),
+      admin.from("directory_listing").select("suburb"),
+    ]);
+    const totalListings = totalListingsRes.count ?? 0;
+    const suburbsCovered = new Set(
+      (suburbRowsRes.data ?? []).map((r) => r.suburb?.trim().toLowerCase()).filter(Boolean)
+    ).size;
+    return { totalListings, suburbsCovered };
+  },
+  ["directory-hero-stats"],
+  { revalidate: 600 }
+);
 
 const ALL_TRADES = [
   "electrician",
@@ -120,19 +146,9 @@ export default async function DirectoryPage({
 
   const supabase = await createClient();
 
-  // Real site-wide stats for the hero counters below - always the true
-  // total across the whole directory, not affected by whatever trade/
-  // suburb/rating filters this particular page load has applied (the
-  // `count` variable further down is a filtered search-results count,
-  // which would be wrong to reuse here).
-  const [totalListingsRes, suburbRowsRes] = await Promise.all([
-    supabase.from("directory_listing").select("*", { count: "exact", head: true }),
-    supabase.from("directory_listing").select("suburb"),
-  ]);
-  const totalListings = totalListingsRes.count ?? 0;
-  const suburbsCovered = new Set(
-    (suburbRowsRes.data ?? []).map((r) => r.suburb?.trim().toLowerCase()).filter(Boolean)
-  ).size;
+  // Kicked off immediately, in parallel with everything else below - these
+  // resolve from cache almost instantly except once every 10 minutes.
+  const heroStatsPromise = getDirectoryHeroStats();
 
   // Trade filter
   const activeSort = sort ?? "rating";
@@ -292,6 +308,12 @@ export default async function DirectoryPage({
   /* Determine if user has performed a search */
   const hasActiveFilters = !!(trade || postcode || suburb || reviews || rating);
 
+  // Resolved last, but kicked off first (see heroStatsPromise above) - by
+  // this point the cached lookup has almost always already resolved
+  // concurrently with the search query work above, so this await rarely
+  // costs anything.
+  const { totalListings, suburbsCovered } = await heroStatsPromise;
+
   return (
     <main className="min-h-screen" style={{ background: "var(--app-bg)" }}>
       <style>{`
@@ -357,7 +379,7 @@ export default async function DirectoryPage({
             </span>
           </div>
 
-          <h1 className="reveal font-display text-[2.8rem] sm:text-[3.6rem] lg:text-[4.2rem] text-white leading-[1.05] mb-5">
+          <h1 className="font-display text-[2.8rem] sm:text-[3.6rem] lg:text-[4.2rem] text-white leading-[1.05] mb-5">
             Find a trusted local tradie
           </h1>
 
