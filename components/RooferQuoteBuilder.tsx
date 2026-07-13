@@ -564,6 +564,8 @@ export default function RooferQuoteBuilder({
       <LiveSiteAnnotation
         trade="roofer"
         lib={lib}
+        archetypeDefaults={archetypeDefaults}
+        onSaveDefault={saveArchetypeDefault}
         onSaveDraft={saveDraft}
         onAnnotationMeta={(meta) => setAnnotationMeta(meta)}
         onAddLineItems={(items) => {

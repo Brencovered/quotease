@@ -323,6 +323,9 @@ export default function GenericQuoteBuilder({
         <div className="space-y-4">
           <LiveSiteAnnotation
             trade={tradeKey}
+            lib={lib}
+            archetypeDefaults={archetypeDefaults}
+            onSaveDefault={saveArchetypeDefault}
             onSaveDraft={saveDraft}
             onAnnotationMeta={(meta) => setAnnotationMeta(meta)}
             onAddLineItems={(items) => {

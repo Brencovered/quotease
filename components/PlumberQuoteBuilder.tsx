@@ -332,6 +332,8 @@ export default function PlumberQuoteBuilder({
           <LiveSiteAnnotation
             trade="plumber"
             lib={lib}
+            archetypeDefaults={archetypeDefaults}
+            onSaveDefault={saveArchetypeDefault}
             onSaveDraft={saveDraft}
             onAnnotationMeta={(meta) => setAnnotationMeta(meta)}
             onAddLineItems={(items) => {

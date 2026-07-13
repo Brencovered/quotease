@@ -311,6 +311,8 @@ export default function CarpenterQuoteBuilder({
           <LiveSiteAnnotation
             trade="carpenter"
             lib={lib}
+            archetypeDefaults={archetypeDefaults}
+            onSaveDefault={saveArchetypeDefault}
             onSaveDraft={saveDraft}
             onAnnotationMeta={(meta) => setAnnotationMeta(meta)}
             onAddLineItems={(items) => {

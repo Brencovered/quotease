@@ -10,6 +10,7 @@ import JobFilesPanel from "@/components/JobFilesPanel";
 import JobActionsBar from "@/components/JobActionsBar";
 import JobPlansPanel from "@/components/JobPlansPanel";
 import { humanizeIntake } from "@/lib/scopeOfWorks";
+import { getCachedPriceBook, getCachedLegacyMaterials } from "@/lib/cache";
 
 // This route is for a quote that hasn't been won yet - draft, sent, or
 // declined. The moment a client accepts, it stops being a quote you're
@@ -47,15 +48,22 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
   const markupMaterialsTotal = ((quote.markup_materials as Array<{ totalCost: number }>) ?? []).reduce((sum, m) => sum + (m.totalCost ?? 0), 0);
   const effectiveTotal = (quote.total_cost ?? 0) + markupMaterialsTotal;
 
-  // Load trade materials for markup panel
+  // Load trade materials for markup panel - price book first (real supplier
+  // pricing), legacy material_items as fallback, same chain the new-quote
+  // page uses, so plan markup here prices identically to a brand new quote.
+  const quoteTrade = quote.trade ?? "electrician";
   let tradeMaterials: Array<{ item_key: string; label: string; unit_cost: number }> = [];
-  const { data: matRows } = await supabase
-    .from("material_items")
-    .select("item_key, label, unit_cost")
-    .eq("profile_id", businessId)
-    .eq("trade", quote.trade ?? "electrician")
-    .order("label");
-  if (matRows?.length) tradeMaterials = matRows;
+  const pbItems = await getCachedPriceBook(businessId, quoteTrade);
+  if (pbItems.length > 0) {
+    tradeMaterials = pbItems.map((m) => ({
+      item_key: m.id,
+      label: m.description,
+      unit_cost: m.cost_price ?? 0,
+    }));
+  } else {
+    const legacyItems = await getCachedLegacyMaterials(businessId, quoteTrade);
+    if (legacyItems.length > 0) tradeMaterials = legacyItems;
+  }
 
   let quotePlans: Array<{ id: string; file_name: string; shapes: unknown[]; calibration: unknown; signedUrl?: string }> = [];
   if (quote.client_id) {

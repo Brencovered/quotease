@@ -618,7 +618,7 @@ function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions
 }) {
   return (
     <div className="space-y-4">
-      <LiveSiteAnnotation trade={trade} lib={lib} onSaveDraft={onSaveDraft} onAnnotationMeta={onAnnotationMeta} onAddLineItems={onAddLiveItems} />
+      <LiveSiteAnnotation trade={trade} lib={lib} archetypeDefaults={archetypeDefaults} onSaveDefault={onSaveArchetypeDefault} onSaveDraft={onSaveDraft} onAnnotationMeta={onAnnotationMeta} onAddLineItems={onAddLiveItems} />
       <div className="card">
         <p className="section-tag mb-1">Step 1</p>
         <p className="font-semibold text-[var(--ink)] text-[17px] mb-1">Upload drawings</p>

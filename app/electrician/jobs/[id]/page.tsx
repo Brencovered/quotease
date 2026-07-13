@@ -19,6 +19,7 @@ import QuickJobActionsBar from "@/components/QuickJobActionsBar";
 import JobProgressStepper from "@/components/JobProgressStepper";
 import TimesheetsPanel from "@/components/TimesheetsPanel";
 import { humanizeIntake } from "@/lib/scopeOfWorks";
+import { getCachedPriceBook, getCachedLegacyMaterials } from "@/lib/cache";
 
 const STATUS_LABELS: Record<string, string> = {
   scheduled: "Scheduled",
@@ -49,8 +50,20 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   const scopeLines = quote ? humanizeIntake(quote.intake_data) : [];
   const labourCost = (job.labour_hours ?? 0) * hourlyRate;
 
-  const [{ data: matRows }, { data: teamRows }, { data: taskRows }, boardColumns, timesheetEntries] = await Promise.all([
-    supabase.from("material_items").select("item_key, label, unit_cost").eq("profile_id", businessId).eq("trade", job.trade ?? "electrician").order("label"),
+  // Materials for the plan markup panel - price book first (real supplier
+  // pricing), legacy material_items as fallback, same chain the new-quote
+  // page uses, so plan markup on an in-progress job prices identically to
+  // a brand new quote rather than falling back to stale legacy defaults.
+  const jobTrade = job.trade ?? "electrician";
+  const [tradeMaterials, { data: teamRows }, { data: taskRows }, boardColumns, timesheetEntries] = await Promise.all([
+    (async (): Promise<Array<{ item_key: string; label: string; unit_cost: number }>> => {
+      const pbItems = await getCachedPriceBook(businessId, jobTrade);
+      if (pbItems.length > 0) {
+        return pbItems.map((m) => ({ item_key: m.id, label: m.description, unit_cost: m.cost_price ?? 0 }));
+      }
+      const legacyItems = await getCachedLegacyMaterials(businessId, jobTrade);
+      return legacyItems.length > 0 ? legacyItems : [];
+    })(),
     supabase.from("team_members").select("id, name, email").eq("owner_profile_id", businessId).eq("status", "active").order("name"),
     supabase.from("job_tasks").select("*").or(`job_id.eq.${job.id}${quote ? `,quote_id.eq.${quote.id}` : ""}`).order("created_at"),
     getOrSeedBoardColumns(supabase, businessId),
@@ -58,8 +71,6 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
       ? supabase.from("timesheets").select("*").eq("job_id", job.id).order("work_date", { ascending: false }).then((r) => r.data ?? [])
       : Promise.resolve([]),
   ]);
-
-  const tradeMaterials: Array<{ item_key: string; label: string; unit_cost: number }> = matRows ?? [];
   const teamMembers: Array<{ id: string; name: string | null; email: string }> = teamRows ?? [];
   const assignedMember = teamMembers.find((m) => m.id === job.assigned_to_member_id);
 
