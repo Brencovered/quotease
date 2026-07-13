@@ -136,7 +136,7 @@ export async function middleware(request: NextRequest) {
 
   // ------------------------------------------------------------------
   // 0. Canonicalise host: redirect the production Vercel alias domains
-  //    to the real custom domain.
+  //    to the real custom domain -- PAGE requests only.
   // ------------------------------------------------------------------
   // These specific hostnames are the fixed production aliases Vercel
   // assigns to this project (confirmed via the project's domains list) --
@@ -147,6 +147,16 @@ export async function middleware(request: NextRequest) {
   // URL search engines and social scrapers treat as authoritative --
   // canonical tags already point at www.swiftscope.com.au, but an actual
   // redirect removes any ambiguity rather than relying on a hint.
+  //
+  // Deliberately excludes /api/* -- if the app is already loaded from an
+  // alias domain (e.g. someone opened quotease.vercel.app directly) and
+  // its client-side JS calls fetch("/api/..."), redirecting that call
+  // turns it into a cross-origin request. The browser then won't carry
+  // the swiftscope.com.au session cookie along, and the redirected
+  // response isn't necessarily readable back to the calling page either
+  // -- this broke "Send" on a quote for exactly this reason. API
+  // correctness matters more here than SEO canonicalisation, and
+  // robots.txt already disallows crawling /api/ anyway.
   const CANONICAL_HOST = "www.swiftscope.com.au";
   const VERCEL_ALIAS_HOSTS = new Set([
     "quotease.vercel.app",
@@ -154,7 +164,7 @@ export async function middleware(request: NextRequest) {
     "quotease-git-main-brennorris360-3348s-projects.vercel.app",
   ]);
   const requestHost = request.headers.get("host") ?? "";
-  if (VERCEL_ALIAS_HOSTS.has(requestHost)) {
+  if (!pathname.startsWith("/api/") && VERCEL_ALIAS_HOSTS.has(requestHost)) {
     const canonicalUrl = new URL(request.nextUrl.pathname + request.nextUrl.search, `https://${CANONICAL_HOST}`);
     return NextResponse.redirect(canonicalUrl, 308);
   }
