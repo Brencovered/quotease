@@ -14,6 +14,16 @@ import { getGoogleReviewsUrl } from "@/lib/seo/gbp";
 import PhotoGallery from "./_components/PhotoGallery";
 import QuoteForm from "./_components/QuoteForm";
 
+/**
+ * Temporarily off: with few tradies in the directory yet, a homeowner
+ * submitting a "request a quote" enquiry that never gets a response hurts
+ * trust more than not offering it at all. Flip back to true once there's
+ * enough directory coverage that a submitted enquiry reliably reaches a
+ * real, responsive tradie. Nothing else needs to change to re-enable --
+ * the form, API route, and DB table are untouched.
+ */
+const QUOTE_REQUESTS_ENABLED = false;
+
 /* ------------------------------------------------------------------ */
 /*  Trade colour / label maps (synced with DirectoryCard)               */
 /* ------------------------------------------------------------------ */
@@ -176,13 +186,15 @@ export default async function TradieProfilePage({
 
             {/* Right CTAs */}
             <div className="flex flex-col sm:flex-row gap-3 shrink-0">
-              <a href="#quote-form"
-                className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-8 py-3.5 rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2 whitespace-nowrap">
-                <MessageSquare size={15} /> Request a quote
-              </a>
+              {QUOTE_REQUESTS_ENABLED && (
+                <a href="#quote-form"
+                  className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-8 py-3.5 rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2 whitespace-nowrap">
+                  <MessageSquare size={15} /> Request a quote
+                </a>
+              )}
               {listing.scraped_contact_phone && (
                 <a href={`tel:${listing.scraped_contact_phone}`}
-                  className="bg-white/10 text-white font-bold text-[14px] px-6 py-3.5 rounded-xl hover:bg-white/20 transition-colors flex items-center justify-center gap-2 whitespace-nowrap">
+                  className={`${QUOTE_REQUESTS_ENABLED ? "bg-white/10 text-white hover:bg-white/20" : "bg-[#ffb400] text-[#0a1722] hover:opacity-90"} font-bold text-[14px] px-6 py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2 whitespace-nowrap`}>
                   <Phone size={15} /> Call now
                 </a>
               )}
@@ -244,7 +256,9 @@ export default async function TradieProfilePage({
                   </a>
                 )}
                 {!listing.scraped_contact_phone && !listing.website_url && (
-                  <p className="text-[12.5px] text-gray-400">No contact details on file. Request a quote above.</p>
+                  <p className="text-[12.5px] text-gray-400">
+                    {QUOTE_REQUESTS_ENABLED ? "No contact details on file. Request a quote above." : "No contact details on file."}
+                  </p>
                 )}
               </div>
             </div>
@@ -268,9 +282,11 @@ export default async function TradieProfilePage({
 
             {photos.length > 0 && <PhotoGallery photos={photos} name={listing.business_name} />}
 
-            <div id="quote-form">
-              <QuoteForm listing={{ id: listing.id, business_name: listing.business_name, scraped_contact_email: listing.scraped_contact_email }} />
-            </div>
+            {QUOTE_REQUESTS_ENABLED && (
+              <div id="quote-form">
+                <QuoteForm listing={{ id: listing.id, business_name: listing.business_name, scraped_contact_email: listing.scraped_contact_email }} />
+              </div>
+            )}
           </div>
 
           {/* RIGHT COLUMN (sticky) */}

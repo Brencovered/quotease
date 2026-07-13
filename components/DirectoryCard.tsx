@@ -1,8 +1,16 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { MapPin, Star, Phone, Globe, Mail, ChevronLeft, ChevronRight, X, Send, Check, BadgeCheck, MessageSquare } from "lucide-react";
+import Link from "next/link";
+import { MapPin, Star, Phone, Globe, Mail, ChevronLeft, ChevronRight, X, Send, Check, BadgeCheck, MessageSquare, ArrowRight } from "lucide-react";
 import { getGoogleReviewsUrl } from "@/lib/seo/gbp";
+
+// Temporarily off (kept in sync with app/directory/[slug]/page.tsx): with few
+// tradies in the directory yet, a homeowner submitting an enquiry that never
+// gets a response hurts trust more than not offering it at all. Flip back
+// once directory coverage is deep enough that a submitted enquiry reliably
+// reaches a real, responsive tradie.
+const QUOTE_REQUESTS_ENABLED = false;
 
 const TRADE_LABELS: Record<string,string> = {
   electrician:"Electrician", plumber:"Plumber", builder:"Builder",
@@ -388,10 +396,17 @@ export default function DirectoryCard({ listing, index = 0 }: { listing: Listing
 
           {/* Actions */}
           <div className="mt-auto space-y-2 pt-3 border-t border-gray-50">
-            <button onClick={() => setShowEnquiry(true)}
-              className="group w-full bg-[#0a1722] text-white font-bold text-[13.5px] py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#132538] active:scale-[0.98] transition-all">
-              <MessageSquare size={14} className="group-hover:rotate-[-6deg] transition-transform" /> Request a quote
-            </button>
+            {QUOTE_REQUESTS_ENABLED ? (
+              <button onClick={() => setShowEnquiry(true)}
+                className="group w-full bg-[#0a1722] text-white font-bold text-[13.5px] py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#132538] active:scale-[0.98] transition-all">
+                <MessageSquare size={14} className="group-hover:rotate-[-6deg] transition-transform" /> Request a quote
+              </button>
+            ) : (
+              <Link href={`/directory/${listing.id}`}
+                className="group w-full bg-[#0a1722] text-white font-bold text-[13.5px] py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#132538] active:scale-[0.98] transition-all">
+                View profile <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            )}
 
             <div className="flex gap-2 justify-center flex-wrap">
               {listing.scraped_contact_phone && (
