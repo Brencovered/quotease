@@ -16,7 +16,7 @@
 import type { Metadata } from "next";
 
 const BASE_URL = "https://www.swiftscope.com.au";
-const DEFAULT_OG = `${BASE_URL}/og-default.jpg`; // NOTE: create this 1200×630 card in /public
+const DEFAULT_OG = `${BASE_URL}/og-default-image`; // generated on request, see app/og-default-image/route.tsx
 
 // -- Canonical helpers ----------------------------------------------------
 
