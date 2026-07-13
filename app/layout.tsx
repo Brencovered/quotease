@@ -9,6 +9,7 @@ import "@fontsource/archivo/700.css";
 import "@fontsource/archivo/800.css";
 import "./globals.css";
 import Providers from "@/components/Providers";
+import OrganizationSchema from "@/components/seo/OrganizationSchema";
 
 export const metadata: Metadata = {
   title: "Swiftscope - quote it, send it, win the job",
@@ -46,6 +47,7 @@ export default function RootLayout({
         <link rel="mask-icon" href="/favicon.svg" color="#1c252d" />
         <meta name="msapplication-TileColor" content="#1c252d" />
         <meta name="msapplication-config" content="/browserconfig.xml" />
+        <OrganizationSchema />
       </head>
       <body className="min-h-full flex flex-col">
         <Providers>{children}</Providers>
