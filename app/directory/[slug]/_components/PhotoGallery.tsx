@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function PhotoGallery({
@@ -21,11 +22,12 @@ export default function PhotoGallery({
 
       {/* Main photo */}
       <div className="relative aspect-video rounded-xl overflow-hidden bg-gray-100 mb-2">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src={`/api/places/photo?ref=${visible[idx]}&maxw=800`}
           alt={`${name} - photo ${idx + 1}`}
-          className="w-full h-full object-cover"
+          fill
+          sizes="(max-width: 640px) 100vw, 600px"
+          className="object-cover"
         />
         {visible.length > 1 && (
           <>
@@ -65,15 +67,16 @@ export default function PhotoGallery({
             <button
               key={ref}
               onClick={() => setIdx(i)}
-              className={`w-16 h-16 rounded-lg overflow-hidden shrink-0 border-2 transition-colors ${
+              className={`relative w-16 h-16 rounded-lg overflow-hidden shrink-0 border-2 transition-colors ${
                 i === idx ? "border-[#ffb400]" : "border-transparent"
               }`}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={`/api/places/photo?ref=${ref}&maxw=150`}
                 alt={`${name} thumbnail ${i + 1}`}
-                className="w-full h-full object-cover"
+                fill
+                sizes="64px"
+                className="object-cover"
               />
             </button>
           ))}

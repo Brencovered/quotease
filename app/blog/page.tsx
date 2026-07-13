@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import Link from "next/link";
+import Image from "next/image";
 import MarketingNav from "@/components/MarketingNav";
 import { ArrowRight, Calendar, Tag } from "lucide-react";
 
@@ -64,9 +65,9 @@ export default async function BlogPage() {
         {featured && (
           <Link href={`/blog/${featured.slug}`} className="group block mb-12">
             <div className="grid md:grid-cols-2 gap-0 rounded-2xl overflow-hidden border border-[#e8ecef] hover:border-[#ffb400] hover:shadow-lg transition-all">
-              <div className="aspect-[16/9] md:aspect-auto overflow-hidden bg-[#f8f9fa]">
+              <div className="relative aspect-[16/9] md:aspect-auto overflow-hidden bg-[#f8f9fa]">
                 {featured.cover_url
-                  ? <img src={featured.cover_url} alt={featured.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  ? <Image src={featured.cover_url} alt={featured.title} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover group-hover:scale-105 transition-transform duration-500" />
                   : <div className="w-full h-full min-h-[240px] bg-gradient-to-br from-[#0a1722] to-[#1a3a52] flex items-center justify-center">
                       <span className="font-display text-[#ffb400] text-[2rem] opacity-30">Swiftscope</span>
                     </div>
@@ -100,9 +101,9 @@ export default async function BlogPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {rest.map(post => (
               <Link key={post.id} href={`/blog/${post.slug}`} className="group flex flex-col rounded-2xl border border-[#e8ecef] hover:border-[#ffb400] hover:shadow-lg transition-all overflow-hidden">
-                <div className="aspect-[16/9] overflow-hidden bg-[#f8f9fa]">
+                <div className="relative aspect-[16/9] overflow-hidden bg-[#f8f9fa]">
                   {post.cover_url
-                    ? <img src={post.cover_url} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    ? <Image src={post.cover_url} alt={post.title} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover group-hover:scale-105 transition-transform duration-500" />
                     : <div className="w-full h-full bg-gradient-to-br from-[#0a1722] to-[#1a3a52] flex items-center justify-center">
                         <span className="font-display text-[#ffb400] opacity-20 text-[1.4rem]">Swiftscope</span>
                       </div>

@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import MarketingNav from "@/components/MarketingNav";
 import { ArrowLeft, Calendar, Tag, Clock, BookOpen, Quote, CheckCircle, ArrowRight, BarChart3, ExternalLink } from "lucide-react";
 
@@ -602,7 +603,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       {/* Cover image */}
       {post.cover_url && (
         <div className="w-full h-[28vh] sm:h-[32vh] max-h-[340px] overflow-hidden bg-[#f8f9fa] relative">
-          <img src={post.cover_url} alt={post.title} className="w-full h-full object-cover object-center" />
+          <Image src={post.cover_url} alt={post.title} fill priority sizes="100vw" className="object-cover object-center" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10" />
         </div>
       )}
@@ -652,7 +653,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             {/* Author & date */}
             <div className="flex items-center gap-4 text-[13px] text-[#8aa4b4] mb-10 pb-8 border-b-2 border-[#e8ecef]">
               {post.author_avatar && (
-                <img src={post.author_avatar} alt={post.author_name} className="w-10 h-10 rounded-full object-cover border-2 border-[#e8ecef]" />
+                <Image src={post.author_avatar} alt={post.author_name} width={40} height={40} className="w-10 h-10 rounded-full object-cover border-2 border-[#e8ecef]" />
               )}
               {!post.author_avatar && post.author_name && (
                 <div className="w-10 h-10 rounded-full bg-[#0a1722] text-[#ffb400] flex items-center justify-center font-display text-[16px] font-bold">
@@ -721,6 +722,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 case "image":
                   return (
                     <figure key={i} className="my-8">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary admin-pasted URL, not a whitelistable domain like cover_url */}
                       <img src={block.src} alt={block.alt} className="w-full rounded-2xl" />
                       {block.alt && <figcaption className="text-center text-[12px] text-[#8aa4b4] mt-2">{block.alt}</figcaption>}
                     </figure>
@@ -787,8 +789,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               {related.map(p => (
                 <Link key={p.id} href={`/blog/${p.slug}`} className="group bg-white rounded-2xl border border-[#e8ecef] overflow-hidden hover:border-[#ffb400] hover:shadow-lg transition-all">
                   {p.cover_url && (
-                    <div className="aspect-[16/9] overflow-hidden">
-                      <img src={p.cover_url} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <div className="relative aspect-[16/9] overflow-hidden">
+                      <Image src={p.cover_url} alt={p.title} fill sizes="(max-width: 640px) 100vw, 33vw" className="object-cover group-hover:scale-105 transition-transform duration-500" />
                     </div>
                   )}
                   <div className="p-5">

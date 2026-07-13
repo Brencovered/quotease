@@ -224,16 +224,28 @@ input[type="radio"] {
 }
 .stamp-wobble { animation: qstamp 3.2s ease-in-out infinite; }
 
-@keyframes shimmer {
-  0%   { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
+/* Animates a translateX transform on an overlay pseudo-element instead of
+   background-position - transform/opacity are compositor-only properties
+   (no repaint needed each frame), whereas background-position forces a
+   paint on the whole element every frame. Flagged by Lighthouse as a
+   non-composited animation; same visual result, cheaper to run. */
 .shimmer {
-  background: linear-gradient(90deg, var(--line-subtle) 25%, #f5f7f9 37%, var(--line-subtle) 63%);
-  background-size: 200% 100%;
-  animation: shimmer 1.6s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+  background: var(--line-subtle);
+}
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, #f5f7f9, transparent);
+  transform: translateX(-100%);
+  animation: shimmer-slide 1.6s ease-in-out infinite;
+}
+@keyframes shimmer-slide {
+  100% { transform: translateX(100%); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .reveal, .stamp-wobble, .shimmer { animation: none; }
+  .reveal, .stamp-wobble, .shimmer::after { animation: none; }
 }
