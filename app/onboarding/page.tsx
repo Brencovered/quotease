@@ -109,6 +109,13 @@ export default function OnboardingPage() {
     loadProfile();
   }, []);
 
+  // Fire the one-time welcome email (+ admin new-signup notification).
+  // Safe to call more than once - the route only ever sends on the first
+  // call that finds profiles.welcome_email_sent_at unset.
+  useEffect(() => {
+    fetch("/api/onboarding/welcome", { method: "POST" }).catch(() => {});
+  }, []);
+
   // Auto-redirect after completion
   useEffect(() => {
     if (!completed) return;
