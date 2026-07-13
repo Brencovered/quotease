@@ -7,7 +7,8 @@ import {
   Upload, Download, SkipForward, ArrowRight, ArrowLeft,
   Check, Package, Monitor, Smartphone, ClipboardList,
   HardHat, PenTool, FileText, Wrench, TrendingUp,
-  Loader2, Sparkles, MapPin, AlertCircle,
+  Loader2, Sparkles, MapPin, AlertCircle, Users, FileUp,
+  ExternalLink, X, Minus, Plus,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -44,9 +45,10 @@ const QUOTE_FREQUENCY_OPTIONS = [
 
 const STEPS = [
   { n: 1, label: "Your area" },
-  { n: 2, label: "Materials" },
+  { n: 2, label: "Your team" },
   { n: 3, label: "Tools you use" },
-  { n: 4, label: "How you quote" },
+  { n: 4, label: "Pricing" },
+  { n: 5, label: "How you quote" },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -61,15 +63,25 @@ export default function OnboardingPage() {
   const [completed, setCompleted] = useState(false);
   const [redirectCountdown, setRedirectCountdown] = useState(5);
 
-  // Step 2: Materials upload
+  // Step 2: Team size
+  const [teamSize, setTeamSize] = useState<number>(1);
+
+  // Step 4: Supplier CSV upload (one path within the pricing step)
   const [csvMessage, setCsvMessage] = useState<string | null>(null);
   const [hasUploaded, setHasUploaded] = useState(false);
   const [uploading, setUploading] = useState(false);
 
+  // Step 4: Pricing setup -- which path the user picked, plus AI quote upload state
+  const [pricingTab, setPricingTab] = useState<"quotes" | "csv" | "xero" | "later">("quotes");
+  const [quoteFiles, setQuoteFiles] = useState<File[]>([]);
+  const [extracting, setExtracting] = useState(false);
+  const [extractMessage, setExtractMessage] = useState<string | null>(null);
+  const [extractedCount, setExtractedCount] = useState(0);
+
   // Step 3: Digital tools
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
 
-  // Step 4: Quote frequency
+  // Step 5: Quote frequency
   const [quoteFrequency, setQuoteFrequency] = useState("");
 
   // Error handling
@@ -87,10 +99,11 @@ export default function OnboardingPage() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: profile } = await supabase.from("profiles").select("suburb, digital_tools, quote_frequency").eq("id", user.id).single();
+      const { data: profile } = await supabase.from("profiles").select("suburb, digital_tools, quote_frequency, team_size").eq("id", user.id).single();
       if (profile?.suburb) setSuburb(profile.suburb);
       if (profile?.digital_tools) setSelectedTools(profile.digital_tools);
       if (profile?.quote_frequency) setQuoteFrequency(profile.quote_frequency);
+      if (profile?.team_size) setTeamSize(profile.team_size);
     }
     loadProfile();
   }, []);
@@ -109,6 +122,47 @@ export default function OnboardingPage() {
 
   function toggleTool(key: string) {
     setSelectedTools((p) => p.includes(key) ? p.filter((k) => k !== key) : [...p, key]);
+  }
+
+  function addQuoteFiles(files: FileList | null) {
+    if (!files) return;
+    const next = [...quoteFiles, ...Array.from(files)].slice(0, 5);
+    setQuoteFiles(next);
+    setExtractMessage(null);
+  }
+
+  function removeQuoteFile(index: number) {
+    setQuoteFiles((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function handleExtractPricing() {
+    if (quoteFiles.length === 0) return;
+    setExtracting(true);
+    setExtractMessage(null);
+
+    const formData = new FormData();
+    quoteFiles.forEach((f) => formData.append("files", f));
+
+    try {
+      const res = await fetch("/api/onboarding/extract-pricing", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setExtractMessage(data.error || "Extraction failed. Please try again, or skip this step.");
+        setExtractedCount(0);
+      } else if (data.imported === 0) {
+        setExtractMessage(data.message || "No priced items found in those quotes -- you can still add pricing manually later.");
+        setExtractedCount(0);
+      } else {
+        setExtractMessage(`Added ${data.imported} priced item${data.imported !== 1 ? "s" : ""} to your price book from ${quoteFiles.length} quote${quoteFiles.length !== 1 ? "s" : ""}.`);
+        setExtractedCount(data.imported);
+      }
+    } catch {
+      setExtractMessage("Network error. Please check your connection and try again.");
+      setExtractedCount(0);
+    } finally {
+      setExtracting(false);
+    }
   }
 
   async function handleCsvUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -169,6 +223,7 @@ export default function OnboardingPage() {
       const updates: Record<string, unknown> = {
         onboarded_at: new Date().toISOString(),
         suburb: suburb.trim() || null,
+        team_size: teamSize,
         digital_tools: selectedTools.length > 0 ? selectedTools : null,
         quote_frequency: quoteFrequency || null,
       };
@@ -205,7 +260,7 @@ export default function OnboardingPage() {
   }
 
   function handleContinue() {
-    if (step < 4) {
+    if (step < STEPS.length) {
       setStep((s) => s + 1);
       setCsvMessage(null);
       setError(null);
@@ -215,7 +270,7 @@ export default function OnboardingPage() {
   }
 
   function handleSkip() {
-    if (step < 4) {
+    if (step < STEPS.length) {
       setStep((s) => s + 1);
       setCsvMessage(null);
       setError(null);
@@ -343,45 +398,41 @@ export default function OnboardingPage() {
             <div className="stepEnter" key="step2">
               <div className="flex items-center gap-3 mb-5">
                 <div className="w-11 h-11 rounded-xl bg-[var(--navy)] flex items-center justify-center">
-                  <Package size={20} className="text-[var(--amber)]" />
+                  <Users size={20} className="text-[var(--amber)]" />
                 </div>
                 <div>
-                  <h1 className="font-display text-[26px] text-[var(--ink)]">Upload your supplier pricing</h1>
-                  <p className="text-[13px] text-[var(--ink-faint)]">Optional - skip if you don&apos;t have one ready</p>
+                  <h1 className="font-display text-[26px] text-[var(--ink)]">How big is your team?</h1>
+                  <p className="text-[13px] text-[var(--ink-faint)]">Just you, or a full crew?</p>
                 </div>
               </div>
 
               <p className="text-[14px] text-[var(--ink-soft)] leading-relaxed mb-6">
-                If you have a supplier price list or materials list from your regular supplier, upload it here and we&apos;ll automatically add it to your price book. This saves you hours of manual entry.
+                Including yourself. This just helps us understand who&apos;s using Swiftscope -- you can invite your team anytime later from Settings.
               </p>
 
-              {/* Upload area */}
-              <div className="border-2 border-dashed border-[var(--line)] rounded-2xl p-8 text-center mb-4 hover:border-[var(--amber)] hover:bg-[var(--amber-light)]/20 transition-all">
-                <Upload size={32} className="text-[var(--ink-faint)] mx-auto mb-3" />
-                <p className="text-[14px] font-semibold text-[var(--ink)] mb-1">Drop your CSV here or click to browse</p>
-                <p className="text-[12px] text-[var(--ink-faint)] mb-4">Xero, MYOB, or any CSV with item codes and prices</p>
-                <label className={`btn-primary inline-flex cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
-                  {uploading ? <><Loader2 size={14} className="animate-spin" /> Uploading...</> : <><Upload size={14} /> Select file</>}
-                  <input type="file" accept=".csv" className="hidden" onChange={handleCsvUpload} disabled={uploading} />
-                </label>
-              </div>
-
-              {csvMessage && (
-                <div className={`rounded-xl px-4 py-3 mb-4 text-[13px] font-semibold ${hasUploaded ? "bg-green-50 text-green-700 border border-green-200" : "bg-[var(--amber-light)] text-[var(--amber-deep)] border border-[var(--amber)]/20"}`}>
-                  {csvMessage}
-                </div>
-              )}
-
-              <div className="flex items-center gap-2 mb-6">
-                <button onClick={() => {}} className="text-[12px] text-[var(--ink-faint)] hover:text-[var(--ink-soft)] font-semibold flex items-center gap-1 transition-colors">
-                  <Download size={12} /> Download a template
+              <div className="flex items-center justify-center gap-6 mb-6">
+                <button
+                  onClick={() => setTeamSize((n) => Math.max(1, n - 1))}
+                  className="w-12 h-12 rounded-full border-2 border-[var(--line)] flex items-center justify-center hover:border-[var(--navy)]/40 transition-colors"
+                  aria-label="Decrease"
+                >
+                  <Minus size={18} className="text-[var(--ink)]" />
                 </button>
-                <span className="text-[var(--line-subtle)]">|</span>
-                <span className="text-[12px] text-[var(--ink-faint)]">Supported: Xero, MYOB, custom CSV</span>
+                <div className="text-center min-w-[80px]">
+                  <p className="font-display text-[40px] text-[var(--ink)] leading-none">{teamSize}</p>
+                  <p className="text-[12px] text-[var(--ink-faint)] mt-1">{teamSize === 1 ? "just me" : "people"}</p>
+                </div>
+                <button
+                  onClick={() => setTeamSize((n) => Math.min(50, n + 1))}
+                  className="w-12 h-12 rounded-full border-2 border-[var(--line)] flex items-center justify-center hover:border-[var(--navy)]/40 transition-colors"
+                  aria-label="Increase"
+                >
+                  <Plus size={18} className="text-[var(--ink)]" />
+                </button>
               </div>
 
               <TipBox icon={Sparkles}>
-                Most suppliers can email you a price list in CSV format. Just ask your rep for an &quot;item price export.&quot;
+                Swiftscope is $45/month flat, unlimited users -- no per-seat pricing whether it&apos;s just you or a crew of ten.
               </TipBox>
             </div>
           )}
@@ -432,8 +483,168 @@ export default function OnboardingPage() {
           )}
 
           {/* ── STEP 4: How often do you quote from site? ── */}
+          {/* ── STEP 4: Get your pricing set up ── */}
           {step === 4 && (
             <div className="stepEnter" key="step4">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-11 h-11 rounded-xl bg-[var(--navy)] flex items-center justify-center">
+                  <Package size={20} className="text-[var(--amber)]" />
+                </div>
+                <div>
+                  <h1 className="font-display text-[26px] text-[var(--ink)]">Get your pricing set up</h1>
+                  <p className="text-[13px] text-[var(--ink-faint)]">Pick whichever&apos;s fastest for you -- all optional</p>
+                </div>
+              </div>
+
+              {/* Tabs */}
+              <div className="grid grid-cols-2 gap-2 mb-6">
+                {[
+                  { key: "quotes" as const, label: "Upload past quotes", icon: FileUp, badge: "AI" },
+                  { key: "csv" as const, label: "Supplier CSV", icon: Upload },
+                  { key: "xero" as const, label: "Connect Xero", icon: TrendingUp },
+                  { key: "later" as const, label: "I'll do this later", icon: SkipForward },
+                ].map((tab) => {
+                  const on = pricingTab === tab.key;
+                  return (
+                    <button key={tab.key} onClick={() => setPricingTab(tab.key)}
+                      className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 font-semibold transition-all text-left ${
+                        on ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] text-[var(--ink)] hover:border-[var(--navy)]/40"
+                      }`}>
+                      <tab.icon size={15} className={on ? "text-[var(--amber)]" : "text-[var(--ink-faint)]"} />
+                      <span className="text-[12.5px] flex-1">{tab.label}</span>
+                      {tab.badge && (
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${on ? "bg-[var(--amber)] text-[var(--navy)]" : "bg-[var(--amber-light)] text-[var(--amber-deep)]"}`}>{tab.badge}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Upload past quotes (AI) */}
+              {pricingTab === "quotes" && (
+                <>
+                  <p className="text-[14px] text-[var(--ink-soft)] leading-relaxed mb-6">
+                    Upload 3-5 quotes you&apos;ve sent to customers before (PDF or photo). Our AI reads them and pulls the priced line items straight into your price book -- your own real pricing, not generic defaults.
+                  </p>
+
+                  <div className="border-2 border-dashed border-[var(--line)] rounded-2xl p-8 text-center mb-4 hover:border-[var(--amber)] hover:bg-[var(--amber-light)]/20 transition-all">
+                    <FileUp size={32} className="text-[var(--ink-faint)] mx-auto mb-3" />
+                    <p className="text-[14px] font-semibold text-[var(--ink)] mb-1">Drop your quotes here or click to browse</p>
+                    <p className="text-[12px] text-[var(--ink-faint)] mb-4">PDF, JPG, PNG, or WebP -- up to 5 files</p>
+                    <label className={`btn-primary inline-flex cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform ${quoteFiles.length >= 5 ? "opacity-50 pointer-events-none" : ""}`}>
+                      <Upload size={14} /> Select files
+                      <input type="file" accept=".pdf,image/*" multiple className="hidden"
+                        onChange={(e) => { addQuoteFiles(e.target.files); e.target.value = ""; }}
+                        disabled={quoteFiles.length >= 5} />
+                    </label>
+                  </div>
+
+                  {quoteFiles.length > 0 && (
+                    <div className="space-y-1.5 mb-4">
+                      {quoteFiles.map((f, i) => (
+                        <div key={`${f.name}-${i}`} className="flex items-center gap-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg px-3 py-2">
+                          <FileText size={13} className="text-[var(--ink-faint)] shrink-0" />
+                          <span className="text-[12.5px] text-[var(--ink)] flex-1 truncate">{f.name}</span>
+                          <button onClick={() => removeQuoteFile(i)} className="text-[var(--ink-faint)] hover:text-[var(--ink)]">
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {quoteFiles.length > 0 && (
+                    <button onClick={handleExtractPricing} disabled={extracting}
+                      className="btn-primary w-full mb-4 disabled:opacity-50">
+                      {extracting ? <><Loader2 size={14} className="animate-spin" /> Reading your quotes...</> : <><Sparkles size={14} /> Extract pricing from {quoteFiles.length} quote{quoteFiles.length !== 1 ? "s" : ""}</>}
+                    </button>
+                  )}
+
+                  {extractMessage && (
+                    <div className={`rounded-xl px-4 py-3 mb-4 text-[13px] font-semibold ${extractedCount > 0 ? "bg-green-50 text-green-700 border border-green-200" : "bg-[var(--amber-light)] text-[var(--amber-deep)] border border-[var(--amber)]/20"}`}>
+                      {extractMessage}
+                    </div>
+                  )}
+
+                  <TipBox icon={Sparkles}>
+                    Messier quotes are fine -- the AI skips anything it isn&apos;t confident about rather than guessing at a price.
+                  </TipBox>
+                </>
+              )}
+
+              {/* Upload supplier CSV */}
+              {pricingTab === "csv" && (
+                <>
+                  <p className="text-[14px] text-[var(--ink-soft)] leading-relaxed mb-6">
+                    If you have a supplier price list or materials list, upload it here and we&apos;ll add it straight to your price book.
+                  </p>
+
+                  <div className="border-2 border-dashed border-[var(--line)] rounded-2xl p-8 text-center mb-4 hover:border-[var(--amber)] hover:bg-[var(--amber-light)]/20 transition-all">
+                    <Upload size={32} className="text-[var(--ink-faint)] mx-auto mb-3" />
+                    <p className="text-[14px] font-semibold text-[var(--ink)] mb-1">Drop your CSV here or click to browse</p>
+                    <p className="text-[12px] text-[var(--ink-faint)] mb-4">Xero, MYOB, or any CSV with item codes and prices</p>
+                    <label className={`btn-primary inline-flex cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
+                      {uploading ? <><Loader2 size={14} className="animate-spin" /> Uploading...</> : <><Upload size={14} /> Select file</>}
+                      <input type="file" accept=".csv" className="hidden" onChange={handleCsvUpload} disabled={uploading} />
+                    </label>
+                  </div>
+
+                  {csvMessage && (
+                    <div className={`rounded-xl px-4 py-3 mb-4 text-[13px] font-semibold ${hasUploaded ? "bg-green-50 text-green-700 border border-green-200" : "bg-[var(--amber-light)] text-[var(--amber-deep)] border border-[var(--amber)]/20"}`}>
+                      {csvMessage}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 mb-6">
+                    <button onClick={() => {}} className="text-[12px] text-[var(--ink-faint)] hover:text-[var(--ink-soft)] font-semibold flex items-center gap-1 transition-colors">
+                      <Download size={12} /> Download a template
+                    </button>
+                    <span className="text-[var(--line-subtle)]">|</span>
+                    <span className="text-[12px] text-[var(--ink-faint)]">Supported: Xero, MYOB, custom CSV</span>
+                  </div>
+
+                  <TipBox icon={Sparkles}>
+                    Most suppliers can email you a price list in CSV format. Just ask your rep for an &quot;item price export.&quot;
+                  </TipBox>
+                </>
+              )}
+
+              {/* Connect Xero */}
+              {pricingTab === "xero" && (
+                <>
+                  <p className="text-[14px] text-[var(--ink-soft)] leading-relaxed mb-6">
+                    Connecting Xero syncs your chart of accounts and contacts for invoicing -- it&apos;s a quick OAuth step best done from Settings so it doesn&apos;t interrupt onboarding.
+                  </p>
+                  <div className="rounded-xl border-2 border-[var(--line)] px-4 py-4 mb-6 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-bold text-[14px] text-[var(--ink)]">Connect Xero</p>
+                      <p className="text-[12.5px] text-[var(--ink-faint)]">Available anytime from Settings &gt; Integrations</p>
+                    </div>
+                    <ExternalLink size={16} className="text-[var(--ink-faint)] shrink-0" />
+                  </div>
+                  <TipBox icon={Sparkles}>
+                    Finish onboarding now -- you&apos;ll find the Xero connect button waiting for you in Settings.
+                  </TipBox>
+                </>
+              )}
+
+              {/* Do this later */}
+              {pricingTab === "later" && (
+                <>
+                  <p className="text-[14px] text-[var(--ink-soft)] leading-relaxed mb-6">
+                    No problem -- you can add pricing manually as you quote, or come back to upload a CSV or past quotes anytime from Settings &gt; Price Book.
+                  </p>
+                  <TipBox icon={Sparkles}>
+                    Swiftscope still works great with an empty price book -- you can type in prices as you go and they&apos;ll be remembered for next time.
+                  </TipBox>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ── STEP 5: How often do you quote from site? ── */}
+          {step === 5 && (
+            <div className="stepEnter" key="step5">
               <div className="flex items-center gap-3 mb-5">
                 <div className="w-11 h-11 rounded-xl bg-[var(--navy)] flex items-center justify-center">
                   <HardHat size={20} className="text-[var(--amber)]" />
@@ -496,13 +707,13 @@ export default function OnboardingPage() {
                 <ArrowLeft size={14} /> Back
               </button>
             )}
-            <button onClick={handleContinue} disabled={step === 4 && saving}
+            <button onClick={handleContinue} disabled={step === STEPS.length && saving}
               className="btn-primary flex-1 disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-[1.02] active:scale-[0.98]">
-              {saving ? <><Loader2 size={14} className="animate-spin" /> Saving...</> : step === 4 ? "Start quoting" : <>Continue <ArrowRight size={14} /></>}
+              {saving ? <><Loader2 size={14} className="animate-spin" /> Saving...</> : step === STEPS.length ? "Start quoting" : <>Continue <ArrowRight size={14} /></>}
             </button>
           </div>
 
-          {step < 4 && (
+          {step < STEPS.length && (
             <button onClick={handleSkip}
               className="w-full text-center text-[13px] text-[var(--ink-faint)] hover:text-[var(--ink-soft)] mt-3 py-2 transition-colors font-semibold flex items-center justify-center gap-1.5">
               <SkipForward size={13} /> Skip this step

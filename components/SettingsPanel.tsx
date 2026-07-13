@@ -151,16 +151,16 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
     }
   }
 
-  async function toggle(key: string) {
-    const adding = !trades.includes(key);
-    const next   = adding ? [...trades, key] : trades.filter((t) => t !== key);
+  async function selectTrade(key: string) {
+    if (trades.length === 1 && trades[0] === key) return; // already selected
+    const next = [key];
     setTrades(next); setTradeSaving(true); setTradeSaved(false);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       const businessId = await getActiveBusinessId(supabase, user.id);
       await supabase.from("profiles").update({ trades: next }).eq("id", businessId);
-      if (adding && TRADE_SEED[key]) {
+      if (TRADE_SEED[key]) {
         await supabase.from("material_items").upsert(
           TRADE_SEED[key].map((m) => ({ profile_id: businessId, trade: key, item_key: m.item_key, label: m.label, unit_cost: m.unit_cost })),
           { onConflict: "profile_id,item_key" }
@@ -236,17 +236,17 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
       {/* Trades */}
       <div className="card mb-4">
         <div className="flex items-center justify-between mb-1">
-          <p className="section-tag">Trades</p>
+          <p className="section-tag">Trade</p>
           {tradeSaving && <span className="text-[12px] text-[var(--ink-faint)]">Saving...</span>}
           {tradeSaved  && <span className="text-[12px] text-[var(--green)] font-semibold flex items-center gap-1"><Check size={12}/>Saved</span>}
         </div>
-        <p className="font-semibold text-[var(--ink)] mb-1">Your active trades</p>
-        <p className="text-[13px] text-[var(--ink-faint)] mb-3">Toggle trades on or off. Default material prices are loaded automatically.</p>
+        <p className="font-semibold text-[var(--ink)] mb-1">Your trade</p>
+        <p className="text-[13px] text-[var(--ink-faint)] mb-3">Swiftscope is tailored to one trade per account -- quote builder, price book, and materials all match whichever you pick here.</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {TRADES.map((t) => {
             const on = trades.includes(t.key);
             return (
-              <button key={t.key} onClick={() => !tradeSaving && toggle(t.key)} disabled={tradeSaving}
+              <button key={t.key} onClick={() => !tradeSaving && selectTrade(t.key)} disabled={tradeSaving}
                 className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 font-semibold transition-colors text-left ${
                   on ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] text-[var(--ink)] hover:border-[var(--navy)]/40"
                 }`}>
