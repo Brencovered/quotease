@@ -379,6 +379,14 @@ function CameraPage() {
   const [calibStep,   setCalibStep]   = useState<"pick" | "target" | "confirm">("pick");
   const [calibObj,    setCalibObj]    = useState(REFERENCE_OBJECTS[0]);
   const [calibCustom, setCalibCustom] = useState("");
+  // Box size as a fraction of screen width - user-adjustable (see
+  // selectCalibObj/resizeCalibBox) instead of the fixed 60% it used to be.
+  // A small reference object like a GPO (115mm) at a comfortable standing
+  // distance only fills a small fraction of the frame - forcing the box to
+  // always be 60vw meant walking right up to the wall to make it fit,
+  // which then leaves almost no field of view left to actually mark up
+  // anything else in the room.
+  const [calibBoxFrac, setCalibBoxFrac] = useState(0.6);
 
   /* ═══════════════════════════════════════════════════════════════
      CAMERA SETUP
@@ -682,7 +690,14 @@ function CameraPage() {
 
   function selectCalibObj(obj: typeof REFERENCE_OBJECTS[0]) {
     setCalibObj(obj);
-    setCalibStep("target");   // show fixed target box
+    // Sensible starting size per object - small objects (GPO, switch,
+    // brick, tile) start with a small box since they're small in real
+    // life; door/ceiling start bigger. Just a starting point - the +/-
+    // buttons on the target screen let a tradie fine-tune it to whatever
+    // size the object actually appears at their current distance.
+    const SMALL_OBJECTS = ["gpo", "light_switch", "standard_brick", "tile_300"];
+    setCalibBoxFrac(SMALL_OBJECTS.includes(obj.key) ? 0.22 : obj.key === "custom" ? 0.4 : 0.5);
+    setCalibStep("target");   // show adjustable target box
   }
 
   function lockAndCalibrate() {
@@ -695,8 +710,8 @@ function CameraPage() {
       return;
     }
 
-    // Fixed box is 60% of screen width, centred
-    const boxWidthPx = o.width * 0.60;
+    // Box width in px reflects whatever size the user has adjusted it to
+    const boxWidthPx = o.width * calibBoxFrac;
     try {
       const pxPerMetre = SpatialMeasurementEngine.calculateCalibrationFactor(calibObj.key, boxWidthPx);
       setRoomCalibration(activeRoom.roomId, {
@@ -715,7 +730,7 @@ function CameraPage() {
     if (isNaN(real) || real <= 0) return;
     const o = overlayRef.current;
     if (!o) return;
-    const boxWidthPx = o.width * 0.60;
+    const boxWidthPx = o.width * calibBoxFrac;
     const pxPerMetre = boxWidthPx / real;
     setRoomCalibration(activeRoom.roomId, { objectType: "custom", pxPerMetre, isCalibrated: true });
     setCalibMode(false); setCalibStep("pick"); setCalibCustom("");
@@ -901,12 +916,12 @@ function CameraPage() {
   // Spec: if not calibrated, show lock screen (can still skip)
   const isLocked = !calibration && !stampMode;
 
-  // Fixed calibration target box dimensions
-  // Aspect ratio matches selected object: width:height
+  // Calibration target box dimensions - width is user-adjustable
+  // (calibBoxFrac), aspect ratio matches the selected object: width:height
   const objDim = OBJECT_DIMENSIONS[calibObj.key] ?? { width: 1, height: 0.5 };
   const targetAspect = calibObj.useWidth ? (objDim.width / objDim.height) : (objDim.height / objDim.width);
-  const targetW = "60vw";
-  const targetH = `calc(60vw / ${targetAspect})`;
+  const targetW = `${calibBoxFrac * 100}vw`;
+  const targetH = `calc(${calibBoxFrac * 100}vw / ${targetAspect})`;
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black">
@@ -1012,10 +1027,31 @@ function CameraPage() {
             </div>
           </div>
 
+          {/* Resize controls - grow/shrink the box to match the object's
+              size at whatever distance the tradie is standing, instead of
+              forcing them to walk up to the wall to fit a fixed-size box */}
+          <div className="absolute z-20 flex items-center gap-3" style={{ pointerEvents: "auto", bottom: "16rem", left: 0, right: 0, justifyContent: "center" }}>
+            <button
+              onClick={() => setCalibBoxFrac((f) => Math.max(0.08, Math.round((f - 0.04) * 100) / 100))}
+              className="w-11 h-11 rounded-full bg-black/70 border-2 border-[#00FF88] flex items-center justify-center text-[#00FF88]"
+              aria-label="Shrink box"
+            >
+              <Minus size={18} />
+            </button>
+            <span className="bg-black/70 text-white text-[11px] font-bold px-3 py-1.5 rounded-full">Resize box</span>
+            <button
+              onClick={() => setCalibBoxFrac((f) => Math.min(0.92, Math.round((f + 0.04) * 100) / 100))}
+              className="w-11 h-11 rounded-full bg-black/70 border-2 border-[#00FF88] flex items-center justify-center text-[#00FF88]"
+              aria-label="Grow box"
+            >
+              <Plus size={18} />
+            </button>
+          </div>
+
           {/* Instruction text below box */}
           <div className="absolute bottom-48 left-0 right-0 flex flex-col items-center gap-2" style={{ pointerEvents: "none" }}>
             <div className="bg-black/70 text-white text-[12px] font-bold px-4 py-2 rounded-full text-center mx-4">
-              Position the box over the {calibObj.label.toLowerCase()} then tap Lock
+              Resize the box to match the {calibObj.label.toLowerCase()}&apos;s size, then tap Lock
             </div>
             {/* Spec: Angle safeguard warning */}
             <div className="flex items-center gap-1.5 bg-black/60 text-amber-400 text-[11px] font-semibold px-3 py-1.5 rounded-full">
@@ -1249,7 +1285,7 @@ function CameraPage() {
 
             <button onClick={commitAnnotation} disabled={!formItem}
               className="w-full bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] py-3.5 rounded-xl border-0 flex items-center justify-center gap-1.5">
-              <Check size={15} /> Add annotation
+              <Check size={15} /> Add to markup
             </button>
           </div>
         </div>

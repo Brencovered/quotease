@@ -113,7 +113,7 @@ export default function LiveSiteAnnotation({
       description:  item.label,
       quantity:     item.quantity,
       unit:         item.unit,
-      notes:        "from site annotation",
+      notes:        "from site markup",
       materialsCost: item.total ?? 0,
       labourHrs:    item.labourHrs,
     })));
@@ -130,7 +130,7 @@ export default function LiveSiteAnnotation({
             <Camera size={18} className="text-[var(--amber)]" />
           </div>
           <div>
-            <p className="font-bold text-[14px] text-[var(--ink)]">Live site annotation</p>
+            <p className="font-bold text-[14px] text-[var(--ink)]">Live site markup</p>
             <p className="text-[12.5px] text-[var(--ink-faint)]">
               Open your camera and tap or draw on the live view to mark up items. Each annotation adds to your quote automatically.
             </p>

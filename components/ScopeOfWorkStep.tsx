@@ -8,7 +8,7 @@ export type ScopeItemSource =
   | "package" | "plan_markup" | "material_bundle" | "extra";
 
 const SOURCE_LABELS: Record<ScopeItemSource, string> = {
-  manual: "Manual", annotation: "Site annotation", drawing: "Drawing takeoff",
+  manual: "Manual", annotation: "Site markup", drawing: "Drawing takeoff",
   voice: "Voice note", package: "Package", plan_markup: "Plan markup",
   material_bundle: "Material bundle", extra: "Extra",
 };
