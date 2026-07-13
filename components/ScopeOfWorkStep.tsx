@@ -32,6 +32,12 @@ export type ScopeItem = {
    *  and it's what a future recalculation pass must check before ever
    *  touching a line automatically. */
   overridden?: boolean;
+  /** Set only for lines created by toggling a site-peripheral card
+   *  (scaffolding, roof access, etc.) - lets the peripherals panel find
+   *  and remove its own line again on toggle-off without touching
+   *  `note`, which is free text a person can edit and which may show up
+   *  in quote/invoice output. */
+  peripheralKey?: string;
 };
 
 type MaterialRow = { item_key: string; label: string; unit_cost: number };

@@ -16,6 +16,8 @@ import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import CategoryMaterialPicker, { type PickerItem } from "@/components/CategoryMaterialPicker";
 import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
+import { MaterialSearchAdd, ScopeItemsList } from "@/components/ScopeOfWorkStep";
+import PeripheralsPanel from "@/components/PeripheralsPanel";
 
 const STEPS = [
   { id: "customer", label: "Customer" },
@@ -538,7 +540,24 @@ export default function GenericQuoteBuilder({
                 onClose={() => setPickingItemId(null)}
               />
             )}
+          </div>
 
+          <PeripheralsPanel trade={tradeKey ?? "default"} siteItems={siteItems} setSiteItems={setSiteItems} />
+
+          {(siteItems.length > 0 || lib.length > 0) && (
+            <div className="card">
+              <p className="section-tag mb-3">From voice, drawing extract &amp; site conditions</p>
+              <p className="text-[12.5px] text-[var(--ink-faint)] mb-3">
+                Items from live annotate, voice, drawing extract, or a toggled site condition above show up here - edit or remove anything before sending.
+              </p>
+              <div className="mb-3">
+                <MaterialSearchAdd lib={lib} onAdd={(item) => setSiteItems((prev) => [...prev, { ...item, id: Math.random().toString(36).slice(2) }])} />
+              </div>
+              <ScopeItemsList items={siteItems} setItems={setSiteItems} />
+            </div>
+          )}
+
+          <div className="card">
             {/* Running total */}
             <div className="bg-[var(--navy)] rounded-xl p-4 mt-4">
               <div className="flex justify-between text-[13.5px] mb-1.5">

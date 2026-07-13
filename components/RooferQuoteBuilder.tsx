@@ -13,6 +13,8 @@ import PackagePicker from "@/components/PackagePicker";
 import { resolveClientId } from "@/lib/resolveClientId";
 import { getActiveBusinessId } from "@/lib/team";
 import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
+import { MaterialSearchAdd, ScopeItemsList } from "@/components/ScopeOfWorkStep";
+import PeripheralsPanel from "@/components/PeripheralsPanel";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -663,6 +665,19 @@ export default function RooferQuoteBuilder({
             onDismiss={() => { setDetectedItems([]); setAnalysisResult(null); }}
           />
         )}
+      </div>
+
+      <PeripheralsPanel trade="roofer" siteItems={siteItems} setSiteItems={setSiteItems} />
+
+      <div className="card">
+        <p className="section-tag mb-3">Materials &amp; labour</p>
+        <p className="text-[12.5px] text-[var(--ink-faint)] mb-3">
+          Items from a package, plan markup, voice, live annotate, or drawing extract show up here automatically. Search below to add anything else, or build the whole scope manually.
+        </p>
+        <div className="mb-3">
+          <MaterialSearchAdd lib={lib} onAdd={(item) => setSiteItems((prev) => [...prev, { ...item, id: Math.random().toString(36).slice(2) }])} />
+        </div>
+        <ScopeItemsList items={siteItems} setItems={setSiteItems} />
       </div>
 
       {/* ── Jobs section ─────────────────────────────────────── */}

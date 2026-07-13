@@ -19,6 +19,7 @@ import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
 import { MaterialSearchAdd, ScopeItemsList, type ScopeItem } from "@/components/ScopeOfWorkStep";
+import PeripheralsPanel from "@/components/PeripheralsPanel";
 
 type MaterialRow = { item_key: string; label: string; unit_cost: number };
 
@@ -497,6 +498,9 @@ export default function PlumberQuoteBuilder({
               </p>
             </div>
           </div>
+
+          <PeripheralsPanel trade="plumber" siteItems={siteItems} setSiteItems={setSiteItems} />
+
           <div className="card">
             <p className="section-tag mb-3">Materials &amp; labour</p>
             <p className="text-[12.5px] text-[var(--ink-faint)] mb-3">

@@ -21,6 +21,7 @@ import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } fr
 import SiteAnnotationReport from "@/components/SiteAnnotationReport";
 import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
 import { MaterialSearchAdd, ScopeItemsList, type ScopeItem } from "@/components/ScopeOfWorkStep";
+import PeripheralsPanel from "@/components/PeripheralsPanel";
 import {
   calcElectricianQuote,
   ELECTRICIAN_DEFAULT_MATERIALS,
@@ -850,6 +851,8 @@ function StepScope({ intake, set, siteItems, setSiteItems, lib, manualLabourHrs,
           </p>
         </div>
       </div>
+
+      <PeripheralsPanel trade="electrician" siteItems={siteItems} setSiteItems={setSiteItems} />
 
       <div className="card">
         <p className="section-tag mb-3">Materials &amp; labour</p>
