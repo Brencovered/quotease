@@ -47,7 +47,15 @@ export default async function JobsPage() {
       boardColumns = columns;
     }
   } catch (err) {
-    console.error("Jobs page: falling back to empty list -", err);
+    // Log a safe summary rather than the raw error object: some Supabase
+    // auth failures throw/attach an object with a reference back to the
+    // internal auth client itself (mfa -> webauthn -> client -> ...circular),
+    // which crashes console.error's own serialization with "Converting
+    // circular structure to JSON" instead of surfacing the real problem.
+    console.error(
+      "Jobs page: falling back to empty list -",
+      err instanceof Error ? err.message : String(err)
+    );
   }
 
   return (

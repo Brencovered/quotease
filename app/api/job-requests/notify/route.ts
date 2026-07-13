@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { resolvePostcode } from "@/lib/resolvePostcode";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY!;
@@ -181,7 +182,13 @@ export async function POST(req: NextRequest) {
     );
 
     // Log the notification
-    await supabase.from("lead_matching_log").insert({
+    // (lead_matching_log has RLS enabled with no policies -- it's a purely
+    // internal audit trail with no per-tenant read access needed, so the
+    // admin client is used here rather than adding a public policy. The
+    // regular client's insert was silently failing before this fix, since
+    // no role had permission and the error was never checked.)
+    const admin = createAdminClient();
+    await admin.from("lead_matching_log").insert({
       request_id: requestId,
       profile_id: profile.id,
       notified_at: notifiedAt,

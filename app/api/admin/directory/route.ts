@@ -1,5 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isAdminEmail } from "@/lib/admin";
+
+async function requireAdmin(): Promise<NextResponse | null> {
+  const supabase = await createClient();
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user || !isAdminEmail(userData.user.email)) {
+    return NextResponse.json({ error: "Not authorised" }, { status: 403 });
+  }
+  return null;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function applyFilters(
@@ -45,6 +56,9 @@ function csvEscape(value: unknown): string {
 }
 
 export async function GET(req: NextRequest) {
+  const unauthorised = await requireAdmin();
+  if (unauthorised) return unauthorised;
+
   const { searchParams } = new URL(req.url);
   const trade = searchParams.get("trade") ?? "";
   const email = searchParams.get("email") ?? "";      // "yes" | "no" | ""
@@ -110,6 +124,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const unauthorised = await requireAdmin();
+  if (unauthorised) return unauthorised;
+
   const body = await req.json();
   const { id, ...updates } = body;
 
@@ -148,6 +165,9 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const unauthorised = await requireAdmin();
+  if (unauthorised) return unauthorised;
+
   const body = await req.json();
   const { ids } = body as { ids: string[] };
 

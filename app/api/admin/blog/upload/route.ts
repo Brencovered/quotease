@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { isAdminEmail } from "@/lib/admin";
 
 /* ------------------------------------------------------------------ */
 /*  POST  – upload a blog image to storage                             */
@@ -7,6 +8,11 @@ import { createClient } from "@/lib/supabase/server";
 /* ------------------------------------------------------------------ */
 export async function POST(request: Request) {
   const supabase = await createClient();
+
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user || !isAdminEmail(userData.user.email)) {
+    return NextResponse.json({ error: "Not authorised" }, { status: 403 });
+  }
 
   let file: File | null = null;
   let type = "cover";

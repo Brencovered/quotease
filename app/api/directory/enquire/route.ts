@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -62,11 +62,17 @@ export async function POST(req: NextRequest) {
   const toAddress = EMAIL_RE.test(scrapedToEmail) ? scrapedToEmail : "hello@swiftscope.com.au";
 
   /* ── 3. Save enquiry to database (always persist) ──────────────── */
-  const supabase = await createClient();
+  // Uses the admin (service-role) client rather than the session-scoped
+  // client: this insert is server-validated above and comes from anonymous
+  // homeowners with no session, so there's no meaningful RLS role to grant
+  // here. Previously this used the regular client, which failed on every
+  // submission -- Supabase's insert().select() requires a SELECT policy for
+  // the RETURNING clause too, not just an INSERT policy, and anon had none.
+  const admin = createAdminClient();
   let enquiryId: string | null = null;
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await admin
       .from("directory_enquiries")
       .insert({
         listing_id: typeof listing_id === "string" ? listing_id : null,
@@ -158,7 +164,7 @@ export async function POST(req: NextRequest) {
 
       // Update DB with error
       if (enquiryId) {
-        await supabase
+        await admin
           .from("directory_enquiries")
           .update({ email_error: errMsg })
           .eq("id", enquiryId);
@@ -172,7 +178,7 @@ export async function POST(req: NextRequest) {
 
     /* ── Success ─────────────────────────────────────────────────── */
     if (enquiryId) {
-      await supabase
+      await admin
         .from("directory_enquiries")
         .update({ email_sent: true })
         .eq("id", enquiryId);
@@ -185,7 +191,7 @@ export async function POST(req: NextRequest) {
     console.error("[directory/enquire] Exception:", err);
 
     if (enquiryId) {
-      await supabase
+      await admin
         .from("directory_enquiries")
         .update({ email_error: errMsg })
         .eq("id", enquiryId);

@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { isAdminEmail } from "@/lib/admin";
 
 /* ------------------------------------------------------------------ */
 /*  POST  – create a new blog post                                     */
 /* ------------------------------------------------------------------ */
 export async function POST(request: Request) {
   const supabase = await createClient();
+
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user || !isAdminEmail(userData.user.email)) {
+    return NextResponse.json({ error: "Not authorised" }, { status: 403 });
+  }
 
   let body: Record<string, unknown>;
   try {
@@ -50,6 +56,11 @@ export async function POST(request: Request) {
 /* ------------------------------------------------------------------ */
 export async function PUT(request: Request) {
   const supabase = await createClient();
+
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user || !isAdminEmail(userData.user.email)) {
+    return NextResponse.json({ error: "Not authorised" }, { status: 403 });
+  }
 
   let body: Record<string, unknown>;
   try {
@@ -96,6 +107,12 @@ export async function PUT(request: Request) {
 /* ------------------------------------------------------------------ */
 export async function DELETE(request: Request) {
   const supabase = await createClient();
+
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user || !isAdminEmail(userData.user.email)) {
+    return NextResponse.json({ error: "Not authorised" }, { status: 403 });
+  }
+
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
 
