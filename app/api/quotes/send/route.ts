@@ -18,18 +18,21 @@ export async function POST(request: Request) {
 
   const { data: quote, error: quoteError } = await supabase
     .from("quotes")
-    .select("*, profiles!quotes_profile_id_fkey(business_name, contact_email, contact_phone, logo_url, branding_primary_color, branding_tagline, brochure_title, brochure_tagline, brochure_color, brochure_tcs, brochure_custom_text)")
+    .select("*, profiles!quotes_profile_id_fkey(business_name, contact_email, contact_phone, logo_url, branding_primary_color, branding_tagline)")
     .eq("id", quoteId)
     .eq("profile_id", businessId)
     .single();
 
-  if (quoteError || !quote) {
-    console.error("[quotes/send] Quote not found", {
+  if (quoteError) {
+    console.error("[quotes/send] DB error looking up quote", {
       quoteId,
       businessId,
       userId: userData.user.id,
-      quoteError: quoteError?.message ?? null,
+      quoteError: quoteError.message,
     });
+    return NextResponse.json({ error: `Could not load quote: ${quoteError.message}` }, { status: 500 });
+  }
+  if (!quote) {
     return NextResponse.json({ error: "Quote not found" }, { status: 404 });
   }
   if (!quote.client_email) {
@@ -60,29 +63,25 @@ export async function POST(request: Request) {
     ? `<img src="${quote.profiles.logo_url}" alt="${business}" style="max-height:52px;max-width:200px;display:block;margin-bottom:4px;" />`
     : `<div style="font-family:Arial Black,Arial,sans-serif;font-size:20px;font-weight:900;letter-spacing:2px;color:#ffffff;">${business.toUpperCase()}</div>`;
 
-  /* ---- Build brochure HTML if profile has brochure data ---- */
+  /* ---- Build a branding strip if the profile has real branding data ---- */
   let brochureHtml = "";
   const p = quote.profiles as Record<string, unknown> | null;
-  const hasBrochureContent = !!(p?.brochure_title || p?.branding_tagline || p?.brochure_custom_text);
-  if (hasBrochureContent && quote.profiles) {
-    const bTitle = (p.brochure_title as string) || (p.business_name as string) || business;
-    const bTagline = (p.brochure_tagline as string) || (p.branding_tagline as string) || "";
-    const bColor = (p.brochure_color as string) || (p.branding_primary_color as string) || "#0a1722";
-    const bTcs = (p.brochure_tcs as string) || "";
-    const bText = (p.brochure_custom_text as string) || "";
+  const hasBrandingContent = !!p?.branding_tagline;
+  if (hasBrandingContent && quote.profiles) {
+    const bTitle = (p.business_name as string) || business;
+    const bTagline = (p.branding_tagline as string) || "";
+    const bColor = (p.branding_primary_color as string) || "#0a1722";
     const bPhone = (p.contact_phone as string) || "";
     const bEmail = (p.contact_email as string) || "";
 
     brochureHtml = `
-  <!-- Brochure section -->
+  <!-- Branding section -->
   <tr><td style="background:#ffffff;padding:32px;border-top:4px solid ${bColor};">
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr><td style="padding-bottom:16px;">
         <p style="font-family:Arial Black,Arial,sans-serif;font-size:18px;font-weight:900;color:${bColor};margin:0 0 4px;">${bTitle}</p>
-        ${bTagline ? `<p style="font-size:13px;color:#64748b;margin:0;">${bTagline}</p>` : ""}
+        <p style="font-size:13px;color:#64748b;margin:0;">${bTagline}</p>
       </td></tr>
-      ${bText ? `<tr><td style="padding-bottom:16px;"><p style="font-size:13px;color:#334155;line-height:1.6;margin:0;white-space:pre-line;">${bText.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p></td></tr>` : ""}
-      ${bTcs ? `<tr><td style="border-top:1px solid #e2e8f0;padding-top:12px;"><p style="font-size:11px;color:#94a3b8;margin:0;"><strong>Terms &amp; Conditions:</strong> ${bTcs.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p></td></tr>` : ""}
       ${(bPhone || bEmail) ? `<tr><td style="padding-top:12px;"><p style="font-size:12px;color:#64748b;margin:0;">${[bPhone, bEmail].filter(Boolean).join(" · ")}</p></td></tr>` : ""}
     </table>
   </td></tr>`;
