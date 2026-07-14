@@ -91,19 +91,41 @@ export default function VoiceNoteRecorder({
     recognition.onresult = (event) => {
       setSpeechDetected(true);
       // Deliberately ignore event.resultIndex and re-scan every result from
-      // 0 each time. Safari (especially iOS) doesn't reliably advance
-      // resultIndex, so trusting it and appending with += re-added
-      // already-finalized words on every subsequent event -- "install"
-      // becoming "install install install..." as recognition progressed.
-      // Rebuilding fresh from event.results (which holds the full history
-      // for this recognition session) and only ever ASSIGNING (never +=)
-      // makes this correct regardless of what the browser reports.
+      // 0 each time, rather than trusting the browser to tell us what's new
+      // (see below for why neither can be fully trusted).
+      //
+      // The previous version of this fix assumed each finalized result at
+      // event.results[i] is a stable, independent segment - concatenate them
+      // all in order and you get the full transcript. That's what the spec
+      // describes, but it doesn't hold on every real device: some Android
+      // Chrome builds instead report each "final" result as the CUMULATIVE
+      // transcript so far (result 1 = "need", result 2 = "need to", result
+      // 3 = "need to do", ...) rather than independent increments.
+      // Concatenating those as if they were independent produces exactly
+      // the exponential, self-repeating "need / need to / need to do /
+      // need to do a ..." stutter this component has been fixed for twice
+      // before and still hit in production.
+      //
+      // Fix: don't assume either behaviour. For each finalized result,
+      // check whether it already contains everything accumulated so far as
+      // a prefix. If so, this browser is being cumulative - the new result
+      // already IS the full text, so replace rather than append. Otherwise
+      // treat it as a genuinely independent new segment (the spec-correct
+      // case) and append as before. This is correct either way, regardless
+      // of which behaviour a given browser/OS actually exhibits.
       let finalThisSession = "";
       let interim = "";
       for (let i = 0; i < event.results.length; i++) {
         const result = event.results[i];
         if (result.isFinal) {
-          finalThisSession += result[0].transcript + " ";
+          const segment = result[0].transcript.trim();
+          if (!segment) continue;
+          const acc = finalThisSession.trim();
+          if (acc && segment.toLowerCase().startsWith(acc.toLowerCase())) {
+            finalThisSession = segment + " ";
+          } else {
+            finalThisSession += segment + " ";
+          }
         } else {
           interim += result[0].transcript;
         }
