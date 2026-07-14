@@ -11,6 +11,12 @@ import { Suspense } from "react";
 
 /* ─── Types ─────────────────────────────────────────────────────── */
 type AnnotationType = "point" | "line" | "area";
+/** Which real-world surface an annotation/calibration belongs to. A single
+ *  flat pxPerMetre factor is only accurate for objects at roughly the same
+ *  camera distance as whatever was calibrated -- a downlight on the ceiling,
+ *  a GPO on the wall, and a pipe on the floor are all at different distances
+ *  from the camera, so each surface gets its own calibration factor. */
+type Plane = "floor" | "wall" | "ceiling";
 interface Pt { x: number; y: number; }
 
 interface Annotation {
@@ -21,6 +27,10 @@ interface Annotation {
   unit: string; note: string;
   length?: number; frameData: string; colour: string;
   opacity: number; fading: boolean;
+  /** Which surface's calibration produced calculatedLength, if any --
+   *  kept for provenance so a tradie reviewing the quote can see a
+   *  measurement came from the wall calibration vs the ceiling one. */
+  plane?: Plane;
 }
 
 /* ─── Spec: CatalogItem -- maps to MaterialRow from price book ───── */
@@ -83,10 +93,19 @@ interface QuoteLineItem {
 }
 
 /* ─── Per-room calibration (spec: RoomSession) ───────────────────── */
-interface RoomCalibration {
+/** A single plane's calibration factor. */
+interface PlaneCalibration {
   objectType: string;
   pxPerMetre: number;
-  isCalibrated: boolean;
+}
+
+/** Depth-robust calibration: one factor per surface (floor/wall/ceiling)
+ *  instead of a single room-wide factor. Previously a room had exactly one
+ *  pxPerMetre value regardless of which plane was being measured, which is
+ *  only correct if every measured object sits at the same distance from
+ *  the camera as the calibration object did. */
+interface RoomCalibration {
+  planes: Partial<Record<Plane, PlaneCalibration>>;
 }
 
 interface RoomSession {
@@ -321,13 +340,17 @@ function CameraPage() {
 
   /* ── Spec: RoomSession state ─────────────────────────────────── */
   const [rooms,       setRooms]       = useState<RoomSession[]>([
-    { roomId: uid(), roomName: "Room 1", calibration: { objectType: "", pxPerMetre: 0, isCalibrated: false }, annotations: [] }
+    { roomId: uid(), roomName: "Room 1", calibration: { planes: {} }, annotations: [] }
   ]);
   const [activeRoomId, setActiveRoomId] = useState<string>("");
+  // Which surface is currently being measured/calibrated. Defaults to
+  // "wall" since GPOs, switches, and most cable/pipe runs are wall-mounted.
+  const [activePlane, setActivePlane] = useState<Plane>("wall");
 
   // Active room derived state
   const activeRoom = rooms.find(r => r.roomId === activeRoomId) ?? rooms[0];
-  const calibration = activeRoom.calibration.isCalibrated ? activeRoom.calibration : null;
+  const calibration = activeRoom.calibration.planes[activePlane] ?? null;
+  const calibratedPlaneCount = Object.keys(activeRoom.calibration.planes).length;
 
   // All annotations flat (for review/finish)
   const allAnnotations = rooms.flatMap(r => r.annotations);
@@ -340,9 +363,11 @@ function CameraPage() {
     ));
   }
 
-  function setRoomCalibration(roomId: string, cal: RoomCalibration) {
+  function setRoomCalibration(roomId: string, plane: Plane, cal: PlaneCalibration) {
     setRooms(prev => prev.map(r =>
-      r.roomId === roomId ? { ...r, calibration: cal } : r
+      r.roomId === roomId
+        ? { ...r, calibration: { planes: { ...r.calibration.planes, [plane]: cal } } }
+        : r
     ));
   }
 
@@ -359,7 +384,7 @@ function CameraPage() {
     const newRoom: RoomSession = {
       roomId: uid(),
       roomName: `Room ${rooms.length + 1}`,
-      calibration: { objectType: "", pxPerMetre: 0, isCalibrated: false },
+      calibration: { planes: {} },
       annotations: [],
     };
     setRooms(prev => [...prev, newRoom]);
@@ -635,6 +660,7 @@ function CameraPage() {
       note: "", length: calcLen ?? undefined,
       frameData: fd, colour: COLOURS[colourIdx % COLOURS.length],
       opacity: 1, fading: false,
+      plane: calcLen != null ? activePlane : undefined,
     };
     addAnnotationToRoom(ann);
     setColourIdx(i => (i + 1) % COLOURS.length);
@@ -673,6 +699,7 @@ function CameraPage() {
       frameData: pendingFrameRef.current,
       colour: COLOURS[colourIdx % COLOURS.length],
       opacity: 1, fading: false,
+      plane: formCalcLen != null ? activePlane : undefined,
     };
     addAnnotationToRoom(ann);
     setColourIdx(i => (i + 1) % COLOURS.length);
@@ -714,10 +741,9 @@ function CameraPage() {
     const boxWidthPx = o.width * calibBoxFrac;
     try {
       const pxPerMetre = SpatialMeasurementEngine.calculateCalibrationFactor(calibObj.key, boxWidthPx);
-      setRoomCalibration(activeRoom.roomId, {
+      setRoomCalibration(activeRoom.roomId, activePlane, {
         objectType: calibObj.key,
         pxPerMetre,
-        isCalibrated: true,
       });
       setCalibMode(false); setCalibStep("pick");
     } catch {
@@ -732,7 +758,7 @@ function CameraPage() {
     if (!o) return;
     const boxWidthPx = o.width * calibBoxFrac;
     const pxPerMetre = boxWidthPx / real;
-    setRoomCalibration(activeRoom.roomId, { objectType: "custom", pxPerMetre, isCalibrated: true });
+    setRoomCalibration(activeRoom.roomId, activePlane, { objectType: "custom", pxPerMetre });
     setCalibMode(false); setCalibStep("pick"); setCalibCustom("");
   }
 
@@ -746,7 +772,7 @@ function CameraPage() {
         id: ann.id, type: ann.type, label: ann.label, itemKey: ann.itemKey,
         qty: ann.qty, unit: ann.unit, note: ann.note, length: ann.length,
         colour: ann.colour, frameData: ann.frameData,
-        calculatedLength: ann.calculatedLength,
+        calculatedLength: ann.calculatedLength, plane: ann.plane,
         roomName: rooms.find(r => r.annotations.some(a => a.id === ann.id))?.roomName,
       }))
     ));
@@ -816,8 +842,10 @@ function CameraPage() {
                 <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-[14px] text-[#0a1722]">{room.roomName}</span>
-                    {room.calibration.isCalibrated && (
-                      <span className="text-[10px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">Calibrated</span>
+                    {Object.keys(room.calibration.planes).length > 0 && (
+                      <span className="text-[10px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">
+                        Calibrated · {Object.keys(room.calibration.planes).join(", ")}
+                      </span>
                     )}
                   </div>
                   {hasCatalog && roomTotal > 0 && (
@@ -960,7 +988,7 @@ function CameraPage() {
                     color: (activeRoom.roomId === r.roomId) ? "#0a1722" : "white",
                   }}>
                   {r.roomName}
-                  {r.calibration.isCalibrated && " ✓"}
+                  {Object.keys(r.calibration.planes).length > 0 && ` ✓${Object.keys(r.calibration.planes).length}`}
                   {r.annotations.length > 0 && ` (${r.annotations.length})`}
                 </button>
               ))}
@@ -1051,7 +1079,7 @@ function CameraPage() {
           {/* Instruction text below box */}
           <div className="absolute bottom-48 left-0 right-0 flex flex-col items-center gap-2" style={{ pointerEvents: "none" }}>
             <div className="bg-black/70 text-white text-[12px] font-bold px-4 py-2 rounded-full text-center mx-4">
-              Resize the box to match the {calibObj.label.toLowerCase()}&apos;s size, then tap Lock
+              Calibrating the <span className="text-[#00FF88]">{activePlane}</span> -- resize the box to match the {calibObj.label.toLowerCase()}&apos;s size, then tap Lock
             </div>
             {/* Spec: Angle safeguard warning */}
             <div className="flex items-center gap-1.5 bg-black/60 text-amber-400 text-[11px] font-semibold px-3 py-1.5 rounded-full">
@@ -1084,7 +1112,7 @@ function CameraPage() {
         {isLocked && (
           <div className="mb-3 flex items-center gap-2 bg-amber-500/20 border border-amber-400/40 rounded-xl px-3 py-2">
             <AlertTriangle size={13} className="text-amber-400 shrink-0" />
-            <p className="text-amber-300 text-[11px] font-semibold">Calibrate this room before measuring lengths</p>
+            <p className="text-amber-300 text-[11px] font-semibold">Calibrate the {activePlane} before measuring lengths on it</p>
           </div>
         )}
 
@@ -1108,11 +1136,29 @@ function CameraPage() {
               style={{ background: stampMode ? "#22c55e" : "rgba(0,0,0,.4)", color: "white" }}>
               {stampMode ? "Stamp ON" : "Stamp off"}
             </button>
+            {/* Plane selector -- a downlight (ceiling), GPO (wall), and
+                pipe (floor) are all at different distances from the camera,
+                so each surface needs its own calibration factor. Switching
+                planes here switches which factor measurements use. */}
+            {!calibMode && (
+              <div className="flex rounded-lg overflow-hidden border-0">
+                {(["floor", "wall", "ceiling"] as Plane[]).map(p => (
+                  <button key={p} onClick={() => setActivePlane(p)}
+                    className="px-1.5 py-1.5 text-[10px] font-bold border-0"
+                    style={{
+                      background: activePlane === p ? "#ffb400" : "rgba(0,0,0,.4)",
+                      color: activePlane === p ? "#0a1722" : "white",
+                    }}>
+                    {activeRoom.calibration.planes[p] ? "✓ " : ""}{p[0].toUpperCase() + p.slice(1)}
+                  </button>
+                ))}
+              </div>
+            )}
             <button onClick={startCalibration}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border-0"
               style={{ background: calibration ? "rgba(34,197,94,.6)" : "rgba(0,0,0,.4)", color: "white" }}>
               <Ruler size={11} />
-              {calibMode ? "Calibrating..." : calibration ? "Recalibrate" : "Calibrate"}
+              {calibMode ? "Calibrating..." : calibration ? `Recalibrate ${activePlane}` : `Calibrate ${activePlane}`}
             </button>
             {allAnnotations.length > 0 && (
               <button onClick={() => {
