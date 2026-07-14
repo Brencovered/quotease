@@ -42,8 +42,6 @@ export default function DashboardPanel({ stats, profit }: Props) {
   return (
     <>
     <div className="page-wrap">
-      <h1 className="font-display text-[28px] text-[var(--ink)] mb-5">Dashboard</h1>
-
       {/* Key stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <div className="card">

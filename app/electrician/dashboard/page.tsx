@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { computeDashboardStats, computeProfitStats } from "@/lib/dashboardStats";
 import { computeAttentionItems, type AttentionItem } from "@/lib/attentionItems";
@@ -5,10 +6,28 @@ import { getActiveBusinessId } from "@/lib/team";
 import { getOnboardingProgress, type OnboardingProgress } from "@/lib/onboarding";
 import AppHeader from "@/components/AppHeader";
 import DashboardPanel from "@/components/DashboardPanel";
+import DashboardSkeleton from "@/components/DashboardSkeleton";
 import AttentionCard from "@/components/AttentionCard";
 import TrialOnboardingWidget from "@/components/TrialOnboardingWidget";
 
-export default async function DashboardPage() {
+export default function DashboardPage() {
+  return (
+    <>
+      <AppHeader />
+      {/* Static, zero-data-dependency shell - renders immediately instead of
+          waiting behind the auth + 7-query fetch below. This is now the
+          largest thing guaranteed to paint fast on this route. */}
+      <div className="page-wrap pb-0">
+        <h1 className="font-display text-[28px] text-[var(--ink)] mb-5">Dashboard</h1>
+      </div>
+      <Suspense fallback={<DashboardSkeleton />}>
+        <DashboardData />
+      </Suspense>
+    </>
+  );
+}
+
+async function DashboardData() {
   let stats = computeDashboardStats([]);
   let profit = computeProfitStats([], [], 95);
   let onboardingProgress: OnboardingProgress | null = null;
@@ -65,8 +84,7 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <AppHeader />
-      <div className="page-wrap pt-4">
+      <div className="page-wrap pt-0">
         {onboardingProgress && <TrialOnboardingWidget initialProgress={onboardingProgress} />}
         <AttentionCard items={attentionItems} />
       </div>

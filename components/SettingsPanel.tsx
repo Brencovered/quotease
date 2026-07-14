@@ -187,8 +187,6 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
 
   return (
     <div className="page-wrap-narrow">
-      <h1 className="font-display text-[28px] text-[var(--ink)] mb-6">Settings</h1>
-
       {/* Account summary */}
       <div className="card mb-4 flex items-center gap-4">
         <div className="w-10 h-10 rounded-full bg-[var(--navy)] flex items-center justify-center font-display text-[var(--amber)] text-lg shrink-0">

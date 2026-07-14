@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import SettingsPanel from "@/components/SettingsPanel";
 import XeroConnectPanel from "@/components/XeroConnectPanel";
@@ -5,13 +6,30 @@ import DirectoryPanel from "@/components/DirectoryPanel";
 import AccountDangerZone from "@/components/AccountDangerZone";
 import AppHeader from "@/components/AppHeader";
 import PushNotificationToggle from "@/components/PushNotificationToggle";
+import SettingsSkeleton from "@/components/SettingsSkeleton";
 import Link from "next/link";
 import { BookOpen, Users } from "lucide-react";
 
 // Always fetch fresh -- Xero OAuth redirect must see updated connection state
 export const dynamic = "force-dynamic";
 
-export default async function SettingsPage() {
+export default function SettingsPage() {
+  return (
+    <>
+      <AppHeader />
+      {/* Static, zero-data-dependency shell - renders immediately instead of
+          waiting behind the auth + profile fetch below. */}
+      <div className="page-wrap-narrow pb-0">
+        <h1 className="font-display text-[28px] text-[var(--ink)] mb-6">Settings</h1>
+      </div>
+      <Suspense fallback={<SettingsSkeleton />}>
+        <SettingsData />
+      </Suspense>
+    </>
+  );
+}
+
+async function SettingsData() {
   let profile: {
     business_name?: string;
     contact_email?: string;
@@ -70,7 +88,6 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <AppHeader />
       <SettingsPanel profile={profile} />
 
       {/* Team */}

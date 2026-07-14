@@ -180,21 +180,32 @@ export default async function DirectoryPage({
   const radiusKm = radius ? parseFloat(radius) : NaN;
   const hasRadius = !isNaN(radiusKm) && radiusKm > 0;
 
+  // Whether this load has any actual search applied - determines which of
+  // the two very different page modes render below, but ALSO whether any
+  // of the listings-search work is needed at all. Computed here (rather
+  // than after the query work, as before) so it can guard that work: the
+  // plain "/directory" landing page - the large majority of traffic, since
+  // hundreds of SEO pages link with filters but organic/ad traffic lands
+  // here bare - has no reason to run a full listings query at all.
+  const hasActiveFilters = !!(trade || postcode || suburb || reviews || rating);
+
   // Resolve the search term to one or more postcodes, and (if a radius is
   // set) a centre point to measure distance from.
   let resolvedPostcodes: string[] = [];
-  if (postcode) {
-    resolvedPostcodes = [postcode];
-  } else if (suburb) {
-    if (/^\d+$/.test(suburb)) {
-      resolvedPostcodes = [suburb];
-    } else {
-      const { data: postcodeRows } = await supabase
-        .from("directory_listing")
-        .select("postcode")
-        .ilike("suburb", `%${suburb}%`)
-        .not("postcode", "is", null);
-      resolvedPostcodes = Array.from(new Set((postcodeRows ?? []).map((r) => r.postcode).filter((p): p is string => !!p)));
+  if (hasActiveFilters) {
+    if (postcode) {
+      resolvedPostcodes = [postcode];
+    } else if (suburb) {
+      if (/^\d+$/.test(suburb)) {
+        resolvedPostcodes = [suburb];
+      } else {
+        const { data: postcodeRows } = await supabase
+          .from("directory_listing")
+          .select("postcode")
+          .ilike("suburb", `%${suburb}%`)
+          .not("postcode", "is", null);
+        resolvedPostcodes = Array.from(new Set((postcodeRows ?? []).map((r) => r.postcode).filter((p): p is string => !!p)));
+      }
     }
   }
 
@@ -202,7 +213,7 @@ export default async function DirectoryPage({
   let error: { message: string } | null = null;
   let count = 0;
 
-  if (hasRadius && resolvedPostcodes.length > 0) {
+  if (hasActiveFilters && hasRadius && resolvedPostcodes.length > 0) {
     // Real distance-based search: find the centre point for the searched
     // postcode(s) (averaging if a suburb name resolved to more than one),
     // then delegate trade/rating/review/sort/pagination filtering to a
@@ -242,7 +253,7 @@ export default async function DirectoryPage({
     }
   }
 
-  if (listings === null) {
+  if (hasActiveFilters && listings === null) {
     // Normal (non-radius, or unresolvable-location) search path.
     let query = supabase
       .from("directory_listing")
@@ -305,14 +316,17 @@ export default async function DirectoryPage({
     return `/directory${qs ? `?${qs}` : ""}`;
   }
 
-  /* Determine if user has performed a search */
-  const hasActiveFilters = !!(trade || postcode || suburb || reviews || rating);
-
   // Resolved last, but kicked off first (see heroStatsPromise above) - by
   // this point the cached lookup has almost always already resolved
   // concurrently with the search query work above, so this await rarely
   // costs anything.
   const { totalListings, suburbsCovered } = await heroStatsPromise;
+
+  // No search applied - the listings query above was skipped entirely, so
+  // use the cached sitewide total for the hero's count display instead
+  // (it was already only ever a rough, decorative figure here - see
+  // FindTradieHeroSearch - never the precise result-set count).
+  if (!hasActiveFilters) count = totalListings;
 
   return (
     <main className="min-h-screen" style={{ background: "var(--app-bg)" }}>
