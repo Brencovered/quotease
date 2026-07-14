@@ -292,7 +292,7 @@ export default function PlumberQuoteBuilder({
     }
     if (sendEmail) {
       const res = await fetch("/api/quotes/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quoteId: quote.id }) });
-      if (!res.ok) { const b = await res.json().catch(()=>({})); setSaveMessage(`Saved - sending failed: ${b.error ?? res.statusText}`); setSaving(false); return; }
+      if (!res.ok) { const b = await res.json().catch(()=>({})); await supabase.from("quotes").update({ status: "draft", sent_at: null }).eq("id", quote.id); setSaveMessage(`Saved - sending failed: ${b.error ?? res.statusText}`); setSaving(false); return; }
       setSaveMessage(`Sent to ${clientEmail}`);
     } else { setSaveMessage("Saved as draft"); }
     setSaving(false);

@@ -262,6 +262,7 @@ export default function GenericQuoteBuilder({
       });
       if (!res.ok) {
         const b = await res.json().catch(() => ({}));
+        await supabase.from("quotes").update({ status: "draft", sent_at: null }).eq("id", quote.id);
         setSaveMessage(`Saved - sending failed: ${b.error ?? res.statusText}`);
         setSaving(false);
         return;

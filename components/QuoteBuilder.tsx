@@ -416,6 +416,11 @@ export default function QuoteBuilder({
       const res = await fetch("/api/quotes/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quoteId: quote.id }) });
       if (!res.ok) {
         const b = await res.json().catch(() => ({}));
+        // The insert above already wrote status: "sent" optimistically -
+        // since sending just failed, that's now a lie sitting in the DB
+        // (the client never actually got an email). Revert it back to
+        // draft rather than leave the quote looking delivered when it isn't.
+        await supabase.from("quotes").update({ status: "draft", sent_at: null }).eq("id", quote.id);
         setSaveMessage(`Saved - but sending failed: ${b.error ?? res.statusText}`);
         setSaving(false);
         return;

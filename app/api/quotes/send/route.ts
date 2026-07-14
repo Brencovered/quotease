@@ -24,6 +24,12 @@ export async function POST(request: Request) {
     .single();
 
   if (quoteError || !quote) {
+    console.error("[quotes/send] Quote not found", {
+      quoteId,
+      businessId,
+      userId: userData.user.id,
+      quoteError: quoteError?.message ?? null,
+    });
     return NextResponse.json({ error: "Quote not found" }, { status: 404 });
   }
   if (!quote.client_email) {
