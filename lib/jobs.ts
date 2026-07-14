@@ -7,11 +7,14 @@
  * job via job_id.
  *
  * Quote-sourced jobs are created the moment a quote is accepted (see
- * app/api/quotes/update-status). This helper is idempotent: call it as
- * many times as you like for the same quote and it will only ever create
- * one job row, returning the existing one on repeat calls. That makes it
- * safe to also use as a lazy backfill for any quote accepted before this
- * table existed.
+ * app/api/quotes/update-status). getOrCreateJobForQuote() is called from
+ * more than one place (the accept API, and the quote detail page's
+ * self-healing redirect), which can race - a unique index on
+ * jobs.quote_id (see supabase/migrations/20260714_jobs_quote_id_unique.sql)
+ * is what actually makes repeat calls safe: if two calls race, the DB
+ * rejects the second INSERT and this function fetches the winning row
+ * instead of erroring. That makes it safe to also use as a lazy backfill
+ * for any quote accepted before this table existed.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -97,6 +100,15 @@ export async function getOrCreateJobForQuote(supabase: SupabaseClient, quoteId: 
     .single();
 
   if (error) {
+    // 23505 = unique_violation. A concurrent call (the accept API and the
+    // quote detail page's self-healing redirect both call this function,
+    // and can race) already won and created the job a moment before this
+    // insert ran - the DB-level unique index on quote_id is what's
+    // stopping this from becoming a duplicate. Fetch and return that row
+    // rather than treating it as a real failure.
+    if (error.code === "23505") {
+      return await getJobByQuoteId(supabase, quoteId);
+    }
     console.error("getOrCreateJobForQuote: failed to create job -", error);
     return null;
   }
