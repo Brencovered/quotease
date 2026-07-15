@@ -419,23 +419,33 @@ async function runTradeScrape(
     };
 
     const details = await fetchPlaceDetails(place.place_id);
-    if (details) {
-      item.rating = details.rating ?? null;
-      item.reviewsCount = details.reviewsCount ?? null;
-      item.phone = details.phone ?? null;
-      item.website = details.website ?? null;
-      item.photoReferences = details.photoReferences ?? [];
-      if (details.formattedAddress) {
-        const upd = parseAustralianAddress(details.formattedAddress);
-        // Re-check if the detailed address is Australian
-        if (!upd.isAustralian) {
-          skippedNonAu++;
-          console.log(`[scrape] Skipping non-AU (details): ${place.name}`);
-          continue;
-        }
-        item.suburb = upd.suburb; item.postcode = upd.postcode;
-      }
+    if (!details || !details.formattedAddress) {
+      // Couldn't get a real address to verify at all - previously this
+      // silently kept the candidate with its placeholder suburb: ""
+      // and the postcode we searched around, meaning a Place Details
+      // failure (timeout, quota, bad place_id) was treated as "assume
+      // Australian" instead of "couldn't verify." That's how US
+      // businesses with a blank suburb (e.g. "Black Rock Roofing" across
+      // half a dozen US states) ended up in an AU-only directory - not a
+      // geographic radius bug, a silent-failure-defaults-to-accept bug.
+      skippedNonAu++;
+      console.log(`[scrape] Skipping unverifiable address: ${place.name}`);
+      continue;
     }
+
+    item.rating = details.rating ?? null;
+    item.reviewsCount = details.reviewsCount ?? null;
+    item.phone = details.phone ?? null;
+    item.website = details.website ?? null;
+    item.photoReferences = details.photoReferences ?? [];
+
+    const upd = parseAustralianAddress(details.formattedAddress);
+    if (!upd.isAustralian) {
+      skippedNonAu++;
+      console.log(`[scrape] Skipping non-AU (details): ${place.name}`);
+      continue;
+    }
+    item.suburb = upd.suburb; item.postcode = upd.postcode;
 
     if (item.website) {
       const html = await fetchWebsiteHtml(item.website);

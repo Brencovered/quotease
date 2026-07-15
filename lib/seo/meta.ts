@@ -70,9 +70,12 @@ export function directoryListingCanonical(slug: string): string {
  */
 export function buildDirectorySlug(row: { id: string; business_name: string; suburb: string }): string {
   const name = row.business_name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  const sub  = row.suburb.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const sub  = (row.suburb || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   const uid  = row.id.replace(/-/g, "").slice(-6);
-  return `${name}-${sub}-${uid}`;
+  // A blank suburb collapses the middle segment rather than leaving a
+  // stray double hyphen (e.g. "business-name--abc123") - name+uid is
+  // still unique and readable even without a suburb.
+  return sub ? `${name}-${sub}-${uid}` : `${name}-${uid}`;
 }
 
 // -- Trade display names --------------------------------------------------
