@@ -123,6 +123,60 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ listings: data ?? [], total: count ?? 0, page, limit });
 }
 
+export async function POST(req: NextRequest) {
+  const unauthorised = await requireAdmin();
+  if (unauthorised) return unauthorised;
+
+  const body = await req.json();
+  const business_name = (body.business_name ?? "").trim();
+  const suburb = (body.suburb ?? "").trim() || null;
+  let postcode = (body.postcode ?? "").trim() || null;
+  const trades = Array.isArray(body.trades) ? body.trades.filter(Boolean) : [];
+  const website_url = (body.website_url ?? "").trim() || null;
+  const scraped_contact_email = (body.scraped_contact_email ?? "").trim() || null;
+  const scraped_contact_phone = (body.scraped_contact_phone ?? "").trim() || null;
+  const blurb = (body.blurb ?? "").trim() || null;
+
+  if (!business_name) {
+    return NextResponse.json({ error: "Business name is required" }, { status: 400 });
+  }
+
+  const admin = createAdminClient();
+
+  // The scraper's search/filter and the directory's SEO pages both key
+  // off postcode, not suburb text alone - same reason a manually-added
+  // listing needs one too, not just a suburb name. If the admin didn't
+  // type one in, back it out from whatever postcode other listings in
+  // that suburb already use, rather than leaving it blank and having
+  // this listing silently miss postcode-based search/pages.
+  if (!postcode && suburb) {
+    const { data: resolved } = await admin.rpc("resolve_postcode_for_suburb", { p_suburb: suburb });
+    if (resolved) postcode = resolved as string;
+  }
+
+  const { data, error } = await admin
+    .from("directory_listing")
+    .insert({
+      business_name,
+      suburb,
+      postcode,
+      trades,
+      website_url,
+      scraped_contact_email,
+      scraped_contact_phone,
+      blurb,
+      source: "manual",
+    })
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ listing: data });
+}
+
 export async function PATCH(req: NextRequest) {
   const unauthorised = await requireAdmin();
   if (unauthorised) return unauthorised;

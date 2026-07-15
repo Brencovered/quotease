@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Search, Trash2, Edit2, Check, X, ChevronLeft, ChevronRight,
-  Mail, Phone, Globe, Star, Loader2, ExternalLink,
+  Mail, Phone, Globe, Star, Loader2, ExternalLink, Plus,
   Square, CheckSquare, SquareMinus, AlertTriangle, Download,
 } from "lucide-react";
 
@@ -77,6 +77,16 @@ export default function AdminDirectoryPanel() {
   // Deleting
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const [confirmDelete, setConfirmDelete] = useState<string[] | null>(null);
+
+  // Add tradie -- for listings the scraper missed (a business too new to
+  // be indexed yet, one with a weak web presence, etc.)
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newListing, setNewListing] = useState({
+    business_name: "", suburb: "", postcode: "", trades: [] as string[],
+    website_url: "", scraped_contact_email: "", scraped_contact_phone: "", blurb: "",
+  });
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const totalPages = Math.ceil(total / limit);
 
@@ -184,6 +194,35 @@ export default function AdminDirectoryPanel() {
     }
   }
 
+  // Add tradie
+  async function createListing() {
+    if (!newListing.business_name.trim()) {
+      setCreateError("Business name is required");
+      return;
+    }
+    setCreating(true);
+    setCreateError(null);
+    try {
+      const res = await fetch("/api/admin/directory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newListing),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        setCreateError(body.error || "Couldn't add that listing");
+      } else {
+        setShowAddForm(false);
+        setNewListing({ business_name: "", suburb: "", postcode: "", trades: [], website_url: "", scraped_contact_email: "", scraped_contact_phone: "", blurb: "" });
+        fetchListings();
+      }
+    } catch {
+      setCreateError("Couldn't add that listing - try again");
+    } finally {
+      setCreating(false);
+    }
+  }
+
   // Delete
   async function doDelete(ids: string[]) {
     setDeletingIds((prev) => {
@@ -278,6 +317,12 @@ export default function AdminDirectoryPanel() {
           <p className="text-[13px] text-[var(--ink-faint)]">{total.toLocaleString()} listing{total !== 1 ? "s" : ""} total</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setShowAddForm((v) => !v)}
+            className="flex items-center gap-1.5 bg-[var(--amber)] text-[var(--navy)] font-bold text-[12.5px] px-3 py-2 rounded-lg hover:brightness-95 transition-colors"
+          >
+            <Plus size={13} /> Add tradie
+          </button>
           {selected.size > 0 && (
             <>
               <span className="text-[13px] font-semibold text-[var(--ink-soft)]">{selected.size} selected</span>
@@ -309,6 +354,84 @@ export default function AdminDirectoryPanel() {
           </button>
         </div>
       </div>
+
+      {showAddForm && (
+        <div className="bg-[var(--surface)] border-2 border-[var(--amber)] rounded-2xl p-4 mb-4">
+          <p className="font-semibold text-[var(--ink)] mb-3">Add a tradie the scraper missed</p>
+          {createError && <p className="text-[13px] text-red-600 mb-2">{createError}</p>}
+          <div className="grid sm:grid-cols-2 gap-3 mb-3">
+            <input
+              value={newListing.business_name}
+              onChange={(e) => setNewListing((f) => ({ ...f, business_name: e.target.value }))}
+              className="app-field text-[13px]"
+              placeholder="Business name *"
+            />
+            <select
+              multiple
+              value={newListing.trades}
+              onChange={(e) => setNewListing((f) => ({ ...f, trades: Array.from(e.target.selectedOptions).map((o) => o.value) }))}
+              className="app-field text-[13px] py-1"
+              size={3}
+            >
+              {TRADES.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+            <input
+              value={newListing.suburb}
+              onChange={(e) => setNewListing((f) => ({ ...f, suburb: e.target.value }))}
+              className="app-field text-[13px]"
+              placeholder="Suburb"
+            />
+            <input
+              value={newListing.postcode}
+              onChange={(e) => setNewListing((f) => ({ ...f, postcode: e.target.value }))}
+              className="app-field text-[13px]"
+              placeholder="Postcode (auto-filled from suburb if left blank)"
+            />
+            <input
+              value={newListing.website_url}
+              onChange={(e) => setNewListing((f) => ({ ...f, website_url: e.target.value }))}
+              className="app-field text-[13px]"
+              placeholder="Website"
+            />
+            <input
+              value={newListing.scraped_contact_phone}
+              onChange={(e) => setNewListing((f) => ({ ...f, scraped_contact_phone: e.target.value }))}
+              className="app-field text-[13px]"
+              placeholder="Phone"
+            />
+            <input
+              value={newListing.scraped_contact_email}
+              onChange={(e) => setNewListing((f) => ({ ...f, scraped_contact_email: e.target.value }))}
+              className="app-field text-[13px]"
+              placeholder="Email"
+            />
+            <input
+              value={newListing.blurb}
+              onChange={(e) => setNewListing((f) => ({ ...f, blurb: e.target.value }))}
+              className="app-field text-[13px]"
+              placeholder="Short blurb (optional)"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={createListing}
+              disabled={creating}
+              className="flex items-center gap-1.5 bg-[var(--navy)] text-white font-bold text-[12.5px] px-3 py-2 rounded-lg hover:bg-[#0e2233] transition-colors disabled:opacity-40"
+            >
+              {creating ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+              {creating ? "Adding..." : "Add to directory"}
+            </button>
+            <button
+              onClick={() => { setShowAddForm(false); setCreateError(null); }}
+              className="text-[12.5px] font-semibold text-[var(--ink-faint)] hover:text-[var(--ink)] px-2 py-2"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-4 mb-4 space-y-3">
