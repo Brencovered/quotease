@@ -9,6 +9,7 @@ import VariationsPanel from "@/components/VariationsPanel";
 import JobCostingPanel from "@/components/JobCostingPanel";
 import CompliancePanel from "@/components/CompliancePanel";
 import JobFilesPanel from "@/components/JobFilesPanel";
+import JobCrewPanel from "@/components/JobCrewPanel";
 import JobBriefPanel from "@/components/JobBriefPanel";
 import JobTasksPanel from "@/components/JobTasksPanel";
 import MaterialsChecklistPanel from "@/components/MaterialsChecklistPanel";
@@ -56,7 +57,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   // page uses, so plan markup on an in-progress job prices identically to
   // a brand new quote rather than falling back to stale legacy defaults.
   const jobTrade = job.trade ?? "electrician";
-  const [tradeMaterials, { data: teamRows }, { data: taskRows }, boardColumns, timesheetEntries] = await Promise.all([
+  const [tradeMaterials, { data: teamRows }, { data: taskRows }, boardColumns, timesheetEntries, { data: crewRows }] = await Promise.all([
     (async (): Promise<Array<{ item_key: string; label: string; unit_cost: number }>> => {
       const pbItems = await getCachedPriceBook(businessId, jobTrade);
       if (pbItems.length > 0) {
@@ -71,8 +72,10 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     isAdmin
       ? supabase.from("timesheets").select("*").eq("job_id", job.id).order("work_date", { ascending: false }).then((r) => r.data ?? [])
       : Promise.resolve([]),
+    supabase.from("job_crew").select("id, team_member_id").eq("job_id", job.id),
   ]);
   const teamMembers: Array<{ id: string; name: string | null; email: string }> = teamRows ?? [];
+  const jobCrew: Array<{ id: string; team_member_id: string }> = crewRows ?? [];
   const assignedMember = teamMembers.find((m) => m.id === job.assigned_to_member_id);
 
   let jobPlans: Array<{ id: string; file_name: string; shapes: unknown[]; calibration: unknown; signedUrl?: string }> = [];
@@ -271,6 +274,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               ) : (
                 <p className="text-[13px] text-[var(--ink-faint)]">Scheduling needs a linked quote - this job was created without one.</p>
               )}
+              <JobCrewPanel jobId={job.id} profileId={businessId} initialCrew={jobCrew} teamMembers={teamMembers} />
               <Link href="/electrician/schedule" className="flex items-center justify-center gap-1.5 text-[13px] font-semibold text-[var(--navy)] border-2 border-[var(--line)] rounded-xl py-2.5 hover:border-[var(--navy)]">
                 View full schedule calendar
               </Link>
