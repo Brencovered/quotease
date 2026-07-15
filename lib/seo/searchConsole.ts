@@ -93,7 +93,13 @@ async function getAccessToken(): Promise<string> {
   return data.access_token;
 }
 
-const SITE_URL = "https://swiftscope.com.au/";
+// Domain property, not a URL-prefix one: covers www / non-www / http / https
+// in one property, so it doesn't matter which host variant actually served a
+// given request. (An earlier version of this pointed at the bare non-www
+// URL-prefix property, https://swiftscope.com.au/ -- which is a 301 redirect
+// to the real www host, so Search Console only ever had one page to report
+// on for it: the redirect itself.)
+const SITE_URL = "sc-domain:swiftscope.com.au";
 const SC_API = "https://www.googleapis.com/webmasters/v3/sites";
 
 /**
@@ -102,7 +108,7 @@ const SC_API = "https://www.googleapis.com/webmasters/v3/sites";
  * Google will recrawl the sitemap on its own schedule after this, same as
  * if you'd clicked "Submit" in the Search Console UI.
  */
-export async function submitSitemap(sitemapUrl = `${SITE_URL}sitemap.xml`): Promise<void> {
+export async function submitSitemap(sitemapUrl = "https://www.swiftscope.com.au/sitemap.xml"): Promise<void> {
   const token = await getAccessToken();
   const res = await fetch(
     `${SC_API}/${encodeURIComponent(SITE_URL)}/sitemaps/${encodeURIComponent(sitemapUrl)}`,
