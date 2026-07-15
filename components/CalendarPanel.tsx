@@ -10,7 +10,19 @@ type ScheduledJob = {
   total_cost: number | null; job_type: string | null; status: string;
   scheduled_start: string | null; scheduled_end: string | null; estimated_days: number | null;
   follow_up_at?: string | null; quote_expires_at?: string | null; sent_at?: string | null;
+  jobs?: { job_number: number | null } | { job_number: number | null }[] | null;
 };
+
+/** The embedded `jobs` relation comes back as an object or a single-item
+ * array depending on how PostgREST resolves the to-one FK - normalize
+ * either shape to just the number, or null if this quote has no job yet
+ * (not accepted, so getOrCreateJobForQuote hasn't run for it). */
+function jobNumberOf(j: ScheduledJob): number | null {
+  const rel = j.jobs;
+  if (!rel) return null;
+  const row = Array.isArray(rel) ? rel[0] : rel;
+  return row?.job_number ?? null;
+}
 
 type ManualEvent = {
   id: string;
@@ -81,7 +93,11 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
       const startMs = start.getTime(), endMs = end.getTime(), oneDayMs = 86400000;
       for (let ms = startMs; ms <= endMs; ms += oneDayMs) {
         const cur = new Date(ms);
-        events.push({ id: `job-${j.id}-${toDateStr(cur)}`, date: toDateStr(cur), type: "job", label: j.client_name ?? "Job", sub: j.site_address ?? undefined, jobId: j.id });
+        const jobNumber = jobNumberOf(j);
+        const jobLabel = jobNumber
+          ? (j.client_name ? `Job #${jobNumber} - ${j.client_name}` : `Job #${jobNumber}`)
+          : (j.client_name ?? "Job");
+        events.push({ id: `job-${j.id}-${toDateStr(cur)}`, date: toDateStr(cur), type: "job", label: jobLabel, sub: j.site_address ?? undefined, jobId: j.id });
       }
     }
     if (j.follow_up_at && j.status === "sent") events.push({ id: `fu-${j.id}`, date: j.follow_up_at.slice(0,10), type: "followup", label: `Follow up: ${j.client_name ?? ""}`, sub: "Quote follow-up due", jobId: j.id });

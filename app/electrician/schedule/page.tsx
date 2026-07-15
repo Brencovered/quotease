@@ -14,7 +14,7 @@ export default async function SchedulePage() {
       // Fetch accepted/paid jobs (schedulable) + sent quotes (for follow-up/expiry events)
       const { data } = await supabase
         .from("quotes")
-        .select("id, client_name, site_address, total_cost, job_type, status, scheduled_start, scheduled_end, estimated_days, follow_up_at, quote_expires_at, sent_at")
+        .select("id, client_name, site_address, total_cost, job_type, status, scheduled_start, scheduled_end, estimated_days, follow_up_at, quote_expires_at, sent_at, jobs(job_number)")
         .eq("profile_id", businessId)
         .in("status", ["accepted", "paid", "sent"])
         .order("scheduled_start", { ascending: true, nullsFirst: false });
