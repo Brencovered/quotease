@@ -279,7 +279,7 @@ export default function MaterialsPanel() {
   return (
     <div className="page-wrap">
       {/* ---- Tab Bar ---- */}
-      <div className="flex items-center gap-1 mb-6 border-b border-[var(--line)]">
+      <div className="flex items-center gap-1 mb-6 border-b border-[var(--line)] overflow-x-auto hide-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
         {[
           { key: "materials" as const, label: "Materials", icon: Box },
           { key: "suppliers" as const, label: "Suppliers", icon: Building2 },
@@ -292,7 +292,7 @@ export default function MaterialsPanel() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-4 py-3 text-[13px] font-bold border-b-2 transition-colors ${
+              className={`flex items-center gap-2 px-4 py-3 text-[13px] font-bold border-b-2 transition-colors shrink-0 whitespace-nowrap ${
                 active
                   ? "border-[var(--amber)] text-[var(--amber-deep)]"
                   : "border-transparent text-[var(--ink-faint)] hover:text-[var(--ink-soft)]"
