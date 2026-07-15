@@ -36,6 +36,7 @@ type SeoKeyword = {
   clicks_28d: number | null;
   impressions_28d: number | null;
   last_synced_at: string | null;
+  segment: "directory" | "saas";
 };
 
 const STATUS_CONFIG: Record<string, { label: string; icon: typeof Target; color: string; bg: string }> = {
@@ -52,6 +53,7 @@ export default function SeoKeywordsPanel() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [intentFilter, setIntentFilter] = useState("");
+  const [segmentFilter, setSegmentFilter] = useState<"directory" | "saas" | "">("");
   const [sortBy, setSortBy] = useState("volume");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [total, setTotal] = useState(0);
@@ -67,6 +69,7 @@ export default function SeoKeywordsPanel() {
     const params = new URLSearchParams();
     if (statusFilter) params.set("status", statusFilter);
     if (intentFilter) params.set("intent", intentFilter);
+    if (segmentFilter) params.set("segment", segmentFilter);
     if (search) params.set("search", search);
     params.set("sortBy", sortBy);
     params.set("sortDir", sortDir);
@@ -83,7 +86,7 @@ export default function SeoKeywordsPanel() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, intentFilter, search, sortBy, sortDir]);
+  }, [statusFilter, intentFilter, segmentFilter, search, sortBy, sortDir]);
 
   useEffect(() => {
     fetchKeywords();
@@ -241,6 +244,34 @@ export default function SeoKeywordsPanel() {
         </div>
       )}
 
+      {/* Segment toggle - two distinct keyword strategies, not one list */}
+      <div className="flex items-center gap-2 mb-3">
+        <button
+          onClick={() => setSegmentFilter("")}
+          className={`text-[12.5px] font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
+            segmentFilter === "" ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] bg-white text-[var(--ink-soft)] hover:border-[var(--navy)]"
+          }`}
+        >
+          All ({total})
+        </button>
+        <button
+          onClick={() => setSegmentFilter("saas")}
+          className={`flex items-center gap-1.5 text-[12.5px] font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
+            segmentFilter === "saas" ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] bg-white text-[var(--ink-soft)] hover:border-[var(--navy)]"
+          }`}
+        >
+          <Search size={12} /> Tradies looking for Swiftscope (SaaS)
+        </button>
+        <button
+          onClick={() => setSegmentFilter("directory")}
+          className={`flex items-center gap-1.5 text-[12.5px] font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
+            segmentFilter === "directory" ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] bg-white text-[var(--ink-soft)] hover:border-[var(--navy)]"
+          }`}
+        >
+          <MapPin size={12} /> People looking for a tradie (Directory)
+        </button>
+      </div>
+
       {/* Status cards */}
       <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-5 mt-2">
         {Object.entries(STATUS_CONFIG).map(([key, cfg]) => {
@@ -356,9 +387,16 @@ export default function SeoKeywordsPanel() {
                   <tr key={k.id} className="border-b border-[var(--line-subtle)] hover:bg-[var(--app-bg)] transition-colors">
                     <td className="py-2.5 px-3">
                       <p className="font-semibold text-[var(--ink)]">{k.keyword}</p>
-                      {k.intent && (
-                        <span className="text-[11px] text-[var(--ink-faint)]">{k.intent}</span>
-                      )}
+                      <div className="flex items-center gap-1.5">
+                        {k.intent && (
+                          <span className="text-[11px] text-[var(--ink-faint)]">{k.intent}</span>
+                        )}
+                        {segmentFilter === "" && (
+                          <span className={`text-[9.5px] font-bold uppercase px-1 py-0.5 rounded ${k.segment === "directory" ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"}`}>
+                            {k.segment === "directory" ? "Directory" : "SaaS"}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-2.5 px-3">
                       <div className="relative">

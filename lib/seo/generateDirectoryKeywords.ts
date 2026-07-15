@@ -65,6 +65,7 @@ export async function generateDirectoryKeywords(): Promise<GenerateResult> {
     return {
       keyword,
       intent: "Local",
+      segment: "directory" as const,
       status: "new" as const,
       notes: `Directory page - ${c.count} listing${c.count === 1 ? "" : "s"}`,
     };
