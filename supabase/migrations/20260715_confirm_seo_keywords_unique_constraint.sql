@@ -1,0 +1,3 @@
+-- No-op: a plain unique constraint on seo_keywords.keyword already existed
+-- from an earlier session (seo_keywords_keyword_key). This file documents
+-- that discovery for traceability; no schema change was needed here.

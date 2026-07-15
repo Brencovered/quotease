@@ -18,6 +18,7 @@ import {
   Loader2,
   RefreshCw,
   AlertTriangle,
+  MapPin,
 } from "lucide-react";
 
 type SeoKeyword = {
@@ -59,6 +60,7 @@ export default function SeoKeywordsPanel() {
   const [updating, setUpdating] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [generating, setGenerating] = useState(false);
 
   const fetchKeywords = useCallback(async () => {
     setLoading(true);
@@ -129,6 +131,28 @@ export default function SeoKeywordsPanel() {
     }
   }
 
+  async function generateDirectoryKeywords() {
+    setGenerating(true);
+    setSyncMsg(null);
+    try {
+      const res = await fetch("/api/admin/seo/generate-directory-keywords", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setSyncMsg({ text: data.error || "Generation failed", ok: false });
+        return;
+      }
+      setSyncMsg({
+        text: `Found ${data.combosFound} indexable trade+suburb pages nationally, added ${data.keywordsInserted} new keyword${data.keywordsInserted === 1 ? "" : "s"}. Tracking ${data.totalTracked} total.`,
+        ok: true,
+      });
+      fetchKeywords();
+    } catch (err) {
+      setSyncMsg({ text: err instanceof Error ? err.message : "Network error", ok: false });
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   async function syncRankings() {
     setSyncing(true);
     setSyncMsg(null);
@@ -190,14 +214,25 @@ export default function SeoKeywordsPanel() {
             <p className="text-[13px] text-[var(--ink-faint)]">{total} keywords loaded</p>
           </div>
         </div>
-        <button
-          onClick={syncRankings}
-          disabled={syncing}
-          className="btn-secondary text-[12.5px] py-2 px-3.5 flex items-center gap-1.5"
-        >
-          <RefreshCw size={13} className={syncing ? "animate-spin" : ""} />
-          {syncing ? "Syncing rankings..." : "Sync rankings from Search Console"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={generateDirectoryKeywords}
+            disabled={generating}
+            className="btn-secondary text-[12.5px] py-2 px-3.5 flex items-center gap-1.5"
+            title="Scans the live directory nationally and adds a tracked keyword for every trade+suburb page that exists, wherever it is"
+          >
+            <MapPin size={13} className={generating ? "animate-pulse" : ""} />
+            {generating ? "Scanning directory..." : "Generate keywords from directory"}
+          </button>
+          <button
+            onClick={syncRankings}
+            disabled={syncing}
+            className="btn-secondary text-[12.5px] py-2 px-3.5 flex items-center gap-1.5"
+          >
+            <RefreshCw size={13} className={syncing ? "animate-spin" : ""} />
+            {syncing ? "Syncing rankings..." : "Sync rankings from Search Console"}
+          </button>
+        </div>
       </div>
 
       {syncMsg && (
