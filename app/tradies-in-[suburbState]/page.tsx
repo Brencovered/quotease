@@ -39,10 +39,9 @@ async function loadSuburbContent(suburbSlug: string, state: string) {
 
   const { data: trades } = await admin
     .from("trade_suburb_pages")
-    .select("trade, suburb, listing_count, avg_rating, total_reviews")
+    .select("trade, suburb, listing_count, avg_rating, total_reviews, is_indexed")
     .eq("suburb_slug", suburbSlug)
     .eq("state", state)
-    .eq("is_indexed", true)
     .order("listing_count", { ascending: false });
 
   if (!trades || trades.length === 0) return null;
@@ -108,7 +107,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     alternates: { canonical },
     openGraph: { title, description, url: canonical, siteName: "Swiftscope", type: "website" },
     twitter: { card: "summary", title, description },
-    robots: { index: true, follow: true },
+    // Same thin-content protection as the trade+suburb pages
+    // (tradeSuburbMeta in this file) - don't ask Google to index a
+    // suburb page that doesn't have enough combined listings across all
+    // trades to be worth ranking. MIN_LISTINGS_FOR_INDEX is duplicated
+    // here rather than imported since it lives in the page component,
+    // not this lib file.
+    robots: { index: content.totalListings >= 3, follow: true },
   };
 }
 
