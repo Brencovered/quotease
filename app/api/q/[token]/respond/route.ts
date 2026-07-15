@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { pushQuoteToXero } from "@/lib/xero";
+import { getOrCreateJobForQuote } from "@/lib/jobs";
 
 export async function POST(request: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -31,6 +32,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
   await supabase.from("quotes").update(update).eq("id", quote.id);
 
   if (action === "accept") {
+    // Create the job now, not lazily - this is the primary way quotes get
+    // accepted (via the emailed client link), so it shouldn't depend on the
+    // tradie happening to open the quote/job detail page afterwards to
+    // trigger the self-healing backfill in getOrCreateJobForQuote.
+    await getOrCreateJobForQuote(supabase, quote.id).catch((err) => {
+      console.error("[q/respond] failed to create job on accept", { quoteId: quote.id, err });
+      return null;
+    });
+
     const { data: profile } = await supabase
       .from("profiles")
       .select("id, xero_connected, xero_tenant_id, xero_access_token, xero_refresh_token, xero_token_expires_at")
