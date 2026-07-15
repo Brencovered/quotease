@@ -17,7 +17,7 @@ export async function GET(request: Request) {
   if (intent) query = query.eq("intent", intent);
   if (search) query = query.ilike("keyword", `%${search}%`);
 
-  const validCols = ["keyword", "intent", "volume", "keyword_difficulty", "cpc_usd", "status", "created_at"];
+  const validCols = ["keyword", "intent", "volume", "keyword_difficulty", "cpc_usd", "status", "created_at", "current_position"];
   const col = validCols.includes(sortBy) ? sortBy : "volume";
   query = query.order(col, { ascending: sortDir === "asc", nullsFirst: false });
 

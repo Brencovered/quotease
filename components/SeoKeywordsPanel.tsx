@@ -16,6 +16,8 @@ import {
   TrendingUp,
   StickyNote,
   Loader2,
+  RefreshCw,
+  AlertTriangle,
 } from "lucide-react";
 
 type SeoKeyword = {
@@ -29,6 +31,10 @@ type SeoKeyword = {
   status: "new" | "targeting" | "tracking" | "ignore" | "ranking";
   notes: string | null;
   created_at: string;
+  current_position: number | null;
+  clicks_28d: number | null;
+  impressions_28d: number | null;
+  last_synced_at: string | null;
 };
 
 const STATUS_CONFIG: Record<string, { label: string; icon: typeof Target; color: string; bg: string }> = {
@@ -51,6 +57,8 @@ export default function SeoKeywordsPanel() {
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [noteValue, setNoteValue] = useState("");
   const [updating, setUpdating] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
   const fetchKeywords = useCallback(async () => {
     setLoading(true);
@@ -121,6 +129,28 @@ export default function SeoKeywordsPanel() {
     }
   }
 
+  async function syncRankings() {
+    setSyncing(true);
+    setSyncMsg(null);
+    try {
+      const res = await fetch("/api/admin/seo/sync-rankings", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setSyncMsg({ text: data.error || "Sync failed", ok: false });
+        return;
+      }
+      setSyncMsg({
+        text: `Matched ${data.matched} keyword${data.matched === 1 ? "" : "s"} with real search data, updated ${data.updated}.`,
+        ok: true,
+      });
+      fetchKeywords();
+    } catch (err) {
+      setSyncMsg({ text: err instanceof Error ? err.message : "Network error", ok: false });
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   function toggleSort(col: string) {
     if (sortBy === col) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -150,18 +180,34 @@ export default function SeoKeywordsPanel() {
 
   return (
     <div className="page-wrap-narrow">
-      <div className="flex items-center gap-3 mb-5">
-        <div className="w-10 h-10 rounded-xl bg-[var(--navy)] flex items-center justify-center">
-          <Search size={18} className="text-[var(--amber)]" />
+      <div className="flex items-center gap-3 mb-3 justify-between flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[var(--navy)] flex items-center justify-center">
+            <Search size={18} className="text-[var(--amber)]" />
+          </div>
+          <div>
+            <h1 className="font-display text-[1.5rem] text-[var(--ink)]">SEO Keywords</h1>
+            <p className="text-[13px] text-[var(--ink-faint)]">{total} keywords loaded</p>
+          </div>
         </div>
-        <div>
-          <h1 className="font-display text-[1.5rem] text-[var(--ink)]">SEO Keywords</h1>
-          <p className="text-[13px] text-[var(--ink-faint)]">{total} keywords loaded</p>
-        </div>
+        <button
+          onClick={syncRankings}
+          disabled={syncing}
+          className="btn-secondary text-[12.5px] py-2 px-3.5 flex items-center gap-1.5"
+        >
+          <RefreshCw size={13} className={syncing ? "animate-spin" : ""} />
+          {syncing ? "Syncing rankings..." : "Sync rankings from Search Console"}
+        </button>
       </div>
 
+      {syncMsg && (
+        <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold mb-3 ${syncMsg.ok ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+          {syncMsg.ok ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />} {syncMsg.text}
+        </div>
+      )}
+
       {/* Status cards */}
-      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-5">
+      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-5 mt-2">
         {Object.entries(STATUS_CONFIG).map(([key, cfg]) => {
           const count = statusCounts[key] ?? 0;
           const isActive = statusFilter === key;
@@ -258,6 +304,11 @@ export default function SeoKeywordsPanel() {
                     CPC <SortIcon col="cpc_usd" />
                   </button>
                 </th>
+                <th className="text-right py-2.5 px-3 w-20">
+                  <button onClick={() => toggleSort("current_position")} className="flex items-center gap-1 font-bold text-[var(--ink-soft)] hover:text-[var(--ink)] ml-auto">
+                    Position <SortIcon col="current_position" />
+                  </button>
+                </th>
                 <th className="text-left py-2.5 px-3 w-32">SERP</th>
                 <th className="text-left py-2.5 px-3 w-40">Notes</th>
               </tr>
@@ -308,6 +359,22 @@ export default function SeoKeywordsPanel() {
                       <span className="text-[var(--ink-soft)]">
                         {k.cpc_usd ? `$${k.cpc_usd.toFixed(2)}` : "-"}
                       </span>
+                    </td>
+                    <td className="py-2.5 px-3 text-right tabular">
+                      {k.current_position != null ? (
+                        <span
+                          className={`font-semibold ${
+                            k.current_position <= 10 ? "text-green-600" :
+                            k.current_position <= 30 ? "text-[var(--amber-deep)]" :
+                            "text-[var(--ink-soft)]"
+                          }`}
+                          title={`${k.clicks_28d ?? 0} clicks, ${k.impressions_28d ?? 0} impressions (last 28 days)`}
+                        >
+                          {k.current_position.toFixed(1)}
+                        </span>
+                      ) : (
+                        <span className="text-[var(--ink-faint)]">-</span>
+                      )}
                     </td>
                     <td className="py-2.5 px-3">
                       {k.serp_features && (
