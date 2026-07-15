@@ -6,6 +6,7 @@ import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
 import { AlertTriangle, Paperclip, X, Sparkles, ChevronRight, ChevronLeft, Check } from "lucide-react";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import VoiceNoteRecorder from "./VoiceNoteRecorder";
+import PlanMarkupQuickAdd from "./PlanMarkupQuickAdd";
 import { calcPlumberQuote, PLUMBER_DEFAULT_MATERIALS, type PlumberIntake } from "@/lib/calcPlumber";
 import MaterialsEditor from "@/components/MaterialsEditor";
 import CalcKeyPricingPanel from "@/components/CalcKeyPricingPanel";
@@ -47,7 +48,7 @@ const STEPS = [
 
 export default function PlumberQuoteBuilder({
   profile, materials, preClientId, preMarkupMaterials, preMarkupSource,
-  pricingTiers, jobSizeTiers, siteConditions,
+  pricingTiers, jobSizeTiers, siteConditions, teamMembers,
 }: {
   profile: { hourly_rate: number; materials_margin_pct: number; archetype_defaults?: Record<string, string> };
   materials: MaterialRow[];
@@ -57,6 +58,7 @@ export default function PlumberQuoteBuilder({
   pricingTiers?: Array<{ id: string; name: string; markup_pct: number; sort_order: number }>;
   jobSizeTiers?: Array<{ id: string; name: string; max_days: number | null; markup_pct: number; sort_order: number }>;
   siteConditions?: SiteConditionTemplateRow[];
+  teamMembers?: Array<{ id: string; name: string | null; email: string }>;
 }) {
   const [step,   setStep]   = useState(0);
   const [intake, setIntake] = useState<PlumberIntake>(DEFAULT_INTAKE);
@@ -109,6 +111,7 @@ export default function PlumberQuoteBuilder({
   const [clientEmail,   setClientEmail]   = useState("");
   const [siteAddress,   setSiteAddress]   = useState("");
   const [clientId, setClientId] = useState<string | null>(preClientId ?? null);
+  const [plannedCrew, setPlannedCrew] = useState<string[]>([]);
   const [termsPreset,   setTermsPreset]   = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">("full_on_completion");
   const [customTerms,   setCustomTerms]   = useState<PaymentTerm[]>([
     { label: "Deposit", percent: 50, trigger: "acceptance", days: 0 },
@@ -271,6 +274,7 @@ export default function PlumberQuoteBuilder({
       site_address: siteAddress,
       trade: "plumber",
       job_type: intake.jobType,
+      planned_crew_member_ids: plannedCrew,
       intake_data: { ...intake, site_items: siteItems, manual_labour_hours: manualLabourHrs, annotation_meta: annotationMeta.map(a => ({ ...a, frameData: "" })) },
       labour_hours: result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0) + siteLabourSave + manualLabourHrs,
       materials_cost: result.materialsCost + extraTotals.materials + siteMatlsSave,
@@ -372,6 +376,28 @@ export default function PlumberQuoteBuilder({
             {drawingFiles.length > 0 && <div className="mt-3 space-y-2">{drawingFiles.map((f) => <div key={f.name} className="flex items-center gap-3 bg-[var(--app-bg)] rounded-lg px-3 py-2.5"><Paperclip size={14} className="text-[var(--ink-faint)] shrink-0" /><span className="text-[13.5px] flex-1 truncate">{f.name}</span><button onClick={() => setDrawingFiles((p) => p.filter((x) => x.name !== f.name))}><X size={14} className="text-[var(--ink-faint)]" /></button></div>)}</div>}
           </div>
 
+          <PlanMarkupQuickAdd
+            lib={lib}
+            marginPct={effectiveMargin}
+            trade="plumber"
+            onAddItems={(items) => {
+              setSiteItems((prev) => [
+                ...prev,
+                ...items.map((item) => ({
+                  id: Math.random().toString(36).slice(2),
+                  label: item.label,
+                  qty: item.quantity,
+                  unit: item.unit,
+                  note: "from plan markup",
+                  materialsCost: item.totalCost,
+                  labourHrs: 0,
+                  source: "plan_markup" as const,
+                })),
+              ]);
+            }}
+            onFileReady={(file) => setDrawingFiles((prev) => (prev.some((f) => f.name === file.name) ? prev : [...prev, file]))}
+          />
+
           <VoiceNoteRecorder
             onTranscriptReady={onVoiceTranscript}
             analyzing={analyzing}
@@ -468,6 +494,35 @@ export default function PlumberQuoteBuilder({
               <Chk checked={intake.certRequired} onChange={(v) => set("certRequired", v)} label="Compliance certificate required" />
             </div>
           </div>
+          {teamMembers && teamMembers.length > 0 && (
+            <div className="card">
+              <p className="section-tag mb-1">Staff for this job</p>
+              <p className="text-[13px] text-[var(--ink-faint)] mb-3">
+                Who this quote assumes will do the work - carries straight over to the job&apos;s crew once accepted.
+              </p>
+              {plannedCrew.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {plannedCrew.map((id) => {
+                    const member = teamMembers.find((m) => m.id === id);
+                    return (
+                      <span key={id} className="inline-flex items-center gap-1.5 rounded-full bg-[var(--app-bg)] border border-[var(--line)] pl-3 pr-1.5 py-1 text-[12.5px] font-medium text-[var(--ink)]">
+                        {member?.name || member?.email || "Unknown"}
+                        <button onClick={() => setPlannedCrew((prev) => prev.filter((p) => p !== id))} className="rounded-full p-0.5 hover:bg-[var(--line)] transition-colors" aria-label={`Remove ${member?.name || member?.email}`}>
+                          <X size={12} />
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+              <select value="" onChange={(e) => { if (e.target.value) setPlannedCrew((prev) => [...prev, e.target.value]); }} className="app-field">
+                <option value="">Add someone to this job...</option>
+                {teamMembers.filter((m) => !plannedCrew.includes(m.id)).map((m) => (
+                  <option key={m.id} value={m.id}>{m.name || m.email}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="card">
             <p className="section-tag mb-3">Hot water</p>
             <Chk checked={intake.hwuReplacement} onChange={(v) => set("hwuReplacement", v)} label="Hot water unit replacement" />

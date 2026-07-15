@@ -11,6 +11,7 @@ import { resolveCalcCosts, hasRealPriceBook, serializeLinkedItemKeys } from "@/l
 import StepCustomer from "./StepCustomer";
 import PackagePicker from "@/components/PackagePicker";
 import VoiceNoteRecorder from "./VoiceNoteRecorder";
+import PlanMarkupQuickAdd from "./PlanMarkupQuickAdd";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import ExtraJobLines, { type ExtraLine, extraLinesTotals } from "./ExtraJobLines";
 import { resolveClientId } from "@/lib/resolveClientId";
@@ -45,7 +46,7 @@ const STEPS = [
 
 export default function CarpenterQuoteBuilder({
   profile, materials, preClientId, preMarkupMaterials, preMarkupSource,
-  pricingTiers, jobSizeTiers, siteConditions,
+  pricingTiers, jobSizeTiers, siteConditions, teamMembers,
 }: {
   profile: { hourly_rate: number; materials_margin_pct: number; archetype_defaults?: Record<string, string> };
   materials: MaterialRow[];
@@ -55,6 +56,7 @@ export default function CarpenterQuoteBuilder({
   pricingTiers?: Array<{ id: string; name: string; markup_pct: number; sort_order: number }>;
   jobSizeTiers?: Array<{ id: string; name: string; max_days: number | null; markup_pct: number; sort_order: number }>;
   siteConditions?: SiteConditionTemplateRow[];
+  teamMembers?: Array<{ id: string; name: string | null; email: string }>;
 }) {
   const [step,   setStep]   = useState(0);
   const [intake, setIntake] = useState<CarpenterIntake>(DEFAULT_INTAKE);
@@ -105,6 +107,7 @@ export default function CarpenterQuoteBuilder({
   const [clientEmail, setClientEmail] = useState("");
   const [siteAddress, setSiteAddress] = useState("");
   const [clientId, setClientId] = useState<string | null>(preClientId ?? null);
+  const [plannedCrew, setPlannedCrew] = useState<string[]>([]);
   const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">("full_on_completion");
   const [customTerms] = useState<PaymentTerm[]>([
     { label: "Deposit", percent: 50, trigger: "acceptance", days: 0 },
@@ -256,6 +259,7 @@ export default function CarpenterQuoteBuilder({
       site_address: siteAddress,
       trade: "carpenter",
       job_type: intake.jobType,
+      planned_crew_member_ids: plannedCrew,
       intake_data: { ...intake, site_items: siteItems, manual_labour_hours: manualLabourHrs, annotation_meta: annotationMeta.map(a => ({ ...a, frameData: "" })) },
       labour_hours: result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0) + siteLabourSave + manualLabourHrs,
       materials_cost: result.materialsCost + extraTotals.materials + siteMatlsSave,
@@ -345,6 +349,28 @@ export default function CarpenterQuoteBuilder({
             </label>
             {drawingFiles.map((f) => <div key={f.name} className="flex items-center gap-3 bg-[var(--app-bg)] rounded-lg px-3 py-2.5 mt-2"><Paperclip size={14} className="text-[var(ink-faint)] shrink-0"/><span className="text-[13.5px] flex-1 truncate">{f.name}</span><button onClick={() => setDrawingFiles((p) => p.filter((x) => x.name!==f.name))}><X size={14} className="text-[var(--ink-faint)]"/></button></div>)}
           </div>
+
+          <PlanMarkupQuickAdd
+            lib={lib}
+            marginPct={effectiveMargin}
+            trade="carpenter"
+            onAddItems={(items) => {
+              setSiteItems((prev) => [
+                ...prev,
+                ...items.map((item) => ({
+                  id: Math.random().toString(36).slice(2),
+                  label: item.label,
+                  qty: item.quantity,
+                  unit: item.unit,
+                  note: "from plan markup",
+                  materialsCost: item.totalCost,
+                  labourHrs: 0,
+                  source: "plan_markup" as const,
+                })),
+              ]);
+            }}
+            onFileReady={(file) => setDrawingFiles((prev) => (prev.some((f) => f.name === file.name) ? prev : [...prev, file]))}
+          />
 
           <VoiceNoteRecorder
             onTranscriptReady={onVoiceTranscript}
@@ -449,6 +475,35 @@ export default function CarpenterQuoteBuilder({
               <Chk checked={intake.multistorey} onChange={(v) => set("multistorey", v)} label="Multi-storey"/>
             </div>
           </div>
+          {teamMembers && teamMembers.length > 0 && (
+            <div className="card">
+              <p className="section-tag mb-1">Staff for this job</p>
+              <p className="text-[13px] text-[var(--ink-faint)] mb-3">
+                Who this quote assumes will do the work - carries straight over to the job&apos;s crew once accepted.
+              </p>
+              {plannedCrew.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {plannedCrew.map((id) => {
+                    const member = teamMembers.find((m) => m.id === id);
+                    return (
+                      <span key={id} className="inline-flex items-center gap-1.5 rounded-full bg-[var(--app-bg)] border border-[var(--line)] pl-3 pr-1.5 py-1 text-[12.5px] font-medium text-[var(--ink)]">
+                        {member?.name || member?.email || "Unknown"}
+                        <button onClick={() => setPlannedCrew((prev) => prev.filter((p) => p !== id))} className="rounded-full p-0.5 hover:bg-[var(--line)] transition-colors" aria-label={`Remove ${member?.name || member?.email}`}>
+                          <X size={12} />
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+              <select value="" onChange={(e) => { if (e.target.value) setPlannedCrew((prev) => [...prev, e.target.value]); }} className="app-field">
+                <option value="">Add someone to this job...</option>
+                {teamMembers.filter((m) => !plannedCrew.includes(m.id)).map((m) => (
+                  <option key={m.id} value={m.id}>{m.name || m.email}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="card">
             <p className="section-tag mb-3">Site access</p>
             <Field label="Overall site access"><select value={intake.siteAccess} onChange={(e) => set("siteAccess", e.target.value as CarpenterIntake["siteAccess"])} className="app-field"><option value="easy">Easy</option><option value="moderate">Moderate</option><option value="difficult">Difficult</option></select></Field>

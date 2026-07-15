@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp, Plus, Trash2, PenLine, Image, FileText, Message
 import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import VoiceNoteRecorder from "./VoiceNoteRecorder";
+import PlanMarkupQuickAdd from "./PlanMarkupQuickAdd";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
 import StepCustomer from "./StepCustomer";
@@ -101,6 +102,7 @@ interface RooferQuoteBuilderProps {
   pricingTiers?: Array<{ id: string; name: string; markup_pct: number; sort_order: number }>;
   jobSizeTiers?: Array<{ id: string; name: string; max_days: number | null; markup_pct: number; sort_order: number }>;
   siteConditions?: SiteConditionTemplateRow[];
+  teamMembers?: Array<{ id: string; name: string | null; email: string }>;
 }
 
 export default function RooferQuoteBuilder({
@@ -112,6 +114,7 @@ export default function RooferQuoteBuilder({
   pricingTiers,
   jobSizeTiers,
   siteConditions,
+  teamMembers,
 }: RooferQuoteBuilderProps) {
 
   // Remembered archetype -> real price book product mappings, so AI-detected
@@ -151,6 +154,7 @@ export default function RooferQuoteBuilder({
   const [clientEmail, setClientEmail] = useState("");
   const [siteAddress, setSiteAddress] = useState("");
   const [clientId, setClientId] = useState<string | null>(preClientId ?? null);
+  const [plannedCrew, setPlannedCrew] = useState<string[]>([]);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">("full_on_completion");
@@ -477,6 +481,7 @@ export default function RooferQuoteBuilder({
       site_address: siteAddress,
       trade: "roofer",
       job_type: `${MATERIALS[material].label} re-roof`,
+      planned_crew_member_ids: plannedCrew,
       intake_data: {
         jobs: jobs.map((j, i) => ({
           index: i + 1, area: j.area, pitch: j.pitchType, style: j.roofStyle,
@@ -614,6 +619,28 @@ export default function RooferQuoteBuilder({
             </div>
           )}
         </div>
+
+        <PlanMarkupQuickAdd
+          lib={lib}
+          marginPct={effectiveMargin}
+          trade="roofer"
+          onAddItems={(items) => {
+            setSiteItems((prev) => [
+              ...prev,
+              ...items.map((item) => ({
+                id: Math.random().toString(36).slice(2),
+                label: item.label,
+                qty: item.quantity,
+                unit: item.unit,
+                note: "from plan markup",
+                materialsCost: item.totalCost,
+                labourHrs: 0,
+                source: "plan_markup" as const,
+              })),
+            ]);
+          }}
+          onFileReady={(file) => setDrawingFiles((prev) => (prev.some((f) => f.name === file.name) ? prev : [...prev, file]))}
+        />
 
         <VoiceNoteRecorder
           onTranscriptReady={onVoiceTranscript}
@@ -838,6 +865,38 @@ export default function RooferQuoteBuilder({
                 {t.name} {t.max_days ? `(< ${t.max_days} day${t.max_days !== 1 ? "s" : ""})` : "(3+ days)"}
                 ({t.markup_pct >= 0 ? "+" : ""}{t.markup_pct}%)
               </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {teamMembers && teamMembers.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="font-semibold text-[14px] text-[var(--ink)] flex items-center gap-2">
+            <Maximize2 size={16} className="text-[var(--amber-deep)]" /> Staff for this job
+          </h3>
+          <p className="text-[12.5px] text-[var(--ink-faint)]">
+            Who this quote assumes will do the work - carries straight over to the job&apos;s crew once accepted.
+          </p>
+          {plannedCrew.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {plannedCrew.map((id) => {
+                const member = teamMembers.find((m) => m.id === id);
+                return (
+                  <span key={id} className="inline-flex items-center gap-1.5 rounded-full bg-[var(--app-bg)] border border-[var(--line)] pl-3 pr-1.5 py-1 text-[12.5px] font-medium text-[var(--ink)]">
+                    {member?.name || member?.email || "Unknown"}
+                    <button onClick={() => setPlannedCrew((prev) => prev.filter((p) => p !== id))} className="rounded-full p-0.5 hover:bg-[var(--line)] transition-colors" aria-label={`Remove ${member?.name || member?.email}`}>
+                      <X size={12} />
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+          )}
+          <select value="" onChange={(e) => { if (e.target.value) setPlannedCrew((prev) => [...prev, e.target.value]); }} className="app-field">
+            <option value="">Add someone to this job...</option>
+            {teamMembers.filter((m) => !plannedCrew.includes(m.id)).map((m) => (
+              <option key={m.id} value={m.id}>{m.name || m.email}</option>
             ))}
           </select>
         </div>
