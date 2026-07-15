@@ -1,10 +1,18 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getTeamContext } from "@/lib/team";
+import { requireActiveAccess } from "@/lib/requireActiveAccess";
 import AppHeader from "@/components/AppHeader";
 import TeamPageClient, { TeamMemberRow, PendingInviteRow } from "@/components/TeamPageClient";
 
 export default async function TeamPage() {
+  // This page used to be under app/quote's layout, which applied
+  // this check to every route under it. Now that it lives at /team
+  // (merged alongside the pre-existing /team/accept/[token] invite-accept
+  // route, which must NOT be gated - someone accepting an invite may not
+  // have active access yet), the check has to happen here directly
+  // instead of via a shared layout.
+  await requireActiveAccess();
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");

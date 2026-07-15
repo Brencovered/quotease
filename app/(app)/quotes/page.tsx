@@ -31,7 +31,7 @@ export default async function QuotesPage() {
       // A quote's own id and its job's id are different records (jobs
       // are a separate table, created from a quote via quote_id, with
       // their own auto-generated id) - accepted/paid quotes link
-      // through to /electrician/jobs/[jobId], not /electrician/jobs/[quoteId].
+      // through to /jobs/[jobId], not /jobs/[quoteId].
       // Reusing the quote's id there 404s, since no job shares that id.
       const acceptedOrPaidIds = quotes.filter((q) => q.status === "accepted" || q.status === "paid").map((q) => q.id as string);
       if (acceptedOrPaidIds.length > 0) {

@@ -321,7 +321,7 @@ function LoginForm() {
         setError(error.message);
         return;
       }
-      const target = next && next.startsWith("/") ? next : "/electrician/dashboard";
+      const target = next && next.startsWith("/") ? next : "/dashboard";
       // A full navigation (not router.push) guarantees the browser sends
       // the just-set session cookie on the very next request. Using
       // router.push here raced with cookie propagation - middleware

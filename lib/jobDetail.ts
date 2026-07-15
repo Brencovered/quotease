@@ -29,7 +29,7 @@ export async function loadJobDetailData(supabase: SupabaseClient, idParam: strin
   }
 
   // A quote that hasn't been won yet (draft/sent/declined) has no job at
-  // all - that's normal, not an error (see app/electrician/quotes/[id]/
+  // all - that's normal, not an error (see app/quotes/[id]/
   // page.tsx, "exclusively pre-acceptance"). Without this, every one of
   // those quotes 404'd, since the rest of this function assumes a real
   // job row exists to key everything off. Build the same return shape

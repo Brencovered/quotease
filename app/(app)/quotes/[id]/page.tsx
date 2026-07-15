@@ -15,7 +15,7 @@ import { getCachedPriceBook, getCachedLegacyMaterials } from "@/lib/cache";
 // This route is for a quote that hasn't been won yet - draft, sent, or
 // declined. The moment a client accepts, it stops being a quote you're
 // chasing and becomes a job you're running - that's a different page
-// with different concerns (see /electrician/jobs/[id]), not just a
+// with different concerns (see /jobs/[id]), not just a
 // different badge colour on the same page.
 export default async function QuoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -30,12 +30,12 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
 
   if (quote.status === "accepted" || quote.status === "paid") {
     // The job is a separate record with its own id (created from the
-    // quote via quote_id) - redirecting to /electrician/jobs/[id] using
+    // quote via quote_id) - redirecting to /jobs/[id] using
     // the QUOTE's id 404s, since no job shares that id.
     // getOrCreateJobForQuote also self-heals the case where a quote was
     // marked accepted/paid but a job was never created for it.
     const job = await getOrCreateJobForQuote(supabase, id);
-    if (job) redirect(`/electrician/jobs/${job.id}`);
+    if (job) redirect(`/jobs/${job.id}`);
     // No job and couldn't create one (e.g. the quote's business is
     // missing) - fall through and show the quote page rather than 404.
   }
@@ -93,7 +93,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
       <main className="page-wrap-narrow">
         <div className="flex items-start justify-between gap-3 mb-4">
           <div>
-            <p className="text-[12px] text-[var(--ink-faint)] mb-1"><Link href="/electrician/quotes" className="hover:underline">Quotes</Link> / {id.slice(0, 8)}</p>
+            <p className="text-[12px] text-[var(--ink-faint)] mb-1"><Link href="/quotes" className="hover:underline">Quotes</Link> / {id.slice(0, 8)}</p>
             <h1 className="font-display text-2xl text-[var(--ink)]">{quote.client_name || "Unnamed client"}</h1>
             {quote.site_address && <p className="text-[13px] text-[var(--ink-faint)] mt-0.5">{quote.site_address}</p>}
           </div>

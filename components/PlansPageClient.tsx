@@ -348,7 +348,7 @@ export default function PlansPageClient({
 
               {/* Raise new quote */}
               <button
-                onClick={() => { window.location.href = `/electrician?client_id=${openPlan.client_id}&plan_id=${openPlan.id}`; }}
+                onClick={() => { window.location.href = `/quote?client_id=${openPlan.client_id}&plan_id=${openPlan.id}`; }}
                 className="btn-primary w-full justify-center">
                 <Plus size={15} /> Raise a new quote from this plan
               </button>

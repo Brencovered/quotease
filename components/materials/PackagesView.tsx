@@ -482,7 +482,7 @@ export default function PackagesView({
                     </div>
                   </div>
                   <Link
-                    href={`/electrician?package_id=${pkg.id}`}
+                    href={`/quote?package_id=${pkg.id}`}
                     className="btn-secondary shrink-0"
                     style={{ padding: "8px 14px", fontSize: "12px" }}
                   >

@@ -337,7 +337,7 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
                 return (
                   <div key={ev.id}>
                     {ev.jobId ? (
-                      <a href={`/electrician/quotes/${ev.jobId}`} className={`flex items-start gap-3 rounded-xl p-3 ${EVENT_STYLE[ev.type] ?? EVENT_STYLE.general}`}>
+                      <a href={`/quotes/${ev.jobId}`} className={`flex items-start gap-3 rounded-xl p-3 ${EVENT_STYLE[ev.type] ?? EVENT_STYLE.general}`}>
                         <Icon size={15} className="mt-0.5 shrink-0" />
                         <div>
                           <p className="font-semibold text-[13.5px]">{ev.label}</p>
@@ -445,7 +445,7 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
             </div>
           )}
           {listJobs.map((j) => (
-            <a key={j.id} href={`/electrician/quotes/${j.id}`} className="card block hover:border-[var(--amber)] transition-colors">
+            <a key={j.id} href={`/quotes/${j.id}`} className="card block hover:border-[var(--amber)] transition-colors">
               <div className="flex justify-between items-start gap-3">
                 <div>
                   <p className="font-bold text-[15px] text-[var(--ink)]">{j.client_name}</p>

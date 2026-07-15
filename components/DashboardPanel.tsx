@@ -155,27 +155,27 @@ export default function DashboardPanel({ stats, profit }: Props) {
 
       {/* Quick actions */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        <Link prefetch={false} href="/electrician" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
+        <Link prefetch={false} href="/quote" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
           <span className="flex items-center gap-2"><Zap size={16} className="text-[var(--amber)]" /> New quote</span>
           <ArrowUpRight size={14} className="text-[var(--ink-faint)]" />
         </Link>
-        <Link prefetch={false} href="/electrician/jobs" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
+        <Link prefetch={false} href="/jobs" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
           <span className="flex items-center gap-2"><Briefcase size={16} className="text-[var(--blue)]" /> Jobs ({stats.activeJobsCount ?? 0})</span>
           <ArrowUpRight size={14} className="text-[var(--ink-faint)]" />
         </Link>
-        <Link prefetch={false} href="/electrician/schedule" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
+        <Link prefetch={false} href="/schedule" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
           <span className="flex items-center gap-2"><CalendarDays size={16} className="text-[var(--green)]" /> Schedule</span>
           <ArrowUpRight size={14} className="text-[var(--ink-faint)]" />
         </Link>
-        <Link prefetch={false} href="/electrician/packages" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
+        <Link prefetch={false} href="/packages" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
           <span className="flex items-center gap-2"><Package size={16} className="text-[var(--amber-deep)]" /> Packages</span>
           <span className="text-[11px] font-bold text-[var(--ink-faint)] bg-[var(--app-bg)] rounded-full px-2 py-0.5">{packageCount} ready</span>
         </Link>
-        <Link prefetch={false} href="/electrician/margins" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
+        <Link prefetch={false} href="/margins" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
           <span className="flex items-center gap-2"><TrendingUp size={16} className="text-[var(--green)]" /> Profit detail</span>
           <ArrowUpRight size={14} className="text-[var(--ink-faint)]" />
         </Link>
-        <Link prefetch={false} href="/electrician/reports" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
+        <Link prefetch={false} href="/reports" className="inline-flex items-center justify-between gap-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] rounded-xl px-4 py-3 font-semibold text-[14px] hover:border-[var(--amber)] hover:shadow-sm transition-all">
           <span className="flex items-center gap-2"><Briefcase size={16} className="text-[var(--navy)]" /> Reports</span>
           <ArrowUpRight size={14} className="text-[var(--ink-faint)]" />
         </Link>

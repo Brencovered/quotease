@@ -52,15 +52,15 @@ import { MODELS } from "@/lib/ai/gateway";
 const MAX_TOOL_ROUNDS = 4;
 
 const NAV_ALLOWLIST: Record<string, string> = {
-  "/electrician": "Start a new quote",
-  "/electrician/jobs": "Your jobs",
-  "/electrician/quotes": "Your quotes",
-  "/electrician/clients": "Your clients",
-  "/electrician/schedule": "Schedule",
-  "/electrician/margins": "Job costing & margins",
-  "/electrician/dashboard": "Dashboard",
-  "/electrician/leads": "Leads",
-  "/electrician/export": "Xero export",
+  "/quote": "Start a new quote",
+  "/jobs": "Your jobs",
+  "/quotes": "Your quotes",
+  "/clients": "Your clients",
+  "/schedule": "Schedule",
+  "/margins": "Job costing & margins",
+  "/dashboard": "Dashboard",
+  "/leads": "Leads",
+  "/export": "Xero export",
   "/settings": "Settings",
   "/settings/pricebook": "Price book",
   "/settings/materials": "Materials",
@@ -210,7 +210,7 @@ export async function POST(req: NextRequest) {
 
         actions.push({
           type: "open_quote_draft",
-          url: `/electrician?trade=${encodeURIComponent(trade)}&package_id=${pkg.id}`,
+          url: `/quote?trade=${encodeURIComponent(trade)}&package_id=${pkg.id}`,
           title,
           itemCount: itemsToInsert.length,
           pricedCount,

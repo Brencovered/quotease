@@ -11,7 +11,7 @@
  * queryable signal (AI assistant usage, viewing the productivity report)
  * are tracked in `onboarding_state`, written by the routes/pages that
  * fire them (see app/api/ai/business-assistant/route.ts and
- * app/electrician/reports/page.tsx).
+ * app/reports/page.tsx).
  *
  * Trial day is computed from profiles.created_at, not login count or
  * wall-clock "days since first visit" -- someone who signs up and comes
@@ -112,8 +112,8 @@ export async function getOnboardingProgress(
       day: 1,
       title: "Set the foundations",
       tasks: [
-        { key: "price_book", label: "Upload or import your pricing", href: "/electrician/materials", done: hasPriceBook },
-        { key: "team", label: "Invite your team", href: "/electrician/team", done: hasTeam },
+        { key: "price_book", label: "Upload or import your pricing", href: "/materials", done: hasPriceBook },
+        { key: "team", label: "Invite your team", href: "/team", done: hasTeam },
       ],
       complete: hasPriceBook && hasTeam,
     },
@@ -121,8 +121,8 @@ export async function getOnboardingProgress(
       day: 2,
       title: "Get your first quote out",
       tasks: [
-        { key: "drawing", label: "Upload a drawing and try AI takeoff or markup", href: "/electrician/plans", done: hasDrawing },
-        { key: "quote", label: "Build a quote", href: "/electrician/quotes", done: hasQuote },
+        { key: "drawing", label: "Upload a drawing and try AI takeoff or markup", href: "/plans", done: hasDrawing },
+        { key: "quote", label: "Build a quote", href: "/quotes", done: hasQuote },
       ],
       complete: hasDrawing && hasQuote,
     },
@@ -130,8 +130,8 @@ export async function getOnboardingProgress(
       day: 3,
       title: "Win it and turn it into a job",
       tasks: [
-        { key: "sent_quote", label: "Send a quote to a client", href: "/electrician/quotes", done: hasSentQuote },
-        { key: "job", label: "See it land on the jobs board", href: "/electrician/jobs", done: hasJob },
+        { key: "sent_quote", label: "Send a quote to a client", href: "/quotes", done: hasSentQuote },
+        { key: "job", label: "See it land on the jobs board", href: "/jobs", done: hasJob },
       ],
       complete: hasSentQuote && hasJob,
     },
@@ -139,8 +139,8 @@ export async function getOnboardingProgress(
       day: 4,
       title: "Run the job",
       tasks: [
-        { key: "assigned_job", label: "Assign a job to a team member", href: "/electrician/jobs", done: hasAssignedJob },
-        { key: "moved_job", label: "Move a job through its stages (or add a Quick Job)", href: "/electrician/jobs", done: hasMovedJob },
+        { key: "assigned_job", label: "Assign a job to a team member", href: "/jobs", done: hasAssignedJob },
+        { key: "moved_job", label: "Move a job through its stages (or add a Quick Job)", href: "/jobs", done: hasMovedJob },
       ],
       complete: hasAssignedJob && hasMovedJob,
     },
@@ -148,7 +148,7 @@ export async function getOnboardingProgress(
       day: 5,
       title: "Get paid",
       tasks: [
-        { key: "invoice", label: "Generate an invoice from a completed job", href: "/electrician/jobs", done: hasInvoice },
+        { key: "invoice", label: "Generate an invoice from a completed job", href: "/jobs", done: hasInvoice },
       ],
       complete: hasInvoice,
     },
@@ -156,7 +156,7 @@ export async function getOnboardingProgress(
       day: 6,
       title: "Work smarter",
       tasks: [
-        { key: "ai_assistant", label: "Ask the business AI assistant something", href: "/electrician/dashboard", done: hasAiAssistant },
+        { key: "ai_assistant", label: "Ask the business AI assistant something", href: "/dashboard", done: hasAiAssistant },
         { key: "push", label: "Turn on push notifications", href: "/settings", done: hasPush },
       ],
       complete: hasAiAssistant && hasPush,
@@ -165,7 +165,7 @@ export async function getOnboardingProgress(
       day: 7,
       title: "See the payoff",
       tasks: [
-        { key: "report", label: "Check your team productivity report", href: "/electrician/reports", done: hasReportView },
+        { key: "report", label: "Check your team productivity report", href: "/reports", done: hasReportView },
       ],
       complete: hasReportView,
     },

@@ -34,7 +34,7 @@ export default function TeamAcceptPanel({
       });
       const body = await res.json();
       if (!res.ok) { setError(body.error ?? "Couldn't accept this invite."); return; }
-      router.push("/electrician/dashboard");
+      router.push("/dashboard");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not reach the server.");
@@ -56,7 +56,7 @@ export default function TeamAcceptPanel({
         ) : status === "active" ? (
           <>
             <p className="text-[14px] text-[var(--ink-soft)] leading-[1.6] mb-5">You&apos;re already on this team.</p>
-            <Link href="/electrician/dashboard" className="btn-primary inline-flex justify-center">Go to dashboard →</Link>
+            <Link href="/dashboard" className="btn-primary inline-flex justify-center">Go to dashboard →</Link>
           </>
         ) : !currentUserEmail ? (
           <>

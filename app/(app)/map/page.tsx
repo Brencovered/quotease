@@ -33,7 +33,7 @@ export default async function MapPage() {
 
         // These rows are quotes (accepted/paid ones, standing in for
         // "jobs" here), so `id` is the quote's id - but the map links
-        // through to /electrician/jobs/[id], which needs the actual
+        // through to /jobs/[id], which needs the actual
         // job's id (a separate record created from the quote via
         // quote_id). Keep `id` as the quote id for the geocoding update
         // below and carry the real job id separately for the link.

@@ -27,7 +27,7 @@ const STATUS: Record<string, { label: string; bg: string; text: string; icon: ty
 
 const FILTERS = ["all","draft","sent","accepted","paid","declined"];
 
-// `now` is passed in from the server (see app/electrician/quotes/page.tsx)
+// `now` is passed in from the server (see app/quotes/page.tsx)
 // rather than calling Date.now() independently here. Server render and
 // client hydration happen at genuinely different moments (today's own
 // measurements showed multi-second gaps under load) - if a quote's
@@ -47,9 +47,9 @@ function daysAgo(d: string | null, now: number)   { if (!d) return null; return 
 // normally happen, but better than a 404 if it does).
 function quoteHref(q: Quote): string {
   if ((q.status === "accepted" || q.status === "paid") && q.job_id) {
-    return `/electrician/jobs/${q.job_id}`;
+    return `/jobs/${q.job_id}`;
   }
-  return `/electrician/quotes/${q.id}`;
+  return `/quotes/${q.id}`;
 }
 
 export default function QuotesList({ quotes: initial, xeroConnected, now }: { quotes: Quote[]; xeroConnected?: boolean; now: number }) {
@@ -118,7 +118,7 @@ export default function QuotesList({ quotes: initial, xeroConnected, now }: { qu
       {celebrating !== null && <WinCelebration amount={celebrating} />}
       <div className="flex items-center justify-between mb-5">
         <h1 className="font-display text-[28px] text-[var(--ink)]">Quotes</h1>
-        <Link href="/electrician" className="inline-flex items-center gap-1.5 bg-[var(--amber)] text-[var(--navy)] font-extrabold text-[13px] px-4 py-2.5 rounded-xl">
+        <Link href="/quote" className="inline-flex items-center gap-1.5 bg-[var(--amber)] text-[var(--navy)] font-extrabold text-[13px] px-4 py-2.5 rounded-xl">
           <Plus size={15} /> New
         </Link>
       </div>
@@ -127,21 +127,21 @@ export default function QuotesList({ quotes: initial, xeroConnected, now }: { qu
       {(overdueFollowUps.length > 0 || expiredQuotes.length > 0 || noFollowUp.length > 0) && (
         <div className="space-y-2 mb-4">
           {overdueFollowUps.map((q) => (
-            <Link key={q.id} href={`/electrician/quotes/${q.id}`} className="flex items-center gap-3 bg-[var(--red-bg)] border border-red-200 rounded-xl px-4 py-3">
+            <Link key={q.id} href={`/quotes/${q.id}`} className="flex items-center gap-3 bg-[var(--red-bg)] border border-red-200 rounded-xl px-4 py-3">
               <Bell size={14} className="text-[var(--red)] shrink-0" />
               <span className="text-[13px] font-semibold text-[var(--red)] flex-1">Follow-up overdue: {q.client_name}</span>
               <ChevronRight size={14} className="text-red-300" />
             </Link>
           ))}
           {expiredQuotes.map((q) => (
-            <Link key={q.id} href={`/electrician/quotes/${q.id}`} className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+            <Link key={q.id} href={`/quotes/${q.id}`} className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
               <AlertTriangle size={14} className="text-amber-600 shrink-0" />
               <span className="text-[13px] font-semibold text-amber-800 flex-1">Quote expired: {q.client_name}</span>
               <ChevronRight size={14} className="text-amber-300" />
             </Link>
           ))}
           {noFollowUp.map((q) => (
-            <Link key={q.id} href={`/electrician/quotes/${q.id}`} className="flex items-center gap-3 bg-[var(--blue-bg)] border border-blue-200 rounded-xl px-4 py-3">
+            <Link key={q.id} href={`/quotes/${q.id}`} className="flex items-center gap-3 bg-[var(--blue-bg)] border border-blue-200 rounded-xl px-4 py-3">
               <Bell size={14} className="text-[var(--blue)] shrink-0" />
               <span className="text-[13px] font-semibold text-[var(--blue)] flex-1">No follow-up set: {q.client_name}</span>
               <ChevronRight size={14} className="text-blue-300" />
@@ -197,7 +197,7 @@ export default function QuotesList({ quotes: initial, xeroConnected, now }: { qu
                 <p className="text-[13.5px] text-[var(--ink-faint)] mb-5 max-w-[220px] mx-auto">
                   Build your first quote and send it before the next tradie does.
                 </p>
-                <Link href="/electrician" className="btn-primary inline-flex w-auto px-6 text-[14px]">
+                <Link href="/quote" className="btn-primary inline-flex w-auto px-6 text-[14px]">
                   Build a quote →
                 </Link>
               </>

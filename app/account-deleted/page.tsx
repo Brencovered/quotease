@@ -17,7 +17,7 @@ export default async function AccountDeletedPage() {
   // the individual's own profile here would create a redirect loop for
   // a team member: middleware sends them here because the BUSINESS is
   // deleted, but their own individual profile was never touched, so
-  // this page would immediately bounce them back to /electrician.
+  // this page would immediately bounce them back to /quote.
   const ctx = await getTeamContext(supabase, userData.user.id);
 
   const { data: profile } = await supabase
@@ -28,7 +28,7 @@ export default async function AccountDeletedPage() {
 
   // Not actually deleted (e.g. already restored in another tab) -- nothing
   // for this page to do, send them back into the app.
-  if (!profile?.deleted_at) redirect("/electrician");
+  if (!profile?.deleted_at) redirect("/quote");
 
   const deletedAt = new Date(profile.deleted_at);
   const purgeDate = new Date(deletedAt.getTime() + GRACE_PERIOD_DAYS * 86400000);

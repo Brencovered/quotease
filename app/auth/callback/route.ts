@@ -24,5 +24,5 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.redirect(`${origin}/electrician/dashboard`);
+  return NextResponse.redirect(`${origin}/dashboard`);
 }

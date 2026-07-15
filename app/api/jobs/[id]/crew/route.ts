@@ -72,7 +72,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     ? new Date(job.scheduled_start).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })
     : null;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
-  const jobUrl = `${appUrl}/electrician/jobs/${jobId}`;
+  const jobUrl = `${appUrl}/jobs/${jobId}`;
 
   const admin = createAdminClient();
 
@@ -103,7 +103,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     await sendPushToUser(admin, member.member_user_id, {
       title: "Added to a job",
       body: `You're on ${jobTitle}${when ? ` - ${when}` : ""}`,
-      url: `/electrician/jobs/${jobId}`,
+      url: `/jobs/${jobId}`,
     });
   }
 

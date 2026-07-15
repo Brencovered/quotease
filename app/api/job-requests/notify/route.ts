@@ -164,7 +164,7 @@ export async function POST(req: NextRequest) {
           ${request.timeline ? `<p style="margin: 0 0 8px;"><strong style="color: #0a1722;">Timeline:</strong> ${request.timeline}</p>` : ""}
           ${request.photo_paths?.length ? `<p style="margin: 0 0 16px;"><strong style="color: #0a1722;">Photos:</strong> ${request.photo_paths.length} attached — view and claim to see them</p>` : ""}
           <p style="margin: 0 0 24px;"><strong style="color: #0a1722;">Suburb:</strong> ${request.suburb}${request.postcode ? ` ${request.postcode}` : ""}</p>
-          <a href="${APP_URL}/electrician/leads" style="display: inline-block; background: #ffb400; color: #0a1722; padding: 14px 28px; border-radius: 10px; font-weight: bold; text-decoration: none; font-size: 15px;">
+          <a href="${APP_URL}/leads" style="display: inline-block; background: #ffb400; color: #0a1722; padding: 14px 28px; border-radius: 10px; font-weight: bold; text-decoration: none; font-size: 15px;">
             View and claim this lead →
           </a>
           <p style="color: #9ca3af; font-size: 12px; margin-top: 24px; line-height: 1.5;">

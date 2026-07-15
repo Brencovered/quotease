@@ -761,7 +761,7 @@ function CameraPage() {
       <div className="bg-white rounded-2xl p-6 text-center max-w-xs">
         <p className="font-bold text-[15px] mb-2">Camera unavailable</p>
         <p className="text-[13px] text-gray-500 mb-4">{error}</p>
-        <button onClick={() => router.push("/electrician")} className="bg-[#0a1722] text-white font-bold px-6 py-3 rounded-xl">Go back</button>
+        <button onClick={() => router.push("/quote")} className="bg-[#0a1722] text-white font-bold px-6 py-3 rounded-xl">Go back</button>
       </div>
     </div>
   );
@@ -987,7 +987,7 @@ function CameraPage() {
             <button onClick={() => setReview(true)} className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[12px] px-4 py-1.5 rounded-full flex items-center gap-1 border-0">
               Done <ChevronRight size={13} />
             </button>
-            <button onClick={() => router.push("/electrician")} className="text-white p-1.5 rounded-lg bg-black/40 border-0">
+            <button onClick={() => router.push("/quote")} className="text-white p-1.5 rounded-lg bg-black/40 border-0">
               <X size={15} />
             </button>
           </div>

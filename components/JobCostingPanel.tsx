@@ -114,7 +114,7 @@ export default function JobCostingPanel({ quoteId, jobId, quotedHours, quotedMat
             </div>
           )}
 
-          <Link href="/electrician/margins" className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--navy)] mb-4">
+          <Link href="/margins" className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--navy)] mb-4">
             See how this compares across all your jobs <ArrowRight size={13} />
           </Link>
 

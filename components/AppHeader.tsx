@@ -24,13 +24,13 @@ import {
 } from "lucide-react";
 
 const NAV = [
-  { href: "/electrician/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/electrician/materials", icon: Package,          label: "Materials" },
-  { href: "/electrician/jobs",      icon: Briefcase,        label: "Jobs" },
-  { href: "/electrician",           icon: Plus,             label: "Quote",   fab: true },
-  { href: "/electrician/quotes",    icon: FileText,         label: "Quotes" },
-  { href: "/electrician/schedule",  icon: CalendarDays,     label: "Schedule" },
-  { href: "/electrician/margins",   icon: TrendingUp,       label: "Profit" },
+  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/materials", icon: Package,          label: "Materials" },
+  { href: "/jobs",      icon: Briefcase,        label: "Jobs" },
+  { href: "/quote",           icon: Plus,             label: "Quote",   fab: true },
+  { href: "/quotes",    icon: FileText,         label: "Quotes" },
+  { href: "/schedule",  icon: CalendarDays,     label: "Schedule" },
+  { href: "/margins",   icon: TrendingUp,       label: "Profit" },
 ];
 
 export default function AppHeader() {
@@ -63,7 +63,7 @@ export default function AppHeader() {
   }
 
   function isActive(href: string) {
-    if (href === "/electrician") return pathname === "/electrician";
+    if (href === "/quote") return pathname === "/quote";
     return pathname.startsWith(href);
   }
 
@@ -80,13 +80,13 @@ export default function AppHeader() {
         className="hidden sm:flex flex-col fixed top-0 left-0 bottom-0 z-40 bg-[var(--navy)] border-r border-white/[0.06]"
         style={{ width: "var(--sidebar-width)" }}
       >
-        <Link prefetch={false} href="/electrician/dashboard" className="font-display text-[15px] tracking-widest text-white px-6 pt-6 pb-5">
+        <Link prefetch={false} href="/dashboard" className="font-display text-[15px] tracking-widest text-white px-6 pt-6 pb-5">
           SWIFTSCOPE
         </Link>
 
         <div className="px-4 pb-4">
           <Link prefetch={false}
-            href="/electrician"
+            href="/quote"
             className="flex items-center justify-center gap-1.5 bg-[var(--amber)] text-[var(--navy)] font-extrabold text-[13px] py-2.5 rounded-xl hover:bg-[var(--amber-deep)] transition-colors"
           >
             <Plus size={15} strokeWidth={3} /> New quote
@@ -116,16 +116,16 @@ export default function AppHeader() {
             );
           })}
 
-          <Link prefetch={false} href="/electrician/leads" className={navLinkClasses("/electrician/leads")}>
-            <Zap size={17} strokeWidth={isActive("/electrician/leads") ? 2.2 : 1.8} />
+          <Link prefetch={false} href="/leads" className={navLinkClasses("/leads")}>
+            <Zap size={17} strokeWidth={isActive("/leads") ? 2.2 : 1.8} />
             Leads
           </Link>
-          <Link prefetch={false} href="/electrician/clients" className={navLinkClasses("/electrician/clients")}>
-            <Users size={17} strokeWidth={isActive("/electrician/clients") ? 2.2 : 1.8} />
+          <Link prefetch={false} href="/clients" className={navLinkClasses("/clients")}>
+            <Users size={17} strokeWidth={isActive("/clients") ? 2.2 : 1.8} />
             Clients
           </Link>
-          <Link prefetch={false} href="/electrician/team" className={navLinkClasses("/electrician/team")}>
-            <UsersRound size={17} strokeWidth={isActive("/electrician/team") ? 2.2 : 1.8} />
+          <Link prefetch={false} href="/team" className={navLinkClasses("/team")}>
+            <UsersRound size={17} strokeWidth={isActive("/team") ? 2.2 : 1.8} />
             Team
           </Link>
 
@@ -146,12 +146,12 @@ export default function AppHeader() {
 
           {moreExpanded && (
             <div className="flex flex-col gap-0.5 pl-2">
-              <Link prefetch={false} href="/electrician/export" className={navLinkClasses("/electrician/export")}>
-                <Download size={17} strokeWidth={isActive("/electrician/export") ? 2.2 : 1.8} />
+              <Link prefetch={false} href="/export" className={navLinkClasses("/export")}>
+                <Download size={17} strokeWidth={isActive("/export") ? 2.2 : 1.8} />
                 Export
               </Link>
-              <Link prefetch={false} href="/electrician/map" className={navLinkClasses("/electrician/map")}>
-                <MapPin size={17} strokeWidth={isActive("/electrician/map") ? 2.2 : 1.8} />
+              <Link prefetch={false} href="/map" className={navLinkClasses("/map")}>
+                <MapPin size={17} strokeWidth={isActive("/map") ? 2.2 : 1.8} />
                 Map
               </Link>
             </div>
@@ -174,7 +174,7 @@ export default function AppHeader() {
 
       {/* -- Mobile top bar -- */}
       <header className="sm:hidden bg-[var(--navy)] sticky top-0 z-40 h-12 flex items-center justify-between px-4 relative">
-        <Link prefetch={false} href="/electrician/dashboard" className="font-display text-[14px] tracking-widest text-white">
+        <Link prefetch={false} href="/dashboard" className="font-display text-[14px] tracking-widest text-white">
           SWIFTSCOPE
         </Link>
         <button onClick={() => setMoreOpen((v) => !v)} className="text-[var(--steel-2)] p-1" aria-label="More">
@@ -185,19 +185,19 @@ export default function AppHeader() {
           <>
             <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
             <div className="absolute top-12 right-4 z-50 bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-lg overflow-hidden w-48">
-              <Link prefetch={false} href="/electrician/clients" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
+              <Link prefetch={false} href="/clients" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <Users size={15} className="text-[var(--ink-faint)]" /> Clients
               </Link>
-              <Link prefetch={false} href="/electrician/team" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(ink)] border-b border-[var(--line)]">
+              <Link prefetch={false} href="/team" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(ink)] border-b border-[var(--line)]">
                 <UsersRound size={15} className="text-[var(--ink-faint)]" /> Team
               </Link>
-              <Link prefetch={false} href="/electrician/leads" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
+              <Link prefetch={false} href="/leads" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <Zap size={15} className="text-[var(--ink-faint)]" /> Leads
               </Link>
-              <Link prefetch={false} href="/electrician/export" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
+              <Link prefetch={false} href="/export" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <Download size={15} className="text-[var(--ink-faint)]" /> Export to Xero / MYOB
               </Link>
-              <Link prefetch={false} href="/electrician/map" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
+              <Link prefetch={false} href="/map" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <MapPin size={15} className="text-[var(--ink-faint)]" /> Map
               </Link>
               <Link prefetch={false} href="/settings" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">

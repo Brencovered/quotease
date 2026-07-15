@@ -341,7 +341,7 @@ export default async function NewQuotePage({
               return (
                 <Link
                   key={t}
-                  href={`/electrician?trade=${t}`}
+                  href={`/quote?trade=${t}`}
                   className={`px-4 py-1.5 rounded-lg text-[13px] font-bold capitalize whitespace-nowrap border-2 transition-colors ${
                     t === selectedTrade
                       ? "border-[var(--navy)] bg-[var(--navy)] text-white"

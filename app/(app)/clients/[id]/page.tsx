@@ -22,7 +22,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
 
   // A quote's own id and its job's id are different records (jobs are a
   // separate table, created from a quote via quote_id, with their own
-  // auto-generated id) - linking to /electrician/jobs/[quoteId] 404s,
+  // auto-generated id) - linking to /jobs/[quoteId] 404s,
   // since no job shares that id.
   const acceptedOrPaidIds = (quotes ?? []).filter((q) => q.status === "accepted" || q.status === "paid").map((q) => q.id);
   let jobIdByQuoteId = new Map<string, string>();
@@ -47,11 +47,11 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
       <AppHeader />
       <main className="page-wrap-narrow">
         <p className="text-[12px] text-[var(--ink-faint)] mb-1">
-          <Link href="/electrician/clients" className="hover:underline">Clients</Link> / {client.name}
+          <Link href="/clients" className="hover:underline">Clients</Link> / {client.name}
         </p>
         <div className="flex items-start justify-between gap-3 mb-1">
           <h1 className="font-display text-2xl text-[var(--ink)]">{client.name}</h1>
-          <Link href={`/electrician?client_id=${client.id}`} className="btn-secondary text-[12.5px] py-2 px-3 shrink-0">
+          <Link href={`/quote?client_id=${client.id}`} className="btn-secondary text-[12.5px] py-2 px-3 shrink-0">
             + New quote
           </Link>
         </div>
@@ -72,7 +72,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                   return (
                     <Link
                       key={q.id}
-                      href={isJob && jobId ? `/electrician/jobs/${jobId}` : `/electrician/quotes/${q.id}`}
+                      href={isJob && jobId ? `/jobs/${jobId}` : `/quotes/${q.id}`}
                       className="flex items-center justify-between py-2.5 hover:bg-[var(--app-bg)] -mx-2 px-2 rounded-lg"
                     >
                       <div>

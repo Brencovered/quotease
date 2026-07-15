@@ -13,7 +13,9 @@
  * 6. Adds security headers to all responses (CSP, HSTS, etc.)
  *
  * Protected routes (auth + active subscription required):
- *   /electrician/*, /settings/*, /camera/*, /team/*, /clients/*,
+ *   /dashboard/*, /quote/*, /quotes/*, /materials/*, /schedule/*,
+ *   /margins/*, /packages/*, /reports/*, /plans/*, /settings/*,
+ *   /camera/*, /team/*, /clients/*,
  *   /jobs/*, /calendar/*, /map/*, /export/*, /seo/*, /comms/*, /leads/*
  *
  * Auth-only routes (auth required, subscription not checked):
@@ -52,7 +54,15 @@ const PUBLIC_PAGE_PATHS = [
 
 /** Routes that require authentication + active subscription */
 const PROTECTED_PAGE_PREFIXES = [
-  "/electrician",
+  "/dashboard",
+  "/quote",
+  "/quotes",
+  "/materials",
+  "/schedule",
+  "/margins",
+  "/packages",
+  "/reports",
+  "/plans",
   "/settings",
   "/camera",
   "/team",
@@ -330,7 +340,7 @@ export async function middleware(request: NextRequest) {
     if (!isAdminEmail(user.email ?? undefined)) {
       // Not an admin -- redirect to dashboard
       return NextResponse.redirect(
-        new URL("/electrician/dashboard", request.url)
+        new URL("/dashboard", request.url)
       );
     }
     // Admin is authorised -- add headers and continue

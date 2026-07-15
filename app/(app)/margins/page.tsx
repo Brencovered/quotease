@@ -31,7 +31,7 @@ export default async function MarginsPage() {
             .select("quote_id, actual_hours, actual_materials_cost, unexpected_costs")
             .in("quote_id", jobs.map((j) => j.id)),
           // These rows are quotes (accepted/paid), so `id` is the quote's
-          // id - but the panel links through to /electrician/jobs/[id],
+          // id - but the panel links through to /jobs/[id],
           // which needs the real job's id (a separate record created
           // from the quote via quote_id).
           supabase

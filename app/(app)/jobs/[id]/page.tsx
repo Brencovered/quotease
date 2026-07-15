@@ -127,7 +127,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
       <main className="page-wrap-narrow">
         <div className="flex items-start justify-between gap-3 mb-4">
           <div>
-            <p className="text-[12px] text-[var(--ink-faint)] mb-1"><Link href="/electrician/jobs" className="hover:underline">Jobs</Link> / Job #{job.job_number}</p>
+            <p className="text-[12px] text-[var(--ink-faint)] mb-1"><Link href="/jobs" className="hover:underline">Jobs</Link> / Job #{job.job_number}</p>
             <h1 className="font-display text-2xl text-[var(--ink)]">{job.client_name || "Unnamed client"}</h1>
             {job.site_address && <p className="text-[13px] text-[var(--ink-faint)] mt-0.5">{job.site_address}</p>}
           </div>
@@ -279,7 +279,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               {isAdmin && (
                 <TimesheetsPanel jobId={job.id} entries={timesheetEntries as never} teamMembers={teamMembers} ownerName={userData.user.email ?? "Owner"} />
               )}
-              <Link href="/electrician/schedule" className="flex items-center justify-center gap-1.5 text-[13px] font-semibold text-[var(--navy)] border-2 border-[var(--line)] rounded-xl py-2.5 hover:border-[var(--navy)]">
+              <Link href="/schedule" className="flex items-center justify-center gap-1.5 text-[13px] font-semibold text-[var(--navy)] border-2 border-[var(--line)] rounded-xl py-2.5 hover:border-[var(--navy)]">
                 View full schedule calendar
               </Link>
             </>

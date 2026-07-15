@@ -133,10 +133,10 @@ export default function JobsPanel({ jobs: initialJobs }: { jobs: Job[] }) {
       <div className="flex items-center justify-between mb-5">
         <h1 className="font-display text-[28px] text-[var(--ink)]">Active jobs</h1>
         <div className="flex items-center gap-2">
-          <Link href="/electrician/map" className="text-[13px] font-semibold text-[var(--navy)] border-2 border-[var(--line)] rounded-xl px-3 py-2.5">
+          <Link href="/map" className="text-[13px] font-semibold text-[var(--navy)] border-2 border-[var(--line)] rounded-xl px-3 py-2.5">
             Map
           </Link>
-          <Link href="/electrician" className="inline-flex items-center gap-1.5 bg-[var(--amber)] text-[var(--navy)] font-extrabold text-[13px] px-4 py-2.5 rounded-xl">
+          <Link href="/quote" className="inline-flex items-center gap-1.5 bg-[var(--amber)] text-[var(--navy)] font-extrabold text-[13px] px-4 py-2.5 rounded-xl">
             <Plus size={15} /> New quote
           </Link>
         </div>
@@ -232,7 +232,7 @@ export default function JobsPanel({ jobs: initialJobs }: { jobs: Job[] }) {
                 <div className="flex items-center gap-2 bg-[var(--app-bg)] rounded-lg px-3 py-2 mb-3 text-[12.5px]">
                   <span className="text-[var(--ink-faint)]">Scheduled</span>
                   <span className="font-semibold text-[var(--ink)]">{new Date(j.scheduled_start).toLocaleDateString("en-AU", { weekday:"short", day:"numeric", month:"short" })}</span>
-                  <Link href="/electrician/schedule" className="ml-auto text-[var(--navy)] font-semibold flex items-center gap-0.5">
+                  <Link href="/schedule" className="ml-auto text-[var(--navy)] font-semibold flex items-center gap-0.5">
                     Schedule <ChevronRight size={12} />
                   </Link>
                 </div>
@@ -259,7 +259,7 @@ export default function JobsPanel({ jobs: initialJobs }: { jobs: Job[] }) {
               </div>
 
               <div className="flex gap-2 flex-wrap">
-                <Link href={`/electrician/jobs/${j.id}`} className="btn-secondary text-[12.5px] py-1.5 px-3">Open &rarr;</Link>
+                <Link href={`/jobs/${j.id}`} className="btn-secondary text-[12.5px] py-1.5 px-3">Open &rarr;</Link>
                 {!j.completed_at && (
                   <button onClick={() => callUpdate({ quoteId: j.id, completeJob: true })} disabled={busyId === j.id} className="btn-secondary text-[12.5px] py-1.5 px-3">Mark complete</button>
                 )}

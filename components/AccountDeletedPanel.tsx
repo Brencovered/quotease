@@ -29,7 +29,7 @@ export default function AccountDeletedPanel({
       const res = await fetch("/api/account/restore", { method: "POST" });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Could not restore account.");
-      router.push("/electrician");
+      router.push("/quote");
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not restore account.");

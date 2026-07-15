@@ -168,7 +168,7 @@ export default function JobsKanbanBoard({ jobs: initialJobs, columns: initialCol
                       style={{ borderLeft: `3px solid ${style.dot}` }}
                     >
                       <div className="flex items-start justify-between gap-1.5 mb-1">
-                        <Link href={`/electrician/jobs/${j.id}`} className="min-w-0 flex-1">
+                        <Link href={`/jobs/${j.id}`} className="min-w-0 flex-1">
                           <p className="text-[13px] font-bold text-[var(--ink)] truncate">{j.client_name || "Unnamed client"}</p>
                           <p className="text-[11px] text-[var(--ink-faint)]">Job #{j.job_number}</p>
                         </Link>
@@ -232,7 +232,7 @@ export default function JobsKanbanBoard({ jobs: initialJobs, columns: initialCol
       {showArchived && (
         <div className="mt-3 space-y-2">
           {jobs.filter((j) => ARCHIVE_STATUSES.includes(j.status)).map((j) => (
-            <Link key={j.id} href={`/electrician/jobs/${j.id}`} className="card flex items-center justify-between gap-3 opacity-70 hover:opacity-100">
+            <Link key={j.id} href={`/jobs/${j.id}`} className="card flex items-center justify-between gap-3 opacity-70 hover:opacity-100">
               <p className="text-[13px] text-[var(--ink)]">{j.client_name || "Unnamed client"} <span className="text-[var(--ink-faint)]">Job #{j.job_number}</span></p>
               <span className="text-[11px] text-[var(--ink-faint)] uppercase font-bold">{j.status}</span>
             </Link>

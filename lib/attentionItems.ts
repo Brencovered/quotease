@@ -100,7 +100,7 @@ export function computeAttentionItems(
           severity: d > 3 ? "high" : "medium",
           label: `Follow up with ${q.client_name || "client"}`,
           sublabel: `Quote sent, follow-up was due ${d === 0 ? "today" : `${d} day${d !== 1 ? "s" : ""} ago`}`,
-          href: `/electrician/quotes/${q.id}`,
+          href: `/quotes/${q.id}`,
         });
       }
     }
@@ -113,7 +113,7 @@ export function computeAttentionItems(
           severity: "medium",
           label: `Quote for ${q.client_name || "client"} has expired`,
           sublabel: `Expired ${d === 0 ? "today" : `${d} day${d !== 1 ? "s" : ""} ago`} - resend or update the price`,
-          href: `/electrician/quotes/${q.id}`,
+          href: `/quotes/${q.id}`,
         });
       }
     }
@@ -133,7 +133,7 @@ export function computeAttentionItems(
         severity: d > stalledJobDays * 2 ? "high" : "medium",
         label: `${j.client_name || "Job"} hasn't moved in ${d} days`,
         sublabel: `Status: ${j.status.replace(/_/g, " ")}`,
-        href: `/electrician/jobs/${j.id}`,
+        href: `/jobs/${j.id}`,
       });
     }
   }
@@ -152,7 +152,7 @@ export function computeAttentionItems(
         severity: d > overdueInvoiceDays * 2 ? "high" : "medium",
         label: `${j.client_name || "Invoice"} unpaid for ${d} days`,
         sublabel: `$${outstanding.toLocaleString()} outstanding`,
-        href: `/electrician/jobs/${j.id}`,
+        href: `/jobs/${j.id}`,
       });
     }
   }
@@ -174,7 +174,7 @@ export function computeAttentionItems(
         severity: "medium",
         label: `No hours logged for ${j.client_name || "a completed job"}`,
         sublabel: `Completed ${d === 0 ? "today" : `${d} day${d !== 1 ? "s" : ""} ago`} - margin data is incomplete without it`,
-        href: `/electrician/jobs/${j.id}`,
+        href: `/jobs/${j.id}`,
       });
     }
   }

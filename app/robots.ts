@@ -9,7 +9,24 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: "*",
         allow: "/",
         disallow: [
-          "/electrician/",   // tradie app -- not public content
+          // Internal app pages -- not public content. Previously one
+          // shared "/electrician/" prefix; now trade-neutral top-level
+          // paths with nothing in common to prefix-match on.
+          "/dashboard/",
+          "/quote",
+          "/quote/",
+          "/quotes/",
+          "/jobs/",
+          "/clients/",
+          "/materials/",
+          "/packages/",
+          "/plans/",
+          "/schedule/",
+          "/margins/",
+          "/reports/",
+          "/leads/",
+          "/map/",
+          "/export/",
           "/settings/",
           "/billing/",
           "/onboarding/",

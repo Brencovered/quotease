@@ -113,7 +113,7 @@ export default function OnboardingPage() {
     if (!completed) return;
     const timer = setInterval(() => {
       setRedirectCountdown((c) => {
-        if (c <= 1) { clearInterval(timer); router.push("/electrician/dashboard"); return 0; }
+        if (c <= 1) { clearInterval(timer); router.push("/dashboard"); return 0; }
         return c - 1;
       });
     }, 1000);
@@ -326,7 +326,7 @@ export default function OnboardingPage() {
         </p>
 
         <button
-          onClick={() => router.push("/electrician/dashboard")}
+          onClick={() => router.push("/dashboard")}
           className="fadeUp2 btn-primary"
         >
           Go to dashboard <ArrowRight size={16} />

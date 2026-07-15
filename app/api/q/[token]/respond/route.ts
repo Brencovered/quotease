@@ -66,7 +66,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
       action === "accept"
         ? `${quote.client_name ?? "A client"} accepted your quote for $${(quote.total_cost ?? 0).toLocaleString()}`
         : `${quote.client_name ?? "A client"} declined your quote for $${(quote.total_cost ?? 0).toLocaleString()}`,
-    url: "/electrician/jobs",
+    url: "/jobs",
   }).catch(() => null);
 
   if (apiKey && profile?.contact_email) {

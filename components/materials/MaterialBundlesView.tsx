@@ -371,7 +371,7 @@ export default function MaterialBundlesView({
                     Est. {formatCurrency(estimatedTotal)}
                   </div>
                   <a
-                    href={`/electrician?bundle_id=${bundle.id}`}
+                    href={`/quote?bundle_id=${bundle.id}`}
                     className="btn-secondary shrink-0"
                     style={{ padding: "8px 14px", fontSize: "12px" }}
                   >

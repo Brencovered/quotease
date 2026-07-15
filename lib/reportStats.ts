@@ -1,7 +1,7 @@
 /**
  * lib/reportStats.ts
  * -------------------
- * Powers the /electrician/reports dashboard. This is job-based (the real
+ * Powers the /reports dashboard. This is job-based (the real
  * jobs table), unlike lib/dashboardStats.ts which is quote-funnel-based
  * (win rate, pipeline by quote status) - the two are complementary, not
  * duplicates. This answers "what actually happened with the business

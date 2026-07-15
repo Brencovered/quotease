@@ -131,7 +131,7 @@ export async function POST(request: Request) {
     // Build job rows
     const jobRows = assignedJobs
       .map((job) => {
-        const jobUrl = `${appUrl}/electrician/jobs/${job.id}`;
+        const jobUrl = `${appUrl}/jobs/${job.id}`;
         const dateRange = job.scheduled_end
           ? `${fmtDate(job.scheduled_start)} — ${fmtDate(job.scheduled_end)}`
           : fmtDate(job.scheduled_start);
@@ -215,7 +215,7 @@ export async function POST(request: Request) {
           </tr>
           <tr>
             <td style="padding:0 24px 24px;text-align:center;">
-              <a href="${appUrl}/electrician/schedule" style="display:inline-block;padding:12px 24px;background:#0f172a;color:#fbbf24;font-size:14px;font-weight:800;text-decoration:none;border-radius:10px;">View full schedule in Swiftscope</a>
+              <a href="${appUrl}/schedule" style="display:inline-block;padding:12px 24px;background:#0f172a;color:#fbbf24;font-size:14px;font-weight:800;text-decoration:none;border-radius:10px;">View full schedule in Swiftscope</a>
             </td>
           </tr>
           <tr>

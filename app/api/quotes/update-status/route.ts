@@ -84,7 +84,7 @@ export async function POST(request: Request) {
       await sendPushToBusiness(createAdminClient(), businessId, {
         title: "Payment received 💰",
         body: `$${paymentAmount.toLocaleString()} from ${existing.client_name ?? "a client"}`,
-        url: paymentJob ? `/electrician/jobs/${paymentJob.id}` : "/electrician/jobs",
+        url: paymentJob ? `/jobs/${paymentJob.id}` : "/jobs",
       }).catch(() => null);
     }
   }
