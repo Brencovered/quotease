@@ -257,6 +257,7 @@ export function getSlugToTradeMap(): Record<string, string> {
  * page component should call notFound() in that case.
  */
 export function parseTradeSuburbSlug(segment: string): { trade: string; suburbSlug: string; state: string } | null {
+  if (typeof segment !== "string" || !segment) return null;
   const parts = segment.split("-");
   if (parts.length < 3) return null;
 
@@ -291,6 +292,7 @@ export function slugToSuburbDisplay(slug: string): string {
  * off-the-back approach, since the suburb slug itself may contain hyphens.
  */
 export function parseSuburbSlug(segment: string): { suburbSlug: string; state: string } | null {
+  if (typeof segment !== "string" || !segment) return null;
   const parts = segment.split("-");
   if (parts.length < 2) return null;
   const state = parts[parts.length - 1];
