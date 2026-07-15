@@ -10,6 +10,7 @@ import PlanMarkupQuickAdd from "./PlanMarkupQuickAdd";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
 import { persistAnnotationFrames } from "@/lib/siteAnnotations";
+import JobDescriptionField from "@/components/JobDescriptionField";
 import StepCustomer from "./StepCustomer";
 import PackagePicker from "@/components/PackagePicker";
 import { resolveClientId } from "@/lib/resolveClientId";
@@ -144,6 +145,7 @@ export default function RooferQuoteBuilder({
     () => markupMaterialsToScopeItems(preMarkupMaterials, preMarkupSource ?? "plan markup")
   );
   const [annotationMeta, setAnnotationMeta] = useState<{id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string;roomName?:string}[]>([]);
+  const [siteNotes, setSiteNotes] = useState("");
   // Direct manual override for anything the formula doesn't capture -
   // confined roof-space access, steep pitch beyond the standard options,
   // or the calculated hours just being wrong for this job.
@@ -481,6 +483,7 @@ export default function RooferQuoteBuilder({
       client_name: clientName,
       client_email: clientEmail,
       site_address: siteAddress,
+      site_notes: siteNotes || null,
       trade: "roofer",
       job_type: `${MATERIALS[material].label} re-roof`,
       planned_crew_member_ids: plannedCrew,
@@ -551,7 +554,7 @@ export default function RooferQuoteBuilder({
 
   function saveDraft() {
     try {
-      sessionStorage.setItem("swiftscope_quote_draft", JSON.stringify({ siteItems, annotationMeta, manualLabourHrs }));
+      sessionStorage.setItem("swiftscope_quote_draft", JSON.stringify({ siteItems, annotationMeta, manualLabourHrs, siteNotes }));
       if (lib) sessionStorage.setItem("swiftscope_price_book", JSON.stringify(lib));
     } catch {}
   }
@@ -970,6 +973,8 @@ export default function RooferQuoteBuilder({
           </p>
         </div>
       </div>
+
+      <JobDescriptionField value={siteNotes} onChange={setSiteNotes} />
 
       {/* ── Summary ──────────────────────────────────────────── */}
       {summary && (

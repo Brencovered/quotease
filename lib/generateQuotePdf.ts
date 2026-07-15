@@ -1,6 +1,8 @@
 import { PDFDocument, PDFName, PDFString, PDFArray, PDFNumber, StandardFonts, rgb } from "pdf-lib";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { termAmount, type PaymentTerm } from "./paymentTerms";
 import { humanizeIntakePublic } from "./humanizeIntake";
+import type { AnnotationMetaPersisted } from "./siteAnnotations";
 
 const humanizeIntake = humanizeIntakePublic;
 
@@ -53,7 +55,8 @@ const HEADER_HEIGHT = 110;
 export async function generateQuotePdf(
   quote: QuotePdfQuote,
   profile: QuotePdfProfile,
-  logoBytes: Uint8Array | null
+  logoBytes: Uint8Array | null,
+  supabase?: SupabaseClient
 ): Promise<Uint8Array> {
   const pdfDoc  = await PDFDocument.create();
   const font     = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -173,6 +176,86 @@ export async function generateQuotePdf(
     }
   }
   y -= 8; rule();
+
+  // ── SITE PHOTOS & NOTES (only for quotes that went through live markup) ──
+  const savedAnnotations = (quote.intake_data as { annotation_meta?: AnnotationMetaPersisted[] } | null)?.annotation_meta;
+  if (savedAnnotations && savedAnnotations.length > 0) {
+    sectionLabel("Site photos & notes");
+
+    const rooms = new Map<string, AnnotationMetaPersisted[]>();
+    for (const ann of savedAnnotations) {
+      const room = ann.roomName ?? "General";
+      if (!rooms.has(room)) rooms.set(room, []);
+      rooms.get(room)!.push(ann);
+    }
+
+    for (const [roomName, anns] of rooms.entries()) {
+      newPageIfNeeded(30);
+      page.drawRectangle({ x: MARGIN, y: y - 14, width: fontBold.widthOfTextAtSize(roomName, 11) + 16, height: 18, color: rgb(0.94, 0.95, 0.96) });
+      page.drawText(roomName, { x: MARGIN + 8, y: y - 9, size: 11, font: fontBold, color: INK });
+      y -= 26;
+
+      for (const ann of anns) {
+        // Fetch and embed the actual photo where one exists (skipped
+        // cleanly for freeform notes with no photo, or if the download
+        // fails for any reason - the text detail still prints either way).
+        let image: Awaited<ReturnType<typeof pdfDoc.embedJpg>> | null = null;
+        if (ann.storagePath && supabase) {
+          try {
+            const { data: fileBlob } = await supabase.storage.from("job-files").download(ann.storagePath);
+            if (fileBlob) {
+              const bytes = new Uint8Array(await fileBlob.arrayBuffer());
+              image = await pdfDoc.embedJpg(bytes);
+            }
+          } catch {
+            // Photo skipped, text detail below still prints
+          }
+        }
+
+        const imgW = 130;
+        const imgH = image ? Math.min(100, imgW * (image.height / image.width)) : 0;
+        const rowH = Math.max(imgH, 40);
+        newPageIfNeeded(rowH + 14);
+
+        if (image) {
+          page.drawImage(image, { x: MARGIN, y: y - imgH, width: imgW, height: imgH });
+        }
+
+        const textX = image ? MARGIN + imgW + 14 : MARGIN;
+        let textY = y - 12;
+        const isNote = ann.type === "note";
+        page.drawText(isNote ? "Note" : ann.label, { x: textX, y: textY, size: 10.5, font: fontBold, color: INK });
+        textY -= 15;
+        if (isNote) {
+          // The note's full text IS the label (see camera page/
+          // ScopeOfWorkStep) - wrap it across the available width.
+          const words = ann.label.split(/\s+/);
+          const maxW  = PAGE_WIDTH - MARGIN - textX;
+          let line = "";
+          for (const word of words) {
+            const candidate = line ? `${line} ${word}` : word;
+            if (font.widthOfTextAtSize(candidate, 9.5) > maxW) {
+              page.drawText(line, { x: textX, y: textY, size: 9.5, font, color: INK_SOFT });
+              textY -= 13;
+              line = word;
+            } else line = candidate;
+          }
+          if (line) { page.drawText(line, { x: textX, y: textY, size: 9.5, font, color: INK_SOFT }); textY -= 13; }
+        } else {
+          const qtyLine = `${ann.qty} ${ann.unit}${ann.length != null ? ` (~${ann.length}m)` : ""}`;
+          page.drawText(qtyLine, { x: textX, y: textY, size: 9.5, font, color: INK_SOFT });
+          textY -= 13;
+          if (ann.note) {
+            page.drawText(ann.note, { x: textX, y: textY, size: 9.5, font, color: INK_FAINT });
+            textY -= 13;
+          }
+        }
+
+        y -= rowH + 14;
+      }
+    }
+    y -= 4; rule();
+  }
 
   // ── SUMMARY ──────────────────────────────────────────────────────
   sectionLabel("Quote summary");

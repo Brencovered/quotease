@@ -28,7 +28,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ toke
     }
   }
 
-  const pdfBytes = await generateQuotePdf(quote, profile, logoBytes);
+  const pdfBytes = await generateQuotePdf(quote, profile, logoBytes, supabase);
   const filename = `Quote-${(quote.client_name ?? "client").replace(/[^a-zA-Z0-9]/g, "-")}.pdf`;
 
   return new NextResponse(Buffer.from(pdfBytes), {

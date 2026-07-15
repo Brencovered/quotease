@@ -18,6 +18,7 @@ import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } fr
 import CategoryMaterialPicker, { type PickerItem } from "@/components/CategoryMaterialPicker";
 import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
 import { persistAnnotationFrames } from "@/lib/siteAnnotations";
+import JobDescriptionField from "@/components/JobDescriptionField";
 import { MaterialSearchAdd, ScopeItemsList } from "@/components/ScopeOfWorkStep";
 import PeripheralsPanel from "@/components/PeripheralsPanel";
 import type { SiteConditionTemplateRow } from "@/lib/peripherals";
@@ -123,6 +124,7 @@ export default function GenericQuoteBuilder({
     () => markupMaterialsToScopeItems(preMarkupMaterials, preMarkupSource ?? "plan markup")
   );
   const [annotationMeta, setAnnotationMeta] = useState<{id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string;roomName?:string}[]>([]);
+  const [siteNotes, setSiteNotes] = useState("");
   const [extraLines, setExtraLines]   = useState<ExtraLine[]>([]);
   const [saving,      setSaving]      = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -220,7 +222,7 @@ export default function GenericQuoteBuilder({
 
   function saveDraft() {
     try {
-      sessionStorage.setItem("swiftscope_quote_draft", JSON.stringify({ clientName, clientEmail, siteAddress, intake, step, extraLines, siteItems, annotationMeta }));
+      sessionStorage.setItem("swiftscope_quote_draft", JSON.stringify({ clientName, clientEmail, siteAddress, intake, step, extraLines, siteItems, annotationMeta, siteNotes }));
 
     } catch {}
   }
@@ -245,6 +247,7 @@ export default function GenericQuoteBuilder({
       client_name:   clientName,
       client_email:  clientEmail,
       site_address:  siteAddress,
+      site_notes:    siteNotes || null,
       trade:         tradeKey,
       job_type:      jobType,
       planned_crew_member_ids: plannedCrew,
@@ -644,6 +647,7 @@ export default function GenericQuoteBuilder({
       {/* Step: Send */}
       {stepId === "send" && (
         <div className="space-y-4">
+          <JobDescriptionField value={siteNotes} onChange={setSiteNotes} />
           <div className="bg-[var(--navy)] rounded-2xl p-5">
             <p className="text-[11px] text-[var(--steel-3)] font-bold uppercase tracking-wider mb-3">Quote summary</p>
             {/* Matches the sticky header and Job detail page - see the

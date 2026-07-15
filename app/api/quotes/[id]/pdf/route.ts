@@ -42,7 +42,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }
 
     const { generateQuotePdf } = await import("@/lib/generateQuotePdf");
-    const pdfBytes = await generateQuotePdf(quote, profile ?? {}, logoBytes);
+    const pdfBytes = await generateQuotePdf(quote, profile ?? {}, logoBytes, supabase);
 
     const filename = `Quote-${(quote.client_name ?? "client").replace(/[^a-zA-Z0-9]/g, "-")}.pdf`;
 

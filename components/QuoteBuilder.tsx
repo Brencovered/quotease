@@ -22,6 +22,7 @@ import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } fr
 import SiteAnnotationReport from "@/components/SiteAnnotationReport";
 import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
 import { persistAnnotationFrames } from "@/lib/siteAnnotations";
+import JobDescriptionField from "@/components/JobDescriptionField";
 import { MaterialSearchAdd, ScopeItemsList, type ScopeItem } from "@/components/ScopeOfWorkStep";
 import PeripheralsPanel from "@/components/PeripheralsPanel";
 import type { SiteConditionTemplateRow } from "@/lib/peripherals";
@@ -160,6 +161,7 @@ export default function QuoteBuilder({
     () => markupMaterialsToScopeItems(preMarkupMaterials, preMarkupSource ?? "plan markup")
   );
   const [annotationMeta, setAnnotationMeta] = useState<{id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string}[]>([]);
+  const [siteNotes, setSiteNotes] = useState("");
   const [saving, setSaving]         = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [savedQuoteId, setSavedQuoteId] = useState<string | null>(null);
@@ -172,7 +174,7 @@ export default function QuoteBuilder({
   function saveDraft() {
     try {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
-        clientName, clientEmail, siteAddress, intake, step, extraLines, siteItems, annotationMeta, manualLabourHrs,
+        clientName, clientEmail, siteAddress, intake, step, extraLines, siteItems, annotationMeta, manualLabourHrs, siteNotes,
       }));
     } catch {}
   }
@@ -192,6 +194,7 @@ export default function QuoteBuilder({
       if (saved.siteItems)   setSiteItems(saved.siteItems);
       if (saved.annotationMeta) setAnnotationMeta(saved.annotationMeta);
       if (saved.manualLabourHrs != null) setManualLabourHrs(saved.manualLabourHrs);
+      if (saved.siteNotes)   setSiteNotes(saved.siteNotes);
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -379,7 +382,7 @@ export default function QuoteBuilder({
 
     const quotePayload: Record<string, unknown> = {
       profile_id: businessId, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail,
-      site_address: siteAddress, trade: "electrician", job_type: intake.jobType,
+      site_address: siteAddress, trade: "electrician", job_type: intake.jobType, site_notes: siteNotes || null,
       intake_data: {
         ...intake,
         site_items:      siteItems,
@@ -620,6 +623,7 @@ export default function QuoteBuilder({
           displayLabourDollar={displayLabourDollar} displayMaterialsDollar={displayMaterialsDollar} manualLabourHrs={manualLabourHrs}
           selectedPricingTier={selectedPricingTier}
           selectedJobSizeTier={selectedJobSizeTier}
+          siteNotes={siteNotes} setSiteNotes={setSiteNotes}
         />
       )}
 
@@ -961,7 +965,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
   saving, saveMessage, savedQuoteId, onSave,
   extraLines, setExtraLines, rate, margin, effectiveMargin, siteItems, setSiteItems, siteTotal, annotationMeta,
   displayLabourDollar, displayMaterialsDollar, manualLabourHrs,
-  selectedPricingTier, selectedJobSizeTier }: {
+  selectedPricingTier, selectedJobSizeTier, siteNotes, setSiteNotes }: {
   intake: ElectricianIntake;
   result: { labourHours: number; materialsCost: number; totalCost: number };
   paymentTerms: PaymentTerm[];
@@ -981,6 +985,7 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
   displayLabourDollar: number; displayMaterialsDollar: number; manualLabourHrs: number;
   selectedPricingTier: { id: string; name: string; markup_pct: number } | null;
   selectedJobSizeTier: { id: string; name: string; markup_pct: number } | null;
+  siteNotes: string; setSiteNotes: (v: string) => void;
 }) {
   const siteMaterials = siteItemsMaterialsTotal(siteItems, effectiveMargin ?? 20);
   const siteLabour = siteItemsLabourTotal(siteItems, rate ?? 95);
@@ -1041,6 +1046,8 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
           </div>
         </div>
       )}
+      <JobDescriptionField value={siteNotes} onChange={setSiteNotes} />
+
       <div className="bg-[var(--navy)] rounded-2xl p-5">
         <p className="text-[11px] text-[var(--steel-3)] font-bold uppercase tracking-wider mb-3">Quote summary</p>
         <div className="space-y-2">

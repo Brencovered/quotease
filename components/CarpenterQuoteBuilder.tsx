@@ -20,6 +20,7 @@ import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
 import { persistAnnotationFrames } from "@/lib/siteAnnotations";
+import JobDescriptionField from "@/components/JobDescriptionField";
 import { MaterialSearchAdd, ScopeItemsList, type ScopeItem } from "@/components/ScopeOfWorkStep";
 import PeripheralsPanel from "@/components/PeripheralsPanel";
 import type { SiteConditionTemplateRow } from "@/lib/peripherals";
@@ -120,6 +121,7 @@ export default function CarpenterQuoteBuilder({
     () => markupMaterialsToScopeItems(preMarkupMaterials, preMarkupSource ?? "plan markup")
   );
   const [annotationMeta, setAnnotationMeta] = useState<{id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string;roomName?:string}[]>([]);
+  const [siteNotes, setSiteNotes] = useState("");
   const [extraLines, setExtraLines] = useState<ExtraLine[]>([]);
   // Direct manual override for anything the formula doesn't capture -
   // roof cavity time, confined-space work, or the calculated hours just
@@ -151,6 +153,7 @@ export default function CarpenterQuoteBuilder({
       if (saved.siteItems)   setSiteItems(saved.siteItems);
       if (saved.annotationMeta) setAnnotationMeta(saved.annotationMeta);
       if (saved.manualLabourHrs != null) setManualLabourHrs(saved.manualLabourHrs);
+      if (saved.siteNotes)   setSiteNotes(saved.siteNotes);
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -224,7 +227,7 @@ export default function CarpenterQuoteBuilder({
 
   function saveDraft() {
     try {
-      sessionStorage.setItem("swiftscope_quote_draft", JSON.stringify({ clientName, clientEmail, siteAddress, intake, step, extraLines, siteItems, annotationMeta, manualLabourHrs }));
+      sessionStorage.setItem("swiftscope_quote_draft", JSON.stringify({ clientName, clientEmail, siteAddress, intake, step, extraLines, siteItems, annotationMeta, manualLabourHrs, siteNotes }));
       if (lib) sessionStorage.setItem("swiftscope_price_book", JSON.stringify(lib));
     } catch {}
   }
@@ -259,6 +262,7 @@ export default function CarpenterQuoteBuilder({
       client_name: clientName,
       client_email: clientEmail,
       site_address: siteAddress,
+      site_notes: siteNotes || null,
       trade: "carpenter",
       job_type: intake.jobType,
       planned_crew_member_ids: plannedCrew,
@@ -552,6 +556,7 @@ export default function CarpenterQuoteBuilder({
 
       {stepId === "send" && (
         <div className="space-y-4">
+          <JobDescriptionField value={siteNotes} onChange={setSiteNotes} />
           <div className="bg-[var(--navy)] rounded-2xl p-5">
             <p className="text-[11px] text-[var(--steel-3)] font-bold uppercase tracking-wider mb-3">Quote summary</p>
             {/* Labour/Materials/hours here match the sticky header and the
