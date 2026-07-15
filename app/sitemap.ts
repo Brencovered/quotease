@@ -126,5 +126,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     }));
 
-  return [...staticPages, ...listingPages, ...programmaticPages];
+  // ── 4. Suburb-only "Tradies in X" pages ──────────────────────────────
+  // One page per suburb (all trades combined) alongside the trade+suburb
+  // pages above - covers broad "tradies in {suburb}" searches that don't
+  // specify a trade, which none of the trade-specific pages target.
+  const suburbTotals = new Map<string, number>();
+  for (const r of tradeSuburbs) {
+    const key = suburbToSlug(r.suburb);
+    suburbTotals.set(key, (suburbTotals.get(key) ?? 0) + r.count);
+  }
+  const suburbPages: MetadataRoute.Sitemap = Array.from(suburbTotals.entries())
+    .filter(([, count]) => count >= MIN_LISTINGS_FOR_INDEX)
+    .map(([suburbSlug]) => ({
+      url: `${BASE_URL}/tradies-in-${suburbSlug}-vic`,
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    }));
+
+  return [...staticPages, ...listingPages, ...programmaticPages, ...suburbPages];
 }

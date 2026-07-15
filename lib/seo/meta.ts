@@ -283,3 +283,23 @@ export function parseTradeSuburbSlug(segment: string): { trade: string; suburbSl
 export function slugToSuburbDisplay(slug: string): string {
   return slug.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 }
+
+/**
+ * Parses a suburb-only URL segment like "seaford-vic" into suburb/state -
+ * the counterpart to parseTradeSuburbSlug but with no trade prefix, for
+ * the "Tradies in {Suburb}" all-trades landing page. Same peel-the-state-
+ * off-the-back approach, since the suburb slug itself may contain hyphens.
+ */
+export function parseSuburbSlug(segment: string): { suburbSlug: string; state: string } | null {
+  const parts = segment.split("-");
+  if (parts.length < 2) return null;
+  const state = parts[parts.length - 1];
+  if (!VALID_STATE_SLUGS.includes(state)) return null;
+  const suburbSlug = parts.slice(0, -1).join("-");
+  if (!suburbSlug) return null;
+  return { suburbSlug, state };
+}
+
+export function suburbLandingCanonical(suburbSlug: string, state: string): string {
+  return `${BASE_URL}/tradies-in-${suburbSlug}-${state}`;
+}
