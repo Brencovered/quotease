@@ -258,9 +258,9 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
           </div>
 
           <div>
-            <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Quote terms and conditions</label>
+            <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Terms and conditions</label>
             <textarea value={terms} onChange={(e) => setTerms(e.target.value)} rows={4} className="app-field text-[13px]" />
-            <p className="text-[11.5px] text-[var(--ink-faint)] mt-1">Sent at the bottom of every quote email.</p>
+            <p className="text-[11.5px] text-[var(--ink-faint)] mt-1">Shown on every quote (web page and PDF) and invoice PDF you send.</p>
           </div>
 
           <div className="border-t border-[var(--line)] pt-3 mt-1">

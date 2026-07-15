@@ -11,7 +11,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
   const { data: quote } = await supabase
     .from("quotes")
     .select(
-      "id, public_token, client_name, site_address, trade, job_type, labour_hours, materials_cost, total_cost, payment_terms, status, intake_data, profiles!quotes_profile_id_fkey(business_name, logo_url, contact_phone, abn, license_number, business_address, bank_account_name, bank_bsb, bank_account_number, accepts_cash)"
+      "id, public_token, client_name, site_address, trade, job_type, labour_hours, materials_cost, total_cost, payment_terms, status, intake_data, profiles!quotes_profile_id_fkey(business_name, logo_url, contact_phone, abn, license_number, business_address, bank_account_name, bank_bsb, bank_account_number, accepts_cash, terms_and_conditions)"
     )
     .eq("public_token", token)
     .single();
@@ -29,6 +29,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
     bank_bsb?: string | null;
     bank_account_number?: string | null;
     accepts_cash?: boolean;
+    terms_and_conditions?: string | null;
   };
 
   const terms: PaymentTerm[] = quote.payment_terms ?? [
@@ -120,6 +121,13 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
                   </p>
                 )}
                 {profile.accepts_cash && <p className="text-[12.5px] text-[var(--ink-soft)]">Cash accepted on completion.</p>}
+              </div>
+            )}
+
+            {profile.terms_and_conditions && (
+              <div className="mb-5 bg-[var(--app-bg)] rounded-xl p-3">
+                <p className="text-[11px] tracking-[.1em] uppercase text-[var(--amber-deep)] font-bold mb-2">Terms and conditions</p>
+                <p className="text-[12.5px] text-[var(--ink-soft)] whitespace-pre-wrap">{profile.terms_and_conditions}</p>
               </div>
             )}
 
