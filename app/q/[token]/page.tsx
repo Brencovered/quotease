@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { termAmount, type PaymentTerm } from "@/lib/paymentTerms";
 import QuoteResponseButtons from "@/components/QuoteResponseButtons";
+import SiteAnnotationReport from "@/components/SiteAnnotationReport";
+import { resolveAnnotationFrameUrls, type AnnotationMetaPersisted } from "@/lib/siteAnnotations";
 import { humanizeIntakePublic } from "@/lib/humanizeIntake";
 
 export default async function PublicQuotePage({ params }: { params: Promise<{ token: string }> }) {
@@ -38,6 +40,8 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
   const hasBankDetails = !!(profile.bank_bsb && profile.bank_account_number);
 
   const scopeLines = humanizeIntakePublic(quote.intake_data as Record<string, unknown> | null);
+  const savedAnnotations = (quote.intake_data as { annotation_meta?: AnnotationMetaPersisted[] } | null)?.annotation_meta;
+  const resolvedAnnotations = await resolveAnnotationFrameUrls(supabase, savedAnnotations);
 
   return (
     <main className="min-h-screen bg-[var(--app-bg)] py-10 px-4">
@@ -93,6 +97,12 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
                 </div>
               </div>
             )}
+
+            {/* Only renders anything if this quote actually went through
+                live site markup - nothing here at all otherwise. */}
+            <div className="mb-5">
+              <SiteAnnotationReport annotations={resolvedAnnotations} title="Site photos & notes" />
+            </div>
 
             <div className="mb-5">
               <p className="text-[11px] tracking-[.1em] uppercase text-[var(--amber-deep)] font-bold mb-2">Quote summary</p>

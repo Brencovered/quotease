@@ -91,6 +91,13 @@ export default function DrawingAnalysisReviewTable({
   const [rows,       setRows]       = useState<ReviewRow[]>(initialRows);
   const [collapsed,  setCollapsed]  = useState(false);
   const [pickerIdx,  setPickerIdx]  = useState<number | null>(null);
+  // When resolving one row offers to fill in other still-unresolved rows
+  // that share the same archetype (item_key) - e.g. six "Cable run" pins
+  // where a person only wants to look the product up once. This is a
+  // prompt, never automatic: two rows sharing a generic label like
+  // "Cable run" can genuinely be different real products (2.5mm vs 1.5mm
+  // cable, in practice), so nothing gets applied without an explicit tap.
+  const [bulkPrompt, setBulkPrompt] = useState<{ itemKey: string; label: string; product: PickerItem; matchIdxs: number[] } | null>(null);
 
   function updateQty(idx: number, qty: number) {
     setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, confirmedQty: Math.max(0, qty) } : r)));
@@ -109,11 +116,33 @@ export default function DrawingAnalysisReviewTable({
   }
 
   function pickProduct(idx: number, item: PickerItem) {
+    const itemKey = rows[idx].item_key;
     setRows((prev) => prev.map((r, i) =>
       i === idx ? { ...r, unitPrice: Number(item.unit_cost), product: item, manual: false } : r
     ));
-    onSaveDefault?.(rows[idx].item_key, item.item_key);
+    onSaveDefault?.(itemKey, item.item_key);
     setPickerIdx(null);
+
+    const matchIdxs = rows
+      .map((r, i) => ({ r, i }))
+      .filter(({ r, i }) => i !== idx && r.item_key === itemKey && r.unitPrice == null && !r.manual)
+      .map(({ i }) => i);
+
+    if (matchIdxs.length > 0) {
+      setBulkPrompt({ itemKey, label: rows[idx].label, product: item, matchIdxs });
+    } else {
+      setBulkPrompt(null);
+    }
+  }
+
+  function applyBulkPrompt() {
+    if (!bulkPrompt) return;
+    setRows((prev) => prev.map((r) =>
+      r.item_key === bulkPrompt.itemKey && r.unitPrice == null && !r.manual
+        ? { ...r, unitPrice: Number(bulkPrompt.product.unit_cost), product: bulkPrompt.product, manual: false }
+        : r
+    ));
+    setBulkPrompt(null);
   }
 
   const grandTotal = rows.reduce((s, r) =>
@@ -173,6 +202,21 @@ export default function DrawingAnalysisReviewTable({
           {notes && <p className="text-[11.5px] mt-0.5 opacity-90">{notes}</p>}
         </div>
       </div>
+
+      {bulkPrompt && (
+        <div className="flex items-center gap-2 rounded-xl border border-[var(--navy)]/20 bg-[var(--navy)]/5 px-3 py-2.5 mb-3">
+          <BookOpen size={14} className="text-[var(--navy)] shrink-0" />
+          <p className="flex-1 text-[12px] text-[var(--ink)]">
+            Use <span className="font-bold">{bulkPrompt.product.label}</span> for the other {bulkPrompt.matchIdxs.length} unpriced &quot;{bulkPrompt.label}&quot; item{bulkPrompt.matchIdxs.length === 1 ? "" : "s"} too?
+          </p>
+          <button onClick={applyBulkPrompt} className="shrink-0 text-[11.5px] font-bold text-white bg-[var(--navy)] rounded-lg px-3 py-1.5">
+            Apply to all
+          </button>
+          <button onClick={() => setBulkPrompt(null)} className="shrink-0 text-[11.5px] font-semibold text-[var(--ink-faint)] px-2 py-1.5">
+            No, differs
+          </button>
+        </div>
+      )}
 
       {!collapsed && (
         <>
