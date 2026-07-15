@@ -275,6 +275,9 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                 <p className="text-[13px] text-[var(--ink-faint)]">Scheduling needs a linked quote - this job was created without one.</p>
               )}
               <JobCrewPanel jobId={job.id} profileId={businessId} initialCrew={jobCrew} teamMembers={teamMembers} />
+              {isAdmin && (
+                <TimesheetsPanel jobId={job.id} entries={timesheetEntries as never} teamMembers={teamMembers} ownerName={userData.user.email ?? "Owner"} />
+              )}
               <Link href="/electrician/schedule" className="flex items-center justify-center gap-1.5 text-[13px] font-semibold text-[var(--navy)] border-2 border-[var(--line)] rounded-xl py-2.5 hover:border-[var(--navy)]">
                 View full schedule calendar
               </Link>
@@ -299,7 +302,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               ) : (
                 <div className="bg-[var(--app-bg)] border border-[var(--line)] rounded-xl p-4">
                   <p className="text-[13.5px] font-semibold text-[var(--ink)]">Job value: ${effectiveTotal.toLocaleString()}</p>
-                  <p className="text-[12.5px] text-[var(--ink-faint)] mt-1">Log actual hours and materials below to see your live margin on this job.</p>
+                  <p className="text-[12.5px] text-[var(--ink-faint)] mt-1">Log actual hours in Team &amp; Schedule and materials in Variations below to see your live margin on this job.</p>
                 </div>
               )}
 
@@ -314,9 +317,6 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                 actuals={actuals}
                 intakeData={quote?.intake_data}
               />
-              {isAdmin && (
-                <TimesheetsPanel jobId={job.id} entries={timesheetEntries as never} teamMembers={teamMembers} ownerName={userData.user.email ?? "Owner"} />
-              )}
             </>
           }
           files={

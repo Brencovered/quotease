@@ -6,8 +6,8 @@ import { LayoutDashboard, FileText, CalendarDays, TrendingUp, Paperclip } from "
 
 const TABS = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "plans", label: "Plans", icon: FileText },
-  { id: "schedule", label: "Schedule", icon: CalendarDays },
+  { id: "plans", label: "Materials & Plans", icon: FileText },
+  { id: "schedule", label: "Team & Schedule", icon: CalendarDays },
   { id: "profit", label: "Profit", icon: TrendingUp },
   { id: "files", label: "Files", icon: Paperclip },
 ] as const;
