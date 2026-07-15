@@ -225,13 +225,16 @@ export default async function NewQuotePage({
     pkgData,
     bundleData,
     planMaterials,
+    { data: teamMemberRows },
   ] = await Promise.all([
     getCachedPricingTiers(businessId),
     getCachedJobSizeTiers(businessId),
     loadPackage(supabase, businessId, packageId, tradeParm),
     loadBundle(supabase, businessId, bundleId, tradeParm),
     loadPlanMarkup(supabase, businessId, planId),
+    supabase.from("team_members").select("id, name, email").eq("owner_profile_id", businessId).eq("status", "active").order("name"),
   ]);
+  const teamMembers: Array<{ id: string; name: string | null; email: string }> = teamMemberRows ?? [];
 
   /* ── 4. Resolve trade from package/bundle ── */
   let effectiveTrade = selectedTrade;
@@ -363,6 +366,7 @@ export default async function NewQuotePage({
         pricingTiers={resolvedPricingTiers}
         jobSizeTiers={resolvedJobSizeTiers}
         siteConditions={siteConditions}
+        teamMembers={teamMembers}
       />
     </>
   );

@@ -61,7 +61,7 @@ const STEPS = [
 
 export default function QuoteBuilder({
   profile, materials, preClientId, preMarkupMaterials, preMarkupSource,
-  pricingTiers, jobSizeTiers, siteConditions,
+  pricingTiers, jobSizeTiers, siteConditions, teamMembers,
 }: {
   profile: { hourly_rate: number; materials_margin_pct: number; default_deposit_pct?: number | null; default_expiry_days?: number; archetype_defaults?: Record<string, string> };
   materials: MaterialRow[];
@@ -71,6 +71,7 @@ export default function QuoteBuilder({
   pricingTiers?: Array<{ id: string; name: string; markup_pct: number; sort_order: number }>;
   jobSizeTiers?: Array<{ id: string; name: string; max_days: number | null; markup_pct: number; sort_order: number }>;
   siteConditions?: SiteConditionTemplateRow[];
+  teamMembers?: Array<{ id: string; name: string | null; email: string }>;
 }) {
   const [step, setStep]     = useState(0);
   const [intake, setIntake] = useState<ElectricianIntake>(DEFAULT_INTAKE);
@@ -127,6 +128,7 @@ export default function QuoteBuilder({
   const [clientEmail, setClientEmail] = useState("");
   const [siteAddress, setSiteAddress] = useState("");
   const [clientId, setClientId] = useState<string | null>(preClientId ?? null);
+  const [plannedCrew, setPlannedCrew] = useState<string[]>([]);
 
   const initialDeposit = profile.default_deposit_pct;
   const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">(
@@ -396,6 +398,7 @@ export default function QuoteBuilder({
       // readers (Xero sync, invoice PDF, quote/job detail pages) that
       // still check it, but there's nothing left to duplicate into it.
       markup_materials: [],
+      planned_crew_member_ids: plannedCrew,
     };
 
     // Opt-in: only send tier IDs to DB if user explicitly selected them
@@ -573,6 +576,9 @@ export default function QuoteBuilder({
           selectedPricingTier={selectedPricingTier}
           selectedJobSizeTier={selectedJobSizeTier}
           profile={profile}
+          teamMembers={teamMembers}
+          plannedCrew={plannedCrew}
+          setPlannedCrew={setPlannedCrew}
         />
       )}
 
@@ -753,7 +759,7 @@ function StepJob({
   selectedPricingTierId, setSelectedPricingTierId,
   selectedJobSizeTierId, setSelectedJobSizeTierId,
   selectedPricingTier, selectedJobSizeTier,
-  profile,
+  profile, teamMembers, plannedCrew, setPlannedCrew,
 }: {
   intake: ElectricianIntake; rate: number; margin: number; effectiveMargin: number;
   set: <K extends keyof ElectricianIntake>(k: K, v: ElectricianIntake[K]) => void;
@@ -765,6 +771,9 @@ function StepJob({
   selectedPricingTier: { id: string; name: string; markup_pct: number } | null;
   selectedJobSizeTier: { id: string; name: string; markup_pct: number } | null;
   profile: { hourly_rate: number; materials_margin_pct: number; default_deposit_pct?: number | null; default_expiry_days?: number };
+  teamMembers?: Array<{ id: string; name: string | null; email: string }>;
+  plannedCrew: string[];
+  setPlannedCrew: React.Dispatch<React.SetStateAction<string[]>>;
 }) {
   return (
     <div className="space-y-4">
@@ -794,6 +803,43 @@ function StepJob({
           <Check2 checked={intake.ccew}     onChange={(v) => set("ccew", v)}     label="CCEW certificate" />
         </Row>
       </div>
+      {teamMembers && teamMembers.length > 0 && (
+        <div className="card">
+          <p className="section-tag mb-1">Staff for this job</p>
+          <p className="text-[13px] text-[var(--ink-faint)] mb-3">
+            Who this quote assumes will do the work - carries straight over to the job&apos;s crew once accepted, so nobody has to be re-picked from scratch.
+          </p>
+          {plannedCrew.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {plannedCrew.map((id) => {
+                const member = teamMembers.find((m) => m.id === id);
+                return (
+                  <span key={id} className="inline-flex items-center gap-1.5 rounded-full bg-[var(--app-bg)] border border-[var(--line)] pl-3 pr-1.5 py-1 text-[12.5px] font-medium text-[var(--ink)]">
+                    {member?.name || member?.email || "Unknown"}
+                    <button
+                      onClick={() => setPlannedCrew((prev) => prev.filter((p) => p !== id))}
+                      className="rounded-full p-0.5 hover:bg-[var(--line)] transition-colors"
+                      aria-label={`Remove ${member?.name || member?.email}`}
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+          )}
+          <select
+            value=""
+            onChange={(e) => { if (e.target.value) setPlannedCrew((prev) => [...prev, e.target.value]); }}
+            className="app-field"
+          >
+            <option value="">Add someone to this job...</option>
+            {teamMembers.filter((m) => !plannedCrew.includes(m.id)).map((m) => (
+              <option key={m.id} value={m.id}>{m.name || m.email}</option>
+            ))}
+          </select>
+        </div>
+      )}
       <div className="card">
         <p className="section-tag mb-3">Customer &amp; job pricing</p>
         {pricingTiers && pricingTiers.length > 0 && (

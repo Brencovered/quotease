@@ -121,6 +121,16 @@ export async function getOrCreateJobForQuote(supabase: SupabaseClient, quoteId: 
     childTables.map((table) => supabase.from(table).update({ job_id: created.id }).eq("quote_id", quoteId).is("job_id", null))
   );
 
+  // Staff picked while the quote was being built (planned_crew_member_ids)
+  // carry straight over into the job's real crew, instead of the tradie
+  // having to re-pick who's on it from scratch on the Schedule tab.
+  const plannedCrew: string[] = [...new Set((quote.planned_crew_member_ids ?? []) as string[])];
+  if (plannedCrew.length > 0) {
+    await supabase.from("job_crew").insert(
+      plannedCrew.map((teamMemberId) => ({ job_id: created.id, team_member_id: teamMemberId, profile_id: quote.profile_id }))
+    );
+  }
+
   return created as JobRow;
 }
 
