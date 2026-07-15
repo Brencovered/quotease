@@ -7,6 +7,7 @@ import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
 import { AlertTriangle, Paperclip, X, Sparkles, ChevronRight, ChevronLeft, Check, Upload, Plus } from "lucide-react";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import VoiceNoteRecorder from "./VoiceNoteRecorder";
+import PlanMarkupQuickAdd from "./PlanMarkupQuickAdd";
 import StepCustomer from "./StepCustomer";
 import ExtraJobLines, { extraLinesTotals } from "./ExtraJobLines";
 import { resolveClientId } from "@/lib/resolveClientId";
@@ -231,6 +232,10 @@ export default function QuoteBuilder({
 
   function set<K extends keyof ElectricianIntake>(key: K, value: ElectricianIntake[K]) {
     setIntake((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function addDrawingFile(file: File) {
+    setDrawingFiles((prev) => (prev.some((f) => f.name === file.name) ? prev : [...prev, file]));
   }
 
   function handleDrawingUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -528,6 +533,23 @@ export default function QuoteBuilder({
               })),
             ]);
           }}
+          marginPct={effectiveMargin}
+          onAddMarkupItems={(items) => {
+            setSiteItems((prev) => [
+              ...prev,
+              ...items.map((item) => ({
+                id: Math.random().toString(36).slice(2),
+                label: item.label,
+                qty: item.quantity,
+                unit: item.unit,
+                note: "from plan markup",
+                materialsCost: item.totalCost,
+                labourHrs: 0,
+                source: "plan_markup" as const,
+              })),
+            ]);
+          }}
+          onMarkupFileReady={addDrawingFile}
         />
       )}
 
@@ -606,7 +628,7 @@ export default function QuoteBuilder({
   );
 }
 
-function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions, analyzing, analysisResult, detectedItems, analysisError, usageLimitReached, archetypeDefaults, onSaveArchetypeDefault, onUpload, onRemove, onAnalyse, onAcceptDetected, onDismissDetected, onVoiceTranscript, trade, lib, onSaveDraft, onAnnotationMeta, onAddLiveItems }: {
+function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions, analyzing, analysisResult, detectedItems, analysisError, usageLimitReached, archetypeDefaults, onSaveArchetypeDefault, onUpload, onRemove, onAnalyse, onAcceptDetected, onDismissDetected, onVoiceTranscript, trade, lib, onSaveDraft, onAnnotationMeta, onAddLiveItems, marginPct, onAddMarkupItems, onMarkupFileReady }: {
   drawingFiles: File[]; drawingInstructions: string; setDrawingInstructions: (v: string) => void;
   analyzing: boolean; analysisResult: { confidence: string; notes: string } | null;
   detectedItems: DetectedItem[];
@@ -623,6 +645,9 @@ function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions
   onSaveDraft: () => void;
   onAnnotationMeta: (meta: {id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string}[]) => void;
   onAddLiveItems: (items: { description: string; quantity: number; unit: string; notes: string; materialsCost?: number; labourHrs?: number }[]) => void;
+  marginPct: number;
+  onAddMarkupItems: (items: { label: string; quantity: number; unit: string; totalCost: number }[]) => void;
+  onMarkupFileReady: (file: File) => void;
 }) {
   return (
     <div className="space-y-4">
@@ -651,6 +676,13 @@ function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions
           </div>
         )}
       </div>
+      <PlanMarkupQuickAdd
+        lib={lib}
+        marginPct={marginPct}
+        trade={trade}
+        onAddItems={onAddMarkupItems}
+        onFileReady={onMarkupFileReady}
+      />
       <VoiceNoteRecorder
         onTranscriptReady={onVoiceTranscript}
         analyzing={analyzing}

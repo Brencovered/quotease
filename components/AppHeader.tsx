@@ -15,7 +15,6 @@ import {
   MapPin,
   Menu,
   X,
-  FolderOpen,
   TrendingUp,
   Download,
   Zap,
@@ -30,7 +29,6 @@ const NAV = [
   { href: "/electrician/jobs",      icon: Briefcase,        label: "Jobs" },
   { href: "/electrician",           icon: Plus,             label: "Quote",   fab: true },
   { href: "/electrician/quotes",    icon: FileText,         label: "Quotes" },
-  { href: "/electrician/plans",     icon: FolderOpen,       label: "Plans" },
   { href: "/electrician/schedule",  icon: CalendarDays,     label: "Schedule" },
   { href: "/electrician/margins",   icon: TrendingUp,       label: "Profit" },
 ];
