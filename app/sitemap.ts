@@ -29,7 +29,7 @@
 
 import { MetadataRoute } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { tradeToSlug, suburbToSlug } from "@/lib/seo/meta";
+import { tradeToSlug, suburbToSlug, buildDirectorySlug } from "@/lib/seo/meta";
 import { LEADS_ENABLED } from "@/lib/featureFlags";
 
 // The site's canonical host is www -- the apex domain 301s to it. Sitemap
@@ -41,14 +41,9 @@ const BASE_URL = "https://www.swiftscope.com.au";
 // too thin, as thin pages dilute overall domain quality in Google's eyes.
 const MIN_LISTINGS_FOR_INDEX = 3;
 
-// Deterministic slug from business name + suburb + last 6 chars of uuid.
-// Replace with row.slug once that column exists.
-function buildSlug(row: { id: string; business_name: string; suburb: string }): string {
-  const name = row.business_name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  const sub  = row.suburb.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  const uid  = row.id.replace(/-/g, "").slice(-6);
-  return `${name}-${sub}-${uid}`;
-}
+// buildSlug moved to lib/seo/meta.ts as buildDirectorySlug - was
+// duplicated identically here and in generateTradeSuburbContent.ts.
+const buildSlug = buildDirectorySlug;
 
 export const revalidate = 86400; // 24 hours
 

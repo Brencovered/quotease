@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { MapPin, Star, Phone, Globe, Mail, ChevronLeft, ChevronRight, X, Send, Check, BadgeCheck, MessageSquare, ArrowRight } from "lucide-react";
 import { getGoogleReviewsUrl } from "@/lib/seo/gbp";
+import { buildDirectorySlug } from "@/lib/seo/meta";
 
 // Temporarily off (kept in sync with app/directory/[slug]/page.tsx): with few
 // tradies in the directory yet, a homeowner submitting an enquiry that never
@@ -402,7 +403,7 @@ export default function DirectoryCard({ listing, index = 0 }: { listing: Listing
                 <MessageSquare size={14} className="group-hover:rotate-[-6deg] transition-transform" /> Request a quote
               </button>
             ) : (
-              <Link href={`/directory/${listing.id}`}
+              <Link href={`/directory/${listing.suburb ? buildDirectorySlug(listing as { id: string; business_name: string; suburb: string }) : listing.id}`}
                 className="group w-full bg-[#0a1722] text-white font-bold text-[13.5px] py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#132538] active:scale-[0.98] transition-all">
                 View profile <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
               </Link>

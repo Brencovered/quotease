@@ -54,6 +54,27 @@ export function directoryListingCanonical(slug: string): string {
   return `${BASE_URL}/directory/${slug}`;
 }
 
+/**
+ * Builds the pretty, business-name-bearing slug for a directory listing -
+ * e.g. "all-metal-roof-plumbing-langwarrin-e77c5f" - instead of exposing
+ * the raw UUID in the URL. The trailing 6 hex chars (stripped of hyphens)
+ * of the row's real id guarantee uniqueness even if two businesses in the
+ * same suburb share a name, without needing a dedicated slug column.
+ *
+ * Single source of truth: this used to be duplicated identically in
+ * app/sitemap.ts and lib/seo/generateTradeSuburbContent.ts. Both now
+ * import this instead, so the sitemap, the SEO landing pages, the
+ * directory search cards, and the listing page's own slug resolution
+ * (app/directory/[slug]/page.tsx) can never drift out of sync with each
+ * other again.
+ */
+export function buildDirectorySlug(row: { id: string; business_name: string; suburb: string }): string {
+  const name = row.business_name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const sub  = row.suburb.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const uid  = row.id.replace(/-/g, "").slice(-6);
+  return `${name}-${sub}-${uid}`;
+}
+
 // -- Trade display names --------------------------------------------------
 
 const TRADE_DISPLAY: Record<string, { singular: string; plural: string }> = {

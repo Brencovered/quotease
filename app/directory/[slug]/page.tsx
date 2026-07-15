@@ -5,11 +5,11 @@ import {
   Building2, Users, Search,
 } from "lucide-react";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import MarketingNav from "@/components/MarketingNav";
 import DirectoryCard from "@/components/DirectoryCard";
-import { tradieListingMeta } from "@/lib/seo/meta";
+import { tradieListingMeta, buildDirectorySlug } from "@/lib/seo/meta";
 import { getGoogleReviewsUrl } from "@/lib/seo/gbp";
 import PhotoGallery from "./_components/PhotoGallery";
 import QuoteForm from "./_components/QuoteForm";
@@ -50,7 +50,9 @@ const TRADE_COLORS: Record<string, string> = {
 /* ------------------------------------------------------------------ */
 type Listing = {
   id: string; business_name: string; trades: string[] | null;
-  suburb: string | null; scraped_contact_phone: string | null;
+  suburb: string | null; postcode: string | null;
+  latitude: number | null; longitude: number | null;
+  scraped_contact_phone: string | null;
   website_url: string | null; scraped_contact_email: string | null;
   google_rating: number | null; google_reviews_count: number | null;
   photo_references: string[] | null; place_id: string | null;
@@ -88,15 +90,64 @@ function domainFromUrl(url: string): string | null {
 /* ------------------------------------------------------------------ */
 /*  Metadata (server)                                                   */
 /* ------------------------------------------------------------------ */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Resolves a URL slug to a listing row. Handles two shapes:
+ *  - The pretty slug buildDirectorySlug produces (business-suburb-uid6) -
+ *    what the sitemap, SEO landing pages, and directory search cards all
+ *    actually link to. Extracts the trailing 6-hex-char id suffix and
+ *    resolves it via a Postgres function (PostgREST can't LIKE-filter a
+ *    uuid column directly without a cast).
+ *  - A raw UUID - what every listing page used to be linked/shared/
+ *    indexed as before this fix. Still resolved (so existing bookmarks
+ *    and any already-indexed raw-UUID URLs keep working), flagged via
+ *    isLegacyId so the caller can 308-redirect to the canonical pretty
+ *    slug instead of serving duplicate content at two URLs.
+ *
+ * Two candidate rows back from the suffix lookup (an astronomically
+ * unlikely 6-hex-char collision) is treated as not-found rather than
+ * silently guessing which business the visitor meant.
+ */
+async function resolveListingBySlug(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  slug: string
+): Promise<{ listing: Listing | null; isLegacyId: boolean }> {
+  if (UUID_RE.test(slug)) {
+    const { data } = await supabase.from("directory_listing").select("*").eq("id", slug).single();
+    return { listing: (data as Listing | null) ?? null, isLegacyId: true };
+  }
+
+  const suffix = slug.slice(-6);
+  if (!/^[0-9a-f]{6}$/i.test(suffix)) return { listing: null, isLegacyId: false };
+
+  const { data } = await supabase.rpc("resolve_directory_listing_by_uid_suffix", { p_suffix: suffix });
+  if (!data || data.length !== 1) return { listing: null, isLegacyId: false };
+  return { listing: data[0] as Listing, isLegacyId: false };
+}
+
 export async function generateMetadata({
   params,
 }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const supabase = await createClient();
-  const { data: listing } = await supabase
-    .from("directory_listing").select("*").eq("id", slug).single();
+  const { listing } = await resolveListingBySlug(supabase, slug);
   if (!listing) return { title: "Not found | Swiftscope" };
-  return tradieListingMeta({ ...listing, slug });
+  // Canonical always points at the pretty slug, even when this metadata
+  // is being generated for a request that arrived via the legacy raw-UUID
+  // URL - that's the whole point of a canonical tag here: tell Google
+  // there's one true URL for this listing, not two.
+  const canonicalSlug = buildDirectorySlug({ id: listing.id, business_name: listing.business_name, suburb: listing.suburb ?? "" });
+  return tradieListingMeta({
+    business_name: listing.business_name,
+    trades: listing.trades ?? [],
+    suburb: listing.suburb ?? "",
+    blurb: listing.blurb,
+    google_rating: listing.google_rating,
+    google_reviews_count: listing.google_reviews_count,
+    logo_url: listing.logo_url,
+    slug: canonicalSlug,
+  });
 }
 
 /* ------------------------------------------------------------------ */
@@ -108,9 +159,16 @@ export default async function TradieProfilePage({
   const { slug } = await params;
   const supabase = await createClient();
 
-  const { data: listing } = await supabase
-    .from("directory_listing").select("*").eq("id", slug).single();
-  if (!listing) notFound();
+  const { listing: maybeListing, isLegacyId } = await resolveListingBySlug(supabase, slug);
+  if (!maybeListing) notFound();
+  const listing: Listing = maybeListing;
+
+  // Someone hit the old raw-UUID URL (a bookmark, an already-indexed
+  // link, a share from before this fix) - send them to the canonical
+  // pretty-slug URL instead of rendering the same page at two addresses.
+  if (isLegacyId) {
+    permanentRedirect(`/directory/${buildDirectorySlug({ id: listing.id, business_name: listing.business_name, suburb: listing.suburb ?? "" })}`);
+  }
 
   /* Similar tradies - always geographically scoped. The previous query
      used an OR between trade-match and suburb-match, so a trade match

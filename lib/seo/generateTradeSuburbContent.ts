@@ -24,7 +24,7 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
-import { getTradeDisplay, suburbToSlug, slugToSuburbDisplay } from "@/lib/seo/meta";
+import { getTradeDisplay, suburbToSlug, slugToSuburbDisplay, buildDirectorySlug } from "@/lib/seo/meta";
 import { generateTradeSuburbFaqs, type FaqItem } from "@/components/seo/FaqSchema";
 
 export interface TradeSuburbListing {
@@ -85,12 +85,9 @@ const PRICING_RANGES: Record<string, string> = {
   arborist:    "$300–$2,000+ depending on tree size and access",
 };
 
-function buildSlug(row: { id: string; business_name: string; suburb: string }): string {
-  const name = row.business_name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  const sub  = row.suburb.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  const uid  = row.id.replace(/-/g, "").slice(-6);
-  return `${name}-${sub}-${uid}`;
-}
+// buildSlug moved to lib/seo/meta.ts as buildDirectorySlug - was
+// duplicated identically here and in app/sitemap.ts.
+const buildSlug = buildDirectorySlug;
 
 export async function generateTradeSuburbContent(
   trade: string,
