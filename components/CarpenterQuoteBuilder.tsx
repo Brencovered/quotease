@@ -554,10 +554,15 @@ export default function CarpenterQuoteBuilder({
         <div className="space-y-4">
           <div className="bg-[var(--navy)] rounded-2xl p-5">
             <p className="text-[11px] text-[var(--steel-3)] font-bold uppercase tracking-wider mb-3">Quote summary</p>
+            {/* Labour/Materials/hours here match the sticky header and the
+                Job detail page: on-site items (site conditions, plan
+                markup, packages) are folded into these totals rather than
+                broken out as a separate bucket - same fix applied to the
+                electrician builder, extended here since this exact same
+                discrepancy exists in every trade builder, not just one. */}
             <div className="space-y-2">
-              <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Labour ({displayLabourHours}h)</span><span className="text-white font-semibold tabular">${displayLabourDollar.toLocaleString()}</span></div>
-              <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Materials</span><span className="text-white font-semibold tabular">${displayMaterialsDollar.toLocaleString()}</span></div>
-              {siteTotal > 0 && <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">On-site items</span><span className="text-white font-semibold tabular">${siteTotal.toLocaleString()}</span></div>}
+              <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Labour ({headerLabourHours}h)</span><span className="text-white font-semibold tabular">${headerLabourDollar.toLocaleString()}</span></div>
+              <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Materials</span><span className="text-white font-semibold tabular">${headerMaterialsDollar.toLocaleString()}</span></div>
               <div className="border-t border-white/10 pt-2 flex justify-between"><span className="text-white font-bold">Total</span><span className="font-display text-[24px] text-[var(--amber)] tabular">${(result.totalCost + siteTotal + extraLinesTotals(extraLines, rate, effectiveMargin).total + Math.round(manualLabourHrs * rate)).toLocaleString()}</span></div>
             </div>
           </div>

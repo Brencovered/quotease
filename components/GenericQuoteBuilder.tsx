@@ -623,21 +623,15 @@ export default function GenericQuoteBuilder({
             {/* Running total */}
             <div className="bg-[var(--navy)] rounded-xl p-4 mt-4">
               <div className="flex justify-between text-[13.5px] mb-1.5">
-                <span className="text-[var(--steel-2)]">Labour ({displayLabourHours}h)</span>
+                <span className="text-[var(--steel-2)]">Labour ({headerLabourHours}h)</span>
                 <span className="text-white font-semibold tabular">
-                  ${displayLabourDollar.toLocaleString()}
+                  ${headerLabourDollar.toLocaleString()}
                 </span>
               </div>
               <div className="flex justify-between text-[13.5px] mb-3">
                 <span className="text-[var(--steel-2)]">Materials + {effectiveMargin}% margin</span>
-                <span className="text-white font-semibold tabular">${displayMaterialsDollar.toLocaleString()}</span>
+                <span className="text-white font-semibold tabular">${headerMaterialsDollar.toLocaleString()}</span>
               </div>
-              {siteTotal > 0 && (
-                <div className="flex justify-between text-[13.5px] mb-3">
-                  <span className="text-[var(--steel-2)]">On-site items</span>
-                  <span className="text-white font-semibold tabular">${siteTotal.toLocaleString()}</span>
-                </div>
-              )}
               <div className="flex justify-between border-t border-white/10 pt-3">
                 <span className="text-white font-bold">Total</span>
                 <span className="font-display text-[22px] text-[var(--amber)] tabular">${displayGrandTotal.toLocaleString()}</span>
@@ -652,21 +646,18 @@ export default function GenericQuoteBuilder({
         <div className="space-y-4">
           <div className="bg-[var(--navy)] rounded-2xl p-5">
             <p className="text-[11px] text-[var(--steel-3)] font-bold uppercase tracking-wider mb-3">Quote summary</p>
+            {/* Matches the sticky header and Job detail page - see the
+                same fix applied to the electrician/carpenter/plumber
+                builders. */}
             <div className="space-y-2">
               <div className="flex justify-between text-[14px]">
-                <span className="text-[var(--steel-2)]">Labour ({displayLabourHours}h)</span>
-                <span className="text-white font-semibold tabular">${displayLabourDollar.toLocaleString()}</span>
+                <span className="text-[var(--steel-2)]">Labour ({headerLabourHours}h)</span>
+                <span className="text-white font-semibold tabular">${headerLabourDollar.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-[14px]">
                 <span className="text-[var(--steel-2)]">Materials</span>
-                <span className="text-white font-semibold tabular">${displayMaterialsDollar.toLocaleString()}</span>
+                <span className="text-white font-semibold tabular">${headerMaterialsDollar.toLocaleString()}</span>
               </div>
-              {siteTotal > 0 && (
-                <div className="flex justify-between text-[14px]">
-                  <span className="text-[var(--steel-2)]">On-site items</span>
-                  <span className="text-white font-semibold tabular">${siteTotal.toLocaleString()}</span>
-                </div>
-              )}
               <div className="border-t border-white/10 pt-2 flex justify-between">
                 <span className="text-white font-bold text-[15px]">Total</span>
                 <span className="font-display text-[24px] text-[var(--amber)] tabular">${displayGrandTotal.toLocaleString()}</span>

@@ -541,6 +541,13 @@ export default function RooferQuoteBuilder({
     + siteItemsMaterialsTotal(siteItems, effectiveMargin)
     + manualLabourHrs * (profile.hourly_rate ?? 95)
   );
+  // Folded into the Labour/Materials rows below instead of shown as a
+  // separate "Files & annotation items" bucket - matches the Job detail
+  // page, which already saves site items folded into labour_hours/
+  // materials_cost (see saveAndSend above), and matches the same fix
+  // applied to every other trade builder's Quote Summary card.
+  const siteLabourDollar = Math.round(siteItemsLabourTotal(siteItems, profile.hourly_rate ?? 95) + manualLabourHrs * (profile.hourly_rate ?? 95));
+  const siteMaterialsDollar = Math.round(siteItemsMaterialsTotal(siteItems, effectiveMargin));
 
   function saveDraft() {
     try {
@@ -974,11 +981,11 @@ export default function RooferQuoteBuilder({
           <div className="space-y-2 text-[13px]">
             <div className="flex justify-between">
               <span className="text-[var(--ink-soft)]">Labour ({RATES[labourRate].label})</span>
-              <span className="font-semibold">${Math.round(summary.labour).toLocaleString()}</span>
+              <span className="font-semibold">${Math.round(summary.labour + siteLabourDollar).toLocaleString()}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-[var(--ink-soft)]">Materials ({MATERIALS[material].label})</span>
-              <span className="font-semibold">${Math.round(summary.matCost).toLocaleString()}</span>
+              <span className="font-semibold">${Math.round(summary.matCost + siteMaterialsDollar).toLocaleString()}</span>
             </div>
             {summary.extrasTotal > 0 && (
               <div className="flex justify-between">
@@ -1006,12 +1013,6 @@ export default function RooferQuoteBuilder({
               <span className="text-[var(--ink-soft)]">GST (10%)</span>
               <span className="font-semibold">${Math.round(summary.gst).toLocaleString()}</span>
             </div>
-            {(siteTotal > 0) && (
-              <div className="flex justify-between">
-                <span className="text-[var(--ink-soft)]">Files &amp; annotation items</span>
-                <span className="font-semibold">${Math.round(siteTotal).toLocaleString()}</span>
-              </div>
-            )}
             <div className="border-t-2 border-[var(--navy)] pt-2 flex justify-between">
               <span className="font-bold text-[var(--ink)]">Total inc. GST</span>
               <span className="font-display text-[1.4rem] text-[var(--amber-deep)]">${Math.round(summary.total + siteTotal).toLocaleString()}</span>
