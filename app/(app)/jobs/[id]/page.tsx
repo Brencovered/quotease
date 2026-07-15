@@ -79,11 +79,11 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   const assignedMember = teamMembers.find((m) => m.id === job.assigned_to_member_id);
 
   let jobPlans: Array<{ id: string; file_name: string; shapes: unknown[]; calibration: unknown; signedUrl?: string }> = [];
-  if (job.client_id) {
+  if (quote) {
     const { data: plans } = await supabase
       .from("client_plans")
       .select("*")
-      .eq("client_id", job.client_id)
+      .eq("quote_id", quote.id)
       .order("created_at", { ascending: false });
     jobPlans = await Promise.all(
       (plans ?? []).map(async (p) => {

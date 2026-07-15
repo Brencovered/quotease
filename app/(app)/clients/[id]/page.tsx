@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveBusinessId } from "@/lib/team";
 import AppHeader from "@/components/AppHeader";
-import PlansLibraryPanel from "@/components/PlansLibraryPanel";
 
 export default async function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -12,9 +11,8 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
   if (!userData.user) notFound();
   const businessId = await getActiveBusinessId(supabase, userData.user.id);
 
-  const [{ data: client }, { data: plans }, { data: quotes }] = await Promise.all([
+  const [{ data: client }, { data: quotes }] = await Promise.all([
     supabase.from("clients").select("*").eq("id", id).eq("profile_id", businessId).single(),
-    supabase.from("client_plans").select("*").eq("client_id", id).order("created_at", { ascending: false }),
     supabase.from("quotes").select("id, total_cost, status, created_at, trade").eq("client_id", id).order("created_at", { ascending: false }),
   ]);
 
@@ -35,13 +33,6 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
     jobIdByQuoteId = new Map((jobRows ?? []).map((j) => [j.quote_id as string, j.id as string]));
   }
 
-  const plansWithUrls = await Promise.all(
-    (plans ?? []).map(async (p) => {
-      const { data: signed } = await supabase.storage.from("job-files").createSignedUrl(p.storage_path, 3600 * 24 * 7);
-      return { ...p, signedUrl: signed?.signedUrl };
-    })
-  );
-
   return (
     <>
       <AppHeader />
@@ -58,8 +49,10 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         {client.billing_address && <p className="text-[13px] text-[var(--ink-faint)] mb-5">{client.billing_address}</p>}
 
         <div className="flex flex-col gap-4">
-          <PlansLibraryPanel clientId={client.id} plans={plansWithUrls} />
-
+          {/* Plans now live per quote/job (see each row below), rather than
+              as one flat client-wide list - a plan uploaded for one job no
+              longer shows up on every other job this client happens to
+              have. Click into a quote or job to view or upload its plans. */}
           <div className="card">
             <p className="section-tag mb-3">Quotes &amp; jobs</p>
             {!quotes || quotes.length === 0 ? (

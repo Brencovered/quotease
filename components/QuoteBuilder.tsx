@@ -231,7 +231,6 @@ export default function QuoteBuilder({
   // Materials up top while Total (which already includes siteTotal) looks
   // correct, making it seem like labour/materials "aren't applied".
   const headerLabourHours = Math.round((displayLabourHours + siteItemsLabourHours(siteItems)) * 10) / 10;
-  const headerLabourDollar = displayLabourDollar + Math.round(siteLabour);
   const headerMaterialsDollar = displayMaterialsDollar + Math.round(siteMaterials);
 
   function set<K extends keyof ElectricianIntake>(key: K, value: ElectricianIntake[K]) {
@@ -982,6 +981,13 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
   selectedJobSizeTier: { id: string; name: string; markup_pct: number } | null;
 }) {
   const siteMaterials = siteItemsMaterialsTotal(siteItems, effectiveMargin ?? 20);
+  const siteLabour = siteItemsLabourTotal(siteItems, rate ?? 95);
+  // Matches the sticky header's combined figures exactly (see the parent
+  // component's headerLabourDollar/headerMaterialsDollar) - on-site items
+  // folded into Labour/Materials rather than broken out separately, so
+  // this card agrees with every other screen showing the same quote.
+  const headerLabourDollar = displayLabourDollar + Math.round(siteLabour);
+  const headerMaterialsDollar = displayMaterialsDollar + Math.round(siteMaterials);
 
   return (
     <div className="space-y-4">
@@ -1036,9 +1042,17 @@ function StepSend({ result, paymentTerms, termsPreset, setTermsPreset, customTer
       <div className="bg-[var(--navy)] rounded-2xl p-5">
         <p className="text-[11px] text-[var(--steel-3)] font-bold uppercase tracking-wider mb-3">Quote summary</p>
         <div className="space-y-2">
-          <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Labour</span><span className="text-white font-semibold tabular">${displayLabourDollar.toLocaleString()}</span></div>
-          <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Materials</span><span className="text-white font-semibold tabular">${displayMaterialsDollar.toLocaleString()}</span></div>
-          {siteTotal > 0 && <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">On-site items</span><span className="text-white font-semibold tabular">${siteTotal.toLocaleString()}</span></div>}
+          {/* Labour/Materials here match the sticky header and the Job
+              detail page: on-site items (site conditions, plan markup,
+              packages, etc) are folded into these two totals rather than
+              shown as a separate bucket. Previously this card showed the
+              un-folded, base-intake-only figures with on-site items broken
+              out separately - correct in total, but showing e.g.
+              "Materials: $0" on a quote that's mostly on-site materials
+              looked like a pricing failure, and disagreed with every other
+              screen showing the same quote. */}
+          <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Labour</span><span className="text-white font-semibold tabular">${headerLabourDollar.toLocaleString()}</span></div>
+          <div className="flex justify-between text-[14px]"><span className="text-[var(--steel-2)]">Materials</span><span className="text-white font-semibold tabular">${headerMaterialsDollar.toLocaleString()}</span></div>
           <div className="border-t border-white/10 pt-2 flex justify-between">
             <span className="text-white font-bold text-[15px]">Total</span>
             <span className="font-display text-[24px] text-[var(--amber)] leading-tight tabular">${(result.totalCost + extraLinesTotals(extraLines, rate, effectiveMargin).total + siteTotal + Math.round(manualLabourHrs * rate)).toLocaleString()}</span>

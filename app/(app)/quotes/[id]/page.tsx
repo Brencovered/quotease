@@ -66,11 +66,11 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
   }
 
   let quotePlans: Array<{ id: string; file_name: string; shapes: unknown[]; calibration: unknown; signedUrl?: string }> = [];
-  if (quote.client_id) {
+  {
     const { data: plans } = await supabase
       .from("client_plans")
       .select("*")
-      .eq("client_id", quote.client_id)
+      .eq("quote_id", quote.id)
       .order("created_at", { ascending: false });
     quotePlans = await Promise.all(
       (plans ?? []).map(async (p) => {

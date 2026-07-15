@@ -2,7 +2,8 @@
 
 import { useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { X, FileImage, Check } from "lucide-react";
+import { getActiveBusinessId } from "@/lib/team";
+import { X, FileImage, Upload, Check } from "lucide-react";
 import PlanMarkup, { type PlanShape, type CalibrationLine, type MaterialItem } from "./PlanMarkup";
 
 type Plan = {
@@ -31,6 +32,45 @@ export default function JobPlansPanel({
   const [plans,       setPlans]       = useState<Plan[]>(initial);
   const [openPlanId,  setOpenPlanId]  = useState<string | null>(null);
   const [savedMsg,    setSavedMsg]    = useState<string | null>(null);
+  const [uploading,   setUploading]   = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const supabase = createClient();
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) { setUploadError("Not signed in"); return; }
+      const businessId = await getActiveBusinessId(supabase, userData.user.id);
+
+      const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+      const path = `${userData.user.id}/plans/${clientId ?? "no-client"}/${Date.now()}-${safeName}`;
+      const { error: uploadErr } = await supabase.storage.from("job-files").upload(path, file);
+      if (uploadErr) { setUploadError(uploadErr.message); return; }
+
+      // Scoped to this quote (and therefore this job, since a job always
+      // has exactly one originating quote) - not the client as a whole,
+      // so this plan only ever shows up here, not on every other job this
+      // same client happens to have.
+      const { data: plan, error: insertErr } = await supabase
+        .from("client_plans")
+        .insert({ quote_id: quoteId, client_id: clientId, profile_id: businessId, file_name: file.name, storage_path: path })
+        .select()
+        .single();
+      if (insertErr) { setUploadError(insertErr.message); return; }
+
+      if (plan) {
+        const { data: signed } = await supabase.storage.from("job-files").createSignedUrl(path, 3600 * 24);
+        setPlans((prev) => [{ ...plan, shapes: [], calibration: null, signedUrl: signed?.signedUrl }, ...prev]);
+      }
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
 
   const save = useCallback(async (planId: string, shapes: PlanShape[], calibration: CalibrationLine | null) => {
     const supabase = createClient();
@@ -74,20 +114,26 @@ export default function JobPlansPanel({
     setTimeout(() => setSavedMsg(null), 3000);
   }
 
-  if (!clientId) return null;
   const openPlan = plans.find((p) => p.id === openPlanId);
 
   return (
     <div className="card">
-      <p className="section-tag mb-1">Site plans</p>
+      <div className="flex items-center justify-between mb-1">
+        <p className="section-tag">Site plans</p>
+        <label className="btn-secondary text-[12px] py-1.5 px-3 cursor-pointer">
+          <Upload size={12} /> {uploading ? "Uploading..." : "Upload"}
+          <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={uploading} />
+        </label>
+      </div>
       <p className="font-semibold text-[var(--ink)] mb-1">Mark up drawings and build your materials list</p>
       <p className="text-[12.5px] text-[var(--ink-faint)] mb-3">
         Drop pins, trace cable runs or outline areas. Link each shape to a material from your library and the cost feeds into this quote automatically.
       </p>
+      {uploadError && <p className="text-[12.5px] text-[var(--red)] mb-3">{uploadError}</p>}
 
       {plans.length === 0 ? (
         <p className="text-[13px] text-[var(--ink-faint)] flex items-center gap-2">
-          <FileImage size={14} /> No plans on file for this client yet - upload one from their client page.
+          <FileImage size={14} /> No plans on this job yet - upload one above.
         </p>
       ) : (
         <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
