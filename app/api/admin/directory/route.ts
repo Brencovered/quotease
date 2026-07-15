@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdminEmail } from "@/lib/admin";
 import { findAndFetchGoogleListing } from "@/lib/googlePlaces";
+import { scrapeWebsite } from "@/lib/websiteScrape";
 import { tradeToSlug, suburbToSlug } from "@/lib/seo/meta";
 
 async function requireAdmin(): Promise<NextResponse | null> {
@@ -162,6 +163,14 @@ export async function POST(req: NextRequest) {
   // photos data it would have gotten from Google, for this one business.
   const google = await findAndFetchGoogleListing(business_name, suburb);
 
+  // Google Places lookup only works if the business actually has a
+  // Google listing to find - a lot of the ones the scraper misses won't.
+  // If the admin gave a website directly, scrape it the same way the
+  // real scraper scrapes any website it finds, so email/logo still get
+  // filled in even with zero Google presence.
+  const websiteToScrape = website_url ?? google.website;
+  const scraped = websiteToScrape ? await scrapeWebsite(websiteToScrape) : { email: null, logoUrl: null };
+
   const { data, error } = await admin
     .from("directory_listing")
     .insert({
@@ -169,10 +178,11 @@ export async function POST(req: NextRequest) {
       suburb,
       postcode,
       trades,
-      website_url: website_url ?? google.website,
-      scraped_contact_email,
+      website_url: websiteToScrape,
+      scraped_contact_email: scraped_contact_email ?? scraped.email,
       scraped_contact_phone: scraped_contact_phone ?? google.formatted_phone_number,
       blurb,
+      logo_url: scraped.logoUrl,
       source: "manual",
       place_id: google.place_id,
       google_rating: google.google_rating,

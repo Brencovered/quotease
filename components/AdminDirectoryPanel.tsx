@@ -358,7 +358,7 @@ export default function AdminDirectoryPanel() {
       {showAddForm && (
         <div className="bg-[var(--surface)] border-2 border-[var(--amber)] rounded-2xl p-4 mb-4">
           <p className="font-semibold text-[var(--ink)] mb-1">Add a tradie the scraper missed</p>
-          <p className="text-[12.5px] text-[var(--ink-faint)] mb-3">Google rating, review count, and photos are pulled in automatically from their business name + suburb - no need to enter those.</p>
+          <p className="text-[12.5px] text-[var(--ink-faint)] mb-3">Google rating, review count, and photos are pulled in automatically from their business name + suburb. If you add a website, their email and logo are pulled from it too - useful when a business has little or no Google presence, which is usually why the scraper missed them in the first place.</p>
           {createError && <p className="text-[13px] text-red-600 mb-2">{createError}</p>}
           <div className="grid sm:grid-cols-2 gap-3 mb-3">
             <input
