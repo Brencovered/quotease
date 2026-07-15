@@ -23,12 +23,10 @@ interface CrewEntry {
 // person and simply didn't have anywhere to live before job_crew existed.
 export default function JobCrewPanel({
   jobId,
-  profileId,
   initialCrew,
   teamMembers,
 }: {
   jobId: string;
-  profileId: string;
   initialCrew: CrewEntry[];
   teamMembers: TeamMemberOption[];
 }) {
@@ -44,17 +42,21 @@ export default function JobCrewPanel({
     if (!adding) return;
     setSaving(true);
     setError(null);
-    const supabase = createClient();
-    const { data, error: insertErr } = await supabase
-      .from("job_crew")
-      .insert({ job_id: jobId, team_member_id: adding, profile_id: profileId })
-      .select("id, team_member_id")
-      .single();
-    if (insertErr) {
+    try {
+      const res = await fetch(`/api/jobs/${jobId}/crew`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamMemberId: adding }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        setError(body.error || "Couldn't add them - try again");
+      } else {
+        setCrew((prev) => [...prev, body.crew]);
+        setAdding("");
+      }
+    } catch {
       setError("Couldn't add them - try again");
-    } else if (data) {
-      setCrew((prev) => [...prev, data]);
-      setAdding("");
     }
     setSaving(false);
   }

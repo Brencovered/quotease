@@ -31,14 +31,15 @@ type TabId = (typeof TABS)[number]["id"];
  * improvement on the page's most common route.
  */
 export default function JobTabs({
-  overview, plans, schedule, profit, files,
-}: Record<TabId, ReactNode>) {
+  overview, plans, schedule, profit, files, hiddenTabs = [],
+}: Record<TabId, ReactNode> & { hiddenTabs?: TabId[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  const visibleTabs = TABS.filter((t) => !hiddenTabs.includes(t.id));
   const requested = searchParams.get("tab");
-  const active: TabId = (TABS.some((t) => t.id === requested) ? requested : "overview") as TabId;
+  const active: TabId = (visibleTabs.some((t) => t.id === requested) ? requested : "overview") as TabId;
 
   function setTab(id: TabId) {
     const params = new URLSearchParams(searchParams.toString());
@@ -51,7 +52,7 @@ export default function JobTabs({
   return (
     <div>
       <div className="flex items-center gap-1 mb-4 bg-[var(--app-bg)] rounded-xl p-1 overflow-x-auto hide-scrollbar">
-        {TABS.map(({ id, label, icon: Icon }) => (
+        {visibleTabs.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setTab(id)}

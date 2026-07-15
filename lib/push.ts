@@ -17,6 +17,47 @@ export interface PushPayload {
  * Expired/invalid subscriptions (410 Gone, 404) are cleaned up as they're
  * discovered, so the subscription list doesn't just grow stale forever.
  */
+/**
+ * Same as sendPushToBusiness, but targeted at one specific person's
+ * devices (push_subscriptions.user_id) rather than broadcasting to
+ * everyone on the business - e.g. notifying just the crew member who
+ * was added to a job, not the whole team.
+ */
+export async function sendPushToUser(admin: SupabaseClient, userId: string, payload: PushPayload): Promise<void> {
+  const publicKey  = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const privateKey = process.env.VAPID_PRIVATE_KEY;
+
+  if (!publicKey || !privateKey) return;
+
+  const { data: subs } = await admin
+    .from("push_subscriptions")
+    .select("id, endpoint, p256dh, auth_key")
+    .eq("user_id", userId);
+
+  if (!subs?.length) return;
+
+  const webpush = await import("web-push");
+  webpush.setVapidDetails("mailto:support@swiftscope.com.au", publicKey, privateKey);
+
+  await Promise.all(
+    subs.map(async (sub) => {
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth_key } },
+          JSON.stringify(payload)
+        );
+      } catch (err) {
+        const statusCode = (err as { statusCode?: number })?.statusCode;
+        if (statusCode === 404 || statusCode === 410) {
+          await admin.from("push_subscriptions").delete().eq("id", sub.id);
+        } else {
+          console.error("[push] send failed for subscription", sub.id, err);
+        }
+      }
+    })
+  );
+}
+
 export async function sendPushToBusiness(admin: SupabaseClient, businessId: string, payload: PushPayload): Promise<void> {
   const publicKey  = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const privateKey = process.env.VAPID_PRIVATE_KEY;

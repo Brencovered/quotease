@@ -210,6 +210,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         </div>
 
         <JobTabs
+          hiddenTabs={isAdmin ? [] : ["profit"]}
           overview={
             <>
               {stepperColumns.length > 0 && <JobProgressStepper jobId={job.id} status={job.status} columns={stepperColumns} />}
@@ -274,7 +275,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               ) : (
                 <p className="text-[13px] text-[var(--ink-faint)]">Scheduling needs a linked quote - this job was created without one.</p>
               )}
-              <JobCrewPanel jobId={job.id} profileId={businessId} initialCrew={jobCrew} teamMembers={teamMembers} />
+              <JobCrewPanel jobId={job.id} initialCrew={jobCrew} teamMembers={teamMembers} />
               {isAdmin && (
                 <TimesheetsPanel jobId={job.id} entries={timesheetEntries as never} teamMembers={teamMembers} ownerName={userData.user.email ?? "Owner"} />
               )}
@@ -284,6 +285,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             </>
           }
           profit={
+            isAdmin ? (
             <>
               {hasActuals ? (
                 <div className={`rounded-xl p-4 sm:p-5 border ${marginTone === "green" ? "bg-green-50 border-green-200" : marginTone === "amber" ? "bg-amber-50 border-amber-200" : "bg-red-50 border-red-200"}`}>
@@ -318,6 +320,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                 intakeData={quote?.intake_data}
               />
             </>
+            ) : null
           }
           files={
             <>
