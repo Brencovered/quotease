@@ -313,7 +313,18 @@ export default function MaterialsCatalog({
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-[14px] font-bold text-[var(--ink)] truncate">{m.description}</h3>
+                      {m.description.startsWith("[COMING SOON]") ? (
+                        <>
+                          <span className="inline-block text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[var(--amber-light)] text-[var(--amber-deep)] mb-1">
+                            Coming soon
+                          </span>
+                          <h3 className="text-[14px] font-bold text-[var(--ink)] line-clamp-2">
+                            {m.description.replace("[COMING SOON]", "").trim()}
+                          </h3>
+                        </>
+                      ) : (
+                        <h3 className="text-[14px] font-bold text-[var(--ink)] line-clamp-2">{m.description}</h3>
+                      )}
                       {m.sku && <p className="text-[11px] text-[var(--ink-faint)] font-mono mt-0.5">{m.sku}</p>}
                     </div>
                     <div className="relative shrink-0">

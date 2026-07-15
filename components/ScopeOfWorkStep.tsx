@@ -206,7 +206,7 @@ function ScopeItemRow({ item, update, remove }: {
   }
 
   return (
-    <div className="flex items-center gap-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl px-3 py-2.5">
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl px-3 py-2.5">
       <div className="flex-1 min-w-0">
         <input
           value={item.label}
@@ -221,42 +221,44 @@ function ScopeItemRow({ item, update, remove }: {
           </p>
         )}
       </div>
-      <input
-        type="number"
-        value={qtyText}
-        onChange={(e) => commitQty(e.target.value)}
-        onBlur={() => { if (qtyText.trim() === "") commitQty("0"); }}
-        className="w-14 bg-[var(--app-bg)] rounded-lg text-center text-[13px] py-1"
-        title="Quantity"
-      />
-      <span className="text-[11px] text-[var(--ink-faint)] w-8">{item.unit}</span>
-      <div className="flex items-center gap-1 w-24">
-        <span className="text-[12px] text-[var(--ink-faint)]">$</span>
+      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
         <input
           type="number"
-          value={unitCostText}
-          onChange={(e) => commitUnitCost(e.target.value)}
-          onBlur={() => { if (unitCostText.trim() === "") commitUnitCost("0"); }}
-          className="w-full bg-[var(--app-bg)] rounded-lg text-center text-[13px] py-1"
-          title="Unit cost"
+          value={qtyText}
+          onChange={(e) => commitQty(e.target.value)}
+          onBlur={() => { if (qtyText.trim() === "") commitQty("0"); }}
+          className="w-14 bg-[var(--app-bg)] rounded-lg text-center text-[13px] py-1"
+          title="Quantity"
         />
+        <span className="text-[11px] text-[var(--ink-faint)] w-8">{item.unit}</span>
+        <div className="flex items-center gap-1 w-24">
+          <span className="text-[12px] text-[var(--ink-faint)]">$</span>
+          <input
+            type="number"
+            value={unitCostText}
+            onChange={(e) => commitUnitCost(e.target.value)}
+            onBlur={() => { if (unitCostText.trim() === "") commitUnitCost("0"); }}
+            className="w-full bg-[var(--app-bg)] rounded-lg text-center text-[13px] py-1"
+            title="Unit cost"
+          />
+        </div>
+        <div className="flex items-center gap-1 w-20">
+          <input
+            type="number"
+            step="0.25"
+            value={hrsText}
+            onChange={(e) => commitHrs(e.target.value)}
+            onBlur={() => { if (hrsText.trim() === "") commitHrs("0"); }}
+            className="w-full bg-[var(--app-bg)] rounded-lg text-center text-[13px] py-1"
+            title="Labour hours"
+          />
+          <span className="text-[11px] text-[var(--ink-faint)]">hrs</span>
+        </div>
+        <span className="text-[13px] font-semibold text-[var(--ink)] w-16 text-right ml-auto sm:ml-0">${item.materialsCost.toLocaleString()}</span>
+        <button type="button" onClick={() => remove(item.id)} className="text-[var(--ink-faint)] hover:text-[var(--red)] p-1">
+          <Trash2 size={14} />
+        </button>
       </div>
-      <div className="flex items-center gap-1 w-20">
-        <input
-          type="number"
-          step="0.25"
-          value={hrsText}
-          onChange={(e) => commitHrs(e.target.value)}
-          onBlur={() => { if (hrsText.trim() === "") commitHrs("0"); }}
-          className="w-full bg-[var(--app-bg)] rounded-lg text-center text-[13px] py-1"
-          title="Labour hours"
-        />
-        <span className="text-[11px] text-[var(--ink-faint)]">hrs</span>
-      </div>
-      <span className="text-[13px] font-semibold text-[var(--ink)] w-16 text-right">${item.materialsCost.toLocaleString()}</span>
-      <button type="button" onClick={() => remove(item.id)} className="text-[var(--ink-faint)] hover:text-[var(--red)] p-1">
-        <Trash2 size={14} />
-      </button>
     </div>
   );
 }

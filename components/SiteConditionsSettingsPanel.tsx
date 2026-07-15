@@ -79,48 +79,50 @@ export default function SiteConditionsSettingsPanel({
               <p className="text-[11px] tracking-[.1em] uppercase text-[var(--ink-faint)] font-bold mb-2 capitalize">{group.trade}</p>
               <div className="space-y-2">
                 {group.templates.map((t) => (
-                  <div key={t.id} className="flex items-center gap-2 bg-[var(--app-bg)] rounded-xl p-2.5">
+                  <div key={t.id} className="flex flex-col sm:flex-row sm:items-center gap-2 bg-[var(--app-bg)] rounded-xl p-2.5">
                     <input
                       value={t.label}
                       onChange={(e) => updateRow(group.trade, t.id, { label: e.target.value })}
                       onBlur={() => saveRow(t.id, { label: t.label })}
-                      className="app-field text-[13px] flex-1"
+                      className="app-field text-[13px] w-full sm:flex-1"
                       placeholder="e.g. Scaffolding"
                     />
-                    <select
-                      value={t.kind}
-                      onChange={(e) => {
-                        const kind = e.target.value as "fixed" | "daily";
-                        updateRow(group.trade, t.id, { kind });
-                        saveRow(t.id, { kind });
-                      }}
-                      className="app-field text-[13px] w-auto"
-                    >
-                      <option value="fixed">Flat fee</option>
-                      <option value="daily">Per day</option>
-                    </select>
-                    <div className="relative w-28">
-                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-faint)]">$</span>
-                      <input
-                        type="number"
-                        min={0}
-                        value={t.default_amount}
-                        onChange={(e) => updateRow(group.trade, t.id, { default_amount: Number(e.target.value) })}
-                        onBlur={() => saveRow(t.id, { default_amount: t.default_amount })}
-                        className="app-field text-[13px] pl-6 w-full"
-                      />
-                    </div>
-                    {savingId === t.id ? (
-                      <Loader2 size={14} className="animate-spin text-[var(--ink-faint)]" />
-                    ) : (
-                      <button
-                        onClick={() => removeRow(group.trade, t.id)}
-                        className="p-2 rounded-lg text-[var(--ink-faint)] hover:text-red-600 hover:bg-red-50 transition-colors"
-                        aria-label={`Remove ${t.label}`}
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={t.kind}
+                        onChange={(e) => {
+                          const kind = e.target.value as "fixed" | "daily";
+                          updateRow(group.trade, t.id, { kind });
+                          saveRow(t.id, { kind });
+                        }}
+                        className="app-field text-[13px] w-auto flex-1 sm:flex-none"
                       >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
+                        <option value="fixed">Flat fee</option>
+                        <option value="daily">Per day</option>
+                      </select>
+                      <div className="relative w-28 shrink-0">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-faint)]">$</span>
+                        <input
+                          type="number"
+                          min={0}
+                          value={t.default_amount}
+                          onChange={(e) => updateRow(group.trade, t.id, { default_amount: Number(e.target.value) })}
+                          onBlur={() => saveRow(t.id, { default_amount: t.default_amount })}
+                          className="app-field text-[13px] pl-6 w-full"
+                        />
+                      </div>
+                      {savingId === t.id ? (
+                        <Loader2 size={14} className="animate-spin text-[var(--ink-faint)] shrink-0" />
+                      ) : (
+                        <button
+                          onClick={() => removeRow(group.trade, t.id)}
+                          className="p-2 rounded-lg text-[var(--ink-faint)] hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
+                          aria-label={`Remove ${t.label}`}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
