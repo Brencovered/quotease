@@ -23,6 +23,7 @@ import SiteAnnotationReport from "@/components/SiteAnnotationReport";
 import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
 import { MaterialSearchAdd, ScopeItemsList, type ScopeItem } from "@/components/ScopeOfWorkStep";
 import PeripheralsPanel from "@/components/PeripheralsPanel";
+import type { SiteConditionTemplateRow } from "@/lib/peripherals";
 import {
   calcElectricianQuote,
   ELECTRICIAN_DEFAULT_MATERIALS,
@@ -60,7 +61,7 @@ const STEPS = [
 
 export default function QuoteBuilder({
   profile, materials, preClientId, preMarkupMaterials, preMarkupSource,
-  pricingTiers, jobSizeTiers,
+  pricingTiers, jobSizeTiers, siteConditions,
 }: {
   profile: { hourly_rate: number; materials_margin_pct: number; default_deposit_pct?: number | null; default_expiry_days?: number; archetype_defaults?: Record<string, string> };
   materials: MaterialRow[];
@@ -69,6 +70,7 @@ export default function QuoteBuilder({
   preMarkupSource?: "package" | "plan markup" | "material bundle";
   pricingTiers?: Array<{ id: string; name: string; markup_pct: number; sort_order: number }>;
   jobSizeTiers?: Array<{ id: string; name: string; max_days: number | null; markup_pct: number; sort_order: number }>;
+  siteConditions?: SiteConditionTemplateRow[];
 }) {
   const [step, setStep]     = useState(0);
   const [intake, setIntake] = useState<ElectricianIntake>(DEFAULT_INTAKE);
@@ -580,6 +582,7 @@ export default function QuoteBuilder({
           siteItems={siteItems} setSiteItems={setSiteItems}
           lib={lib}
           manualLabourHrs={manualLabourHrs} setManualLabourHrs={setManualLabourHrs}
+          siteConditions={siteConditions}
         />
       )}
 
@@ -837,7 +840,7 @@ function StepJob({
   );
 }
 
-function StepScope({ intake, set, siteItems, setSiteItems, lib, manualLabourHrs, setManualLabourHrs }: {
+function StepScope({ intake, set, siteItems, setSiteItems, lib, manualLabourHrs, setManualLabourHrs, siteConditions }: {
   intake: ElectricianIntake;
   set: <K extends keyof ElectricianIntake>(k: K, v: ElectricianIntake[K]) => void;
   siteItems: ScopeItem[];
@@ -845,6 +848,7 @@ function StepScope({ intake, set, siteItems, setSiteItems, lib, manualLabourHrs,
   lib: MaterialRow[];
   manualLabourHrs: number;
   setManualLabourHrs: React.Dispatch<React.SetStateAction<number>>;
+  siteConditions?: SiteConditionTemplateRow[];
 }) {
   return (
     <div className="space-y-4">
@@ -889,7 +893,7 @@ function StepScope({ intake, set, siteItems, setSiteItems, lib, manualLabourHrs,
         </div>
       </div>
 
-      <PeripheralsPanel trade="electrician" siteItems={siteItems} setSiteItems={setSiteItems} />
+      <PeripheralsPanel templates={siteConditions ?? []} siteItems={siteItems} setSiteItems={setSiteItems} />
 
       <div className="card">
         <p className="section-tag mb-3">Materials &amp; labour</p>

@@ -7,6 +7,8 @@ import AccountDangerZone from "@/components/AccountDangerZone";
 import AppHeader from "@/components/AppHeader";
 import PushNotificationToggle from "@/components/PushNotificationToggle";
 import SettingsSkeleton from "@/components/SettingsSkeleton";
+import SiteConditionsSettingsPanel from "@/components/SiteConditionsSettingsPanel";
+import { getPeripheralsForBusiness, type SiteConditionTemplateRow } from "@/lib/peripherals";
 import Link from "next/link";
 import { BookOpen, Users } from "lucide-react";
 
@@ -31,6 +33,7 @@ export default function SettingsPage() {
 
 async function SettingsData() {
   let profile: {
+    id?: string;
     business_name?: string;
     contact_email?: string;
     xero_connected?: boolean;
@@ -86,9 +89,28 @@ async function SettingsData() {
 
   const xeroConnected = !!(profile as Record<string, unknown>)?.xero_tenant_id;
 
+  let siteConditionsByTrade: { trade: string; templates: SiteConditionTemplateRow[] }[] = [];
+  if (profile?.id && profile.trades?.length) {
+    try {
+      const supabase = await createClient();
+      siteConditionsByTrade = await Promise.all(
+        profile.trades.map(async (trade) => ({
+          trade,
+          templates: await getPeripheralsForBusiness(supabase, profile!.id!, trade),
+        }))
+      );
+    } catch (err) {
+      console.error("Settings page: continuing without site conditions -", err);
+    }
+  }
+
   return (
     <>
       <SettingsPanel profile={profile} />
+
+      {profile?.id && siteConditionsByTrade.length > 0 && (
+        <SiteConditionsSettingsPanel businessId={profile.id} initialByTrade={siteConditionsByTrade} />
+      )}
 
       {/* Team */}
       <div className="page-wrap-narrow pb-0 pt-0">

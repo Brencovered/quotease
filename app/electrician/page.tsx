@@ -16,6 +16,7 @@ import QuoteBuilderDynamic from "@/components/QuoteBuilderDynamic";
 import AppHeader from "@/components/AppHeader";
 import Link from "next/link";
 import { ALL_TRADES } from "@/lib/genericTrades";
+import { getPeripheralsForBusiness } from "@/lib/peripherals";
 
 const DEDICATED_DEFAULTS: Record<string, readonly { item_key: string; label: string; unit_cost: number }[]> = {
   electrician: ELECTRICIAN_DEFAULT_MATERIALS,
@@ -237,6 +238,13 @@ export default async function NewQuotePage({
   if (pkgData?.trade) effectiveTrade = pkgData.trade;
   if (bundleData.trade) effectiveTrade = bundleData.trade;
 
+  // Business + trade customizable site conditions (Level 2 connection
+  // fees, scaffolding, etc) - seeds from lib/peripherals.ts's hardcoded
+  // defaults on first use, then reads from the business's own saved rows
+  // from then on. Fetched after effectiveTrade is resolved since a
+  // package/bundle can override the trade selected above.
+  const siteConditions = await getPeripheralsForBusiness(supabase, businessId, effectiveTrade);
+
   /* ── 5. Resolve pre-markup materials ── */
   let preMarkupMaterials: Array<{
     label: string; quantity: number; unit: string; unitCost: number;
@@ -354,6 +362,7 @@ export default async function NewQuotePage({
         preMarkupSource={preMarkupSource}
         pricingTiers={resolvedPricingTiers}
         jobSizeTiers={resolvedJobSizeTiers}
+        siteConditions={siteConditions}
       />
     </>
   );

@@ -37,6 +37,7 @@ interface BuilderProps {
   preMarkupSource?: "package" | "plan markup" | "material bundle";
   pricingTiers: Array<{ id: string; name: string; markup_pct: number; sort_order: number }>;
   jobSizeTiers: Array<{ id: string; name: string; max_days: number | null; markup_pct: number; sort_order: number }>;
+  siteConditions: Array<{ id: string; trade: string; label: string; kind: "fixed" | "daily"; default_amount: number; sort_order: number }>;
 }
 
 function TradeBuilderInner({ tradeKey, profile, ...rest }: BuilderProps) {

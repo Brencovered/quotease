@@ -20,6 +20,7 @@ import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } fr
 import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
 import { MaterialSearchAdd, ScopeItemsList, type ScopeItem } from "@/components/ScopeOfWorkStep";
 import PeripheralsPanel from "@/components/PeripheralsPanel";
+import type { SiteConditionTemplateRow } from "@/lib/peripherals";
 
 type MaterialRow = { item_key: string; label: string; unit_cost: number };
 
@@ -44,7 +45,7 @@ const STEPS = [
 
 export default function CarpenterQuoteBuilder({
   profile, materials, preClientId, preMarkupMaterials, preMarkupSource,
-  pricingTiers, jobSizeTiers,
+  pricingTiers, jobSizeTiers, siteConditions,
 }: {
   profile: { hourly_rate: number; materials_margin_pct: number; archetype_defaults?: Record<string, string> };
   materials: MaterialRow[];
@@ -53,6 +54,7 @@ export default function CarpenterQuoteBuilder({
   preMarkupSource?: "package" | "plan markup" | "material bundle";
   pricingTiers?: Array<{ id: string; name: string; markup_pct: number; sort_order: number }>;
   jobSizeTiers?: Array<{ id: string; name: string; max_days: number | null; markup_pct: number; sort_order: number }>;
+  siteConditions?: SiteConditionTemplateRow[];
 }) {
   const [step,   setStep]   = useState(0);
   const [intake, setIntake] = useState<CarpenterIntake>(DEFAULT_INTAKE);
@@ -465,7 +467,7 @@ export default function CarpenterQuoteBuilder({
       {stepId === "scope" && (
         <div className="space-y-4">
           <PackagePicker trade="carpenter" />
-          <PeripheralsPanel trade="carpenter" siteItems={siteItems} setSiteItems={setSiteItems} />
+          <PeripheralsPanel templates={siteConditions ?? []} siteItems={siteItems} setSiteItems={setSiteItems} />
           <div className="card">
             <p className="section-tag mb-3">Materials &amp; labour</p>
             <p className="text-[12.5px] text-[var(--ink-faint)] mb-3">

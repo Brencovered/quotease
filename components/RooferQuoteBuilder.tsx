@@ -15,6 +15,7 @@ import { getActiveBusinessId } from "@/lib/team";
 import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
 import { MaterialSearchAdd, ScopeItemsList } from "@/components/ScopeOfWorkStep";
 import PeripheralsPanel from "@/components/PeripheralsPanel";
+import type { SiteConditionTemplateRow } from "@/lib/peripherals";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -99,6 +100,7 @@ interface RooferQuoteBuilderProps {
   preMarkupSource?: "package" | "plan markup" | "material bundle";
   pricingTiers?: Array<{ id: string; name: string; markup_pct: number; sort_order: number }>;
   jobSizeTiers?: Array<{ id: string; name: string; max_days: number | null; markup_pct: number; sort_order: number }>;
+  siteConditions?: SiteConditionTemplateRow[];
 }
 
 export default function RooferQuoteBuilder({
@@ -109,6 +111,7 @@ export default function RooferQuoteBuilder({
   preMarkupSource,
   pricingTiers,
   jobSizeTiers,
+  siteConditions,
 }: RooferQuoteBuilderProps) {
 
   // Remembered archetype -> real price book product mappings, so AI-detected
@@ -667,7 +670,7 @@ export default function RooferQuoteBuilder({
         )}
       </div>
 
-      <PeripheralsPanel trade="roofer" siteItems={siteItems} setSiteItems={setSiteItems} />
+      <PeripheralsPanel templates={siteConditions ?? []} siteItems={siteItems} setSiteItems={setSiteItems} />
 
       <div className="card">
         <p className="section-tag mb-3">Materials &amp; labour</p>

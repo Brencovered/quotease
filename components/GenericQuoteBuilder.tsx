@@ -18,6 +18,7 @@ import CategoryMaterialPicker, { type PickerItem } from "@/components/CategoryMa
 import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
 import { MaterialSearchAdd, ScopeItemsList } from "@/components/ScopeOfWorkStep";
 import PeripheralsPanel from "@/components/PeripheralsPanel";
+import type { SiteConditionTemplateRow } from "@/lib/peripherals";
 
 const STEPS = [
   { id: "customer", label: "Customer" },
@@ -39,6 +40,7 @@ export default function GenericQuoteBuilder({
   preMarkupSource,
   pricingTiers,
   jobSizeTiers,
+  siteConditions,
 }: {
   tradeKey: string;
   profile: { hourly_rate: number; materials_margin_pct: number; archetype_defaults?: Record<string, string> };
@@ -48,6 +50,7 @@ export default function GenericQuoteBuilder({
   preMarkupSource?: "package" | "plan markup" | "material bundle";
   pricingTiers?: Array<{ id: string; name: string; markup_pct: number; sort_order: number }>;
   jobSizeTiers?: Array<{ id: string; name: string; max_days: number | null; markup_pct: number; sort_order: number }>;
+  siteConditions?: SiteConditionTemplateRow[];
 }) {
   const lib = materials ?? [];
   const [archetypeDefaults, setArchetypeDefaults] = useState<Record<string, string>>(
@@ -543,7 +546,7 @@ export default function GenericQuoteBuilder({
             )}
           </div>
 
-          <PeripheralsPanel trade={tradeKey ?? "default"} siteItems={siteItems} setSiteItems={setSiteItems} />
+          <PeripheralsPanel templates={siteConditions ?? []} siteItems={siteItems} setSiteItems={setSiteItems} />
 
           {(siteItems.length > 0 || lib.length > 0) && (
             <div className="card">

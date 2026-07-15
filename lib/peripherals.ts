@@ -53,3 +53,44 @@ export const PERIPHERALS_BY_TRADE: Record<string, PeripheralTemplate[]> = {
 export function peripheralsForTrade(trade: string): PeripheralTemplate[] {
   return PERIPHERALS_BY_TRADE[trade] ?? PERIPHERALS_BY_TRADE.default;
 }
+
+/**
+ * Business-aware version of peripheralsForTrade. The static list above is
+ * now only a one-time seed source, not the source of truth: the first
+ * time a business needs peripherals for a given trade with no
+ * site_condition_templates rows yet, this seeds real DB rows from the
+ * hardcoded defaults, then returns from the DB every time after - fully
+ * editable per business per trade from Settings, nothing hard-set past
+ * that first seed.
+ */
+export interface SiteConditionTemplateRow {
+  id: string; trade: string; label: string; kind: PeripheralKind; default_amount: number; sort_order: number;
+}
+
+export async function getPeripheralsForBusiness(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  businessId: string,
+  trade: string
+): Promise<SiteConditionTemplateRow[]> {
+  const { data: existing } = await supabase
+    .from("site_condition_templates")
+    .select("id, trade, label, kind, default_amount, sort_order")
+    .eq("profile_id", businessId)
+    .eq("trade", trade)
+    .order("sort_order");
+
+  if (existing && existing.length > 0) return existing;
+
+  const seed = peripheralsForTrade(trade);
+  if (seed.length === 0) return [];
+
+  const { data: inserted } = await supabase
+    .from("site_condition_templates")
+    .insert(seed.map((s, i) => ({
+      profile_id: businessId, trade, label: s.label, kind: s.kind, default_amount: s.defaultAmount, sort_order: i,
+    })))
+    .select("id, trade, label, kind, default_amount, sort_order");
+
+  return inserted ?? [];
+}
