@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdminEmail } from "@/lib/admin";
+import { findAndFetchGoogleListing } from "@/lib/googlePlaces";
+import { tradeToSlug, suburbToSlug } from "@/lib/seo/meta";
 
 async function requireAdmin(): Promise<NextResponse | null> {
   const supabase = await createClient();
@@ -154,6 +157,11 @@ export async function POST(req: NextRequest) {
     if (resolved) postcode = resolved as string;
   }
 
+  // The scraper wouldn't otherwise touch this listing (that's the whole
+  // reason it's being added manually), so pull the same rating/reviews/
+  // photos data it would have gotten from Google, for this one business.
+  const google = await findAndFetchGoogleListing(business_name, suburb);
+
   const { data, error } = await admin
     .from("directory_listing")
     .insert({
@@ -161,17 +169,73 @@ export async function POST(req: NextRequest) {
       suburb,
       postcode,
       trades,
-      website_url,
+      website_url: website_url ?? google.website,
       scraped_contact_email,
-      scraped_contact_phone,
+      scraped_contact_phone: scraped_contact_phone ?? google.formatted_phone_number,
       blurb,
       source: "manual",
+      place_id: google.place_id,
+      google_rating: google.google_rating,
+      google_reviews_count: google.google_reviews_count,
+      photo_references: google.photo_references,
     })
     .select()
     .single();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Set the page up the same way the weekly refresh-seo cron would for a
+  // scraped listing, instead of leaving this trade+suburb's stats and
+  // indexability stale until the next scheduled run (up to a week away).
+  // Scoped to just this listing's trade(s)+suburb - not a full re-run of
+  // the cron's all-listings scan, which stays untouched.
+  if (suburb && trades.length > 0) {
+    const suburbSlug = suburbToSlug(suburb);
+    const state = "vic"; // matches refresh-seo's own hardcoding until directory_listing has a real state column
+    const MIN_LISTINGS_FOR_INDEX = 3;
+
+    for (const trade of trades) {
+      try {
+        const { data: rows } = await admin
+          .from("directory_listing")
+          .select("google_rating, google_reviews_count")
+          .eq("suburb", suburb)
+          .contains("trades", [trade]);
+
+        let ratingSum = 0, ratingCount = 0, reviews = 0;
+        for (const row of rows ?? []) {
+          if (row.google_rating != null && (row.google_reviews_count ?? 0) >= 3) {
+            ratingSum += Number(row.google_rating);
+            ratingCount += 1;
+          }
+          reviews += row.google_reviews_count ?? 0;
+        }
+        const count = rows?.length ?? 0;
+
+        await admin.from("trade_suburb_pages").upsert(
+          {
+            trade,
+            suburb,
+            suburb_slug: suburbSlug,
+            state,
+            listing_count: count,
+            avg_rating: ratingCount > 0 ? ratingSum / ratingCount : null,
+            total_reviews: reviews,
+            is_indexed: count >= MIN_LISTINGS_FOR_INDEX,
+            last_refreshed_at: new Date().toISOString(),
+          },
+          { onConflict: "trade,suburb_slug,state" }
+        );
+
+        revalidatePath(`/${tradeToSlug(trade)}-${suburbSlug}-${state}`);
+      } catch (err) {
+        console.error(`[admin/directory] SEO page setup failed for ${trade}/${suburb}:`, err);
+        // A stats/revalidation hiccup shouldn't fail the listing creation
+        // that already succeeded above - same posture as refresh-seo itself.
+      }
+    }
   }
 
   return NextResponse.json({ listing: data });
