@@ -21,6 +21,7 @@ import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import SiteAnnotationReport from "@/components/SiteAnnotationReport";
 import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
+import { persistAnnotationFrames } from "@/lib/siteAnnotations";
 import { MaterialSearchAdd, ScopeItemsList, type ScopeItem } from "@/components/ScopeOfWorkStep";
 import PeripheralsPanel from "@/components/PeripheralsPanel";
 import type { SiteConditionTemplateRow } from "@/lib/peripherals";
@@ -374,6 +375,7 @@ export default function QuoteBuilder({
     const siteLabourSave = siteItemsLabourHours(siteItems);
     const siteMatlsSave  = siteItemsMaterialsTotal(siteItems, effectiveMargin);
     const siteTotalSave  = Math.round(siteLabourSave * rate + siteMatlsSave);
+    const persistedAnnotations = await persistAnnotationFrames(supabase, businessId, annotationMeta);
 
     const quotePayload: Record<string, unknown> = {
       profile_id: businessId, client_id: resolvedClientId, client_name: clientName, client_email: clientEmail,
@@ -382,7 +384,7 @@ export default function QuoteBuilder({
         ...intake,
         site_items:      siteItems,
         manual_labour_hours: manualLabourHrs,
-        annotation_meta: annotationMeta.map(a => ({ ...a, frameData: "" })),
+        annotation_meta: persistedAnnotations,
       },
       labour_hours:   result.labourHours + extraLines.reduce((s, l) => s + l.hours, 0) + siteLabourSave + manualLabourHrs,
       materials_cost: Math.round(result.materialsCost + extraTotals.materials + siteMatlsSave),

@@ -15,6 +15,8 @@ import JobTasksPanel from "@/components/JobTasksPanel";
 import MaterialsChecklistPanel from "@/components/MaterialsChecklistPanel";
 import JobTimeline from "@/components/JobTimeline";
 import JobPlansPanel from "@/components/JobPlansPanel";
+import SiteAnnotationReport from "@/components/SiteAnnotationReport";
+import { resolveAnnotationFrameUrls, type AnnotationMetaPersisted } from "@/lib/siteAnnotations";
 import JobActionsBar from "@/components/JobActionsBar";
 import QuickJobActionsBar from "@/components/QuickJobActionsBar";
 import JobProgressStepper from "@/components/JobProgressStepper";
@@ -50,6 +52,8 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   const { job, quote, variations, actuals, certsWithUrls, attachmentsWithUrls, payments, hourlyRate, marginPct } = data;
 
   const scopeLines = quote ? humanizeIntake(quote.intake_data) : [];
+  const savedAnnotations = quote ? (quote.intake_data as { annotation_meta?: AnnotationMetaPersisted[] } | null)?.annotation_meta : undefined;
+  const resolvedAnnotations = await resolveAnnotationFrameUrls(supabase, savedAnnotations);
   const labourCost = (job.labour_hours ?? 0) * hourlyRate;
 
   // Materials for the plan markup panel - price book first (real supplier
@@ -258,6 +262,9 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               {quote && (
                 <MaterialsChecklistPanel quoteId={quote.id} initialChecklist={quote.materials_checklist ?? []} scopeLines={scopeLines} clientName={job.client_name} />
               )}
+              {/* Only renders anything if this job's quote actually went
+                  through live site markup - no camera use, no report. */}
+              <SiteAnnotationReport annotations={resolvedAnnotations} />
             </>
           }
           schedule={

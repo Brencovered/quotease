@@ -19,6 +19,7 @@ import { getActiveBusinessId } from "@/lib/team";
 import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
+import { persistAnnotationFrames } from "@/lib/siteAnnotations";
 import { MaterialSearchAdd, ScopeItemsList, type ScopeItem } from "@/components/ScopeOfWorkStep";
 import PeripheralsPanel from "@/components/PeripheralsPanel";
 import type { SiteConditionTemplateRow } from "@/lib/peripherals";
@@ -266,6 +267,7 @@ export default function PlumberQuoteBuilder({
     const siteLabourSave   = siteItemsLabourHours(siteItems);
     const siteMatlsSave    = siteItemsMaterialsTotal(siteItems, effectiveMargin);
     const siteTotalSave    = Math.round(siteLabourSave * rate + siteMatlsSave);
+    const persistedAnnotations = await persistAnnotationFrames(supabase, businessId, annotationMeta);
     const { data: quote, error } = await supabase.from("quotes").insert({
       profile_id: businessId,
       client_id: resolvedClientId,
@@ -275,7 +277,7 @@ export default function PlumberQuoteBuilder({
       trade: "plumber",
       job_type: intake.jobType,
       planned_crew_member_ids: plannedCrew,
-      intake_data: { ...intake, site_items: siteItems, manual_labour_hours: manualLabourHrs, annotation_meta: annotationMeta.map(a => ({ ...a, frameData: "" })) },
+      intake_data: { ...intake, site_items: siteItems, manual_labour_hours: manualLabourHrs, annotation_meta: persistedAnnotations },
       labour_hours: result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0) + siteLabourSave + manualLabourHrs,
       materials_cost: result.materialsCost + extraTotals.materials + siteMatlsSave,
       total_cost: result.totalCost + extraTotals.total + siteTotalSave + Math.round(manualLabourHrs * rate),

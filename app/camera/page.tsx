@@ -5,12 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   MapPin, Ruler, Pencil, RotateCcw, X, Check, Minus, Plus,
   ChevronRight, MoveHorizontal, Crosshair,
-  DoorOpen, Box, Grid3x3, Lightbulb, MoveVertical, AlertTriangle,
+  DoorOpen, Box, Grid3x3, Lightbulb, MoveVertical, AlertTriangle, StickyNote,
 } from "lucide-react";
 import { Suspense } from "react";
 
 /* ─── Types ─────────────────────────────────────────────────────── */
-type AnnotationType = "point" | "line" | "area";
+type AnnotationType = "point" | "line" | "area" | "note";
 interface Pt { x: number; y: number; }
 
 interface Annotation {
@@ -467,7 +467,7 @@ function CameraPage() {
           ctx.fillStyle = "#FFB400"; ctx.font = "bold 12px system-ui"; ctx.textAlign = "center";
           ctx.fillText(`${liveLen}m`, mx, my - 2); ctx.textAlign = "start";
         }
-      } else if (drawMode === "area" && curPts.length >= 2) {
+      } else if ((drawMode === "area" || drawMode === "note") && curPts.length >= 2) {
         ctx.beginPath(); ctx.moveTo(curPts[0].x, curPts[0].y);
         curPts.slice(1).forEach(p => ctx.lineTo(p.x, p.y)); ctx.stroke();
       }
@@ -484,15 +484,23 @@ function CameraPage() {
     }
 
     // Fading annotations on live feed (just colour dots so tradie sees what's placed)
-    activeRoom.annotations.forEach((ann, i) => {
+    activeRoom.annotations.forEach((ann) => {
       if (ann.opacity <= 0) return;
       const c = ann.colour;
       ctx.globalAlpha = ann.opacity * 0.6;
       if (ann.points[0]) {
         ctx.fillStyle = c;
         ctx.beginPath(); ctx.arc(ann.points[0].x, ann.points[0].y, 8, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = "#fff"; ctx.font = "bold 10px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText(String(i + 1), ann.points[0].x, ann.points[0].y);
+        // Short label tag next to the dot (not inside it - a real label
+        // like "Cold water pipe" doesn't fit in an 8px circle). By this
+        // point the annotation is already fully committed, so its real
+        // label is always known here - never a placeholder count.
+        ctx.fillStyle = "rgba(0,0,0,.7)";
+        ctx.font = "bold 11px system-ui";
+        const lw = Math.min(ctx.measureText(ann.label).width + 10, 160);
+        ctx.fillRect(ann.points[0].x + 10, ann.points[0].y - 10, lw, 20);
+        ctx.fillStyle = "#fff"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+        ctx.fillText(ann.label, ann.points[0].x + 15, ann.points[0].y, 150);
         ctx.textAlign = "start"; ctx.textBaseline = "alphabetic";
       }
       ctx.globalAlpha = 1;
@@ -552,12 +560,16 @@ function CameraPage() {
     setIsDrawing(false);
     if (drawMode === "line" && curPts.length === 2) captureAnnotation(curPts);
     else if (drawMode === "area" && curPts.length >= 3) captureAnnotation(curPts);
+    // Note mode accepts either gesture: a plain tap (curPts stays a single
+    // point, since handleMove never added more) or a traced zone (3+
+    // points) - "mark an area or a section and drop a note" covers both.
+    else if (drawMode === "note" && curPts.length >= 1) captureAnnotation(curPts);
   }
 
   /* ═══════════════════════════════════════════════════════════════
      CAPTURE FRAME
      ═══════════════════════════════════════════════════════════════ */
-  function captureFrame(pts: Pt[]) {
+  function captureFrame(pts: Pt[], label?: string) {
     const v = videoRef.current; const s = snapRef.current; const o = overlayRef.current;
     let fd = "";
     if (v && s && o) {
@@ -573,10 +585,26 @@ function CameraPage() {
       if (pts.length === 1) {
         ctx.beginPath(); ctx.arc(pts[0].x * sx, pts[0].y * sy, 18, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = "#fff"; ctx.lineWidth = 3; ctx.shadowBlur = 0; ctx.stroke();
-        ctx.fillStyle = "#000"; ctx.font = `bold ${Math.max(14, s.width / 60)}px system-ui`;
-        ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText(String(allAnnotations.length + 1), pts[0].x * sx, pts[0].y * sy);
-        ctx.textAlign = "start"; ctx.textBaseline = "alphabetic";
+        if (label) {
+          // Stamp mode: the item is already chosen at capture time, so
+          // bake its real name onto the photo (e.g. "Downlight") instead
+          // of a meaningless running count. For the manual flow the item
+          // isn't picked until after this frame is captured (the form
+          // comes up next), so there's deliberately no text baked in here
+          // for that path - nothing to show yet that wouldn't be wrong.
+          const fontSize = Math.max(13, s.width / 70);
+          ctx.font = `bold ${fontSize}px system-ui`;
+          const padding = 10;
+          const textWidth = ctx.measureText(label).width;
+          const tagX = pts[0].x * sx + 24;
+          const tagY = pts[0].y * sy - fontSize;
+          ctx.fillStyle = "rgba(0,0,0,.75)";
+          ctx.fillRect(tagX, tagY, textWidth + padding * 2, fontSize + 12);
+          ctx.fillStyle = "#fff";
+          ctx.textAlign = "left"; ctx.textBaseline = "middle";
+          ctx.fillText(label, tagX + padding, tagY + (fontSize + 12) / 2);
+          ctx.textAlign = "start"; ctx.textBaseline = "alphabetic";
+        }
       } else if (pts.length === 2) {
         ctx.strokeStyle = colour; ctx.lineWidth = Math.max(4, s.width / 200); ctx.shadowBlur = 4;
         ctx.beginPath(); ctx.moveTo(pts[0].x * sx, pts[0].y * sy); ctx.lineTo(pts[1].x * sx, pts[1].y * sy); ctx.stroke();
@@ -621,8 +649,8 @@ function CameraPage() {
      QUICK COMMIT (stamp mode)
      ═══════════════════════════════════════════════════════════════ */
   function quickCommit(pts: Pt[], itemKey: string) {
-    const fd  = captureFrame(pts);
     const def = items.find(i => i.key === itemKey) ?? items[0];
+    const fd  = captureFrame(pts, def.label);
     let qty = 1;
     let calcLen: number | null = null;
     if (def.unit === "m" && calibration && pts.length === 2) {
@@ -645,6 +673,12 @@ function CameraPage() {
      CAPTURE ANNOTATION
      ═══════════════════════════════════════════════════════════════ */
   function captureAnnotation(pts: Pt[]) {
+    if (drawMode === "note") {
+      captureFrame(pts);
+      setFormNote("");
+      setPendingPts(pts); setCurPts([]); setShowForm(true);
+      return;
+    }
     if (stampMode) { quickCommit(pts, stampItem); return; }
     captureFrame(pts);
 
@@ -662,6 +696,30 @@ function CameraPage() {
   }
 
   function commitAnnotation() {
+    if (drawMode === "note") {
+      // Deliberately not tied to a material or a cost: itemKey "__note__"
+      // never matches any catalog item, so PricingEngine.generateLineItems
+      // silently skips it (same as any unrecognised key), and
+      // LiveSiteAnnotation filters it out before building the priced
+      // review table too. It still gets a photo and still shows up in
+      // the site survey report - purely informational.
+      const text = formNote.trim();
+      if (!text) return;
+      const ann: Annotation = {
+        id: uid(), type: "note", points: pendingPts,
+        label: text, itemKey: "__note__",
+        qty: 0, calculatedLength: null,
+        unit: "", note: text,
+        frameData: pendingFrameRef.current,
+        colour: COLOURS[colourIdx % COLOURS.length],
+        opacity: 1, fading: false,
+      };
+      addAnnotationToRoom(ann);
+      setColourIdx(i => (i + 1) % COLOURS.length);
+      setShowForm(false); setPendingPts([]); setFormNote("");
+      startFade(ann.id);
+      return;
+    }
     const def = items.find(i => i.key === formItem) ?? items[0];
     const ann: Annotation = {
       id: uid(), type: drawMode, points: pendingPts,
@@ -1090,9 +1148,9 @@ function CameraPage() {
 
         <div className="flex items-center justify-between mb-2">
           <div className="flex gap-1.5">
-            {(["point", "line", "area"] as AnnotationType[]).map(m => {
-              const Icon = m === "point" ? MapPin : m === "line" ? Ruler : Pencil;
-              const label = m === "point" ? "Tap" : m === "line" ? "Line" : "Area";
+            {(["point", "line", "area", "note"] as AnnotationType[]).map(m => {
+              const Icon = m === "point" ? MapPin : m === "line" ? Ruler : m === "area" ? Pencil : StickyNote;
+              const label = m === "point" ? "Tap" : m === "line" ? "Line" : m === "area" ? "Area" : "Note";
               return (
                 <button key={m} onClick={() => setDrawMode(m)}
                   className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border-0"
@@ -1225,9 +1283,30 @@ function CameraPage() {
         <div className="absolute inset-0 z-20 bg-black/50 flex items-end">
           <div className="bg-white rounded-t-3xl p-5 w-full">
             <div className="flex justify-between items-center mb-3">
-              <p className="font-bold text-[15px]">What is this?</p>
-              <button onClick={() => { setShowForm(false); setPendingPts([]); setCurPts([]); }} className="border-0 bg-none p-1"><X size={17} /></button>
+              <p className="font-bold text-[15px]">{drawMode === "note" ? "What's the note?" : "What is this?"}</p>
+              <button onClick={() => { setShowForm(false); setPendingPts([]); setCurPts([]); setFormNote(""); }} className="border-0 bg-none p-1"><X size={17} /></button>
             </div>
+
+            {drawMode === "note" ? (
+              <>
+                <p className="text-[12px] text-gray-500 mb-2">
+                  Not tied to a material or cost - just shows up in the site report against this spot.
+                </p>
+                <textarea
+                  value={formNote}
+                  onChange={e => setFormNote(e.target.value)}
+                  placeholder="e.g. Client wants extra power here, confirm on site. Possible asbestos - check before cutting."
+                  rows={4}
+                  autoFocus
+                  className="w-full border-2 border-gray-200 focus:border-[#0a1722] rounded-xl px-3 py-2.5 text-[14px] mb-3 resize-none"
+                />
+                <button onClick={commitAnnotation} disabled={!formNote.trim()}
+                  className="w-full bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] py-3.5 rounded-xl border-0 flex items-center justify-center gap-1.5 disabled:opacity-40">
+                  <Check size={15} /> Add note
+                </button>
+              </>
+            ) : (
+              <>
             <div className="grid grid-cols-2 gap-1.5 mb-3 max-h-40 overflow-y-auto">
               {items.map(item => (
                 <button key={item.key} onClick={() => setFormItem(item.key)}
@@ -1287,6 +1366,8 @@ function CameraPage() {
               className="w-full bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] py-3.5 rounded-xl border-0 flex items-center justify-center gap-1.5">
               <Check size={15} /> Add to markup
             </button>
+              </>
+            )}
           </div>
         </div>
       )}

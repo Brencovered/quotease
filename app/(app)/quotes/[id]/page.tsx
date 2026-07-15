@@ -9,6 +9,8 @@ import FollowUpPanel from "@/components/FollowUpPanel";
 import JobFilesPanel from "@/components/JobFilesPanel";
 import JobActionsBar from "@/components/JobActionsBar";
 import JobPlansPanel from "@/components/JobPlansPanel";
+import SiteAnnotationReport from "@/components/SiteAnnotationReport";
+import { resolveAnnotationFrameUrls, type AnnotationMetaPersisted } from "@/lib/siteAnnotations";
 import { humanizeIntake } from "@/lib/scopeOfWorks";
 import { getCachedPriceBook, getCachedLegacyMaterials } from "@/lib/cache";
 
@@ -41,6 +43,8 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
   }
 
   const scopeLines = humanizeIntake(quote.intake_data);
+  const savedAnnotations = (quote.intake_data as { annotation_meta?: AnnotationMetaPersisted[] } | null)?.annotation_meta;
+  const resolvedAnnotations = await resolveAnnotationFrameUrls(supabase, savedAnnotations);
   const labourCost = (quote.total_cost ?? 0) - (quote.materials_cost ?? 0);
 
   // Materials added via plan markup carry a real cost and add to what's
@@ -169,6 +173,11 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
           <JobPlansPanel quoteId={quote.id} clientId={quote.client_id} plans={quotePlans as never} materials={tradeMaterials} marginPct={marginPct ?? 20} trade={quote.trade ?? "electrician"} />
 
           <JobFilesPanel quoteId={quote.id} attachments={attachmentsWithUrls} />
+
+          {/* Only renders anything if this quote actually went through
+              live site markup - a quote with none of that has no camera
+              icon, no photos, nothing here at all. */}
+          <SiteAnnotationReport annotations={resolvedAnnotations} />
         </div>
       </main>
     </>

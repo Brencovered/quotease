@@ -85,13 +85,19 @@ export default function LiveSiteAnnotation({
         // Hand off to the same review-and-price step drawing takeoff and
         // voice quoting use -- counts come from the camera markup, prices
         // come from the real price book, never from a hardcoded guess.
-        const detected: DetectedItem[] = annotations.map((ann) => ({
-          label: ann.length != null ? `${ann.label} (~${ann.length}m)` : ann.label,
-          item_key: ann.itemKey,
-          quantity: ann.qty,
-          unit: ann.unit,
-          labour_hours: (ANNOTATION_LABOUR_HOURS[ann.itemKey] ?? 0) * ann.qty,
-        }));
+        // Freeform notes (itemKey "__note__") are deliberately excluded
+        // here - they're not tied to a material or cost, only to the
+        // site report via onAnnotationMeta below, which still gets ALL
+        // annotations including notes.
+        const detected: DetectedItem[] = annotations
+          .filter((ann) => ann.itemKey !== "__note__")
+          .map((ann) => ({
+            label: ann.length != null ? `${ann.label} (~${ann.length}m)` : ann.label,
+            item_key: ann.itemKey,
+            quantity: ann.qty,
+            unit: ann.unit,
+            labour_hours: (ANNOTATION_LABOUR_HOURS[ann.itemKey] ?? 0) * ann.qty,
+          }));
 
         setAdded(false);
         setPendingItems(detected);

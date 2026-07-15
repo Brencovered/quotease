@@ -9,6 +9,7 @@ import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import PlanMarkupQuickAdd from "./PlanMarkupQuickAdd";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
+import { persistAnnotationFrames } from "@/lib/siteAnnotations";
 import StepCustomer from "./StepCustomer";
 import PackagePicker from "@/components/PackagePicker";
 import { resolveClientId } from "@/lib/resolveClientId";
@@ -472,6 +473,7 @@ export default function RooferQuoteBuilder({
     const siteMatlsSave    = siteItemsMaterialsTotal(siteItems, effectiveMargin);
     const siteTotalSave    = Math.round(siteLabourSave * rate + siteMatlsSave);
     const formulaLabourHrs = summary.labour / rate;
+    const persistedAnnotations = await persistAnnotationFrames(supabase, businessId, annotationMeta);
 
     const { data: quote, error } = await supabase.from("quotes").insert({
       profile_id: businessId,
@@ -490,7 +492,7 @@ export default function RooferQuoteBuilder({
         material, color, labourRate, tier, extras, notes, warranty,
         site_items: siteItems,
         manual_labour_hours: manualLabourHrs,
-        annotation_meta: annotationMeta.map(a => ({ ...a, frameData: "" })),
+        annotation_meta: persistedAnnotations,
       },
       labour_hours: formulaLabourHrs + siteLabourSave + manualLabourHrs,
       materials_cost: Math.round(summary.matCost + summary.extrasTotal + summary.colorSurcharge + siteMatlsSave),
