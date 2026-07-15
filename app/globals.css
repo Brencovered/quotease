@@ -39,6 +39,8 @@
   --bottom-nav: 64px;
 }
 
+@layer components {
+
 body {
   background: var(--app-bg);
   color: var(--ink);
@@ -248,4 +250,6 @@ input[type="radio"] {
 
 @media (prefers-reduced-motion: reduce) {
   .reveal, .stamp-wobble, .shimmer::after { animation: none; }
+}
+
 }
