@@ -326,6 +326,7 @@ export default function PlumberQuoteBuilder({
             {i < step && <Check size={11} />}{s.label}
           </button>
         ))}
+        <div className="w-2 shrink-0" aria-hidden="true" />
       </div>
 
       {/* Step content */}

@@ -303,6 +303,7 @@ export default function CarpenterQuoteBuilder({
       </div>
       <div className="flex items-center gap-1 mb-5 overflow-x-auto hide-scrollbar pb-1">
         {STEPS.map((s,i) => <button key={s.id} onClick={() => setStep(i)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12.5px] font-bold whitespace-nowrap ${i===step ? "bg-[var(--navy)] text-white" : i<step ? "bg-[var(--amber-light)] text-[var(--amber-deep)]" : "bg-[var(--surface)] text-[var(--ink-faint)] border border-[var(--line)]"}`}>{i<step && <Check size={11}/>}{s.label}</button>)}
+        <div className="w-2 shrink-0" aria-hidden="true" />
       </div>
 
       {stepId === "customer" && (

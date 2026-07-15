@@ -163,6 +163,7 @@ export default function QuotesList({ quotes: initial, xeroConnected, now }: { qu
             </button>
           );
         })}
+        <div className="w-2 shrink-0" aria-hidden="true" />
       </div>
 
       {/* Xero */}

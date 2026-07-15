@@ -352,6 +352,7 @@ export default async function NewQuotePage({
                 </Link>
               );
             })}
+            <div className="w-2 shrink-0" aria-hidden="true" />
           </div>
         </div>
       )}

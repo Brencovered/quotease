@@ -279,7 +279,7 @@ export default function MaterialsPanel() {
   return (
     <div className="page-wrap">
       {/* ---- Tab Bar ---- */}
-      <div className="flex items-center gap-1 mb-6 border-b border-[var(--line)] overflow-x-auto hide-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+      <div className="flex items-center gap-1 mb-6 border-b border-[var(--line)] overflow-x-auto hide-scrollbar -mx-4 px-4 pr-2 sm:mx-0 sm:px-0">
         {[
           { key: "materials" as const, label: "Materials", icon: Box },
           { key: "suppliers" as const, label: "Suppliers", icon: Building2 },
@@ -303,6 +303,12 @@ export default function MaterialsPanel() {
             </button>
           );
         })}
+        {/* Trailing spacer so the last tab always has real breathing room
+            before the screen edge, instead of the row's own edge-bleed
+            padding being the only thing standing between "Bundles" and
+            the literal edge of the phone - which read as a broken/cut-off
+            layout even though the tab itself wasn't actually clipped. */}
+        <div className="w-4 shrink-0 sm:hidden" aria-hidden="true" />
       </div>
 
       {/* ---- Tab 1: Materials ---- */}

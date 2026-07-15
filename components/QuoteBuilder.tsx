@@ -482,6 +482,7 @@ export default function QuoteBuilder({
             </button>
           );
         })}
+        <div className="w-2 shrink-0" aria-hidden="true" />
       </div>
 
       {stepId === "drawing" && (
