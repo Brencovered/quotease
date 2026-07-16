@@ -711,7 +711,15 @@ function CameraPage() {
       setPendingPts(pts); setCurPts([]); setShowForm(true);
       return;
     }
-    if (stampMode) { quickCommit(pts, stampItem); return; }
+    // Stamp mode is a fast single-tap path for repeated identical items
+    // (several downlights in a row) - it's specifically for point taps.
+    // Area/Line are a more deliberate gesture where "just a note" matters
+    // most, so they always go through the full form below regardless of
+    // whether stamp mode happens to be toggled on. Without this check,
+    // finishing an Area trace while stamp mode was on would silently
+    // commit it straight to whatever stamp item was selected (e.g.
+    // "Downlight") with no form and no note option ever shown at all.
+    if (stampMode && drawMode === "point") { quickCommit(pts, stampItem); return; }
     captureFrame(pts);
 
     // Spec: calculatedLengthMeters from engine
