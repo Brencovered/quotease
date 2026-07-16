@@ -71,19 +71,22 @@ export default function JobsKanbanBoard({ jobs: initialJobs, columns: initialCol
     if (visibleJobIds.length === 0) return;
     let cancelled = false;
     async function loadLineItems() {
-      const results: LineItemsMap = {};
-      await Promise.all(
-        visibleJobIds.map(async (jobId) => {
-          try {
-            const res = await fetch(`/api/job-line-items?jobId=${jobId}`);
-            if (res.ok) {
-              const data = await res.json();
-              results[jobId] = (data.items ?? []).map((item: { status: LineItemStatus }) => ({ status: item.status }));
-            }
-          } catch { /* skip */ }
-        })
-      );
-      if (!cancelled) setLineItemsMap(results);
+      // One batched request for every visible job's line items instead of
+      // firing a separate fetch per job on mount - previously a board with
+      // 10+ jobs made 10+ concurrent round-trips to this route just to
+      // show progress badges.
+      try {
+        const res = await fetch(`/api/job-line-items?jobIds=${visibleJobIds.join(",")}`);
+        if (res.ok) {
+          const data = await res.json();
+          const itemsByJobId = (data.itemsByJobId ?? {}) as Record<string, { status: LineItemStatus }[]>;
+          const results: LineItemsMap = {};
+          for (const jobId of visibleJobIds) {
+            results[jobId] = (itemsByJobId[jobId] ?? []).map((item) => ({ status: item.status }));
+          }
+          if (!cancelled) setLineItemsMap(results);
+        }
+      } catch { /* skip */ }
     }
     loadLineItems();
     return () => { cancelled = true; };

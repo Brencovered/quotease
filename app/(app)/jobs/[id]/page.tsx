@@ -53,15 +53,29 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
 
   const scopeLines = quote ? humanizeIntake(quote.intake_data) : [];
   const savedAnnotations = quote ? (quote.intake_data as { annotation_meta?: AnnotationMetaPersisted[] } | null)?.annotation_meta : undefined;
-  const resolvedAnnotations = await resolveAnnotationFrameUrls(supabase, savedAnnotations);
   const labourCost = (job.labour_hours ?? 0) * hourlyRate;
 
   // Materials for the plan markup panel - price book first (real supplier
   // pricing), legacy material_items as fallback, same chain the new-quote
   // page uses, so plan markup on an in-progress job prices identically to
   // a brand new quote rather than falling back to stale legacy defaults.
+  //
+  // Annotation resolution and plan-signing used to be two separate awaited
+  // stages, one before this Promise.all and one after - each a full extra
+  // round-trip on the waterfall with no data dependency on the others.
+  // Folded in here so every independent fetch for this page happens in one
+  // concurrent batch instead of four-plus sequential stages.
   const jobTrade = job.trade ?? "electrician";
-  const [tradeMaterials, { data: teamRows }, { data: taskRows }, boardColumns, timesheetEntries, { data: crewRows }] = await Promise.all([
+  const [
+    tradeMaterials,
+    { data: teamRows },
+    { data: taskRows },
+    boardColumns,
+    timesheetEntries,
+    { data: crewRows },
+    resolvedAnnotations,
+    jobPlans,
+  ] = await Promise.all([
     (async (): Promise<Array<{ item_key: string; label: string; unit_cost: number }>> => {
       const pbItems = await getCachedPriceBook(businessId, jobTrade);
       if (pbItems.length > 0) {
@@ -77,25 +91,25 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
       ? supabase.from("timesheets").select("*").eq("job_id", job.id).order("work_date", { ascending: false }).then((r) => r.data ?? [])
       : Promise.resolve([]),
     supabase.from("job_crew").select("id, team_member_id").eq("job_id", job.id),
+    resolveAnnotationFrameUrls(supabase, savedAnnotations),
+    (async (): Promise<Array<{ id: string; file_name: string; shapes: unknown[]; calibration: unknown; signedUrl?: string }>> => {
+      if (!quote) return [];
+      const { data: plans } = await supabase
+        .from("client_plans")
+        .select("*")
+        .eq("quote_id", quote.id)
+        .order("created_at", { ascending: false });
+      if (!plans || plans.length === 0) return [];
+      const { data: signedBatch } = await supabase.storage
+        .from("job-files")
+        .createSignedUrls(plans.map((p) => p.storage_path), 3600 * 24);
+      const urlByPath = new Map((signedBatch ?? []).map((s) => [s.path, s.signedUrl]));
+      return plans.map((p) => ({ ...p, signedUrl: urlByPath.get(p.storage_path) }));
+    })(),
   ]);
   const teamMembers: Array<{ id: string; name: string | null; email: string }> = teamRows ?? [];
   const jobCrew: Array<{ id: string; team_member_id: string }> = crewRows ?? [];
   const assignedMember = teamMembers.find((m) => m.id === job.assigned_to_member_id);
-
-  let jobPlans: Array<{ id: string; file_name: string; shapes: unknown[]; calibration: unknown; signedUrl?: string }> = [];
-  if (quote) {
-    const { data: plans } = await supabase
-      .from("client_plans")
-      .select("*")
-      .eq("quote_id", quote.id)
-      .order("created_at", { ascending: false });
-    jobPlans = await Promise.all(
-      (plans ?? []).map(async (p) => {
-        const { data: signed } = await supabase.storage.from("job-files").createSignedUrl(p.storage_path, 3600 * 24);
-        return { ...p, signedUrl: signed?.signedUrl };
-      })
-    );
-  }
 
   // Approved variations and drawing-markup materials add to what's owed on
   // top of the original quoted/quick-job total.

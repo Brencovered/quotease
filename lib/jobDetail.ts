@@ -2,6 +2,37 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getOrCreateJobForQuote } from "@/lib/jobs";
 
 /**
+ * Signs a batch of storage paths in a single Storage API round-trip
+ * instead of one createSignedUrl() call per row. Previously
+ * attachmentsWithUrls and certsWithUrls each looped calling
+ * createSignedUrl() individually, which meant a job with (say) 6
+ * attachments and 4 certs made 10 separate sequential-ish network calls
+ * to Supabase Storage just for URLs. createSignedUrls (plural) takes an
+ * array of paths and returns them all in one call, and rows with no
+ * storage_path are filtered out before the call and re-merged after so
+ * the shape of the returned array matches the input rows 1:1.
+ */
+async function signPathsBatch(
+  supabase: SupabaseClient,
+  bucket: string,
+  rows: Array<Record<string, unknown>>,
+  pathKey: string,
+  expiresIn: number
+): Promise<Array<Record<string, unknown> & { signedUrl?: string }>> {
+  const withPath = rows.filter((r) => r[pathKey]);
+  if (withPath.length === 0) return rows.map((r) => ({ ...r }));
+
+  const paths = withPath.map((r) => r[pathKey] as string);
+  const { data: signedBatch } = await supabase.storage.from(bucket).createSignedUrls(paths, expiresIn);
+  const urlByPath = new Map((signedBatch ?? []).map((s) => [s.path, s.signedUrl]));
+
+  return rows.map((r) => ({
+    ...r,
+    signedUrl: (r[pathKey] ? urlByPath.get(r[pathKey] as string) : undefined) ?? undefined,
+  }));
+}
+
+/**
  * A job detail page is keyed by the job's own id now, not the quote's.
  * Quote-sourced jobs still carry a linked `quote` (for scope/PDF/markup
  * data that genuinely lives on the quote); quick jobs and recurring
@@ -49,12 +80,7 @@ export async function loadJobDetailData(supabase: SupabaseClient, idParam: strin
     ]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const attachmentsWithUrls: any[] = await Promise.all(
-      (attachments ?? []).map(async (a: Record<string, unknown>) => {
-        const { data: signed } = await supabase.storage.from("job-files").createSignedUrl(a.storage_path as string, 3600);
-        return { ...a, signedUrl: signed?.signedUrl };
-      })
-    );
+    const attachmentsWithUrls: any[] = await signPathsBatch(supabase, "job-files", attachments ?? [], "storage_path", 3600);
 
     return {
       job: null,
@@ -86,21 +112,14 @@ export async function loadJobDetailData(supabase: SupabaseClient, idParam: strin
     supabase.from("payments").select("*").or(`job_id.eq.${jobId}${job.quote_id ? `,quote_id.eq.${job.quote_id}` : ""}`).order("recorded_at"),
   ]);
 
+  // Attachments and certs each get their own batched createSignedUrls call
+  // (one round-trip per type instead of one per row), and the two batches
+  // run concurrently instead of certs waiting on attachments to finish.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const attachmentsWithUrls: any[] = await Promise.all(
-    (attachments ?? []).map(async (a: Record<string, unknown>) => {
-      const { data: signed } = await supabase.storage.from("job-files").createSignedUrl(a.storage_path as string, 3600);
-      return { ...a, signedUrl: signed?.signedUrl };
-    })
-  );
-
-  const certsWithUrls = await Promise.all(
-    (certs ?? []).map(async (c: Record<string, unknown>) => {
-      if (!c.storage_path) return c;
-      const { data: signed } = await supabase.storage.from("job-files").createSignedUrl(c.storage_path as string, 3600 * 24 * 365);
-      return { ...c, signedUrl: signed?.signedUrl };
-    })
-  );
+  const [attachmentsWithUrls, certsWithUrls]: [any[], any[]] = await Promise.all([
+    signPathsBatch(supabase, "job-files", attachments ?? [], "storage_path", 3600),
+    signPathsBatch(supabase, "job-files", certs ?? [], "storage_path", 3600 * 24 * 365),
+  ]);
 
   return {
     job,

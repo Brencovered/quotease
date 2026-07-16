@@ -39,6 +39,35 @@ const DEFAULT_JOB_SIZE_TIERS = [
   { name: "Large", max_days: null, markup_pct: -3, sort_order: 2 },
 ];
 
+/**
+ * Price book first (real supplier pricing), legacy material_items as
+ * fallback, hardcoded defaults as last resort. Pulled out into its own
+ * function so it can be kicked off eagerly alongside the main Promise.all
+ * in the common case where no package/bundle is in play (see below) rather
+ * than always waiting until after effectiveTrade is resolved.
+ */
+async function resolveMaterialsForTrade(
+  businessId: string,
+  trade: string | undefined
+): Promise<{ item_key: string; label: string; unit_cost: number }[]> {
+  if (!trade) return [];
+
+  const pbItems = await getCachedPriceBook(businessId, trade);
+  if (pbItems.length > 0) {
+    return pbItems.map((m) => ({ item_key: m.id, label: m.description, unit_cost: m.cost_price ?? 0 }));
+  }
+
+  const legacyItems = await getCachedLegacyMaterials(businessId, trade);
+  if (legacyItems.length > 0) return legacyItems;
+
+  if (DEDICATED.includes(trade)) {
+    const defaults = DEDICATED_DEFAULTS[trade];
+    if (defaults) return defaults.map((m) => ({ ...m }));
+  }
+
+  return [];
+}
+
 /* ── helpers for optional package / bundle / plan / markup data ── */
 
 async function loadPackage(
@@ -218,6 +247,21 @@ export default async function NewQuotePage({
       ? tradeParm
       : (activeTrades[0] ?? "electrician");
 
+  // Only a package or bundle can override the trade away from
+  // selectedTrade (see step 4 below). That only happens when the request
+  // actually carries a package_id/bundle_id - the overwhelming majority of
+  // visits to this page don't. In that common case effectiveTrade is
+  // already known to equal selectedTrade before any query runs, so site
+  // conditions and materials (previously two more sequential stages after
+  // this Promise.all) can be kicked off right now instead of waiting.
+  const packageOrBundleRequested = Boolean(packageId || bundleId);
+  const eagerSiteConditionsPromise = packageOrBundleRequested
+    ? null
+    : getPeripheralsForBusiness(supabase, businessId, selectedTrade);
+  const eagerMaterialsPromise = packageOrBundleRequested
+    ? null
+    : resolveMaterialsForTrade(businessId, selectedTrade);
+
   /* ── 3. Fetch EVERYTHING in parallel ── */
   const [
     pricingTiers,
@@ -226,6 +270,8 @@ export default async function NewQuotePage({
     bundleData,
     planMaterials,
     { data: teamMemberRows },
+    eagerSiteConditions,
+    eagerMaterials,
   ] = await Promise.all([
     getCachedPricingTiers(businessId),
     getCachedJobSizeTiers(businessId),
@@ -233,6 +279,8 @@ export default async function NewQuotePage({
     loadBundle(supabase, businessId, bundleId, tradeParm),
     loadPlanMarkup(supabase, businessId, planId),
     supabase.from("team_members").select("id, name, email").eq("owner_profile_id", businessId).eq("status", "active").order("name"),
+    eagerSiteConditionsPromise ?? Promise.resolve(null),
+    eagerMaterialsPromise ?? Promise.resolve(null),
   ]);
   const teamMembers: Array<{ id: string; name: string | null; email: string }> = teamMemberRows ?? [];
 
@@ -244,9 +292,9 @@ export default async function NewQuotePage({
   // Business + trade customizable site conditions (Level 2 connection
   // fees, scaffolding, etc) - seeds from lib/peripherals.ts's hardcoded
   // defaults on first use, then reads from the business's own saved rows
-  // from then on. Fetched after effectiveTrade is resolved since a
-  // package/bundle can override the trade selected above.
-  const siteConditions = await getPeripheralsForBusiness(supabase, businessId, effectiveTrade);
+  // from then on. Falls back to fetching now only in the rare case a
+  // package/bundle actually changed the trade out from under the eager fetch.
+  const siteConditions = eagerSiteConditions ?? (await getPeripheralsForBusiness(supabase, businessId, effectiveTrade));
 
   /* ── 5. Resolve pre-markup materials ── */
   let preMarkupMaterials: Array<{
@@ -283,33 +331,13 @@ export default async function NewQuotePage({
   }
 
   /* ── 6. Load materials (cached, single query — no loop) ── */
-  let materials: { item_key: string; label: string; unit_cost: number }[] = [];
-
-  if (effectiveTrade) {
-    // Try price_book_items first (single query, cached)
-    const pbItems = await getCachedPriceBook(businessId, effectiveTrade);
-    if (pbItems.length > 0) {
-      materials = pbItems.map((m) => ({
-        item_key: m.id,
-        label: m.description,
-        unit_cost: m.cost_price ?? 0,
-      }));
-    }
-
-    // Fallback to legacy material_items (cached)
-    if (materials.length === 0) {
-      const legacyItems = await getCachedLegacyMaterials(businessId, effectiveTrade);
-      if (legacyItems.length > 0) {
-        materials = legacyItems;
-      }
-    }
-
-    // Fallback to hardcoded defaults
-    if (materials.length === 0 && DEDICATED.includes(effectiveTrade)) {
-      const defaults = DEDICATED_DEFAULTS[effectiveTrade];
-      if (defaults) materials = defaults.map((m) => ({ ...m }));
-    }
-  }
+  // Reuse the eagerly-fetched materials whenever the trade wasn't
+  // overridden by a package/bundle; only re-fetch for the rare case where
+  // effectiveTrade actually changed after the eager fetch was kicked off.
+  const materials: { item_key: string; label: string; unit_cost: number }[] =
+    eagerMaterials && effectiveTrade === selectedTrade
+      ? eagerMaterials
+      : await resolveMaterialsForTrade(businessId, effectiveTrade);
 
   /* ── 7. Build tier objects for the builder ── */
   const resolvedPricingTiers = pricingTiers.length > 0

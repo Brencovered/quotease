@@ -4,9 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const jobId = searchParams.get("jobId");
+  const jobIdsParam = searchParams.get("jobIds");
 
-  if (!jobId) {
-    return NextResponse.json({ error: "Missing jobId" }, { status: 400 });
+  if (!jobId && !jobIdsParam) {
+    return NextResponse.json({ error: "Missing jobId or jobIds" }, { status: 400 });
   }
 
   const supabase = await createClient();
@@ -15,10 +16,40 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  // Batch mode: the kanban board previously fired one of these requests
+  // per visible job on mount (N round-trips, each with its own auth check).
+  // jobIds pulls line items for every job in a single query and groups
+  // them by job_id, so the board can make one request instead of N.
+  if (jobIdsParam) {
+    const jobIds = jobIdsParam.split(",").map((s) => s.trim()).filter(Boolean);
+    if (jobIds.length === 0) {
+      return NextResponse.json({ itemsByJobId: {} });
+    }
+
+    const { data: items, error } = await supabase
+      .from("job_line_items")
+      .select("*")
+      .in("job_id", jobIds)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    const itemsByJobId: Record<string, unknown[]> = {};
+    for (const item of items ?? []) {
+      const key = (item as { job_id: string }).job_id;
+      (itemsByJobId[key] ??= []).push(item);
+    }
+
+    return NextResponse.json({ itemsByJobId });
+  }
+
   const { data: items, error } = await supabase
     .from("job_line_items")
     .select("*")
-    .eq("job_id", jobId)
+    .eq("job_id", jobId as string)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
 

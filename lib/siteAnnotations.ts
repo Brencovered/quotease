@@ -37,15 +37,25 @@ export async function resolveAnnotationFrameUrls(
   annotations: AnnotationMetaPersisted[] | null | undefined
 ): Promise<(AnnotationMetaPersisted & { frameData: string })[]> {
   if (!annotations || annotations.length === 0) return [];
-  return Promise.all(
-    annotations.map(async (ann) => {
-      if (!ann.storagePath) return { ...ann, frameData: "" };
-      const { data: signed } = await supabase.storage
-        .from("job-files")
-        .createSignedUrl(ann.storagePath, 3600 * 24);
-      return { ...ann, frameData: signed?.signedUrl ?? "" };
-    })
-  );
+
+  // One batched createSignedUrls call for every annotation photo instead
+  // of a createSignedUrl() round-trip per annotation - a job with a full
+  // site survey (10-20+ photos) previously made that many separate Storage
+  // API calls just to render the report.
+  const withPath = annotations.filter((a) => a.storagePath);
+  const paths = withPath.map((a) => a.storagePath as string);
+  const urlByPath = new Map<string, string>();
+  if (paths.length > 0) {
+    const { data: signedBatch } = await supabase.storage.from("job-files").createSignedUrls(paths, 3600 * 24);
+    for (const s of signedBatch ?? []) {
+      if (s.signedUrl && s.path) urlByPath.set(s.path, s.signedUrl);
+    }
+  }
+
+  return annotations.map((ann) => ({
+    ...ann,
+    frameData: ann.storagePath ? (urlByPath.get(ann.storagePath) ?? "") : "",
+  }));
 }
 
 /**
