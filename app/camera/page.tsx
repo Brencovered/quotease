@@ -312,6 +312,7 @@ function CameraPage() {
   const [formItem,    setFormItem]    = useState(items[0].key);
   const [formQty,     setFormQty]     = useState(1);
   const [formNote,    setFormNote]    = useState("");
+  const [formIsNote,  setFormIsNote]  = useState(false);
   const [formCalcLen, setFormCalcLen] = useState<number | null>(null); // spec: calculatedLengthMeters
   const [review,      setReview]      = useState(false);
   const [stampMode,   setStampMode]   = useState(true);
@@ -455,7 +456,23 @@ function CameraPage() {
     if (curPts.length > 0) {
       const c = COLOURS[colourIdx % COLOURS.length];
       ctx.strokeStyle = c; ctx.lineWidth = 3; ctx.setLineDash([5, 4]);
-      if (drawMode === "line" && curPts.length >= 2) {
+      if (drawMode === "line" && curPts.length === 1) {
+        // Waiting for the second tap - show exactly where the start point
+        // landed (a drag would have this covered by the finger the whole
+        // time) plus a hint of what to do next.
+        ctx.setLineDash([]);
+        ctx.fillStyle = c;
+        ctx.beginPath(); ctx.arc(curPts[0].x, curPts[0].y, 9, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "#fff"; ctx.lineWidth = 2.5; ctx.stroke();
+        ctx.font = "bold 13px system-ui";
+        const hint = "Tap the end point";
+        const hw = ctx.measureText(hint).width;
+        ctx.fillStyle = "rgba(0,0,0,.75)";
+        ctx.fillRect(curPts[0].x - hw / 2 - 10, curPts[0].y - 42, hw + 20, 26);
+        ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(hint, curPts[0].x, curPts[0].y - 29);
+        ctx.textAlign = "start"; ctx.textBaseline = "alphabetic";
+      } else if (drawMode === "line" && curPts.length >= 2) {
         ctx.beginPath(); ctx.moveTo(curPts[0].x, curPts[0].y); ctx.lineTo(curPts[1].x, curPts[1].y); ctx.stroke();
         // Live measurement label
         if (calibration) {
@@ -546,20 +563,35 @@ function CameraPage() {
     if (calibMode) return;
     const p = canvasPt(e);
     if (drawMode === "point") { captureAnnotation([p]); return; }
+    if (drawMode === "line") {
+      if (curPts.length === 0) {
+        // First tap: mark the start point only, then wait for a second,
+        // separate tap to place the end point. Dragging a finger across
+        // the screen to draw a cable/pipe run means the fingertip itself
+        // covers the exact point being placed the whole time - two
+        // independent taps let the person actually see where each end
+        // lands before committing to it.
+        setCurPts([p]);
+        return;
+      }
+      const line = [curPts[0], p];
+      setCurPts([]);
+      captureAnnotation(line);
+      return;
+    }
     setIsDrawing(true); setCurPts([p]);
   }
 
   function handleMove(e: React.TouchEvent | React.MouseEvent) {
     e.preventDefault(); if (!isDrawing) return;
     const p = canvasPt(e);
-    setCurPts(prev => drawMode === "line" ? [prev[0], p] : [...prev, p]);
+    setCurPts(prev => [...prev, p]);
   }
 
   function handleEnd(e: React.TouchEvent | React.MouseEvent) {
     e.preventDefault(); if (!isDrawing) return;
     setIsDrawing(false);
-    if (drawMode === "line" && curPts.length === 2) captureAnnotation(curPts);
-    else if (drawMode === "area" && curPts.length >= 3) captureAnnotation(curPts);
+    if (drawMode === "area" && curPts.length >= 3) captureAnnotation(curPts);
     // Note mode accepts either gesture: a plain tap (curPts stays a single
     // point, since handleMove never added more) or a traced zone (3+
     // points) - "mark an area or a section and drop a note" covers both.
@@ -692,21 +724,28 @@ function CameraPage() {
     setFormQty(calcLen ?? 1);     // spec: pre-fill with calculated length
     setFormCalcLen(calcLen);
     setFormNote("");
+    setFormIsNote(false);
     setPendingPts(pts); setCurPts([]); setShowForm(true);
   }
 
   function commitAnnotation() {
-    if (drawMode === "note") {
+    if (drawMode === "note" || formIsNote) {
       // Deliberately not tied to a material or a cost: itemKey "__note__"
       // never matches any catalog item, so PricingEngine.generateLineItems
       // silently skips it (same as any unrecognised key), and
       // LiveSiteAnnotation filters it out before building the priced
       // review table too. It still gets a photo and still shows up in
       // the site survey report - purely informational.
+      //
+      // type stays as the actual gesture used (point/line/area), not
+      // hardcoded to "note" - formIsNote lets someone trace an Area (or
+      // draw a Line, or drop a Point) and still opt out of pricing
+      // without needing to have pre-selected the dedicated Note mode
+      // from the toolbar first.
       const text = formNote.trim();
       if (!text) return;
       const ann: Annotation = {
-        id: uid(), type: "note", points: pendingPts,
+        id: uid(), type: drawMode, points: pendingPts,
         label: text, itemKey: "__note__",
         qty: 0, calculatedLength: null,
         unit: "", note: text,
@@ -716,7 +755,7 @@ function CameraPage() {
       };
       addAnnotationToRoom(ann);
       setColourIdx(i => (i + 1) % COLOURS.length);
-      setShowForm(false); setPendingPts([]); setFormNote("");
+      setShowForm(false); setPendingPts([]); setFormNote(""); setFormIsNote(false);
       startFade(ann.id);
       return;
     }
@@ -1152,7 +1191,7 @@ function CameraPage() {
               const Icon = m === "point" ? MapPin : m === "line" ? Ruler : m === "area" ? Pencil : StickyNote;
               const label = m === "point" ? "Tap" : m === "line" ? "Line" : m === "area" ? "Area" : "Note";
               return (
-                <button key={m} onClick={() => setDrawMode(m)}
+                <button key={m} onClick={() => { setDrawMode(m); setCurPts([]); }}
                   className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border-0"
                   style={{ background: drawMode === m ? "#ffb400" : "rgba(0,0,0,.4)", color: drawMode === m ? "#0a1722" : "white" }}>
                   <Icon size={11} /> {label}
@@ -1283,11 +1322,11 @@ function CameraPage() {
         <div className="absolute inset-0 z-20 bg-black/50 flex items-end">
           <div className="bg-white rounded-t-3xl p-5 w-full">
             <div className="flex justify-between items-center mb-3">
-              <p className="font-bold text-[15px]">{drawMode === "note" ? "What's the note?" : "What is this?"}</p>
-              <button onClick={() => { setShowForm(false); setPendingPts([]); setCurPts([]); setFormNote(""); }} className="border-0 bg-none p-1"><X size={17} /></button>
+              <p className="font-bold text-[15px]">{(drawMode === "note" || formIsNote) ? "What's the note?" : "What is this?"}</p>
+              <button onClick={() => { setShowForm(false); setPendingPts([]); setCurPts([]); setFormNote(""); setFormIsNote(false); }} className="border-0 bg-none p-1"><X size={17} /></button>
             </div>
 
-            {drawMode === "note" ? (
+            {(drawMode === "note" || formIsNote) ? (
               <>
                 <p className="text-[12px] text-gray-500 mb-2">
                   Not tied to a material or cost - just shows up in the site report against this spot.
@@ -1304,9 +1343,19 @@ function CameraPage() {
                   className="w-full bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] py-3.5 rounded-xl border-0 flex items-center justify-center gap-1.5 disabled:opacity-40">
                   <Check size={15} /> Add note
                 </button>
+                {drawMode !== "note" && (
+                  <button onClick={() => setFormIsNote(false)} className="w-full text-center text-[12.5px] font-semibold text-gray-400 py-2 mt-1 border-0 bg-none">
+                    Back to picking a material
+                  </button>
+                )}
               </>
             ) : (
               <>
+            {drawMode !== "point" && (
+              <button onClick={() => setFormIsNote(true)} className="w-full text-left text-[12.5px] font-semibold text-[#0a1722] underline underline-offset-2 mb-3 border-0 bg-none p-0">
+                Just a note here - no material or cost
+              </button>
+            )}
             <div className="grid grid-cols-2 gap-1.5 mb-3 max-h-40 overflow-y-auto">
               {items.map(item => (
                 <button key={item.key} onClick={() => setFormItem(item.key)}
