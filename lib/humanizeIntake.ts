@@ -44,9 +44,9 @@ export const INTAKE_FIELD_LABELS: Record<string, string> = {
 
 export const INTAKE_VALUE_LABELS: Record<string, Record<string, string>> = {
   ceilingType:    { standard_plasterboard: "Standard plasterboard", concrete_slab: "Concrete slab", heritage_timber: "Heritage / period timber", skillion: "Skillion / cathedral", unknown: "Unknown - assess on site" },
-  roofAccess:     { "1": "No roof work", "1.3": "Easy access", "1.7": "Tight crawl", "2.3": "Extreme" },
-  subfloorAccess: { "1": "No subfloor work", "1.3": "Easy crawl", "1.8": "Tight crawl", "2.4": "Wet / very low" },
-  siteAccess:     { easy: "Easy", moderate: "Moderate", difficult: "Difficult" },
+  roofAccess:     { "1": "N/A", "1.3": "Easy access", "1.7": "Tight crawl", "2.3": "Extreme" },
+  subfloorAccess: { "1": "N/A", "1.3": "Easy crawl", "1.8": "Tight crawl", "2.4": "Wet / very low" },
+  siteAccess:     { na: "N/A", easy: "Easy", moderate: "Moderate", difficult: "Difficult", custom: "Custom" },
   downlightGrade: { builder: "Builder grade", standard: "Standard", premium: "Premium / smart", client_supply: "Client supply" },
   downlightSupply: { supply_and_fit: "Supply & fit", wire_and_fit: "Wire & fit (client supply)", provisional: "Provisional sum" },
   switchboardRcboMode: { full_board: "Full RCBO board", per_pole: "RCBO per pole" },
@@ -74,9 +74,9 @@ const DEPENDENT_FIELDS: Record<string, { parent: string; nonZero?: boolean }> = 
 
 // Values that mean "nothing selected / default" and should be suppressed
 const SUPPRESS_VALUES: Record<string, Set<string>> = {
-  roofAccess:     new Set(["1"]),    // "No roof work"
-  subfloorAccess: new Set(["1"]),    // "No subfloor work"
-  siteAccess:     new Set(["easy"]), // easy is the default, only show if moderate/difficult
+  roofAccess:     new Set(["1"]),   // "N/A"
+  subfloorAccess: new Set(["1"]),   // "N/A"
+  siteAccess:     new Set(["na"]),  // "N/A" is the default, only show if a real condition is set
   ceilingType:    new Set(["unknown"]),
   downlightSupply: new Set(["supply_and_fit"]), // supply_and_fit is default, only show if different
   switchboardRcboMode: new Set(["full_board"]),  // only show per_pole since full_board is obvious
@@ -87,8 +87,9 @@ export function humanizeIntakePublic(intake: Record<string, unknown> | null | un
   const lines: string[] = [];
 
   const SKIP = new Set([
-    "notes", "jobType", "ceilingType",
+    "notes", "jobType", "ceilingType", "manual_labour_hours",
     "roofAccess", "subfloorAccess", "siteAccess", "multistorey",
+    "roofAccessNote", "subfloorAccessNote", "siteAccessNote",
     "switchboardRcbo", "switchboardRcboMode", "switchboardPoles",
     "downlightGrade", "downlightSupply", "downlightProvisional",
   ]);
@@ -178,7 +179,7 @@ export function humanizeIntakePublic(intake: Record<string, unknown> | null | un
   if (Array.isArray(siteItems)) {
     for (const item of siteItems) {
       if (item.label) {
-        lines.push(`${item.label}: ${item.qty} ${item.unit}${item.note ? ` - ${item.note}` : ""}`);
+        lines.push(`${item.label}: ${item.qty} ${item.unit}`);
       }
     }
   }

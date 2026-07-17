@@ -2,8 +2,9 @@ import { INTAKE_FIELD_LABELS, INTAKE_VALUE_LABELS } from "./humanizeIntake";
 
 // Fields to completely skip in scope display
 const SKIP = new Set([
-  "jobType", "notes", "ceilingType",       // internal calc only
+  "jobType", "notes", "ceilingType", "manual_labour_hours", // internal calc only
   "roofAccess", "subfloorAccess",           // shown as access conditions not scope items
+  "roofAccessNote", "subfloorAccessNote", "siteAccessNote", // custom-access free text, not scope items
   "siteAccess", "multistorey",              // conditions not scope items
   "switchboardRcbo", "switchboardRcboMode", // rolled into switchboard line
   "switchboardPoles",                       // rolled into switchboard line
@@ -94,7 +95,7 @@ export function humanizeIntake(intake: Record<string, unknown> | null | undefine
   if (Array.isArray(siteItems)) {
     for (const item of siteItems) {
       if (item.label) {
-        lines.push(`${item.label}: ${item.qty} ${item.unit}${item.note ? ` - ${item.note}` : ""}`);
+        lines.push(`${item.label}: ${item.qty} ${item.unit}`);
       }
     }
   }

@@ -14,8 +14,9 @@ export interface GenericIntake {
   jobType: string;
   description: string;
   lineItems: GenericLineItem[];
-  siteAccess: "easy" | "moderate" | "difficult";
+  siteAccess: "na" | "easy" | "moderate" | "difficult" | "custom";
   notes?: string;
+  siteAccessNote?: string;
 }
 
 export interface GenericQuoteResult {
@@ -32,7 +33,7 @@ export function calcGenericQuote(
   let materialsTotal = 0;
   let labourHours = 0;
 
-  const siteMult = intake.siteAccess === "easy" ? 1 : intake.siteAccess === "moderate" ? 1.1 : 1.25;
+  const siteMult = intake.siteAccess === "moderate" ? 1.1 : intake.siteAccess === "difficult" ? 1.25 : 1;
 
   for (const item of intake.lineItems) {
     const lineTotal = item.qty * item.unit_cost;

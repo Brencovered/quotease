@@ -36,7 +36,7 @@ import {
 type MaterialRow = { item_key: string; label: string; unit_cost: number };
 
 const DEFAULT_INTAKE: ElectricianIntake = {
-  jobType: "reno", ceilingType: "unknown",
+  jobType: "na", ceilingType: "unknown",
   switchboardUpgrade: false, switchboardRcbo: false, switchboardRcboMode: "full_board", switchboardPoles: 12,
   threePhase: false,
   powerPoints: 0, lightPoints: 0, switches: 0,
@@ -49,7 +49,7 @@ const DEFAULT_INTAKE: ElectricianIntake = {
   customAppliances: [],
   evCharger: false, solarConnection: false, externalCircuits: 0,
   dataPoints: 0, nbn: false,
-  siteAccess: "easy", multistorey: false,
+  siteAccess: "na", multistorey: false,
   smokeAlarms: 0, callout: false, ccew: false, notes: "",
 };
 
@@ -788,6 +788,7 @@ function StepJob({
         <div className="grid grid-cols-2 gap-3 mb-3">
           <Field label="Job type" className="col-span-2">
             <select value={intake.jobType} onChange={(e) => set("jobType", e.target.value as ElectricianIntake["jobType"])} className="app-field">
+              <option value="na">N/A</option>
               <option value="reno">Renovation / alteration</option>
               <option value="newbuild">New build</option>
               <option value="fault">Fault find / repair</option>
@@ -902,33 +903,91 @@ function StepScope({ intake, set, siteItems, setSiteItems, lib, manualLabourHrs,
   setManualLabourHrs: React.Dispatch<React.SetStateAction<number>>;
   siteConditions?: SiteConditionTemplateRow[];
 }) {
+  const [roofCustom, setRoofCustom]         = useState(!!intake.roofAccessNote);
+  const [subfloorCustom, setSubfloorCustom] = useState(!!intake.subfloorAccessNote);
+
   return (
     <div className="space-y-4">
       <div className="card">
         <p className="section-tag mb-3">Conditions</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Roof cavity access">
-            <select value={intake.roofAccess} onChange={(e) => set("roofAccess", Number(e.target.value) as ElectricianIntake["roofAccess"])} className="app-field">
-              <option value={1}>No roof work needed</option>
+            <select
+              value={roofCustom ? "custom" : intake.roofAccess}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === "custom") { setRoofCustom(true); set("roofAccess", 1); }
+                else { setRoofCustom(false); set("roofAccess", Number(v) as ElectricianIntake["roofAccess"]); set("roofAccessNote", ""); }
+              }}
+              className="app-field"
+            >
+              <option value={1}>N/A</option>
               <option value={1.3}>Easy access</option>
               <option value={1.7}>Tight crawl</option>
               <option value={2.3}>Extreme - very difficult</option>
+              <option value="custom">Custom</option>
             </select>
+            {roofCustom && (
+              <input
+                type="text"
+                value={intake.roofAccessNote ?? ""}
+                onChange={(e) => set("roofAccessNote", e.target.value)}
+                placeholder="Describe roof cavity access"
+                className="app-field mt-2"
+              />
+            )}
           </Field>
           <Field label="Subfloor access">
-            <select value={intake.subfloorAccess} onChange={(e) => set("subfloorAccess", Number(e.target.value) as ElectricianIntake["subfloorAccess"])} className="app-field">
-              <option value={1}>No subfloor work</option>
+            <select
+              value={subfloorCustom ? "custom" : intake.subfloorAccess}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === "custom") { setSubfloorCustom(true); set("subfloorAccess", 1); }
+                else { setSubfloorCustom(false); set("subfloorAccess", Number(v) as ElectricianIntake["subfloorAccess"]); set("subfloorAccessNote", ""); }
+              }}
+              className="app-field"
+            >
+              <option value={1}>N/A</option>
               <option value={1.3}>Easy crawl</option>
               <option value={1.8}>Tight crawl</option>
               <option value={2.4}>Wet / very low clearance</option>
+              <option value="custom">Custom</option>
             </select>
+            {subfloorCustom && (
+              <input
+                type="text"
+                value={intake.subfloorAccessNote ?? ""}
+                onChange={(e) => set("subfloorAccessNote", e.target.value)}
+                placeholder="Describe subfloor access"
+                className="app-field mt-2"
+              />
+            )}
           </Field>
           <Field label="Overall site access">
-            <select value={intake.siteAccess} onChange={(e) => set("siteAccess", e.target.value as ElectricianIntake["siteAccess"])} className="app-field">
+            <select
+              value={intake.siteAccess}
+              onChange={(e) => {
+                const v = e.target.value as ElectricianIntake["siteAccess"];
+                set("siteAccess", v);
+                if (v !== "custom") set("siteAccessNote", "");
+              }}
+              className="app-field"
+            >
+              <option value="na">N/A</option>
               <option value="easy">Easy</option>
               <option value="moderate">Moderate</option>
               <option value="difficult">Difficult</option>
+              <option value="custom">Custom</option>
             </select>
+            {intake.siteAccess === "custom" && (
+              <input
+                type="text"
+                value={intake.siteAccessNote ?? ""}
+                onChange={(e) => set("siteAccessNote", e.target.value)}
+                placeholder="Describe overall site access"
+                className="app-field mt-2"
+              />
+            )}
           </Field>
           <Field label="Smoke alarms to interconnect"><Num value={intake.smokeAlarms} onChange={(v) => set("smokeAlarms", v)} /></Field>
         </div>

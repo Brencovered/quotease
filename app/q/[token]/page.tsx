@@ -90,7 +90,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
                     <div key={i} className="flex items-center justify-between text-[13.5px] py-1.5 border-b border-[var(--line-subtle)]">
                       <div>
                         <p className="font-semibold text-[var(--ink)]">{item.label}</p>
-                        <p className="text-[12px] text-[var(--ink-faint)]">{item.qty} {item.unit}{item.note ? ` · ${item.note}` : ""}</p>
+                        <p className="text-[12px] text-[var(--ink-faint)]">{item.qty} {item.unit}</p>
                       </div>
                     </div>
                   ))}

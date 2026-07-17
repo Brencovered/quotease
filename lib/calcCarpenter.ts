@@ -19,7 +19,7 @@ export const CARPENTER_DEFAULT_MATERIALS = [
 ] as const;
 
 export interface CarpenterIntake {
-  jobType: "reno" | "newbuild" | "deck" | "framing" | "fitout" | "repair";
+  jobType: "na" | "reno" | "newbuild" | "deck" | "framing" | "fitout" | "repair";
   // Doors
   internalDoors: number;
   externalDoors: number;
@@ -40,10 +40,11 @@ export interface CarpenterIntake {
   fasciaLm: number;
   // Access / site
   workingAtHeight: boolean; // requires scaffolding allowance in labour
-  siteAccess: "easy" | "moderate" | "difficult";
+  siteAccess: "na" | "easy" | "moderate" | "difficult" | "custom";
   multistorey: boolean;
   callout: boolean;
   notes?: string;
+  siteAccessNote?: string;
 }
 
 export interface CarpenterQuoteResult {
@@ -98,7 +99,7 @@ export function calcCarpenterQuote(
 
   // Height / access
   const heightMult  = intake.workingAtHeight ? 1.25 : 1;
-  const siteMult    = intake.siteAccess === "easy" ? 1 : intake.siteAccess === "moderate" ? 1.15 : 1.35;
+  const siteMult    = intake.siteAccess === "moderate" ? 1.15 : intake.siteAccess === "difficult" ? 1.35 : 1;
   const storeyMult  = intake.multistorey ? 1.1 : 1;
 
   const totalHours   = labour * heightMult * siteMult * storeyMult;

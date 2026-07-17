@@ -28,13 +28,13 @@ import type { SiteConditionTemplateRow } from "@/lib/peripherals";
 type MaterialRow = { item_key: string; label: string; unit_cost: number };
 
 const DEFAULT_INTAKE: CarpenterIntake = {
-  jobType: "reno",
+  jobType: "na",
   internalDoors: 0, externalDoors: 0, doorFramesOnly: 0,
   skirtingMetres: 0, architraveMetres: 0,
   newWallFrames: 0, framingTimberLm: 0, plywoodSheets: 0,
   deckingSqm: 0, deckingBeamLm: 0,
   robeShelvingLm: 0, fasciaLm: 0,
-  workingAtHeight: false, siteAccess: "easy", multistorey: false, callout: false, notes: "",
+  workingAtHeight: false, siteAccess: "na", multistorey: false, callout: false, notes: "",
 };
 
 const STEPS = [
@@ -436,7 +436,7 @@ export default function CarpenterQuoteBuilder({
         <div className="space-y-4">
           <div className="card">
             <p className="section-tag mb-3">Job details</p>
-            <Field label="Job type" className="mb-3"><select value={intake.jobType} onChange={(e) => set("jobType", e.target.value as CarpenterIntake["jobType"])} className="app-field"><option value="reno">Renovation / alteration</option><option value="newbuild">New build</option><option value="deck">Deck / outdoor</option><option value="framing">Framing only</option><option value="fitout">Fitout / joinery</option><option value="repair">Repair</option></select></Field>
+            <Field label="Job type" className="mb-3"><select value={intake.jobType} onChange={(e) => set("jobType", e.target.value as CarpenterIntake["jobType"])} className="app-field"><option value="na">N/A</option><option value="reno">Renovation / alteration</option><option value="newbuild">New build</option><option value="deck">Deck / outdoor</option><option value="framing">Framing only</option><option value="fitout">Fitout / joinery</option><option value="repair">Repair</option></select></Field>
             {pricingTiers && pricingTiers.length > 0 && (
               <div className="mb-3">
                 <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Customer type</label>
@@ -513,7 +513,32 @@ export default function CarpenterQuoteBuilder({
           )}
           <div className="card">
             <p className="section-tag mb-3">Site access</p>
-            <Field label="Overall site access"><select value={intake.siteAccess} onChange={(e) => set("siteAccess", e.target.value as CarpenterIntake["siteAccess"])} className="app-field"><option value="easy">Easy</option><option value="moderate">Moderate</option><option value="difficult">Difficult</option></select></Field>
+            <Field label="Overall site access">
+              <select
+                value={intake.siteAccess}
+                onChange={(e) => {
+                  const v = e.target.value as CarpenterIntake["siteAccess"];
+                  set("siteAccess", v);
+                  if (v !== "custom") set("siteAccessNote", "");
+                }}
+                className="app-field"
+              >
+                <option value="na">N/A</option>
+                <option value="easy">Easy</option>
+                <option value="moderate">Moderate</option>
+                <option value="difficult">Difficult</option>
+                <option value="custom">Custom</option>
+              </select>
+              {intake.siteAccess === "custom" && (
+                <input
+                  type="text"
+                  value={intake.siteAccessNote ?? ""}
+                  onChange={(e) => set("siteAccessNote", e.target.value)}
+                  placeholder="Describe overall site access"
+                  className="app-field mt-2"
+                />
+              )}
+            </Field>
             <div className="mt-4 pt-4 border-t border-[var(--line-subtle)]">
               <Field label="Extra labour hours (manual adjustment)">
                 <Num value={manualLabourHrs} onChange={setManualLabourHrs} step={0.5} />

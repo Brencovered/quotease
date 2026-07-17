@@ -24,7 +24,7 @@ export const PLUMBER_DEFAULT_MATERIALS = [
 ] as const;
 
 export interface PlumberIntake {
-  jobType: "reno" | "newbuild" | "fault" | "gasfitting" | "drainage" | "compliance";
+  jobType: "na" | "reno" | "newbuild" | "fault" | "gasfitting" | "drainage" | "compliance";
   // Tapware
   basinTaps: number;
   kitchenTaps: number;
@@ -49,14 +49,16 @@ export interface PlumberIntake {
   blockageClear: boolean;
   cctv: boolean;
   // Access
-  subfloorAccess: "none" | "easy" | "tight" | "wet";
+  subfloorAccess: "none" | "easy" | "tight" | "wet" | "custom";
   slabPenetrations: number;
   multistorey: boolean;
   // Compliance
   callout: boolean;
   certRequired: boolean;
-  siteAccess: "easy" | "moderate" | "difficult";
+  siteAccess: "na" | "easy" | "moderate" | "difficult" | "custom";
   notes?: string;
+  subfloorAccessNote?: string;
+  siteAccessNote?: string;
 }
 
 export interface PlumberQuoteResult {
@@ -124,8 +126,8 @@ export function calcPlumberQuote(
   labour += intake.slabPenetrations * 2;
 
   // Access multipliers
-  const subMult = { none: 1, easy: 1.2, tight: 1.5, wet: 1.8 }[intake.subfloorAccess];
-  const siteMult = intake.siteAccess === "easy" ? 1 : intake.siteAccess === "moderate" ? 1.15 : 1.35;
+  const subMult = { none: 1, easy: 1.2, tight: 1.5, wet: 1.8, custom: 1 }[intake.subfloorAccess];
+  const siteMult = intake.siteAccess === "moderate" ? 1.15 : intake.siteAccess === "difficult" ? 1.35 : 1;
   const storey = intake.multistorey ? 1.1 : 1;
 
   const totalHours   = labour * subMult * siteMult * storey;

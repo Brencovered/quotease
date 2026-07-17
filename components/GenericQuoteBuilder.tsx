@@ -102,7 +102,8 @@ export default function GenericQuoteBuilder({
   const [step,        setStep]        = useState(0);
   const [jobType,     setJobType]     = useState(template.jobTypes[0]);
   const [description, setDescription] = useState("");
-  const [siteAccess,  setSiteAccess]  = useState<GenericIntake["siteAccess"]>("easy");
+  const [siteAccess,  setSiteAccess]  = useState<GenericIntake["siteAccess"]>("na");
+  const [siteAccessNote, setSiteAccessNote] = useState("");
   const [items,       setItems]       = useState<GenericLineItem[]>(
     template.defaultItems.map((it) => ({ ...it, id: uid() }))
   );
@@ -130,8 +131,8 @@ export default function GenericQuoteBuilder({
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   const intake: GenericIntake = useMemo(() => ({
-    jobType, description, lineItems: items, siteAccess,
-  }), [jobType, description, items, siteAccess]);
+    jobType, description, lineItems: items, siteAccess, siteAccessNote,
+  }), [jobType, description, items, siteAccess, siteAccessNote]);
 
   const result = useMemo(() => calcGenericQuote(intake, effectiveMargin), [intake, effectiveMargin]);
   // Package / plan-markup / bundle materials are seeded into siteItems on
@@ -463,11 +464,30 @@ export default function GenericQuoteBuilder({
                   className="app-field" placeholder="e.g. Full repaint of 3-bed house, walls only" />
               </Field>
               <Field label="Site access">
-                <select value={siteAccess} onChange={(e) => setSiteAccess(e.target.value as GenericIntake["siteAccess"])} className="app-field">
+                <select
+                  value={siteAccess}
+                  onChange={(e) => {
+                    const v = e.target.value as GenericIntake["siteAccess"];
+                    setSiteAccess(v);
+                    if (v !== "custom") setSiteAccessNote("");
+                  }}
+                  className="app-field"
+                >
+                  <option value="na">N/A</option>
                   <option value="easy">Easy</option>
                   <option value="moderate">Moderate (10% labour premium)</option>
                   <option value="difficult">Difficult (25% labour premium)</option>
+                  <option value="custom">Custom</option>
                 </select>
+                {siteAccess === "custom" && (
+                  <input
+                    type="text"
+                    value={siteAccessNote}
+                    onChange={(e) => setSiteAccessNote(e.target.value)}
+                    placeholder="Describe site access"
+                    className="app-field mt-2"
+                  />
+                )}
               </Field>
               {pricingTiers && pricingTiers.length > 0 && (
                 <div>

@@ -28,7 +28,7 @@ import type { SiteConditionTemplateRow } from "@/lib/peripherals";
 type MaterialRow = { item_key: string; label: string; unit_cost: number };
 
 const DEFAULT_INTAKE: PlumberIntake = {
-  jobType: "reno",
+  jobType: "na",
   basinTaps: 0, kitchenTaps: 0, showerMixers: 0, bathMixers: 0, toilets: 0,
   hwuReplacement: false, hwuType: "none",
   newBathroomRoughin: false, newKitchenRoughin: false, newLaundryRoughin: false,
@@ -36,7 +36,7 @@ const DEFAULT_INTAKE: PlumberIntake = {
   copperMetres: 0, pexMetres: 0, drainageMetres: 0,
   blockageClear: false, cctv: false,
   subfloorAccess: "none", slabPenetrations: 0, multistorey: false,
-  callout: false, certRequired: false, siteAccess: "easy", notes: "",
+  callout: false, certRequired: false, siteAccess: "na", notes: "",
 };
 
 const STEPS = [
@@ -456,7 +456,7 @@ export default function PlumberQuoteBuilder({
         <div className="space-y-4">
           <div className="card">
             <p className="section-tag mb-3">Job details</p>
-            <Field label="Job type" className="mb-3"><select value={intake.jobType} onChange={(e) => set("jobType", e.target.value as PlumberIntake["jobType"])} className="app-field"><option value="reno">Renovation / alteration</option><option value="newbuild">New build</option><option value="fault">Fault / leak repair</option><option value="gasfitting">Gas fitting</option><option value="drainage">Drainage / sewer</option><option value="compliance">Compliance check</option></select></Field>
+            <Field label="Job type" className="mb-3"><select value={intake.jobType} onChange={(e) => set("jobType", e.target.value as PlumberIntake["jobType"])} className="app-field"><option value="na">N/A</option><option value="reno">Renovation / alteration</option><option value="newbuild">New build</option><option value="fault">Fault / leak repair</option><option value="gasfitting">Gas fitting</option><option value="drainage">Drainage / sewer</option><option value="compliance">Compliance check</option></select></Field>
             {pricingTiers && pricingTiers.length > 0 && (
               <div className="mb-3">
                 <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Customer type</label>
@@ -546,8 +546,58 @@ export default function PlumberQuoteBuilder({
           <div className="card">
             <p className="section-tag mb-3">Conditions</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Subfloor access"><select value={intake.subfloorAccess} onChange={(e) => set("subfloorAccess", e.target.value as PlumberIntake["subfloorAccess"])} className="app-field"><option value="none">No subfloor work</option><option value="easy">Easy crawl</option><option value="tight">Tight crawl</option><option value="wet">Wet / very low</option></select></Field>
-              <Field label="Overall site access"><select value={intake.siteAccess} onChange={(e) => set("siteAccess", e.target.value as PlumberIntake["siteAccess"])} className="app-field"><option value="easy">Easy</option><option value="moderate">Moderate</option><option value="difficult">Difficult</option></select></Field>
+              <Field label="Subfloor access">
+                <select
+                  value={intake.subfloorAccess}
+                  onChange={(e) => {
+                    const v = e.target.value as PlumberIntake["subfloorAccess"];
+                    set("subfloorAccess", v);
+                    if (v !== "custom") set("subfloorAccessNote", "");
+                  }}
+                  className="app-field"
+                >
+                  <option value="none">N/A</option>
+                  <option value="easy">Easy crawl</option>
+                  <option value="tight">Tight crawl</option>
+                  <option value="wet">Wet / very low</option>
+                  <option value="custom">Custom</option>
+                </select>
+                {intake.subfloorAccess === "custom" && (
+                  <input
+                    type="text"
+                    value={intake.subfloorAccessNote ?? ""}
+                    onChange={(e) => set("subfloorAccessNote", e.target.value)}
+                    placeholder="Describe subfloor access"
+                    className="app-field mt-2"
+                  />
+                )}
+              </Field>
+              <Field label="Overall site access">
+                <select
+                  value={intake.siteAccess}
+                  onChange={(e) => {
+                    const v = e.target.value as PlumberIntake["siteAccess"];
+                    set("siteAccess", v);
+                    if (v !== "custom") set("siteAccessNote", "");
+                  }}
+                  className="app-field"
+                >
+                  <option value="na">N/A</option>
+                  <option value="easy">Easy</option>
+                  <option value="moderate">Moderate</option>
+                  <option value="difficult">Difficult</option>
+                  <option value="custom">Custom</option>
+                </select>
+                {intake.siteAccess === "custom" && (
+                  <input
+                    type="text"
+                    value={intake.siteAccessNote ?? ""}
+                    onChange={(e) => set("siteAccessNote", e.target.value)}
+                    placeholder="Describe overall site access"
+                    className="app-field mt-2"
+                  />
+                )}
+              </Field>
             </div>
             <div className="mt-3">
               <Chk checked={intake.multistorey} onChange={(v) => set("multistorey", v)} label="Multi-storey" />

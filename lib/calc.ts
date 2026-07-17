@@ -57,7 +57,7 @@ export interface CustomAppliance {
 export type DownlightSupply = "supply_and_fit" | "wire_and_fit" | "provisional";
 
 export interface ElectricianIntake {
-  jobType:           "reno" | "newbuild" | "fault" | "compliance";
+  jobType:           "na" | "reno" | "newbuild" | "fault" | "compliance";
   // ceiling type retained for calc engine but hidden from UI
   ceilingType:       "standard_plasterboard" | "concrete_slab" | "heritage_timber" | "skillion" | "unknown";
   switchboardUpgrade: boolean;
@@ -90,13 +90,17 @@ export interface ElectricianIntake {
   externalCircuits:   number;
   dataPoints:         number;
   nbn:                boolean;
-  siteAccess:         "easy" | "moderate" | "difficult";
+  siteAccess:         "na" | "easy" | "moderate" | "difficult" | "custom";
   multistorey:        boolean;
   smokeAlarms:        number;
   // COES always required -- removed from UI, always true in calc
   callout:            boolean;
   ccew:               boolean;
   notes?:             string;
+  // Free-text notes shown when the matching access field is set to "Custom"
+  roofAccessNote?:     string;
+  subfloorAccessNote?: string;
+  siteAccessNote?:     string;
 }
 
 export interface QuoteResult {
@@ -136,7 +140,7 @@ export function calcElectricianQuote(
   const ceilMult = ceilingMultiplier(intake.ceilingType ?? "unknown");
   const accessFactor = (intake.roofAccess ?? 1) * (intake.subfloorAccess ?? 1);
   const siteAccessMult =
-    intake.siteAccess === "easy" ? 1 : intake.siteAccess === "moderate" ? 1.15 : 1.35;
+    intake.siteAccess === "moderate" ? 1.15 : intake.siteAccess === "difficult" ? 1.35 : 1;
   const storeysAdd = intake.multistorey ? 0.1 : 0;
   const overallAccess = (accessFactor * ceilMult) * (siteAccessMult + storeysAdd);
 
