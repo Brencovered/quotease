@@ -637,7 +637,7 @@ export default function PlumberQuoteBuilder({
           onSaveDefault={saveCalcDefault}
         />
       )}
-      {stepId === "materials" && !hasRealPriceBook(lib) && <MaterialsEditor lib={lib} setLib={setLib} trade="plumber" />}
+      {stepId === "materials" && !hasRealPriceBook(lib) && <MaterialsEditor lib={lib} setLib={setLib} trade="plumber" defaults={PLUMBER_DEFAULT_MATERIALS} />}
 
       {stepId === "send" && (
         <div className="space-y-4">

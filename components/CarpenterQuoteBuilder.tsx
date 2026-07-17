@@ -577,7 +577,7 @@ export default function CarpenterQuoteBuilder({
           onSaveDefault={saveCalcDefault}
         />
       )}
-      {stepId === "materials" && !hasRealPriceBook(lib) && <MaterialsEditor lib={lib} setLib={setLib} trade="carpenter" />}
+      {stepId === "materials" && !hasRealPriceBook(lib) && <MaterialsEditor lib={lib} setLib={setLib} trade="carpenter" defaults={CARPENTER_DEFAULT_MATERIALS} />}
 
       {stepId === "send" && (
         <div className="space-y-4">
