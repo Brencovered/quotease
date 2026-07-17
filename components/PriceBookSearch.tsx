@@ -33,10 +33,31 @@ export default function PriceBookSearch({
   const [results,  setResults]  = useState<PriceBookResult[]>([]);
   const [loading,  setLoading]  = useState(false);
   const [open,     setOpen]     = useState(false);
-  const [hasPriceBook, setHasPriceBook] = useState(true);
+  // Whether this business has ANY price book items at all for this trade -
+  // checked once on mount, separately from any individual search. Defaults
+  // to true (assume a price book exists) so we never flash an incorrect
+  // "No price book" message before this check has resolved.
+  const [businessHasPriceBook, setBusinessHasPriceBook] = useState(true);
   const wrapRef = useRef<HTMLDivElement>(null);
 
   const debouncedQ = useDebounce(query, 280);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function checkExists() {
+      const params = new URLSearchParams({ checkExists: "1" });
+      if (trade) params.set("trade", trade);
+      try {
+        const res = await fetch(`/api/pricebook?${params}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled) setBusinessHasPriceBook(!!data.hasAny);
+        }
+      } catch { /* leave default assumption in place */ }
+    }
+    checkExists();
+    return () => { cancelled = true; };
+  }, [trade]);
 
   const search = useCallback(async (q: string) => {
     if (q.length < 2) { setResults([]); setOpen(false); return; }
@@ -46,7 +67,6 @@ export default function PriceBookSearch({
     const res = await fetch(`/api/pricebook?${params}`);
     const data = await res.json();
     setResults(data.items ?? []);
-    setHasPriceBook((data.items?.length ?? 0) > 0 || q.length < 2);
     setOpen(true);
     setLoading(false);
   }, [trade]);
@@ -87,10 +107,10 @@ export default function PriceBookSearch({
           className="app-field pl-8 text-[13px]"
           placeholder={placeholder}
         />
-        {!hasPriceBook && query.length >= 2 && !loading && (
+        {query.length >= 2 && !loading && results.length === 0 && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[11px] text-amber-600">
             <BookOpen size={12} />
-            <span>No price book</span>
+            <span>{businessHasPriceBook ? "No matches" : "No price book"}</span>
           </div>
         )}
       </div>
