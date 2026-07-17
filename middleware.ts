@@ -219,13 +219,26 @@ export async function middleware(request: NextRequest) {
     );
 
   // Check if this is a protected page route
-  const isProtectedPage = PROTECTED_PAGE_PREFIXES.some((p) =>
-    pathname.startsWith(p + "/")
+  //
+  // BUG FIX: previously only matched pathname.startsWith(p + "/"), which
+  // requires a trailing sub-path segment. The bare path itself (e.g.
+  // exactly "/dashboard", with nothing after it) never matched, since
+  // "/dashboard".startsWith("/dashboard/") is false - meaning the single
+  // most-visited URL for every one of these routes fell all the way
+  // through to the "not a route we recognise as needing protection"
+  // branch below and skipped auth, subscription, AND onboarding checks
+  // entirely. This is why a freshly signed-up, non-onboarded account
+  // could land on /dashboard directly: /quote happened to still redirect
+  // to /onboarding because that page has its own separate onboarded_at
+  // check, but /dashboard has no such page-level check and was relying
+  // entirely on this now-fixed middleware gate.
+  const isProtectedPage = PROTECTED_PAGE_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(p + "/")
   );
 
-  // Check if this is an admin route
-  const isAdminRoute = ADMIN_PREFIXES.some((p) =>
-    pathname.startsWith(p + "/")
+  // Check if this is an admin route (same bare-path fix as isProtectedPage above)
+  const isAdminRoute = ADMIN_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(p + "/")
   );
 
   // Check if this is a billing or onboarding page (auth-only, no sub check)

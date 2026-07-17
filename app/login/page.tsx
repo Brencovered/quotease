@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveBusinessId } from "@/lib/team";
 import {
   Timer,
   DollarSign,
@@ -321,7 +322,29 @@ function LoginForm() {
         setError(error.message);
         return;
       }
-      const target = next && next.startsWith("/") ? next : "/dashboard";
+
+      // Every other entry point (signup, the email-confirmation callback)
+      // already checks onboarded_at before deciding where to send someone.
+      // This one didn't, and was the actual gap that let a freshly
+      // confirmed-but-not-onboarded account reach /dashboard directly when
+      // they came back and logged in manually instead of being auto-signed-in
+      // by the confirmation link.
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      let target = next && next.startsWith("/") ? next : "/dashboard";
+      if (user) {
+        const businessId = await getActiveBusinessId(supabase, user.id);
+        const isTeamMember = businessId !== user.id;
+        if (!isTeamMember) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("onboarded_at")
+            .eq("id", businessId)
+            .maybeSingle();
+          if (!profile?.onboarded_at) target = "/onboarding";
+        }
+      }
       // A full navigation (not router.push) guarantees the browser sends
       // the just-set session cookie on the very next request. Using
       // router.push here raced with cookie propagation - middleware
