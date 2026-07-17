@@ -26,3 +26,16 @@
  * bring it all back with no other code changes.
  */
 export const LEADS_ENABLED = false;
+
+/**
+ * The $4.99/mo standalone claimed directory page: ABN/licence verification
+ * badge, manual photo gallery, quote capture into the real quotes table,
+ * monthly goal setting, and the business marketing pack. Bundled free into
+ * the $45/mo plan once live.
+ *
+ * Off until the full v1 build is done and reviewed -- claim flow, business
+ * lookup/matching, richer page template, Stripe product, and entitlement
+ * check all need to land together, not incrementally in public. Nothing
+ * gated by this flag should be linked to or discoverable while it's off.
+ */
+export const CLAIMED_DIRECTORY_PAGES_ENABLED = false;
