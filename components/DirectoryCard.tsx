@@ -5,6 +5,7 @@ import Link from "next/link";
 import { MapPin, Star, Phone, Globe, Mail, ChevronLeft, ChevronRight, X, Send, Check, BadgeCheck, MessageSquare, ArrowRight } from "lucide-react";
 import { getGoogleReviewsUrl } from "@/lib/seo/gbp";
 import { buildDirectorySlug } from "@/lib/seo/meta";
+import { CLAIMED_DIRECTORY_PAGES_ENABLED } from "@/lib/featureFlags";
 
 // Temporarily off (kept in sync with app/directory/[slug]/page.tsx): with few
 // tradies in the directory yet, a homeowner submitting an enquiry that never
@@ -36,6 +37,7 @@ type Listing = {
   google_rating: number | null; google_reviews_count: number | null;
   photo_references: string[] | null; place_id: string | null;
   blurb: string | null; logo_url: string | null;
+  is_claimed?: boolean | null;
 };
 
 function Stars({ rating }: { rating: number }) {
@@ -377,6 +379,11 @@ export default function DirectoryCard({ listing, index = 0 }: { listing: Listing
             <h2 className="font-bold text-[15px] text-gray-900 leading-snug flex-1">{listing.business_name}</h2>
             <BadgeCheck size={16} className="text-blue-500 shrink-0 mt-0.5" />
           </div>
+          {CLAIMED_DIRECTORY_PAGES_ENABLED && listing.is_claimed && (
+            <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full mb-2 w-fit">
+              <Check size={10} /> Claimed
+            </span>
+          )}
 
           {/* Location */}
           {listing.suburb && (

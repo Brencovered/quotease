@@ -255,6 +255,11 @@ export default async function TradieProfilePage({
                   <span className="flex items-center gap-1 text-[12px] font-semibold text-emerald-400 bg-emerald-400/10 px-2.5 py-1 rounded-full">
                     <ShieldCheck size={12} /> Curated on Swiftscope
                   </span>
+                  {CLAIMED_DIRECTORY_PAGES_ENABLED && listing.is_claimed && (
+                    <span className="flex items-center gap-1 text-[12px] font-semibold text-white bg-blue-600/80 px-2.5 py-1 rounded-full">
+                      <Check size={12} /> Claimed listing
+                    </span>
+                  )}
                   {isVerifiedBadge && (
                     <span className="flex items-center gap-1 text-[12px] font-semibold text-[#0a1722] bg-[#ffb400] px-2.5 py-1 rounded-full">
                       <ShieldCheck size={12} /> Verified Business
@@ -381,6 +386,14 @@ export default async function TradieProfilePage({
                   </p>
                 )}
               </div>
+              {CLAIMED_DIRECTORY_PAGES_ENABLED && !listing.is_claimed && (
+                <Link
+                  href={`/directory/claim?name=${encodeURIComponent(listing.business_name)}&suburb=${encodeURIComponent(listing.suburb ?? "")}&trade=${encodeURIComponent(primaryTrade ?? "")}`}
+                  className="block mt-4 pt-3 border-t border-gray-100 text-[12.5px] font-semibold text-[#0a1722] hover:underline"
+                >
+                  Is this your business? Claim this free listing →
+                </Link>
+              )}
             </div>
           </div>
         </div>

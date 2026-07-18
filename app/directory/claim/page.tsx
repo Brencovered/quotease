@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import MarketingNav from "@/components/MarketingNav";
@@ -38,6 +39,7 @@ type ListingMatch = {
 type Step = "auth" | "search" | "resolve" | "abn" | "done";
 
 export default function ClaimDirectoryListingPage() {
+  const searchParams = useSearchParams();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [step, setStep] = useState<Step>("auth");
 
@@ -55,9 +57,9 @@ export default function ClaimDirectoryListingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [businessName, setBusinessName] = useState("");
-  const [trade, setTrade] = useState("");
-  const [suburb, setSuburb] = useState("");
+  const [businessName, setBusinessName] = useState(() => searchParams.get("name") ?? "");
+  const [trade, setTrade] = useState(() => searchParams.get("trade") ?? "");
+  const [suburb, setSuburb] = useState(() => searchParams.get("suburb") ?? "");
 
   const [matches, setMatches] = useState<ListingMatch[]>([]);
   const [strongMatch, setStrongMatch] = useState<ListingMatch | null>(null);
