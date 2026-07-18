@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -39,6 +39,18 @@ type ListingMatch = {
 type Step = "auth" | "search" | "resolve" | "abn" | "done";
 
 export default function ClaimDirectoryListingPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen flex items-center justify-center" style={{ background: "var(--app-bg)" }}>
+        <Loader2 className="animate-spin text-[#0a1722]" size={28} />
+      </main>
+    }>
+      <ClaimDirectoryListingInner />
+    </Suspense>
+  );
+}
+
+function ClaimDirectoryListingInner() {
   const searchParams = useSearchParams();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [step, setStep] = useState<Step>("auth");
