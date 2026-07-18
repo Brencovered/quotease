@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
 import { AlertTriangle, Paperclip, X, Sparkles, ChevronRight, ChevronLeft, Check, Upload, Plus } from "lucide-react";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
+import { safeParseApiResponse } from "@/lib/safeParseApiResponse";
 import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import PlanMarkupQuickAdd from "./PlanMarkupQuickAdd";
 import StepCustomer from "./StepCustomer";
@@ -270,9 +271,10 @@ export default function QuoteBuilder({
       fd.append("trade", "electrician");
       if (drawingInstructions.trim()) fd.append("instructions", drawingInstructions.trim());
       const res  = await fetch("/api/quotes/analyze-drawing", { method: "POST", body: fd });
-      const body = await res.json();
-      if (!res.ok) {
-        setAnalysisError(body.error ?? "Analysis failed");
+      const { ok, body, parseError } = await safeParseApiResponse(res);
+      if (parseError) { setAnalysisError(parseError); return; }
+      if (!ok) {
+        setAnalysisError((body.error as string) ?? "Analysis failed");
         if (body.usageLimitReached) setUsageLimitReached(true);
         return;
       }
@@ -303,9 +305,10 @@ export default function QuoteBuilder({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ transcript, instructions: drawingInstructions.trim() || undefined }),
       });
-      const body = await res.json();
-      if (!res.ok) {
-        setAnalysisError(body.error ?? "Analysis failed");
+      const { ok, body, parseError } = await safeParseApiResponse(res);
+      if (parseError) { setAnalysisError(parseError); return; }
+      if (!ok) {
+        setAnalysisError((body.error as string) ?? "Analysis failed");
         if (body.usageLimitReached) setUsageLimitReached(true);
         return;
       }

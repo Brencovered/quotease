@@ -8,6 +8,7 @@ import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } fr
 import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import PlanMarkupQuickAdd from "./PlanMarkupQuickAdd";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
+import { safeParseApiResponse } from "@/lib/safeParseApiResponse";
 import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
 import { persistAnnotationFrames } from "@/lib/siteAnnotations";
 import JobDescriptionField from "@/components/JobDescriptionField";
@@ -254,8 +255,9 @@ export default function RooferQuoteBuilder({
       fd.append("trade", "roofer");
       fd.append("instructions", "This is a roofing job. Focus on roof area, guttering, ridge/valley lengths, and any roof-mounted extras.");
       const res  = await fetch("/api/quotes/analyze-drawing", { method: "POST", body: fd });
-      const body = await res.json();
-      if (!res.ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
+      const { ok, body, parseError } = await safeParseApiResponse(res);
+      if (parseError) { setAnalysisError(parseError); return; }
+      if (!ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
       if (Array.isArray(body.result?.detected_items) && body.result.detected_items.length > 0) {
         setDetectedItems(body.result.detected_items);
       }
@@ -272,8 +274,9 @@ export default function RooferQuoteBuilder({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ transcript, trade: "roofer", instructions: "This is a roofing job. Focus on roof area, guttering, ridge/valley lengths, and any roof-mounted extras." }),
       });
-      const body = await res.json();
-      if (!res.ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
+      const { ok, body, parseError } = await safeParseApiResponse(res);
+      if (parseError) { setAnalysisError(parseError); return; }
+      if (!ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
       if (Array.isArray(body.result?.detected_items) && body.result.detected_items.length > 0) {
         setDetectedItems(body.result.detected_items);
       }

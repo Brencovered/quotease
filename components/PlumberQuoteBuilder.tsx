@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
 import { AlertTriangle, Paperclip, X, Sparkles, ChevronRight, ChevronLeft, Check } from "lucide-react";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
+import { safeParseApiResponse } from "@/lib/safeParseApiResponse";
 import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import PlanMarkupQuickAdd from "./PlanMarkupQuickAdd";
 import { calcPlumberQuote, PLUMBER_DEFAULT_MATERIALS, type PlumberIntake } from "@/lib/calcPlumber";
@@ -212,8 +213,9 @@ export default function PlumberQuoteBuilder({
       fd.append("trade", "plumber");
       fd.append("instructions", "This is a plumbing job. Focus on wet areas, fixture counts, pipe runs.");
       const res  = await fetch("/api/quotes/analyze-drawing", { method: "POST", body: fd });
-      const body = await res.json();
-      if (!res.ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
+      const { ok, body, parseError } = await safeParseApiResponse(res);
+      if (parseError) { setAnalysisError(parseError); return; }
+      if (!ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
       if (Array.isArray(body.result?.detected_items) && body.result.detected_items.length > 0) {
         setDetectedItems(body.result.detected_items);
       }
@@ -230,8 +232,9 @@ export default function PlumberQuoteBuilder({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ transcript, trade: "plumber", instructions: "This is a plumbing job. Focus on wet areas, fixture counts, pipe runs." }),
       });
-      const body = await res.json();
-      if (!res.ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
+      const { ok, body, parseError } = await safeParseApiResponse(res);
+      if (parseError) { setAnalysisError(parseError); return; }
+      if (!ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
       if (Array.isArray(body.result?.detected_items) && body.result.detected_items.length > 0) {
         setDetectedItems(body.result.detected_items);
       }

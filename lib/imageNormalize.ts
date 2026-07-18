@@ -1,20 +1,31 @@
 // Shared canvas draw step - re-rasterizes whatever the browser can decode
 // into a format pdf-lib and Claude's vision API can both actually use.
-async function rasterize(file: File): Promise<HTMLCanvasElement> {
+// maxDimension caps the longest side, downscaling large phone photos (a
+// modern phone camera easily produces 4000px+ images, multiple MB even as
+// JPEG) so uploads stay comfortably under the platform's request body size
+// limit. Full camera resolution is never needed for AI analysis or a PDF
+// logo -- Claude's vision API itself downsamples large images internally.
+async function rasterize(file: File, maxDimension?: number): Promise<HTMLCanvasElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
+      let { naturalWidth: width, naturalHeight: height } = img;
+      if (maxDimension && Math.max(width, height) > maxDimension) {
+        const scale = maxDimension / Math.max(width, height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
       const canvas = document.createElement("canvas");
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
+      canvas.width = width;
+      canvas.height = height;
       const ctx = canvas.getContext("2d");
       URL.revokeObjectURL(url);
       if (!ctx) {
         reject(new Error("Could not process this image in your browser."));
         return;
       }
-      ctx.drawImage(img, 0, 0);
+      ctx.drawImage(img, 0, 0, width, height);
       resolve(canvas);
     };
     img.onerror = () => {
@@ -36,7 +47,7 @@ async function rasterize(file: File): Promise<HTMLCanvasElement> {
 // they go through Claude's separate "document" content type, not "image".
 export async function normalizeForAnalysis(file: File): Promise<File> {
   if (file.type === "application/pdf") return file;
-  const canvas = await rasterize(file);
+  const canvas = await rasterize(file, 2200);
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => {
