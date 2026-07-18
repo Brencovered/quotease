@@ -55,7 +55,7 @@ const DEFAULT_INTAKE: ElectricianIntake = {
 
 const STEPS = [
   { id: "customer",   label: "Customer" },
-  { id: "drawing",    label: "Files" },
+  { id: "drawing",    label: "Quote capture" },
   { id: "job",        label: "Job" },
   { id: "scope",      label: "Scope" },
   { id: "send",       label: "Send" },
@@ -490,7 +490,9 @@ export default function QuoteBuilder({
       </div>
 
       {stepId === "drawing" && (
-        <StepDrawing
+        <>
+          <PackagePicker trade="electrician" />
+          <StepDrawing
           drawingFiles={drawingFiles}
           drawingInstructions={drawingInstructions}
           setDrawingInstructions={setDrawingInstructions}
@@ -561,6 +563,7 @@ export default function QuoteBuilder({
           }}
           onMarkupFileReady={addDrawingFile}
         />
+        </>
       )}
 
       {stepId === "job" && (
@@ -598,16 +601,13 @@ export default function QuoteBuilder({
       )}
 
       {stepId === "customer" && (
-        <>
-          <PackagePicker trade="electrician" />
-          <StepCustomer
-            clientName={clientName} setClientName={setClientName}
-            clientEmail={clientEmail} setClientEmail={setClientEmail}
-            siteAddress={siteAddress} setSiteAddress={setSiteAddress}
-            onCeilingHint={(hint) => set("ceilingType", hint as ElectricianIntake["ceilingType"])}
-            setClientId={setClientId}
-          />
-        </>
+        <StepCustomer
+          clientName={clientName} setClientName={setClientName}
+          clientEmail={clientEmail} setClientEmail={setClientEmail}
+          siteAddress={siteAddress} setSiteAddress={setSiteAddress}
+          onCeilingHint={(hint) => set("ceilingType", hint as ElectricianIntake["ceilingType"])}
+          setClientId={setClientId}
+        />
       )}
 
       {stepId === "send" && (

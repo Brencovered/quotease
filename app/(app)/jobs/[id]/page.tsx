@@ -22,7 +22,7 @@ import QuickJobActionsBar from "@/components/QuickJobActionsBar";
 import JobProgressStepper from "@/components/JobProgressStepper";
 import TimesheetsPanel from "@/components/TimesheetsPanel";
 import JobTabs from "@/components/JobTabs";
-import { humanizeIntake } from "@/lib/scopeOfWorks";
+import { humanizeIntake, summarizeConditions } from "@/lib/scopeOfWorks";
 import { getCachedPriceBook, getCachedLegacyMaterials } from "@/lib/cache";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -52,6 +52,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   const { job, quote, variations, actuals, certsWithUrls, attachmentsWithUrls, payments, hourlyRate, marginPct } = data;
 
   const scopeLines = quote ? humanizeIntake(quote.intake_data) : [];
+  const conditionLines = quote ? summarizeConditions(quote.intake_data) : [];
   const savedAnnotations = quote ? (quote.intake_data as { annotation_meta?: AnnotationMetaPersisted[] } | null)?.annotation_meta : undefined;
   const labourCost = (job.labour_hours ?? 0) * hourlyRate;
 
@@ -192,6 +193,16 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             </ul>
           ) : (
             <p className="text-[13px] text-[var(--ink-faint)] mb-4">{job.title || "No scope details recorded."}</p>
+          )}
+          {conditionLines.length > 0 && (
+            <div className="mb-4 pb-4 border-b border-[var(--line)]">
+              <p className="text-[11px] font-bold text-[var(--ink-faint)] uppercase tracking-wide mb-1.5">Conditions considered</p>
+              <ul className="grid sm:grid-cols-2 gap-y-1 gap-x-4">
+                {conditionLines.map((line) => (
+                  <li key={line} className="text-[12.5px] text-[var(--ink-faint)]">• {line}</li>
+                ))}
+              </ul>
+            </div>
           )}
           <div className="border-t border-[var(--line)] pt-3 space-y-1">
             <div className="flex justify-between text-[13.5px]">

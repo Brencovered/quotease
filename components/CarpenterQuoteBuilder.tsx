@@ -39,7 +39,7 @@ const DEFAULT_INTAKE: CarpenterIntake = {
 
 const STEPS = [
   { id: "customer",  label: "Customer"  },
-  { id: "drawing",   label: "Files"     },
+  { id: "drawing",   label: "Quote capture" },
   { id: "job",       label: "Job"       },
   { id: "scope",     label: "Scope"     },
   { id: "materials", label: "Materials" },
@@ -323,6 +323,7 @@ export default function CarpenterQuoteBuilder({
 
       {stepId === "drawing" && (
         <div className="space-y-4">
+          <PackagePicker trade="carpenter" />
           <LiveSiteAnnotation
             trade="carpenter"
             lib={lib}
@@ -553,7 +554,6 @@ export default function CarpenterQuoteBuilder({
 
       {stepId === "scope" && (
         <div className="space-y-4">
-          <PackagePicker trade="carpenter" />
           <PeripheralsPanel templates={siteConditions ?? []} siteItems={siteItems} setSiteItems={setSiteItems} />
           <div className="card">
             <p className="section-tag mb-3">Materials &amp; labour</p>

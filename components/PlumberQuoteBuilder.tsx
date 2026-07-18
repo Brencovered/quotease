@@ -41,7 +41,7 @@ const DEFAULT_INTAKE: PlumberIntake = {
 
 const STEPS = [
   { id: "customer",  label: "Customer"  },
-  { id: "drawing",   label: "Files"     },
+  { id: "drawing",   label: "Quote capture" },
   { id: "job",       label: "Job"       },
   { id: "scope",     label: "Scope"     },
   { id: "materials", label: "Materials" },
@@ -347,6 +347,7 @@ export default function PlumberQuoteBuilder({
 
       {stepId === "drawing" && (
         <div className="space-y-4">
+          <PackagePicker trade="plumber" />
           <LiveSiteAnnotation
             trade="plumber"
             lib={lib}
@@ -542,7 +543,6 @@ export default function PlumberQuoteBuilder({
 
       {stepId === "scope" && (
         <div className="space-y-4">
-          <PackagePicker trade="plumber" />
           <div className="card">
             <p className="section-tag mb-3">Conditions</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

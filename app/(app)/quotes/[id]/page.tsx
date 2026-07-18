@@ -11,7 +11,7 @@ import JobActionsBar from "@/components/JobActionsBar";
 import JobPlansPanel from "@/components/JobPlansPanel";
 import SiteAnnotationReport from "@/components/SiteAnnotationReport";
 import { resolveAnnotationFrameUrls, type AnnotationMetaPersisted } from "@/lib/siteAnnotations";
-import { humanizeIntake } from "@/lib/scopeOfWorks";
+import { humanizeIntake, summarizeConditions } from "@/lib/scopeOfWorks";
 import { getCachedPriceBook, getCachedLegacyMaterials } from "@/lib/cache";
 
 // This route is for a quote that hasn't been won yet - draft, sent, or
@@ -43,6 +43,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
   }
 
   const scopeLines = humanizeIntake(quote.intake_data);
+  const conditionLines = summarizeConditions(quote.intake_data);
   const savedAnnotations = (quote.intake_data as { annotation_meta?: AnnotationMetaPersisted[] } | null)?.annotation_meta;
   const resolvedAnnotations = await resolveAnnotationFrameUrls(supabase, savedAnnotations);
   const labourCost = (quote.total_cost ?? 0) - (quote.materials_cost ?? 0);
@@ -121,6 +122,16 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
             </ul>
           ) : (
             <p className="text-[13px] text-[var(--ink-faint)] mb-4">No scope details recorded.</p>
+          )}
+          {conditionLines.length > 0 && (
+            <div className="mb-4 pb-4 border-b border-[var(--line)]">
+              <p className="text-[11px] font-bold text-[var(--ink-faint)] uppercase tracking-wide mb-1.5">Conditions considered</p>
+              <ul className="grid sm:grid-cols-2 gap-y-1 gap-x-4">
+                {conditionLines.map((line) => (
+                  <li key={line} className="text-[12.5px] text-[var(--ink-faint)]">• {line}</li>
+                ))}
+              </ul>
+            </div>
           )}
           <div className="border-t border-[var(--line)] pt-3 space-y-1">
             <div className="flex justify-between text-[13.5px]">

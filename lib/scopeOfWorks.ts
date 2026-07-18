@@ -1,4 +1,4 @@
-import { INTAKE_FIELD_LABELS, INTAKE_VALUE_LABELS } from "./humanizeIntake";
+import { INTAKE_FIELD_LABELS, INTAKE_VALUE_LABELS, SUPPRESS_VALUES } from "./humanizeIntake";
 
 // Fields to completely skip in scope display
 const SKIP = new Set([
@@ -102,6 +102,57 @@ export function humanizeIntake(intake: Record<string, unknown> | null | undefine
 
   // COES always included
   lines.push("Certificate of Electrical Safety (COES) - included");
+
+  return lines;
+}
+
+/**
+ * These fields deliberately never show up in humanizeIntake() above -- they
+ * affect the price (see the overallAccess multiplier in lib/calc.ts) but
+ * aren't purchasable scope items, so listing them as scope lines would be
+ * misleading. Previously that meant they were captured, silently changed
+ * the total, and then vanished -- no trace anywhere for the tradie (or
+ * customer) to see why the price came out the way it did. This surfaces
+ * them as a separate, short "conditions considered" summary instead.
+ */
+export function summarizeConditions(intake: Record<string, unknown> | null | undefined): string[] {
+  if (!intake) return [];
+  const data = intake;
+  const lines: string[] = [];
+
+  function pushIfSet(key: string, noteKey?: string) {
+    const value = data[key];
+    if (value === null || value === undefined || value === "" || value === false) return;
+    if (SUPPRESS_VALUES[key]?.has(String(value))) return;
+
+    const label = INTAKE_FIELD_LABELS[key] ?? key;
+    if (typeof value === "boolean") { lines.push(label); return; }
+
+    const valueLabel = INTAKE_VALUE_LABELS[key]?.[String(value)];
+    const note = noteKey ? (data[noteKey] as string | undefined) : undefined;
+    if (String(value) === "custom" && note) {
+      lines.push(`${label}: ${note}`);
+    } else if (valueLabel) {
+      lines.push(`${label}: ${valueLabel}`);
+    } else if (typeof value === "string" && value.trim()) {
+      // No mapped label for this value (e.g. generic trade's free-text job
+      // type, or a value from a trade not yet added to the shared map) --
+      // show the raw value rather than silently dropping it.
+      lines.push(`${label}: ${value}`);
+    }
+  }
+
+  pushIfSet("jobType");
+  pushIfSet("ceilingType");
+  pushIfSet("roofAccess", "roofAccessNote");
+  pushIfSet("subfloorAccess", "subfloorAccessNote");
+  pushIfSet("siteAccess", "siteAccessNote");
+  pushIfSet("multistorey");
+
+  const manualHours = data.manual_labour_hours;
+  if (typeof manualHours === "number" && manualHours !== 0) {
+    lines.push(`Extra labour hours: ${manualHours > 0 ? "+" : ""}${manualHours}h (manual adjustment)`);
+  }
 
   return lines;
 }

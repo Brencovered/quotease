@@ -25,7 +25,7 @@ import type { SiteConditionTemplateRow } from "@/lib/peripherals";
 
 const STEPS = [
   { id: "customer", label: "Customer" },
-  { id: "drawing",  label: "Files" },
+  { id: "drawing",  label: "Quote capture" },
   { id: "job",     label: "Job" },
   { id: "items",   label: "Items" },
   { id: "send",    label: "Send" },
@@ -339,6 +339,7 @@ export default function GenericQuoteBuilder({
 
       {stepId === "drawing" && (
         <div className="space-y-4">
+          <PackagePicker trade={tradeKey} />
           <LiveSiteAnnotation
             trade={tradeKey}
             lib={lib}
@@ -564,7 +565,6 @@ export default function GenericQuoteBuilder({
       {/* Step: Items */}
       {stepId === "items" && (
         <div className="space-y-4">
-          <PackagePicker trade={tradeKey} />
           <div className="card">
             <div className="flex items-center justify-between mb-3">
               <p className="section-tag">Line items</p>

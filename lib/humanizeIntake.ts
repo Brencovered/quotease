@@ -45,8 +45,20 @@ export const INTAKE_FIELD_LABELS: Record<string, string> = {
 export const INTAKE_VALUE_LABELS: Record<string, Record<string, string>> = {
   ceilingType:    { standard_plasterboard: "Standard plasterboard", concrete_slab: "Concrete slab", heritage_timber: "Heritage / period timber", skillion: "Skillion / cathedral", unknown: "Unknown - assess on site" },
   roofAccess:     { "1": "N/A", "1.3": "Easy access", "1.7": "Tight crawl", "2.3": "Extreme" },
-  subfloorAccess: { "1": "N/A", "1.3": "Easy crawl", "1.8": "Tight crawl", "2.4": "Wet / very low" },
+  // Electrician uses numeric multipliers here; plumber uses a string enum
+  // for the same field name -- both live in the same map since the keys
+  // don't collide.
+  subfloorAccess: { "1": "N/A", "1.3": "Easy crawl", "1.8": "Tight crawl", "2.4": "Wet / very low", none: "N/A", easy: "Easy crawl", tight: "Tight crawl", wet: "Wet / very low clearance" },
   siteAccess:     { na: "N/A", easy: "Easy", moderate: "Moderate", difficult: "Difficult", custom: "Custom" },
+  // jobType's value set differs per trade builder (electrician, plumber,
+  // carpenter, roofer, generic) -- all merged here since none of the keys
+  // collide across trades.
+  jobType:        {
+    na: "N/A", reno: "Renovation", newbuild: "New build", fault: "Fault find / repair", compliance: "Compliance / certification",
+    gasfitting: "Gasfitting", drainage: "Drainage",
+    deck: "Deck", framing: "Framing", fitout: "Fit-out", repair: "Repair",
+    reroof: "Reroof", new: "New roof", gutters: "Gutters", inspection: "Inspection",
+  },
   downlightGrade: { builder: "Builder grade", standard: "Standard", premium: "Premium / smart", client_supply: "Client supply" },
   downlightSupply: { supply_and_fit: "Supply & fit", wire_and_fit: "Wire & fit (client supply)", provisional: "Provisional sum" },
   switchboardRcboMode: { full_board: "Full RCBO board", per_pole: "RCBO per pole" },
@@ -73,11 +85,12 @@ const DEPENDENT_FIELDS: Record<string, { parent: string; nonZero?: boolean }> = 
 };
 
 // Values that mean "nothing selected / default" and should be suppressed
-const SUPPRESS_VALUES: Record<string, Set<string>> = {
+export const SUPPRESS_VALUES: Record<string, Set<string>> = {
   roofAccess:     new Set(["1"]),   // "N/A"
-  subfloorAccess: new Set(["1"]),   // "N/A"
+  subfloorAccess: new Set(["1", "none"]),   // "N/A" -- "1" (electrician) and "none" (plumber)
   siteAccess:     new Set(["na"]),  // "N/A" is the default, only show if a real condition is set
   ceilingType:    new Set(["unknown"]),
+  jobType:        new Set(["na"]),
   downlightSupply: new Set(["supply_and_fit"]), // supply_and_fit is default, only show if different
   switchboardRcboMode: new Set(["full_board"]),  // only show per_pole since full_board is obvious
 };
