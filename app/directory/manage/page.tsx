@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import MarketingNav from "@/components/MarketingNav";
 import { buildDirectorySlug } from "@/lib/seo/meta";
+import OwnerGoalWidget from "./_components/OwnerGoalWidget";
 import {
   Loader2, ImagePlus, X, Save, AlertCircle, CheckCircle2,
   Link2, Globe, ExternalLink,
@@ -21,6 +22,8 @@ type Listing = {
   website_url: string | null;
   instagram_url: string | null;
   facebook_url: string | null;
+  services_offered: string[] | null;
+  years_experience: number | null;
 };
 
 const MAX_PHOTOS = 8;
@@ -42,6 +45,9 @@ export default function ManageDirectoryListingPage() {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [instagramUrl, setInstagramUrl] = useState("");
   const [facebookUrl, setFacebookUrl] = useState("");
+  const [services, setServices] = useState<string[]>([]);
+  const [serviceInput, setServiceInput] = useState("");
+  const [yearsExperience, setYearsExperience] = useState("");
 
   const logoInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -63,9 +69,25 @@ export default function ManageDirectoryListingPage() {
         setWebsiteUrl(data.listing.website_url ?? "");
         setInstagramUrl(data.listing.instagram_url ?? "");
         setFacebookUrl(data.listing.facebook_url ?? "");
+        setServices(data.listing.services_offered ?? []);
+        setYearsExperience(data.listing.years_experience != null ? String(data.listing.years_experience) : "");
       })
       .finally(() => setLoading(false));
   }, []);
+
+  function addService() {
+    const trimmed = serviceInput.trim();
+    if (!trimmed || services.length >= 15 || services.includes(trimmed)) {
+      setServiceInput("");
+      return;
+    }
+    setServices((s) => [...s, trimmed]);
+    setServiceInput("");
+  }
+
+  function removeService(service: string) {
+    setServices((s) => s.filter((x) => x !== service));
+  }
 
   async function uploadFile(file: File, bucket: string): Promise<string | null> {
     if (!businessId) return null;
@@ -132,6 +154,8 @@ export default function ManageDirectoryListingPage() {
           website_url: websiteUrl,
           instagram_url: instagramUrl,
           facebook_url: facebookUrl,
+          services_offered: services,
+          years_experience: yearsExperience.trim() === "" ? null : Number(yearsExperience),
         }),
       });
       const data = await res.json();
@@ -224,12 +248,57 @@ export default function ManageDirectoryListingPage() {
             <textarea
               value={blurb}
               onChange={(e) => setBlurb(e.target.value)}
-              maxLength={600}
-              rows={4}
-              placeholder="Tell homeowners what you do and why they should choose you..."
+              maxLength={1500}
+              rows={6}
+              placeholder="Tell homeowners what you do, what makes you different, and why they should choose you. This is the main thing homeowners read before requesting a quote, so give it some detail..."
               className="app-field w-full resize-none"
             />
-            <p className="text-[11.5px] text-[#8a97a1] mt-1">{blurb.length}/600</p>
+            <p className="text-[11.5px] text-[#8a97a1] mt-1">{blurb.length}/1500</p>
+          </div>
+
+          {/* Services offered */}
+          <div>
+            <label className="block text-[13px] font-semibold text-[#0a1722] mb-1.5">Services offered</label>
+            <p className="text-[12px] text-[#8a97a1] mb-2">
+              Add specific services so homeowners know exactly what you do, e.g. &quot;Switchboard upgrades&quot;, &quot;Emergency callouts&quot;, &quot;Hot water systems&quot;.
+            </p>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {services.map((s) => (
+                <span key={s} className="flex items-center gap-1.5 text-[12.5px] font-medium bg-[#f1f4f6] text-[#0a1722] rounded-full pl-3 pr-2 py-1">
+                  {s}
+                  <button onClick={() => removeService(s)} className="text-[#8a97a1] hover:text-[#0a1722]">
+                    <X size={12} />
+                  </button>
+                </span>
+              ))}
+            </div>
+            {services.length < 15 && (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={serviceInput}
+                  onChange={(e) => setServiceInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addService(); } }}
+                  placeholder="Add a service and press Enter"
+                  className="app-field flex-1"
+                />
+                <button onClick={addService} type="button" className="btn-secondary text-[13px]">Add</button>
+              </div>
+            )}
+          </div>
+
+          {/* Years experience */}
+          <div>
+            <label className="block text-[13px] font-semibold text-[#0a1722] mb-1.5">Years of experience</label>
+            <input
+              type="number"
+              min={0}
+              max={80}
+              value={yearsExperience}
+              onChange={(e) => setYearsExperience(e.target.value)}
+              placeholder="e.g. 12"
+              className="app-field w-32"
+            />
           </div>
 
           {/* Gallery */}
@@ -313,6 +382,11 @@ export default function ManageDirectoryListingPage() {
             {saving ? <Loader2 size={16} className="animate-spin" /> : saved ? <CheckCircle2 size={16} /> : <Save size={16} />}
             {saving ? "Saving..." : saved ? "Saved" : "Save changes"}
           </button>
+        </div>
+
+        {/* Monthly goal -- private to this page, never shown to the public */}
+        <div className="card p-6 rounded-2xl bg-[#fffbeb] mt-6">
+          <OwnerGoalWidget />
         </div>
       </div>
     </main>

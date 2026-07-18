@@ -8,7 +8,6 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getActiveBusinessId } from "@/lib/team";
 import { CLAIMED_DIRECTORY_PAGES_ENABLED } from "@/lib/featureFlags";
 import MarketingNav from "@/components/MarketingNav";
 import DirectoryCard from "@/components/DirectoryCard";
@@ -18,7 +17,6 @@ import PhotoGallery from "./_components/PhotoGallery";
 import QuoteForm from "./_components/QuoteForm";
 import ListingLogo from "./_components/ListingLogo";
 import ReviewsSection from "./_components/ReviewsSection";
-import OwnerGoalWidget from "./_components/OwnerGoalWidget";
 import { getPlaceReviews } from "@/lib/googleReviews";
 import TradieSchema from "@/components/seo/TradieSchema";
 
@@ -63,6 +61,7 @@ type Listing = {
   blurb: string | null; logo_url: string | null;
   is_claimed: boolean | null; profile_id: string | null;
   instagram_url: string | null; facebook_url: string | null;
+  services_offered: string[] | null; years_experience: number | null;
 };
 
 /* ------------------------------------------------------------------ */
@@ -213,11 +212,12 @@ export default async function TradieProfilePage({
   const photos    = listing.photo_references?.filter(Boolean) ?? [];
   const reviews   = listing.place_id ? await getPlaceReviews(listing.place_id) : [];
 
-  // Claimed-page additions (verified badge, owner goal widget) are gated
-  // behind the feature flag -- nothing here should be visible until the
-  // full v1 build is reviewed and the flag flips on.
+  // The verified badge is the only claimed-page addition on this public
+  // page -- gated behind the feature flag until the full v1 build is
+  // reviewed. Anything owner-only (goals, page management) lives entirely
+  // on /directory/manage, a separate authenticated page, not here, so the
+  // public page never has to know who's viewing it.
   let isVerifiedBadge = false;
-  let isOwnerViewing = false;
   if (CLAIMED_DIRECTORY_PAGES_ENABLED && listing.is_claimed && listing.profile_id) {
     const admin = createAdminClient();
     const { data: ownerProfile } = await admin
@@ -226,12 +226,6 @@ export default async function TradieProfilePage({
       .eq("id", listing.profile_id)
       .maybeSingle();
     isVerifiedBadge = ownerProfile?.directory_badge_verified ?? false;
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const viewerBusinessId = await getActiveBusinessId(supabase, user.id);
-      isOwnerViewing = viewerBusinessId === listing.profile_id;
-    }
   }
 
   return (
@@ -316,19 +310,6 @@ export default async function TradieProfilePage({
         </div>
       </section>
 
-      {isOwnerViewing && (
-        <section className="border-b border-[var(--line)] bg-[#fffbeb]">
-          <div className="max-w-6xl mx-auto px-6 py-6">
-            <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
-              <OwnerGoalWidget />
-              <Link href="/directory/manage" className="text-[13px] font-semibold text-[#0a1722] underline underline-offset-2 whitespace-nowrap">
-                Manage your page
-              </Link>
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* INFO CARDS ROW */}
       <section className="border-b border-[var(--line)]">
         <div className="max-w-6xl mx-auto px-6 py-6">
@@ -409,11 +390,27 @@ export default async function TradieProfilePage({
         <div className="flex flex-col lg:flex-row gap-8">
           {/* LEFT COLUMN */}
           <div className="flex-1 min-w-0 space-y-8">
-            {listing.blurb && (
+            {(listing.blurb || (listing.services_offered && listing.services_offered.length > 0) || listing.years_experience) && (
               <div className="reveal">
                 <p className="text-[11.5px] font-semibold text-gray-500 uppercase tracking-wide mb-3">About</p>
-                <div className="bg-white rounded-2xl border border-gray-100 p-6">
-                  <p className="text-[14px] text-gray-600 leading-relaxed whitespace-pre-line">{listing.blurb}</p>
+                <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+                  {listing.blurb && (
+                    <p className="text-[14px] text-gray-600 leading-relaxed whitespace-pre-line">{listing.blurb}</p>
+                  )}
+                  {listing.years_experience != null && (
+                    <p className="text-[13px] font-semibold text-gray-700">
+                      {listing.years_experience}+ years of experience
+                    </p>
+                  )}
+                  {listing.services_offered && listing.services_offered.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {listing.services_offered.map((s) => (
+                        <span key={s} className="text-[12.5px] font-medium bg-[#f1f4f6] text-[#0a1722] rounded-full px-3 py-1">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

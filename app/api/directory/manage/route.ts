@@ -28,7 +28,7 @@ export async function GET() {
 
   const { data: listing, error } = await admin
     .from("directory_listing")
-    .select("id, business_name, suburb, trades, blurb, logo_url, photo_references, website_url, instagram_url, facebook_url")
+    .select("id, business_name, suburb, trades, blurb, logo_url, photo_references, website_url, instagram_url, facebook_url, services_offered, years_experience")
     .eq("profile_id", businessId)
     .maybeSingle();
 
@@ -66,7 +66,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   const update: Record<string, unknown> = {};
-  if (typeof body.blurb === "string") update.blurb = body.blurb.trim().slice(0, 600) || null;
+  if (typeof body.blurb === "string") update.blurb = body.blurb.trim().slice(0, 1500) || null;
   if (typeof body.logo_url === "string") update.logo_url = body.logo_url.trim() || null;
   if (typeof body.website_url === "string") update.website_url = body.website_url.trim() || null;
   if (typeof body.instagram_url === "string") update.instagram_url = body.instagram_url.trim() || null;
@@ -75,6 +75,20 @@ export async function PATCH(req: NextRequest) {
     update.photo_references = body.photo_references
       .filter((p): p is string => typeof p === "string" && p.trim().length > 0)
       .slice(0, MAX_PHOTOS);
+  }
+  if (Array.isArray(body.services_offered)) {
+    update.services_offered = body.services_offered
+      .filter((s): s is string => typeof s === "string" && s.trim().length > 0)
+      .map((s) => s.trim().slice(0, 60))
+      .slice(0, 15);
+  }
+  if (body.years_experience !== undefined) {
+    if (body.years_experience === null) {
+      update.years_experience = null;
+    } else {
+      const years = Number(body.years_experience);
+      update.years_experience = Number.isInteger(years) && years >= 0 && years <= 80 ? years : null;
+    }
   }
 
   if (Object.keys(update).length === 0) {
