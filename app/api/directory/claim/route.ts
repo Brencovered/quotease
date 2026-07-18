@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getActiveBusinessId } from "@/lib/team";
 import { CLAIMED_DIRECTORY_PAGES_ENABLED } from "@/lib/featureFlags";
 import { buildDirectorySlug } from "@/lib/seo/meta";
+import { verifyAbn } from "@/lib/abnLookup";
 
 const VALID_TRADES = [
   "electrician", "plumber", "builder", "roofer", "painter", "carpenter",
@@ -84,8 +85,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  let verifiedBadge = false;
   if (abn) {
-    await admin.from("profiles").update({ abn }).eq("id", businessId);
+    const verification = await verifyAbn(abn);
+    verifiedBadge = verification.valid && verification.active === true;
+    await admin.from("profiles").update({
+      abn,
+      abn_verified_at: verifiedBadge ? new Date().toISOString() : null,
+      directory_badge_verified: verifiedBadge,
+    }).eq("id", businessId);
   }
 
   if (listingId) {
@@ -135,7 +143,7 @@ export async function POST(req: NextRequest) {
     });
 
     const slug = buildDirectorySlug({ id: listing.id, business_name: listing.business_name, suburb: listing.suburb ?? "" });
-    return NextResponse.json({ listingId, outcome: "claimed", slug });
+    return NextResponse.json({ listingId, outcome: "claimed", slug, verifiedBadge });
   }
 
   // No match -- create a brand new listing, owned and verified from day one.
@@ -166,5 +174,5 @@ export async function POST(req: NextRequest) {
   });
 
   const slug = buildDirectorySlug({ id: created.id, business_name: businessName, suburb });
-  return NextResponse.json({ listingId: created.id, outcome: "created_new", slug });
+  return NextResponse.json({ listingId: created.id, outcome: "created_new", slug, verifiedBadge });
 }

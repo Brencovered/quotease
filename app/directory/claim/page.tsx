@@ -66,6 +66,7 @@ export default function ClaimDirectoryListingPage() {
   const [abn, setAbn] = useState("");
   const [resultSlug, setResultSlug] = useState<string | null>(null);
   const [resultOutcome, setResultOutcome] = useState<"claimed" | "created_new" | null>(null);
+  const [resultVerified, setResultVerified] = useState(false);
 
   // Already signed in (e.g. an existing $45 tradie extending into a
   // directory page) -- skip straight past the auth step.
@@ -171,6 +172,7 @@ export default function ClaimDirectoryListingPage() {
       }
       setResultSlug(data.slug);
       setResultOutcome(data.outcome);
+      setResultVerified(Boolean(data.verifiedBadge));
       setStep("done");
     } catch {
       setError("Something went wrong. Please check your connection and try again.");
@@ -424,14 +426,21 @@ export default function ClaimDirectoryListingPage() {
             <h2 className="font-display text-[1.6rem] text-[#0a1722] mb-2">
               {resultOutcome === "claimed" ? "Your page is claimed!" : "Your page is live!"}
             </h2>
-            <p className="text-[14px] text-[#5a6b78] mb-6">
+            <p className="text-[14px] text-[#5a6b78] mb-2">
               Homeowners searching for a {trade} in {suburb} can now find you.
             </p>
+            {abn && (
+              <p className={`text-[13px] mb-6 ${resultVerified ? "text-emerald-600" : "text-[#8a97a1]"}`}>
+                {resultVerified
+                  ? "Your ABN was verified -- the Verified Business badge is now showing on your page."
+                  : "We couldn't verify that ABN right now. You can add it again later from Manage your page."}
+              </p>
+            )}
             {resultSlug && (
               <div className="flex items-center justify-center gap-3">
-                <a href={`/directory/${resultSlug}`} className="btn-primary inline-flex items-center gap-2">
+                <Link href={`/directory/${resultSlug}`} className="btn-primary inline-flex items-center gap-2">
                   View my page <ArrowRight size={16} />
-                </a>
+                </Link>
                 <Link href="/directory/manage" className="btn-secondary inline-flex items-center gap-2">
                   Add photos & description
                 </Link>
