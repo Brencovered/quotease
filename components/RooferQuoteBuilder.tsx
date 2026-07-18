@@ -608,10 +608,11 @@ export default function RooferQuoteBuilder({
         }}
       />
 
-      {/* ── Files: photos, AI drawing analysis, AI voice ────────── */}
+      {/* ── Quote capture: photos, AI drawing analysis, AI voice, packages ── */}
       <div className="space-y-4">
+        <PackagePicker trade="roofer" />
         <div className="card">
-          <p className="section-tag mb-1">Files</p>
+          <p className="section-tag mb-1">Quote capture</p>
           <p className="font-semibold text-[17px] mb-1">Upload photos or plans</p>
           <p className="text-[13px] text-[var(--ink-faint)] mb-4">Roof photos, aerial shots, or existing plans.</p>
           <label className="flex items-center justify-center gap-2 border-2 border-dashed border-[var(--line)] rounded-xl py-8 cursor-pointer hover:border-[var(--amber)] transition-colors bg-[var(--app-bg)]">
@@ -724,7 +725,6 @@ export default function RooferQuoteBuilder({
 
       {/* ── Jobs section ─────────────────────────────────────── */}
       <div className="space-y-3">
-        <PackagePicker trade="roofer" />
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-[14px] text-[var(--ink)] flex items-center gap-2">
             <FileText size={16} className="text-[var(--amber-deep)]" /> Jobs ({jobs.length})
