@@ -31,16 +31,26 @@ import FindTradieHeroSearch from "./_components/FindTradieHeroSearch";
 // need to be "roughly current", not live-to-the-second.
 const getDirectoryHeroStats = unstable_cache(
   async () => {
-    const admin = createAdminClient();
-    const [totalListingsRes, suburbRowsRes] = await Promise.all([
-      admin.from("directory_listing").select("*", { count: "exact", head: true }),
-      admin.from("directory_listing").select("suburb"),
-    ]);
-    const totalListings = totalListingsRes.count ?? 0;
-    const suburbsCovered = new Set(
-      (suburbRowsRes.data ?? []).map((r) => r.suburb?.trim().toLowerCase()).filter(Boolean)
-    ).size;
-    return { totalListings, suburbsCovered };
+    try {
+      const admin = createAdminClient();
+      const [totalListingsRes, suburbRowsRes] = await Promise.all([
+        admin.from("directory_listing").select("*", { count: "exact", head: true }),
+        admin.from("directory_listing").select("suburb"),
+      ]);
+      const totalListings = totalListingsRes.count ?? 0;
+      const suburbsCovered = new Set(
+        (suburbRowsRes.data ?? []).map((r) => r.suburb?.trim().toLowerCase()).filter(Boolean)
+      ).size;
+      return { totalListings, suburbsCovered };
+    } catch (err) {
+      // This is decorative hero copy, not the source of truth for listing
+      // data -- a transient env/config issue during background revalidation
+      // (e.g. a missing key on a fresh preview deployment) should degrade
+      // to 0s here, not take down the entire /directory page for every
+      // visitor until the next successful revalidation.
+      console.error("[directory] hero stats fetch failed:", err);
+      return { totalListings: 0, suburbsCovered: 0 };
+    }
   },
   ["directory-hero-stats"],
   { revalidate: 600 }

@@ -94,28 +94,42 @@ export async function generateTradeSuburbContent(
   suburbSlug: string,
   state: string
 ): Promise<TradeSuburbContent> {
-  const supabase = await createClient();
   const { singular, plural } = getTradeDisplay(trade);
 
-  // directory_listing stores suburb names with proper casing/spacing
-  // (e.g. "South Melbourne"), but the URL only has a slug
-  // ("south-melbourne"). Rather than guess at a SQL pattern that handles
-  // every punctuation/casing variant, pull every listing for the trade and
-  // match in code by re-slugifying each row's suburb -- small dataset,
-  // simpler and more reliable than fragile ILIKE patterns.
-  const { data: tradeRows, error } = await supabase
-    .from("directory_listing")
-    .select("id, business_name, trades, suburb, google_rating, google_reviews_count, logo_url, photo_references, blurb, scraped_contact_phone, website_url")
-    .contains("trades", [trade]);
+  let rows: Array<Omit<TradeSuburbListing, "slug">> = [];
+  try {
+    const supabase = await createClient();
 
-  if (error) {
-    console.error("[generateTradeSuburbContent] query failed:", error.message);
+    // directory_listing stores suburb names with proper casing/spacing
+    // (e.g. "South Melbourne"), but the URL only has a slug
+    // ("south-melbourne"). Rather than guess at a SQL pattern that handles
+    // every punctuation/casing variant, pull every listing for the trade and
+    // match in code by re-slugifying each row's suburb -- small dataset,
+    // simpler and more reliable than fragile ILIKE patterns.
+    const { data: tradeRows, error } = await supabase
+      .from("directory_listing")
+      .select("id, business_name, trades, suburb, google_rating, google_reviews_count, logo_url, photo_references, blurb, scraped_contact_phone, website_url")
+      .contains("trades", [trade]);
+
+    if (error) {
+      console.error("[generateTradeSuburbContent] query failed:", error.message);
+    }
+    rows = tradeRows ?? [];
+  } catch (err) {
+    // A missing/unavailable Supabase client (e.g. a transient env issue
+    // during background ISR revalidation) should render this page as a
+    // low-listing/not-yet-indexed suburb page, not crash the whole route --
+    // the page component already has a real empty state for listingCount 0,
+    // and hasEnoughListingsToIndex below keeps it out of search until a
+    // successful revalidation actually finds listings.
+    console.error("[generateTradeSuburbContent] Supabase client unavailable:", err);
+    rows = [];
   }
 
-  const rows = (tradeRows ?? []).filter((r) => r.suburb && suburbToSlug(r.suburb) === suburbSlug);
-  const suburb = rows[0]?.suburb ?? slugToSuburbDisplay(suburbSlug);
+  const filteredRows = rows.filter((r) => r.suburb && suburbToSlug(r.suburb) === suburbSlug);
+  const suburb = filteredRows[0]?.suburb ?? slugToSuburbDisplay(suburbSlug);
 
-  const listings: TradeSuburbListing[] = rows.map((r) => ({
+  const listings: TradeSuburbListing[] = filteredRows.map((r) => ({
     ...r,
     slug: buildSlug(r),
   }));
