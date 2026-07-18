@@ -38,4 +38,7 @@ export const LEADS_ENABLED = false;
  * check all need to land together, not incrementally in public. Nothing
  * gated by this flag should be linked to or discoverable while it's off.
  */
-export const CLAIMED_DIRECTORY_PAGES_ENABLED = false;
+// TEMPORARILY ON for preview-branch testing only -- flip back to false
+// before this branch merges to main. Never merge this file with the flag
+// left true.
+export const CLAIMED_DIRECTORY_PAGES_ENABLED = true;
