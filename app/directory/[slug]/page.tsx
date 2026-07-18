@@ -418,7 +418,7 @@ export default async function TradieProfilePage({
                         <p key={`${l.type}-${i}`} className="flex items-center gap-1.5 text-[12.5px] text-gray-600">
                           <ShieldCheck size={13} className="text-emerald-500 shrink-0" />
                           <span className="font-semibold text-gray-700">{l.type}</span>
-                          <span className="text-gray-400">{l.number}</span>
+                          {l.number && <span className="text-gray-400">{l.number}</span>}
                         </p>
                       ))}
                     </div>

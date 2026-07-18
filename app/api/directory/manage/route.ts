@@ -93,13 +93,15 @@ export async function PATCH(req: NextRequest) {
   if (Array.isArray(body.licenses)) {
     update.licenses = body.licenses
       .filter(
-        (l): l is { type: string; number: string } =>
+        (l): l is { type: string; number?: string } =>
           typeof l === "object" && l !== null &&
-          typeof (l as Record<string, unknown>).type === "string" &&
-          typeof (l as Record<string, unknown>).number === "string"
+          typeof (l as Record<string, unknown>).type === "string"
       )
-      .map((l) => ({ type: l.type.trim().slice(0, 80), number: l.number.trim().slice(0, 40) }))
-      .filter((l) => l.type && l.number)
+      .map((l) => ({
+        type: l.type.trim().slice(0, 80),
+        number: typeof l.number === "string" ? l.number.trim().slice(0, 40) : "",
+      }))
+      .filter((l) => l.type)
       .slice(0, 10);
   }
 

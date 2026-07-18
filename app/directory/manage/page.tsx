@@ -83,12 +83,19 @@ export default function ManageDirectoryListingPage() {
   }, []);
 
   function addService() {
-    const trimmed = serviceInput.trim();
-    if (!trimmed || services.length >= 15 || services.includes(trimmed)) {
+    const parts = serviceInput.split(",").map((p) => p.trim()).filter(Boolean);
+    if (parts.length === 0) {
       setServiceInput("");
       return;
     }
-    setServices((s) => [...s, trimmed]);
+    setServices((s) => {
+      const merged = [...s];
+      for (const part of parts) {
+        if (merged.length >= 15) break;
+        if (!merged.includes(part)) merged.push(part);
+      }
+      return merged;
+    });
     setServiceInput("");
   }
 
@@ -99,7 +106,10 @@ export default function ManageDirectoryListingPage() {
   function addLicense() {
     const type = licenseTypeInput.trim();
     const number = licenseNumberInput.trim();
-    if (!type || !number || licenses.length >= 10) return;
+    // Number is optional -- some certifications (e.g. "Working at Heights")
+    // don't have a formal licence number to enter, and requiring one
+    // silently blocked adding those.
+    if (!type || licenses.length >= 10) return;
     setLicenses((l) => [...l, { type, number }]);
     setLicenseTypeInput("");
     setLicenseNumberInput("");
@@ -300,7 +310,7 @@ export default function ManageDirectoryListingPage() {
                   value={serviceInput}
                   onChange={(e) => setServiceInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addService(); } }}
-                  placeholder="Add a service and press Enter"
+                  placeholder="Add a service (or a few, separated by commas) and press Enter"
                   className="app-field flex-1"
                 />
                 <button onClick={addService} type="button" className="btn-secondary text-[13px]">Add</button>
@@ -333,7 +343,7 @@ export default function ManageDirectoryListingPage() {
                 {licenses.map((l, i) => (
                   <div key={`${l.type}-${l.number}-${i}`} className="flex items-center justify-between gap-2 bg-[#f1f4f6] rounded-lg px-3 py-2">
                     <span className="text-[13px] text-[#0a1722]">
-                      <span className="font-semibold">{l.type}</span> -- {l.number}
+                      <span className="font-semibold">{l.type}</span>{l.number ? ` -- ${l.number}` : ""}
                     </span>
                     <button onClick={() => removeLicense(i)} className="text-[#8a97a1] hover:text-[#0a1722] shrink-0">
                       <X size={14} />
@@ -348,6 +358,7 @@ export default function ManageDirectoryListingPage() {
                   type="text"
                   value={licenseTypeInput}
                   onChange={(e) => setLicenseTypeInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLicense(); } }}
                   placeholder="Licence type"
                   className="app-field flex-1"
                 />
@@ -356,7 +367,7 @@ export default function ManageDirectoryListingPage() {
                   value={licenseNumberInput}
                   onChange={(e) => setLicenseNumberInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLicense(); } }}
-                  placeholder="Licence number"
+                  placeholder="Licence number (optional)"
                   className="app-field flex-1"
                 />
                 <button onClick={addLicense} type="button" className="btn-secondary text-[13px] shrink-0">Add</button>
