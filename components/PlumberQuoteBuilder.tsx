@@ -6,6 +6,7 @@ import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
 import { AlertTriangle, Paperclip, X, Sparkles, ChevronRight, ChevronLeft, Check } from "lucide-react";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import { safeParseApiResponse } from "@/lib/safeParseApiResponse";
+import { analyzeDrawingFile } from "@/lib/analyzeDrawingClient";
 import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import PlanMarkupQuickAdd from "./PlanMarkupQuickAdd";
 import { calcPlumberQuote, PLUMBER_DEFAULT_MATERIALS, type PlumberIntake } from "@/lib/calcPlumber";
@@ -207,13 +208,12 @@ export default function PlumberQuoteBuilder({
     if (!drawingFiles.length) return;
     setAnalyzing(true); setAnalysisError(null); setAnalysisResult(null); setAnalysisSource("drawing");
     try {
-      const fd = new FormData();
       const fileForAnalysis = await normalizeForAnalysis(drawingFiles[0]);
-      fd.append("file", fileForAnalysis);
-      fd.append("trade", "plumber");
-      fd.append("instructions", "This is a plumbing job. Focus on wet areas, fixture counts, pipe runs.");
-      const res  = await fetch("/api/quotes/analyze-drawing", { method: "POST", body: fd });
-      const { ok, body, parseError } = await safeParseApiResponse(res);
+      const { ok, body, parseError } = await analyzeDrawingFile(
+        fileForAnalysis,
+        "plumber",
+        "This is a plumbing job. Focus on wet areas, fixture counts, pipe runs."
+      );
       if (parseError) { setAnalysisError(parseError); return; }
       if (!ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
       if (Array.isArray(body.result?.detected_items) && body.result.detected_items.length > 0) {

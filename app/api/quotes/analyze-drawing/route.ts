@@ -15,6 +15,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getActiveBusinessId } from "@/lib/team";
 import { checkUsage, currentPeriod, type UsageProfile } from "@/lib/aiUsage";
 import {
@@ -152,43 +153,97 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       });
     }
 
-    // ── 5. Parse form data ───────────────────────────────────────────────────
-    let formData: FormData;
-    try {
-      formData = await request.formData();
-    } catch {
-      return errorResponse(400, { error: "Invalid form data." });
-    }
+    // ── 5. Parse the file -- either a direct multipart upload (small
+    //      files, the common case, no extra round trip) or a JSON body
+    //      pointing at a file the client already uploaded straight to
+    //      Supabase Storage (large files -- Vercel serverless functions
+    //      cap the request body at ~4.5MB, a real architectural PDF or a
+    //      full-res phone photo routinely exceeds that, and there's no
+    //      app-level config that raises this limit) ──────────────────────
+    let fileBuffer: Buffer;
+    let mimeType: string;
+    let trade: string;
+    let instructions: string | undefined;
+    let fileSize: number;
+    let tempStoragePath: string | null = null;
 
-    const file = formData.get("file");
-    if (!file || !(file instanceof File)) {
-      return errorResponse(400, { error: "Missing or invalid 'file' field." });
-    }
+    const contentType = request.headers.get("content-type") || "";
 
-    const trade = (formData.get("trade") as string) || "electrician";
-    const instructions = (formData.get("instructions") as string) || undefined;
+    if (contentType.includes("application/json")) {
+      let jsonBody: { storagePath?: string; trade?: string; instructions?: string; mimeType?: string };
+      try {
+        jsonBody = await request.json();
+      } catch {
+        return errorResponse(400, { error: "Invalid JSON body." });
+      }
+
+      const { storagePath } = jsonBody;
+      if (!storagePath) {
+        return errorResponse(400, { error: "Missing storagePath." });
+      }
+
+      const admin = createAdminClient();
+      const { data: fileData, error: downloadError } = await admin.storage
+        .from("drawing-analysis-temp")
+        .download(storagePath);
+
+      if (downloadError || !fileData) {
+        return errorResponse(400, {
+          error: "Could not retrieve the uploaded file. It may have expired -- please try uploading again.",
+        });
+      }
+
+      trade = jsonBody.trade || "electrician";
+      instructions = jsonBody.instructions || undefined;
+      mimeType = jsonBody.mimeType || fileData.type || "application/octet-stream";
+      fileBuffer = Buffer.from(await fileData.arrayBuffer());
+      fileSize = fileBuffer.length;
+      tempStoragePath = storagePath;
+    } else {
+      let formData: FormData;
+      try {
+        formData = await request.formData();
+      } catch {
+        return errorResponse(400, { error: "Invalid form data." });
+      }
+
+      const file = formData.get("file");
+      if (!file || !(file instanceof File)) {
+        return errorResponse(400, { error: "Missing or invalid 'file' field." });
+      }
+
+      trade = (formData.get("trade") as string) || "electrician";
+      instructions = (formData.get("instructions") as string) || undefined;
+      mimeType = file.type;
+      fileBuffer = Buffer.from(await file.arrayBuffer());
+      fileSize = file.size;
+    }
 
     // ── 6. Validate file type ────────────────────────────────────────────────
-    if (!isSupportedMimeType(file.type)) {
+    if (!isSupportedMimeType(mimeType)) {
       return errorResponse(415, {
-        error: `Unsupported file type: ${file.type}. Supported: JPEG, PNG, WebP, PDF.`,
+        error: `Unsupported file type: ${mimeType}. Supported: JPEG, PNG, WebP, PDF.`,
         canRetry: true,
       });
     }
 
-    // ── 7. Read file to buffer ───────────────────────────────────────────────
-    const fileBuffer = Buffer.from(await file.arrayBuffer());
-
-    // ── 8. Run analysis pipeline ─────────────────────────────────────────────
+    // ── 7. Run analysis pipeline ─────────────────────────────────────────────
     const analysis: AnalysisSuccess = await analyzeDrawing({
       fileBuffer,
-      mimeType: file.type,
+      mimeType,
       trade,
       instructions,
       profileTrades: profile.trades ?? [],
       businessId,
       userId: authUser.id,
     });
+
+    // Temp storage object has served its purpose -- clean it up regardless
+    // of what happens next. Fire-and-forget, a leftover temp file is a
+    // minor storage cost, not worth failing the response over.
+    if (tempStoragePath) {
+      createAdminClient().storage.from("drawing-analysis-temp").remove([tempStoragePath]).catch(() => {});
+    }
 
     const totalTime = Date.now() - requestStartTime;
 
@@ -220,8 +275,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     logAnalysis(supabase, {
       profileId: businessId,
       trade: normalizeTrade(trade),
-      fileType: file.type,
-      fileSize: file.size,
+      fileType: mimeType,
+      fileSize: fileSize,
       imageQualityScore: analysis.validation.score,
       queryScore: analysis.gate.queryScore,
       overallConfidence: analysis.result.confidence.overall,

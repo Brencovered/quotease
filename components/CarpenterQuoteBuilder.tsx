@@ -14,6 +14,7 @@ import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import PlanMarkupQuickAdd from "./PlanMarkupQuickAdd";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import { safeParseApiResponse } from "@/lib/safeParseApiResponse";
+import { analyzeDrawingFile } from "@/lib/analyzeDrawingClient";
 import ExtraJobLines, { type ExtraLine, extraLinesTotals } from "./ExtraJobLines";
 import { resolveClientId } from "@/lib/resolveClientId";
 import { getActiveBusinessId } from "@/lib/team";
@@ -192,13 +193,12 @@ export default function CarpenterQuoteBuilder({
     if (!drawingFiles.length) return;
     setAnalyzing(true); setAnalysisError(null); setAnalysisResult(null); setAnalysisSource("drawing");
     try {
-      const fd = new FormData();
       const fileForAnalysis = await normalizeForAnalysis(drawingFiles[0]);
-      fd.append("file", fileForAnalysis);
-      fd.append("trade", "carpenter");
-      fd.append("instructions", "This is a carpentry job. Focus on doors, framing, timber runs, and joinery.");
-      const res = await fetch("/api/quotes/analyze-drawing", { method: "POST", body: fd });
-      const { ok, body, parseError } = await safeParseApiResponse(res);
+      const { ok, body, parseError } = await analyzeDrawingFile(
+        fileForAnalysis,
+        "carpenter",
+        "This is a carpentry job. Focus on doors, framing, timber runs, and joinery."
+      );
       if (parseError) { setAnalysisError(parseError); return; }
       if (!ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
       if (Array.isArray(body.result?.detected_items) && body.result.detected_items.length > 0) {

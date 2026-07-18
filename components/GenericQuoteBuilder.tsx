@@ -11,6 +11,7 @@ import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import PlanMarkupQuickAdd from "./PlanMarkupQuickAdd";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import { safeParseApiResponse } from "@/lib/safeParseApiResponse";
+import { analyzeDrawingFile } from "@/lib/analyzeDrawingClient";
 import ExtraJobLines, { type ExtraLine, extraLinesTotals } from "./ExtraJobLines";
 import { resolveClientId } from "@/lib/resolveClientId";
 import { getActiveBusinessId } from "@/lib/team";
@@ -188,13 +189,12 @@ export default function GenericQuoteBuilder({
     if (!drawingFiles.length) return;
     setAnalyzing(true); setAnalysisError(null); setAnalysisResult(null); setAnalysisSource("drawing");
     try {
-      const fd = new FormData();
       const fileForAnalysis = await normalizeForAnalysis(drawingFiles[0]);
-      fd.append("file", fileForAnalysis);
-      fd.append("trade", tradeKey ?? "default");
-      fd.append("instructions", `This is a ${template.label.toLowerCase()} job. Focus on what a ${template.label.toLowerCase()} would need to quote from this.`);
-      const res = await fetch("/api/quotes/analyze-drawing", { method: "POST", body: fd });
-      const { ok, body, parseError } = await safeParseApiResponse(res);
+      const { ok, body, parseError } = await analyzeDrawingFile(
+        fileForAnalysis,
+        tradeKey ?? "default",
+        `This is a ${template.label.toLowerCase()} job. Focus on what a ${template.label.toLowerCase()} would need to quote from this.`
+      );
       if (parseError) { setAnalysisError(parseError); return; }
       if (!ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
       if (Array.isArray(body.result?.detected_items) && body.result.detected_items.length > 0) {

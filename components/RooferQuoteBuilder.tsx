@@ -9,6 +9,7 @@ import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import PlanMarkupQuickAdd from "./PlanMarkupQuickAdd";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import { safeParseApiResponse } from "@/lib/safeParseApiResponse";
+import { analyzeDrawingFile } from "@/lib/analyzeDrawingClient";
 import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
 import { persistAnnotationFrames } from "@/lib/siteAnnotations";
 import JobDescriptionField from "@/components/JobDescriptionField";
@@ -249,13 +250,12 @@ export default function RooferQuoteBuilder({
     if (!drawingFiles.length) return;
     setAnalyzing(true); setAnalysisError(null); setAnalysisResult(null); setAnalysisSource("drawing");
     try {
-      const fd = new FormData();
       const fileForAnalysis = await normalizeForAnalysis(drawingFiles[0]);
-      fd.append("file", fileForAnalysis);
-      fd.append("trade", "roofer");
-      fd.append("instructions", "This is a roofing job. Focus on roof area, guttering, ridge/valley lengths, and any roof-mounted extras.");
-      const res  = await fetch("/api/quotes/analyze-drawing", { method: "POST", body: fd });
-      const { ok, body, parseError } = await safeParseApiResponse(res);
+      const { ok, body, parseError } = await analyzeDrawingFile(
+        fileForAnalysis,
+        "roofer",
+        "This is a roofing job. Focus on roof area, guttering, ridge/valley lengths, and any roof-mounted extras."
+      );
       if (parseError) { setAnalysisError(parseError); return; }
       if (!ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
       if (Array.isArray(body.result?.detected_items) && body.result.detected_items.length > 0) {
