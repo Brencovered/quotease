@@ -7,6 +7,9 @@ import {
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getActiveBusinessId } from "@/lib/team";
+import { CLAIMED_DIRECTORY_PAGES_ENABLED } from "@/lib/featureFlags";
 import MarketingNav from "@/components/MarketingNav";
 import DirectoryCard from "@/components/DirectoryCard";
 import { tradieListingMeta, buildDirectorySlug } from "@/lib/seo/meta";
@@ -15,6 +18,7 @@ import PhotoGallery from "./_components/PhotoGallery";
 import QuoteForm from "./_components/QuoteForm";
 import ListingLogo from "./_components/ListingLogo";
 import ReviewsSection from "./_components/ReviewsSection";
+import OwnerGoalWidget from "./_components/OwnerGoalWidget";
 import { getPlaceReviews } from "@/lib/googleReviews";
 import TradieSchema from "@/components/seo/TradieSchema";
 
@@ -57,6 +61,7 @@ type Listing = {
   google_rating: number | null; google_reviews_count: number | null;
   photo_references: string[] | null; place_id: string | null;
   blurb: string | null; logo_url: string | null;
+  is_claimed: boolean | null; profile_id: string | null;
 };
 
 /* ------------------------------------------------------------------ */
@@ -207,6 +212,27 @@ export default async function TradieProfilePage({
   const photos    = listing.photo_references?.filter(Boolean) ?? [];
   const reviews   = listing.place_id ? await getPlaceReviews(listing.place_id) : [];
 
+  // Claimed-page additions (verified badge, owner goal widget) are gated
+  // behind the feature flag -- nothing here should be visible until the
+  // full v1 build is reviewed and the flag flips on.
+  let isVerifiedBadge = false;
+  let isOwnerViewing = false;
+  if (CLAIMED_DIRECTORY_PAGES_ENABLED && listing.is_claimed && listing.profile_id) {
+    const admin = createAdminClient();
+    const { data: ownerProfile } = await admin
+      .from("profiles")
+      .select("directory_badge_verified")
+      .eq("id", listing.profile_id)
+      .maybeSingle();
+    isVerifiedBadge = ownerProfile?.directory_badge_verified ?? false;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const viewerBusinessId = await getActiveBusinessId(supabase, user.id);
+      isOwnerViewing = viewerBusinessId === listing.profile_id;
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[var(--app-bg)]">
       <MarketingNav />
@@ -233,6 +259,11 @@ export default async function TradieProfilePage({
                   <span className="flex items-center gap-1 text-[12px] font-semibold text-emerald-400 bg-emerald-400/10 px-2.5 py-1 rounded-full">
                     <ShieldCheck size={12} /> Curated on Swiftscope
                   </span>
+                  {isVerifiedBadge && (
+                    <span className="flex items-center gap-1 text-[12px] font-semibold text-[#0a1722] bg-[#ffb400] px-2.5 py-1 rounded-full">
+                      <ShieldCheck size={12} /> Verified Business
+                    </span>
+                  )}
                 </div>
               )}
 
@@ -283,6 +314,14 @@ export default async function TradieProfilePage({
           </div>
         </div>
       </section>
+
+      {isOwnerViewing && (
+        <section className="border-b border-[var(--line)] bg-[#fffbeb]">
+          <div className="max-w-6xl mx-auto px-6 py-6">
+            <OwnerGoalWidget />
+          </div>
+        </section>
+      )}
 
       {/* INFO CARDS ROW */}
       <section className="border-b border-[var(--line)]">

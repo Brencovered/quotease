@@ -19,9 +19,9 @@ async function requireAdmin(): Promise<NextResponse | null> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function applyFilters(
   query: any,
-  params: { trade: string; email: string; phone: string; website: string; rating: string; search: string }
+  params: { trade: string; email: string; phone: string; website: string; rating: string; claimed: string; search: string }
 ) {
-  const { trade, email, phone, website, rating, search } = params;
+  const { trade, email, phone, website, rating, claimed, search } = params;
   let q = query;
 
   if (trade) q = q.contains("trades", [trade]);
@@ -37,6 +37,9 @@ function applyFilters(
 
   if (rating === "yes") q = q.not("google_rating", "is", null);
   else if (rating === "no") q = q.is("google_rating", null);
+
+  if (claimed === "yes") q = q.eq("is_claimed", true);
+  else if (claimed === "no") q = q.eq("is_claimed", false);
 
   if (search) {
     const s = `%${search}%`;
@@ -69,6 +72,7 @@ export async function GET(req: NextRequest) {
   const phone = searchParams.get("phone") ?? "";      // "yes" | "no" | ""
   const website = searchParams.get("website") ?? "";  // "yes" | "no" | ""
   const rating = searchParams.get("rating") ?? "";    // "yes" | "no" | ""
+  const claimed = searchParams.get("claimed") ?? "";  // "yes" | "no" | ""
   const search = searchParams.get("search") ?? "";
   const format = searchParams.get("format") ?? "";
 
@@ -87,7 +91,7 @@ export async function GET(req: NextRequest) {
     for (let from = 0; rows.length < wantCount; from += PAGE) {
       const to = Math.min(from + PAGE, wantCount) - 1;
       let query = admin.from("directory_listing").select("*");
-      query = applyFilters(query, { trade, email, phone, website, rating, search });
+      query = applyFilters(query, { trade, email, phone, website, rating, claimed, search });
       const { data, error } = await query.order("created_at", { ascending: false }).range(from, to);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
       if (!data || data.length === 0) break;
@@ -112,7 +116,7 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(200, Math.max(10, parseInt(searchParams.get("limit") ?? "50", 10)));
 
   let query = admin.from("directory_listing").select("*", { count: "exact" });
-  query = applyFilters(query, { trade, email, phone, website, rating, search });
+  query = applyFilters(query, { trade, email, phone, website, rating, claimed, search });
 
   // Pagination
   const from = (page - 1) * limit;
