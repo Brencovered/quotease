@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import MarketingNav from "@/components/MarketingNav";
 import {
@@ -427,9 +428,14 @@ export default function ClaimDirectoryListingPage() {
               Homeowners searching for a {trade} in {suburb} can now find you.
             </p>
             {resultSlug && (
-              <a href={`/directory/${resultSlug}`} className="btn-primary inline-flex items-center gap-2">
-                View my page <ArrowRight size={16} />
-              </a>
+              <div className="flex items-center justify-center gap-3">
+                <a href={`/directory/${resultSlug}`} className="btn-primary inline-flex items-center gap-2">
+                  View my page <ArrowRight size={16} />
+                </a>
+                <Link href="/directory/manage" className="btn-secondary inline-flex items-center gap-2">
+                  Add photos & description
+                </Link>
+              </div>
             )}
           </div>
         )}

@@ -2,7 +2,7 @@ import Link from "next/link";
 import {
   Star, MapPin, Phone, Globe, Mail, Check, Shield,
   ShieldCheck, MessageSquare, ExternalLink, Wrench,
-  Building2, Users, Search,
+  Building2, Users, Search, Link2,
 } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
@@ -62,6 +62,7 @@ type Listing = {
   photo_references: string[] | null; place_id: string | null;
   blurb: string | null; logo_url: string | null;
   is_claimed: boolean | null; profile_id: string | null;
+  instagram_url: string | null; facebook_url: string | null;
 };
 
 /* ------------------------------------------------------------------ */
@@ -318,7 +319,12 @@ export default async function TradieProfilePage({
       {isOwnerViewing && (
         <section className="border-b border-[var(--line)] bg-[#fffbeb]">
           <div className="max-w-6xl mx-auto px-6 py-6">
-            <OwnerGoalWidget />
+            <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
+              <OwnerGoalWidget />
+              <Link href="/directory/manage" className="text-[13px] font-semibold text-[#0a1722] underline underline-offset-2 whitespace-nowrap">
+                Manage your page
+              </Link>
+            </div>
           </div>
         </section>
       )}
@@ -373,6 +379,18 @@ export default async function TradieProfilePage({
                   <a href={listing.website_url} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-2 text-[13px] font-semibold text-gray-700 hover:text-[#0a1722] transition-colors">
                     <Globe size={13} className="text-gray-400" /> {domain} <ExternalLink size={11} className="text-gray-300" />
+                  </a>
+                )}
+                {listing.instagram_url && (
+                  <a href={listing.instagram_url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-[13px] font-semibold text-gray-700 hover:text-[#0a1722] transition-colors">
+                    <Link2 size={13} className="text-gray-400" /> Instagram <ExternalLink size={11} className="text-gray-300" />
+                  </a>
+                )}
+                {listing.facebook_url && (
+                  <a href={listing.facebook_url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-[13px] font-semibold text-gray-700 hover:text-[#0a1722] transition-colors">
+                    <Link2 size={13} className="text-gray-400" /> Facebook <ExternalLink size={11} className="text-gray-300" />
                   </a>
                 )}
                 {!listing.scraped_contact_phone && !listing.website_url && (
