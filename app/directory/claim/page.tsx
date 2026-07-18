@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import MarketingNav from "@/components/MarketingNav";
 import {
   Search, Loader2, CheckCircle2, ArrowRight, Star,
-  MapPin, ShieldCheck, AlertCircle,
+  MapPin, ShieldCheck, AlertCircle, Mail, Lock,
 } from "lucide-react";
 
 const TRADES = [
@@ -35,13 +34,22 @@ type ListingMatch = {
   similarity: number;
 };
 
-type Step = "search" | "resolve" | "abn" | "done";
+type Step = "auth" | "search" | "resolve" | "abn" | "done";
 
 export default function ClaimDirectoryListingPage() {
-  const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [step, setStep] = useState<Step>("auth");
 
-  const [step, setStep] = useState<Step>("search");
+  // Auth step -- deliberately separate from the main app's /login and
+  // /signup: this is the $4.99 standalone tier's own entry point, not the
+  // $45 plan's onboarding wizard, and shouldn't look or feel like it. A new
+  // account created here should never be routed through /onboarding.
+  const [authMode, setAuthMode] = useState<"signup" | "login">("signup");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [checkYourEmail, setCheckYourEmail] = useState(false);
+
   const [searching, setSearching] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,17 +66,57 @@ export default function ClaimDirectoryListingPage() {
   const [resultSlug, setResultSlug] = useState<string | null>(null);
   const [resultOutcome, setResultOutcome] = useState<"claimed" | "created_new" | null>(null);
 
-  // Auth-gated -- redirect to login (returning here) if not signed in.
+  // Already signed in (e.g. an existing $45 tradie extending into a
+  // directory page) -- skip straight past the auth step.
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) {
-        router.push("/login?redirect=/directory/claim");
-        return;
-      }
+      if (data.user) setStep("search");
       setCheckingAuth(false);
     });
-  }, [router]);
+  }, []);
+
+  async function handleAuth(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!email.trim() || !password) {
+      setError("Please enter your email and password.");
+      return;
+    }
+    setAuthLoading(true);
+    try {
+      const supabase = createClient();
+      if (authMode === "signup") {
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            // Explicitly back to /directory/claim -- never the $45 plan's
+            // /onboarding default that a bare signUp() would otherwise send
+            // an email-confirmation link to.
+            emailRedirectTo: `${window.location.origin}/directory/claim`,
+          },
+        });
+        if (signUpError) { setError(signUpError.message); return; }
+        if (data.session) {
+          setStep("search");
+        } else {
+          setCheckYourEmail(true);
+        }
+      } else {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+        if (signInError) { setError(signInError.message); return; }
+        setStep("search");
+      }
+    } catch {
+      setError("Could not reach the server. Please try again.");
+    } finally {
+      setAuthLoading(false);
+    }
+  }
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -155,6 +203,80 @@ export default function ClaimDirectoryListingPage() {
           <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 text-[13.5px] rounded-xl px-4 py-3 mb-6">
             <AlertCircle size={16} className="shrink-0 mt-0.5" />
             <span>{error}</span>
+          </div>
+        )}
+
+        {step === "auth" && (
+          <div className="card p-6 rounded-2xl bg-white">
+            {checkYourEmail ? (
+              <div className="text-center py-4">
+                <Mail size={32} className="text-[#ffb400] mx-auto mb-3" />
+                <p className="text-[14px] text-[#0a1722] font-semibold mb-1">Check your email</p>
+                <p className="text-[13.5px] text-[#5a6b78]">
+                  We&apos;ve sent a confirmation link to {email}. Click it to come back here and set up your page.
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleAuth} className="space-y-5">
+                <div className="flex gap-1 bg-[#f1f4f6] rounded-lg p-1 mb-1">
+                  <button
+                    type="button"
+                    onClick={() => setAuthMode("signup")}
+                    className={`flex-1 text-[13px] font-semibold py-1.5 rounded-md transition-colors ${authMode === "signup" ? "bg-white shadow-sm text-[#0a1722]" : "text-[#5a6b78]"}`}
+                  >
+                    Create account
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAuthMode("login")}
+                    className={`flex-1 text-[13px] font-semibold py-1.5 rounded-md transition-colors ${authMode === "login" ? "bg-white shadow-sm text-[#0a1722]" : "text-[#5a6b78]"}`}
+                  >
+                    Log in
+                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-[13px] font-semibold text-[#0a1722] mb-1.5">Email</label>
+                  <div className="relative">
+                    <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8a97a1]" />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@business.com.au"
+                      className="app-field w-full pl-9"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[13px] font-semibold text-[#0a1722] mb-1.5">Password</label>
+                  <div className="relative">
+                    <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8a97a1]" />
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder={authMode === "signup" ? "Choose a password" : "Your password"}
+                      className="app-field w-full pl-9"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={authLoading}
+                  className="btn-primary w-full flex items-center justify-center gap-2"
+                >
+                  {authLoading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
+                  {authLoading ? "One moment..." : authMode === "signup" ? "Create my account" : "Log in"}
+                </button>
+
+                <p className="text-[12px] text-[#8a97a1] text-center">
+                  This is just for your directory page -- not the full Swiftscope job management sign up.
+                </p>
+              </form>
+            )}
           </div>
         )}
 
