@@ -62,6 +62,7 @@ type Listing = {
   is_claimed: boolean | null; profile_id: string | null;
   instagram_url: string | null; facebook_url: string | null;
   services_offered: string[] | null; years_experience: number | null;
+  licenses: { type: string; number: string }[] | null;
 };
 
 /* ------------------------------------------------------------------ */
@@ -390,7 +391,7 @@ export default async function TradieProfilePage({
         <div className="flex flex-col lg:flex-row gap-8">
           {/* LEFT COLUMN */}
           <div className="flex-1 min-w-0 space-y-8">
-            {(listing.blurb || (listing.services_offered && listing.services_offered.length > 0) || listing.years_experience) && (
+            {(listing.blurb || (listing.services_offered && listing.services_offered.length > 0) || listing.years_experience || (listing.licenses && listing.licenses.length > 0)) && (
               <div className="reveal">
                 <p className="text-[11.5px] font-semibold text-gray-500 uppercase tracking-wide mb-3">About</p>
                 <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
@@ -408,6 +409,17 @@ export default async function TradieProfilePage({
                         <span key={s} className="text-[12.5px] font-medium bg-[#f1f4f6] text-[#0a1722] rounded-full px-3 py-1">
                           {s}
                         </span>
+                      ))}
+                    </div>
+                  )}
+                  {listing.licenses && listing.licenses.length > 0 && (
+                    <div className="space-y-1.5 pt-1 border-t border-gray-100">
+                      {listing.licenses.map((l, i) => (
+                        <p key={`${l.type}-${i}`} className="flex items-center gap-1.5 text-[12.5px] text-gray-600">
+                          <ShieldCheck size={13} className="text-emerald-500 shrink-0" />
+                          <span className="font-semibold text-gray-700">{l.type}</span>
+                          <span className="text-gray-400">{l.number}</span>
+                        </p>
                       ))}
                     </div>
                   )}

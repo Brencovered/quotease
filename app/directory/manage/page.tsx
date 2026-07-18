@@ -11,6 +11,8 @@ import {
   Link2, Globe, ExternalLink,
 } from "lucide-react";
 
+type License = { type: string; number: string };
+
 type Listing = {
   id: string;
   business_name: string;
@@ -24,6 +26,7 @@ type Listing = {
   facebook_url: string | null;
   services_offered: string[] | null;
   years_experience: number | null;
+  licenses: License[] | null;
 };
 
 const MAX_PHOTOS = 8;
@@ -48,6 +51,9 @@ export default function ManageDirectoryListingPage() {
   const [services, setServices] = useState<string[]>([]);
   const [serviceInput, setServiceInput] = useState("");
   const [yearsExperience, setYearsExperience] = useState("");
+  const [licenses, setLicenses] = useState<License[]>([]);
+  const [licenseTypeInput, setLicenseTypeInput] = useState("");
+  const [licenseNumberInput, setLicenseNumberInput] = useState("");
 
   const logoInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -71,6 +77,7 @@ export default function ManageDirectoryListingPage() {
         setFacebookUrl(data.listing.facebook_url ?? "");
         setServices(data.listing.services_offered ?? []);
         setYearsExperience(data.listing.years_experience != null ? String(data.listing.years_experience) : "");
+        setLicenses(data.listing.licenses ?? []);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -87,6 +94,19 @@ export default function ManageDirectoryListingPage() {
 
   function removeService(service: string) {
     setServices((s) => s.filter((x) => x !== service));
+  }
+
+  function addLicense() {
+    const type = licenseTypeInput.trim();
+    const number = licenseNumberInput.trim();
+    if (!type || !number || licenses.length >= 10) return;
+    setLicenses((l) => [...l, { type, number }]);
+    setLicenseTypeInput("");
+    setLicenseNumberInput("");
+  }
+
+  function removeLicense(index: number) {
+    setLicenses((l) => l.filter((_, i) => i !== index));
   }
 
   async function uploadFile(file: File, bucket: string): Promise<string | null> {
@@ -156,6 +176,7 @@ export default function ManageDirectoryListingPage() {
           facebook_url: facebookUrl,
           services_offered: services,
           years_experience: yearsExperience.trim() === "" ? null : Number(yearsExperience),
+          licenses,
         }),
       });
       const data = await res.json();
@@ -299,6 +320,48 @@ export default function ManageDirectoryListingPage() {
               placeholder="e.g. 12"
               className="app-field w-32"
             />
+          </div>
+
+          {/* Licenses / certifications */}
+          <div>
+            <label className="block text-[13px] font-semibold text-[#0a1722] mb-1.5">Licences & certifications</label>
+            <p className="text-[12px] text-[#8a97a1] mb-2">
+              e.g. Electrical Contractor Licence, plumbing licence, builder&apos;s licence, working-at-heights certification.
+            </p>
+            {licenses.length > 0 && (
+              <div className="space-y-2 mb-3">
+                {licenses.map((l, i) => (
+                  <div key={`${l.type}-${l.number}-${i}`} className="flex items-center justify-between gap-2 bg-[#f1f4f6] rounded-lg px-3 py-2">
+                    <span className="text-[13px] text-[#0a1722]">
+                      <span className="font-semibold">{l.type}</span> -- {l.number}
+                    </span>
+                    <button onClick={() => removeLicense(i)} className="text-[#8a97a1] hover:text-[#0a1722] shrink-0">
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {licenses.length < 10 && (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={licenseTypeInput}
+                  onChange={(e) => setLicenseTypeInput(e.target.value)}
+                  placeholder="Licence type"
+                  className="app-field flex-1"
+                />
+                <input
+                  type="text"
+                  value={licenseNumberInput}
+                  onChange={(e) => setLicenseNumberInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLicense(); } }}
+                  placeholder="Licence number"
+                  className="app-field flex-1"
+                />
+                <button onClick={addLicense} type="button" className="btn-secondary text-[13px] shrink-0">Add</button>
+              </div>
+            )}
           </div>
 
           {/* Gallery */}

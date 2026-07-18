@@ -28,7 +28,7 @@ export async function GET() {
 
   const { data: listing, error } = await admin
     .from("directory_listing")
-    .select("id, business_name, suburb, trades, blurb, logo_url, photo_references, website_url, instagram_url, facebook_url, services_offered, years_experience")
+    .select("id, business_name, suburb, trades, blurb, logo_url, photo_references, website_url, instagram_url, facebook_url, services_offered, years_experience, licenses")
     .eq("profile_id", businessId)
     .maybeSingle();
 
@@ -89,6 +89,18 @@ export async function PATCH(req: NextRequest) {
       const years = Number(body.years_experience);
       update.years_experience = Number.isInteger(years) && years >= 0 && years <= 80 ? years : null;
     }
+  }
+  if (Array.isArray(body.licenses)) {
+    update.licenses = body.licenses
+      .filter(
+        (l): l is { type: string; number: string } =>
+          typeof l === "object" && l !== null &&
+          typeof (l as Record<string, unknown>).type === "string" &&
+          typeof (l as Record<string, unknown>).number === "string"
+      )
+      .map((l) => ({ type: l.type.trim().slice(0, 80), number: l.number.trim().slice(0, 40) }))
+      .filter((l) => l.type && l.number)
+      .slice(0, 10);
   }
 
   if (Object.keys(update).length === 0) {
