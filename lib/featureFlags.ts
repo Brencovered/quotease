@@ -39,7 +39,4 @@ export const LEADS_ENABLED = false;
  * not incrementally in public. Nothing gated by this flag should be linked
  * to or discoverable while it's off.
  */
-// TEMPORARILY ON for preview-branch testing only -- flip back to false
-// before this branch merges to main. Never merge this file with the flag
-// left true.
-export const CLAIMED_DIRECTORY_PAGES_ENABLED = true;
+export const CLAIMED_DIRECTORY_PAGES_ENABLED = false;
