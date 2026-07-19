@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { CLAIMED_DIRECTORY_PAGES_ENABLED } from "@/lib/featureFlags";
 
 /**
- * Business lookup step shared by both the $4.99 standalone claim flow and
+ * Business lookup step shared by both the free claimed directory page and
  * the $45 plan signup. Searches unclaimed directory_listing rows via the
  * search_directory_listings_fuzzy() Postgres function (exact match falls
  * out of this naturally as similarity 1.0) so a new signup can either

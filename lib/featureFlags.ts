@@ -28,15 +28,16 @@
 export const LEADS_ENABLED = false;
 
 /**
- * The $4.99/mo standalone claimed directory page: ABN/licence verification
- * badge, manual photo gallery, quote capture into the real quotes table,
- * monthly goal setting, and the business marketing pack. Bundled free into
- * the $45/mo plan once live.
+ * The free claimed directory page: ABN/licence verification badge, manual
+ * photo gallery, quote capture into the real quotes table, monthly goal
+ * setting, and the business marketing pack. No paid tier -- claiming a
+ * page is free, zero barrier to adopt. (No Stripe/billing was ever built
+ * for this, so there's nothing to remove -- it was always just this flag.)
  *
  * Off until the full v1 build is done and reviewed -- claim flow, business
- * lookup/matching, richer page template, Stripe product, and entitlement
- * check all need to land together, not incrementally in public. Nothing
- * gated by this flag should be linked to or discoverable while it's off.
+ * lookup/matching, and richer page template all need to land together,
+ * not incrementally in public. Nothing gated by this flag should be linked
+ * to or discoverable while it's off.
  */
 // TEMPORARILY ON for preview-branch testing only -- flip back to false
 // before this branch merges to main. Never merge this file with the flag

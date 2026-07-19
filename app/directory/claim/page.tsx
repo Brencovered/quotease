@@ -56,7 +56,7 @@ function ClaimDirectoryListingInner() {
   const [step, setStep] = useState<Step>("auth");
 
   // Auth step -- deliberately separate from the main app's /login and
-  // /signup: this is the $4.99 standalone tier's own entry point, not the
+  // /signup: this is the free claimed directory page's own entry point, not the
   // $45 plan's onboarding wizard, and shouldn't look or feel like it. A new
   // account created here should never be routed through /onboarding.
   const [authMode, setAuthMode] = useState<"signup" | "login">("signup");
