@@ -34,9 +34,9 @@ export const LEADS_ENABLED = false;
  * page is free, zero barrier to adopt. (No Stripe/billing was ever built
  * for this, so there's nothing to remove -- it was always just this flag.)
  *
- * Off until the full v1 build is done and reviewed -- claim flow, business
- * lookup/matching, and richer page template all need to land together,
- * not incrementally in public. Nothing gated by this flag should be linked
- * to or discoverable while it's off.
+ * Live as of 20 July 2026. ABN verification (lib/abnLookup.ts) degrades
+ * gracefully to "unverified" until ABN_LOOKUP_GUID is set in Vercel --
+ * the Verified Business badge won't actually turn on for anyone until
+ * that's configured, but nothing breaks in the meantime.
  */
-export const CLAIMED_DIRECTORY_PAGES_ENABLED = false;
+export const CLAIMED_DIRECTORY_PAGES_ENABLED = true;

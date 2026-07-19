@@ -21,6 +21,7 @@ import MarketingNav from "@/components/MarketingNav";
 import AnimatedCounter from "./_components/AnimatedCounter";
 import DirectorySearchForm from "./_components/DirectorySearchForm";
 import FindTradieHeroSearch from "./_components/FindTradieHeroSearch";
+import { CLAIMED_DIRECTORY_PAGES_ENABLED } from "@/lib/featureFlags";
 
 // Sitewide hero counters (total listings, suburbs covered) don't depend on
 // searchParams at all - every visitor to /directory sees the same two
@@ -444,10 +445,15 @@ export default async function DirectoryPage({
             ))}
           </div>
 
-          <div className="reveal flex flex-wrap gap-3">
+          <div className="reveal flex flex-wrap gap-3 items-center">
             <Link href="#listings" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-7 py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors">
               Browse directory <ArrowRight size={15} />
             </Link>
+            {CLAIMED_DIRECTORY_PAGES_ENABLED && (
+              <Link href="/directory/claim" className="inline-flex items-center gap-2 text-[13.5px] font-semibold text-white underline underline-offset-4 decoration-white/30 hover:decoration-white/70 transition-colors px-2">
+                Own a trade business? Claim your free listing
+              </Link>
+            )}
           </div>
         </div>
       </section>
