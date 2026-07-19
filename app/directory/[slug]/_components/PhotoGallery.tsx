@@ -4,6 +4,17 @@ import { useState } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
+/**
+ * photo_references holds two different kinds of values: scraped Google
+ * Places photo_reference tokens (opaque, need the /api/places/photo proxy
+ * + API key), and full URLs for tradie-uploaded photos (Supabase Storage
+ * public URLs from the claimed-page manage screen). Only the former needs
+ * proxying.
+ */
+function photoSrc(ref: string, maxw: number): string {
+  return ref.startsWith("http") ? ref : `/api/places/photo?ref=${ref}&maxw=${maxw}`;
+}
+
 export default function PhotoGallery({
   photos,
   name,
@@ -23,7 +34,7 @@ export default function PhotoGallery({
       {/* Main photo */}
       <div className="relative aspect-video rounded-xl overflow-hidden bg-gray-100 mb-2">
         <Image
-          src={`/api/places/photo?ref=${visible[idx]}&maxw=800`}
+          src={photoSrc(visible[idx], 800)}
           alt={`${name} - photo ${idx + 1}`}
           fill
           sizes="(max-width: 640px) 100vw, 600px"
@@ -72,7 +83,7 @@ export default function PhotoGallery({
               }`}
             >
               <Image
-                src={`/api/places/photo?ref=${ref}&maxw=150`}
+                src={photoSrc(ref, 150)}
                 alt={`${name} thumbnail ${i + 1}`}
                 fill
                 sizes="64px"

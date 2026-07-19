@@ -26,3 +26,17 @@
  * bring it all back with no other code changes.
  */
 export const LEADS_ENABLED = false;
+
+/**
+ * The free claimed directory page: ABN/licence verification badge, manual
+ * photo gallery, quote capture into the real quotes table, monthly goal
+ * setting, and the business marketing pack. No paid tier -- claiming a
+ * page is free, zero barrier to adopt. (No Stripe/billing was ever built
+ * for this, so there's nothing to remove -- it was always just this flag.)
+ *
+ * Off until the full v1 build is done and reviewed -- claim flow, business
+ * lookup/matching, and richer page template all need to land together,
+ * not incrementally in public. Nothing gated by this flag should be linked
+ * to or discoverable while it's off.
+ */
+export const CLAIMED_DIRECTORY_PAGES_ENABLED = false;

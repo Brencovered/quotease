@@ -2,11 +2,13 @@ import Link from "next/link";
 import {
   Star, MapPin, Phone, Globe, Mail, Check, Shield,
   ShieldCheck, MessageSquare, ExternalLink, Wrench,
-  Building2, Users, Search,
+  Building2, Users, Search, Link2,
 } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { CLAIMED_DIRECTORY_PAGES_ENABLED } from "@/lib/featureFlags";
 import MarketingNav from "@/components/MarketingNav";
 import DirectoryCard from "@/components/DirectoryCard";
 import { tradieListingMeta, buildDirectorySlug } from "@/lib/seo/meta";
@@ -57,6 +59,10 @@ type Listing = {
   google_rating: number | null; google_reviews_count: number | null;
   photo_references: string[] | null; place_id: string | null;
   blurb: string | null; logo_url: string | null;
+  is_claimed: boolean | null; profile_id: string | null;
+  instagram_url: string | null; facebook_url: string | null;
+  services_offered: string[] | null; years_experience: number | null;
+  licenses: { type: string; number: string }[] | null;
 };
 
 /* ------------------------------------------------------------------ */
@@ -207,6 +213,22 @@ export default async function TradieProfilePage({
   const photos    = listing.photo_references?.filter(Boolean) ?? [];
   const reviews   = listing.place_id ? await getPlaceReviews(listing.place_id) : [];
 
+  // The verified badge is the only claimed-page addition on this public
+  // page -- gated behind the feature flag until the full v1 build is
+  // reviewed. Anything owner-only (goals, page management) lives entirely
+  // on /directory/manage, a separate authenticated page, not here, so the
+  // public page never has to know who's viewing it.
+  let isVerifiedBadge = false;
+  if (CLAIMED_DIRECTORY_PAGES_ENABLED && listing.is_claimed && listing.profile_id) {
+    const admin = createAdminClient();
+    const { data: ownerProfile } = await admin
+      .from("profiles")
+      .select("directory_badge_verified")
+      .eq("id", listing.profile_id)
+      .maybeSingle();
+    isVerifiedBadge = ownerProfile?.directory_badge_verified ?? false;
+  }
+
   return (
     <main className="min-h-screen bg-[var(--app-bg)]">
       <MarketingNav />
@@ -233,6 +255,16 @@ export default async function TradieProfilePage({
                   <span className="flex items-center gap-1 text-[12px] font-semibold text-emerald-400 bg-emerald-400/10 px-2.5 py-1 rounded-full">
                     <ShieldCheck size={12} /> Curated on Swiftscope
                   </span>
+                  {CLAIMED_DIRECTORY_PAGES_ENABLED && listing.is_claimed && (
+                    <span className="flex items-center gap-1 text-[12px] font-semibold text-white bg-blue-600/80 px-2.5 py-1 rounded-full">
+                      <Check size={12} /> Claimed listing
+                    </span>
+                  )}
+                  {isVerifiedBadge && (
+                    <span className="flex items-center gap-1 text-[12px] font-semibold text-[#0a1722] bg-[#ffb400] px-2.5 py-1 rounded-full">
+                      <ShieldCheck size={12} /> Verified Business
+                    </span>
+                  )}
                 </div>
               )}
 
@@ -336,12 +368,32 @@ export default async function TradieProfilePage({
                     <Globe size={13} className="text-gray-400" /> {domain} <ExternalLink size={11} className="text-gray-300" />
                   </a>
                 )}
+                {listing.instagram_url && (
+                  <a href={listing.instagram_url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-[13px] font-semibold text-gray-700 hover:text-[#0a1722] transition-colors">
+                    <Link2 size={13} className="text-gray-400" /> Instagram <ExternalLink size={11} className="text-gray-300" />
+                  </a>
+                )}
+                {listing.facebook_url && (
+                  <a href={listing.facebook_url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-[13px] font-semibold text-gray-700 hover:text-[#0a1722] transition-colors">
+                    <Link2 size={13} className="text-gray-400" /> Facebook <ExternalLink size={11} className="text-gray-300" />
+                  </a>
+                )}
                 {!listing.scraped_contact_phone && !listing.website_url && (
                   <p className="text-[12.5px] text-gray-400">
                     {QUOTE_REQUESTS_ENABLED ? "No contact details on file. Request a quote above." : "No contact details on file."}
                   </p>
                 )}
               </div>
+              {CLAIMED_DIRECTORY_PAGES_ENABLED && !listing.is_claimed && (
+                <Link
+                  href={`/directory/claim?name=${encodeURIComponent(listing.business_name)}&suburb=${encodeURIComponent(listing.suburb ?? "")}&trade=${encodeURIComponent(primaryTrade ?? "")}`}
+                  className="block mt-4 pt-3 border-t border-gray-100 text-[12.5px] font-semibold text-[#0a1722] hover:underline"
+                >
+                  Is this your business? Claim this free listing →
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -352,11 +404,38 @@ export default async function TradieProfilePage({
         <div className="flex flex-col lg:flex-row gap-8">
           {/* LEFT COLUMN */}
           <div className="flex-1 min-w-0 space-y-8">
-            {listing.blurb && (
+            {(listing.blurb || (listing.services_offered && listing.services_offered.length > 0) || listing.years_experience || (listing.licenses && listing.licenses.length > 0)) && (
               <div className="reveal">
                 <p className="text-[11.5px] font-semibold text-gray-500 uppercase tracking-wide mb-3">About</p>
-                <div className="bg-white rounded-2xl border border-gray-100 p-6">
-                  <p className="text-[14px] text-gray-600 leading-relaxed whitespace-pre-line">{listing.blurb}</p>
+                <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+                  {listing.blurb && (
+                    <p className="text-[14px] text-gray-600 leading-relaxed whitespace-pre-line">{listing.blurb}</p>
+                  )}
+                  {listing.years_experience != null && (
+                    <p className="text-[13px] font-semibold text-gray-700">
+                      {listing.years_experience}+ years of experience
+                    </p>
+                  )}
+                  {listing.services_offered && listing.services_offered.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {listing.services_offered.map((s) => (
+                        <span key={s} className="text-[12.5px] font-medium bg-[#f1f4f6] text-[#0a1722] rounded-full px-3 py-1">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {listing.licenses && listing.licenses.length > 0 && (
+                    <div className="space-y-1.5 pt-1 border-t border-gray-100">
+                      {listing.licenses.map((l, i) => (
+                        <p key={`${l.type}-${i}`} className="flex items-center gap-1.5 text-[12.5px] text-gray-600">
+                          <ShieldCheck size={13} className="text-emerald-500 shrink-0" />
+                          <span className="font-semibold text-gray-700">{l.type}</span>
+                          {l.number && <span className="text-gray-400">{l.number}</span>}
+                        </p>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

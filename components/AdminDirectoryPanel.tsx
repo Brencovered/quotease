@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Search, Trash2, Edit2, Check, X, ChevronLeft, ChevronRight,
   Mail, Phone, Globe, Star, Loader2, ExternalLink, Plus,
-  Square, CheckSquare, SquareMinus, AlertTriangle, Download,
+  Square, CheckSquare, SquareMinus, AlertTriangle, Download, ShieldCheck,
 } from "lucide-react";
+import { buildDirectorySlug } from "@/lib/seo/meta";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -27,6 +28,8 @@ interface DirectoryListing {
   logo_url: string | null;
   place_id: string | null;
   created_at: string;
+  is_claimed: boolean;
+  profile_id: string | null;
 }
 
 type TriState = "all" | "yes" | "no";
@@ -61,6 +64,7 @@ export default function AdminDirectoryPanel() {
   const [phoneFilter, setPhoneFilter] = useState<TriState>("all");
   const [websiteFilter, setWebsiteFilter] = useState<TriState>("all");
   const [ratingFilter, setRatingFilter] = useState<TriState>("all");
+  const [claimedFilter, setClaimedFilter] = useState<TriState>("all");
 
   // Selection
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -100,6 +104,7 @@ export default function AdminDirectoryPanel() {
     if (phoneFilter !== "all") params.set("phone", phoneFilter);
     if (websiteFilter !== "all") params.set("website", websiteFilter);
     if (ratingFilter !== "all") params.set("rating", ratingFilter);
+    if (claimedFilter !== "all") params.set("claimed", claimedFilter);
     if (search.trim()) params.set("search", search.trim());
 
     try {
@@ -114,7 +119,7 @@ export default function AdminDirectoryPanel() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, tradeFilter, emailFilter, phoneFilter, websiteFilter, ratingFilter, search]);
+  }, [page, limit, tradeFilter, emailFilter, phoneFilter, websiteFilter, ratingFilter, claimedFilter, search]);
 
   useEffect(() => {
     fetchListings();
@@ -124,7 +129,7 @@ export default function AdminDirectoryPanel() {
   useEffect(() => {
     setPage(1);
     setSelected(new Set());
-  }, [tradeFilter, emailFilter, phoneFilter, websiteFilter, ratingFilter, search, limit]);
+  }, [tradeFilter, emailFilter, phoneFilter, websiteFilter, ratingFilter, claimedFilter, search, limit]);
 
   // Selection helpers
   const allSelected = listings.length > 0 && listings.every((l) => selected.has(l.id));
@@ -269,6 +274,7 @@ export default function AdminDirectoryPanel() {
       if (phoneFilter !== "all") params.set("phone", phoneFilter);
       if (websiteFilter !== "all") params.set("website", websiteFilter);
       if (ratingFilter !== "all") params.set("rating", ratingFilter);
+      if (claimedFilter !== "all") params.set("claimed", claimedFilter);
       if (search.trim()) params.set("search", search.trim());
 
       const res = await fetch(`/api/admin/directory?${params}`);
@@ -297,6 +303,7 @@ export default function AdminDirectoryPanel() {
     phoneFilter !== "all",
     websiteFilter !== "all",
     ratingFilter !== "all",
+    claimedFilter !== "all",
   ].filter(Boolean).length;
 
   function clearAllFilters() {
@@ -305,6 +312,7 @@ export default function AdminDirectoryPanel() {
     setPhoneFilter("all");
     setWebsiteFilter("all");
     setRatingFilter("all");
+    setClaimedFilter("all");
     setSearch("");
   }
 
@@ -510,6 +518,12 @@ export default function AdminDirectoryPanel() {
             onChange={setRatingFilter}
             icon={Star}
           />
+          <TriStateFilter
+            label="Claimed"
+            value={claimedFilter}
+            onChange={setClaimedFilter}
+            icon={ShieldCheck}
+          />
         </div>
       </div>
 
@@ -581,12 +595,28 @@ export default function AdminDirectoryPanel() {
                             />
                           ) : (
                             <>
-                              <p className="font-semibold text-[var(--ink)]">{l.business_name}</p>
+                              <div className="flex items-center gap-1.5">
+                                <p className="font-semibold text-[var(--ink)]">{l.business_name}</p>
+                                {l.is_claimed && (
+                                  <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full shrink-0">
+                                    <ShieldCheck size={9} /> Claimed
+                                  </span>
+                                )}
+                              </div>
                               {l.website_url && (
                                 <a href={l.website_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11px] text-blue-600 hover:underline">
                                   <ExternalLink size={9} /> {l.website_url.replace(/^https?:\/\//, "").slice(0, 30)}
                                 </a>
                               )}
+                              <br />
+                              <a
+                                href={`/directory/${buildDirectorySlug({ id: l.id, business_name: l.business_name, suburb: l.suburb ?? "" })}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[11px] text-[var(--ink-faint)] hover:underline"
+                              >
+                                <ExternalLink size={9} /> View live page
+                              </a>
                             </>
                           )}
                         </td>
