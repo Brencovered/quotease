@@ -1,6 +1,38 @@
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import DocketSignForm from "@/components/DocketSignForm";
+import type { DocketItem } from "@/lib/dockets";
+
+function summaryTable(title: string, items: DocketItem[], columns: { key: string; label: string }[]) {
+  if (items.length === 0) return null;
+  return (
+    <div className="mb-5">
+      <p className="text-[11px] font-bold tracking-wide uppercase text-[#8a9ba8] mb-2">{title}</p>
+      <div className="border border-[#e8ecef] rounded-lg overflow-hidden">
+        <table className="w-full text-[12.5px]">
+          <thead>
+            <tr className="bg-[#f8f9fa] text-left text-[#5a6a78]">
+              {columns.map((c) => <th key={c.key} className="px-3 py-2 font-semibold">{c.label}</th>)}
+              <th className="px-3 py-2 font-semibold text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((it) => (
+              <tr key={it.id} className="border-t border-[#e8ecef]">
+                {columns.map((c) => (
+                  <td key={c.key} className="px-3 py-2 text-[#3a4a58]">
+                    {c.key === "name" ? (it.person_name || it.label) : c.key === "role" ? it.label : c.key === "hours" ? `${it.quantity}h` : c.key === "qty" ? it.quantity : c.key === "rate" ? `$${it.rate}` : ""}
+                  </td>
+                ))}
+                <td className="px-3 py-2 text-right font-semibold text-[#0a1722]">${it.line_total.toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 export default async function PublicDocketPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -9,7 +41,7 @@ export default async function PublicDocketPage({ params }: { params: Promise<{ t
   const { data: docket } = await supabase
     .from("dockets")
     .select(
-      "id, work_date, description, labour_hours, hourly_rate, minimum_hours, materials_cost, billed_hours, total_cost, status, signed_by_name, signed_at, jobs(job_number, title, client_name, site_address, profiles!jobs_profile_id_fkey(business_name, logo_url))"
+      "id, work_date, description, weather, client_name, total_cost, status, signed_by_name, signed_at, docket_items(*), jobs(job_number, title, client_name, site_address, profiles!jobs_profile_id_fkey(business_name, logo_url, contact_phone, business_address))"
     )
     .eq("public_token", token)
     .single();
@@ -21,60 +53,52 @@ export default async function PublicDocketPage({ params }: { params: Promise<{ t
     title: string | null;
     client_name: string | null;
     site_address: string | null;
-    profiles: { business_name?: string; logo_url?: string | null };
+    profiles: { business_name?: string; logo_url?: string | null; contact_phone?: string | null; business_address?: string | null };
   };
   const profile = job?.profiles;
+  const items = (docket.docket_items ?? []) as DocketItem[];
+  const labourItems = items.filter((i) => i.category === "labour");
+  const plantItems = items.filter((i) => i.category === "plant");
+  const materialItems = items.filter((i) => i.category === "material");
+  const customItems = items.filter((i) => i.category === "custom");
 
   const alreadySigned = docket.status === "signed" || docket.status === "invoiced";
   const workDate = new Date(docket.work_date).toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
   return (
     <main className="min-h-screen bg-[#f4f6f7] py-10 px-4">
-      <div className="max-w-md mx-auto bg-white rounded-2xl shadow-sm overflow-hidden">
+      <div className="max-w-lg mx-auto bg-white rounded-2xl shadow-sm overflow-hidden">
         <div className="bg-[#0a1722] px-6 py-5">
-          <p className="text-[12px] font-semibold text-[#8aa4b4] uppercase tracking-wide">{profile?.business_name || "Dayworks docket"}</p>
-          <p className="text-white font-bold text-[20px] mt-0.5">Job #{job?.job_number}{job?.title ? ` - ${job.title}` : ""}</p>
+          <p className="text-[12px] font-semibold text-[#8aa4b4] uppercase tracking-wide">Dayworks docket</p>
+          <p className="text-white font-bold text-[20px] mt-0.5">{profile?.business_name || "Job"} - Job #{job?.job_number}{job?.title ? ` - ${job.title}` : ""}</p>
         </div>
 
         <div className="px-6 py-6">
           <div className="mb-5 space-y-1">
+            {profile?.business_name && <p className="text-[13px] text-[#5a6a78]"><span className="font-semibold text-[#0a1722]">Company:</span> {profile.business_name}</p>}
+            {profile?.business_address && <p className="text-[13px] text-[#5a6a78]"><span className="font-semibold text-[#0a1722]">Address:</span> {profile.business_address}</p>}
+            {profile?.contact_phone && <p className="text-[13px] text-[#5a6a78]"><span className="font-semibold text-[#0a1722]">Phone:</span> {profile.contact_phone}</p>}
             <p className="text-[13px] text-[#5a6a78]"><span className="font-semibold text-[#0a1722]">Date of work:</span> {workDate}</p>
+            {docket.weather && <p className="text-[13px] text-[#5a6a78]"><span className="font-semibold text-[#0a1722]">Weather:</span> {docket.weather}</p>}
+            {(docket.client_name || job?.client_name) && <p className="text-[13px] text-[#5a6a78]"><span className="font-semibold text-[#0a1722]">Client:</span> {docket.client_name || job.client_name}</p>}
             {job?.site_address && <p className="text-[13px] text-[#5a6a78]"><span className="font-semibold text-[#0a1722]">Site:</span> {job.site_address}</p>}
-            {job?.client_name && <p className="text-[13px] text-[#5a6a78]"><span className="font-semibold text-[#0a1722]">Client:</span> {job.client_name}</p>}
           </div>
 
           {docket.description && (
             <div className="bg-[#f8f9fa] rounded-xl px-4 py-3 mb-5">
-              <p className="text-[11px] font-bold tracking-wide uppercase text-[#8a9ba8] mb-1">Work done</p>
+              <p className="text-[11px] font-bold tracking-wide uppercase text-[#8a9ba8] mb-1">Description of work completed</p>
               <p className="text-[14px] text-[#3a4a58] leading-relaxed">{docket.description}</p>
             </div>
           )}
 
-          <div className="border-t border-[#e8ecef] pt-4 space-y-2 mb-6">
-            <div className="flex justify-between text-[13.5px]">
-              <span className="text-[#5a6a78]">Hours worked</span>
-              <span className="font-semibold text-[#0a1722]">{docket.labour_hours}h</span>
-            </div>
-            {docket.billed_hours > docket.labour_hours && (
-              <div className="flex justify-between text-[13.5px]">
-                <span className="text-[#5a6a78]">Billed (min. {docket.minimum_hours}h callout)</span>
-                <span className="font-semibold text-[#0a1722]">{docket.billed_hours}h</span>
-              </div>
-            )}
-            <div className="flex justify-between text-[13.5px]">
-              <span className="text-[#5a6a78]">Rate</span>
-              <span className="font-semibold text-[#0a1722]">${docket.hourly_rate}/h</span>
-            </div>
-            {docket.materials_cost > 0 && (
-              <div className="flex justify-between text-[13.5px]">
-                <span className="text-[#5a6a78]">Materials</span>
-                <span className="font-semibold text-[#0a1722]">${docket.materials_cost}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-[16px] pt-2 border-t border-[#e8ecef] mt-2">
-              <span className="font-bold text-[#0a1722]">Total</span>
-              <span className="font-bold text-[#0a1722]">${docket.total_cost}</span>
-            </div>
+          {summaryTable("Labour summary", labourItems, [{ key: "name", label: "Person" }, { key: "role", label: "Role" }, { key: "hours", label: "Hours" }, { key: "rate", label: "Rate" }])}
+          {summaryTable("Plant summary", plantItems, [{ key: "role", label: "Plant item" }, { key: "hours", label: "Hours" }, { key: "rate", label: "Rate" }])}
+          {summaryTable("Materials summary", materialItems, [{ key: "role", label: "Material" }, { key: "qty", label: "Quantity" }, { key: "rate", label: "Rate" }])}
+          {summaryTable("Other", customItems, [{ key: "role", label: "Item" }, { key: "qty", label: "Quantity" }, { key: "rate", label: "Rate" }])}
+
+          <div className="flex justify-between text-[16px] pt-3 border-t-2 border-[#0a1722] mb-6">
+            <span className="font-bold text-[#0a1722]">Total</span>
+            <span className="font-bold text-[#0a1722]">${docket.total_cost.toLocaleString()}</span>
           </div>
 
           {alreadySigned ? (

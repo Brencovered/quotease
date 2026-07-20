@@ -1,78 +1,150 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveBusinessId } from "@/lib/team";
-import { Plus, CheckCircle2, Send, FileClock, Copy, Check } from "lucide-react";
-import type { Docket, DocketStatus } from "@/lib/dockets";
+import { Plus, CheckCircle2, Send, FileClock, Copy, Check, Trash2, Search } from "lucide-react";
+import type { Docket, DocketItem, DocketRateItem } from "@/lib/dockets";
 
-const STATUS_STYLE: Record<DocketStatus, string> = {
+const STATUS_STYLE: Record<string, string> = {
   draft: "bg-slate-100 text-slate-700",
   sent: "bg-amber-50 text-amber-800",
   signed: "bg-green-50 text-green-700",
   invoiced: "bg-blue-50 text-blue-700",
 };
-const STATUS_ICON: Record<DocketStatus, typeof FileClock> = {
+const STATUS_ICON: Record<string, typeof FileClock> = {
   draft: FileClock,
   sent: Send,
   signed: CheckCircle2,
   invoiced: CheckCircle2,
 };
 
-const today = () => new Date().toISOString().slice(0, 10);
+type CatalogMaterial = { item_key: string; label: string; unit_cost: number };
 
-function emptyForm(defaultRate: number) {
-  return { work_date: today(), description: "", labour_hours: "", hourly_rate: String(defaultRate || ""), minimum_hours: "4", materials_cost: "" };
+type LabourRow = { key: string; source_rate_item_id: string | null; label: string; person_name: string; quantity: string; rate: string };
+type PlantRow = { key: string; source_rate_item_id: string | null; label: string; quantity: string; rate: string };
+type MaterialRow = { key: string; label: string; quantity: string; rate: string };
+type CustomRow = { key: string; label: string; quantity: string; rate: string };
+
+const today = () => new Date().toISOString().slice(0, 10);
+const rid = () => Math.random().toString(36).slice(2);
+const num = (v: string) => Number(v) || 0;
+
+function emptyHeader() {
+  return { work_date: today(), weather: "", client_name: "", description: "" };
 }
 
-export default function DocketsPanel({ jobId, defaultHourlyRate, dockets: initial }: {
+export default function DocketsPanel({
+  jobId,
+  dockets: initial,
+  labourCatalog,
+  plantCatalog,
+  materialsCatalog,
+}: {
   jobId: string;
-  defaultHourlyRate: number;
   dockets: Docket[];
+  labourCatalog: DocketRateItem[];
+  plantCatalog: DocketRateItem[];
+  materialsCatalog: CatalogMaterial[];
+  defaultHourlyRate?: number;
 }) {
   const [dockets, setDockets] = useState(initial);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState(emptyForm(defaultHourlyRate));
+  const [header, setHeader] = useState(emptyHeader());
+  const [labourRows, setLabourRows] = useState<LabourRow[]>([]);
+  const [plantRows, setPlantRows] = useState<PlantRow[]>([]);
+  const [materialRows, setMaterialRows] = useState<MaterialRow[]>([]);
+  const [customRows, setCustomRows] = useState<CustomRow[]>([]);
+  const [materialQuery, setMaterialQuery] = useState("");
+  const [materialSearchOpen, setMaterialSearchOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const labourHours = Number(form.labour_hours) || 0;
-  const hourlyRate = Number(form.hourly_rate) || 0;
-  const minimumHours = Number(form.minimum_hours) || 0;
-  const materialsCost = Number(form.materials_cost) || 0;
-  const billedHours = Math.max(labourHours, minimumHours);
-  const previewTotal = billedHours * hourlyRate + materialsCost;
+  const materialResults = useMemo(() => {
+    const q = materialQuery.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return materialsCatalog.filter((m) => m.label.toLowerCase().includes(q)).slice(0, 8);
+  }, [materialQuery, materialsCatalog]);
+
+  const grandTotal =
+    labourRows.reduce((s, r) => s + num(r.quantity) * num(r.rate), 0) +
+    plantRows.reduce((s, r) => s + num(r.quantity) * num(r.rate), 0) +
+    materialRows.reduce((s, r) => s + num(r.quantity) * num(r.rate), 0) +
+    customRows.reduce((s, r) => s + num(r.quantity) * num(r.rate), 0);
 
   const unbilledTotal = dockets.filter((d) => d.status !== "invoiced").reduce((sum, d) => sum + d.total_cost, 0);
+  const unbilledCount = dockets.filter((d) => d.status !== "invoiced").length;
 
-  async function addDocket() {
-    if (!form.work_date) { setError("Date of work is required"); return; }
+  function resetForm() {
+    setHeader(emptyHeader());
+    setLabourRows([]);
+    setPlantRows([]);
+    setMaterialRows([]);
+    setCustomRows([]);
+    setMaterialQuery("");
+  }
+
+  function addLabourRow() {
+    setLabourRows((r) => [...r, { key: rid(), source_rate_item_id: null, label: "", person_name: "", quantity: "", rate: "" }]);
+  }
+  function addPlantRow() {
+    setPlantRows((r) => [...r, { key: rid(), source_rate_item_id: null, label: "", quantity: "", rate: "" }]);
+  }
+  function addCustomRow() {
+    setCustomRows((r) => [...r, { key: rid(), label: "", quantity: "1", rate: "" }]);
+  }
+  function pickMaterial(m: CatalogMaterial) {
+    setMaterialRows((r) => [...r, { key: rid(), label: m.label, quantity: "1", rate: String(m.unit_cost) }]);
+    setMaterialQuery("");
+    setMaterialSearchOpen(false);
+  }
+
+  function pickLabourCatalogItem(rowKey: string, rateItemId: string) {
+    const item = labourCatalog.find((c) => c.id === rateItemId);
+    setLabourRows((rows) => rows.map((r) => r.key === rowKey ? { ...r, source_rate_item_id: rateItemId, label: item?.label ?? "", rate: item ? String(item.default_rate) : r.rate } : r));
+  }
+  function pickPlantCatalogItem(rowKey: string, rateItemId: string) {
+    const item = plantCatalog.find((c) => c.id === rateItemId);
+    setPlantRows((rows) => rows.map((r) => r.key === rowKey ? { ...r, source_rate_item_id: rateItemId, label: item?.label ?? "", rate: item ? String(item.default_rate) : r.rate } : r));
+  }
+
+  async function saveDocket() {
+    if (!header.work_date) { setError("Date of work is required"); return; }
+    const hasAnyLine = labourRows.length + plantRows.length + materialRows.length + customRows.length > 0;
+    if (!hasAnyLine) { setError("Add at least one labour, plant, materials or custom line"); return; }
+
     setSaving(true);
     setError(null);
     const supabase = createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) { setError("Not signed in"); setSaving(false); return; }
     const businessId = await getActiveBusinessId(supabase, userData.user.id);
-    const { data, error: err } = await supabase
+
+    const { data: docket, error: docketErr } = await supabase
       .from("dockets")
-      .insert({
-        job_id: jobId,
-        profile_id: businessId,
-        work_date: form.work_date,
-        description: form.description,
-        labour_hours: labourHours,
-        hourly_rate: hourlyRate,
-        minimum_hours: minimumHours,
-        materials_cost: materialsCost,
-        status: "draft",
-      })
+      .insert({ job_id: jobId, profile_id: businessId, work_date: header.work_date, weather: header.weather || null, client_name: header.client_name || null, description: header.description || null, status: "draft" })
       .select()
       .single();
-    if (err) { setError(err.message); setSaving(false); return; }
-    setDockets((prev) => [data, ...prev]);
+    if (docketErr || !docket) { setError(docketErr?.message ?? "Could not save docket"); setSaving(false); return; }
+
+    let sortOrder = 0;
+    const itemRows = [
+      ...labourRows.filter((r) => r.label.trim()).map((r) => ({ docket_id: docket.id, profile_id: businessId, category: "labour", source_rate_item_id: r.source_rate_item_id, label: r.label.trim(), person_name: r.person_name.trim() || null, quantity: num(r.quantity), rate: num(r.rate), sort_order: sortOrder++ })),
+      ...plantRows.filter((r) => r.label.trim()).map((r) => ({ docket_id: docket.id, profile_id: businessId, category: "plant", source_rate_item_id: r.source_rate_item_id, label: r.label.trim(), person_name: null, quantity: num(r.quantity), rate: num(r.rate), sort_order: sortOrder++ })),
+      ...materialRows.filter((r) => r.label.trim()).map((r) => ({ docket_id: docket.id, profile_id: businessId, category: "material", source_rate_item_id: null, label: r.label.trim(), person_name: null, quantity: num(r.quantity), rate: num(r.rate), sort_order: sortOrder++ })),
+      ...customRows.filter((r) => r.label.trim()).map((r) => ({ docket_id: docket.id, profile_id: businessId, category: "custom", source_rate_item_id: null, label: r.label.trim(), person_name: null, quantity: num(r.quantity), rate: num(r.rate), sort_order: sortOrder++ })),
+    ];
+
+    const { error: itemsErr } = await supabase.from("docket_items").insert(itemRows);
+    if (itemsErr) { setError(itemsErr.message); setSaving(false); return; }
+
+    // Re-fetch so we get the trigger-computed total_cost and full item rows.
+    const { data: fullDocket } = await supabase.from("dockets").select("*, docket_items(*)").eq("id", docket.id).single();
+    setDockets((prev) => [fullDocket ?? docket, ...prev]);
     setShowForm(false);
-    setForm(emptyForm(defaultHourlyRate));
+    resetForm();
     setSaving(false);
   }
 
@@ -102,49 +174,130 @@ export default function DocketsPanel({ jobId, defaultHourlyRate, dockets: initia
 
       {unbilledTotal > 0 && (
         <div className="bg-amber-50 text-amber-900 rounded-lg px-3 py-2 text-[13px] font-semibold mb-3">
-          ${unbilledTotal.toLocaleString()} across {dockets.filter((d) => d.status !== "invoiced").length} unbilled docket{dockets.filter((d) => d.status !== "invoiced").length === 1 ? "" : "s"} - bundle into an invoice at end of month
+          ${unbilledTotal.toLocaleString()} across {unbilledCount} unbilled docket{unbilledCount === 1 ? "" : "s"} - bundle into an invoice at end of month
         </div>
       )}
 
       {showForm && (
-        <div className="bg-[var(--app-bg)] rounded-xl p-3 mb-4 space-y-2">
+        <div className="bg-[var(--app-bg)] rounded-xl p-3 mb-4 space-y-4">
+          {/* Header */}
           <div className="grid grid-cols-2 gap-2">
             <label className="block">
               <span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1">Date of work *</span>
-              <input type="date" value={form.work_date} onChange={(e) => setForm((f) => ({ ...f, work_date: e.target.value }))} className="app-field" />
+              <input type="date" value={header.work_date} onChange={(e) => setHeader((h) => ({ ...h, work_date: e.target.value }))} className="app-field" />
             </label>
             <label className="block">
-              <span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1">Hourly rate</span>
-              <input type="number" min={0} value={form.hourly_rate} onChange={(e) => setForm((f) => ({ ...f, hourly_rate: e.target.value }))} className="app-field" placeholder="0" />
+              <span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1">Weather</span>
+              <input value={header.weather} onChange={(e) => setHeader((h) => ({ ...h, weather: e.target.value }))} className="app-field" placeholder="e.g. Sunny" />
             </label>
           </div>
           <label className="block">
-            <span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1">Work done</span>
-            <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2} className="app-field text-[13px]" placeholder="What was done on site today..." />
+            <span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1">Client / site contact (who&apos;ll sign)</span>
+            <input value={header.client_name} onChange={(e) => setHeader((h) => ({ ...h, client_name: e.target.value }))} className="app-field" placeholder="Site supervisor or client name" />
           </label>
-          <div className="grid grid-cols-3 gap-2">
-            <label className="block">
-              <span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1">Hours worked</span>
-              <input type="number" min={0} step={0.25} value={form.labour_hours} onChange={(e) => setForm((f) => ({ ...f, labour_hours: e.target.value }))} className="app-field" placeholder="0" />
-            </label>
-            <label className="block">
-              <span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1">Min. callout (h)</span>
-              <input type="number" min={0} step={0.5} value={form.minimum_hours} onChange={(e) => setForm((f) => ({ ...f, minimum_hours: e.target.value }))} className="app-field" />
-            </label>
-            <label className="block">
-              <span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1">Materials</span>
-              <input type="number" min={0} value={form.materials_cost} onChange={(e) => setForm((f) => ({ ...f, materials_cost: e.target.value }))} className="app-field" placeholder="0" />
-            </label>
+          <label className="block">
+            <span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1">Description of work</span>
+            <textarea value={header.description} onChange={(e) => setHeader((h) => ({ ...h, description: e.target.value }))} rows={2} className="app-field text-[13px]" placeholder="What was done on site today..." />
+          </label>
+
+          {/* Labour */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[12px] font-bold text-[var(--ink-soft)] uppercase tracking-wide">Labour</span>
+              <button type="button" onClick={addLabourRow} className="text-[12px] font-semibold text-[var(--navy)]">+ Add person</button>
+            </div>
+            {labourRows.map((row) => (
+              <div key={row.key} className="grid grid-cols-12 gap-1.5 mb-1.5 items-center">
+                <select value={row.source_rate_item_id ?? ""} onChange={(e) => e.target.value ? pickLabourCatalogItem(row.key, e.target.value) : setLabourRows((rows) => rows.map((r) => r.key === row.key ? { ...r, source_rate_item_id: null } : r))} className="app-field col-span-4 text-[12.5px]">
+                  <option value="">Custom role...</option>
+                  {labourCatalog.map((c) => <option key={c.id} value={c.id}>{c.label} (${c.default_rate}/h)</option>)}
+                </select>
+                {!row.source_rate_item_id && (
+                  <input value={row.label} onChange={(e) => setLabourRows((rows) => rows.map((r) => r.key === row.key ? { ...r, label: e.target.value } : r))} placeholder="Role" className="app-field col-span-3 text-[12.5px]" />
+                )}
+                <input value={row.person_name} onChange={(e) => setLabourRows((rows) => rows.map((r) => r.key === row.key ? { ...r, person_name: e.target.value } : r))} placeholder="Person" className={`app-field text-[12.5px] ${row.source_rate_item_id ? "col-span-4" : "col-span-2"}`} />
+                <input type="number" min={0} step={0.25} value={row.quantity} onChange={(e) => setLabourRows((rows) => rows.map((r) => r.key === row.key ? { ...r, quantity: e.target.value } : r))} placeholder="Hrs" className="app-field col-span-2 text-[12.5px]" />
+                <input type="number" min={0} value={row.rate} onChange={(e) => setLabourRows((rows) => rows.map((r) => r.key === row.key ? { ...r, rate: e.target.value } : r))} placeholder="$/h" className="app-field col-span-2 text-[12.5px]" />
+                <button type="button" onClick={() => setLabourRows((rows) => rows.filter((r) => r.key !== row.key))} className="col-span-1 flex justify-center text-[var(--ink-faint)] hover:text-red-600"><Trash2 size={13} /></button>
+              </div>
+            ))}
           </div>
-          {(labourHours > 0 || materialsCost > 0) && (
-            <p className="text-[13px] font-semibold text-[var(--ink)]">
-              Billed {billedHours}h{billedHours > labourHours ? ` (${labourHours}h worked, ${minimumHours}h minimum applies)` : ""} - docket total: ${Math.round(previewTotal).toLocaleString()}
-            </p>
-          )}
+
+          {/* Plant */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[12px] font-bold text-[var(--ink-soft)] uppercase tracking-wide">Plant &amp; equipment</span>
+              <button type="button" onClick={addPlantRow} className="text-[12px] font-semibold text-[var(--navy)]">+ Add item</button>
+            </div>
+            {plantRows.map((row) => (
+              <div key={row.key} className="grid grid-cols-12 gap-1.5 mb-1.5 items-center">
+                <select value={row.source_rate_item_id ?? ""} onChange={(e) => e.target.value ? pickPlantCatalogItem(row.key, e.target.value) : setPlantRows((rows) => rows.map((r) => r.key === row.key ? { ...r, source_rate_item_id: null } : r))} className="app-field col-span-5 text-[12.5px]">
+                  <option value="">Custom item...</option>
+                  {plantCatalog.map((c) => <option key={c.id} value={c.id}>{c.label} (${c.default_rate}/h)</option>)}
+                </select>
+                {!row.source_rate_item_id && (
+                  <input value={row.label} onChange={(e) => setPlantRows((rows) => rows.map((r) => r.key === row.key ? { ...r, label: e.target.value } : r))} placeholder="Item" className="app-field col-span-4 text-[12.5px]" />
+                )}
+                <input type="number" min={0} step={0.25} value={row.quantity} onChange={(e) => setPlantRows((rows) => rows.map((r) => r.key === row.key ? { ...r, quantity: e.target.value } : r))} placeholder="Hrs" className={`app-field text-[12.5px] ${row.source_rate_item_id ? "col-span-3" : "col-span-2"}`} />
+                <input type="number" min={0} value={row.rate} onChange={(e) => setPlantRows((rows) => rows.map((r) => r.key === row.key ? { ...r, rate: e.target.value } : r))} placeholder="$/h" className="col-span-2 app-field text-[12.5px]" />
+                <button type="button" onClick={() => setPlantRows((rows) => rows.filter((r) => r.key !== row.key))} className="col-span-1 flex justify-center text-[var(--ink-faint)] hover:text-red-600"><Trash2 size={13} /></button>
+              </div>
+            ))}
+          </div>
+
+          {/* Materials */}
+          <div>
+            <span className="block text-[12px] font-bold text-[var(--ink-soft)] uppercase tracking-wide mb-1.5">Materials</span>
+            {materialsCatalog.length > 0 && (
+              <div className="relative mb-2">
+                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--ink-faint)]" />
+                <input value={materialQuery} onChange={(e) => { setMaterialQuery(e.target.value); setMaterialSearchOpen(true); }} onFocus={() => setMaterialSearchOpen(true)} placeholder="Search price book..." className="app-field pl-8 text-[12.5px]" />
+                {materialSearchOpen && materialQuery.trim().length >= 2 && (
+                  <div className="absolute z-20 left-0 right-0 mt-1 bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                    {materialResults.length === 0 ? (
+                      <p className="text-[12px] text-[var(--ink-faint)] px-3 py-2">No matches.</p>
+                    ) : materialResults.map((m) => (
+                      <button key={m.item_key} type="button" onClick={() => pickMaterial(m)} className="w-full flex items-center justify-between text-left px-3 py-2 hover:bg-[var(--app-bg)] border-b border-[var(--line)] last:border-0">
+                        <span className="text-[12px] text-[var(--ink)] truncate pr-2">{m.label}</span>
+                        <span className="text-[12px] font-semibold text-[var(--ink-faint)] whitespace-nowrap">${m.unit_cost}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {materialRows.map((row) => (
+              <div key={row.key} className="grid grid-cols-12 gap-1.5 mb-1.5 items-center">
+                <input value={row.label} onChange={(e) => setMaterialRows((rows) => rows.map((r) => r.key === row.key ? { ...r, label: e.target.value } : r))} placeholder="Material" className="app-field col-span-6 text-[12.5px]" />
+                <input type="number" min={0} value={row.quantity} onChange={(e) => setMaterialRows((rows) => rows.map((r) => r.key === row.key ? { ...r, quantity: e.target.value } : r))} placeholder="Qty" className="app-field col-span-2 text-[12.5px]" />
+                <input type="number" min={0} value={row.rate} onChange={(e) => setMaterialRows((rows) => rows.map((r) => r.key === row.key ? { ...r, rate: e.target.value } : r))} placeholder="$ each" className="app-field col-span-3 text-[12.5px]" />
+                <button type="button" onClick={() => setMaterialRows((rows) => rows.filter((r) => r.key !== row.key))} className="col-span-1 flex justify-center text-[var(--ink-faint)] hover:text-red-600"><Trash2 size={13} /></button>
+              </div>
+            ))}
+          </div>
+
+          {/* Custom / outlier */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[12px] font-bold text-[var(--ink-soft)] uppercase tracking-wide">Custom / outlier item</span>
+              <button type="button" onClick={addCustomRow} className="text-[12px] font-semibold text-[var(--navy)]">+ Add line</button>
+            </div>
+            <p className="text-[11.5px] text-[var(--ink-faint)] mb-1.5">For anything one-off that doesn&apos;t fit labour, plant or materials.</p>
+            {customRows.map((row) => (
+              <div key={row.key} className="grid grid-cols-12 gap-1.5 mb-1.5 items-center">
+                <input value={row.label} onChange={(e) => setCustomRows((rows) => rows.map((r) => r.key === row.key ? { ...r, label: e.target.value } : r))} placeholder="Description" className="app-field col-span-6 text-[12.5px]" />
+                <input type="number" min={0} value={row.quantity} onChange={(e) => setCustomRows((rows) => rows.map((r) => r.key === row.key ? { ...r, quantity: e.target.value } : r))} placeholder="Qty" className="app-field col-span-2 text-[12.5px]" />
+                <input type="number" min={0} value={row.rate} onChange={(e) => setCustomRows((rows) => rows.map((r) => r.key === row.key ? { ...r, rate: e.target.value } : r))} placeholder="$ each" className="app-field col-span-3 text-[12.5px]" />
+                <button type="button" onClick={() => setCustomRows((rows) => rows.filter((r) => r.key !== row.key))} className="col-span-1 flex justify-center text-[var(--ink-faint)] hover:text-red-600"><Trash2 size={13} /></button>
+              </div>
+            ))}
+          </div>
+
+          {grandTotal > 0 && <p className="text-[13.5px] font-bold text-[var(--ink)]">Docket total: ${grandTotal.toLocaleString()}</p>}
           {error && <p className="text-[12.5px] text-red-600">{error}</p>}
           <div className="flex gap-2">
-            <button onClick={addDocket} disabled={saving} className="bg-[var(--navy)] text-white rounded-lg px-3 py-1.5 text-[13px] font-semibold disabled:opacity-50">{saving ? "Saving..." : "Save docket"}</button>
-            <button onClick={() => setShowForm(false)} className="border-2 border-[var(--line)] rounded-lg px-3 py-1.5 text-[13px] font-semibold">Cancel</button>
+            <button onClick={saveDocket} disabled={saving} className="bg-[var(--navy)] text-white rounded-lg px-3 py-1.5 text-[13px] font-semibold disabled:opacity-50">{saving ? "Saving..." : "Save docket"}</button>
+            <button onClick={() => { setShowForm(false); resetForm(); }} className="border-2 border-[var(--line)] rounded-lg px-3 py-1.5 text-[13px] font-semibold">Cancel</button>
           </div>
         </div>
       )}
@@ -156,20 +309,35 @@ export default function DocketsPanel({ jobId, defaultHourlyRate, dockets: initia
       <div className="space-y-2 mt-2">
         {dockets.map((d) => {
           const Icon = STATUS_ICON[d.status];
+          const items: DocketItem[] = d.items ?? (d as unknown as { docket_items?: DocketItem[] }).docket_items ?? [];
+          const isExpanded = expandedId === d.id;
           return (
             <div key={d.id} className="border border-[var(--line)] rounded-lg p-3">
-              <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start justify-between gap-2 cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : d.id)}>
                 <div>
                   <p className="text-[14px] font-semibold text-[var(--ink)]">{new Date(d.work_date).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}</p>
                   {d.description && <p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5 line-clamp-2">{d.description}</p>}
-                  <p className="text-[13px] font-semibold text-[var(--ink)] mt-1">
-                    {d.billed_hours}h @ ${d.hourly_rate}/h{d.materials_cost > 0 ? ` + $${d.materials_cost} materials` : ""} = ${d.total_cost.toLocaleString()}
-                  </p>
+                  <p className="text-[13px] font-semibold text-[var(--ink)] mt-1">{items.length} line{items.length === 1 ? "" : "s"} - ${d.total_cost.toLocaleString()}</p>
                 </div>
                 <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1 whitespace-nowrap ${STATUS_STYLE[d.status]}`}>
                   <Icon size={11} />{d.status}
                 </span>
               </div>
+
+              {isExpanded && items.length > 0 && (
+                <div className="mt-2 space-y-1 border-t border-[var(--line)] pt-2">
+                  {items.map((it) => (
+                    <div key={it.id} className="flex items-center justify-between text-[12.5px]">
+                      <span className="text-[var(--ink-soft)]">
+                        {it.category === "labour" && it.person_name ? `${it.person_name} - ${it.label}` : it.label}
+                        {it.category !== "material" && it.category !== "custom" ? ` (${it.quantity}h)` : it.quantity > 1 ? ` x${it.quantity}` : ""}
+                      </span>
+                      <span className="font-semibold text-[var(--ink)]">${it.line_total.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {d.status === "signed" && d.signed_by_name && (
                 <p className="text-[11px] text-green-700 mt-1">Signed by {d.signed_by_name}{d.signed_at ? ` on ${new Date(d.signed_at).toLocaleDateString("en-AU")}` : ""}</p>
               )}

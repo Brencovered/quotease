@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Box, Building2, Package, Tag, Layers, ShoppingBag } from "lucide-react";
+import { Box, Building2, Package, Tag, Layers, ShoppingBag, Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveBusinessId } from "@/lib/team";
 import MaterialsCatalog, { MaterialModal, CsvUploadModal } from "./materials/MaterialsCatalog";
@@ -11,6 +11,7 @@ import PackagesView from "./materials/PackagesView";
 import PricingTiersView from "./materials/PricingTiersView";
 import JobSizeTiersView from "./materials/JobSizeTiersView";
 import MaterialBundlesView from "./materials/MaterialBundlesView";
+import DocketRateItemsView from "./materials/DocketRateItemsView";
 import type { Material, Supplier, Pkg, PackageRow, PricingTier, JobSizeTier, MaterialBundle } from "./materials/shared";
 import { PAGE_SIZE } from "./materials/shared";
 
@@ -21,7 +22,7 @@ export default function MaterialsPanel() {
   const supabase = createClient();
 
   /* --- Tabs --- */
-  const [activeTab, setActiveTab] = useState<"materials" | "suppliers" | "packages" | "pricing" | "bundles">("materials");
+  const [activeTab, setActiveTab] = useState<"materials" | "suppliers" | "packages" | "pricing" | "bundles" | "dockets">("materials");
 
   /* --- Pricing sub-tabs --- */
   const [pricingSubTab, setPricingSubTab] = useState<"tiers" | "sizes">("tiers");
@@ -286,6 +287,7 @@ export default function MaterialsPanel() {
           { key: "packages" as const, label: "Packages", icon: Package },
           { key: "pricing" as const, label: "Pricing", icon: Tag },
           { key: "bundles" as const, label: "Bundles", icon: ShoppingBag },
+          { key: "dockets" as const, label: "Dayworks", icon: Clock },
         ].map((tab) => {
           const active = activeTab === tab.key;
           return (
@@ -421,6 +423,8 @@ export default function MaterialsPanel() {
           onBundlesChanged={() => loadBundles()}
         />
       )}
+
+      {activeTab === "dockets" && <DocketRateItemsView />}
 
       {/* ---- Material Modal ---- */}
       {materialModalOpen && (

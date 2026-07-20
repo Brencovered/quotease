@@ -1,34 +1,55 @@
 export type DocketStatus = "draft" | "sent" | "signed" | "invoiced";
+export type DocketItemCategory = "labour" | "plant" | "material" | "custom";
+export type DocketRateCategory = "labour" | "plant";
 
+/** The tradie's saved catalog of labour roles / plant items they charge builders or contractors for. */
+export interface DocketRateItem {
+  id: string;
+  profile_id: string;
+  category: DocketRateCategory;
+  label: string;
+  default_rate: number;
+  unit: string;
+  created_at: string;
+}
+
+/** One line on a docket - a person's hours, a plant item's hours, a material, or a custom one-off entry. */
+export interface DocketItem {
+  id: string;
+  docket_id: string;
+  profile_id: string;
+  category: DocketItemCategory;
+  source_rate_item_id: string | null;
+  label: string;
+  person_name: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  quantity: number;
+  rate: number;
+  line_total: number; // generated: quantity * rate
+  sort_order: number;
+  created_at: string;
+}
+
+/** The docket header. total_cost is trigger-maintained from the sum of its items. */
 export interface Docket {
   id: string;
   job_id: string;
   profile_id: string;
   work_date: string; // date, YYYY-MM-DD
   description: string | null;
-  labour_hours: number;
-  hourly_rate: number;
-  minimum_hours: number;
-  materials_cost: number;
-  billed_hours: number; // generated: greatest(labour_hours, minimum_hours)
-  total_cost: number; // generated: billed_hours * hourly_rate + materials_cost
+  weather: string | null;
+  client_name: string | null; // who's on site / signing, distinct from the job's client
+  start_time: string | null;
+  end_time: string | null;
+  total_cost: number;
   status: DocketStatus;
   public_token: string;
   signed_by_name: string | null;
-  signature_data: string | null; // base64 PNG data URL
+  signature_data: string | null;
   signed_at: string | null;
   invoiced_at: string | null;
   created_at: string;
   updated_at: string;
-}
-
-/** What the "log a docket" form actually needs to submit - the rest is server/DB-computed. */
-export interface DocketDraftInput {
-  job_id: string;
-  work_date: string;
-  description: string;
-  labour_hours: number;
-  hourly_rate: number;
-  minimum_hours: number;
-  materials_cost: number;
+  items?: DocketItem[];
 }
