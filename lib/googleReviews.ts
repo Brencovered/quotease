@@ -47,9 +47,21 @@ export async function getPlaceReviews(placeId: string): Promise<GoogleReview[]> 
     });
     clearTimeout(timeout);
 
-    if (!res.ok) return [];
+    if (!res.ok) {
+      console.error(`[googleReviews] Place Details HTTP ${res.status} for ${placeId}`);
+      return [];
+    }
 
     const data = await res.json();
+    // Google's Places API returns HTTP 200 even for key/quota/billing
+    // problems -- the actual outcome is in the JSON body's status field
+    // (OK, ZERO_RESULTS, OVER_QUERY_LIMIT, REQUEST_DENIED, INVALID_REQUEST,
+    // UNKNOWN_ERROR). Log anything other than OK/ZERO_RESULTS so a
+    // sitewide failure (e.g. quota exhausted) is actually visible instead
+    // of just quietly returning no reviews everywhere.
+    if (data?.status && data.status !== "OK" && data.status !== "ZERO_RESULTS") {
+      console.error(`[googleReviews] Places API status "${data.status}" for ${placeId}: ${data.error_message ?? ""}`);
+    }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const reviews = data?.result?.reviews as any[] | undefined;
     if (!Array.isArray(reviews)) return [];

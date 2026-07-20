@@ -24,7 +24,11 @@ export async function GET(req: NextRequest) {
   } finally {
     clearTimeout(timeout);
   }
-  if (!res.ok) return NextResponse.json({ error: "Photo not found" }, { status: 404 });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    console.error(`[places/photo] Google returned ${res.status} for ref starting "${ref.slice(0, 12)}...": ${errText.slice(0, 300)}`);
+    return NextResponse.json({ error: "Photo not found" }, { status: 404 });
+  }
 
   const blob    = await res.blob();
   const headers = new Headers();
