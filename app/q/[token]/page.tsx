@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { termAmount, type PaymentTerm } from "@/lib/paymentTerms";
 import QuoteResponseButtons from "@/components/QuoteResponseButtons";
 import SiteAnnotationReport from "@/components/SiteAnnotationReport";
+import SafeLogoImage from "@/components/SafeLogoImage";
 import { resolveAnnotationFrameUrls, type AnnotationMetaPersisted } from "@/lib/siteAnnotations";
 import { humanizeIntakePublic } from "@/lib/humanizeIntake";
 
@@ -49,8 +50,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
         <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl overflow-hidden shadow-sm">
           <div className="bg-[var(--navy)] px-6 py-6">
             {profile.logo_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={profile.logo_url} alt={profile.business_name ?? ""} className="h-10 mb-3 object-contain" />
+              <SafeLogoImage src={profile.logo_url} alt={profile.business_name ?? ""} className="h-10 mb-3 object-contain" />
             )}
             <p className="font-display text-xl text-white">{profile.business_name ?? "Quote"}</p>
             <p className="text-[12.5px] text-[var(--steel-1)] mt-1">

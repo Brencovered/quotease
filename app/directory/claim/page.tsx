@@ -566,11 +566,17 @@ function ClaimDirectoryListingInner() {
 }
 
 function ListingMatchCard({ match }: { match: ListingMatch }) {
+  const [logoFailed, setLogoFailed] = useState(false);
   return (
     <div className="flex items-center gap-3 border border-[#e5e9ec] rounded-xl p-3">
-      {match.logo_url ? (
+      {match.logo_url && !logoFailed ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={match.logo_url} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
+        <img
+          src={match.logo_url}
+          alt=""
+          className="w-10 h-10 rounded-lg object-cover shrink-0"
+          onError={() => setLogoFailed(true)}
+        />
       ) : (
         <div className="w-10 h-10 rounded-lg bg-[#f1f4f6] shrink-0" />
       )}
