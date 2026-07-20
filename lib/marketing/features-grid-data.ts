@@ -30,8 +30,8 @@ export const FEATURES_GRID: FeatureGridItem[] = [
     replaces: "HiPages",
     label: "Lead generation",
     note: "Homeowner quote requests included with your plan. No per-lead auction. No credits system.",
-    image: "https://images.unsplash.com/photo-1597502310092-31cdaa35b46d?w=1200&q=80&auto=format&fit=crop",
-    imageAlt: "Tradesman in orange helmet on site",
+    image: "/marketing/lead-generation-leads.png",
+    imageAlt: "Swiftscope Leads screen showing claimed homeowner leads with stage, budget and timeframe",
     heroTitle: "Win local leads without the auction",
     heroSubtitle: "Homeowner quote requests, included with your plan",
     intro: [
