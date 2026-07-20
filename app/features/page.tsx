@@ -1,11 +1,13 @@
 import Link from "next/link";
+import Image from "next/image";
 import SavingsCalculator from "@/components/SavingsCalculator";
 import {
-  Zap, Users, Smartphone, FileText, DollarSign, PenTool,
+  Zap, Users, FileText, DollarSign, PenTool,
   Calendar, RefreshCw, MapPin, ArrowRight,
-  Briefcase, ChevronDown,
+  ChevronDown,
 } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
+import { FEATURES_GRID } from "@/lib/marketing/features-grid-data";
 
 export const metadata = { title: "Features - Swiftscope" };
 
@@ -31,30 +33,42 @@ export default function FeaturesPage() {
       <div className="bg-white border-b border-[#e8ecef]">
         <div className="max-w-7xl mx-auto px-6 py-20">
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
-            {[
-              { icon:MapPin,      type:"replace",   replaces:"HiPages",          label:"Lead generation",      note:"Homeowner quote requests included with your plan. No per-lead auction. No credits system." },
-              { icon:Briefcase,   type:"replace",   replaces:"Fergus / Tradify", label:"Job management",       note:"Quotes, jobs, scheduling, variations, job costing. All in one place, all on your phone." },
-              { icon:Smartphone,  type:"replace",   replaces:"ServiceM8",        label:"Mobile quoting",       note:"Trade-specific quote builder on your phone. Send the quote before you leave the driveway." },
-              { icon:PenTool,     type:"replace",   replaces:"GroundPlan",       label:"Drawing markup",       note:"Upload site plans, draw cable runs or pipe routes, count items. Costs link to your quote." },
-              { icon:DollarSign,  type:"replace",   replaces:"SimPro",           label:"Job costing",          note:"Track actual hours and materials against what you quoted. Know your real margin on every job." },
-              { icon:RefreshCw,   type:"integrate", replaces:"Xero",             label:"Xero live sync",       note:"Swiftscope integrates with Xero. Accepted quotes push as invoices automatically - no double entry." },
-            ].map(r => (
-              <div key={r.replaces} className={`rounded-2xl p-6 border ${r.type === "integrate" ? "bg-blue-50 border-blue-100" : "bg-[#f8f9fa] border-[#e8ecef]"}`}>
-                <div className="flex items-start justify-between mb-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${r.type === "integrate" ? "bg-blue-100" : "bg-[#0a1722]"}`}>
-                    <r.icon size={18} className={r.type === "integrate" ? "text-blue-600" : "text-[#ffb400]"} />
+            {FEATURES_GRID.map(r => (
+              <Link
+                key={r.slug}
+                href={`/features/${r.slug}`}
+                className={`group block rounded-2xl border overflow-hidden transition-shadow hover:shadow-lg ${r.type === "integrate" ? "bg-blue-50 border-blue-100" : "bg-[#f8f9fa] border-[#e8ecef]"}`}
+              >
+                <div className="relative h-36 w-full overflow-hidden">
+                  <Image
+                    src={r.image}
+                    alt={r.imageAlt}
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/0 to-black/0" />
+                </div>
+                <div className="p-6">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${r.type === "integrate" ? "bg-blue-100" : "bg-[#0a1722]"}`}>
+                      <r.icon size={18} className={r.type === "integrate" ? "text-blue-600" : "text-[#ffb400]"} />
+                    </div>
+                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${
+                      r.type === "integrate"
+                        ? "bg-blue-100 text-blue-700 border-blue-200"
+                        : "bg-red-50 text-red-600 border-red-100"
+                    }`}>
+                      {r.type === "integrate" ? `Integrates with ${r.replaces}` : `Replaces ${r.replaces}`}
+                    </span>
                   </div>
-                  <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${
-                    r.type === "integrate"
-                      ? "bg-blue-100 text-blue-700 border-blue-200"
-                      : "bg-red-50 text-red-600 border-red-100"
-                  }`}>
-                    {r.type === "integrate" ? `Integrates with ${r.replaces}` : `Replaces ${r.replaces}`}
+                  <p className="font-bold text-[15px] text-[#0a1722] mb-1 group-hover:underline">{r.label}</p>
+                  <p className="text-[13px] text-[#5a6a78] leading-relaxed mb-3">{r.note}</p>
+                  <span className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-[#e89e00]">
+                    Learn more <ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" />
                   </span>
                 </div>
-                <p className="font-bold text-[15px] text-[#0a1722] mb-1">{r.label}</p>
-                <p className="text-[13px] text-[#5a6a78] leading-relaxed">{r.note}</p>
-              </div>
+              </Link>
             ))}
           </div>
 
