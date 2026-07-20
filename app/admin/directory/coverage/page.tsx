@@ -48,7 +48,7 @@ export default function CoveragePage() {
   const [cellMessage, setCellMessage] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    fetch("/api/admin/directory/coverage")
+    fetch("/api/admin/directory/coverage", { cache: "no-store" })
       .then(async (r) => {
         if (!r.ok) {
           const d = await r.json();

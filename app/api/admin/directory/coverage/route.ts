@@ -3,6 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdminEmail } from "@/lib/admin";
 
+// This reflects live scrape/refresh actions the admin just ran -- it must
+// never be cached, by Next.js, Vercel's edge, or the browser. Explicit
+// rather than relying on cookies() usage elsewhere in the file to opt
+// this route out of caching implicitly.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 // Approximate official Australia Post postcode ranges. Good enough for a
 // heuristic state grouping on an admin dashboard -- not meant to be exact
 // for edge-case PO box ranges.
@@ -94,9 +101,12 @@ export async function GET() {
 
   postcodes.sort((a, z) => z.total - a.total);
 
-  return NextResponse.json({
-    postcodes,
-    postcodeCount: postcodes.length,
-    stateCount: new Set(postcodes.map((p) => p.state)).size,
-  });
+  return NextResponse.json(
+    {
+      postcodes,
+      postcodeCount: postcodes.length,
+      stateCount: new Set(postcodes.map((p) => p.state)).size,
+    },
+    { headers: { "Cache-Control": "no-store, max-age=0" } }
+  );
 }
