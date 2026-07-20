@@ -49,12 +49,27 @@ export async function GET() {
 
   const admin = createAdminClient();
 
-  const { data: rows, error } = await admin
-    .from("directory_listing")
-    .select("postcode, suburb, trades");
+  // PostgREST silently caps an unpaginated select at 1,000 rows -- with
+  // 5,000+ listings in directory_listing, a plain .select() here was
+  // quietly aggregating against roughly the first fifth of the table,
+  // which is exactly why counts on this page didn't match the real data
+  // (e.g. showing 0 aircon listings for a postcode that actually has 4).
+  // Page through the whole table explicitly rather than relying on a
+  // single unbounded select.
+  const PAGE_SIZE = 1000;
+  const rows: { postcode: string | null; suburb: string | null; trades: string[] | null }[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data: page, error } = await admin
+      .from("directory_listing")
+      .select("postcode, suburb, trades")
+      .range(from, from + PAGE_SIZE - 1);
 
-  if (error) {
-    return NextResponse.json({ error: "Failed to load coverage data" }, { status: 500 });
+    if (error) {
+      return NextResponse.json({ error: "Failed to load coverage data" }, { status: 500 });
+    }
+    if (!page || page.length === 0) break;
+    rows.push(...page);
+    if (page.length < PAGE_SIZE) break;
   }
 
   type Bucket = {
@@ -67,7 +82,7 @@ export async function GET() {
 
   const buckets = new Map<string, Bucket>();
 
-  for (const row of rows ?? []) {
+  for (const row of rows) {
     const postcode = row.postcode?.trim();
     if (!postcode) continue;
 
