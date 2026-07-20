@@ -11,6 +11,9 @@ export interface FeatureGridItem {
   note: string;
   image: string;
   imageAlt: string;
+  /** Optional separate image for the detail-page hero. Falls back to `image`/`imageAlt` if omitted. */
+  heroImage?: string;
+  heroImageAlt?: string;
   /** Detail page content */
   heroTitle: string;
   heroSubtitle: string;
@@ -75,8 +78,10 @@ export const FEATURES_GRID: FeatureGridItem[] = [
     replaces: "ServiceM8",
     label: "Mobile quoting",
     note: "Trade-specific quote builder on your phone. Send the quote before you leave the driveway.",
-    image: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=1200&q=80&auto=format&fit=crop",
-    imageAlt: "Electrician installing wiring on site, wearing a yellow hardhat",
+    image: "/marketing/mobile-quoting-quote-builder.png",
+    imageAlt: "Swiftscope quote builder screen showing labour, materials and on-site items, with two tradies reviewing it on site",
+    heroImage: "/marketing/mobile-quoting-quotes-list.png",
+    heroImageAlt: "Swiftscope Quotes screen showing follow-up reminders and quote statuses",
     heroTitle: "Quote before you leave the driveway",
     heroSubtitle: "A trade-specific quote builder that lives on your phone",
     intro: [

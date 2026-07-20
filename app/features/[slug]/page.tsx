@@ -58,8 +58,8 @@ export default async function FeatureDetailPage({ params }: { params: Promise<{ 
             </div>
             <div className="relative h-64 md:h-80 rounded-2xl overflow-hidden">
               <Image
-                src={feature.image}
-                alt={feature.imageAlt}
+                src={feature.heroImage || feature.image}
+                alt={feature.heroImageAlt || feature.imageAlt}
                 fill
                 sizes="(max-width: 768px) 100vw, 50vw"
                 className="object-cover"
