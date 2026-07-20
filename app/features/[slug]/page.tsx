@@ -125,7 +125,7 @@ export default async function FeatureDetailPage({ params }: { params: Promise<{ 
                   href={`/features/${r.slug}`}
                   className="group block rounded-2xl border bg-white border-[#e8ecef] overflow-hidden transition-shadow hover:shadow-lg"
                 >
-                  <div className="relative h-44 w-full overflow-hidden bg-[#0a1722]">
+                  <div className="relative h-52 w-full overflow-hidden bg-[#0a1722]">
                     <Image
                       src={r.image}
                       alt={r.imageAlt}

@@ -39,7 +39,7 @@ export default function FeaturesPage() {
                 href={`/features/${r.slug}`}
                 className={`group block rounded-2xl border overflow-hidden transition-shadow hover:shadow-lg ${r.type === "integrate" ? "bg-blue-50 border-blue-100" : "bg-[#f8f9fa] border-[#e8ecef]"}`}
               >
-                <div className="relative h-56 w-full overflow-hidden bg-[#0a1722]">
+                <div className="relative h-64 w-full overflow-hidden bg-[#0a1722]">
                   <Image
                     src={r.image}
                     alt={r.imageAlt}
