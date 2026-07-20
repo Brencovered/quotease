@@ -5,6 +5,21 @@ import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
 import { FEATURES_GRID, getFeatureBySlug } from "@/lib/marketing/features-grid-data";
 
+/** Renders `**bold**` segments in a string as <strong>, everything else as plain text */
+function renderEmphasis(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong key={i} className="font-bold text-[#0a1722]">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return <span key={i}>{part}</span>;
+  });
+}
+
 export function generateStaticParams() {
   return FEATURES_GRID.map((f) => ({ slug: f.slug }));
 }
@@ -69,9 +84,9 @@ export default async function FeatureDetailPage({ params }: { params: Promise<{ 
                 <Link href="/signup" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-7 py-3.5 rounded-xl hover:opacity-90">
                   Start free trial <ArrowRight size={15} />
                 </Link>
-                {feature.costLabel && (
+                {feature.competitorCost && (
                   <span className="text-[13px] text-[#8aa4b4]">
-                    vs. <span className="text-white/90 font-semibold">{feature.costLabel.split(" typically")[0]}</span> elsewhere
+                    vs. <span className="text-white/90 font-semibold">{feature.competitorCostLabel}</span> elsewhere
                   </span>
                 )}
               </div>
@@ -96,23 +111,15 @@ export default async function FeatureDetailPage({ params }: { params: Promise<{ 
           <div className="grid md:grid-cols-3 gap-12">
             <div className="md:col-span-2 space-y-5">
               {feature.intro.map((p, i) => (
-                <p key={i} className="text-[16px] text-[#3a4a58] leading-relaxed">{p}</p>
+                <p key={i} className="text-[16px] text-[#3a4a58] leading-relaxed">{renderEmphasis(p)}</p>
               ))}
-              {feature.costLabel && (
-                <div className="bg-[#f8f9fa] border border-[#e8ecef] rounded-xl px-5 py-4 mt-2">
-                  <p className="text-[13px] text-[#5a6a78]">
-                    <span className="font-bold text-[#0a1722]">For comparison: </span>
-                    {feature.costLabel}, versus $45/month flat for the whole Swiftscope platform.
-                  </p>
-                </div>
-              )}
               <div className="pt-6">
                 <Link href="/signup" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-7 py-3.5 rounded-xl hover:opacity-90">
                   Start free trial <ArrowRight size={15} />
                 </Link>
               </div>
             </div>
-            <div>
+            <div className="space-y-5">
               <div className="bg-[#f8f9fa] border border-[#e8ecef] rounded-2xl p-6">
                 <p className="text-[11px] font-bold tracking-[.15em] uppercase text-[#ffb400] mb-4">What it does</p>
                 <ul className="space-y-3">
@@ -124,6 +131,20 @@ export default async function FeatureDetailPage({ params }: { params: Promise<{ 
                   ))}
                 </ul>
               </div>
+              {feature.competitorCost && (
+                <div className="bg-[#0a1722] rounded-2xl p-6">
+                  <p className="text-[11px] font-bold tracking-[.15em] uppercase text-[#ffb400] mb-4">What you&apos;d pay elsewhere</p>
+                  <div className="flex items-center justify-between py-2.5 border-b border-white/10">
+                    <span className="text-[13px] text-[#8aa4b4] pr-2">{feature.competitorCostLabel}</span>
+                    <span className="text-[15px] font-bold text-white/50 line-through whitespace-nowrap">{feature.competitorCost}</span>
+                  </div>
+                  <div className="flex items-center justify-between pt-3">
+                    <span className="text-[13px] font-semibold text-white">Swiftscope</span>
+                    <span className="text-[1.6rem] font-display text-[#ffb400] leading-none">$45<span className="text-[13px] text-[#8aa4b4] font-sans font-normal">/mo flat</span></span>
+                  </div>
+                  <p className="text-[11.5px] text-[#8aa4b4] mt-3 leading-snug">Unlimited seats, whole platform included - not just this feature.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

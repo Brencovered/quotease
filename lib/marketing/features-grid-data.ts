@@ -23,7 +23,9 @@ export interface FeatureGridItem {
   quickStats: string[];
   intro: string[];
   bullets: string[];
-  costLabel?: string;
+  /** Structured competitor cost, used to build the price comparison card. Omit for "integrate" type features. */
+  competitorCostLabel?: string;
+  competitorCost?: string;
 }
 
 export const FEATURES_GRID: FeatureGridItem[] = [
@@ -41,8 +43,8 @@ export const FEATURES_GRID: FeatureGridItem[] = [
     replacesReason: "HiPages charges $30-150 every time you claim a lead. Swiftscope doesn't charge you a cent extra for a single one.",
     quickStats: ["No auction", "No credits system", "Unlimited claims"],
     intro: [
-      "HiPages and similar directories sell you leads one at a time, in an auction against other tradies, with a credits system that runs out right when work is slow. Swiftscope includes homeowner quote requests in your flat monthly plan instead.",
-      "Homeowners in your service area post the job they need done. You claim the ones that fit your trade and availability, at no extra cost per lead. There's no bidding, no credits to top up, and no cap on how many you can claim in a month.",
+      "HiPages and similar directories sell you leads one at a time, in an auction against other tradies, with a credits system that runs out right when work is slow. Swiftscope includes homeowner quote requests **in your flat monthly plan instead**.",
+      "Homeowners in your service area post the job they need done. You claim the ones that fit your trade and availability, **at no extra cost per lead**. There's no bidding, no credits to top up, and **no cap on how many you can claim in a month**.",
       "Claimed leads drop straight into your pipeline next to your other jobs, so you're not juggling a separate app just to chase new work.",
     ],
     bullets: [
@@ -51,7 +53,8 @@ export const FEATURES_GRID: FeatureGridItem[] = [
       "Unlimited claims included in your flat monthly plan",
       "Claimed leads flow straight into your existing job pipeline",
     ],
-    costLabel: "HiPages lead credits typically run $80-300/month",
+    competitorCostLabel: "HiPages lead credits",
+    competitorCost: "$80-300/month",
   },
   {
     slug: "job-management",
@@ -69,9 +72,9 @@ export const FEATURES_GRID: FeatureGridItem[] = [
     replacesReason: "Fergus and Tradify are priced and built for bigger operations. This is scoped for a crew your size, at a fraction of the cost.",
     quickStats: ["One board, not five apps", "No per-seat pricing", "Built for 1-15 crews"],
     intro: [
-      "Fergus and Tradify built full job management platforms - and most small trade businesses only end up using a third of what they pay for. Swiftscope covers the parts that actually matter for a 1-15 person crew: quoting, job tracking, scheduling, variations and job costing, without the enterprise-scale complexity.",
-      "A job moves from quote to scheduled to in-progress to invoiced, all visible on one board, on your phone, without switching between five different screens.",
-      "Because it's built for small crews specifically, there's no per-seat pricing creep as you add an apprentice or a second team member.",
+      "Fergus and Tradify built full job management platforms - and most small trade businesses only end up using a third of what they pay for. Swiftscope covers the parts that actually matter for a 1-15 person crew: quoting, job tracking, scheduling, variations and job costing, **without the enterprise-scale complexity**.",
+      "A job moves from quote to scheduled to in-progress to invoiced, **all visible on one board, on your phone**, without switching between five different screens.",
+      "Because it's built for small crews specifically, **there's no per-seat pricing creep** as you add an apprentice or a second team member.",
     ],
     bullets: [
       "Quotes, jobs, scheduling and invoicing in a single board",
@@ -79,7 +82,8 @@ export const FEATURES_GRID: FeatureGridItem[] = [
       "Built for 1-15 person crews, not enterprise job management",
       "No per-seat pricing as your team grows",
     ],
-    costLabel: "Fergus or ServiceM8 typically run $40-130/month",
+    competitorCostLabel: "Fergus or ServiceM8",
+    competitorCost: "$40-130/month",
   },
   {
     slug: "mobile-quoting",
@@ -97,9 +101,9 @@ export const FEATURES_GRID: FeatureGridItem[] = [
     replacesReason: "ServiceM8 charges per user, per month, for mobile quoting alone. It's built into Swiftscope's flat plan from day one.",
     quickStats: ["Trade-specific fields", "Numbers calculate live", "Sent before you drive off"],
     intro: [
-      "Generic quoting apps ask for generic fields. Swiftscope's quote builder is trade-specific - an electrician sees circuit and switchboard fields, a plumber sees fixture and pipe-run fields, a carpenter sees framing and joinery fields - so you're not translating your job into someone else's template.",
-      "Numbers calculate live as you fill the quote in: labour hours, materials pulled from your own price book, margin, total. By the time you're back in the car, the quote is already sent.",
-      "Homeowners who get a quote on the spot, while you're still standing in front of them, are far more likely to accept it than one that arrives three days later after they've called two other tradies.",
+      "Generic quoting apps ask for generic fields. Swiftscope's quote builder is trade-specific - an electrician sees circuit and switchboard fields, a plumber sees fixture and pipe-run fields, a carpenter sees framing and joinery fields - so **you're not translating your job into someone else's template**.",
+      "Numbers calculate live as you fill the quote in: labour hours, materials pulled from your own price book, margin, total. **By the time you're back in the car, the quote is already sent.**",
+      "Homeowners who get a quote on the spot, while you're still standing in front of them, are **far more likely to accept it** than one that arrives three days later after they've called two other tradies.",
     ],
     bullets: [
       "Trade-specific fields for electricians, plumbers, carpenters, roofers and generic trades",
@@ -107,7 +111,8 @@ export const FEATURES_GRID: FeatureGridItem[] = [
       "Send a professional quote from your phone on-site",
       "Faster quotes mean higher acceptance rates",
     ],
-    costLabel: "ServiceM8 typically runs $48-62/user/month",
+    competitorCostLabel: "ServiceM8",
+    competitorCost: "$48-62/user/month",
   },
   {
     slug: "drawing-markup",
@@ -123,8 +128,8 @@ export const FEATURES_GRID: FeatureGridItem[] = [
     replacesReason: "GroundPlan is a $60-100/month add-on bolted onto other platforms. Drawing markup is native to Swiftscope, at no extra cost.",
     quickStats: ["Click to count items", "Costs auto-link to quote", "No separate takeoff tool"],
     intro: [
-      "Takeoff tools like GroundPlan are built for estimators on large commercial jobs. Swiftscope's drawing markup is built for a tradie quoting a house: upload a floor plan, click to mark downlights, GPOs, switchboards, cable runs or pipe routes, and each click adds a priced item to the quote in the background.",
-      "There's no separate export-then-re-enter step. The costs you generate on the plan are the same costs that show up in the quote total, sourced from your own price book.",
+      "Takeoff tools like GroundPlan are built for estimators on large commercial jobs. Swiftscope's drawing markup is built for a tradie quoting a house: upload a floor plan, click to mark downlights, GPOs, switchboards, cable runs or pipe routes, and **each click adds a priced item to the quote in the background**.",
+      "There's no separate export-then-re-enter step. **The costs you generate on the plan are the same costs that show up in the quote total**, sourced from your own price book.",
       "For jobs where a full plan isn't available, the same click-to-count approach works live on a phone camera on site - see Live Site Markup.",
     ],
     bullets: [
@@ -133,7 +138,8 @@ export const FEATURES_GRID: FeatureGridItem[] = [
       "Costs link directly to the quote - no manual re-entry",
       "Pulls pricing from your own price book, not a generic rate card",
     ],
-    costLabel: "GroundPlan typically runs $60-100/month",
+    competitorCostLabel: "GroundPlan",
+    competitorCost: "$60-100/month",
   },
   {
     slug: "job-costing",
@@ -151,9 +157,9 @@ export const FEATURES_GRID: FeatureGridItem[] = [
     replacesReason: "SimPro sells job costing as a premium add-on, priced per user. It's part of the base Swiftscope plan, no upsell required.",
     quickStats: ["Actual vs quoted", "Real margin per job", "No implementation project"],
     intro: [
-      "Most tradies find out whether a job made money weeks later, if at all, once the invoice is paid and the dust has settled. Job costing in Swiftscope tracks actual labour hours and materials used against what was quoted, in real time as the job runs.",
-      "That means you see - job by job - where a quote held up and where it didn't, instead of guessing at the end of the year why margins felt tighter than expected.",
-      "SimPro and other enterprise platforms offer this too, at a level of depth built for much larger operations. Swiftscope's version is scoped for a 1-15 person crew that wants the answer without the setup overhead.",
+      "Most tradies find out whether a job made money weeks later, if at all, once the invoice is paid and the dust has settled. Job costing in Swiftscope **tracks actual labour hours and materials used against what was quoted**, in real time as the job runs.",
+      "That means you see - job by job - where a quote held up and where it didn't, instead of **guessing at the end of the year** why margins felt tighter than expected.",
+      "SimPro and other enterprise platforms offer this too, at a level of depth built for much larger operations. Swiftscope's version is **scoped for a 1-15 person crew** that wants the answer without the setup overhead.",
     ],
     bullets: [
       "Actual hours and materials tracked against the original quote",
@@ -161,7 +167,8 @@ export const FEATURES_GRID: FeatureGridItem[] = [
       "Spot which jobs or job types are undercutting your margin",
       "No lengthy setup or implementation project required",
     ],
-    costLabel: "SimPro's job costing add-on typically runs $75+/user/month",
+    competitorCostLabel: "SimPro's job costing add-on",
+    competitorCost: "$75+/user/month",
   },
   {
     slug: "xero-sync",
@@ -177,9 +184,9 @@ export const FEATURES_GRID: FeatureGridItem[] = [
     replacesReason: "Every competitor offers some form of Xero sync. Swiftscope's is a live OAuth connection, included in the base plan, not a higher tier.",
     quickStats: ["Live OAuth sync", "No CSV re-entry", "Included, not an add-on"],
     intro: [
-      "Swiftscope connects to Xero via a live OAuth sync, not a CSV you export and re-import by hand. When a client accepts a quote and it becomes a job, the invoice pushes through to Xero automatically.",
-      "That means the numbers your bookkeeper or accountant sees match what's actually in the field, without a second round of manual data entry that introduces typos and mismatches.",
-      "It's included in the base Swiftscope plan - there's no separate integration fee or higher tier required to turn it on.",
+      "Swiftscope connects to Xero via a live OAuth sync, not a CSV you export and re-import by hand. When a client accepts a quote and it becomes a job, **the invoice pushes through to Xero automatically**.",
+      "That means the numbers your bookkeeper or accountant sees match what's actually in the field, **without a second round of manual data entry** that introduces typos and mismatches.",
+      "It's included in the base Swiftscope plan - **there's no separate integration fee or higher tier** required to turn it on.",
     ],
     bullets: [
       "Live OAuth sync with Xero, not a manual CSV export",
