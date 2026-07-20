@@ -325,7 +325,7 @@ function extractEmails(html: string): string | null {
 //   2. apple-touch-icon (usually a square brand mark)
 //   3. the page's favicon link tag
 //   4. a guessed /favicon.ico as a last resort
-function extractLogoUrl(html: string, baseUrl: string): string | null {
+export function extractLogoUrl(html: string, baseUrl: string): string | null {
   const logoImg = html.match(/<img[^>]+(?:src|alt)=["'][^"']*logo[^"']*["'][^>]*>/i);
   if (logoImg) {
     const srcMatch = logoImg[0].match(/src=["']([^"']+)["']/i);
@@ -347,7 +347,7 @@ function extractLogoUrl(html: string, baseUrl: string): string | null {
 // Fetch website HTML
 // ---------------------------------------------------------------------------
 
-async function fetchWebsiteHtml(url: string): Promise<string | null> {
+export async function fetchWebsiteHtml(url: string): Promise<string | null> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 8000);
   try {

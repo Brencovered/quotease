@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Search, Loader2, Check, AlertCircle, Database, Mail, Phone, Star,
   Image, Globe, Wrench, Play, MapPin, Hash, Clock, Zap, ChevronDown,
-  CheckSquare, Square, X,
+  CheckSquare, Square, X, RefreshCw,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -136,6 +136,10 @@ export default function AdminScraperPage() {
     total: 0, withEmail: 0, withPhone: 0, withRating: 0, withPhotos: 0, withLogo: 0,
   });
   const [statsLoading, setStatsLoading] = useState(true);
+  const [refreshHours, setRefreshHours] = useState(24);
+  const [refreshRunning, setRefreshRunning] = useState(false);
+  const [refreshProgress, setRefreshProgress] = useState<{ checked: number; updated: number; total: number } | null>(null);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
 
   /* ---- fetch stats on mount ---- */
@@ -249,6 +253,44 @@ export default function AdminScraperPage() {
     }
   };
 
+  // Re-extracts logo_url for listings created in the last N hours, in
+  // bounded batches (no Google Places API calls -- just re-fetches each
+  // business's own website with the corrected logo-detection priority).
+  const runRefreshLogos = useCallback(async () => {
+    setRefreshRunning(true);
+    setRefreshError(null);
+    setRefreshProgress({ checked: 0, updated: 0, total: 0 });
+
+    let offset = 0;
+    let totalChecked = 0;
+    let totalUpdated = 0;
+    let total = 0;
+
+    try {
+      while (true) {
+        const res = await fetch("/api/admin/directory/refresh-logos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sinceHours: refreshHours, offset }),
+        });
+        const data = await res.json();
+        if (!res.ok) { setRefreshError(data.error ?? "Failed to refresh logos"); break; }
+
+        totalChecked += data.checked;
+        totalUpdated += data.updated;
+        total = data.total;
+        setRefreshProgress({ checked: totalChecked, updated: totalUpdated, total });
+
+        if (data.remaining <= 0 || data.checked === 0) break;
+        offset = data.nextOffset;
+      }
+    } catch {
+      setRefreshError("Could not reach the server");
+    } finally {
+      setRefreshRunning(false);
+    }
+  }, [refreshHours]);
+
   return (
     <div>
       {/* Header */}
@@ -257,6 +299,47 @@ export default function AdminScraperPage() {
         <p className="text-[13px] text-[var(--ink-soft)]">
           Find and import tradies from Google Places. Select one or more trades and a postcode.
         </p>
+      </div>
+
+      {/* Refresh logos -- fixes bad logos (e.g. og:image hero photos) on
+          already-scraped listings without re-spending Google Places API
+          credits. Just re-fetches each business's own website. */}
+      <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-6 mb-6">
+        <h2 className="font-semibold text-[15px] text-[var(--ink)] mb-1 flex items-center gap-2">
+          <RefreshCw className="w-4 h-4 text-[var(--amber)]" /> Refresh logos
+        </h2>
+        <p className="text-[12.5px] text-[var(--ink-soft)] mb-4">
+          Re-checks each listing&apos;s own website for a real logo (fixes the og:image-as-logo bug for listings
+          scraped before that fix). No Google Places API cost -- just re-fetches their website.
+        </p>
+        <div className="flex items-center gap-3 flex-wrap">
+          <label className="text-[13px] text-[var(--ink-soft)] flex items-center gap-2">
+            Listings created in the last
+            <input
+              type="number"
+              min={1}
+              value={refreshHours}
+              onChange={(e) => setRefreshHours(Math.max(1, Number(e.target.value)))}
+              disabled={refreshRunning}
+              className="app-field w-20 text-[13px] py-1.5"
+            />
+            hours
+          </label>
+          <button
+            onClick={runRefreshLogos}
+            disabled={refreshRunning}
+            className="flex items-center gap-1.5 bg-[var(--amber)] text-[var(--navy)] font-bold text-[12.5px] px-3 py-2 rounded-lg hover:brightness-95 transition-colors disabled:opacity-50"
+          >
+            {refreshRunning ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+            {refreshRunning ? "Running..." : "Run"}
+          </button>
+          {refreshProgress && (
+            <span className="text-[12.5px] text-[var(--ink-soft)]">
+              Checked {refreshProgress.checked}{refreshProgress.total ? ` of ${refreshProgress.total}` : ""} -- {refreshProgress.updated} logo{refreshProgress.updated !== 1 ? "s" : ""} updated
+            </span>
+          )}
+          {refreshError && <span className="text-[12.5px] text-red-600 font-semibold">{refreshError}</span>}
+        </div>
       </div>
 
       {/* Two-column layout */}
