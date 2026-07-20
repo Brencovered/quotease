@@ -569,7 +569,7 @@ function ListingMatchCard({ match }: { match: ListingMatch }) {
   const [logoFailed, setLogoFailed] = useState(false);
   return (
     <div className="flex items-center gap-3 border border-[#e5e9ec] rounded-xl p-3">
-      {match.logo_url && !logoFailed ? (
+      {match.logo_url && !logoFailed && !match.logo_url.startsWith("http://") ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={match.logo_url}

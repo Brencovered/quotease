@@ -183,10 +183,22 @@ function isValidEmail(email: string): boolean {
 
 function resolveUrl(url: string, base: string): string {
   if (!url) return "";
-  if (url.startsWith("http://") || url.startsWith("https://")) return url;
-  if (url.startsWith("//")) return `https:${url}`;
-  try { return new URL(url, base).href; }
-  catch { return `${base.replace(/\/$/, "")}${url.startsWith("/") ? url : `/${url}`}`; }
+  let resolved: string;
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    resolved = url;
+  } else if (url.startsWith("//")) {
+    resolved = `https:${url}`;
+  } else {
+    try { resolved = new URL(url, base).href; }
+    catch { resolved = `${base.replace(/\/$/, "")}${url.startsWith("/") ? url : `/${url}`}`; }
+  }
+  // Force https regardless of how we got here -- an http:// image on an
+  // https:// page is mixed content, which browsers handle inconsistently
+  // (onError doesn't reliably fire the way it does for a normal failed
+  // load), so this showed up as a permanently broken logo rather than
+  // falling back cleanly. Almost every real domain serving images also
+  // supports https on the same path.
+  return resolved.replace(/^http:\/\//, "https://");
 }
 
 // ---------------------------------------------------------------------------

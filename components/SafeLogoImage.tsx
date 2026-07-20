@@ -8,6 +8,11 @@ import { useState } from "react";
  * entirely on error instead. Use anywhere a logo_url might be stale
  * (scraped from a site that's since changed, or any user-uploaded image
  * URL that could 404).
+ *
+ * http:// URLs are treated as invalid up front, never even attempted --
+ * mixed content on an https:// page doesn't reliably trigger onError the
+ * way a normal failed load does, so these were showing up as permanently
+ * broken rather than falling back cleanly.
  */
 export default function SafeLogoImage({
   src,
@@ -19,7 +24,7 @@ export default function SafeLogoImage({
   className?: string;
 }) {
   const [failed, setFailed] = useState(false);
-  if (failed) return null;
+  if (failed || src.startsWith("http://")) return null;
 
   return (
     // eslint-disable-next-line @next/next/no-img-element
