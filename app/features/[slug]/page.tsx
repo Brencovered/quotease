@@ -71,7 +71,7 @@ export default async function FeatureDetailPage({ params }: { params: Promise<{ 
               </h1>
               <p className="text-[16px] text-[#8aa4b4] max-w-lg mb-5">{feature.heroSubtitle}</p>
               <p className="text-[14.5px] text-[#c8d4dc] max-w-lg leading-relaxed mb-6 border-l-2 border-[#ffb400] pl-4">
-                {feature.replacesReason}
+                {feature.valueStatement}
               </p>
               <div className="flex flex-wrap gap-2 mb-8">
                 {feature.quickStats.map((stat, i) => (
@@ -84,11 +84,6 @@ export default async function FeatureDetailPage({ params }: { params: Promise<{ 
                 <Link href="/signup" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-7 py-3.5 rounded-xl hover:opacity-90">
                   Start free trial <ArrowRight size={15} />
                 </Link>
-                {feature.competitorCost && (
-                  <span className="text-[13px] text-[#8aa4b4]">
-                    vs. <span className="text-white/90 font-semibold">{feature.competitorCostLabel}</span> elsewhere
-                  </span>
-                )}
               </div>
             </div>
             <div className={`relative w-full overflow-hidden rounded-2xl bg-white/5 ${(feature.heroImage || feature.image).startsWith("/marketing/") ? "aspect-[4/5]" : "aspect-[3/2]"}`}>
@@ -131,7 +126,7 @@ export default async function FeatureDetailPage({ params }: { params: Promise<{ 
                   ))}
                 </ul>
               </div>
-              {feature.competitorCost && (
+              {feature.competitorCost ? (
                 <div className="bg-[#0a1722] rounded-2xl p-6">
                   <p className="text-[11px] font-bold tracking-[.15em] uppercase text-[#ffb400] mb-4">What you&apos;d pay elsewhere</p>
                   <div className="flex items-center justify-between py-2.5 border-b border-white/10">
@@ -142,8 +137,10 @@ export default async function FeatureDetailPage({ params }: { params: Promise<{ 
                     <span className="text-[13px] font-semibold text-white">Swiftscope</span>
                     <span className="text-[1.6rem] font-display text-[#ffb400] leading-none">$45<span className="text-[13px] text-[#8aa4b4] font-sans font-normal">/mo flat</span></span>
                   </div>
-                  <p className="text-[11.5px] text-[#8aa4b4] mt-3 leading-snug">Unlimited seats, whole platform included - not just this feature.</p>
+                  <p className="text-[11.5px] text-[#8aa4b4] mt-3 leading-snug">{feature.replacesReason}</p>
                 </div>
+              ) : (
+                <p className="text-[12.5px] text-[#8a9ba8] leading-relaxed px-1">{feature.replacesReason}</p>
               )}
             </div>
           </div>

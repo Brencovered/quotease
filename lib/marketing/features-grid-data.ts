@@ -17,7 +17,9 @@ export interface FeatureGridItem {
   /** Detail page content */
   heroTitle: string;
   heroSubtitle: string;
-  /** One-line direct comparison shown prominently in the hero, under the subtitle */
+  /** Positive, outcome-focused one-liner shown prominently in the hero - what Swiftscope does for the tradie, not a competitor comparison */
+  valueStatement: string;
+  /** One-line direct comparison to the competitor, shown as supporting context (near pricing), not the lead pitch */
   replacesReason: string;
   /** 3 short (2-4 word) chips shown in the hero to fill the space and reinforce value at a glance */
   quickStats: string[];
@@ -40,10 +42,11 @@ export const FEATURES_GRID: FeatureGridItem[] = [
     imageAlt: "Swiftscope Leads screen showing claimed homeowner leads with stage, budget and timeframe",
     heroTitle: "Win local leads without the auction",
     heroSubtitle: "Homeowner quote requests, included with your plan",
+    valueStatement: "Every homeowner lead in your service area, claimable the moment it lands - no bidding war, no waiting to see if it's worth your time.",
     replacesReason: "HiPages charges $30-150 every time you claim a lead. Swiftscope doesn't charge you a cent extra for a single one.",
     quickStats: ["No auction", "No credits system", "Unlimited claims"],
     intro: [
-      "HiPages and similar directories sell you leads one at a time, in an auction against other tradies, with a credits system that runs out right when work is slow. Swiftscope includes homeowner quote requests **in your flat monthly plan instead**.",
+      "Homeowner quote requests are included in your flat monthly plan - **no auction, no credits system that runs out right when work is slow**. Directories like HiPages sell you leads one at a time instead, bidding against other tradies for the same job.",
       "Homeowners in your service area post the job they need done. You claim the ones that fit your trade and availability, **at no extra cost per lead**. There's no bidding, no credits to top up, and **no cap on how many you can claim in a month**.",
       "Claimed leads drop straight into your pipeline next to your other jobs, so you're not juggling a separate app just to chase new work.",
     ],
@@ -69,10 +72,11 @@ export const FEATURES_GRID: FeatureGridItem[] = [
     heroImageAlt: "Swiftscope Jobs screen showing job value, amount still owing, estimated profit, and active jobs in progress",
     heroTitle: "Everything about a job, in one place",
     heroSubtitle: "Quotes, jobs, scheduling, variations and costing together",
+    valueStatement: "One board that carries a job from first quote to final invoice, so nothing gets lost between apps or forgotten in a notebook on the dash.",
     replacesReason: "Fergus and Tradify are priced and built for bigger operations. This is scoped for a crew your size, at a fraction of the cost.",
     quickStats: ["One board, not five apps", "No per-seat pricing", "Built for 1-15 crews"],
     intro: [
-      "Fergus and Tradify built full job management platforms - and most small trade businesses only end up using a third of what they pay for. Swiftscope covers the parts that actually matter for a 1-15 person crew: quoting, job tracking, scheduling, variations and job costing, **without the enterprise-scale complexity**.",
+      "Swiftscope covers everything that actually matters for a 1-15 person crew - quoting, job tracking, scheduling, variations and job costing - **without the enterprise-scale complexity** that platforms like Fergus and Tradify are built for, and priced for.",
       "A job moves from quote to scheduled to in-progress to invoiced, **all visible on one board, on your phone**, without switching between five different screens.",
       "Because it's built for small crews specifically, **there's no per-seat pricing creep** as you add an apprentice or a second team member.",
     ],
@@ -98,10 +102,11 @@ export const FEATURES_GRID: FeatureGridItem[] = [
     heroImageAlt: "Swiftscope Quotes screen showing follow-up reminders and quote statuses",
     heroTitle: "Quote before you leave the driveway",
     heroSubtitle: "A trade-specific quote builder that lives on your phone",
+    valueStatement: "Build and send a proper quote before you've even packed the ute back up - numbers calculated live, in fields built for your trade, not a generic form.",
     replacesReason: "ServiceM8 charges per user, per month, for mobile quoting alone. It's built into Swiftscope's flat plan from day one.",
     quickStats: ["Trade-specific fields", "Numbers calculate live", "Sent before you drive off"],
     intro: [
-      "Generic quoting apps ask for generic fields. Swiftscope's quote builder is trade-specific - an electrician sees circuit and switchboard fields, a plumber sees fixture and pipe-run fields, a carpenter sees framing and joinery fields - so **you're not translating your job into someone else's template**.",
+      "Swiftscope's quote builder is trade-specific - an electrician sees circuit and switchboard fields, a plumber sees fixture and pipe-run fields, a carpenter sees framing and joinery fields - so **you're not translating your job into someone else's generic template**.",
       "Numbers calculate live as you fill the quote in: labour hours, materials pulled from your own price book, margin, total. **By the time you're back in the car, the quote is already sent.**",
       "Homeowners who get a quote on the spot, while you're still standing in front of them, are **far more likely to accept it** than one that arrives three days later after they've called two other tradies.",
     ],
@@ -125,10 +130,11 @@ export const FEATURES_GRID: FeatureGridItem[] = [
     imageAlt: "Swiftscope drawing markup screen showing numbered downlight points placed on a floor plan",
     heroTitle: "Mark up a plan, get a priced quote",
     heroSubtitle: "Upload a drawing, click to count items, costs flow straight through",
+    valueStatement: "Turn a floor plan into a priced quote by clicking through it once - no separate takeoff step, no re-keying numbers into a different tool.",
     replacesReason: "GroundPlan is a $60-100/month add-on bolted onto other platforms. Drawing markup is native to Swiftscope, at no extra cost.",
     quickStats: ["Click to count items", "Costs auto-link to quote", "No separate takeoff tool"],
     intro: [
-      "Takeoff tools like GroundPlan are built for estimators on large commercial jobs. Swiftscope's drawing markup is built for a tradie quoting a house: upload a floor plan, click to mark downlights, GPOs, switchboards, cable runs or pipe routes, and **each click adds a priced item to the quote in the background**.",
+      "Upload a floor plan, click to mark downlights, GPOs, switchboards, cable runs or pipe routes, and **each click adds a priced item to the quote in the background**. It's built for a tradie quoting a house, not an estimator running takeoff on a commercial tower like GroundPlan and similar tools are.",
       "There's no separate export-then-re-enter step. **The costs you generate on the plan are the same costs that show up in the quote total**, sourced from your own price book.",
       "For jobs where a full plan isn't available, the same click-to-count approach works live on a phone camera on site - see Live Site Markup.",
     ],
@@ -154,6 +160,7 @@ export const FEATURES_GRID: FeatureGridItem[] = [
     heroImageAlt: "Swiftscope Packages screen showing reusable priced quote templates",
     heroTitle: "Know your real margin on every job",
     heroSubtitle: "Actual hours and materials, tracked against what you quoted",
+    valueStatement: "See exactly what a job earned the moment it wraps up, not months later when the year's numbers don't quite add up.",
     replacesReason: "SimPro sells job costing as a premium add-on, priced per user. It's part of the base Swiftscope plan, no upsell required.",
     quickStats: ["Actual vs quoted", "Real margin per job", "No implementation project"],
     intro: [
@@ -181,6 +188,7 @@ export const FEATURES_GRID: FeatureGridItem[] = [
     imageAlt: "Swiftscope Export to Xero / MYOB screen showing job export filters and a list of exported invoices",
     heroTitle: "Your books, sorted without re-typing anything",
     heroSubtitle: "Accepted quotes push straight into Xero as invoices",
+    valueStatement: "An accepted quote becomes an invoice in Xero automatically, so your books match what actually happened on site without you touching a keyboard twice.",
     replacesReason: "Every competitor offers some form of Xero sync. Swiftscope's is a live OAuth connection, included in the base plan, not a higher tier.",
     quickStats: ["Live OAuth sync", "No CSV re-entry", "Included, not an add-on"],
     intro: [
