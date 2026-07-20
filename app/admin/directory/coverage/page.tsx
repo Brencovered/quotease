@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { Loader2, AlertTriangle, MapPin, ArrowUpDown } from "lucide-react";
+import { Loader2, AlertTriangle, MapPin, ArrowUpDown, Zap } from "lucide-react";
 
 const TRADE_COLUMNS = [
   { key: "electrician", label: "Elec" },
@@ -19,6 +19,7 @@ const TRADE_COLUMNS = [
 
 // Below this count for a given postcode+trade combo, flag it as thin.
 const LOW_THRESHOLD = 3;
+const SCRAPE_RADIUS_KM = 15;
 
 type PostcodeRow = {
   postcode: string;
@@ -29,6 +30,11 @@ type PostcodeRow = {
 };
 
 type SortKey = "total" | "postcode" | "state" | string;
+type CellStatus = "scraping" | "done" | "error";
+
+function cellKey(postcode: string, trade: string) {
+  return `${postcode}|${trade}`;
+}
 
 export default function CoveragePage() {
   const [loading, setLoading] = useState(true);
@@ -38,6 +44,8 @@ export default function CoveragePage() {
   const [stateFilter, setStateFilter] = useState<string>("all");
   const [sortKey, setSortKey] = useState<SortKey>("total");
   const [sortAsc, setSortAsc] = useState(false);
+  const [cellStatus, setCellStatus] = useState<Record<string, CellStatus>>({});
+  const [cellMessage, setCellMessage] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetch("/api/admin/directory/coverage")
@@ -95,6 +103,56 @@ export default function CoveragePage() {
     return spots.sort((a, z) => z.total - a.total).slice(0, 20);
   }, [postcodes]);
 
+  // Click a cell -> run a real scrape for that postcode+trade combo, right
+  // from the table. Updates the cell's count in place from the response
+  // rather than a full page refetch.
+  async function runScrape(postcode: string, trade: string) {
+    const key = cellKey(postcode, trade);
+    if (cellStatus[key] === "scraping") return; // already running, ignore re-clicks
+
+    setCellStatus((prev) => ({ ...prev, [key]: "scraping" }));
+    setCellMessage((prev) => { const next = { ...prev }; delete next[key]; return next; });
+
+    try {
+      const res = await fetch("/api/admin/scrape", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trade, postcode, radiusKm: SCRAPE_RADIUS_KM }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCellStatus((prev) => ({ ...prev, [key]: "error" }));
+        setCellMessage((prev) => ({ ...prev, [key]: data.error ?? "Scrape failed" }));
+        return;
+      }
+
+      const added = (data.totalNew ?? 0) + (data.totalUpdated ?? 0);
+      setPostcodes((prev) =>
+        prev.map((row) => {
+          if (row.postcode !== postcode) return row;
+          return {
+            ...row,
+            total: row.total + (data.totalNew ?? 0),
+            byTrade: { ...row.byTrade, [trade]: (row.byTrade[trade] ?? 0) + (data.totalNew ?? 0) },
+          };
+        })
+      );
+      setCellStatus((prev) => ({ ...prev, [key]: "done" }));
+      setCellMessage((prev) => ({
+        ...prev,
+        [key]: added > 0 ? `+${data.totalNew ?? 0} new` : "No new results",
+      }));
+      // Clear the transient "done" highlight after a few seconds, but leave
+      // the updated count in place.
+      setTimeout(() => {
+        setCellStatus((prev) => { const next = { ...prev }; delete next[key]; return next; });
+      }, 4000);
+    } catch {
+      setCellStatus((prev) => ({ ...prev, [key]: "error" }));
+      setCellMessage((prev) => ({ ...prev, [key]: "Could not reach the server" }));
+    }
+  }
+
   function toggleSort(key: SortKey) {
     if (sortKey === key) setSortAsc((a) => !a);
     else { setSortKey(key); setSortAsc(false); }
@@ -131,6 +189,7 @@ export default function CoveragePage() {
           <p className="text-[13px] text-[var(--ink-faint)]">
             {postcodes.length.toLocaleString()} postcodes across {stateCount} states with at least one listing.
             Only shows gaps within existing data -- postcodes with zero listings at all don&apos;t appear here.
+            Click any cell to run a real scrape for that postcode + trade ({SCRAPE_RADIUS_KM}km radius) right here.
           </p>
         </div>
         <Link href="/admin/scraper" className="text-[13px] font-semibold text-[var(--amber)] hover:underline">
@@ -145,16 +204,37 @@ export default function CoveragePage() {
             Worth scraping next -- established postcodes with a thin trade
           </p>
           <div className="flex flex-wrap gap-2">
-            {thinSpots.map((s) => (
-              <span key={`${s.postcode}-${s.trade}`} className="inline-flex items-center gap-1.5 text-[12.5px] bg-white border border-amber-200 rounded-full px-3 py-1">
-                <MapPin size={11} className="text-amber-600" />
-                <span className="font-semibold">{s.suburb || s.postcode}</span>
-                <span className="text-[var(--ink-faint)]">{s.postcode} ({s.state})</span>
-                <span className="text-amber-700 font-semibold">
-                  {TRADE_COLUMNS.find((t) => t.key === s.trade)?.label}: {s.count}
-                </span>
-              </span>
-            ))}
+            {thinSpots.map((s) => {
+              const key = cellKey(s.postcode, s.trade);
+              const status = cellStatus[key];
+              const message = cellMessage[key];
+              return (
+                <button
+                  key={key}
+                  onClick={() => runScrape(s.postcode, s.trade)}
+                  disabled={status === "scraping"}
+                  title={`Click to scrape ${TRADE_COLUMNS.find((t) => t.key === s.trade)?.label} in ${s.postcode}`}
+                  className="relative inline-flex items-center gap-1.5 text-[12.5px] bg-white border border-amber-200 rounded-full px-3 py-1 hover:border-amber-400 transition-colors"
+                >
+                  <MapPin size={11} className="text-amber-600" />
+                  <span className="font-semibold">{s.suburb || s.postcode}</span>
+                  <span className="text-[var(--ink-faint)]">{s.postcode} ({s.state})</span>
+                  <span className="text-amber-700 font-semibold">
+                    {TRADE_COLUMNS.find((t) => t.key === s.trade)?.label}: {s.count}
+                  </span>
+                  {status === "scraping" ? (
+                    <Loader2 size={11} className="animate-spin text-amber-600" />
+                  ) : (
+                    <Zap size={11} className="text-amber-500" />
+                  )}
+                  {message && status !== "scraping" && (
+                    <span className="absolute left-1/2 -translate-x-1/2 top-full mt-1 z-10 whitespace-nowrap text-[10.5px] font-semibold bg-[var(--navy)] text-white rounded px-2 py-0.5 shadow-lg">
+                      {message}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -199,11 +279,37 @@ export default function CoveragePage() {
                 <td className="px-3 py-2 text-[var(--ink-soft)]">{row.suburb}</td>
                 <td className="px-3 py-2 text-[var(--ink-faint)]">{row.state}</td>
                 <td className="px-3 py-2 font-semibold text-[var(--ink)]">{row.total}</td>
-                {TRADE_COLUMNS.map((t) => (
-                  <td key={t.key} className={`px-3 py-2 text-center ${cellColor(row.byTrade[t.key] ?? 0)}`}>
-                    {row.byTrade[t.key] ?? 0}
-                  </td>
-                ))}
+                {TRADE_COLUMNS.map((t) => {
+                  const key = cellKey(row.postcode, t.key);
+                  const status = cellStatus[key];
+                  const message = cellMessage[key];
+                  return (
+                    <td
+                      key={t.key}
+                      onClick={() => runScrape(row.postcode, t.key)}
+                      title={`Click to scrape ${t.label} in ${row.postcode} (${SCRAPE_RADIUS_KM}km radius)`}
+                      className={`relative px-3 py-2 text-center cursor-pointer transition-colors group ${
+                        status === "error" ? "bg-red-100 text-red-700"
+                        : status === "done" ? "bg-emerald-200 text-emerald-900"
+                        : cellColor(row.byTrade[t.key] ?? 0)
+                      } hover:ring-2 hover:ring-inset hover:ring-[var(--amber)]`}
+                    >
+                      {status === "scraping" ? (
+                        <Loader2 size={12} className="animate-spin mx-auto" />
+                      ) : (
+                        <>
+                          {row.byTrade[t.key] ?? 0}
+                          <Zap size={9} className="hidden group-hover:inline-block ml-1 text-[var(--amber)] align-middle" />
+                        </>
+                      )}
+                      {message && status !== "scraping" && (
+                        <span className="absolute left-1/2 -translate-x-1/2 top-full mt-1 z-10 whitespace-nowrap text-[10.5px] font-semibold bg-[var(--navy)] text-white rounded px-2 py-0.5 shadow-lg">
+                          {message}
+                        </span>
+                      )}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>
