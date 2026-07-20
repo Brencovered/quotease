@@ -8,11 +8,10 @@
  * review text.
  *
  * Reviews are "Atmosphere Data" under Google's Places API pricing (unlike
- * the Basic Data already scraped for rating/phone/photos), so this is a
- * genuine per-call cost -- kept in check with Next's fetch cache rather
- * than calling on every page view. revalidate matches the directory's
- * existing 1-week assumption (see app/sitemap.ts) that listing data
- * doesn't change fast enough to need fresher reviews than that.
+ * the Basic/Contact Data already scraped for rating/phone/photos), by far
+ * the most expensive tier -- kept in check with Next's fetch cache rather
+ * than calling on every page view. 3-month revalidate window: reviews
+ * don't change fast enough to justify a fresh paid call every week.
  */
 
 const API_KEY = process.env.GOOGLE_PLACES_API_KEY;
@@ -43,7 +42,7 @@ export async function getPlaceReviews(placeId: string): Promise<GoogleReview[]> 
   try {
     const res = await fetch(url, {
       signal: controller.signal,
-      next: { revalidate: 604800 }, // 7 days
+      next: { revalidate: 7776000 }, // ~3 months -- reviews don't change fast enough to justify weekly Atmosphere-tier calls
     });
     clearTimeout(timeout);
 
