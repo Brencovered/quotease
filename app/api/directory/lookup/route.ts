@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
   const businessName = typeof body.businessName === "string" ? body.businessName.trim() : "";
   const trade = typeof body.trade === "string" ? body.trade.trim() : null;
   const suburb = typeof body.suburb === "string" ? body.suburb.trim() : null;
+  const postcode = typeof body.postcode === "string" ? body.postcode.trim() : null;
 
   if (!businessName) {
     return NextResponse.json({ error: "Business name is required" }, { status: 400 });
@@ -44,6 +45,7 @@ export async function POST(req: NextRequest) {
     p_name: businessName,
     p_trade: trade,
     p_suburb: suburb,
+    p_postcode: postcode,
     p_limit: 5,
   });
 

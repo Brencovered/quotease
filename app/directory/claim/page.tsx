@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import MarketingNav from "@/components/MarketingNav";
 import {
   Search, Loader2, CheckCircle2, ArrowRight, Star,
-  MapPin, ShieldCheck, AlertCircle, Mail, Lock,
+  MapPin, ShieldCheck, AlertCircle, Mail, Lock, ImagePlus,
 } from "lucide-react";
 
 const TRADES = [
@@ -52,6 +52,7 @@ export default function ClaimDirectoryListingPage() {
 
 function ClaimDirectoryListingInner() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [step, setStep] = useState<Step>("auth");
 
@@ -68,28 +69,55 @@ function ClaimDirectoryListingInner() {
   const [searching, setSearching] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [existingListingSlug, setExistingListingSlug] = useState<string | null>(null);
 
   const [businessName, setBusinessName] = useState(() => searchParams.get("name") ?? "");
   const [trade, setTrade] = useState(() => searchParams.get("trade") ?? "");
   const [suburb, setSuburb] = useState(() => searchParams.get("suburb") ?? "");
+  const [postcode, setPostcode] = useState(() => searchParams.get("postcode") ?? "");
 
   const [matches, setMatches] = useState<ListingMatch[]>([]);
   const [strongMatch, setStrongMatch] = useState<ListingMatch | null>(null);
   const [selectedListingId, setSelectedListingId] = useState<string | null | "new">(null);
 
   const [abn, setAbn] = useState("");
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [resultSlug, setResultSlug] = useState<string | null>(null);
   const [resultOutcome, setResultOutcome] = useState<"claimed" | "created_new" | null>(null);
   const [resultVerified, setResultVerified] = useState(false);
 
+  // Returning tradie who already claimed a listing shouldn't have to search
+  // for their business again just to log back in -- send them straight to
+  // the management screen instead. Returns true if it redirected.
+  async function redirectIfAlreadyClaimed(): Promise<boolean> {
+    try {
+      const res = await fetch("/api/directory/manage");
+      if (res.ok) {
+        router.push("/directory/manage");
+        return true;
+      }
+    } catch {
+      // fall through -- if this check fails, just proceed to the normal
+      // search flow rather than blocking the user entirely
+    }
+    return false;
+  }
+
   // Already signed in (e.g. an existing $45 tradie extending into a
-  // directory page) -- skip straight past the auth step.
+  // directory page) -- skip straight past the auth step. If they already
+  // have a claimed listing, skip straight to managing it instead of
+  // searching for a business all over again.
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) setStep("search");
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (data.user) {
+        const redirected = await redirectIfAlreadyClaimed();
+        if (!redirected) setStep("search");
+      }
       setCheckingAuth(false);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleAuth(e: React.FormEvent) {
@@ -125,7 +153,8 @@ function ClaimDirectoryListingInner() {
           password,
         });
         if (signInError) { setError(signInError.message); return; }
-        setStep("search");
+        const redirected = await redirectIfAlreadyClaimed();
+        if (!redirected) setStep("search");
       }
     } catch {
       setError("Could not reach the server. Please try again.");
@@ -141,13 +170,17 @@ function ClaimDirectoryListingInner() {
       setError("Please fill in your business name, trade, and suburb.");
       return;
     }
+    if (postcode.trim() && !/^\d{4}$/.test(postcode.trim())) {
+      setError("Postcode must be 4 digits.");
+      return;
+    }
 
     setSearching(true);
     try {
       const res = await fetch("/api/directory/lookup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ businessName, trade, suburb }),
+        body: JSON.stringify({ businessName, trade, suburb, postcode: postcode.trim() || undefined }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -164,6 +197,29 @@ function ClaimDirectoryListingInner() {
     }
   }
 
+  async function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    setError(null);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: uploadErr } = await supabase.storage.from("logos").upload(path, file, { upsert: false });
+      if (uploadErr) {
+        setError(`Logo upload failed: ${uploadErr.message}`);
+        return;
+      }
+      const { data } = supabase.storage.from("logos").getPublicUrl(path);
+      setLogoUrl(data.publicUrl);
+    } finally {
+      setUploadingLogo(false);
+    }
+  }
+
   async function finaliseClaim(listingId: string | null) {
     setSubmitting(true);
     setError(null);
@@ -176,12 +232,15 @@ function ClaimDirectoryListingInner() {
           businessName,
           trade,
           suburb,
+          postcode: postcode.trim() || undefined,
           abn: abn.trim() || undefined,
+          logoUrl: logoUrl || undefined,
         }),
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Something went wrong. Please try again.");
+        setExistingListingSlug(data.existingSlug ?? null);
         return;
       }
       setResultSlug(data.slug);
@@ -209,17 +268,25 @@ function ClaimDirectoryListingInner() {
 
       <div className="max-w-2xl mx-auto px-6 py-14">
         <h1 className="font-display text-[2.2rem] sm:text-[2.6rem] text-[#0a1722] leading-tight mb-3">
-          Claim your directory page
+          Claim or add your business listing
         </h1>
         <p className="text-[15px] text-[#5a6b78] mb-10">
-          Get a verified page in the Swiftscope directory, built for homeowners
-          searching for a tradie in your area.
+          Get a free page in the Swiftscope directory, built for homeowners
+          searching for a tradie in your area. Already listed? Claim it. Not
+          listed yet? We&apos;ll create your page right now.
         </p>
 
         {error && (
           <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 text-[13.5px] rounded-xl px-4 py-3 mb-6">
             <AlertCircle size={16} className="shrink-0 mt-0.5" />
-            <span>{error}</span>
+            <div>
+              <span>{error}</span>
+              {existingListingSlug && (
+                <Link href="/directory/manage" className="block mt-1.5 font-semibold underline underline-offset-2">
+                  Manage your existing listing →
+                </Link>
+              )}
+            </div>
           </div>
         )}
 
@@ -324,15 +391,29 @@ function ClaimDirectoryListingInner() {
               </select>
             </div>
 
-            <div>
-              <label className="block text-[13px] font-semibold text-[#0a1722] mb-1.5">Suburb</label>
-              <input
-                type="text"
-                value={suburb}
-                onChange={(e) => setSuburb(e.target.value)}
-                placeholder="e.g. Parramatta"
-                className="app-field w-full"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[13px] font-semibold text-[#0a1722] mb-1.5">Suburb</label>
+                <input
+                  type="text"
+                  value={suburb}
+                  onChange={(e) => setSuburb(e.target.value)}
+                  placeholder="e.g. Parramatta"
+                  className="app-field w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-[13px] font-semibold text-[#0a1722] mb-1.5">Postcode</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={4}
+                  value={postcode}
+                  onChange={(e) => setPostcode(e.target.value.replace(/\D/g, ""))}
+                  placeholder="e.g. 2150"
+                  className="app-field w-full"
+                />
+              </div>
             </div>
 
             <button
@@ -409,6 +490,23 @@ function ClaimDirectoryListingInner() {
 
         {step === "abn" && (
           <div className="card p-6 rounded-2xl bg-white space-y-5">
+            <div>
+              <label className="block text-[13px] font-semibold text-[#0a1722] mb-2">Logo or photo (optional)</label>
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-xl bg-[#f1f4f6] overflow-hidden flex items-center justify-center shrink-0">
+                  {logoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                  ) : (
+                    <ImagePlus size={20} className="text-[#8a97a1]" />
+                  )}
+                </div>
+                <input type="file" accept="image/*" onChange={handleLogoChange} className="hidden" id="claim-logo-upload" />
+                <label htmlFor="claim-logo-upload" className="btn-secondary cursor-pointer text-[13px] !py-1.5">
+                  {uploadingLogo ? <Loader2 size={14} className="animate-spin" /> : "Upload logo"}
+                </label>
+              </div>
+            </div>
             <div className="flex items-center gap-2 text-[13px] font-semibold text-emerald-700 bg-emerald-50 rounded-xl px-3 py-2">
               <ShieldCheck size={15} />
               Add your ABN to show a verified badge on your page (optional, can add later)

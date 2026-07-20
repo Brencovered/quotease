@@ -56,13 +56,19 @@ export async function POST(req: NextRequest) {
   const businessName = typeof body.businessName === "string" ? body.businessName.trim() : "";
   const trade = typeof body.trade === "string" ? body.trade.trim() : "";
   const suburb = typeof body.suburb === "string" ? body.suburb.trim() : "";
+  const postcode = typeof body.postcode === "string" ? body.postcode.trim() : "";
   const abn = typeof body.abn === "string" ? body.abn.replace(/\s+/g, "") : "";
+  const logoUrl = typeof body.logoUrl === "string" ? body.logoUrl.trim() : "";
 
   if (!businessName || !trade || !suburb) {
     return NextResponse.json(
       { error: "Business name, trade, and suburb are required" },
       { status: 400 }
     );
+  }
+
+  if (postcode && !/^\d{4}$/.test(postcode)) {
+    return NextResponse.json({ error: "Postcode must be 4 digits" }, { status: 400 });
   }
 
   if (!VALID_TRADES.includes(trade)) {
@@ -74,13 +80,22 @@ export async function POST(req: NextRequest) {
   // than claiming a second one.
   const { data: existingClaim } = await admin
     .from("directory_listing")
-    .select("id")
+    .select("id, business_name, suburb")
     .eq("profile_id", businessId)
     .maybeSingle();
 
   if (existingClaim) {
+    const existingSlug = buildDirectorySlug({
+      id: existingClaim.id,
+      business_name: existingClaim.business_name,
+      suburb: existingClaim.suburb ?? "",
+    });
     return NextResponse.json(
-      { error: "This business has already claimed a directory listing" },
+      {
+        error: `This account already manages a different claimed listing (${existingClaim.business_name}). Only one claimed listing is allowed per account in this version.`,
+        existingBusinessName: existingClaim.business_name,
+        existingSlug,
+      },
       { status: 409 }
     );
   }
@@ -100,7 +115,7 @@ export async function POST(req: NextRequest) {
     // Claiming an existing scraped listing.
     const { data: listing, error: fetchErr } = await admin
       .from("directory_listing")
-      .select("id, is_claimed, business_name, suburb")
+      .select("id, is_claimed, business_name, suburb, logo_url")
       .eq("id", listingId)
       .single();
 
@@ -125,7 +140,14 @@ export async function POST(req: NextRequest) {
 
     const { error: updateErr } = await admin
       .from("directory_listing")
-      .update({ is_claimed: true, profile_id: businessId })
+      .update({
+        is_claimed: true,
+        profile_id: businessId,
+        // Only fill in a logo if the scraped listing doesn't already have
+        // one -- never overwrite an existing (e.g. Google-sourced) logo
+        // with nothing just because the tradie skipped this step.
+        ...(logoUrl && !listing.logo_url ? { logo_url: logoUrl } : {}),
+      })
       .eq("id", listingId)
       .eq("is_claimed", false); // belt-and-braces against a race between two concurrent claims
 
@@ -153,6 +175,8 @@ export async function POST(req: NextRequest) {
       business_name: businessName,
       trades: [trade],
       suburb,
+      postcode: postcode || null,
+      logo_url: logoUrl || null,
       profile_id: businessId,
       is_claimed: true,
       source: "manual",
