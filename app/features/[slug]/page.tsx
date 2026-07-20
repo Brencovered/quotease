@@ -56,13 +56,13 @@ export default async function FeatureDetailPage({ params }: { params: Promise<{ 
               </h1>
               <p className="text-[16px] text-[#8aa4b4] max-w-lg">{feature.heroSubtitle}</p>
             </div>
-            <div className="relative h-64 md:h-80 rounded-2xl overflow-hidden">
+            <div className="relative h-72 md:h-96 rounded-2xl overflow-hidden bg-white/5">
               <Image
                 src={feature.heroImage || feature.image}
                 alt={feature.heroImageAlt || feature.imageAlt}
                 fill
                 sizes="(max-width: 768px) 100vw, 50vw"
-                className="object-cover"
+                className={`object-cover ${(feature.heroImage || feature.image).startsWith("/marketing/") ? "object-top" : "object-center"}`}
                 priority
               />
             </div>
@@ -125,13 +125,13 @@ export default async function FeatureDetailPage({ params }: { params: Promise<{ 
                   href={`/features/${r.slug}`}
                   className="group block rounded-2xl border bg-white border-[#e8ecef] overflow-hidden transition-shadow hover:shadow-lg"
                 >
-                  <div className="relative h-28 w-full overflow-hidden">
+                  <div className="relative h-44 w-full overflow-hidden bg-[#0a1722]">
                     <Image
                       src={r.image}
                       alt={r.imageAlt}
                       fill
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      className="object-cover transition-transform duration-300 group-hover:scale-105"
+                      className={`object-cover transition-transform duration-300 group-hover:scale-105 ${r.image.startsWith("/marketing/") ? "object-top" : "object-center"}`}
                     />
                   </div>
                   <div className="p-5">
