@@ -266,6 +266,8 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
 
               <JobTasksPanel quoteId={quote?.id ?? null} jobId={job.id} profileId={businessId} initialTasks={taskRows ?? []} teamMembers={teamMembers} />
 
+              <DocketsPanel jobId={job.id} defaultHourlyRate={hourlyRate} dockets={dockets} />
+
               <JobTimeline
                 acceptedAt={quote?.accepted_at ?? job.created_at}
                 completedAt={job.completed_at}
@@ -342,7 +344,6 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               )}
 
               <VariationsPanel quoteId={quote?.id ?? null} jobId={job.id} hourlyRate={hourlyRate} margin={marginPct} variations={variations} quoteTotalCost={job.total_cost ?? 0} lib={tradeMaterials} />
-              <DocketsPanel jobId={job.id} defaultHourlyRate={hourlyRate} dockets={dockets} />
               <JobCostingPanel
                 quoteId={quote?.id ?? null}
                 jobId={job.id}
