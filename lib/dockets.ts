@@ -40,6 +40,7 @@ export interface Docket {
   description: string | null;
   weather: string | null;
   client_name: string | null; // who's on site / signing, distinct from the job's client
+  client_email: string | null; // where the signing link gets sent
   start_time: string | null;
   end_time: string | null;
   total_cost: number;
@@ -48,6 +49,7 @@ export interface Docket {
   signed_by_name: string | null;
   signature_data: string | null;
   signed_at: string | null;
+  sent_at: string | null;
   invoiced_at: string | null;
   created_at: string;
   updated_at: string;

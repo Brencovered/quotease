@@ -31,7 +31,7 @@ const rid = () => Math.random().toString(36).slice(2);
 const num = (v: string) => Number(v) || 0;
 
 function emptyHeader() {
-  return { work_date: today(), weather: "", client_name: "", description: "" };
+  return { work_date: today(), weather: "", client_name: "", client_email: "", description: "" };
 }
 
 export default function DocketsPanel({
@@ -61,6 +61,9 @@ export default function DocketsPanel({
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const [sentId, setSentId] = useState<string | null>(null);
+  const [sendError, setSendError] = useState<Record<string, string>>({});
 
   const materialResults = useMemo(() => {
     const q = materialQuery.trim().toLowerCase();
@@ -124,7 +127,7 @@ export default function DocketsPanel({
 
     const { data: docket, error: docketErr } = await supabase
       .from("dockets")
-      .insert({ job_id: jobId, profile_id: businessId, work_date: header.work_date, weather: header.weather || null, client_name: header.client_name || null, description: header.description || null, status: "draft" })
+      .insert({ job_id: jobId, profile_id: businessId, work_date: header.work_date, weather: header.weather || null, client_name: header.client_name || null, client_email: header.client_email || null, description: header.description || null, status: "draft" })
       .select()
       .single();
     if (docketErr || !docket) { setError(docketErr?.message ?? "Could not save docket"); setSaving(false); return; }
@@ -162,6 +165,32 @@ export default function DocketsPanel({
     setTimeout(() => setCopiedId(null), 2000);
   }
 
+  async function sendDocket(docket: Docket) {
+    if (!docket.client_email) {
+      setSendError((prev) => ({ ...prev, [docket.id]: "Add an email for this docket to send it - use Copy link instead for now" }));
+      return;
+    }
+    setSendingId(docket.id);
+    setSendError((prev) => ({ ...prev, [docket.id]: "" }));
+    try {
+      const res = await fetch("/api/dockets/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ docketId: docket.id }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || "Could not send");
+      setDockets((prev) => prev.map((d) => (d.id === docket.id ? { ...d, status: "sent" } : d)));
+      if (body.warning) setSendError((prev) => ({ ...prev, [docket.id]: body.warning }));
+      else setSentId(docket.id);
+    } catch (err) {
+      setSendError((prev) => ({ ...prev, [docket.id]: err instanceof Error ? err.message : "Could not send" }));
+    } finally {
+      setSendingId(null);
+      setTimeout(() => setSentId((cur) => (cur === docket.id ? null : cur)), 3000);
+    }
+  }
+
   return (
     <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-4 sm:p-5">
       <div className="flex items-center justify-between mb-1">
@@ -191,10 +220,16 @@ export default function DocketsPanel({
               <input value={header.weather} onChange={(e) => setHeader((h) => ({ ...h, weather: e.target.value }))} className="app-field" placeholder="e.g. Sunny" />
             </label>
           </div>
-          <label className="block">
-            <span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1">Client / site contact (who&apos;ll sign)</span>
-            <input value={header.client_name} onChange={(e) => setHeader((h) => ({ ...h, client_name: e.target.value }))} className="app-field" placeholder="Site supervisor or client name" />
-          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1">Client / site contact (who&apos;ll sign)</span>
+              <input value={header.client_name} onChange={(e) => setHeader((h) => ({ ...h, client_name: e.target.value }))} className="app-field" placeholder="Site supervisor or client name" />
+            </label>
+            <label className="block">
+              <span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1">Their email (to send for signature)</span>
+              <input type="email" value={header.client_email} onChange={(e) => setHeader((h) => ({ ...h, client_email: e.target.value }))} className="app-field" placeholder="supervisor@builder.com.au" />
+            </label>
+          </div>
           <label className="block">
             <span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1">Description of work</span>
             <textarea value={header.description} onChange={(e) => setHeader((h) => ({ ...h, description: e.target.value }))} rows={2} className="app-field text-[13px]" placeholder="What was done on site today..." />
@@ -339,13 +374,19 @@ export default function DocketsPanel({
               )}
 
               {d.status === "signed" && d.signed_by_name && (
-                <p className="text-[11px] text-green-700 mt-1">Signed by {d.signed_by_name}{d.signed_at ? ` on ${new Date(d.signed_at).toLocaleDateString("en-AU")}` : ""}</p>
+                <p className="text-[11px] text-green-700 mt-1">Signed by {d.signed_by_name}{d.signed_at ? ` on ${new Date(d.signed_at).toLocaleDateString("en-AU")}` : ""} - ready to invoice</p>
               )}
               {(d.status === "draft" || d.status === "sent") && (
-                <div className="flex gap-2 mt-2">
-                  <button onClick={() => copyLink(d)} className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-[var(--navy)] border-2 border-[var(--line)] rounded-lg px-3 py-1">
-                    {copiedId === d.id ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy signing link</>}
-                  </button>
+                <div className="mt-2">
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={() => sendDocket(d)} disabled={sendingId === d.id} className="inline-flex items-center gap-1 text-[12.5px] font-bold bg-[var(--navy)] text-white rounded-lg px-3 py-1 disabled:opacity-50">
+                      {sentId === d.id ? <><Check size={12} /> Sent</> : sendingId === d.id ? "Sending..." : <><Send size={12} /> {d.status === "sent" ? "Resend" : "Send"} for signature</>}
+                    </button>
+                    <button onClick={() => copyLink(d)} className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-[var(--navy)] border-2 border-[var(--line)] rounded-lg px-3 py-1">
+                      {copiedId === d.id ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy link</>}
+                    </button>
+                  </div>
+                  {sendError[d.id] && <p className="text-[11.5px] text-amber-700 mt-1.5">{sendError[d.id]}</p>}
                 </div>
               )}
             </div>
