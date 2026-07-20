@@ -313,22 +313,29 @@ function extractEmails(html: string): string | null {
 // Step 3b: Scrape website for logo
 // ---------------------------------------------------------------------------
 
+// og:image is deliberately NOT used as a logo source -- it's meant for
+// social-media link previews and is almost always a generic hero/content
+// photo, not a logo. Using it here was exactly why a scraped business's
+// "logo" would show a random banner photo (e.g. a hero shot from their
+// homepage) instead of an actual brand mark, or Swiftscope's own
+// "add your logo" placeholder if no real logo signal exists.
+//
+// Priority instead goes to actual logo signals, most to least direct:
+//   1. an <img> whose src/alt literally says "logo"
+//   2. apple-touch-icon (usually a square brand mark)
+//   3. the page's favicon link tag
+//   4. a guessed /favicon.ico as a last resort
 function extractLogoUrl(html: string, baseUrl: string): string | null {
-  const ogImage = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i);
-  if (ogImage) return resolveUrl(ogImage[1], baseUrl);
-  const ogImageRev = html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
-  if (ogImageRev) return resolveUrl(ogImageRev[1], baseUrl);
-
-  const apple = html.match(/<link[^>]+rel=["']apple-touch-icon["'][^>]+href=["']([^"']+)["']/i);
-  if (apple) return resolveUrl(apple[1], baseUrl);
-  const appleRev = html.match(/<link[^>]+href=["']([^"']+)["'][^>]+rel=["']apple-touch-icon["']/i);
-  if (appleRev) return resolveUrl(appleRev[1], baseUrl);
-
   const logoImg = html.match(/<img[^>]+(?:src|alt)=["'][^"']*logo[^"']*["'][^>]*>/i);
   if (logoImg) {
     const srcMatch = logoImg[0].match(/src=["']([^"']+)["']/i);
     if (srcMatch) return resolveUrl(srcMatch[1], baseUrl);
   }
+
+  const apple = html.match(/<link[^>]+rel=["']apple-touch-icon["'][^>]+href=["']([^"']+)["']/i);
+  if (apple) return resolveUrl(apple[1], baseUrl);
+  const appleRev = html.match(/<link[^>]+href=["']([^"']+)["'][^>]+rel=["']apple-touch-icon["']/i);
+  if (appleRev) return resolveUrl(appleRev[1], baseUrl);
 
   const favicon = html.match(/<link[^>]+rel=["']?(?:shortcut\s+)?icon["']?[^>]+href=["']([^"']+)["']/i);
   if (favicon) return resolveUrl(favicon[1], baseUrl);
