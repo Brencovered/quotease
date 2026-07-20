@@ -39,13 +39,13 @@ export default function FeaturesPage() {
                 href={`/features/${r.slug}`}
                 className={`group block rounded-2xl border overflow-hidden transition-shadow hover:shadow-lg ${r.type === "integrate" ? "bg-blue-50 border-blue-100" : "bg-[#f8f9fa] border-[#e8ecef]"}`}
               >
-                <div className="relative h-64 w-full overflow-hidden bg-[#0a1722]">
+                <div className={`relative w-full overflow-hidden bg-[#0a1722] ${r.image.startsWith("/marketing/") ? "aspect-[4/5]" : "aspect-[3/2]"}`}>
                   <Image
                     src={r.image}
                     alt={r.imageAlt}
                     fill
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    className={`object-cover transition-transform duration-300 group-hover:scale-105 ${r.image.startsWith("/marketing/") ? "object-top" : "object-center"}`}
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                 </div>
                 <div className="p-6">
