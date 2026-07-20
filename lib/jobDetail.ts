@@ -86,6 +86,7 @@ export async function loadJobDetailData(supabase: SupabaseClient, idParam: strin
       job: null,
       quote: quote ?? null,
       variations: [],
+      dockets: [],
       actuals: [],
       certsWithUrls: [],
       followUps: followUps ?? [],
@@ -101,9 +102,10 @@ export async function loadJobDetailData(supabase: SupabaseClient, idParam: strin
     ? supabase.from("quotes").select("*").eq("id", job.quote_id).single()
     : Promise.resolve({ data: null });
 
-  const [{ data: quote }, { data: variations }, { data: actuals }, { data: certs }, { data: followUps }, { data: attachments }, { data: profile }, { data: payments }] = await Promise.all([
+  const [{ data: quote }, { data: variations }, { data: dockets }, { data: actuals }, { data: certs }, { data: followUps }, { data: attachments }, { data: profile }, { data: payments }] = await Promise.all([
     quotePromise,
     supabase.from("variations").select("*").or(`job_id.eq.${jobId}${job.quote_id ? `,quote_id.eq.${job.quote_id}` : ""}`).order("created_at"),
+    supabase.from("dockets").select("*").eq("job_id", jobId).order("work_date", { ascending: false }),
     supabase.from("job_actuals").select("*").or(`job_id.eq.${jobId}${job.quote_id ? `,quote_id.eq.${job.quote_id}` : ""}`).order("recorded_at"),
     supabase.from("compliance_certs").select("*").or(`job_id.eq.${jobId}${job.quote_id ? `,quote_id.eq.${job.quote_id}` : ""}`).order("created_at"),
     supabase.from("follow_up_log").select("*").or(`job_id.eq.${jobId}${job.quote_id ? `,quote_id.eq.${job.quote_id}` : ""}`).order("followed_up_at", { ascending: false }),
@@ -125,6 +127,7 @@ export async function loadJobDetailData(supabase: SupabaseClient, idParam: strin
     job,
     quote: quote ?? null,
     variations: variations ?? [],
+    dockets: dockets ?? [],
     actuals: actuals ?? [],
     certsWithUrls,
     followUps: followUps ?? [],

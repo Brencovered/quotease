@@ -6,6 +6,7 @@ import { getTeamContext } from "@/lib/team";
 import { getOrSeedBoardColumns } from "@/lib/jobBoard";
 import AppHeader from "@/components/AppHeader";
 import VariationsPanel from "@/components/VariationsPanel";
+import DocketsPanel from "@/components/DocketsPanel";
 import JobCostingPanel from "@/components/JobCostingPanel";
 import CompliancePanel from "@/components/CompliancePanel";
 import JobFilesPanel from "@/components/JobFilesPanel";
@@ -49,7 +50,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
 
   const data = await loadJobDetailData(supabase, id, businessId);
   if (!data) notFound();
-  const { job, quote, variations, actuals, certsWithUrls, attachmentsWithUrls, payments, hourlyRate, marginPct } = data;
+  const { job, quote, variations, dockets, actuals, certsWithUrls, attachmentsWithUrls, payments, hourlyRate, marginPct } = data;
 
   const scopeLines = quote ? humanizeIntake(quote.intake_data) : [];
   const conditionLines = quote ? summarizeConditions(quote.intake_data) : [];
@@ -341,6 +342,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               )}
 
               <VariationsPanel quoteId={quote?.id ?? null} jobId={job.id} hourlyRate={hourlyRate} margin={marginPct} variations={variations} quoteTotalCost={job.total_cost ?? 0} lib={tradeMaterials} />
+              <DocketsPanel jobId={job.id} defaultHourlyRate={hourlyRate} dockets={dockets} />
               <JobCostingPanel
                 quoteId={quote?.id ?? null}
                 jobId={job.id}
