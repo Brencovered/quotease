@@ -54,7 +54,27 @@ export default async function FeatureDetailPage({ params }: { params: Promise<{ 
               <h1 className="font-display uppercase text-[2.4rem] sm:text-[3rem] leading-[0.95] text-white mb-4">
                 {feature.heroTitle}
               </h1>
-              <p className="text-[16px] text-[#8aa4b4] max-w-lg">{feature.heroSubtitle}</p>
+              <p className="text-[16px] text-[#8aa4b4] max-w-lg mb-5">{feature.heroSubtitle}</p>
+              <p className="text-[14.5px] text-[#c8d4dc] max-w-lg leading-relaxed mb-6 border-l-2 border-[#ffb400] pl-4">
+                {feature.replacesReason}
+              </p>
+              <div className="flex flex-wrap gap-2 mb-8">
+                {feature.quickStats.map((stat, i) => (
+                  <span key={i} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-white/85 bg-white/[0.06] border border-white/10 rounded-full px-3.5 py-1.5">
+                    <Check size={12} className="text-[#ffb400]" /> {stat}
+                  </span>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center gap-4">
+                <Link href="/signup" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-7 py-3.5 rounded-xl hover:opacity-90">
+                  Start free trial <ArrowRight size={15} />
+                </Link>
+                {feature.costLabel && (
+                  <span className="text-[13px] text-[#8aa4b4]">
+                    vs. <span className="text-white/90 font-semibold">{feature.costLabel.split(" typically")[0]}</span> elsewhere
+                  </span>
+                )}
+              </div>
             </div>
             <div className={`relative w-full overflow-hidden rounded-2xl bg-white/5 ${(feature.heroImage || feature.image).startsWith("/marketing/") ? "aspect-[4/5]" : "aspect-[3/2]"}`}>
               <Image
