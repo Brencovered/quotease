@@ -142,6 +142,7 @@ export default async function DirectoryPage({
     trade?: string;
     postcode?: string;
     suburb?: string;
+    search?: string;
     reviews?: string;
     rating?: string;
     sort?: string;
@@ -149,7 +150,7 @@ export default async function DirectoryPage({
     radius?: string;
   }>;
 }) {
-  const { trade, postcode: postcodeParam, suburb: suburbParam, reviews, rating, sort, page: pageParam, radius } = await searchParams;
+  const { trade, postcode: postcodeParam, suburb: suburbParam, search: searchParam, reviews, rating, sort, page: pageParam, radius } = await searchParams;
   const page = parseInt(pageParam ?? "1");
   const perPage = 24;
   const from = (page - 1) * perPage;
@@ -188,8 +189,12 @@ export default async function DirectoryPage({
   // search field in the UI any more.
   const postcode = postcodeParam?.trim();
   const suburb = suburbParam?.trim();
+  const search = searchParam?.trim();
   const radiusKm = radius ? parseFloat(radius) : NaN;
-  const hasRadius = !isNaN(radiusKm) && radiusKm > 0;
+  // A name search isn't distance-based (you already know who you're
+  // looking for) -- always use the plain query path below rather than the
+  // radius RPC, which has no name parameter to extend.
+  const hasRadius = !search && !isNaN(radiusKm) && radiusKm > 0;
 
   // Whether this load has any actual search applied - determines which of
   // the two very different page modes render below, but ALSO whether any
@@ -198,7 +203,7 @@ export default async function DirectoryPage({
   // plain "/directory" landing page - the large majority of traffic, since
   // hundreds of SEO pages link with filters but organic/ad traffic lands
   // here bare - has no reason to run a full listings query at all.
-  const hasActiveFilters = !!(trade || postcode || suburb || reviews || rating);
+  const hasActiveFilters = !!(trade || postcode || suburb || search || reviews || rating);
 
   // Resolve the search term to one or more postcodes, and (if a radius is
   // set) a centre point to measure distance from.
@@ -271,6 +276,8 @@ export default async function DirectoryPage({
       .select("*", { count: "exact" });
 
     if (trade) query = query.contains("trades", [trade]);
+
+    if (search) query = query.ilike("business_name", `%${search}%`);
 
     if (postcode) {
       query = query.ilike("postcode", `${postcode}%`);
@@ -467,6 +474,7 @@ export default async function DirectoryPage({
           <DirectorySearchForm
             trade={trade}
             postcode={postcode ?? suburb}
+            search={search}
             reviews={reviews}
             rating={rating}
             sort={sort}

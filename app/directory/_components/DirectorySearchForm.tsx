@@ -51,6 +51,7 @@ const RADIUS_OPTIONS = [
 interface DirectorySearchFormProps {
   trade: string | undefined;
   postcode: string | undefined;
+  search: string | undefined;
   reviews: string | undefined;
   rating: string | undefined;
   sort: string | undefined;
@@ -61,6 +62,7 @@ interface DirectorySearchFormProps {
 export default function DirectorySearchForm({
   trade,
   postcode,
+  search,
   reviews,
   rating,
   sort,
@@ -106,6 +108,17 @@ export default function DirectorySearchForm({
             <option key={t} value={t}>{TRADE_LABELS[t]}</option>
           ))}
         </select>
+
+        <div className="relative flex-1 min-w-[160px]">
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] z-10" />
+          <input
+            type="text"
+            name="search"
+            defaultValue={search ?? ""}
+            placeholder="Business name"
+            className="app-field pl-8 pr-3 text-[13px] w-full bg-white"
+          />
+        </div>
 
         <div className="relative flex-1 min-w-[160px]">
           <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] z-10" />
@@ -167,7 +180,7 @@ export default function DirectorySearchForm({
           Search
         </button>
 
-        {(trade || postcode || reviews || rating || sort || radius) && (
+        {(trade || postcode || search || reviews || rating || sort || radius) && (
           <Link href="/directory" className="text-[13px] font-semibold hover:opacity-70 transition-opacity" style={{ color: "var(--ink-faint)" }}>
             Clear all
           </Link>
@@ -175,6 +188,7 @@ export default function DirectorySearchForm({
 
         <span className="text-[12px] ml-auto hidden sm:block" style={{ color: "var(--ink-faint)" }}>
           {count} result{count !== 1 ? "s" : ""}
+          {search ? ` - "${search}"` : ""}
           {trade ? ` - ${TRADE_LABELS[trade] ?? trade}` : ""}
           {postcode ? ` - ${postcode}` : ""}
           {radius ? ` - ${RADIUS_OPTIONS.find((r) => r.value === radius)?.label ?? radius}` : ""}

@@ -357,7 +357,7 @@ function ClaimDirectoryListingInner() {
                 </button>
 
                 <p className="text-[12px] text-[#8a97a1] text-center">
-                  This is just for your directory page -- not the full Swiftscope job management sign up.
+                  This is just for your directory page -- not the full Swiftscope job management sign up. Already claimed a listing? Log in above to manage it.
                 </p>
               </form>
             )}

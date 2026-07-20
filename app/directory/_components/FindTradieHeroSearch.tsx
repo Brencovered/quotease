@@ -11,6 +11,7 @@ import {
   Shield,
   Sparkles,
   CircleDot,
+  Search,
 } from "lucide-react";
 
 const ALL_TRADES = [
@@ -61,6 +62,7 @@ export default function FindTradieHeroSearch({
   const router = useRouter();
   const [trade, setTrade] = useState("");
   const [postcode, setPostcode] = useState("");
+  const [businessName, setBusinessName] = useState("");
   const [radius, setRadius] = useState("25");
   const [error, setError] = useState("");
 
@@ -69,19 +71,20 @@ export default function FindTradieHeroSearch({
       e.preventDefault();
       setError("");
 
-      if (!postcode.trim()) {
-        setError("Please enter your postcode");
+      if (!postcode.trim() && !businessName.trim()) {
+        setError("Please enter a postcode or a business name");
         return;
       }
 
       const params = new URLSearchParams();
       if (trade) params.set("trade", trade);
-      params.set("postcode", postcode.trim());
+      if (postcode.trim()) params.set("postcode", postcode.trim());
+      if (businessName.trim()) params.set("search", businessName.trim());
       params.set("radius", radius);
 
       router.push(`/directory?${params.toString()}`);
     },
-    [trade, postcode, radius, router]
+    [trade, postcode, businessName, radius, router]
   );
 
   return (
@@ -138,7 +141,7 @@ export default function FindTradieHeroSearch({
           <form onSubmit={handleSubmit}>
             <div className="grid sm:grid-cols-12 gap-3 sm:gap-4 items-end">
               {/* Trade select */}
-              <div className="sm:col-span-4 relative">
+              <div className="sm:col-span-3 relative">
                 <label
                   htmlFor="trade"
                   className="block text-[12px] font-bold text-[var(--ink-soft)] mb-1.5"
@@ -167,8 +170,35 @@ export default function FindTradieHeroSearch({
                 </div>
               </div>
 
+              {/* Business name */}
+              <div className="sm:col-span-3 relative">
+                <label
+                  htmlFor="businessName"
+                  className="block text-[12px] font-bold text-[var(--ink-soft)] mb-1.5"
+                >
+                  Business name
+                </label>
+                <div className="relative">
+                  <Search
+                    size={14}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] pointer-events-none"
+                  />
+                  <input
+                    id="businessName"
+                    type="text"
+                    value={businessName}
+                    onChange={(e) => {
+                      setBusinessName(e.target.value);
+                      if (error) setError("");
+                    }}
+                    placeholder="Know who you want?"
+                    className="app-field text-[14px] pl-9 pr-3 bg-white w-full"
+                  />
+                </div>
+              </div>
+
               {/* Postcode input */}
-              <div className="sm:col-span-4 relative">
+              <div className="sm:col-span-3 relative">
                 <label
                   htmlFor="postcode"
                   className="block text-[12px] font-bold text-[var(--ink-soft)] mb-1.5"
@@ -196,7 +226,7 @@ export default function FindTradieHeroSearch({
               </div>
 
               {/* Radius select */}
-              <div className="sm:col-span-2 relative">
+              <div className="sm:col-span-3 relative">
                 <label
                   htmlFor="radius"
                   className="block text-[12px] font-bold text-[var(--ink-soft)] mb-1.5"
@@ -225,10 +255,10 @@ export default function FindTradieHeroSearch({
               </div>
 
               {/* Submit button */}
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-12">
                 <button
                   type="submit"
-                  className="w-full inline-flex items-center justify-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-5 py-[11px] rounded-xl hover:bg-[#e89e00] transition-colors"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-8 py-[11px] rounded-xl hover:bg-[#e89e00] transition-colors"
                 >
                   Find
                   <ArrowRight size={15} />

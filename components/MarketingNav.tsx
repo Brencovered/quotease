@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
-import { LEADS_ENABLED } from "@/lib/featureFlags";
+import { LEADS_ENABLED, CLAIMED_DIRECTORY_PAGES_ENABLED } from "@/lib/featureFlags";
 
 /**
  * Shared top nav for the marketing site (home, /features, /how-it-works).
@@ -32,6 +32,11 @@ export default function MarketingNav({ transparent = false }: { transparent?: bo
           <Link href="/directory" className="text-white/85 hover:text-white font-semibold text-[13.5px] px-4 py-2 rounded-lg border border-white/20 hover:border-white/40 transition-colors">
             Find a tradie
           </Link>
+          {CLAIMED_DIRECTORY_PAGES_ENABLED && (
+            <Link href="/directory/claim" className="text-white/85 hover:text-white font-semibold text-[13.5px] px-4 py-2 rounded-lg border border-white/20 hover:border-white/40 transition-colors">
+              Manage your listing
+            </Link>
+          )}
           {LEADS_ENABLED && (
             <Link href="/get-quotes" className="text-white/85 hover:text-white font-semibold text-[13.5px] px-4 py-2 rounded-lg border border-white/20 hover:border-white/40 transition-colors">
               Get a quote
@@ -58,6 +63,9 @@ export default function MarketingNav({ transparent = false }: { transparent?: bo
           <Link href="/how-it-works" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">How it works</Link>
           <Link href="/blog" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Blog</Link>
           <Link href="/directory" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Find a tradie</Link>
+          {CLAIMED_DIRECTORY_PAGES_ENABLED && (
+            <Link href="/directory/claim" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Manage your listing</Link>
+          )}
           {LEADS_ENABLED && (
             <Link href="/get-quotes" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Get a quote</Link>
           )}
