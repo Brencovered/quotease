@@ -68,6 +68,8 @@ export default function AdminDirectoryPanel() {
 
   // Selection
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [sendingInvites, setSendingInvites] = useState(false);
+  const [inviteResult, setInviteResult] = useState<string | null>(null);
 
   // Export
   const [exportCount, setExportCount] = useState<number | "all">("all");
@@ -228,6 +230,35 @@ export default function AdminDirectoryPanel() {
     }
   }
 
+  // Send "claim your free listing" invites to selected unclaimed rows with
+  // an email address on file (built for manually-added leads, e.g. from
+  // hiPages -- not for bulk-emailing the whole Google Places directory)
+  async function sendClaimInvites(ids: string[]) {
+    setSendingInvites(true);
+    setInviteResult(null);
+    try {
+      const res = await fetch("/api/admin/directory/send-claim-invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listingIds: ids }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setInviteResult(data.error ?? "Failed to send invites");
+      } else {
+        const parts = [`${data.sent} sent`];
+        if (data.skippedNoEmail) parts.push(`${data.skippedNoEmail} skipped (no email)`);
+        if (data.skippedAlreadyClaimed) parts.push(`${data.skippedAlreadyClaimed} skipped (already claimed)`);
+        if (data.failed) parts.push(`${data.failed} failed`);
+        setInviteResult(parts.join(", "));
+      }
+    } catch {
+      setInviteResult("Failed to send invites -- check your connection");
+    } finally {
+      setSendingInvites(false);
+    }
+  }
+
   // Delete
   async function doDelete(ids: string[]) {
     setDeletingIds((prev) => {
@@ -335,12 +366,23 @@ export default function AdminDirectoryPanel() {
             <>
               <span className="text-[13px] font-semibold text-[var(--ink-soft)]">{selected.size} selected</span>
               <button
+                onClick={() => sendClaimInvites(Array.from(selected))}
+                disabled={sendingInvites}
+                className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 font-semibold text-[12.5px] px-3 py-2 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors"
+              >
+                {sendingInvites ? <Loader2 size={13} className="animate-spin" /> : <Mail size={13} />}
+                Send claim invite
+              </button>
+              <button
                 onClick={() => setConfirmDelete(Array.from(selected))}
                 className="flex items-center gap-1.5 bg-red-50 text-red-600 font-semibold text-[12.5px] px-3 py-2 rounded-lg border border-red-200 hover:bg-red-100 transition-colors"
               >
                 <Trash2 size={13} /> Delete selected
               </button>
             </>
+          )}
+          {inviteResult && (
+            <span className="text-[12.5px] font-semibold text-[var(--ink-soft)]">{inviteResult}</span>
           )}
           <select
             value={exportCount}
