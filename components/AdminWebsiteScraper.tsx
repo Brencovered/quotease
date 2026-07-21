@@ -205,6 +205,9 @@ export default function AdminWebsiteScraper() {
         </div>
       )}
 
+      {/* Yellow Pages Scraper */}
+      <YellowPagesScraper />
+
       {/* Info box */}
       <div className="bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3">
         <p className="font-bold text-[13px] text-blue-900 mb-1">How this works</p>
@@ -215,6 +218,85 @@ export default function AdminWebsiteScraper() {
           <p><strong>Rate:</strong> 30 listings per batch, 8 second timeout per site, skips non-200 responses.</p>
         </div>
       </div>
+    </div>
+  );
+}
+
+function YellowPagesScraper() {
+  const [trade,   setTrade]   = React.useState("electrician");
+  const [suburb,  setSuburb]  = React.useState("Sydney NSW");
+  const [pages,   setPages]   = React.useState(2);
+  const [running, setRunning] = React.useState(false);
+  const [result,  setResult]  = React.useState<{found:number;inserted:number;skipped:number;pagesScraped:number}|null>(null);
+
+  const TRADES = ["electrician","plumber","carpenter","roofer","painter","tiler","landscaper","builder","concreter","plasterer"];
+  const SUBURBS = [
+    "Sydney NSW","Melbourne VIC","Brisbane QLD","Perth WA","Adelaide SA",
+    "Gold Coast QLD","Newcastle NSW","Canberra ACT","Wollongong NSW","Geelong VIC",
+    "Hobart TAS","Townsville QLD","Cairns QLD","Darwin NT","Toowoomba QLD",
+  ];
+
+  async function run() {
+    setRunning(true); setResult(null);
+    const res = await fetch("/api/admin/scrape-yellowpages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ trade, suburb, pages }),
+    });
+    setResult(await res.json());
+    setRunning(false);
+  }
+
+  return (
+    <div className="card space-y-4">
+      <div>
+        <p className="section-tag">Yellow Pages scraper</p>
+        <p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5">
+          Scrape Australian trade businesses from Yellow Pages -- free, no API key, no per-call cost.
+        </p>
+      </div>
+      <div className="grid sm:grid-cols-3 gap-3">
+        <div>
+          <p className="text-[11px] font-bold uppercase text-[var(--ink-faint)] mb-1.5">Trade</p>
+          <select value={trade} onChange={e => setTrade(e.target.value)} className="app-field text-[13px]">
+            {TRADES.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+          </select>
+        </div>
+        <div>
+          <p className="text-[11px] font-bold uppercase text-[var(--ink-faint)] mb-1.5">Suburb / City</p>
+          <div className="flex gap-1.5">
+            <select value={suburb} onChange={e => setSuburb(e.target.value)} className="app-field text-[13px] flex-1">
+              {SUBURBS.map(s => <option key={s}>{s}</option>)}
+            </select>
+          </div>
+          <input value={suburb} onChange={e => setSuburb(e.target.value)}
+            className="app-field text-[13px] mt-1.5" placeholder="Or type a suburb..." />
+        </div>
+        <div>
+          <p className="text-[11px] font-bold uppercase text-[var(--ink-faint)] mb-1.5">Pages to scrape</p>
+          <input type="number" min={1} max={5} value={pages} onChange={e => setPages(Number(e.target.value))}
+            className="app-field text-[13px]" />
+          <p className="text-[10.5px] text-[var(--ink-faint)] mt-1">~20 results per page, max 5</p>
+        </div>
+      </div>
+      <button onClick={run} disabled={running} className="btn-primary flex items-center gap-2">
+        {running ? <><span className="animate-spin">⟳</span> Scraping...</> : "Run Yellow Pages scrape"}
+      </button>
+      {result && (
+        <div className="grid grid-cols-4 gap-3">
+          {[
+            ["Pages scraped", result.pagesScraped],
+            ["Found",         result.found],
+            ["Inserted",      result.inserted],
+            ["Skipped",       result.skipped],
+          ].map(([label, val]) => (
+            <div key={label as string} className="bg-[var(--app-bg)] rounded-xl px-3 py-2.5">
+              <p className="text-[10px] font-bold uppercase text-[var(--ink-faint)]">{label}</p>
+              <p className="font-display text-[1.5rem] text-[var(--ink)]">{val}</p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

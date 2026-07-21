@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdminEmail } from "@/lib/admin";
-import { fetchWebsiteHtml, extractLogoUrl, extractBlurb, extractPhotos } from "@/lib/websiteScraper";
+import { fetchWebsiteHtml, extractLogoUrl, extractBlurb, extractPhotos, extractAbout, extractServices, extractPhone } from "@/lib/websiteScraper";
 
 const BATCH = 30;
 
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
   // need the specific field we're trying to fill
   let query = admin
     .from("directory_listing")
-    .select("id, business_name, website_url, logo_url, blurb, photo_references", { count: "exact" })
+    .select("id, business_name, website_url, logo_url, blurb, photo_references, services_offered, scraped_contact_phone", { count: "exact" })
     .not("website_url", "is", null)
     .eq("is_claimed", false);
 
@@ -120,6 +120,24 @@ export async function POST(req: NextRequest) {
     if ((mode === "blurb" || mode === "all") && !listing.blurb) {
       const blurb = extractBlurb(html);
       if (blurb) { updates.blurb = blurb; updated.push("blurb"); }
+    }
+
+    // About (extended description -- separate from blurb)
+    if ((mode === "blurb" || mode === "all") && !listing.blurb) {
+      const about = extractAbout(html);
+      if (about && !updates.blurb) { updates.blurb = about; updated.push("blurb (about)"); }
+    }
+
+    // Services list
+    if (mode === "all" && !(listing as {services_offered?: unknown}).services_offered) {
+      const services = extractServices(html);
+      if (services.length > 0) { updates.services_offered = services; updated.push(`services (${services.length})`); }
+    }
+
+    // Phone (if not already scraped)
+    if (mode === "all" && !(listing as {scraped_contact_phone?: unknown}).scraped_contact_phone) {
+      const phone = extractPhone(html);
+      if (phone) { updates.scraped_contact_phone = phone; updated.push("phone"); }
     }
 
     // Photos

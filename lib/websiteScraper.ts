@@ -107,3 +107,74 @@ export function extractPhotos(html: string, baseUrl: string): string[] {
 
   return photos.slice(0, 6);
 }
+
+/**
+ * Extract about/company description from website HTML.
+ * Looks for about page content, team descriptions, company history.
+ * Returns up to 500 chars.
+ */
+export function extractAbout(html: string): string | null {
+  // Look for about section by common selectors/patterns
+  const aboutSection = html.match(
+    /<(?:section|div)[^>]*(?:id|class)=["'][^"']*(?:about|who-we-are|our-story|company|team)[^"']*["'][^>]*>([\s\S]{50,2000}?)<\/(?:section|div)>/i
+  );
+  if (aboutSection) {
+    const text = aboutSection[1]
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (text.length > 50) return text.slice(0, 500);
+  }
+
+  // Fallback: look for paragraphs near "about" heading
+  const nearAbout = html.match(
+    /<h[1-4][^>]*>[^<]*(?:about|who we are|our story)[^<]*<\/h[1-4]>\s*(?:<[^>]+>\s*)*<p[^>]*>([\s\S]{50,500}?)<\/p>/i
+  );
+  if (nearAbout) {
+    const text = nearAbout[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    if (text.length > 50) return text.slice(0, 500);
+  }
+
+  return null;
+}
+
+/**
+ * Extract services list from website HTML.
+ * Returns array of service strings (max 10).
+ */
+export function extractServices(html: string): string[] {
+  const services: string[] = [];
+
+  // Look for a services section with a list
+  const serviceSection = html.match(
+    /<(?:section|div)[^>]*(?:id|class)=["'][^"']*(?:services|what-we-do|specialties)[^"']*["'][^>]*>([\s\S]{50,3000}?)<\/(?:section|div)>/i
+  );
+
+  if (serviceSection) {
+    const items = serviceSection[1].matchAll(/<li[^>]*>([\s\S]{5,100}?)<\/li>/gi);
+    for (const m of items) {
+      const text = m[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+      if (text.length >= 5 && text.length <= 80) {
+        services.push(text);
+        if (services.length >= 10) break;
+      }
+    }
+  }
+
+  return services;
+}
+
+/**
+ * Extract phone number from website HTML.
+ */
+export function extractPhone(html: string): string | null {
+  // tel: links are most reliable
+  const tel = html.match(/href=["']tel:([+\d\s\-().]{8,20})["']/i);
+  if (tel) return tel[1].replace(/\s+/g, " ").trim();
+
+  // AU mobile/landline patterns
+  const auPhone = html.match(/((?:04|04\d\d|\(0[2-8]\)|\d{2})\s*[\d\s\-]{6,10}\d)/);
+  if (auPhone) return auPhone[1].trim();
+
+  return null;
+}
