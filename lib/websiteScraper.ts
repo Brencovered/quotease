@@ -150,27 +150,63 @@ export function filterPhotos(photos: string[], logoUrl: string | null): string[]
  * Looks for about page content, team descriptions, company history.
  * Returns up to 500 chars.
  */
+/**
+ * Strips script/style/nav/header/footer, common menu/breadcrumb wrapper
+ * classes, and <title>, from raw HTML before any content-extraction regex
+ * runs. Needed because a container-matching regex (e.g. "find a div whose
+ * class contains 'about'") can't tell how big that container actually is
+ * -- on a lot of modern sites the whole page (title, breadcrumb, full nav
+ * menu, then the real content) ends up nested inside one wrapper div/main
+ * whose id or class happens to contain "about", so the match swallows all
+ * of it. Stripping chrome first means even a too-greedy container match
+ * can't include nav/menu text, because it's no longer there to include.
+ */
+function stripChrome(html: string): string {
+  return html
+    .replace(/<title>[\s\S]*?<\/title>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<(?:nav|header|footer)[\s\S]*?<\/(?:nav|header|footer)>/gi, " ")
+    .replace(/<[^>]+(?:class|id)=["'][^"']*(?:menu|navbar|breadcrumbs?)[^"']*["'][^>]*>[\s\S]*?<\/(?:div|ul|nav)>/gi, " ");
+}
+
+/**
+ * Truncates at the last full sentence (or, failing that, the last word)
+ * within `max` chars, rather than a hard character slice that can cut off
+ * mid-word (e.g. "...too many outdoor projects fa").
+ */
+function cleanTruncate(text: string, max: number): string {
+  if (text.length <= max) return text;
+  const slice = text.slice(0, max);
+  const lastSentenceEnd = Math.max(slice.lastIndexOf(". "), slice.lastIndexOf("! "), slice.lastIndexOf("? "));
+  if (lastSentenceEnd > max * 0.4) return slice.slice(0, lastSentenceEnd + 1);
+  const lastSpace = slice.lastIndexOf(" ");
+  return (lastSpace > max * 0.5 ? slice.slice(0, lastSpace) : slice).trim() + "...";
+}
+
 export function extractAbout(html: string): string | null {
+  const cleaned = stripChrome(html);
+
   // Look for about section by common selectors/patterns
-  const aboutSection = html.match(
+  const aboutSection = cleaned.match(
     /<(?:section|div)[^>]*(?:id|class)=["'][^"']*(?:about|who-we-are|our-story|company|team)[^"']*["'][^>]*>([\s\S]{50,2000}?)<\/(?:section|div)>/i
   );
   if (aboutSection) {
     const text = decodeHtmlEntities(
       aboutSection[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
     );
-    if (text.length > 50) return text.slice(0, 500);
+    if (text.length > 50) return cleanTruncate(text, 500);
   }
 
   // Fallback: look for paragraphs near "about" heading
-  const nearAbout = html.match(
+  const nearAbout = cleaned.match(
     /<h[1-4][^>]*>[^<]*(?:about|who we are|our story)[^<]*<\/h[1-4]>\s*(?:<[^>]+>\s*)*<p[^>]*>([\s\S]{50,500}?)<\/p>/i
   );
   if (nearAbout) {
     const text = decodeHtmlEntities(
       nearAbout[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
     );
-    if (text.length > 50) return text.slice(0, 500);
+    if (text.length > 50) return cleanTruncate(text, 500);
   }
 
   return null;
@@ -182,9 +218,10 @@ export function extractAbout(html: string): string | null {
  */
 export function extractServices(html: string): string[] {
   const services: string[] = [];
+  const cleaned = stripChrome(html);
 
   // Look for a services section with a list
-  const serviceSection = html.match(
+  const serviceSection = cleaned.match(
     /<(?:section|div)[^>]*(?:id|class)=["'][^"']*(?:services|what-we-do|specialties)[^"']*["'][^>]*>([\s\S]{50,3000}?)<\/(?:section|div)>/i
   );
 
@@ -337,16 +374,12 @@ export async function scrapeSubPages(
       if (targeted) {
         result.aboutText = targeted;
       } else {
-        // Fallback: strip obvious chrome (script/style/nav/header/footer
-        // tags, plus common menu/breadcrumb class names even when they
-        // aren't wrapped in one of those literal tags), prefer content
-        // inside <main> if present, and only then fall back to the
-        // whole body.
-        let stripped = aboutHtml
-          .replace(/<script[\s\S]*?<\/script>/gi, " ")
-          .replace(/<style[\s\S]*?<\/style>/gi, " ")
-          .replace(/<(?:nav|header|footer)[\s\S]*?<\/(?:nav|header|footer)>/gi, " ")
-          .replace(/<[^>]+(?:class|id)=["'][^"']*(?:menu|navbar|breadcrumbs?)[^"']*["'][^>]*>[\s\S]*?<\/(?:div|ul|nav)>/gi, " ");
+        // Fallback: stripChrome already removed script/style/nav/header/
+        // footer/title/menu chrome above (via extractAbout's own call to
+        // it) -- redo that here since this path works from the raw
+        // aboutHtml directly, then prefer content inside <main> if present,
+        // and only then fall back to the whole (already-stripped) body.
+        let stripped = stripChrome(aboutHtml);
 
         const main = stripped.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
         if (main) stripped = main[1];
@@ -354,7 +387,7 @@ export async function scrapeSubPages(
         const text = decodeHtmlEntities(
           stripped.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
         );
-        if (text.length > 100) result.aboutText = text.slice(0, 800);
+        if (text.length > 100) result.aboutText = cleanTruncate(text, 800);
       }
     }
   }
@@ -362,9 +395,13 @@ export async function scrapeSubPages(
   if (serviceHref && serviceHref[1] !== aboutHref?.[1]) {
     const servHtml = await fetchSubPage(serviceHref[1]);
     if (servHtml) {
-      // Extract service list items from the services page
+      // Extract service list items from the services page -- strip chrome
+      // first, otherwise this happily scoops up every <li> in the nav menu
+      // too (which is exactly how a services page's real content ends up
+      // as a list of nav labels like "Design & Planning", "Careers").
+      const cleanedServHtml = stripChrome(servHtml);
       const items: string[] = [];
-      const liMatches = servHtml.matchAll(/<li[^>]*>(.*?)<\/li>/gi);
+      const liMatches = cleanedServHtml.matchAll(/<li[^>]*>(.*?)<\/li>/gi);
       for (const m of liMatches) {
         const text = decodeHtmlEntities(m[1].replace(/<[^>]+>/g, "").trim());
         if (text.length >= 5 && text.length <= 80) {
