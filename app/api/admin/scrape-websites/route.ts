@@ -2,11 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdminEmail } from "@/lib/admin";
-import { fetchWebsiteHtml, extractLogoUrl, extractBlurb, extractPhotos, resolveUrl } from "@/lib/websiteScraper";
+import { fetchWebsiteHtml, extractLogoUrl, extractBlurb, extractPhotos } from "@/lib/websiteScraper";
 
-const BATCH = 30; // per invocation -- website fetches are slow
+const BATCH = 30;
 
-/* ── Download and store a photo in Supabase Storage ────────────── */
 async function downloadAndStore(
   photoUrl: string,
   listingId: string,
@@ -15,30 +14,23 @@ async function downloadAndStore(
 ): Promise<string | null> {
   try {
     const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(), 10000);
+    const t = setTimeout(() => controller.abort(), 12000);
     const res = await fetch(photoUrl, {
       signal: controller.signal,
       headers: { "User-Agent": "Swiftscope-Bot/1.0 (+https://swiftscope.com.au)" },
     });
     clearTimeout(t);
     if (!res.ok) return null;
-
     const contentType = res.headers.get("content-type") ?? "image/jpeg";
     if (!contentType.startsWith("image/")) return null;
-
-    const ext = contentType.includes("png") ? "png" : "jpg";
     const buffer = Buffer.from(await res.arrayBuffer());
-
-    // Skip tiny images (less than 5KB = likely icons)
-    if (buffer.length < 5000) return null;
-
+    if (buffer.length < 5000) return null; // skip tiny icons
+    const ext = contentType.includes("png") ? "png" : "jpg";
     const path = `website/${listingId}/${idx}.${ext}`;
     const { error } = await admin.storage
       .from("directory-photos")
       .upload(path, buffer, { upsert: true, contentType });
-
     if (error) return null;
-
     const { data: pub } = admin.storage.from("directory-photos").getPublicUrl(path);
     return pub.publicUrl;
   } catch {
@@ -46,12 +38,6 @@ async function downloadAndStore(
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   POST /api/admin/scrape-websites
-   Batch-processes listings that have website_url but missing photos,
-   logo, or blurb. Pulls content from their own website -- free, no
-   Google API calls.
-═══════════════════════════════════════════════════════════════ */
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -60,35 +46,59 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const mode = body.mode ?? "all"; // "photos" | "logo" | "blurb" | "all"
+  const mode = body.mode ?? "all";
 
   const admin = createAdminClient();
 
-  // Get listings with a website URL that need enriching
-  const { data: listings, count } = await admin
+  // Build targeted query based on mode -- only fetch listings that actually
+  // need the specific field we're trying to fill
+  let query = admin
     .from("directory_listing")
     .select("id, business_name, website_url, logo_url, blurb, photo_references", { count: "exact" })
     .not("website_url", "is", null)
-    .eq("is_claimed", false)
-    // Prioritise listings with no cached photos (only Google tokens or empty)
-    .or("photos_cached_at.is.null,logo_url.is.null,blurb.is.null")
-    .order("photos_cached_at", { ascending: true, nullsFirst: true })
+    .eq("is_claimed", false);
+
+  if (mode === "photos" || mode === "all") {
+    // Listings where photo_references is empty OR all refs are Google tokens (not http)
+    query = query.or("photos_cached_at.is.null,photo_references.is.null,photo_references.eq.{}");
+  } else if (mode === "logo") {
+    query = query.is("logo_url", null);
+  } else if (mode === "blurb") {
+    query = query.is("blurb", null);
+  }
+
+  const { data: listings, count } = await query
+    .order("website_scraped_at", { ascending: true, nullsFirst: true })
     .limit(BATCH);
+
+  // Further filter in code: skip listings that already have what we need
+  const needsWork = (listings ?? []).filter(listing => {
+    const refs = (listing.photo_references ?? []) as string[];
+    const cachedPhotos = refs.filter(r => r.startsWith("http"));
+    if (mode === "photos" || mode === "all") {
+      if (cachedPhotos.length >= 2) return false; // already has photos
+    }
+    if (mode === "logo" && listing.logo_url) return false;
+    if (mode === "blurb" && listing.blurb) return false;
+    return true;
+  });
 
   const results = {
     processed: 0, updated: 0, skipped: 0, failed: 0,
-    remaining: (count ?? 0) - (listings?.length ?? 0),
+    remaining: Math.max(0, (count ?? 0) - BATCH),
     detail: [] as string[],
+    skipReasons: {} as Record<string, number>,
   };
 
-  for (const listing of listings ?? []) {
+  for (const listing of needsWork) {
     results.processed++;
     const url = listing.website_url as string;
 
     const html = await fetchWebsiteHtml(url);
     if (!html) {
-      results.skipped++;
-      // Stamp website_scraped_at so we don't retry failed sites immediately
+      results.failed++;
+      results.skipReasons["fetch failed / timeout"] = (results.skipReasons["fetch failed / timeout"] ?? 0) + 1;
+      // Stamp so we don't retry immediately -- will retry after other listings
       await admin.from("directory_listing")
         .update({ website_scraped_at: new Date().toISOString() })
         .eq("id", listing.id);
@@ -98,56 +108,68 @@ export async function POST(req: NextRequest) {
     const updates: Record<string, unknown> = {
       website_scraped_at: new Date().toISOString(),
     };
+    const updated: string[] = [];
 
-    // ── Logo ─────────────────────────────────────────────────────
+    // Logo
     if ((mode === "logo" || mode === "all") && !listing.logo_url) {
       const logo = extractLogoUrl(html, url);
-      if (logo) updates.logo_url = logo;
+      if (logo) { updates.logo_url = logo; updated.push("logo_url"); }
     }
 
-    // ── Blurb ────────────────────────────────────────────────────
+    // Blurb
     if ((mode === "blurb" || mode === "all") && !listing.blurb) {
       const blurb = extractBlurb(html);
-      if (blurb) updates.blurb = blurb;
+      if (blurb) { updates.blurb = blurb; updated.push("blurb"); }
     }
 
-    // ── Photos ───────────────────────────────────────────────────
+    // Photos
     if (mode === "photos" || mode === "all") {
       const existing = (listing.photo_references ?? []) as string[];
-      const cachedCount = existing.filter(r => r.startsWith("http")).length;
+      const alreadyCached = existing.filter(r => r.startsWith("http"));
 
-      if (cachedCount < 3) {
+      if (alreadyCached.length < 2) {
         const photoUrls = extractPhotos(html, url);
-        const newPhotos: string[] = [...existing.filter(r => r.startsWith("http"))];
+        const newPhotos: string[] = [...alreadyCached];
 
-        for (let i = 0; i < photoUrls.length && newPhotos.length < 6; i++) {
+        for (let i = 0; i < photoUrls.length && newPhotos.length < 4; i++) {
           const stored = await downloadAndStore(photoUrls[i], listing.id, i, admin);
           if (stored) newPhotos.push(stored);
         }
 
-        if (newPhotos.length > cachedCount) {
+        if (newPhotos.length > alreadyCached.length) {
           updates.photo_references = newPhotos;
           updates.photos_cached_at = new Date().toISOString();
+          updated.push(`photo_references (${newPhotos.length} photos)`);
+        } else {
+          // No photos found on website -- stamp so we don't retry immediately
+          updates.photos_cached_at = new Date().toISOString();
+          results.skipReasons["no photos found on site"] = (results.skipReasons["no photos found on site"] ?? 0) + 1;
         }
       }
     }
 
-    if (Object.keys(updates).length > 1) { // more than just the timestamp
-      await admin.from("directory_listing").update(updates).eq("id", listing.id);
+    await admin.from("directory_listing").update(updates).eq("id", listing.id);
+
+    if (updated.length > 0) {
       results.updated++;
-      results.detail.push(`✓ ${listing.business_name} (${Object.keys(updates).filter(k => k !== "website_scraped_at").join(", ")})`);
+      results.detail.push(`✓ ${listing.business_name} (${updated.join(", ")})`);
     } else {
-      // Nothing to update but stamp it anyway
-      await admin.from("directory_listing").update(updates).eq("id", listing.id);
       results.skipped++;
+      results.detail.push(`⁃ ${listing.business_name} (nothing extractable from ${url.slice(0, 40)})`);
     }
+  }
+
+  // Add listings that had all fields already (filtered out before processing)
+  const alreadyComplete = (listings?.length ?? 0) - needsWork.length;
+  if (alreadyComplete > 0) {
+    results.skipReasons[`already complete`] = alreadyComplete;
+    results.skipped += alreadyComplete;
   }
 
   return NextResponse.json(results);
 }
 
-/* ── GET: return stats on how many listings need enriching ──────── */
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user || !isAdminEmail(user.email)) {
@@ -156,13 +178,14 @@ export async function GET(req: NextRequest) {
 
   const admin = createAdminClient();
 
-  const [total, withWebsite, withPhotos, withLogo, withBlurb] = await Promise.all([
+  const [total, withWebsite, withPhotos, withLogo, withBlurb, noWebsite] = await Promise.all([
     admin.from("directory_listing").select("id", { count: "exact", head: true }).then(r => r.count ?? 0),
     admin.from("directory_listing").select("id", { count: "exact", head: true }).not("website_url", "is", null).then(r => r.count ?? 0),
     admin.from("directory_listing").select("id", { count: "exact", head: true }).not("photos_cached_at", "is", null).then(r => r.count ?? 0),
     admin.from("directory_listing").select("id", { count: "exact", head: true }).not("logo_url", "is", null).then(r => r.count ?? 0),
     admin.from("directory_listing").select("id", { count: "exact", head: true }).not("blurb", "is", null).then(r => r.count ?? 0),
+    admin.from("directory_listing").select("id", { count: "exact", head: true }).is("website_url", null).then(r => r.count ?? 0),
   ]);
 
-  return NextResponse.json({ total, withWebsite, withPhotos, withLogo, withBlurb });
+  return NextResponse.json({ total, withWebsite, withPhotos, withLogo, withBlurb, noWebsite });
 }
