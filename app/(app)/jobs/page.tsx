@@ -22,7 +22,7 @@ export default async function JobsPage() {
       const businessId = await getActiveBusinessId(supabase, userData.user.id);
 
       /* ── All queries in parallel ── */
-      const [{ data: allJobs }, { data: quotesData }, { data: teamRows }, columns] = await Promise.all([
+      const [{ data: allJobs }, { data: quotesData }, { data: teamRows }, { data: docketRows }, columns] = await Promise.all([
         supabase
           .from("jobs")
           .select("id, job_number, client_name, site_address, total_cost, amount_paid, status, source, scheduled_date, scheduled_start, is_recurring_template, recurrence_rule")
@@ -35,12 +35,22 @@ export default async function JobsPage() {
           .eq("status", "accepted")
           .order("accepted_at", { ascending: true }),
         supabase.from("team_members").select("id, name, email").eq("owner_profile_id", businessId).eq("status", "active").order("name"),
+        supabase.from("dockets").select("job_id, total_cost").eq("profile_id", businessId).eq("status", "signed"),
         getCachedBoardColumns(businessId),
       ]);
 
+      // Sum of signed, unbilled docket totals per job - shown as a "ready
+      // to invoice" badge on the board so it's visible where jobs are
+      // actually managed day to day, not just on a separate dockets page.
+      const readyToInvoiceByJob = new Map<string, number>();
+      for (const d of docketRows ?? []) {
+        readyToInvoiceByJob.set(d.job_id, (readyToInvoiceByJob.get(d.job_id) ?? 0) + (d.total_cost ?? 0));
+      }
+
       if (allJobs) {
-        boardJobs = allJobs.filter((j) => !j.is_recurring_template);
-        quickJobs = allJobs.filter((j) => j.source === "quick" || j.source === "recurring");
+        const withReadyToInvoice = allJobs.map((j) => ({ ...j, ready_to_invoice: readyToInvoiceByJob.get(j.id) ?? 0 }));
+        boardJobs = withReadyToInvoice.filter((j) => !j.is_recurring_template);
+        quickJobs = withReadyToInvoice.filter((j) => j.source === "quick" || j.source === "recurring");
       }
       if (quotesData) listJobs = quotesData;
       if (teamRows) teamMembers = teamRows;

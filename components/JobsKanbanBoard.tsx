@@ -18,6 +18,7 @@ export type BoardJob = {
   source: string;
   scheduled_date: string | null;
   scheduled_start: string | null;
+  ready_to_invoice?: number;
 };
 
 export type BoardColumn = {
@@ -215,6 +216,11 @@ export default function JobsKanbanBoard({ jobs: initialJobs, columns: initialCol
                       </div>
                       {subBadge && (
                         <span className="inline-block mt-1.5 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase" style={{ background: style.bg, color: style.text }}>{subBadge}</span>
+                      )}
+                      {!!j.ready_to_invoice && j.ready_to_invoice > 0 && (
+                        <span className="inline-block mt-1.5 ml-1 text-[10px] px-1.5 py-0.5 rounded font-bold bg-green-50 text-green-700">
+                          ${j.ready_to_invoice.toLocaleString()} ready to invoice
+                        </span>
                       )}
                     </div>
                   );
