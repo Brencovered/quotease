@@ -13,6 +13,25 @@ export function getRandomUserAgent(): string {
   return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 }
 
+// Every text-extraction function below strips tags but never decoded HTML
+// entities -- "Design &amp; Planning" was showing up verbatim as literal
+// text instead of "Design & Planning". Covers the handful of entities that
+// actually show up in real page copy (not attempting a full HTML entity
+// table -- ampersand, quotes, and numeric entities cover the practical
+// cases).
+export function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&amp;/g, "&")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&#0?39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCharCode(parseInt(code, 16)));
+}
+
 export function resolveUrl(path: string, base: string): string {
   if (!path) return "";
   try { return new URL(path, base).href; } catch { return ""; }
@@ -59,9 +78,9 @@ export function extractLogoUrl(html: string, baseUrl: string): string | null {
 export function extractBlurb(html: string): string | null {
   const desc = html.match(/<meta[^>]+name=[\"']description[\"'][^>]+content=[\"']([^\"']{20,300})[\"']/i)
     ?? html.match(/<meta[^>]+content=[\"']([^\"']{20,300})[\"'][^>]+name=[\"']description[\"']/i);
-  if (desc) return desc[1].trim();
+  if (desc) return decodeHtmlEntities(desc[1].trim());
   const og = html.match(/<meta[^>]+property=[\"']og:description[\"'][^>]+content=[\"']([^\"']{20,300})[\"']/i);
-  if (og) return og[1].trim();
+  if (og) return decodeHtmlEntities(og[1].trim());
   return null;
 }
 
@@ -137,10 +156,9 @@ export function extractAbout(html: string): string | null {
     /<(?:section|div)[^>]*(?:id|class)=["'][^"']*(?:about|who-we-are|our-story|company|team)[^"']*["'][^>]*>([\s\S]{50,2000}?)<\/(?:section|div)>/i
   );
   if (aboutSection) {
-    const text = aboutSection[1]
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
+    const text = decodeHtmlEntities(
+      aboutSection[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
+    );
     if (text.length > 50) return text.slice(0, 500);
   }
 
@@ -149,7 +167,9 @@ export function extractAbout(html: string): string | null {
     /<h[1-4][^>]*>[^<]*(?:about|who we are|our story)[^<]*<\/h[1-4]>\s*(?:<[^>]+>\s*)*<p[^>]*>([\s\S]{50,500}?)<\/p>/i
   );
   if (nearAbout) {
-    const text = nearAbout[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    const text = decodeHtmlEntities(
+      nearAbout[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
+    );
     if (text.length > 50) return text.slice(0, 500);
   }
 
@@ -171,7 +191,7 @@ export function extractServices(html: string): string[] {
   if (serviceSection) {
     const items = serviceSection[1].matchAll(/<li[^>]*>([\s\S]{5,100}?)<\/li>/gi);
     for (const m of items) {
-      const text = m[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+      const text = decodeHtmlEntities(m[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim());
       if (text.length >= 5 && text.length <= 80) {
         services.push(text);
         if (services.length >= 10) break;
@@ -306,14 +326,36 @@ export async function scrapeSubPages(
   if (aboutHref) {
     const aboutHtml = await fetchSubPage(aboutHref[1]);
     if (aboutHtml) {
-      const text = aboutHtml
-        .replace(/<script[\s\S]*?<\/script>/gi, " ")
-        .replace(/<style[\s\S]*?<\/style>/gi, " ")
-        .replace(/<(?:nav|header|footer)[\s\S]*?<\/(?:nav|header|footer)>/gi, " ")
-        .replace(/<[^>]+>/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-      if (text.length > 100) result.aboutText = text.slice(0, 800);
+      // Try the same targeted extraction used on the homepage first --
+      // it looks for an actual about/story container or heading+paragraph,
+      // rather than just grabbing whatever text happens to come first on
+      // the page. On a lot of modern sites that's the full mega-menu
+      // (Services > Design & Planning, Outdoor Building, ... Company >
+      // About, Team, Careers ...) since it isn't always wrapped in a
+      // literal <nav>/<header> tag the crude fallback below can strip.
+      const targeted = extractAbout(aboutHtml);
+      if (targeted) {
+        result.aboutText = targeted;
+      } else {
+        // Fallback: strip obvious chrome (script/style/nav/header/footer
+        // tags, plus common menu/breadcrumb class names even when they
+        // aren't wrapped in one of those literal tags), prefer content
+        // inside <main> if present, and only then fall back to the
+        // whole body.
+        let stripped = aboutHtml
+          .replace(/<script[\s\S]*?<\/script>/gi, " ")
+          .replace(/<style[\s\S]*?<\/style>/gi, " ")
+          .replace(/<(?:nav|header|footer)[\s\S]*?<\/(?:nav|header|footer)>/gi, " ")
+          .replace(/<[^>]+(?:class|id)=["'][^"']*(?:menu|navbar|breadcrumbs?)[^"']*["'][^>]*>[\s\S]*?<\/(?:div|ul|nav)>/gi, " ");
+
+        const main = stripped.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
+        if (main) stripped = main[1];
+
+        const text = decodeHtmlEntities(
+          stripped.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
+        );
+        if (text.length > 100) result.aboutText = text.slice(0, 800);
+      }
     }
   }
 
@@ -324,7 +366,7 @@ export async function scrapeSubPages(
       const items: string[] = [];
       const liMatches = servHtml.matchAll(/<li[^>]*>(.*?)<\/li>/gi);
       for (const m of liMatches) {
-        const text = m[1].replace(/<[^>]+>/g, "").trim();
+        const text = decodeHtmlEntities(m[1].replace(/<[^>]+>/g, "").trim());
         if (text.length >= 5 && text.length <= 80) {
           items.push(text);
           if (items.length >= 12) break;
