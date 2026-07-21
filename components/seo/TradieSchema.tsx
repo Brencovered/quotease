@@ -77,8 +77,20 @@ export default function TradieSchema({
   slug,
   reviews,
 }: TradieSchemaProps) {
-  const schemaType = TRADE_SCHEMA_TYPE[trade.toLowerCase()] ?? "LocalBusiness";
+  const specificType = TRADE_SCHEMA_TYPE[trade.toLowerCase()] ?? "LocalBusiness";
   const canonicalUrl = `${BASE_URL}/directory/${slug}`;
+
+  // Google Review snippets only support LocalBusiness (and a handful of
+  // other types like Product, Recipe). Specific subtypes like
+  // LandscapingBusiness, RoofingContractor etc. are NOT on the supported
+  // list and cause "Invalid object type for field" validation errors.
+  // Use an array type when we have reviews so both types are declared,
+  // giving Google the LocalBusiness signal it needs for reviews while
+  // keeping the specific type for other structured data purposes.
+  const hasReviews = reviews && reviews.filter(r => r.text?.trim() && r.authorName?.trim() && r.rating >= 1 && r.rating <= 5 && r.time > 0).length > 0;
+  const schemaType = hasReviews && specificType !== "LocalBusiness"
+    ? [specificType, "LocalBusiness"]
+    : specificType;
 
   const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
