@@ -142,8 +142,24 @@ export default function DocketsPanel({
 
   async function saveDocket() {
     if (!header.work_date) { setError("Date of work is required"); return; }
-    const hasAnyLine = labourRows.length + plantRows.length + materialRows.length + customRows.length > 0;
-    if (!hasAnyLine) { setError("Add at least one labour, plant, materials or custom line"); return; }
+
+    // Filter to rows that actually have content - a row with a label but
+    // zero quantity/hours isn't a real line item, it's an unfinished one.
+    // Computing this BEFORE creating the docket header means a docket with
+    // no valid lines never gets created at all, instead of silently saving
+    // an empty (or effectively $0) docket like "add a row, don't fill it
+    // in, hit save" previously allowed.
+    const validLabourRows = labourRows.filter((r) => r.label.trim() && num(r.quantity) > 0);
+    const validPlantRows = plantRows.filter((r) => r.label.trim() && num(r.quantity) > 0);
+    const validMaterialRows = materialRows.filter((r) => r.label.trim() && num(r.quantity) > 0);
+    const validCustomRows = customRows.filter((r) => r.label.trim() && num(r.quantity) > 0);
+    const totalValidLines = validLabourRows.length + validPlantRows.length + validMaterialRows.length + validCustomRows.length;
+
+    if (totalValidLines === 0) {
+      const anyRowsAtAll = labourRows.length + plantRows.length + materialRows.length + customRows.length > 0;
+      setError(anyRowsAtAll ? "Every line needs a description and non-zero hours/quantity before this can be saved" : "Add at least one labour, plant, materials or custom line");
+      return;
+    }
 
     setSaving(true);
     setError(null);
@@ -161,14 +177,19 @@ export default function DocketsPanel({
 
     let sortOrder = 0;
     const itemRows = [
-      ...labourRows.filter((r) => r.label.trim()).map((r) => ({ docket_id: docket.id, profile_id: businessId, category: "labour", source_rate_item_id: r.source_rate_item_id, label: r.label.trim(), person_name: r.person_name.trim() || null, quantity: num(r.quantity), rate: num(r.rate), sort_order: sortOrder++ })),
-      ...plantRows.filter((r) => r.label.trim()).map((r) => ({ docket_id: docket.id, profile_id: businessId, category: "plant", source_rate_item_id: r.source_rate_item_id, label: r.label.trim(), person_name: null, quantity: num(r.quantity), rate: num(r.rate), sort_order: sortOrder++ })),
-      ...materialRows.filter((r) => r.label.trim()).map((r) => ({ docket_id: docket.id, profile_id: businessId, category: "material", source_rate_item_id: null, label: r.label.trim(), person_name: null, quantity: num(r.quantity), rate: num(r.rate), sort_order: sortOrder++ })),
-      ...customRows.filter((r) => r.label.trim()).map((r) => ({ docket_id: docket.id, profile_id: businessId, category: "custom", source_rate_item_id: null, label: r.label.trim(), person_name: null, quantity: num(r.quantity), rate: num(r.rate), sort_order: sortOrder++ })),
+      ...validLabourRows.map((r) => ({ docket_id: docket.id, profile_id: businessId, category: "labour", source_rate_item_id: r.source_rate_item_id, label: r.label.trim(), person_name: r.person_name.trim() || null, quantity: num(r.quantity), rate: num(r.rate), sort_order: sortOrder++ })),
+      ...validPlantRows.map((r) => ({ docket_id: docket.id, profile_id: businessId, category: "plant", source_rate_item_id: r.source_rate_item_id, label: r.label.trim(), person_name: null, quantity: num(r.quantity), rate: num(r.rate), sort_order: sortOrder++ })),
+      ...validMaterialRows.map((r) => ({ docket_id: docket.id, profile_id: businessId, category: "material", source_rate_item_id: null, label: r.label.trim(), person_name: null, quantity: num(r.quantity), rate: num(r.rate), sort_order: sortOrder++ })),
+      ...validCustomRows.map((r) => ({ docket_id: docket.id, profile_id: businessId, category: "custom", source_rate_item_id: null, label: r.label.trim(), person_name: null, quantity: num(r.quantity), rate: num(r.rate), sort_order: sortOrder++ })),
     ];
 
     const { error: itemsErr } = await supabase.from("docket_items").insert(itemRows);
-    if (itemsErr) { setError(itemsErr.message); setSaving(false); return; }
+    if (itemsErr) {
+      await supabase.from("dockets").delete().eq("id", docket.id);
+      setError(itemsErr.message);
+      setSaving(false);
+      return;
+    }
 
     // Re-fetch so we get the trigger-computed total_cost and full item rows.
     const { data: fullDocket } = await supabase.from("dockets").select("*, docket_items(*)").eq("id", docket.id).single();
