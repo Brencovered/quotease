@@ -85,7 +85,7 @@ export default function TradieSchema({
     "@type": schemaType,
     name: businessName,
     url: website ?? canonicalUrl,
-    sameAs: [canonicalUrl],
+    sameAs: website ? [canonicalUrl, website] : [canonicalUrl],
     address: {
       "@type": "PostalAddress",
       ...(streetAddress && { streetAddress }),
@@ -108,37 +108,37 @@ export default function TradieSchema({
     }),
     // priceRange: "$$", // NOTE: uncomment and customise once we have per-listing pricing data
     areaServed: {
-      "@type": "City",
+      "@type": "AdministrativeArea",
       name: suburb,
     },
     // Only emit aggregateRating when we have enough reviews to be credible.
     ...(googleRating && reviewCount && reviewCount >= 3 && {
       aggregateRating: {
         "@type": "AggregateRating",
-        ratingValue: googleRating.toFixed(1),
-        reviewCount: reviewCount,
+        ratingValue: String(googleRating.toFixed(1)),
+        reviewCount: String(reviewCount),
         bestRating: "5",
         worstRating: "1",
       },
     }),
-    // Individual reviews, when we have real text to attach (via the Places
-    // API's Place Details reviews field) rather than just the aggregate
-    // number -- schema.org's Review type expects actual review content,
-    // not a synthesized one, so this is only emitted when genuine text
-    // exists for each entry.
-    ...(reviews && reviews.length > 0 && {
-      review: reviews.slice(0, 5).map((r) => ({
-        "@type": "Review",
-        author: { "@type": "Person", name: r.authorName },
-        datePublished: new Date(r.time * 1000).toISOString().slice(0, 10),
-        reviewBody: r.text,
-        reviewRating: {
-          "@type": "Rating",
-          ratingValue: r.rating,
-          bestRating: "5",
-          worstRating: "1",
-        },
-      })),
+    // Individual reviews -- only emit when review has actual text content.
+    // Empty reviewBody or missing author causes Google validation errors.
+    ...(reviews && reviews.filter(r => r.text?.trim() && r.authorName?.trim() && r.rating >= 1 && r.rating <= 5).length > 0 && {
+      review: reviews
+        .filter(r => r.text?.trim() && r.authorName?.trim() && r.rating >= 1 && r.rating <= 5)
+        .slice(0, 5)
+        .map((r) => ({
+          "@type": "Review",
+          author: { "@type": "Person", name: r.authorName.trim() },
+          datePublished: new Date(r.time * 1000).toISOString().slice(0, 10),
+          reviewBody: r.text.trim(),
+          reviewRating: {
+            "@type": "Rating",
+            ratingValue: String(r.rating),
+            bestRating: "5",
+            worstRating: "1",
+          },
+        })),
     }),
   };
 
