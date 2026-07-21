@@ -223,11 +223,11 @@ export default function AdminWebsiteScraper() {
 }
 
 function YellowPagesScraper() {
-  const [trade,   setTrade]   = React.useState("electrician");
-  const [suburb,  setSuburb]  = React.useState("Sydney NSW");
-  const [pages,   setPages]   = React.useState(2);
-  const [running, setRunning] = React.useState(false);
-  const [result,  setResult]  = React.useState<{found:number;inserted:number;skipped:number;pagesScraped:number}|null>(null);
+  const [trade,   setTrade]   = useState("electrician");
+  const [suburb,  setSuburb]  = useState("Sydney NSW");
+  const [pages,   setPages]   = useState(2);
+  const [running, setRunning] = useState(false);
+  const [result,  setResult]  = useState<{found:number;inserted:number;skipped:number;pagesScraped:number}|null>(null);
 
   const TRADES = ["electrician","plumber","carpenter","roofer","painter","tiler","landscaper","builder","concreter","plasterer"];
   const SUBURBS = [
