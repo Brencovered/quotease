@@ -56,7 +56,7 @@ const ARCHIVE_STATUSES = ["archived", "cancelled"];
 
 type LineItemsMap = Record<string, { status: LineItemStatus }[]>;
 
-export default function JobsKanbanBoard({ jobs: initialJobs, columns: initialColumns }: { jobs: BoardJob[]; columns: BoardColumn[] }) {
+export default function JobsKanbanBoard({ jobs: initialJobs, columns: initialColumns, canSeePricing = true }: { jobs: BoardJob[]; columns: BoardColumn[]; canSeePricing?: boolean }) {
   const router = useRouter();
   const [jobs, setJobs] = useState(initialJobs);
   const [columns, setColumns] = useState(initialColumns);
@@ -154,7 +154,7 @@ export default function JobsKanbanBoard({ jobs: initialJobs, columns: initialCol
                 </span>
                 <span className="text-[11px] text-[var(--ink-faint)] font-semibold">{colJobs.length}</span>
               </div>
-              {colJobs.length > 0 && (
+              {canSeePricing && colJobs.length > 0 && (
                 <p className="text-[11px] text-[var(--ink-faint)] px-1 mb-2">${colTotal.toLocaleString()}</p>
               )}
               <div className="space-y-2">
@@ -207,7 +207,7 @@ export default function JobsKanbanBoard({ jobs: initialJobs, columns: initialCol
                         </div>
                       )}
                       <div className="flex items-center justify-between">
-                        <p className="text-[13px] font-semibold text-[var(--ink)]">${(j.total_cost ?? 0).toLocaleString()}</p>
+                        {canSeePricing && <p className="text-[13px] font-semibold text-[var(--ink)]">${(j.total_cost ?? 0).toLocaleString()}</p>}
                         {j.source !== "quote" && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--amber-light)] text-[var(--amber-deep)] font-bold uppercase">
                             {j.source === "recurring" ? <Repeat size={10} className="inline -mt-0.5" /> : "quick"}
@@ -217,7 +217,7 @@ export default function JobsKanbanBoard({ jobs: initialJobs, columns: initialCol
                       {subBadge && (
                         <span className="inline-block mt-1.5 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase" style={{ background: style.bg, color: style.text }}>{subBadge}</span>
                       )}
-                      {!!j.ready_to_invoice && j.ready_to_invoice > 0 && (
+                      {canSeePricing && !!j.ready_to_invoice && j.ready_to_invoice > 0 && (
                         <span className="inline-block mt-1.5 ml-1 text-[10px] px-1.5 py-0.5 rounded font-bold bg-green-50 text-green-700">
                           ${j.ready_to_invoice.toLocaleString()} ready to invoice
                         </span>

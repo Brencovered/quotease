@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getActiveBusinessId } from "@/lib/team";
+import { getTeamContext } from "@/lib/team";
 import { getCachedBoardColumns } from "@/lib/cache";
 import AppHeader from "@/components/AppHeader";
 import JobsPageClient from "./JobsPageClient";
@@ -14,12 +14,15 @@ export default async function JobsPage() {
   let teamMembers: Array<{ id: string; name: string | null; email: string }> = [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let boardColumns: any[] = [];
+  let canSeePricing = true;
 
   try {
     const supabase = await createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (userData.user) {
-      const businessId = await getActiveBusinessId(supabase, userData.user.id);
+      const ctx = await getTeamContext(supabase, userData.user.id);
+      const businessId = ctx.businessId;
+      canSeePricing = ctx.canSeePricing;
 
       /* ── All queries in parallel ── */
       const [{ data: allJobs }, { data: quotesData }, { data: teamRows }, { data: docketRows }, columns] = await Promise.all([
@@ -71,7 +74,7 @@ export default async function JobsPage() {
   return (
     <>
       <AppHeader />
-      <JobsPageClient boardJobs={boardJobs} quickJobs={quickJobs} listJobs={listJobs} teamMembers={teamMembers} boardColumns={boardColumns} />
+      <JobsPageClient boardJobs={boardJobs} quickJobs={quickJobs} listJobs={listJobs} teamMembers={teamMembers} boardColumns={boardColumns} canSeePricing={canSeePricing} />
     </>
   );
 }

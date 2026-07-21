@@ -41,6 +41,7 @@ export default function DocketsPanel({
   labourCatalog,
   plantCatalog,
   materialsCatalog,
+  canSeePricing = true,
 }: {
   jobId: string;
   dockets: Docket[];
@@ -49,6 +50,8 @@ export default function DocketsPanel({
   plantCatalog: DocketRateItem[];
   materialsCatalog: CatalogMaterial[];
   defaultHourlyRate?: number;
+  /** Site members can log dockets but never see a dollar figure - rates, totals, invoiced amounts all hidden. */
+  canSeePricing?: boolean;
 }) {
   const [dockets, setDockets] = useState(initial);
   const [docketInvoices, setDocketInvoices] = useState(initialInvoices);
@@ -262,11 +265,13 @@ export default function DocketsPanel({
             <div className="bg-green-50 border border-green-100 rounded-lg px-3 py-2.5">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <p className="text-[13px] font-semibold text-green-900">
-                  ${signedReadyTotal.toLocaleString()} across {signedReady.length} signed docket{signedReady.length === 1 ? "" : "s"} - ready to invoice
+                  {canSeePricing ? `$${signedReadyTotal.toLocaleString()} across ${signedReady.length} signed docket${signedReady.length === 1 ? "" : "s"} - ready to invoice` : `${signedReady.length} signed docket${signedReady.length === 1 ? "" : "s"} - ready to invoice`}
                 </p>
-                <button onClick={bundleToInvoice} disabled={bundling} className="inline-flex items-center gap-1.5 text-[12.5px] font-bold bg-green-700 text-white rounded-lg px-3 py-1.5 disabled:opacity-50">
-                  {bundling ? <><Loader2 size={12} className="animate-spin" /> Bundling...</> : <><Receipt size={12} /> Bundle into invoice</>}
-                </button>
+                {canSeePricing && (
+                  <button onClick={bundleToInvoice} disabled={bundling} className="inline-flex items-center gap-1.5 text-[12.5px] font-bold bg-green-700 text-white rounded-lg px-3 py-1.5 disabled:opacity-50">
+                    {bundling ? <><Loader2 size={12} className="animate-spin" /> Bundling...</> : <><Receipt size={12} /> Bundle into invoice</>}
+                  </button>
+                )}
               </div>
               {bundleError && <p className="text-[12px] text-red-600 mt-1.5">{bundleError}</p>}
               {bundleNotice && <p className="text-[12px] text-green-800 mt-1.5">{bundleNotice}</p>}
@@ -294,7 +299,7 @@ export default function DocketsPanel({
                   {new Date(inv.period_start).toLocaleDateString("en-AU", { day: "numeric", month: "short" })} - {new Date(inv.period_end).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
                   {" · "}{inv.docket_count} docket{inv.docket_count === 1 ? "" : "s"}
                 </span>
-                <span className="font-bold text-[var(--ink)]">${inv.total_cost.toLocaleString()}</span>
+                {canSeePricing && <span className="font-bold text-[var(--ink)]">${inv.total_cost.toLocaleString()}</span>}
               </div>
             ))}
           </div>
@@ -339,14 +344,16 @@ export default function DocketsPanel({
               <div key={row.key} className="grid grid-cols-12 gap-1.5 mb-1.5 items-center">
                 <select value={row.source_rate_item_id ?? ""} onChange={(e) => e.target.value ? pickLabourCatalogItem(row.key, e.target.value) : setLabourRows((rows) => rows.map((r) => r.key === row.key ? { ...r, source_rate_item_id: null } : r))} className="app-field col-span-4 text-[12.5px]">
                   <option value="">Custom role...</option>
-                  {labourCatalog.map((c) => <option key={c.id} value={c.id}>{c.label} (${c.default_rate}/h)</option>)}
+                  {labourCatalog.map((c) => <option key={c.id} value={c.id}>{c.label}{canSeePricing ? ` ($${c.default_rate}/h)` : ""}</option>)}
                 </select>
                 {!row.source_rate_item_id && (
                   <input value={row.label} onChange={(e) => setLabourRows((rows) => rows.map((r) => r.key === row.key ? { ...r, label: e.target.value } : r))} placeholder="Role" className="app-field col-span-3 text-[12.5px]" />
                 )}
-                <input value={row.person_name} onChange={(e) => setLabourRows((rows) => rows.map((r) => r.key === row.key ? { ...r, person_name: e.target.value } : r))} placeholder="Person" className={`app-field text-[12.5px] ${row.source_rate_item_id ? "col-span-4" : "col-span-2"}`} />
-                <input type="number" min={0} step={0.25} value={row.quantity} onChange={(e) => setLabourRows((rows) => rows.map((r) => r.key === row.key ? { ...r, quantity: e.target.value } : r))} placeholder="Hrs" className="app-field col-span-2 text-[12.5px]" />
-                <input type="number" min={0} value={row.rate} onChange={(e) => setLabourRows((rows) => rows.map((r) => r.key === row.key ? { ...r, rate: e.target.value } : r))} placeholder="$/h" className="app-field col-span-2 text-[12.5px]" />
+                <input value={row.person_name} onChange={(e) => setLabourRows((rows) => rows.map((r) => r.key === row.key ? { ...r, person_name: e.target.value } : r))} placeholder="Person" className={`app-field text-[12.5px] ${row.source_rate_item_id ? (canSeePricing ? "col-span-4" : "col-span-6") : (canSeePricing ? "col-span-2" : "col-span-4")}`} />
+                <input type="number" min={0} step={0.25} value={row.quantity} onChange={(e) => setLabourRows((rows) => rows.map((r) => r.key === row.key ? { ...r, quantity: e.target.value } : r))} placeholder="Hrs" className={`app-field text-[12.5px] ${canSeePricing ? "col-span-2" : "col-span-1"}`} />
+                {canSeePricing && (
+                  <input type="number" min={0} value={row.rate} onChange={(e) => setLabourRows((rows) => rows.map((r) => r.key === row.key ? { ...r, rate: e.target.value } : r))} placeholder="$/h" className="app-field col-span-2 text-[12.5px]" />
+                )}
                 <button type="button" onClick={() => setLabourRows((rows) => rows.filter((r) => r.key !== row.key))} className="col-span-1 flex justify-center text-[var(--ink-faint)] hover:text-red-600"><Trash2 size={13} /></button>
               </div>
             ))}
@@ -362,13 +369,15 @@ export default function DocketsPanel({
               <div key={row.key} className="grid grid-cols-12 gap-1.5 mb-1.5 items-center">
                 <select value={row.source_rate_item_id ?? ""} onChange={(e) => e.target.value ? pickPlantCatalogItem(row.key, e.target.value) : setPlantRows((rows) => rows.map((r) => r.key === row.key ? { ...r, source_rate_item_id: null } : r))} className="app-field col-span-5 text-[12.5px]">
                   <option value="">Custom item...</option>
-                  {plantCatalog.map((c) => <option key={c.id} value={c.id}>{c.label} (${c.default_rate}/h)</option>)}
+                  {plantCatalog.map((c) => <option key={c.id} value={c.id}>{c.label}{canSeePricing ? ` ($${c.default_rate}/h)` : ""}</option>)}
                 </select>
                 {!row.source_rate_item_id && (
                   <input value={row.label} onChange={(e) => setPlantRows((rows) => rows.map((r) => r.key === row.key ? { ...r, label: e.target.value } : r))} placeholder="Item" className="app-field col-span-4 text-[12.5px]" />
                 )}
-                <input type="number" min={0} step={0.25} value={row.quantity} onChange={(e) => setPlantRows((rows) => rows.map((r) => r.key === row.key ? { ...r, quantity: e.target.value } : r))} placeholder="Hrs" className={`app-field text-[12.5px] ${row.source_rate_item_id ? "col-span-3" : "col-span-2"}`} />
-                <input type="number" min={0} value={row.rate} onChange={(e) => setPlantRows((rows) => rows.map((r) => r.key === row.key ? { ...r, rate: e.target.value } : r))} placeholder="$/h" className="col-span-2 app-field text-[12.5px]" />
+                <input type="number" min={0} step={0.25} value={row.quantity} onChange={(e) => setPlantRows((rows) => rows.map((r) => r.key === row.key ? { ...r, quantity: e.target.value } : r))} placeholder="Hrs" className={`app-field text-[12.5px] ${row.source_rate_item_id ? (canSeePricing ? "col-span-3" : "col-span-5") : (canSeePricing ? "col-span-2" : "col-span-3")}`} />
+                {canSeePricing && (
+                  <input type="number" min={0} value={row.rate} onChange={(e) => setPlantRows((rows) => rows.map((r) => r.key === row.key ? { ...r, rate: e.target.value } : r))} placeholder="$/h" className="col-span-2 app-field text-[12.5px]" />
+                )}
                 <button type="button" onClick={() => setPlantRows((rows) => rows.filter((r) => r.key !== row.key))} className="col-span-1 flex justify-center text-[var(--ink-faint)] hover:text-red-600"><Trash2 size={13} /></button>
               </div>
             ))}
@@ -388,7 +397,7 @@ export default function DocketsPanel({
                     ) : materialResults.map((m) => (
                       <button key={m.item_key} type="button" onClick={() => pickMaterial(m)} className="w-full flex items-center justify-between text-left px-3 py-2 hover:bg-[var(--app-bg)] border-b border-[var(--line)] last:border-0">
                         <span className="text-[12px] text-[var(--ink)] truncate pr-2">{m.label}</span>
-                        <span className="text-[12px] font-semibold text-[var(--ink-faint)] whitespace-nowrap">${m.unit_cost}</span>
+                        {canSeePricing && <span className="text-[12px] font-semibold text-[var(--ink-faint)] whitespace-nowrap">${m.unit_cost}</span>}
                       </button>
                     ))}
                   </div>
@@ -397,9 +406,11 @@ export default function DocketsPanel({
             )}
             {materialRows.map((row) => (
               <div key={row.key} className="grid grid-cols-12 gap-1.5 mb-1.5 items-center">
-                <input value={row.label} onChange={(e) => setMaterialRows((rows) => rows.map((r) => r.key === row.key ? { ...r, label: e.target.value } : r))} placeholder="Material" className="app-field col-span-6 text-[12.5px]" />
-                <input type="number" min={0} value={row.quantity} onChange={(e) => setMaterialRows((rows) => rows.map((r) => r.key === row.key ? { ...r, quantity: e.target.value } : r))} placeholder="Qty" className="app-field col-span-2 text-[12.5px]" />
-                <input type="number" min={0} value={row.rate} onChange={(e) => setMaterialRows((rows) => rows.map((r) => r.key === row.key ? { ...r, rate: e.target.value } : r))} placeholder="$ each" className="app-field col-span-3 text-[12.5px]" />
+                <input value={row.label} onChange={(e) => setMaterialRows((rows) => rows.map((r) => r.key === row.key ? { ...r, label: e.target.value } : r))} placeholder="Material" className={`app-field text-[12.5px] ${canSeePricing ? "col-span-6" : "col-span-8"}`} />
+                <input type="number" min={0} value={row.quantity} onChange={(e) => setMaterialRows((rows) => rows.map((r) => r.key === row.key ? { ...r, quantity: e.target.value } : r))} placeholder="Qty" className={`app-field text-[12.5px] ${canSeePricing ? "col-span-2" : "col-span-3"}`} />
+                {canSeePricing && (
+                  <input type="number" min={0} value={row.rate} onChange={(e) => setMaterialRows((rows) => rows.map((r) => r.key === row.key ? { ...r, rate: e.target.value } : r))} placeholder="$ each" className="app-field col-span-3 text-[12.5px]" />
+                )}
                 <button type="button" onClick={() => setMaterialRows((rows) => rows.filter((r) => r.key !== row.key))} className="col-span-1 flex justify-center text-[var(--ink-faint)] hover:text-red-600"><Trash2 size={13} /></button>
               </div>
             ))}
@@ -414,15 +425,17 @@ export default function DocketsPanel({
             <p className="text-[11.5px] text-[var(--ink-faint)] mb-1.5">For anything one-off that doesn&apos;t fit labour, plant or materials.</p>
             {customRows.map((row) => (
               <div key={row.key} className="grid grid-cols-12 gap-1.5 mb-1.5 items-center">
-                <input value={row.label} onChange={(e) => setCustomRows((rows) => rows.map((r) => r.key === row.key ? { ...r, label: e.target.value } : r))} placeholder="Description" className="app-field col-span-6 text-[12.5px]" />
-                <input type="number" min={0} value={row.quantity} onChange={(e) => setCustomRows((rows) => rows.map((r) => r.key === row.key ? { ...r, quantity: e.target.value } : r))} placeholder="Qty" className="app-field col-span-2 text-[12.5px]" />
-                <input type="number" min={0} value={row.rate} onChange={(e) => setCustomRows((rows) => rows.map((r) => r.key === row.key ? { ...r, rate: e.target.value } : r))} placeholder="$ each" className="app-field col-span-3 text-[12.5px]" />
+                <input value={row.label} onChange={(e) => setCustomRows((rows) => rows.map((r) => r.key === row.key ? { ...r, label: e.target.value } : r))} placeholder="Description" className={`app-field text-[12.5px] ${canSeePricing ? "col-span-6" : "col-span-8"}`} />
+                <input type="number" min={0} value={row.quantity} onChange={(e) => setCustomRows((rows) => rows.map((r) => r.key === row.key ? { ...r, quantity: e.target.value } : r))} placeholder="Qty" className={`app-field text-[12.5px] ${canSeePricing ? "col-span-2" : "col-span-3"}`} />
+                {canSeePricing && (
+                  <input type="number" min={0} value={row.rate} onChange={(e) => setCustomRows((rows) => rows.map((r) => r.key === row.key ? { ...r, rate: e.target.value } : r))} placeholder="$ each" className="app-field col-span-3 text-[12.5px]" />
+                )}
                 <button type="button" onClick={() => setCustomRows((rows) => rows.filter((r) => r.key !== row.key))} className="col-span-1 flex justify-center text-[var(--ink-faint)] hover:text-red-600"><Trash2 size={13} /></button>
               </div>
             ))}
           </div>
 
-          {grandTotal > 0 && <p className="text-[13.5px] font-bold text-[var(--ink)]">Docket total: ${grandTotal.toLocaleString()}</p>}
+          {canSeePricing && grandTotal > 0 && <p className="text-[13.5px] font-bold text-[var(--ink)]">Docket total: ${grandTotal.toLocaleString()}</p>}
           {error && <p className="text-[12.5px] text-red-600">{error}</p>}
           <div className="flex gap-2">
             <button onClick={saveDocket} disabled={saving} className="bg-[var(--navy)] text-white rounded-lg px-3 py-1.5 text-[13px] font-semibold disabled:opacity-50">{saving ? "Saving..." : "Save docket"}</button>
@@ -446,7 +459,7 @@ export default function DocketsPanel({
                 <div>
                   <p className="text-[14px] font-semibold text-[var(--ink)]">{new Date(d.work_date).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}</p>
                   {d.description && <p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5 line-clamp-2">{d.description}</p>}
-                  <p className="text-[13px] font-semibold text-[var(--ink)] mt-1">{items.length} line{items.length === 1 ? "" : "s"} - ${d.total_cost.toLocaleString()}</p>
+                  <p className="text-[13px] font-semibold text-[var(--ink)] mt-1">{items.length} line{items.length === 1 ? "" : "s"}{canSeePricing ? ` - $${d.total_cost.toLocaleString()}` : ""}</p>
                 </div>
                 <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1 whitespace-nowrap ${STATUS_STYLE[d.status]}`}>
                   <Icon size={11} />{d.status}
@@ -461,7 +474,7 @@ export default function DocketsPanel({
                         {it.category === "labour" && it.person_name ? `${it.person_name} - ${it.label}` : it.label}
                         {it.category !== "material" && it.category !== "custom" ? ` (${it.quantity}h)` : it.quantity > 1 ? ` x${it.quantity}` : ""}
                       </span>
-                      <span className="font-semibold text-[var(--ink)]">${it.line_total.toLocaleString()}</span>
+                      {canSeePricing && <span className="font-semibold text-[var(--ink)]">${it.line_total.toLocaleString()}</span>}
                     </div>
                   ))}
                 </div>

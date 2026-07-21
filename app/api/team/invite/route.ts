@@ -1,12 +1,15 @@
 /**
  * POST /api/team/invite
  * ----------------------
- * Owner or admin only. Creates a team_members row (status "invited") and
+ * Owner, admin, or manager. Creates a team_members row (status "invited") and
  * emails the person an accept link. If they already have a Swiftscope
  * login, accepting just links their existing account -- no second signup
  * needed.
  *
- * Body: { email: string, name?: string, role?: "admin" | "member" }
+ * A manager can only invite as site_member - they can't create other
+ * managers or admins. Owner/admin can invite at any tier.
+ *
+ * Body: { email: string, name?: string, role?: "admin" | "manager" | "site_member", accessScope?: "all" | "assigned_only" }
  */
 
 import { NextResponse } from "next/server";
@@ -14,6 +17,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getTeamContext } from "@/lib/team";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const VALID_ROLES = ["admin", "manager", "site_member"] as const;
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -23,11 +27,17 @@ export async function POST(request: Request) {
   }
 
   const ctx = await getTeamContext(supabase, userData.user.id);
-  if (!ctx.isOwner && ctx.role !== "admin") {
-    return NextResponse.json({ error: "Only the owner or an admin can invite team members." }, { status: 403 });
+  const canInvite = ctx.isOwner || ctx.role === "admin" || ctx.role === "manager";
+  if (!canInvite) {
+    return NextResponse.json({ error: "Only the owner, an admin, or a manager can invite team members." }, { status: 403 });
   }
 
-  const { email, name, role } = (await request.json()) as { email?: string; name?: string; role?: string };
+  const { email, name, role: requestedRole, accessScope: requestedAccessScope } = (await request.json()) as {
+    email?: string;
+    name?: string;
+    role?: string;
+    accessScope?: string;
+  };
   const cleanEmail = email?.trim().toLowerCase();
   if (!cleanEmail) {
     return NextResponse.json({ error: "Email is required" }, { status: 400 });
@@ -35,6 +45,14 @@ export async function POST(request: Request) {
   if (cleanEmail === userData.user.email?.toLowerCase()) {
     return NextResponse.json({ error: "That's your own email." }, { status: 400 });
   }
+
+  let role: (typeof VALID_ROLES)[number] = VALID_ROLES.includes(requestedRole as never) ? (requestedRole as (typeof VALID_ROLES)[number]) : "site_member";
+  // A manager inviting someone can only hand out the site_member tier -
+  // they can't create a peer manager or an admin.
+  if (!ctx.isOwner && ctx.role === "manager") {
+    role = "site_member";
+  }
+  const accessScope = requestedAccessScope === "assigned_only" ? "assigned_only" : "all";
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -48,7 +66,8 @@ export async function POST(request: Request) {
       owner_profile_id: ctx.businessId,
       email: cleanEmail,
       name: name?.trim() || null,
-      role: role === "admin" ? "admin" : "member",
+      role,
+      access_scope: accessScope,
     })
     .select("id, invite_token")
     .single();

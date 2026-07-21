@@ -17,7 +17,7 @@ const EMPTY_FORM = { title: "", description: "", labour_hours: "", materials_cos
 
 type CatalogItem = { item_key: string; label: string; unit_cost: number };
 
-export default function VariationsPanel({ quoteId, jobId, hourlyRate, margin, variations: initial, quoteTotalCost, lib = [] }: {
+export default function VariationsPanel({ quoteId, jobId, hourlyRate, margin, variations: initial, quoteTotalCost, lib = [], canSeePricing = true }: {
   quoteId: string | null;
   jobId?: string | null;
   hourlyRate: number;
@@ -29,6 +29,8 @@ export default function VariationsPanel({ quoteId, jobId, hourlyRate, margin, va
    *  material_items as fallback). Optional so older callers don't break;
    *  the catalog search just doesn't show anything without it. */
   lib?: CatalogItem[];
+  /** Site members can add a variation but never see a dollar figure - rates, totals, catalog prices all hidden. */
+  canSeePricing?: boolean;
 }) {
   const [variations, setVariations] = useState(initial);
   const [showForm, setShowForm] = useState(false);
@@ -108,7 +110,7 @@ export default function VariationsPanel({ quoteId, jobId, hourlyRate, margin, va
       </div>
       <p className="font-semibold text-[var(--ink)] mb-1">Scope changes</p>
 
-      {approvedTotal > 0 && (
+      {canSeePricing && approvedTotal > 0 && (
         <div className="bg-green-50 text-green-800 rounded-lg px-3 py-2 text-[13px] font-semibold mb-3">
           Approved variations add ${approvedTotal.toLocaleString()} - revised job total: ${(quoteTotalCost + approvedTotal).toLocaleString()}
         </div>
@@ -142,7 +144,7 @@ export default function VariationsPanel({ quoteId, jobId, hourlyRate, margin, va
                         className="w-full flex items-center justify-between text-left px-3 py-2 hover:bg-[var(--app-bg)] border-b border-[var(--line)] last:border-0"
                       >
                         <span className="text-[12.5px] text-[var(--ink)] truncate pr-2">{m.label}</span>
-                        <span className="text-[12px] font-semibold text-[var(--ink-faint)] whitespace-nowrap">${m.unit_cost.toLocaleString()}</span>
+                        {canSeePricing && <span className="text-[12px] font-semibold text-[var(--ink-faint)] whitespace-nowrap">${m.unit_cost.toLocaleString()}</span>}
                       </button>
                     ))
                   )}
@@ -157,7 +159,7 @@ export default function VariationsPanel({ quoteId, jobId, hourlyRate, margin, va
           <label className="block"><span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1">Description</span>
             <textarea value={form.description} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} rows={2} className="app-field text-[13px]" placeholder="Details of the additional work..." />
           </label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className={`grid gap-2 ${canSeePricing ? "grid-cols-2" : "grid-cols-1"}`}>
             <label className="block">
               <span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1">Labour hours</span>
               <div className="flex items-center gap-1.5">
@@ -174,11 +176,13 @@ export default function VariationsPanel({ quoteId, jobId, hourlyRate, margin, va
                 </button>
               </div>
             </label>
-            <label className="block"><span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1">Materials (ex margin)</span>
-              <input type="number" min={0} value={form.materials_cost} onChange={(e) => setForm(f => ({ ...f, materials_cost: e.target.value }))} className="app-field" placeholder="0" />
-            </label>
+            {canSeePricing && (
+              <label className="block"><span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1">Materials (ex margin)</span>
+                <input type="number" min={0} value={form.materials_cost} onChange={(e) => setForm(f => ({ ...f, materials_cost: e.target.value }))} className="app-field" placeholder="0" />
+              </label>
+            )}
           </div>
-          {(labourHours > 0 || materialsRaw > 0) && (
+          {canSeePricing && (labourHours > 0 || materialsRaw > 0) && (
             <p className="text-[13px] font-semibold text-[var(--ink)]">Variation total: ${Math.round(totalCost).toLocaleString()}</p>
           )}
           {error && <p className="text-[12.5px] text-red-600">{error}</p>}
@@ -202,13 +206,13 @@ export default function VariationsPanel({ quoteId, jobId, hourlyRate, margin, va
                 <div>
                   <p className="text-[14px] font-semibold text-[var(--ink)]">{v.title}</p>
                   {v.description && <p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5">{v.description}</p>}
-                  <p className="text-[13px] font-semibold text-[var(--ink)] mt-1">${v.total_cost.toLocaleString()}</p>
+                  {canSeePricing && <p className="text-[13px] font-semibold text-[var(--ink)] mt-1">${v.total_cost.toLocaleString()}</p>}
                 </div>
                 <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1 whitespace-nowrap ${STATUS_STYLE[v.status]}`}>
                   <Icon size={11} />{v.status}
                 </span>
               </div>
-              {v.status === "pending" && (
+              {canSeePricing && v.status === "pending" && (
                 <div className="flex gap-2 mt-2">
                   <button onClick={() => updateStatus(v.id, "approved")} className="text-[12.5px] font-semibold bg-green-600 text-white rounded-lg px-3 py-1">Client approved</button>
                   <button onClick={() => updateStatus(v.id, "declined")} className="text-[12.5px] font-semibold text-red-600 border-2 border-[var(--line)] rounded-lg px-3 py-1">Declined</button>

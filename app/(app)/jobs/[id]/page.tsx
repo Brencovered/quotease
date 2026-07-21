@@ -47,6 +47,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   const ctx = await getTeamContext(supabase, userData.user.id);
   const businessId = ctx.businessId;
   const isAdmin = ctx.isOwner || ctx.role === "admin";
+  const canSeePricing = ctx.canSeePricing;
 
   const data = await loadJobDetailData(supabase, id, businessId);
   if (!data) notFound();
@@ -152,21 +153,27 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             {job.site_address && <p className="text-[13px] text-[var(--ink-faint)] mt-0.5">{job.site_address}</p>}
           </div>
           <div className="text-right shrink-0">
-            <p className="font-display text-2xl text-[var(--ink)]">${effectiveTotal.toLocaleString()}</p>
-            <p className="text-[11px] text-[var(--ink-faint)]">Original: ${(job.total_cost ?? 0).toLocaleString()}</p>
-            {approvedVariationsTotal > 0 && <p className="text-[11px] text-[var(--green)]">+${approvedVariationsTotal.toLocaleString()} variations</p>}
-            {markupMaterials > 0 && <p className="text-[11px] text-[var(--amber-deep)]">+${markupMaterials.toLocaleString()} from drawings</p>}
+            {canSeePricing && (
+              <>
+                <p className="font-display text-2xl text-[var(--ink)]">${effectiveTotal.toLocaleString()}</p>
+                <p className="text-[11px] text-[var(--ink-faint)]">Original: ${(job.total_cost ?? 0).toLocaleString()}</p>
+                {approvedVariationsTotal > 0 && <p className="text-[11px] text-[var(--green)]">+${approvedVariationsTotal.toLocaleString()} variations</p>}
+                {markupMaterials > 0 && <p className="text-[11px] text-[var(--amber-deep)]">+${markupMaterials.toLocaleString()} from drawings</p>}
+              </>
+            )}
             <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold inline-block mt-1 bg-amber-50 text-amber-800">
               {STATUS_LABELS[job.status] ?? job.status}
             </span>
-            {quote && (
+            {canSeePricing && quote && (
               <a href={`/api/quotes/${quote.id}/pdf`} target="_blank" rel="noopener noreferrer" className="block text-[12.5px] font-semibold text-[var(--navy)] underline mt-2">
                 Download quote PDF
               </a>
             )}
-            <a href={`/api/jobs/${job.id}/invoice-pdf`} target="_blank" rel="noopener noreferrer" className="block text-[12.5px] font-semibold text-[var(--navy)] underline mt-1">
-              Download invoice
-            </a>
+            {canSeePricing && (
+              <a href={`/api/jobs/${job.id}/invoice-pdf`} target="_blank" rel="noopener noreferrer" className="block text-[12.5px] font-semibold text-[var(--navy)] underline mt-1">
+                Download invoice
+              </a>
+            )}
           </div>
         </div>
 
@@ -205,25 +212,32 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               </ul>
             </div>
           )}
-          <div className="border-t border-[var(--line)] pt-3 space-y-1">
-            <div className="flex justify-between text-[13.5px]">
-              <span className="text-[var(--ink-soft)]">Labour ({job.labour_hours ?? 0} hrs)</span>
-              <span className="font-semibold text-[var(--ink)]">${labourCost.toLocaleString()}</span>
+          {canSeePricing && (
+            <div className="border-t border-[var(--line)] pt-3 space-y-1">
+              <div className="flex justify-between text-[13.5px]">
+                <span className="text-[var(--ink-soft)]">Labour ({job.labour_hours ?? 0} hrs)</span>
+                <span className="font-semibold text-[var(--ink)]">${labourCost.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-[13.5px]">
+                <span className="text-[var(--ink-soft)]">Materials</span>
+                <span className="font-semibold text-[var(--ink)]">${(job.materials_cost ?? 0).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-[14.5px] pt-1 border-t border-[var(--line)]">
+                <span className="font-bold text-[var(--ink)]">Total</span>
+                <span className="font-display text-lg text-[var(--ink)]">${effectiveTotal.toLocaleString()}</span>
+              </div>
+              {approvedVariationsTotal > 0 && (
+                <p className="text-[11.5px] text-[var(--ink-faint)] text-right">
+                  ${(job.total_cost ?? 0).toLocaleString()} quoted + ${approvedVariationsTotal.toLocaleString()} approved variations
+                </p>
+              )}
             </div>
-            <div className="flex justify-between text-[13.5px]">
-              <span className="text-[var(--ink-soft)]">Materials</span>
-              <span className="font-semibold text-[var(--ink)]">${(job.materials_cost ?? 0).toLocaleString()}</span>
+          )}
+          {!canSeePricing && (
+            <div className="border-t border-[var(--line)] pt-3">
+              <p className="text-[13.5px] text-[var(--ink-soft)]">Labour: {job.labour_hours ?? 0} hrs logged</p>
             </div>
-            <div className="flex justify-between text-[14.5px] pt-1 border-t border-[var(--line)]">
-              <span className="font-bold text-[var(--ink)]">Total</span>
-              <span className="font-display text-lg text-[var(--ink)]">${effectiveTotal.toLocaleString()}</span>
-            </div>
-            {approvedVariationsTotal > 0 && (
-              <p className="text-[11.5px] text-[var(--ink-faint)] text-right">
-                ${(job.total_cost ?? 0).toLocaleString()} quoted + ${approvedVariationsTotal.toLocaleString()} approved variations
-              </p>
-            )}
-          </div>
+          )}
           {quote && ((quote.markup_materials as Array<{ label: string; quantity: number; unit: string; totalCost: number }>) ?? []).length > 0 && (
             <div className="border-t border-[var(--line)] pt-3 mt-3">
               <p className="text-[11px] font-bold text-[var(--ink-faint)] uppercase tracking-wide mb-2">From site plans</p>
@@ -240,7 +254,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         </div>
 
         <JobTabs
-          hiddenTabs={isAdmin ? [] : ["profit"]}
+          hiddenTabs={canSeePricing ? [] : ["profit"]}
           overview={
             <>
               {stepperColumns.length > 0 && <JobProgressStepper jobId={job.id} status={job.status} columns={stepperColumns} />}
@@ -264,7 +278,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                 />
               )}
 
-              <JobTasksPanel quoteId={quote?.id ?? null} jobId={job.id} profileId={businessId} initialTasks={taskRows ?? []} teamMembers={teamMembers} />
+              <JobTasksPanel quoteId={quote?.id ?? null} jobId={job.id} initialTasks={taskRows ?? []} teamMembers={teamMembers} />
 
               <DocketsPanel
                 jobId={job.id}
@@ -274,7 +288,10 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                 plantCatalog={docketRates.filter((r: { category: string }) => r.category === "plant") as never}
                 materialsCatalog={tradeMaterials}
                 defaultHourlyRate={hourlyRate}
+                canSeePricing={canSeePricing}
               />
+
+              <VariationsPanel quoteId={quote?.id ?? null} jobId={job.id} hourlyRate={hourlyRate} margin={marginPct} variations={variations} quoteTotalCost={job.total_cost ?? 0} lib={tradeMaterials} canSeePricing={canSeePricing} />
 
               <JobTimeline
                 acceptedAt={quote?.accepted_at ?? job.created_at}
@@ -319,7 +336,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                 <p className="text-[13px] text-[var(--ink-faint)]">Scheduling needs a linked quote - this job was created without one.</p>
               )}
               <JobCrewPanel jobId={job.id} initialCrew={jobCrew} teamMembers={teamMembers} />
-              {isAdmin && (
+              {canSeePricing && (
                 <TimesheetsPanel jobId={job.id} entries={timesheetEntries as never} teamMembers={teamMembers} ownerName={userData.user.email ?? "Owner"} />
               )}
               <Link href="/schedule" className="flex items-center justify-center gap-1.5 text-[13px] font-semibold text-[var(--navy)] border-2 border-[var(--line)] rounded-xl py-2.5 hover:border-[var(--navy)]">
@@ -328,7 +345,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             </>
           }
           profit={
-            isAdmin ? (
+            canSeePricing ? (
             <>
               {hasActuals ? (
                 <div className={`rounded-xl p-4 sm:p-5 border ${marginTone === "green" ? "bg-green-50 border-green-200" : marginTone === "amber" ? "bg-amber-50 border-amber-200" : "bg-red-50 border-red-200"}`}>
@@ -351,7 +368,6 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                 </div>
               )}
 
-              <VariationsPanel quoteId={quote?.id ?? null} jobId={job.id} hourlyRate={hourlyRate} margin={marginPct} variations={variations} quoteTotalCost={job.total_cost ?? 0} lib={tradeMaterials} />
               <JobCostingPanel
                 quoteId={quote?.id ?? null}
                 jobId={job.id}

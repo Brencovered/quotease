@@ -1,10 +1,13 @@
 /**
  * POST /api/team/[id] -- update role, remove, or resend invite for a team member
  * --------------------------------------------------------------------------------
- * Owner or admin only (enforced by RLS -- "Owner manages team" and
- * "Admin manages team" policies).
+ * Owner or admin: full control over anyone. Manager: can only manage
+ * site_member rows (their own invitees), can't touch other managers/admins,
+ * and can't promote anyone above site_member.
  *
- * Body: { action: "remove" } | { action: "set_role", role: "admin" | "member" } | { action: "resend" }
+ * Body: { action: "remove" }
+ *     | { action: "set_role", role: "admin" | "manager" | "site_member", accessScope?: "all" | "assigned_only" }
+ *     | { action: "resend" }
  */
 
 import { NextResponse } from "next/server";
@@ -12,6 +15,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getTeamContext } from "@/lib/team";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const VALID_ROLES = ["admin", "manager", "site_member"] as const;
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -22,11 +26,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   const ctx = await getTeamContext(supabase, userData.user.id);
-  if (!ctx.isOwner && ctx.role !== "admin") {
-    return NextResponse.json({ error: "Only the owner or an admin can manage the team." }, { status: 403 });
+  const canManage = ctx.isOwner || ctx.role === "admin" || ctx.role === "manager";
+  if (!canManage) {
+    return NextResponse.json({ error: "Only the owner, an admin, or a manager can manage the team." }, { status: 403 });
   }
 
-  const body = (await request.json()) as { action?: string; role?: string };
+  // A manager's reach stops at the site_member rows they can see - they
+  // can't touch another manager's or admin's row, can't remove/resend for
+  // anyone else, and can't promote anyone past site_member.
+  const isPlainManager = !ctx.isOwner && ctx.role === "manager";
+  if (isPlainManager) {
+    const { data: target } = await supabase.from("team_members").select("role").eq("id", id).eq("owner_profile_id", ctx.businessId).single();
+    if (!target || target.role !== "site_member") {
+      return NextResponse.json({ error: "As a manager, you can only manage site members." }, { status: 403 });
+    }
+  }
+
+  const body = (await request.json()) as { action?: string; role?: string; accessScope?: string };
 
   if (body.action === "remove") {
     const { error } = await supabase
@@ -39,10 +55,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   if (body.action === "set_role") {
-    const role = body.role === "admin" ? "admin" : "member";
+    let role: (typeof VALID_ROLES)[number] = VALID_ROLES.includes(body.role as never) ? (body.role as (typeof VALID_ROLES)[number]) : "site_member";
+    if (isPlainManager) role = "site_member"; // can't promote past their own tier
+    const accessScope = body.accessScope === "assigned_only" ? "assigned_only" : "all";
     const { error } = await supabase
       .from("team_members")
-      .update({ role })
+      .update({ role, access_scope: accessScope })
       .eq("id", id)
       .eq("owner_profile_id", ctx.businessId);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });

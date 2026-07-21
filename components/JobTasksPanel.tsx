@@ -21,13 +21,11 @@ interface Task {
 export default function JobTasksPanel({
   quoteId,
   jobId,
-  profileId,
   initialTasks,
   teamMembers,
 }: {
   quoteId: string | null;
   jobId?: string | null;
-  profileId: string;
   initialTasks: Task[];
   teamMembers: TeamMemberOption[];
 }) {
@@ -47,21 +45,19 @@ export default function JobTasksPanel({
     e.preventDefault();
     if (!title.trim()) return;
     setAdding(true);
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("job_tasks")
-      .insert({
-        quote_id: quoteId || null,
-        job_id: jobId ?? null,
-        profile_id: profileId,
-        title: title.trim(),
-        assigned_to_member_id: assignedTo || null,
-      })
-      .select()
-      .single();
-    if (!error && data) {
-      setTasks((prev) => [...prev, data]);
-      setTitle(""); setAssignedTo("");
+    try {
+      const res = await fetch(`/api/jobs/${jobId}/tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quoteId: quoteId || null, title: title.trim(), assignedToMemberId: assignedTo || null }),
+      });
+      const body = await res.json();
+      if (res.ok && body.task) {
+        setTasks((prev) => [...prev, body.task]);
+        setTitle(""); setAssignedTo("");
+      }
+    } catch {
+      // Best-effort - the form just stays filled in so they can retry.
     }
     setAdding(false);
   }

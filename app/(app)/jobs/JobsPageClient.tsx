@@ -12,6 +12,7 @@ export default function JobsPageClient({
   listJobs,
   teamMembers,
   boardColumns,
+  canSeePricing = true,
 }: {
   boardJobs: BoardJob[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -20,10 +21,12 @@ export default function JobsPageClient({
   listJobs: any[];
   teamMembers: Array<{ id: string; name: string | null; email: string }>;
   boardColumns: BoardColumn[];
+  /** Site members never see pricing anywhere - hides $ figures on the board and removes the invoicing-focused List view entirely. */
+  canSeePricing?: boolean;
 }) {
   const [view, setView] = useState<"board" | "list">("board");
 
-  const toggle = (
+  const toggle = canSeePricing ? (
     <div className="inline-flex rounded-xl border-2 border-[var(--line)] p-0.5">
       <button
         onClick={() => setView("board")}
@@ -35,12 +38,12 @@ export default function JobsPageClient({
         onClick={() => setView("list")}
         className={`flex items-center gap-1.5 text-[12.5px] font-semibold px-3 py-1.5 rounded-lg ${view === "list" ? "bg-[var(--navy)] text-white" : "text-[var(--ink-faint)]"}`}
       >
-        <List size={14} /> List & invoicing
+        <List size={14} /> List &amp; invoicing
       </button>
     </div>
-  );
+  ) : null;
 
-  if (view === "list") {
+  if (view === "list" && canSeePricing) {
     return (
       <div>
         <div className="page-wrap pb-0">
@@ -61,7 +64,7 @@ export default function JobsPageClient({
         {toggle}
       </div>
       <QuickJobsPanel jobs={quickJobs} teamMembers={teamMembers} />
-      <JobsKanbanBoard jobs={boardJobs} columns={boardColumns} />
+      <JobsKanbanBoard jobs={boardJobs} columns={boardColumns} canSeePricing={canSeePricing} />
     </div>
   );
 }

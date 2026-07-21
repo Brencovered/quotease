@@ -19,11 +19,12 @@ export default async function TeamPage() {
   const ctx = await getTeamContext(supabase, user.id);
   const businessId = ctx.businessId;
   const isAdmin = ctx.isOwner || ctx.role === "admin";
+  const canManageTeam = ctx.isOwner || ctx.role === "admin" || ctx.role === "manager";
 
   const [{ data: members }, { data: profile }] = await Promise.all([
     supabase
       .from("team_members")
-      .select("id, email, name, role, status, invited_at, joined_at, hourly_rate")
+      .select("id, email, name, role, access_scope, status, invited_at, joined_at, hourly_rate")
       .eq("owner_profile_id", businessId)
       .neq("status", "removed")
       .order("joined_at", { ascending: false }),
@@ -37,6 +38,7 @@ export default async function TeamPage() {
       email: m.email,
       name: m.name,
       role: m.role,
+      access_scope: m.access_scope,
       status: m.status,
       invited_at: m.invited_at,
       joined_at: m.joined_at,
@@ -51,6 +53,7 @@ export default async function TeamPage() {
       email: m.email,
       name: m.name,
       role: m.role,
+      access_scope: m.access_scope,
       status: m.status,
       invited_at: m.invited_at,
       owner_business_name: null,
@@ -71,8 +74,8 @@ export default async function TeamPage() {
         <TeamPageClient
           members={activeMembers}
           pendingInvites={pendingInvites}
-          isOwner={ctx.isOwner}
           isAdmin={isAdmin}
+          canManageTeam={canManageTeam}
           defaultHourlyRate={profile?.hourly_rate ?? 95}
           currentUserEmail={user.email ?? null}
         />
