@@ -5,6 +5,8 @@ import { isAdminEmail } from "@/lib/admin";
 import {
   fetchWebsiteHtml, extractLogoUrl, extractBlurb,
   extractPhotos, extractAbout, extractPhone, filterPhotos,
+  extractSocialLinks, extractYearsExperience, extractLicenses,
+  extractServices, scrapeSubPages,
 } from "@/lib/websiteScraper";
 
 function extractBusinessName(html: string, url: string): string | null {
@@ -210,6 +212,12 @@ export async function POST(req: NextRequest) {
   const about        = extractAbout(html);
   const phone        = extractPhone(html);
   const { suburb, postcode, state } = extractAddress(html);
+  const socialLinks   = extractSocialLinks(html);
+  const yearsExp      = extractYearsExperience(html);
+  const licenses      = extractLicenses(html);
+  const services      = extractServices ? extractServices(html) : [];
+  // Scrape about/services sub-pages for richer content
+  const subPages      = await scrapeSubPages(html, siteUrl);
   const trades       = extractTrades(html, siteUrl);
   const rawPhotos    = extractPhotos(html, siteUrl);
   const photoUrls    = filterPhotos(rawPhotos, logo);
@@ -237,11 +245,19 @@ export async function POST(req: NextRequest) {
     : [];
   const allPhotos = [...new Set([...storedPhotos, ...existingPhotos])].slice(0, 6);
 
+  // Best blurb: about section > subpage about > meta description
+  const bestBlurb = about ?? subPages.aboutText ?? blurb;
+  // Best services: homepage services + subpage services
+  const allServices = [...new Set([
+    ...services,
+    ...(subPages.servicesText ? subPages.servicesText.split("\n").filter(Boolean) : []),
+  ])].slice(0, 12);
+
   const payload = {
     business_name:          businessName,
     website_url:            siteUrl,
     logo_url:               logo,
-    blurb:                  about ?? blurb,
+    blurb:                  bestBlurb,
     scraped_contact_phone:  phone,
     suburb,
     postcode,
@@ -252,6 +268,11 @@ export async function POST(req: NextRequest) {
     website_scraped_at:     new Date().toISOString(),
     source:                 "manual",
     is_claimed:             false,
+    facebook_url:           socialLinks.facebook,
+    instagram_url:          socialLinks.instagram,
+    years_experience:       yearsExp,
+    licenses:               licenses.length > 0 ? licenses : null,
+    services_offered:       allServices.length > 0 ? allServices : null,
   };
 
   // Remove null values unless overwriting
@@ -346,9 +367,14 @@ export async function POST(req: NextRequest) {
       postcode,
       state,
       phone,
-      logo: !!logo,
-      blurb: !!(about ?? blurb),
-      photos: storedPhotos.length,
+      logo:           !!logo,
+      blurb:          !!bestBlurb,
+      photos:         storedPhotos.length,
+      facebook:       !!socialLinks.facebook,
+      instagram:      !!socialLinks.instagram,
+      years_experience: yearsExp,
+      licenses:       licenses.length,
+      services:       allServices.length,
     },
   });
 }

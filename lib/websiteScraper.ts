@@ -196,3 +196,143 @@ export function extractPhone(html: string): string | null {
 
   return null;
 }
+
+/**
+ * Extract social media links from website HTML.
+ */
+export function extractSocialLinks(html: string): { facebook: string | null; instagram: string | null } {
+  const result = { facebook: null as string | null, instagram: null as string | null };
+
+  // Facebook
+  const fb = html.match(/href=["\'](https?:\/\/(?:www\.)?facebook\.com\/(?!sharer|share|dialog)[a-zA-Z0-9._/-]{2,80})["\']/i);
+  if (fb) result.facebook = fb[1].split("?")[0].replace(/\/$/, "");
+
+  // Instagram
+  const ig = html.match(/href=["\'](https?:\/\/(?:www\.)?instagram\.com\/[a-zA-Z0-9._]{2,60}(?:\/)?)["\']/i);
+  if (ig) result.instagram = ig[1].split("?")[0].replace(/\/$/, "");
+
+  return result;
+}
+
+/**
+ * Extract years of experience from website HTML.
+ * Looks for patterns like "25 years experience", "established 1998", "since 2001"
+ */
+export function extractYearsExperience(html: string): number | null {
+  const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").toLowerCase();
+  const currentYear = new Date().getFullYear();
+
+  // "established in 1998" / "since 2001" / "est. 2005"
+  const estMatch = text.match(/(?:established|est\.?|founded|operating since|trading since|in business since|since)\s+(?:in\s+)?(19\d{2}|20[01]\d|202[0-4])/i);
+  if (estMatch) {
+    const year = parseInt(estMatch[1]);
+    const years = currentYear - year;
+    if (years >= 1 && years <= 100) return years;
+  }
+
+  // "25 years experience" / "over 20 years"
+  const expMatch = text.match(/(?:over\s+)?(\d{1,2})\+?\s+years?\s+(?:of\s+)?(?:experience|in\s+(?:the\s+)?(?:industry|trade|business))/i);
+  if (expMatch) {
+    const years = parseInt(expMatch[1]);
+    if (years >= 1 && years <= 80) return years;
+  }
+
+  return null;
+}
+
+/**
+ * Extract trade licences and registrations from website HTML.
+ * Looks for licence numbers, QBCC, VBA, Fair Trading, master electrician etc.
+ */
+export function extractLicenses(html: string): { type: string; number: string }[] {
+  const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+  const licenses: { type: string; number: string }[] = [];
+  const seen = new Set<string>();
+
+  const PATTERNS: { type: string; regex: RegExp }[] = [
+    { type: "QBCC Licence",          regex: /QBCC\s+(?:Licence|License|No\.?|#)?\s*:?\s*([0-9]{5,10})/gi },
+    { type: "VBA Registration",      regex: /VBA\s+(?:Reg(?:istration)?|No\.?|#)?\s*:?\s*([A-Z0-9]{4,12})/gi },
+    { type: "Electrical Licence",    regex: /(?:electrical|electrician)\s+licen[sc]e\s+(?:no\.?|#|number)?\s*:?\s*([A-Z0-9]{3,12})/gi },
+    { type: "Plumbing Licence",      regex: /plumb(?:ing|er)\s+licen[sc]e\s+(?:no\.?|#|number)?\s*:?\s*([A-Z0-9]{3,12})/gi },
+    { type: "Master Electricians",   regex: /(master\s+electricians?\s+australia)/gi },
+    { type: "Master Plumbers",       regex: /(master\s+plumbers?)/gi },
+    { type: "HIA Member",            regex: /(hia\s+member|housing\s+industry\s+association)/gi },
+    { type: "MBA Member",            regex: /(master\s+builders?\s+association)/gi },
+    { type: "NECA Member",           regex: /(neca|national\s+electrical\s+(?:and\s+)?communications?\s+association)/gi },
+    { type: "ABN",                   regex: /ABN\s*:?\s*(\d{2}\s*\d{3}\s*\d{3}\s*\d{3})/gi },
+    { type: "Contractor Licence",    regex: /contractor(?:\'s)?\s+licen[sc]e\s+(?:no\.?|#)?\s*:?\s*([A-Z0-9]{3,12})/gi },
+    { type: "Building Licence",      regex: /building\s+(?:practitioners?\s+)?licen[sc]e\s+(?:no\.?|#)?\s*:?\s*([A-Z0-9]{3,12})/gi },
+  ];
+
+  for (const { type, regex } of PATTERNS) {
+    const matches = [...text.matchAll(regex)];
+    for (const m of matches) {
+      const number = (m[1] ?? "").trim().replace(/\s+/g, " ");
+      const key = `${type}:${number}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        licenses.push({ type, number });
+        if (licenses.length >= 5) break;
+      }
+    }
+    if (licenses.length >= 5) break;
+  }
+
+  return licenses;
+}
+
+/**
+ * Scrape an about page or services page if linked from the homepage.
+ * Returns combined text content.
+ */
+export async function scrapeSubPages(
+  html: string,
+  baseUrl: string
+): Promise<{ aboutText: string | null; servicesText: string | null }> {
+  const result = { aboutText: null as string | null, servicesText: null as string | null };
+
+  // Find about and services page links
+  const aboutHref  = html.match(/href=["\'](\/[^"\']*(?:about|who-we-are|our-story|company)[^"\']*)["\']/i);
+  const serviceHref = html.match(/href=["\'](\/[^"\']*(?:services?|what-we-do|our-work)[^"\']*)["\']/i);
+
+  async function fetchSubPage(path: string): Promise<string | null> {
+    try {
+      const url = new URL(path, baseUrl).href;
+      if (url === baseUrl) return null; // avoid refetching homepage
+      return await fetchWebsiteHtml(url);
+    } catch { return null; }
+  }
+
+  if (aboutHref) {
+    const aboutHtml = await fetchSubPage(aboutHref[1]);
+    if (aboutHtml) {
+      const text = aboutHtml
+        .replace(/<script[\s\S]*?<\/script>/gi, " ")
+        .replace(/<style[\s\S]*?<\/style>/gi, " ")
+        .replace(/<(?:nav|header|footer)[\s\S]*?<\/(?:nav|header|footer)>/gi, " ")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (text.length > 100) result.aboutText = text.slice(0, 800);
+    }
+  }
+
+  if (serviceHref && serviceHref[1] !== aboutHref?.[1]) {
+    const servHtml = await fetchSubPage(serviceHref[1]);
+    if (servHtml) {
+      // Extract service list items from the services page
+      const items: string[] = [];
+      const liMatches = servHtml.matchAll(/<li[^>]*>(.*?)<\/li>/gi);
+      for (const m of liMatches) {
+        const text = m[1].replace(/<[^>]+>/g, "").trim();
+        if (text.length >= 5 && text.length <= 80) {
+          items.push(text);
+          if (items.length >= 12) break;
+        }
+      }
+      if (items.length > 0) result.servicesText = items.join("\n");
+    }
+  }
+
+  return result;
+}

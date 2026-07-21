@@ -241,6 +241,53 @@ export default function AdminManualScraper() {
                   </div>
                 </div>
               </div>
+
+              {/* Social links */}
+              <div className="flex items-start gap-2.5 bg-[var(--app-bg)] rounded-xl p-3">
+                <Globe size={14} className="text-[var(--amber-deep)] mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-[10.5px] font-bold uppercase text-[var(--ink-faint)]">Social media</p>
+                  <div className="flex gap-1.5 mt-1 flex-wrap">
+                    <span className={`text-[10.5px] font-bold px-1.5 py-0.5 rounded-full ${result.extracted.facebook ? "bg-blue-50 text-blue-700" : "bg-[var(--line)] text-[var(--ink-faint)]"}`}>
+                      {result.extracted.facebook ? "✓ Facebook" : "No Facebook"}
+                    </span>
+                    <span className={`text-[10.5px] font-bold px-1.5 py-0.5 rounded-full ${result.extracted.instagram ? "bg-pink-50 text-pink-700" : "bg-[var(--line)] text-[var(--ink-faint)]"}`}>
+                      {result.extracted.instagram ? "✓ Instagram" : "No Instagram"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Experience */}
+              <div className="flex items-start gap-2.5 bg-[var(--app-bg)] rounded-xl p-3">
+                <Briefcase size={14} className="text-[var(--amber-deep)] mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-[10.5px] font-bold uppercase text-[var(--ink-faint)]">Experience & licences</p>
+                  <div className="flex gap-1.5 mt-1 flex-wrap">
+                    {result.extracted.years_experience ? (
+                      <span className="text-[10.5px] font-bold px-1.5 py-0.5 rounded-full bg-green-50 text-green-700">
+                        ✓ {result.extracted.years_experience} yrs exp
+                      </span>
+                    ) : <span className="text-[10.5px] text-[var(--ink-faint)]">No exp data</span>}
+                    {result.extracted.licenses > 0 && (
+                      <span className="text-[10.5px] font-bold px-1.5 py-0.5 rounded-full bg-green-50 text-green-700">
+                        ✓ {result.extracted.licenses} licence{result.extracted.licenses !== 1 ? "s" : ""}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Services */}
+              <div className="flex items-start gap-2.5 bg-[var(--app-bg)] rounded-xl p-3">
+                <FileText size={14} className="text-[var(--amber-deep)] mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-[10.5px] font-bold uppercase text-[var(--ink-faint)]">Services found</p>
+                  <p className={`text-[13px] font-semibold mt-0.5 ${result.extracted.services > 0 ? "text-green-600" : "text-[var(--ink-faint)] italic"}`}>
+                    {result.extracted.services > 0 ? `${result.extracted.services} service items` : "None found"}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -264,6 +311,10 @@ export default function AdminManualScraper() {
               ["Logo",             "apple-touch-icon, img[alt*=logo], favicon"],
               ["Description",      "meta description, about section text"],
               ["Photos",           "og:image, hero images, gallery (stored to Supabase)"],
+              ["Social media",     "Facebook and Instagram profile links"],
+              ["Years experience", "Established year, \"X years experience\" patterns"],
+              ["Licences",         "QBCC, VBA, Master Electricians, ABN, contractor licences"],
+              ["Services",         "Services page + homepage service lists (up to 12 items)"],
               ["Existing listings","Matched by website URL, updates or creates"],
             ].map(([label, src]) => (
               <div key={label} className="flex items-baseline gap-1.5">

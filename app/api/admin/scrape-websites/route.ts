@@ -140,6 +140,43 @@ export async function POST(req: NextRequest) {
       if (phone) { updates.scraped_contact_phone = phone; updated.push("phone"); }
     }
 
+    // Social links
+    if (mode === "all") {
+      const social = extractSocialLinks(html);
+      if (social.facebook && !(listing as {facebook_url?: unknown}).facebook_url) {
+        updates.facebook_url = social.facebook; updated.push("facebook");
+      }
+      if (social.instagram && !(listing as {instagram_url?: unknown}).instagram_url) {
+        updates.instagram_url = social.instagram; updated.push("instagram");
+      }
+    }
+
+    // Years experience
+    if (mode === "all" && !(listing as {years_experience?: unknown}).years_experience) {
+      const years = extractYearsExperience(html);
+      if (years) { updates.years_experience = years; updated.push(`${years}yrs exp`); }
+    }
+
+    // Licences
+    if (mode === "all" && !(listing as {licenses?: unknown}).licenses) {
+      const lics = extractLicenses(html);
+      if (lics.length > 0) { updates.licenses = lics; updated.push(`${lics.length} licence(s)`); }
+    }
+
+    // Services from sub-pages (only in all mode -- extra network call)
+    if (mode === "all" && !(listing as {services_offered?: unknown}).services_offered) {
+      const subs = await scrapeSubPages(html, url);
+      const svcs = [...extractServices(html)];
+      if (subs.servicesText) svcs.push(...subs.servicesText.split("\n").filter(Boolean));
+      const unique = [...new Set(svcs)].slice(0, 12);
+      if (unique.length > 0) { updates.services_offered = unique; updated.push(`services (${unique.length})`); }
+      // Upgrade blurb with about sub-page if current blurb is short
+      const currentBlurb = (listing as {blurb?: string | null}).blurb;
+      if (subs.aboutText && (!currentBlurb || currentBlurb.length < 100)) {
+        updates.blurb = subs.aboutText; updated.push("blurb (about page)");
+      }
+    }
+
     // Photos
     if (mode === "photos" || mode === "all") {
       const existing = (listing.photo_references ?? []) as string[];
