@@ -89,7 +89,7 @@ function PhotoSlider({ refs, name, onFirstLoad, onFirstError, visible = true }: 
     <div className="relative h-40 bg-gray-100 overflow-hidden group">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={photos[idx].startsWith("http") ? photos[idx] : `/api/places/photo?ref=${photos[idx]}&maxw=600`}
+        src={photos[idx].startsWith("http") ? photos[idx] : "/placeholder-photo.jpg"}
         alt={name}
         onLoad={idx === 0 ? onFirstLoad : undefined}
         onError={idx === 0 ? onFirstError : undefined}

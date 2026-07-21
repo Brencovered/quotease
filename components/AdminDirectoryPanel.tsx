@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 
 import { useState, useEffect, useCallback } from "react";
 import {
@@ -51,6 +52,17 @@ const PAGE_SIZES = [25, 50, 100];
 /* ------------------------------------------------------------------ */
 
 export default function AdminDirectoryPanel() {
+  const [caching,   setCaching]   = React.useState(false);
+  const [cacheResult, setCacheResult] = React.useState<{processed:number;cached:number;remaining:number;failed:number}|null>(null);
+
+  async function runBulkCache() {
+    setCaching(true); setCacheResult(null);
+    const res = await fetch("/api/admin/cache-photos-bulk", { method: "POST" });
+    const data = await res.json();
+    setCacheResult(data);
+    setCaching(false);
+  }
+
   const [listings, setListings] = useState<DirectoryListing[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);

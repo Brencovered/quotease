@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const BATCH_SIZE = 15; // photo downloads are heavier than the logo refresh's plain HTML fetch
+const BATCH_SIZE = 200; // photo downloads are heavier than the logo refresh's plain HTML fetch
 const REFRESH_INTERVAL_DAYS = 180; // ~6 months, per Brendan
 const GOOGLE_API_KEY = process.env.GOOGLE_PLACES_API_KEY!;
 
