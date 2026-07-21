@@ -45,6 +45,7 @@ async function DashboardData() {
         { data: jobs },
         { data: timesheets },
         { data: teamMembers },
+        { data: dockets },
         onboarding,
       ] = await Promise.all([
         supabase
@@ -59,6 +60,7 @@ async function DashboardData() {
           .eq("profile_id", businessId),
         supabase.from("timesheets").select("job_id").eq("profile_id", businessId),
         supabase.from("team_members").select("id, name, status").eq("owner_profile_id", businessId),
+        supabase.from("dockets").select("id, job_id, work_date, total_cost, status, invoiced_at").eq("profile_id", businessId).eq("status", "signed"),
         // Previously awaited separately *after* the six queries above -
         // an independent 12-query batch (see lib/onboarding.ts) that only
         // needs businessId, so there was no real reason for it to wait.
@@ -76,6 +78,7 @@ async function DashboardData() {
         jobs: jobs ?? [],
         timesheets: timesheets ?? [],
         teamMembers: teamMembers ?? [],
+        dockets: dockets ?? [],
       });
     }
   } catch (err) {

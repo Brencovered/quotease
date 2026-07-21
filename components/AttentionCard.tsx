@@ -11,6 +11,7 @@ const ICONS: Record<AttentionItemType, typeof AlertTriangle> = {
   job_stalled: Clock,
   invoice_overdue: DollarSign,
   timesheet_missing: FileClock,
+  docket_ready_to_invoice: CheckCircle2,
 };
 
 const COLLAPSED_LIMIT = 5;

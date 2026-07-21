@@ -9,7 +9,8 @@ export type AttentionItemType =
   | "quote_expired"
   | "job_stalled"
   | "invoice_overdue"
-  | "timesheet_missing";
+  | "timesheet_missing"
+  | "docket_ready_to_invoice";
 
 export interface AttentionItem {
   id: string; // stable key: `${type}:${entityId}`
@@ -44,6 +45,15 @@ export interface TimesheetForAttention {
   job_id: string | null;
 }
 
+export interface DocketForAttention {
+  id: string;
+  job_id: string;
+  work_date: string;
+  total_cost: number;
+  status: string;
+  invoiced_at: string | null;
+}
+
 export interface TeamMemberForAttention {
   id: string;
   name: string | null;
@@ -72,6 +82,7 @@ export function computeAttentionItems(
     jobs: JobForAttention[];
     timesheets: TimesheetForAttention[];
     teamMembers: TeamMemberForAttention[];
+    dockets?: DocketForAttention[];
   },
   opts: {
     stalledJobDays?: number;
@@ -80,7 +91,7 @@ export function computeAttentionItems(
     now?: Date;
   } = {}
 ): AttentionItem[] {
-  const { quotes, jobs, timesheets, teamMembers } = data;
+  const { quotes, jobs, timesheets, teamMembers, dockets = [] } = data;
   const stalledJobDays = opts.stalledJobDays ?? 7;
   const overdueInvoiceDays = opts.overdueInvoiceDays ?? 14;
   const missingTimesheetDays = opts.missingTimesheetDays ?? 14;
@@ -179,13 +190,32 @@ export function computeAttentionItems(
     }
   }
 
+  // 5. Dockets a supervisor has signed but that haven't been invoiced yet -
+  // these are money sitting on the table with nothing left to chase, just
+  // waiting to be bundled into an invoice at end of month.
+  const jobsById = new Map(jobs.map((j) => [j.id, j]));
+  for (const d of dockets) {
+    if (d.status !== "signed" || d.invoiced_at) continue;
+    const job = jobsById.get(d.job_id);
+    const workDate = new Date(d.work_date).toLocaleDateString("en-AU", { day: "numeric", month: "short" });
+    items.push({
+      id: `docket_ready_to_invoice:${d.id}`,
+      type: "docket_ready_to_invoice",
+      severity: "medium",
+      label: `Docket signed - ${job?.client_name || "a job"}`,
+      sublabel: `${workDate} - $${d.total_cost.toLocaleString()} ready to invoice`,
+      href: `/jobs/${d.job_id}`,
+    });
+  }
+
   // Highest severity first, then most overdue-sounding types before informational ones.
   const typeOrder: Record<AttentionItemType, number> = {
     invoice_overdue: 0,
     quote_follow_up: 1,
     job_stalled: 2,
     quote_expired: 3,
-    timesheet_missing: 4,
+    docket_ready_to_invoice: 4,
+    timesheet_missing: 5,
   };
   items.sort((a, b) => {
     if (a.severity !== b.severity) return a.severity === "high" ? -1 : 1;
