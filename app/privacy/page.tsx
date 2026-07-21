@@ -41,16 +41,13 @@ export default function PrivacyPolicyPage() {
             <strong>Before you publish this:</strong> this policy is a working draft prepared to align with the
             Australian Privacy Principles (Privacy Act 1988 (Cth)) and the New Zealand Privacy Act 2020. It is
             not legal advice. Have it reviewed by a qualified Australian and/or New Zealand privacy lawyer before
-            relying on it, and fill in the bracketed placeholders (your full legal name as the registered sole
-            trader, ABN, and business
-            address) with your actual business details before this goes live.
+            relying on it.
           </p>
         </div>
 
         <Section id="overview" title="1. Overview">
           <p>
-            This policy applies to <strong>[Your full legal name], ABN [insert ABN]</strong> trading
-            as Swiftscope (&quot;<strong>Swiftscope</strong>&quot;, &quot;<strong>we</strong>&quot;, &quot;<strong>us</strong>&quot;), and covers the
+            This policy applies to <strong>the sole trader trading as Swiftscope, ABN 13 829 040 278</strong> (&quot;<strong>Swiftscope</strong>&quot;, &quot;<strong>we</strong>&quot;, &quot;<strong>us</strong>&quot;), and covers the
             swiftscope.com.au website, the Swiftscope quoting and job management platform, and any related
             mobile or desktop experience (together, the &quot;<strong>Service</strong>&quot;).
           </p>
@@ -196,7 +193,7 @@ export default function PrivacyPolicyPage() {
           <p>
             No method of transmission or storage is 100% secure, and we can&apos;t guarantee absolute security.
             If you become aware of a security issue affecting Swiftscope, please contact us immediately at{" "}
-            <a href="mailto:security@swiftscope.com.au" className="text-[#c98600] underline font-semibold">security@swiftscope.com.au</a>.
+            <a href="mailto:team@swiftscope.com.au" className="text-[#c98600] underline font-semibold">team@swiftscope.com.au</a>.
           </p>
         </Section>
 
@@ -236,7 +233,7 @@ export default function PrivacyPolicyPage() {
           <p>
             For anything you can&apos;t access or correct yourself, or if you have a complaint about how we&apos;ve
             handled your personal information, contact us at{" "}
-            <a href="mailto:privacy@swiftscope.com.au" className="text-[#c98600] underline font-semibold">privacy@swiftscope.com.au</a>.
+            <a href="mailto:team@swiftscope.com.au" className="text-[#c98600] underline font-semibold">team@swiftscope.com.au</a>.
             We&apos;ll acknowledge your complaint and aim to resolve it within a reasonable time.
           </p>
           <p>
@@ -287,10 +284,10 @@ export default function PrivacyPolicyPage() {
             For any question about this policy or how we handle personal information, contact:
           </p>
           <p>
-            <strong>[Your full legal name]</strong><br />
-            ABN: [insert ABN]<br />
-            Business address: [insert address]<br />
-            Email: <a href="mailto:privacy@swiftscope.com.au" className="text-[#c98600] underline font-semibold">privacy@swiftscope.com.au</a>
+            <strong>Swiftscope (sole trader)</strong><br />
+            ABN: 13 829 040 278<br />
+            Location: Melbourne, Victoria, Australia<br />
+            Email: <a href="mailto:team@swiftscope.com.au" className="text-[#c98600] underline font-semibold">team@swiftscope.com.au</a>
           </p>
         </Section>
       </div>

@@ -41,16 +41,14 @@ export default function TermsOfUsePage() {
             <strong>Before you publish this:</strong> this is a working draft written to cover the ground a
             SaaS terms of use document for an Australian/NZ business typically needs (acceptable use, liability,
             IP, termination, governing law). It is not legal advice. Have it reviewed by a qualified Australian
-            and/or New Zealand lawyer before relying on it, and fill in the bracketed placeholders (your full
-            legal name as the registered sole trader, ABN, and business address) with your actual details.
+            and/or New Zealand lawyer before relying on it.
           </p>
         </div>
 
         <Section id="acceptance" title="1. Acceptance of these terms">
           <p>
             These Terms of Use (&quot;<strong>Terms</strong>&quot;) are a legal agreement between you (and, if
-            applicable, the business you represent) and <strong>[Your full legal name], ABN
-            [insert ABN]</strong> trading as Swiftscope (&quot;<strong>Swiftscope</strong>&quot;, &quot;<strong>we</strong>&quot;,
+            applicable, the business you represent) and <strong>the sole trader trading as Swiftscope, ABN 13 829 040 278</strong> (&quot;<strong>Swiftscope</strong>&quot;, &quot;<strong>we</strong>&quot;,
             &quot;<strong>us</strong>&quot;), governing your access to and use of the swiftscope.com.au website and the
             Swiftscope quoting and job management platform (together, the &quot;<strong>Service</strong>&quot;).
           </p>
@@ -82,7 +80,7 @@ export default function TermsOfUsePage() {
             <li>You&apos;re responsible for keeping your login credentials confidential and for all activity that occurs under your account.</li>
             <li>You must provide accurate, current information when you register, and keep it up to date.</li>
             <li>If you invite team members to your account, you&apos;re responsible for their use of the Service under your subscription, and for having any necessary authority to give them access to your business data.</li>
-            <li>Notify us immediately at <a href="mailto:support@swiftscope.com.au" className="text-[#c98600] underline font-semibold">support@swiftscope.com.au</a> if you suspect unauthorised use of your account.</li>
+            <li>Notify us immediately at <a href="mailto:team@swiftscope.com.au" className="text-[#c98600] underline font-semibold">team@swiftscope.com.au</a> if you suspect unauthorised use of your account.</li>
           </ul>
         </Section>
 
@@ -241,10 +239,10 @@ export default function TermsOfUsePage() {
             Questions about these Terms can be sent to:
           </p>
           <p>
-            <strong>[Your full legal name]</strong><br />
-            ABN: [insert ABN]<br />
-            Business address: [insert address]<br />
-            Email: <a href="mailto:support@swiftscope.com.au" className="text-[#c98600] underline font-semibold">support@swiftscope.com.au</a>
+            <strong>Swiftscope (sole trader)</strong><br />
+            ABN: 13 829 040 278<br />
+            Location: Melbourne, Victoria, Australia<br />
+            Email: <a href="mailto:team@swiftscope.com.au" className="text-[#c98600] underline font-semibold">team@swiftscope.com.au</a>
           </p>
         </Section>
       </div>
