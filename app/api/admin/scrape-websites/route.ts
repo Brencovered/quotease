@@ -2,83 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdminEmail } from "@/lib/admin";
-import { fetchWebsiteHtml, extractLogoUrl } from "@/app/api/admin/scrape/route";
+import { fetchWebsiteHtml, extractLogoUrl, extractBlurb, extractPhotos, resolveUrl } from "@/lib/websiteScraper";
 
 const BATCH = 30; // per invocation -- website fetches are slow
-
-/* ── Extract photos from website HTML ──────────────────────────── */
-function extractPhotos(html: string, baseUrl: string): string[] {
-  const photos: string[] = [];
-  const seen = new Set<string>();
-
-  function add(url: string) {
-    if (!url) return;
-    const resolved = resolveUrl(url, baseUrl);
-    if (!resolved) return;
-    // Skip tiny icons, tracking pixels, SVGs, data URIs
-    if (resolved.startsWith("data:")) return;
-    if (/\.(svg|ico|gif|webp)$/i.test(resolved)) return;
-    if (/\/(icon|favicon|pixel|tracking|spacer|placeholder)/i.test(resolved)) return;
-    if (seen.has(resolved)) return;
-    seen.add(resolved);
-    photos.push(resolved);
-  }
-
-  // og:image -- best quality, designed for sharing
-  const og = html.match(/<meta[^>]+property=[\"']og:image[\"'][^>]+content=[\"']([^\"']+)[\"']/i)
-    ?? html.match(/<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+property=[\"']og:image[\"']/i);
-  if (og) add(og[1]);
-
-  // Twitter card image
-  const tw = html.match(/<meta[^>]+name=[\"']twitter:image[\"'][^>]+content=[\"']([^\"']+)[\"']/i);
-  if (tw) add(tw[1]);
-
-  // Large images in hero/banner/gallery sections
-  const heroSection = html.match(/<(?:section|div)[^>]*(?:hero|banner|gallery|slider|carousel)[^>]*>([\s\S]{0,3000})/i);
-  if (heroSection) {
-    const imgMatches = heroSection[1].matchAll(/<img[^>]+src=[\"']([^\"']+)[\"'][^>]*>/gi);
-    for (const m of imgMatches) add(m[1]);
-  }
-
-  // Structured data images (JSON-LD)
-  const jsonLd = html.match(/<script[^>]+type=[\"']application\/ld\+json[\"'][^>]*>([\s\S]+?)<\/script>/gi);
-  if (jsonLd) {
-    for (const block of jsonLd) {
-      try {
-        const data = JSON.parse(block.replace(/<[^>]+>/g, ""));
-        const img = data.image ?? data["@graph"]?.[0]?.image;
-        if (typeof img === "string") add(img);
-        else if (Array.isArray(img)) img.slice(0, 3).forEach((i: string) => add(i));
-      } catch {}
-    }
-  }
-
-  return photos.slice(0, 6);
-}
-
-/* ── Extract blurb from website HTML ───────────────────────────── */
-function extractBlurb(html: string): string | null {
-  // Meta description
-  const desc = html.match(/<meta[^>]+name=[\"']description[\"'][^>]+content=[\"']([^\"']{20,300})[\"']/i)
-    ?? html.match(/<meta[^>]+content=[\"']([^\"']{20,300})[\"'][^>]+name=[\"']description[\"']/i);
-  if (desc) return desc[1].trim();
-
-  // og:description
-  const og = html.match(/<meta[^>]+property=[\"']og:description[\"'][^>]+content=[\"']([^\"']{20,300})[\"']/i);
-  if (og) return og[1].trim();
-
-  return null;
-}
-
-/* ── Resolve URL ────────────────────────────────────────────────── */
-function resolveUrl(url: string, base: string): string {
-  if (!url) return "";
-  try {
-    return new URL(url, base).href;
-  } catch {
-    return "";
-  }
-}
 
 /* ── Download and store a photo in Supabase Storage ────────────── */
 async function downloadAndStore(
