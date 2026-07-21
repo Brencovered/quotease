@@ -54,6 +54,7 @@ export default function DocketsPanel({
   const [docketInvoices, setDocketInvoices] = useState(initialInvoices);
   const [bundling, setBundling] = useState(false);
   const [bundleError, setBundleError] = useState<string | null>(null);
+  const [bundleNotice, setBundleNotice] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [header, setHeader] = useState(emptyHeader());
   const [labourRows, setLabourRows] = useState<LabourRow[]>([]);
@@ -90,6 +91,7 @@ export default function DocketsPanel({
   async function bundleToInvoice() {
     setBundling(true);
     setBundleError(null);
+    setBundleNotice(null);
     try {
       const res = await fetch("/api/dockets/bundle", {
         method: "POST",
@@ -100,6 +102,11 @@ export default function DocketsPanel({
       if (!res.ok) throw new Error(body.error || "Could not create invoice");
       setDocketInvoices((prev) => [body.invoice, ...prev]);
       setDockets((prev) => prev.map((d) => (d.status === "signed" ? { ...d, status: "invoiced", docket_invoice_id: body.invoice.id } : d)));
+      if (body.xero?.ok) {
+        setBundleNotice(`${body.invoice.invoice_number} pushed to Xero as a draft invoice - finalise and send it from there.`);
+      } else if (body.xero && !body.xero.ok) {
+        setBundleNotice(`${body.invoice.invoice_number} created, but couldn't push to Xero: ${body.xero.error}`);
+      }
     } catch (err) {
       setBundleError(err instanceof Error ? err.message : "Could not create invoice");
     } finally {
@@ -262,6 +269,7 @@ export default function DocketsPanel({
                 </button>
               </div>
               {bundleError && <p className="text-[12px] text-red-600 mt-1.5">{bundleError}</p>}
+              {bundleNotice && <p className="text-[12px] text-green-800 mt-1.5">{bundleNotice}</p>}
             </div>
           )}
           {awaitingSignature.length > 0 && (
@@ -278,7 +286,10 @@ export default function DocketsPanel({
           <div className="space-y-1.5">
             {docketInvoices.map((inv) => (
               <div key={inv.id} className="flex items-center justify-between border border-[var(--line)] rounded-lg px-3 py-2 text-[13px]">
-                <span className="font-semibold text-[var(--ink)]">{inv.invoice_number}</span>
+                <span className="font-semibold text-[var(--ink)] flex items-center gap-1.5">
+                  {inv.invoice_number}
+                  {inv.xero_invoice_id && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-bold">XERO</span>}
+                </span>
                 <span className="text-[var(--ink-faint)]">
                   {new Date(inv.period_start).toLocaleDateString("en-AU", { day: "numeric", month: "short" })} - {new Date(inv.period_end).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
                   {" · "}{inv.docket_count} docket{inv.docket_count === 1 ? "" : "s"}

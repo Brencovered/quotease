@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveBusinessId } from "@/lib/team";
+import { pushDocketInvoiceToXero } from "@/lib/xero";
 
 export async function POST(request: Request) {
   const { jobId } = await request.json();
@@ -17,13 +18,17 @@ export async function POST(request: Request) {
 
   // Only signed dockets are billable - draft/sent ones are still awaiting
   // signature and have no place in an invoice yet.
-  const { data: dockets, error: docketsError } = await supabase
-    .from("dockets")
-    .select("id, work_date, total_cost")
-    .eq("job_id", jobId)
-    .eq("profile_id", businessId)
-    .eq("status", "signed")
-    .is("docket_invoice_id", null);
+  const [{ data: dockets, error: docketsError }, { data: job }, { data: profile }] = await Promise.all([
+    supabase
+      .from("dockets")
+      .select("id, work_date, total_cost, description")
+      .eq("job_id", jobId)
+      .eq("profile_id", businessId)
+      .eq("status", "signed")
+      .is("docket_invoice_id", null),
+    supabase.from("jobs").select("client_name, client_email").eq("id", jobId).single(),
+    supabase.from("profiles").select("id, xero_connected, xero_tenant_id, xero_access_token, xero_refresh_token, xero_token_expires_at").eq("id", businessId).single(),
+  ]);
 
   if (docketsError) {
     return NextResponse.json({ error: docketsError.message }, { status: 500 });
@@ -75,5 +80,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, invoice });
+  // Push to Xero as a DRAFT invoice - the tradie reviews, finalises and
+  // sends it from within Xero itself, same as the existing quote-accepted
+  // flow. Best-effort: the bundle above is already committed either way,
+  // so a Xero failure (not connected, expired token, etc.) shouldn't be
+  // treated as the bundle action itself having failed - just reported back
+  // so the tradie knows it still needs manual attention.
+  let xeroResult: { ok: boolean; error?: string; xeroInvoiceId?: string } | null = null;
+  if (profile) {
+    xeroResult = await pushDocketInvoiceToXero(
+      { invoice_number: invoice.invoice_number, total_cost: invoice.total_cost },
+      dockets.map((d) => ({ work_date: d.work_date, total_cost: d.total_cost, description: d.description })),
+      { name: job?.client_name ?? null, email: job?.client_email ?? null },
+      profile
+    );
+    if (xeroResult.ok) {
+      await supabase
+        .from("docket_invoices")
+        .update({ xero_invoice_id: xeroResult.xeroInvoiceId ?? null, xero_exported_at: new Date().toISOString(), status: "sent" })
+        .eq("id", invoice.id);
+    }
+  }
+
+  return NextResponse.json({ ok: true, invoice, xero: xeroResult });
 }

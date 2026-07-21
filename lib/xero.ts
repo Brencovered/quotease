@@ -103,3 +103,64 @@ export async function pushQuoteToXero(quote: {
 
   return { ok: true };
 }
+
+export async function pushDocketInvoiceToXero(
+  bundle: {
+    invoice_number: string;
+    total_cost: number;
+  },
+  dockets: { work_date: string; total_cost: number; description: string | null }[],
+  client: { name: string | null; email: string | null },
+  profile: XeroProfile
+): Promise<{ ok: boolean; error?: string; xeroInvoiceId?: string }> {
+  if (!profile.xero_connected || !profile.xero_tenant_id) {
+    return { ok: false, error: "Xero not connected" };
+  }
+
+  const accessToken = await getValidAccessToken(profile);
+  if (!accessToken) return { ok: false, error: "Could not refresh Xero token - reconnect in Settings" };
+
+  const headers = {
+    Authorization: `Bearer ${accessToken}`,
+    "Xero-tenant-id": profile.xero_tenant_id,
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+
+  // One line item per docket in the bundle (dated, with its own total)
+  // rather than a single lump sum - gives the client's Xero invoice the
+  // same day-by-day breakdown the signed dockets themselves recorded,
+  // instead of collapsing a month of dayworks into one opaque number.
+  const lineItems = dockets.map((d) => ({
+    Description: `Dayworks - ${new Date(d.work_date).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}${d.description ? ` - ${d.description}` : ""}`,
+    Quantity: 1,
+    UnitAmount: d.total_cost,
+    AccountCode: "200", // standard default sales account code in a new Xero org
+  }));
+
+  const invoiceRes = await fetch("https://api.xero.com/api.xro/2.0/Invoices", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      Invoices: [
+        {
+          Type: "ACCREC",
+          Contact: { Name: client.name || "Unnamed client", EmailAddress: client.email || undefined },
+          LineItems: lineItems,
+          Status: "DRAFT",
+          Reference: bundle.invoice_number,
+        },
+      ],
+    }),
+  });
+
+  if (!invoiceRes.ok) {
+    const body = await invoiceRes.text();
+    return { ok: false, error: `Xero rejected the invoice: ${body.slice(0, 300)}` };
+  }
+
+  const result = await invoiceRes.json();
+  const xeroInvoiceId = result?.Invoices?.[0]?.InvoiceID as string | undefined;
+
+  return { ok: true, xeroInvoiceId };
+}
