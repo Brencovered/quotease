@@ -65,7 +65,7 @@ export default function AdminWebsiteScraper() {
       <div>
         <h2 className="font-display text-[1.6rem] text-[var(--ink)]">Website scraper</h2>
         <p className="text-[13.5px] text-[var(--ink-soft)] mt-0.5">
-          Pull photos, logos, and blurbs directly from each business's own website.
+          Pull photos, logos, and blurbs directly from each business&apos;s own website.
           Free, no Google API calls, and often better quality.
         </p>
       </div>
@@ -177,7 +177,7 @@ export default function AdminWebsiteScraper() {
           {result.remaining > 0 && !autoRun && (
             <div className="flex items-center gap-2 text-[12.5px] text-amber-700 bg-amber-50 rounded-xl px-3 py-2">
               <AlertTriangle size={13} />
-              {result.remaining.toLocaleString()} listings still need scraping. Keep clicking "Run batch" or enable auto-run.
+              {result.remaining.toLocaleString()} listings still need scraping. Keep clicking &quot;Run batch&quot; or enable auto-run.
             </div>
           )}
 
