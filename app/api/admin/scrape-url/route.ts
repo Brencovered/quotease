@@ -201,22 +201,82 @@ export async function POST(req: NextRequest) {
   let action: "created" | "updated";
 
   if (existingListing) {
-    const updateData = overwrite ? clean : Object.fromEntries(
-      Object.entries(clean).filter(([k]) => {
-        // Only update fields that were empty/null on the existing listing
-        return !["id", "source"].includes(k);
-      })
-    );
-    await admin.from("directory_listing").update(updateData).eq("id", existingListing.id);
+    // Update existing -- use direct update so we preserve the slug
+    const updateData = overwrite
+      ? clean
+      : Object.fromEntries(Object.entries(clean).filter(([k]) => !["id", "source"].includes(k)));
+    const { error: updateErr } = await admin
+      .from("directory_listing")
+      .update(updateData)
+      .eq("id", existingListing.id);
+    if (updateErr) console.error("[scrape-url] update error:", updateErr);
     action = "updated";
   } else {
-    await admin.from("directory_listing").insert({ ...clean, id: listingId });
+    // Create new -- use RPC so slug is auto-generated from business_name + suburb
+    const { error: rpcErr } = await admin.rpc("upsert_directory_listing", {
+      p_business_name:         businessName ?? siteUrl,
+      p_trades:                trades,
+      p_website_url:           siteUrl,
+      p_suburb:                suburb,
+      p_postcode:              postcode,
+      p_latitude:              null,
+      p_longitude:             null,
+      p_place_id:              null,
+      p_google_rating:         null,
+      p_google_reviews_count:  null,
+      p_photo_references:      allPhotos.length > 0 ? allPhotos : [],
+      p_scraped_contact_phone: phone,
+      p_private_email:         null,
+      p_logo_url:              logo,
+    });
+
+    if (rpcErr) {
+      console.error("[scrape-url] RPC error, falling back to direct insert:", rpcErr);
+      // Fallback: direct insert with manual slug
+      const slug = (businessName ?? "listing")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "")
+        + (suburb ? "-" + suburb.toLowerCase().replace(/[^a-z0-9]+/g, "-") : "")
+        + "-" + Date.now().toString(36);
+
+      await admin.from("directory_listing").insert({
+        ...clean,
+        id:   listingId,
+        slug,
+      });
+    }
+
+    // Now update the freshly created listing with photos/blurb (RPC doesn't take all fields)
+    const { data: fresh } = await admin
+      .from("directory_listing")
+      .select("id")
+      .ilike("website_url", siteUrl)
+      .limit(1);
+
+    if (fresh?.[0]) {
+      await admin.from("directory_listing").update({
+        blurb:              about ?? blurb,
+        photos_cached_at:   allPhotos.length > 0 ? new Date().toISOString() : null,
+        website_scraped_at: new Date().toISOString(),
+        source:             "manual",
+      }).eq("id", fresh[0].id);
+    }
+
     action = "created";
   }
 
+  // Fetch the slug for the public listing URL
+  const { data: finalListing } = await admin
+    .from("directory_listing")
+    .select("id, slug")
+    .ilike("website_url", siteUrl)
+    .limit(1);
+
   return NextResponse.json({
     action,
-    id: existingListing?.id ?? listingId,
+    id:   finalListing?.[0]?.id ?? existingListing?.id ?? listingId,
+    slug: finalListing?.[0]?.slug ?? null,
     extracted: {
       business_name: businessName,
       trades,

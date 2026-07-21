@@ -10,6 +10,7 @@ import {
 interface ScrapeResult {
   action: "created" | "updated";
   id: string;
+  slug: string | null;
   extracted: {
     business_name: string | null;
     trades: string[];
@@ -150,14 +151,14 @@ export default function AdminManualScraper() {
               )}
             </div>
             <a
-              href={`/admin/directory`}
+              href={result.slug ? `/directory/${result.slug}` : `/admin/directory`}
               target="_blank"
               rel="noreferrer"
               className={`flex items-center gap-1 text-[12px] font-semibold shrink-0 ${
                 result.action === "created" ? "text-green-700 hover:text-green-900" : "text-blue-700 hover:text-blue-900"
               }`}
             >
-              View in directory <ExternalLink size={11} />
+              {result.slug ? "View live listing" : "View in directory"} <ExternalLink size={11} />
             </a>
           </div>
 
