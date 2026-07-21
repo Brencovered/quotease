@@ -107,9 +107,10 @@ function parseYPListings(html: string, trade: string): YPListing[] {
   return listings.filter(l => l.business_name.length > 2);
 }
 
-function ypSearchUrl(trade: string, suburb: string, page = 1): string {
-  const q = encodeURIComponent(trade);
-  const loc = encodeURIComponent(suburb);
+function ypSearchUrl(trade: string, suburb: string, postcode: string, page = 1): string {
+  const q   = encodeURIComponent(trade);
+  // Postcode gives more precise results than suburb name
+  const loc = encodeURIComponent(postcode || suburb);
   const start = (page - 1) * RESULTS_PER_PAGE;
   return `https://www.yellowpages.com.au/search/listings?clue=${q}&locationClue=${loc}&start=${start}`;
 }
@@ -122,14 +123,14 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const { trade = "electrician", suburb = "Sydney NSW", pages = 2 } = body;
+  const { trade = "electrician", suburb = "Sydney NSW", postcode = "", pages = 2 } = body;
 
   const admin = createAdminClient();
   const allListings: YPListing[] = [];
   let pagesScraped = 0;
 
   for (let page = 1; page <= Math.min(pages, 5); page++) {
-    const url = ypSearchUrl(trade, suburb, page);
+    const url = ypSearchUrl(trade, suburb, postcode, page);
     const html = await fetchHtml(url);
     if (!html) break;
 
@@ -160,8 +161,8 @@ export async function POST(req: NextRequest) {
       business_name:        l.business_name,
       trades:               [l.trade],
       suburb:               l.suburb,
-      postcode:             l.postcode,
-      state:                l.state ?? "NSW",
+      postcode:             l.postcode || postcode || null,
+      state:                l.state ?? (suburb.match(/(NSW|VIC|QLD|WA|SA|TAS|NT|ACT)/)?.[0] ?? null),
       scraped_contact_phone: l.phone,
       private_email:        l.email,
       website_url:          l.website_url,

@@ -223,78 +223,150 @@ export default function AdminWebsiteScraper() {
 }
 
 function YellowPagesScraper() {
-  const [trade,   setTrade]   = useState("electrician");
-  const [suburb,  setSuburb]  = useState("Sydney NSW");
-  const [pages,   setPages]   = useState(2);
-  const [running, setRunning] = useState(false);
-  const [result,  setResult]  = useState<{found:number;inserted:number;skipped:number;pagesScraped:number}|null>(null);
+  const [trade,    setTrade]    = useState("electrician");
+  const [suburb,   setSuburb]   = useState("Melbourne VIC");
+  const [postcode, setPostcode] = useState("");
+  const [pages,    setPages]    = useState(3);
+  const [running,  setRunning]  = useState(false);
+  const [result,   setResult]   = useState<{found:number;inserted:number;skipped:number;pagesScraped:number}|null>(null);
 
-  const TRADES = ["electrician","plumber","carpenter","roofer","painter","tiler","landscaper","builder","concreter","plasterer"];
-  const SUBURBS = [
-    "Sydney NSW","Melbourne VIC","Brisbane QLD","Perth WA","Adelaide SA",
-    "Gold Coast QLD","Newcastle NSW","Canberra ACT","Wollongong NSW","Geelong VIC",
-    "Hobart TAS","Townsville QLD","Cairns QLD","Darwin NT","Toowoomba QLD",
+  const TRADES = [
+    "electrician","plumber","carpenter","roofer","painter",
+    "tiler","landscaper","builder","concreter","plasterer",
+    "airconditioning","solar","locksmith","glazier","fencer",
   ];
+
+  // Major AU suburbs/cities with postcodes for targeted scraping
+  const LOCATIONS = [
+    // NSW
+    { label: "Sydney CBD, NSW",         suburb: "Sydney NSW",          postcode: "2000" },
+    { label: "Parramatta, NSW",          suburb: "Parramatta NSW",      postcode: "2150" },
+    { label: "Newcastle, NSW",           suburb: "Newcastle NSW",       postcode: "2300" },
+    { label: "Wollongong, NSW",          suburb: "Wollongong NSW",      postcode: "2500" },
+    { label: "Penrith, NSW",             suburb: "Penrith NSW",         postcode: "2750" },
+    { label: "Blacktown, NSW",           suburb: "Blacktown NSW",       postcode: "2148" },
+    // VIC
+    { label: "Melbourne CBD, VIC",       suburb: "Melbourne VIC",       postcode: "3000" },
+    { label: "Geelong, VIC",             suburb: "Geelong VIC",         postcode: "3220" },
+    { label: "Ballarat, VIC",            suburb: "Ballarat VIC",        postcode: "3350" },
+    { label: "Bendigo, VIC",             suburb: "Bendigo VIC",         postcode: "3550" },
+    { label: "Dandenong, VIC",           suburb: "Dandenong VIC",       postcode: "3175" },
+    // QLD
+    { label: "Brisbane CBD, QLD",        suburb: "Brisbane QLD",        postcode: "4000" },
+    { label: "Gold Coast, QLD",          suburb: "Gold Coast QLD",      postcode: "4217" },
+    { label: "Sunshine Coast, QLD",      suburb: "Sunshine Coast QLD",  postcode: "4557" },
+    { label: "Townsville, QLD",          suburb: "Townsville QLD",      postcode: "4810" },
+    { label: "Cairns, QLD",              suburb: "Cairns QLD",          postcode: "4870" },
+    { label: "Toowoomba, QLD",           suburb: "Toowoomba QLD",       postcode: "4350" },
+    // WA
+    { label: "Perth CBD, WA",            suburb: "Perth WA",            postcode: "6000" },
+    { label: "Fremantle, WA",            suburb: "Fremantle WA",        postcode: "6160" },
+    { label: "Mandurah, WA",             suburb: "Mandurah WA",         postcode: "6210" },
+    // SA
+    { label: "Adelaide CBD, SA",         suburb: "Adelaide SA",         postcode: "5000" },
+    { label: "Mount Gambier, SA",        suburb: "Mount Gambier SA",    postcode: "5290" },
+    // TAS
+    { label: "Hobart, TAS",              suburb: "Hobart TAS",          postcode: "7000" },
+    // NT
+    { label: "Darwin, NT",               suburb: "Darwin NT",           postcode: "0800" },
+    // ACT
+    { label: "Canberra, ACT",            suburb: "Canberra ACT",        postcode: "2600" },
+  ];
+
+  function handleLocationChange(label: string) {
+    const loc = LOCATIONS.find(l => l.label === label);
+    if (loc) { setSuburb(loc.suburb); setPostcode(loc.postcode); }
+  }
 
   async function run() {
     setRunning(true); setResult(null);
     const res = await fetch("/api/admin/scrape-yellowpages", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ trade, suburb, pages }),
+      body: JSON.stringify({ trade, suburb, postcode, pages }),
     });
     setResult(await res.json());
     setRunning(false);
   }
+
+  const selectedLocation = LOCATIONS.find(l => l.suburb === suburb);
 
   return (
     <div className="card space-y-4">
       <div>
         <p className="section-tag">Yellow Pages scraper</p>
         <p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5">
-          Scrape Australian trade businesses from Yellow Pages -- free, no API key, no per-call cost.
+          Scrape Australian trade businesses from Yellow Pages. Free, no API key, no per-call cost.
+          Captures suburb, postcode, and state for SEO-targeted directory pages.
         </p>
       </div>
+
       <div className="grid sm:grid-cols-3 gap-3">
+        {/* Trade */}
         <div>
           <p className="text-[11px] font-bold uppercase text-[var(--ink-faint)] mb-1.5">Trade</p>
           <select value={trade} onChange={e => setTrade(e.target.value)} className="app-field text-[13px]">
-            {TRADES.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+            {TRADES.map(t => (
+              <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+            ))}
           </select>
         </div>
+
+        {/* Location */}
         <div>
-          <p className="text-[11px] font-bold uppercase text-[var(--ink-faint)] mb-1.5">Suburb / City</p>
-          <div className="flex gap-1.5">
-            <select value={suburb} onChange={e => setSuburb(e.target.value)} className="app-field text-[13px] flex-1">
-              {SUBURBS.map(s => <option key={s}>{s}</option>)}
-            </select>
+          <p className="text-[11px] font-bold uppercase text-[var(--ink-faint)] mb-1.5">Location</p>
+          <select
+            value={selectedLocation?.label ?? ""}
+            onChange={e => handleLocationChange(e.target.value)}
+            className="app-field text-[13px] mb-1.5"
+          >
+            {LOCATIONS.map(l => <option key={l.label}>{l.label}</option>)}
+          </select>
+          <div className="grid grid-cols-2 gap-1.5">
+            <input value={suburb} onChange={e => setSuburb(e.target.value)}
+              className="app-field text-[12px]" placeholder="Suburb" />
+            <input value={postcode} onChange={e => setPostcode(e.target.value)}
+              className="app-field text-[12px]" placeholder="Postcode" />
           </div>
-          <input value={suburb} onChange={e => setSuburb(e.target.value)}
-            className="app-field text-[13px] mt-1.5" placeholder="Or type a suburb..." />
         </div>
+
+        {/* Pages */}
         <div>
           <p className="text-[11px] font-bold uppercase text-[var(--ink-faint)] mb-1.5">Pages to scrape</p>
-          <input type="number" min={1} max={5} value={pages} onChange={e => setPages(Number(e.target.value))}
-            className="app-field text-[13px]" />
-          <p className="text-[10.5px] text-[var(--ink-faint)] mt-1">~20 results per page, max 5</p>
+          <select value={pages} onChange={e => setPages(Number(e.target.value))} className="app-field text-[13px]">
+            {[1,2,3,4,5].map(n => <option key={n} value={n}>{n} page{n>1?"s":""} (~{n*20} results)</option>)}
+          </select>
+          <p className="text-[11px] text-[var(--ink-faint)] mt-1.5">
+            Tip: run all 5 pages per location to maximise coverage
+          </p>
         </div>
       </div>
-      <button onClick={run} disabled={running} className="btn-primary flex items-center gap-2">
-        {running ? <><span className="animate-spin">⟳</span> Scraping...</> : "Run Yellow Pages scrape"}
+
+      <button onClick={run} disabled={running}
+        className="btn-primary w-full justify-center text-[14px] py-3">
+        {running ? "Scraping Yellow Pages..." : `Scrape ${trade}s in ${suburb}`}
       </button>
+
       {result && (
-        <div className="grid grid-cols-4 gap-3">
-          {[
-            ["Pages scraped", result.pagesScraped],
-            ["Found",         result.found],
-            ["Inserted",      result.inserted],
-            ["Skipped",       result.skipped],
-          ].map(([label, val]) => (
-            <div key={label as string} className="bg-[var(--app-bg)] rounded-xl px-3 py-2.5">
-              <p className="text-[10px] font-bold uppercase text-[var(--ink-faint)]">{label}</p>
-              <p className="font-display text-[1.5rem] text-[var(--ink)]">{val}</p>
-            </div>
-          ))}
+        <div className="space-y-2">
+          <div className="grid grid-cols-4 gap-3">
+            {([
+              ["Pages scraped", result.pagesScraped, "text-[var(--ink)]"],
+              ["Found",         result.found,        "text-[var(--ink)]"],
+              ["Inserted",      result.inserted,     "text-green-600"],
+              ["Skipped",       result.skipped,      "text-[var(--ink-faint)]"],
+            ] as [string, number, string][]).map(([label, val, color]) => (
+              <div key={label} className="bg-[var(--app-bg)] rounded-xl px-3 py-2.5">
+                <p className="text-[10px] font-bold uppercase text-[var(--ink-faint)]">{label}</p>
+                <p className={`font-display text-[1.5rem] ${color}`}>{val}</p>
+              </div>
+            ))}
+          </div>
+          {result.inserted > 0 && (
+            <p className="text-[12px] text-green-600 font-semibold">
+              ✓ Added {result.inserted} new {trade}s from {suburb} to the directory
+            </p>
+          )}
         </div>
       )}
     </div>
