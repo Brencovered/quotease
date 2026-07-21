@@ -210,8 +210,8 @@ export default async function TradieProfilePage({
   const accent    = (primaryTrade && TRADE_COLORS[primaryTrade]) || "#0a1722";
   const tradeLabel = (primaryTrade && TRADE_LABELS[primaryTrade]) ?? primaryTrade;
   const domain    = listing.website_url ? domainFromUrl(listing.website_url) : null;
+  const photos       = listing.photo_references?.filter(Boolean) ?? [];
   const cachedPhotos = photos.filter(p => p.startsWith("http"));
-  const photos    = listing.photo_references?.filter(Boolean) ?? [];
   const reviews   = listing.place_id ? await getPlaceReviews(listing.place_id) : [];
 
   // The verified badge is the only claimed-page addition on this public
