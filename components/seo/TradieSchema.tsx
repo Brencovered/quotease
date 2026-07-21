@@ -123,18 +123,18 @@ export default function TradieSchema({
     }),
     // Individual reviews -- only emit when review has actual text content.
     // Empty reviewBody or missing author causes Google validation errors.
-    ...(reviews && reviews.filter(r => r.text?.trim() && r.authorName?.trim() && r.rating >= 1 && r.rating <= 5).length > 0 && {
+    ...(reviews && reviews.filter(r => r.text?.trim() && r.authorName?.trim() && r.rating >= 1 && r.rating <= 5 && r.time > 0).length > 0 && {
       review: reviews
-        .filter(r => r.text?.trim() && r.authorName?.trim() && r.rating >= 1 && r.rating <= 5)
+        .filter(r => r.text?.trim() && r.authorName?.trim() && r.rating >= 1 && r.rating <= 5 && r.time > 0)
         .slice(0, 5)
         .map((r) => ({
           "@type": "Review",
           author: { "@type": "Person", name: r.authorName.trim() },
           datePublished: new Date(r.time * 1000).toISOString().slice(0, 10),
-          reviewBody: r.text.trim(),
+          reviewBody: r.text.trim().slice(0, 500), // cap length for safety
           reviewRating: {
             "@type": "Rating",
-            ratingValue: String(r.rating),
+            ratingValue: String(Math.round(r.rating)), // must be integer string
             bestRating: "5",
             worstRating: "1",
           },
