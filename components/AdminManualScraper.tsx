@@ -21,6 +21,11 @@ interface ScrapeResult {
     logo: boolean;
     blurb: boolean;
     photos: number;
+    facebook: boolean;
+    instagram: boolean;
+    years_experience: number | null;
+    licenses: number;
+    services: number;
   };
 }
 

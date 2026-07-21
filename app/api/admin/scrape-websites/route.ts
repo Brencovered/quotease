@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdminEmail } from "@/lib/admin";
-import { fetchWebsiteHtml, extractLogoUrl, extractBlurb, extractPhotos, extractAbout, extractServices, extractPhone } from "@/lib/websiteScraper";
+import { fetchWebsiteHtml, extractLogoUrl, extractBlurb, extractPhotos, extractAbout, extractServices, extractPhone, extractSocialLinks, extractYearsExperience, extractLicenses, scrapeSubPages } from "@/lib/websiteScraper";
 
 const BATCH = 30;
 
