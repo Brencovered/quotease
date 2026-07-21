@@ -27,3 +27,7 @@ create policy "Public can read published posts"
 -- Storage bucket for blog images (run manually if bucket doesn't exist)
 -- insert into storage.buckets (id, name, public) values ('blog-images', 'blog-images', true)
 -- on conflict do nothing;
+
+-- Add website_scraped_at to directory_listing for the website scraper
+alter table public.directory_listing
+  add column if not exists website_scraped_at timestamptz;

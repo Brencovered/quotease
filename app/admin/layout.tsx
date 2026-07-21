@@ -39,7 +39,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <Link href="/admin/blog" className="text-[var(--steel-1)] hover:text-white">Blog</Link>
             <Link href="/admin/seo" className="text-[var(--steel-1)] hover:text-white">SEO</Link>
             <Link href="/admin/integrations" className="text-[var(--amber)] hover:text-white">Integrations</Link>
-            <Link href="/admin/scraper" className="text-[var(--amber)] hover:text-white">Scraper</Link>
+            <Link href="/admin/scraper" className="text-[var(--amber)] hover:text-white">Google scraper</Link>
+            <Link href="/admin/website-scraper" className="text-[var(--amber)] hover:text-white">Website scraper</Link>
           </nav>
         </div>
       </header>
