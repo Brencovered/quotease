@@ -35,13 +35,14 @@ export default function TermsOfUsePage() {
       </div>
 
       <div className="max-w-3xl mx-auto px-6 py-14">
-        {/* Important notice box */}
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 mb-10">
-          <p className="text-[13.5px] leading-relaxed text-[#5a4a00]">
-            <strong>Before you publish this:</strong> this is a working draft written to cover the ground a
-            SaaS terms of use document for an Australian/NZ business typically needs (acceptable use, liability,
-            IP, termination, governing law). It is not legal advice. Have it reviewed by a qualified Australian
-            and/or New Zealand lawyer before relying on it.
+        {/* Notice */}
+        <div className="bg-[#f1f4f6] border border-[#e5e9ec] rounded-2xl p-6 mb-10">
+          <p className="text-[13.5px] leading-relaxed text-[#5a6b78]">
+            We&apos;ve prepared these Terms in good faith to reflect what we understand of the Australian and
+            New Zealand legal frameworks applicable to a small business providing this kind of Service, to the
+            best of our knowledge and within our means as a small operation. They are not a substitute for
+            professional legal advice, and we may update them from time to time as our understanding, the
+            Service, or the applicable law changes.
           </p>
         </div>
 

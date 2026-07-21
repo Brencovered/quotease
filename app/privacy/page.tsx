@@ -35,13 +35,13 @@ export default function PrivacyPolicyPage() {
       </div>
 
       <div className="max-w-3xl mx-auto px-6 py-14">
-        {/* Important notice box */}
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 mb-10">
-          <p className="text-[13.5px] leading-relaxed text-[#5a4a00]">
-            <strong>Before you publish this:</strong> this policy is a working draft prepared to align with the
-            Australian Privacy Principles (Privacy Act 1988 (Cth)) and the New Zealand Privacy Act 2020. It is
-            not legal advice. Have it reviewed by a qualified Australian and/or New Zealand privacy lawyer before
-            relying on it.
+        {/* Notice */}
+        <div className="bg-[#f1f4f6] border border-[#e5e9ec] rounded-2xl p-6 mb-10">
+          <p className="text-[13.5px] leading-relaxed text-[#5a6b78]">
+            We&apos;ve prepared this policy in good faith to align with the Australian Privacy Principles
+            (Privacy Act 1988 (Cth)) and the New Zealand Privacy Act 2020, to the best of our knowledge and
+            within our means as a small operation. It is not a substitute for professional legal advice, and we
+            may update it from time to time as our understanding, the Service, or the applicable law changes.
           </p>
         </div>
 
