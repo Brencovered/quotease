@@ -50,7 +50,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
 
   const data = await loadJobDetailData(supabase, id, businessId);
   if (!data) notFound();
-  const { job, quote, variations, dockets, docketRates, actuals, certsWithUrls, attachmentsWithUrls, payments, hourlyRate, marginPct } = data;
+  const { job, quote, variations, dockets, docketInvoices, docketRates, actuals, certsWithUrls, attachmentsWithUrls, payments, hourlyRate, marginPct } = data;
 
   const scopeLines = quote ? humanizeIntake(quote.intake_data) : [];
   const conditionLines = quote ? summarizeConditions(quote.intake_data) : [];
@@ -269,6 +269,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               <DocketsPanel
                 jobId={job.id}
                 dockets={dockets as never}
+                docketInvoices={docketInvoices as never}
                 labourCatalog={docketRates.filter((r: { category: string }) => r.category === "labour") as never}
                 plantCatalog={docketRates.filter((r: { category: string }) => r.category === "plant") as never}
                 materialsCatalog={tradeMaterials}

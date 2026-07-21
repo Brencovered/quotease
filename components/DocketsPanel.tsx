@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveBusinessId } from "@/lib/team";
-import { Plus, CheckCircle2, Send, FileClock, Copy, Check, Trash2, Search } from "lucide-react";
-import type { Docket, DocketItem, DocketRateItem } from "@/lib/dockets";
+import { Plus, CheckCircle2, Send, FileClock, Copy, Check, Trash2, Search, Receipt, Loader2 } from "lucide-react";
+import type { Docket, DocketItem, DocketRateItem, DocketInvoice } from "@/lib/dockets";
 
 const STATUS_STYLE: Record<string, string> = {
   draft: "bg-slate-100 text-slate-700",
@@ -37,18 +37,23 @@ function emptyHeader() {
 export default function DocketsPanel({
   jobId,
   dockets: initial,
+  docketInvoices: initialInvoices,
   labourCatalog,
   plantCatalog,
   materialsCatalog,
 }: {
   jobId: string;
   dockets: Docket[];
+  docketInvoices: DocketInvoice[];
   labourCatalog: DocketRateItem[];
   plantCatalog: DocketRateItem[];
   materialsCatalog: CatalogMaterial[];
   defaultHourlyRate?: number;
 }) {
   const [dockets, setDockets] = useState(initial);
+  const [docketInvoices, setDocketInvoices] = useState(initialInvoices);
+  const [bundling, setBundling] = useState(false);
+  const [bundleError, setBundleError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [header, setHeader] = useState(emptyHeader());
   const [labourRows, setLabourRows] = useState<LabourRow[]>([]);
@@ -78,7 +83,29 @@ export default function DocketsPanel({
     customRows.reduce((s, r) => s + num(r.quantity) * num(r.rate), 0);
 
   const unbilledTotal = dockets.filter((d) => d.status !== "invoiced").reduce((sum, d) => sum + d.total_cost, 0);
-  const unbilledCount = dockets.filter((d) => d.status !== "invoiced").length;
+  const signedReady = dockets.filter((d) => d.status === "signed");
+  const signedReadyTotal = signedReady.reduce((sum, d) => sum + d.total_cost, 0);
+  const awaitingSignature = dockets.filter((d) => d.status === "draft" || d.status === "sent");
+
+  async function bundleToInvoice() {
+    setBundling(true);
+    setBundleError(null);
+    try {
+      const res = await fetch("/api/dockets/bundle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || "Could not create invoice");
+      setDocketInvoices((prev) => [body.invoice, ...prev]);
+      setDockets((prev) => prev.map((d) => (d.status === "signed" ? { ...d, status: "invoiced", docket_invoice_id: body.invoice.id } : d)));
+    } catch (err) {
+      setBundleError(err instanceof Error ? err.message : "Could not create invoice");
+    } finally {
+      setBundling(false);
+    }
+  }
 
   function resetForm() {
     setHeader(emptyHeader());
@@ -202,8 +229,43 @@ export default function DocketsPanel({
       <p className="font-semibold text-[var(--ink)] mb-1">Signed, per-day work records</p>
 
       {unbilledTotal > 0 && (
-        <div className="bg-amber-50 text-amber-900 rounded-lg px-3 py-2 text-[13px] font-semibold mb-3">
-          ${unbilledTotal.toLocaleString()} across {unbilledCount} unbilled docket{unbilledCount === 1 ? "" : "s"} - bundle into an invoice at end of month
+        <div className="mb-3 space-y-2">
+          {signedReady.length > 0 && (
+            <div className="bg-green-50 border border-green-100 rounded-lg px-3 py-2.5">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <p className="text-[13px] font-semibold text-green-900">
+                  ${signedReadyTotal.toLocaleString()} across {signedReady.length} signed docket{signedReady.length === 1 ? "" : "s"} - ready to invoice
+                </p>
+                <button onClick={bundleToInvoice} disabled={bundling} className="inline-flex items-center gap-1.5 text-[12.5px] font-bold bg-green-700 text-white rounded-lg px-3 py-1.5 disabled:opacity-50">
+                  {bundling ? <><Loader2 size={12} className="animate-spin" /> Bundling...</> : <><Receipt size={12} /> Bundle into invoice</>}
+                </button>
+              </div>
+              {bundleError && <p className="text-[12px] text-red-600 mt-1.5">{bundleError}</p>}
+            </div>
+          )}
+          {awaitingSignature.length > 0 && (
+            <div className="bg-amber-50 text-amber-900 rounded-lg px-3 py-2 text-[13px] font-semibold">
+              {awaitingSignature.length} docket{awaitingSignature.length === 1 ? "" : "s"} still awaiting signature
+            </div>
+          )}
+        </div>
+      )}
+
+      {docketInvoices.length > 0 && (
+        <div className="mb-4">
+          <p className="text-[11px] font-bold tracking-wide uppercase text-[var(--ink-faint)] mb-1.5">Invoiced</p>
+          <div className="space-y-1.5">
+            {docketInvoices.map((inv) => (
+              <div key={inv.id} className="flex items-center justify-between border border-[var(--line)] rounded-lg px-3 py-2 text-[13px]">
+                <span className="font-semibold text-[var(--ink)]">{inv.invoice_number}</span>
+                <span className="text-[var(--ink-faint)]">
+                  {new Date(inv.period_start).toLocaleDateString("en-AU", { day: "numeric", month: "short" })} - {new Date(inv.period_end).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
+                  {" · "}{inv.docket_count} docket{inv.docket_count === 1 ? "" : "s"}
+                </span>
+                <span className="font-bold text-[var(--ink)]">${inv.total_cost.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

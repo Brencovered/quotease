@@ -87,6 +87,7 @@ export async function loadJobDetailData(supabase: SupabaseClient, idParam: strin
       quote: quote ?? null,
       variations: [],
       dockets: [],
+      docketInvoices: [],
       docketRates: [],
       actuals: [],
       certsWithUrls: [],
@@ -103,10 +104,11 @@ export async function loadJobDetailData(supabase: SupabaseClient, idParam: strin
     ? supabase.from("quotes").select("*").eq("id", job.quote_id).single()
     : Promise.resolve({ data: null });
 
-  const [{ data: quote }, { data: variations }, { data: dockets }, { data: docketRates }, { data: actuals }, { data: certs }, { data: followUps }, { data: attachments }, { data: profile }, { data: payments }] = await Promise.all([
+  const [{ data: quote }, { data: variations }, { data: dockets }, { data: docketInvoices }, { data: docketRates }, { data: actuals }, { data: certs }, { data: followUps }, { data: attachments }, { data: profile }, { data: payments }] = await Promise.all([
     quotePromise,
     supabase.from("variations").select("*").or(`job_id.eq.${jobId}${job.quote_id ? `,quote_id.eq.${job.quote_id}` : ""}`).order("created_at"),
     supabase.from("dockets").select("*, docket_items(*)").eq("job_id", jobId).order("work_date", { ascending: false }).order("sort_order", { foreignTable: "docket_items" }),
+    supabase.from("docket_invoices").select("*").eq("job_id", jobId).order("created_at", { ascending: false }),
     supabase.from("docket_rate_items").select("*").eq("profile_id", profileId).order("category").order("label"),
     supabase.from("job_actuals").select("*").or(`job_id.eq.${jobId}${job.quote_id ? `,quote_id.eq.${job.quote_id}` : ""}`).order("recorded_at"),
     supabase.from("compliance_certs").select("*").or(`job_id.eq.${jobId}${job.quote_id ? `,quote_id.eq.${job.quote_id}` : ""}`).order("created_at"),
@@ -130,6 +132,7 @@ export async function loadJobDetailData(supabase: SupabaseClient, idParam: strin
     quote: quote ?? null,
     variations: variations ?? [],
     dockets: dockets ?? [],
+    docketInvoices: docketInvoices ?? [],
     docketRates: docketRates ?? [],
     actuals: actuals ?? [],
     certsWithUrls,

@@ -31,6 +31,24 @@ export interface DocketItem {
   created_at: string;
 }
 
+export type DocketInvoiceStatus = "draft" | "sent" | "paid";
+
+/** One EOM bundle: every signed docket rolled into a single invoice for a job. */
+export interface DocketInvoice {
+  id: string;
+  job_id: string;
+  profile_id: string;
+  invoice_number: string;
+  period_start: string;
+  period_end: string;
+  docket_count: number;
+  total_cost: number;
+  status: DocketInvoiceStatus;
+  xero_invoice_id: string | null;
+  xero_exported_at: string | null;
+  created_at: string;
+}
+
 /** The docket header. total_cost is trigger-maintained from the sum of its items. */
 export interface Docket {
   id: string;
@@ -51,6 +69,7 @@ export interface Docket {
   signed_at: string | null;
   sent_at: string | null;
   invoiced_at: string | null;
+  docket_invoice_id: string | null;
   created_at: string;
   updated_at: string;
   items?: DocketItem[];

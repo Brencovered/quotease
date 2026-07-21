@@ -8,6 +8,7 @@ import AppHeader from "@/components/AppHeader";
 import DashboardPanel from "@/components/DashboardPanel";
 import DashboardSkeleton from "@/components/DashboardSkeleton";
 import AttentionCard from "@/components/AttentionCard";
+import DocketsQuickView from "@/components/DocketsQuickView";
 import TrialOnboardingWidget from "@/components/TrialOnboardingWidget";
 
 export default function DashboardPage() {
@@ -32,6 +33,7 @@ async function DashboardData() {
   let profit = computeProfitStats([], [], 95);
   let onboardingProgress: OnboardingProgress | null = null;
   let attentionItems: AttentionItem[] = [];
+  let docketRows: { id: string; status: string; total_cost: number }[] = [];
 
   try {
     const supabase = await createClient();
@@ -60,7 +62,7 @@ async function DashboardData() {
           .eq("profile_id", businessId),
         supabase.from("timesheets").select("job_id").eq("profile_id", businessId),
         supabase.from("team_members").select("id, name, status").eq("owner_profile_id", businessId),
-        supabase.from("dockets").select("id, job_id, work_date, total_cost, status, invoiced_at").eq("profile_id", businessId).eq("status", "signed"),
+        supabase.from("dockets").select("id, job_id, work_date, total_cost, status, invoiced_at").eq("profile_id", businessId).neq("status", "invoiced"),
         // Previously awaited separately *after* the six queries above -
         // an independent 12-query batch (see lib/onboarding.ts) that only
         // needs businessId, so there was no real reason for it to wait.
@@ -80,6 +82,7 @@ async function DashboardData() {
         teamMembers: teamMembers ?? [],
         dockets: dockets ?? [],
       });
+      docketRows = dockets ?? [];
     }
   } catch (err) {
     console.error("Dashboard page:", err);
@@ -89,6 +92,7 @@ async function DashboardData() {
     <>
       <div className="page-wrap pt-0">
         {onboardingProgress && <TrialOnboardingWidget initialProgress={onboardingProgress} />}
+        <DocketsQuickView dockets={docketRows} />
         <AttentionCard items={attentionItems} />
       </div>
       <DashboardPanel stats={stats} profit={profit} />
