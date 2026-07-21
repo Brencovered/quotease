@@ -9,6 +9,7 @@ export async function POST() {
   const businessId = await getActiveBusinessId(supabase, user.id);
 
   await supabase.from("profiles").update({
+    xero_connected:       false,
     xero_tenant_id:       null,
     xero_access_token:    null,
     xero_refresh_token:   null,

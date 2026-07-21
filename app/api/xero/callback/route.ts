@@ -69,6 +69,7 @@ export async function GET(req: NextRequest) {
   const supabase = await createClient();
 
   const xeroData = {
+    xero_connected:        true,
     xero_tenant_id:        tenantId,
     xero_access_token:     tokens.access_token,
     xero_refresh_token:    tokens.refresh_token,
