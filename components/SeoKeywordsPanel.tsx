@@ -63,6 +63,7 @@ export default function SeoKeywordsPanel() {
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [generatingSaas, setGeneratingSaas] = useState(false);
 
   const fetchKeywords = useCallback(async () => {
     setLoading(true);
@@ -156,6 +157,28 @@ export default function SeoKeywordsPanel() {
     }
   }
 
+  async function generateSaasKeywords() {
+    setGeneratingSaas(true);
+    setSyncMsg(null);
+    try {
+      const res = await fetch("/api/admin/seo/generate-saas-keywords", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setSyncMsg({ text: data.error || "Generation failed", ok: false });
+        return;
+      }
+      setSyncMsg({
+        text: `Considered ${data.templatesConsidered} product/pricing/comparison keyword templates, added ${data.keywordsInserted} new keyword${data.keywordsInserted === 1 ? "" : "s"}. Tracking ${data.totalTracked} SaaS keywords total.`,
+        ok: true,
+      });
+      fetchKeywords();
+    } catch (err) {
+      setSyncMsg({ text: err instanceof Error ? err.message : "Network error", ok: false });
+    } finally {
+      setGeneratingSaas(false);
+    }
+  }
+
   async function syncRankings() {
     setSyncing(true);
     setSyncMsg(null);
@@ -226,6 +249,15 @@ export default function SeoKeywordsPanel() {
           >
             <MapPin size={13} className={generating ? "animate-pulse" : ""} />
             {generating ? "Scanning directory..." : "Generate keywords from directory"}
+          </button>
+          <button
+            onClick={generateSaasKeywords}
+            disabled={generatingSaas}
+            className="btn-secondary text-[12.5px] py-2 px-3.5 flex items-center gap-1.5"
+            title="Adds keyword ideas for the core quoting/job-management product -- category terms, trade-specific terms, pricing-led terms, and genuine alternative/comparison terms against ServiceM8/Tradify/Fergus/etc"
+          >
+            <Target size={13} className={generatingSaas ? "animate-pulse" : ""} />
+            {generatingSaas ? "Generating..." : "Generate SaaS keywords"}
           </button>
           <button
             onClick={syncRankings}
