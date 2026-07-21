@@ -79,17 +79,24 @@ function RatingLink({ rating, count, placeId }: { rating: number; count: number 
   );
 }
 
-function PhotoSlider({ refs, name, onFirstLoad, onFirstError, visible = true }: {
-  refs: string[]; name: string;
+function PhotoSlider({ refs, name, trade, onFirstLoad, onFirstError, visible = true }: {
+  refs: string[]; name: string; trade?: string;
   onFirstLoad?: () => void; onFirstError?: () => void; visible?: boolean;
 }) {
   const [idx, setIdx] = useState(0);
-  const photos = refs.slice(0, 3);
+  // Only show cached photos (real URLs) -- never proxy to Google
+  const photos = refs.filter(r => r.startsWith("http")).slice(0, 3);
+
+  // No cached photos -- show branded placeholder
+  if (photos.length === 0) {
+    return <SwiftscopeCover trade={trade} onLoad={onFirstLoad} />;
+  }
+
   return (
     <div className="relative h-40 bg-gray-100 overflow-hidden group">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={photos[idx].startsWith("http") ? photos[idx] : "/placeholder-photo.jpg"}
+        src={photos[idx]}
         alt={name}
         onLoad={idx === 0 ? onFirstLoad : undefined}
         onError={idx === 0 ? onFirstError : undefined}
@@ -131,14 +138,34 @@ function domainFromUrl(url: string): string | null {
 // When neither the business's own logo nor a Google photo is available, show
 // a small branded Swiftscope cover instead of a bare initial letter - it
 // reads as "this listing is taken care of" rather than "something's missing".
-function SwiftscopeCover({ trade }: { trade?: string }) {
+function SwiftscopeCover({ trade, onLoad }: { trade?: string; onLoad?: () => void }) {
   const accent = (trade && TRADE_COLORS[trade]) || "#ffb400";
+  const tradeLabel = trade ? trade.charAt(0).toUpperCase() + trade.slice(1) : null;
+
+  // Fire onLoad so parent components that wait for photo load proceed
+  useEffect(() => { onLoad?.(); }, [onLoad]);
+
   return (
-    <div className="h-40 relative overflow-hidden flex items-center justify-center bg-[#0a1722]">
-      <div className="absolute inset-0 opacity-[0.16]"
-        style={{ backgroundImage: `radial-gradient(circle at 20% 25%, ${accent} 0%, transparent 45%), radial-gradient(circle at 85% 80%, ${accent} 0%, transparent 40%)` }} />
-      <div className="absolute -right-6 -bottom-8 w-28 h-28 rounded-full border-[10px] border-white/[0.04]" />
-      <p className="relative font-display text-[1.6rem] text-[#ffb400] tracking-wide">Swiftscope</p>
+    <div className="h-40 relative overflow-hidden flex flex-col items-center justify-center bg-[#0a1722]">
+      {/* Subtle gradient orbs */}
+      <div className="absolute inset-0 opacity-[0.18]"
+        style={{ backgroundImage: `radial-gradient(circle at 15% 30%, ${accent} 0%, transparent 50%), radial-gradient(circle at 88% 75%, ${accent} 0%, transparent 45%)` }} />
+      {/* Grid texture */}
+      <div className="absolute inset-0 opacity-[0.04]"
+        style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.3) 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+      {/* Decorative circles */}
+      <div className="absolute -right-4 -bottom-6 w-24 h-24 rounded-full border-[8px] border-white/[0.05]" />
+      <div className="absolute -left-6 -top-4 w-20 h-20 rounded-full border-[6px] border-white/[0.04]" />
+      {/* Content */}
+      <div className="relative flex flex-col items-center gap-1.5">
+        <p className="font-display text-[1.4rem] text-[#ffb400] tracking-wide leading-none">Swiftscope</p>
+        {tradeLabel && (
+          <span className="text-[10px] font-bold uppercase tracking-[.2em] px-2.5 py-0.5 rounded-full"
+            style={{ background: accent + "22", color: accent }}>
+            {tradeLabel}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
