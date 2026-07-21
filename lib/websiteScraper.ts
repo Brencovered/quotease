@@ -109,6 +109,24 @@ export function extractPhotos(html: string, baseUrl: string): string[] {
 }
 
 /**
+ * Filter photos -- remove likely logo/icon images and dedupe against the logo URL.
+ */
+export function filterPhotos(photos: string[], logoUrl: string | null): string[] {
+  return photos.filter(url => {
+    if (!url) return false;
+    // Skip if same as logo
+    if (logoUrl && url === logoUrl) return false;
+    // Skip filenames that look like logos/icons
+    const lower = url.toLowerCase();
+    if (/\/(logo|icon|brand|favicon|watermark|badge|seal)[^/]*\.(jpg|jpeg|png|webp)/.test(lower)) return false;
+    // Skip very small images by URL hint (thumbnails)
+    if (/[_-](thumb|thumbnail|small|xs|tiny|16x|32x|48x|64x|128x)/.test(lower)) return false;
+    return true;
+  });
+}
+
+
+/**
  * Extract about/company description from website HTML.
  * Looks for about page content, team descriptions, company history.
  * Returns up to 500 chars.

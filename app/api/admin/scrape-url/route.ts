@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdminEmail } from "@/lib/admin";
 import {
   fetchWebsiteHtml, extractLogoUrl, extractBlurb,
-  extractPhotos, extractAbout, extractPhone,
+  extractPhotos, extractAbout, extractPhone, filterPhotos,
 } from "@/lib/websiteScraper";
 
 function extractBusinessName(html: string, url: string): string | null {
@@ -67,28 +67,89 @@ function extractAddress(html: string): { suburb: string | null; postcode: string
 }
 
 function extractTrades(html: string, url: string): string[] {
-  const TRADE_KEYWORDS: Record<string, string[]> = {
-    electrician: ["electrician","electrical","wiring","switchboard","powerpoint","lighting install"],
-    plumber:     ["plumber","plumbing","drain","pipe","hot water","blocked drain"],
-    carpenter:   ["carpenter","carpentry","cabinetry","joinery","decking","framing"],
-    roofer:      ["roofing","roofer","gutters","roof repair","colorbond","re-roof"],
-    painter:     ["painter","painting","interior paint","exterior paint","wall painting"],
-    tiler:       ["tiler","tiling","floor tile","wall tile","bathroom tile"],
-    landscaper:  ["landscaper","landscaping","garden design","lawn","retaining wall"],
-    builder:     ["builder","building","construction","renovation","extension"],
-    concreter:   ["concreter","concreting","concrete","driveway","slab"],
-    plasterer:   ["plasterer","plastering","render","gyprock"],
-    airconditioning: ["air conditioning","aircon","hvac","split system","ducted"],
-    solar:       ["solar","solar panel","photovoltaic","battery storage"],
+  // Score each trade by keyword frequency -- avoids false positives from
+  // generic words like "building" on an electrician's site
+  const TRADE_KEYWORDS: Record<string, { words: string[]; weight: number }[]> = {
+    electrician: [
+      { words: ["electrician","electrical contractor","licensed electrician"], weight: 5 },
+      { words: ["switchboard","cabling","powerpoint","data point","smoke alarm install"], weight: 3 },
+      { words: ["wiring","circuit","electrical work","electrical services"], weight: 2 },
+    ],
+    plumber: [
+      { words: ["plumber","plumbing contractor","licensed plumber"], weight: 5 },
+      { words: ["hot water","drain","blocked drain","pipe repair","gas fitting"], weight: 3 },
+      { words: ["bathroom renovation","kitchen plumbing","plumbing services"], weight: 2 },
+    ],
+    carpenter: [
+      { words: ["carpenter","carpentry","cabinet maker","joinery"], weight: 5 },
+      { words: ["decking","framing","timber frame","custom cabinets"], weight: 3 },
+      { words: ["woodwork","fit-out","kitchen renovation"], weight: 2 },
+    ],
+    roofer: [
+      { words: ["roofer","roofing contractor","re-roofing"], weight: 5 },
+      { words: ["colorbond roof","tile roof","roof repair","gutter replacement"], weight: 3 },
+      { words: ["roofing services","roof restoration","metal roofing"], weight: 2 },
+    ],
+    painter: [
+      { words: ["painter","painting contractor","house painter"], weight: 5 },
+      { words: ["interior painting","exterior painting","commercial painting"], weight: 3 },
+      { words: ["colour consultation","feature wall","painting services"], weight: 2 },
+    ],
+    tiler: [
+      { words: ["tiler","tiling contractor","floor tiler"], weight: 5 },
+      { words: ["bathroom tiles","floor tiles","wall tiles","shower tiling"], weight: 3 },
+      { words: ["tile installation","grout","mosaic"], weight: 2 },
+    ],
+    landscaper: [
+      { words: ["landscaper","landscaping contractor","garden designer"], weight: 5 },
+      { words: ["lawn mowing","retaining wall","irrigation","garden maintenance"], weight: 3 },
+      { words: ["turf","mulching","paving","garden design"], weight: 2 },
+    ],
+    builder: [
+      { words: ["builder","building contractor","licensed builder","hia member"], weight: 5 },
+      { words: ["home extension","new home build","knockdown rebuild"], weight: 3 },
+    ],
+    concreter: [
+      { words: ["concreter","concrete contractor","concrete driveway"], weight: 5 },
+      { words: ["exposed aggregate","concrete slab","concrete paths"], weight: 3 },
+    ],
+    airconditioning: [
+      { words: ["air conditioning","aircon installer","hvac contractor"], weight: 5 },
+      { words: ["split system","ducted air","reverse cycle","refrigeration"], weight: 3 },
+    ],
+    solar: [
+      { words: ["solar installer","solar panel installation","clean energy council"], weight: 5 },
+      { words: ["battery storage","solar power","photovoltaic","solar quotes"], weight: 3 },
+    ],
   };
 
-  const text = (html + " " + url).toLowerCase();
-  const found: string[] = [];
-  for (const [trade, keywords] of Object.entries(TRADE_KEYWORDS)) {
-    if (keywords.some(k => text.includes(k))) found.push(trade);
-    if (found.length >= 3) break;
+  // Only scan visible text content, not full HTML (avoids script/style keywords)
+  const visibleText = html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+
+  const scores: Record<string, number> = {};
+
+  for (const [trade, tiers] of Object.entries(TRADE_KEYWORDS)) {
+    let score = 0;
+    for (const tier of tiers) {
+      for (const word of tier.words) {
+        // Count occurrences -- repeated mentions = stronger signal
+        const count = (visibleText.match(new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi")) ?? []).length;
+        if (count > 0) score += tier.weight * Math.min(count, 3);
+      }
+    }
+    if (score > 0) scores[trade] = score;
   }
-  return found.length > 0 ? found : ["builder"]; // default fallback
+
+  // Sort by score, return top 2 only (don't over-tag)
+  const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+  const result = sorted.slice(0, 2).map(([trade]) => trade);
+
+  return result.length > 0 ? result : [];
 }
 
 async function downloadAndStore(
@@ -150,7 +211,8 @@ export async function POST(req: NextRequest) {
   const phone        = extractPhone(html);
   const { suburb, postcode, state } = extractAddress(html);
   const trades       = extractTrades(html, siteUrl);
-  const photoUrls    = extractPhotos(html, siteUrl);
+  const rawPhotos    = extractPhotos(html, siteUrl);
+  const photoUrls    = filterPhotos(rawPhotos, logo);
 
   // Check if listing already exists (by website_url)
   const { data: existing } = await admin
