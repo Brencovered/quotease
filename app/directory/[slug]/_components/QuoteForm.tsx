@@ -7,6 +7,8 @@ type Listing = {
   id: string;
   business_name: string;
   scraped_contact_email: string | null;
+  is_claimed?: boolean;
+  owner_email?: string | null;
 };
 
 export default function QuoteForm({ listing }: { listing: Listing }) {
@@ -30,13 +32,19 @@ export default function QuoteForm({ listing }: { listing: Listing }) {
     }
     setSending(true);
     setError("");
+    // Claimed listing: goes straight to the account's real email, not the
+    // (possibly stale) scraped contact address. Unclaimed: the API route
+    // itself falls back to Swiftscope's inbox if the scraped address is
+    // missing/invalid, and includes a claim-your-page nudge.
+    const toEmail = listing.is_claimed && listing.owner_email ? listing.owner_email : listing.scraped_contact_email;
     const res = await fetch("/api/directory/enquire", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         listing_id: listing.id,
         business_name: listing.business_name,
-        to_email: listing.scraped_contact_email,
+        to_email: toEmail,
+        is_claimed: listing.is_claimed ?? false,
         name,
         email,
         phone,

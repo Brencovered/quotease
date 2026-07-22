@@ -5,14 +5,13 @@ import Link from "next/link";
 import { MapPin, Star, Phone, Globe, Mail, ChevronLeft, ChevronRight, X, Send, Check, BadgeCheck, MessageSquare, ArrowRight } from "lucide-react";
 import { getGoogleReviewsUrl } from "@/lib/seo/gbp";
 import { buildDirectorySlug } from "@/lib/seo/meta";
-import { CLAIMED_DIRECTORY_PAGES_ENABLED } from "@/lib/featureFlags";
+import { CLAIMED_DIRECTORY_PAGES_ENABLED, QUOTE_REQUESTS_ENABLED } from "@/lib/featureFlags";
 
 // Temporarily off (kept in sync with app/directory/[slug]/page.tsx): with few
 // tradies in the directory yet, a homeowner submitting an enquiry that never
 // gets a response hurts trust more than not offering it at all. Flip back
 // once directory coverage is deep enough that a submitted enquiry reliably
 // reaches a real, responsive tradie.
-const QUOTE_REQUESTS_ENABLED = false;
 
 const TRADE_LABELS: Record<string,string> = {
   electrician:"Electrician", plumber:"Plumber", builder:"Builder",

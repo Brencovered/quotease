@@ -28,6 +28,27 @@
 export const LEADS_ENABLED = false;
 
 /**
+ * The per-listing "request a quote" enquiry form on directory pages
+ * (app/api/directory/enquire, the QuoteForm component). Separate from
+ * LEADS_ENABLED above -- that's the broader lead-matching flow
+ * (/get-quotes, homeowner posts a job, matched tradies get notified),
+ * which stays off. This is just the simpler, per-business enquiry form.
+ *
+ * Routing:
+ *  - Claimed listing: sent to the account's real email (profiles.contact_email)
+ *  - Unclaimed listing: sent to the scraped contact email if we have a
+ *    valid one on file, falling back to Swiftscope's own inbox otherwise
+ *    -- and includes a claim-your-page nudge, since this is a genuine,
+ *    concrete "here's why you'd want an account" moment for an unclaimed
+ *    business.
+ *
+ * Was two separate hardcoded `false` constants in
+ * app/directory/[slug]/page.tsx and components/DirectoryCard.tsx, kept in
+ * sync manually -- promoted to one shared flag here instead.
+ */
+export const QUOTE_REQUESTS_ENABLED = true;
+
+/**
  * The free claimed directory page: ABN/licence verification badge, manual
  * photo gallery, quote capture into the real quotes table, monthly goal
  * setting, and the business marketing pack. No paid tier -- claiming a

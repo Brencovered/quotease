@@ -8,7 +8,7 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { CLAIMED_DIRECTORY_PAGES_ENABLED } from "@/lib/featureFlags";
+import { CLAIMED_DIRECTORY_PAGES_ENABLED, QUOTE_REQUESTS_ENABLED } from "@/lib/featureFlags";
 import MarketingNav from "@/components/MarketingNav";
 import DirectoryCard from "@/components/DirectoryCard";
 import { tradieListingMeta, buildDirectorySlug } from "@/lib/seo/meta";
@@ -28,7 +28,6 @@ import TradieSchema from "@/components/seo/TradieSchema";
  * real, responsive tradie. Nothing else needs to change to re-enable --
  * the form, API route, and DB table are untouched.
  */
-const QUOTE_REQUESTS_ENABLED = false;
 
 /* ------------------------------------------------------------------ */
 /*  Trade colour / label maps (synced with DirectoryCard)               */
@@ -214,20 +213,23 @@ export default async function TradieProfilePage({
   const cachedPhotos = photos.filter(p => p.startsWith("http"));
   const reviews   = listing.place_id ? await getPlaceReviews(listing.place_id) : [];
 
-  // The verified badge is the only claimed-page addition on this public
-  // page -- gated behind the feature flag until the full v1 build is
-  // reviewed. Anything owner-only (goals, page management) lives entirely
-  // on /directory/manage, a separate authenticated page, not here, so the
-  // public page never has to know who's viewing it.
+  // The verified badge is a claimed-page addition (gated behind its own
+  // flag). The owner's real contact_email is fetched here too whenever
+  // quote requests are on and this listing is claimed -- a claimed
+  // business's quote enquiries go straight to their real account email,
+  // not the (possibly stale) scraped one. Both live in one lookup rather
+  // than two separate admin-client round trips.
   let isVerifiedBadge = false;
-  if (CLAIMED_DIRECTORY_PAGES_ENABLED && listing.is_claimed && listing.profile_id) {
+  let ownerEmail: string | null = null;
+  if (listing.is_claimed && listing.profile_id && (CLAIMED_DIRECTORY_PAGES_ENABLED || QUOTE_REQUESTS_ENABLED)) {
     const admin = createAdminClient();
     const { data: ownerProfile } = await admin
       .from("profiles")
-      .select("directory_badge_verified")
+      .select("directory_badge_verified, contact_email")
       .eq("id", listing.profile_id)
       .maybeSingle();
     isVerifiedBadge = ownerProfile?.directory_badge_verified ?? false;
+    ownerEmail = ownerProfile?.contact_email ?? null;
   }
 
   return (
@@ -471,7 +473,7 @@ export default async function TradieProfilePage({
 
             {QUOTE_REQUESTS_ENABLED && (
               <div id="quote-form">
-                <QuoteForm listing={{ id: listing.id, business_name: listing.business_name, scraped_contact_email: listing.scraped_contact_email }} />
+                <QuoteForm listing={{ id: listing.id, business_name: listing.business_name, scraped_contact_email: listing.scraped_contact_email, is_claimed: listing.is_claimed ?? false, owner_email: ownerEmail }} />
               </div>
             )}
           </div>

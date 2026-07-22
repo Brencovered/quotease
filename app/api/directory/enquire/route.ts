@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
     listing_id,
     business_name,
     to_email,
+    is_claimed,
     name,
     email,
     phone,
@@ -78,6 +79,7 @@ export async function POST(req: NextRequest) {
         listing_id: typeof listing_id === "string" ? listing_id : null,
         business_name: typeof business_name === "string" ? business_name : null,
         to_email: toAddress,
+        is_claimed: is_claimed === true,
         customer_name: customerName,
         customer_email: customerEmail,
         customer_phone: typeof phone === "string" ? phone.trim() || null : null,
@@ -117,8 +119,21 @@ export async function POST(req: NextRequest) {
     extraFields.push(`<p><strong>Notes:</strong> ${escapeHtml(message)}</p>`);
   }
 
+  const isClaimed = is_claimed === true;
+
+  const claimNudge = isClaimed
+    ? ""
+    : `
+    <hr/>
+    <p style="background:#fffbeb;border:1px solid #ffe58f;border-radius:8px;padding:12px 16px;font-size:13px;color:#5a4a00;">
+      This lead came through your free, unclaimed Swiftscope directory page. Claim it to receive enquiries like
+      this straight to your own account, manage your photos and services, and get a verified badge --
+      <a href="https://swiftscope.com.au/directory/claim" style="color:#c98600;font-weight:600;">claim your listing free</a>.
+    </p>
+  `;
+
   const html = `
-    <h2>New quote request from Swiftscope Directory</h2>
+    <h2>${isClaimed ? "New quote request via your Swiftscope page" : "New quote request from Swiftscope Directory"}</h2>
     <p><strong>Business:</strong> ${escapeHtml(typeof business_name === "string" ? business_name : "")}</p>
     <hr/>
     <p><strong>From:</strong> ${escapeHtml(customerName)}</p>
@@ -126,6 +141,7 @@ export async function POST(req: NextRequest) {
     ${extraFields.join("")}
     <hr/>
     <p><strong>Job:</strong> ${escapeHtml(jobDesc)}</p>
+    ${claimNudge}
     <hr/>
     <p style="color:#888;font-size:12px">Sent via Swiftscope Directory - swiftscope.com.au/directory</p>
   `;
