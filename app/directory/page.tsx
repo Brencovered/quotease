@@ -298,21 +298,25 @@ export default async function DirectoryPage({
       if (isPureTradeQuery && !effectiveTrade) effectiveTrade = detectedTrade;
 
       // Each remaining word must appear *somewhere* across
-      // business_name/blurb/services_offered, in any order -- far more
-      // forgiving than requiring the entire original phrase to match
-      // verbatim, which almost never happens. Each .or() call ANDs
-      // against the others; only conditions *within* one .or() call are
-      // OR'd. PostgREST's or() filter values must NOT be wrapped in
-      // quotes for a plain word like this (that was the actual bug --
-      // "%spark%" quoted like that fails to parse); quoting is only for
-      // values containing the syntax's own reserved characters, which
-      // are already stripped below.
+      // business_name/blurb, in any order -- far more forgiving than
+      // requiring the entire original phrase to match verbatim, which
+      // almost never happens. Each .or() call ANDs against the others;
+      // only conditions *within* one .or() call are OR'd.
+      //
+      // Deliberately NOT searching services_offered here anymore --
+      // confirmed twice in production that including
+      // "services_offered::text.ilike.%x%" inside this nested/grouped
+      // .or() filter fails to parse under PostgREST's grammar (even
+      // fully unquoted, plain single words with nothing special in them
+      // still crashed). Rather than guess a third time, keep this to the
+      // two plain, uncast text columns, which are guaranteed to work --
+      // if service-keyword search needs to come back, it should go
+      // through a proper Postgres function instead of an inline filter
+      // cast, and be tested against the real PostgREST endpoint first.
       for (const word of wordsToSearch) {
         const escaped = word.replace(/["%,()]/g, "");
         if (!escaped) continue;
-        query = query.or(
-          `business_name.ilike.%${escaped}%,blurb.ilike.%${escaped}%,services_offered::text.ilike.%${escaped}%`
-        );
+        query = query.or(`business_name.ilike.%${escaped}%,blurb.ilike.%${escaped}%`);
       }
     }
 
