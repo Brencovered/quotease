@@ -8,10 +8,9 @@ import {
   Lock,
   Check,
   ClipboardList,
-  MessageSquare,
-  Award,
   ArrowRight,
   Sparkles,
+  Phone,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -642,9 +641,9 @@ export default async function DirectoryPage({
 
               <div className="grid sm:grid-cols-3 gap-6 lg:gap-8">
                 {[
-                  { num: "01", icon: ClipboardList, title: "Post your job", desc: "Describe what you need done, your suburb, and any budget or timing preferences." },
-                  { num: "02", icon: MessageSquare, title: "Get up to 3 quotes", desc: "Matched local tradies review your job and respond with detailed quotes." },
-                  { num: "03", icon: Award, title: "Hire with confidence", desc: "Compare ratings, read real reviews, and choose the right tradie for you." },
+                  { num: "01", icon: Search, title: "Search by trade & suburb", desc: "Tell us what you need (electrician, plumber, roofer, and more) and where you are." },
+                  { num: "02", icon: ClipboardList, title: "Compare local tradies", desc: "Browse profiles with real Google ratings, reviews, photos, licences and services offered." },
+                  { num: "03", icon: Phone, title: "Contact them directly", desc: "Call, visit their website, or request a quote straight from their page. No middleman, no waiting to be matched." },
                 ].map(({ num, icon: Icon, title, desc }, i) => (
                   <div key={num} className="reveal group relative p-6 sm:p-8 rounded-2xl border text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
                     style={{ borderColor: "var(--line)", background: "var(--surface)", animationDelay: `${i * 100}ms` }}>

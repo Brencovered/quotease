@@ -94,7 +94,7 @@ export function generateTradeSuburbFaqs(
     },
     {
       question: `How do I find a reliable ${tradeSingular.toLowerCase()} in ${suburb}, ${state}?`,
-      answer: `Post your job on Swiftscope - it's free. Local ${suburb} ${tradePlural.toLowerCase()} will respond with quotes. You can compare Google ratings and reviews before choosing who to contact.`,
+      answer: `Browse the ${suburb} ${tradePlural.toLowerCase()} listed on Swiftscope, it's free. Compare Google ratings, reviews, licences and photos, then contact your chosen ${tradeSingular.toLowerCase()} directly by phone, website, or quote request.`,
     },
     {
       question: `Do ${suburb} ${tradePlural.toLowerCase()} on Swiftscope have insurance?`,
@@ -102,7 +102,7 @@ export function generateTradeSuburbFaqs(
     },
     {
       question: `Can I get same-day quotes from ${suburb} ${tradePlural.toLowerCase()}?`,
-      answer: `Many ${suburb} ${tradePlural.toLowerCase()} on Swiftscope respond to job requests within a few hours. Post your job now and see who's available.`,
+      answer: `Many ${suburb} ${tradePlural.toLowerCase()} on Swiftscope respond quickly to direct enquiries. Contact a few directly by phone or quote request to compare availability.`,
     },
   ];
 }
