@@ -115,7 +115,7 @@ export default function DirectorySearchForm({
             type="text"
             name="search"
             defaultValue={search ?? ""}
-            placeholder="Business name"
+            placeholder="Name or service"
             className="app-field pl-8 pr-3 text-[13px] w-full bg-white"
           />
         </div>

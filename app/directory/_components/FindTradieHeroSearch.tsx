@@ -170,13 +170,13 @@ export default function FindTradieHeroSearch({
                 </div>
               </div>
 
-              {/* Business name */}
+              {/* Business name / service search */}
               <div className="sm:col-span-3 relative">
                 <label
                   htmlFor="businessName"
                   className="block text-[12px] font-bold text-[var(--ink-soft)] mb-1.5"
                 >
-                  Business name
+                  Name or service
                 </label>
                 <div className="relative">
                   <Search
@@ -191,7 +191,7 @@ export default function FindTradieHeroSearch({
                       setBusinessName(e.target.value);
                       if (error) setError("");
                     }}
-                    placeholder="Know who you want?"
+                    placeholder="Business name or service, e.g. deck building"
                     className="app-field text-[14px] pl-9 pr-3 bg-white w-full"
                   />
                 </div>

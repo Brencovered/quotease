@@ -37,6 +37,7 @@ type Listing = {
   google_rating: number | null; google_reviews_count: number | null;
   photo_references: string[] | null; place_id: string | null;
   blurb: string | null; logo_url: string | null;
+  services_offered?: string[] | null;
   is_claimed?: boolean | null;
 };
 
@@ -427,6 +428,23 @@ export default function DirectoryCard({ listing, index = 0 }: { listing: Listing
           {/* Blurb */}
           {listing.blurb && (
             <p className="text-[12.5px] text-gray-600 leading-relaxed mb-3 line-clamp-2 flex-1">{listing.blurb}</p>
+          )}
+
+          {/* Services offered -- compact, so a service-based search match is
+              visible on the card itself, not just findable */}
+          {listing.services_offered && listing.services_offered.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {listing.services_offered.slice(0, 3).map((s) => (
+                <span key={s} className="text-[11px] font-medium bg-gray-50 text-gray-600 rounded-full px-2 py-0.5">
+                  {s}
+                </span>
+              ))}
+              {listing.services_offered.length > 3 && (
+                <span className="text-[11px] font-medium text-gray-400 px-1 py-0.5">
+                  +{listing.services_offered.length - 3} more
+                </span>
+              )}
+            </div>
           )}
 
           {/* Actions */}

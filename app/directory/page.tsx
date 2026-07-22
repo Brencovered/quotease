@@ -276,7 +276,19 @@ export default async function DirectoryPage({
 
     if (trade) query = query.contains("trades", [trade]);
 
-    if (search) query = query.ilike("business_name", `%${search}%`);
+    if (search) {
+      // Match business name, description, and services offered -- so a
+      // search like "deck building" or "roof repairs" can surface a
+      // tradie whose blurb/services mention it even if their trade
+      // category alone wouldn't (e.g. a carpenter who does deck work).
+      // services_offered is a text[] column -- ::text cast lets ilike
+      // match against its serialized contents (PostgREST supports column
+      // casts directly in filter expressions).
+      const escaped = search.replace(/[%,]/g, "");
+      query = query.or(
+        `business_name.ilike.%${escaped}%,blurb.ilike.%${escaped}%,services_offered::text.ilike.%${escaped}%`
+      );
+    }
 
     if (postcode) {
       query = query.ilike("postcode", `${postcode}%`);
