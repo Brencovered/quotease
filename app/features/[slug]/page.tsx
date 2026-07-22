@@ -147,6 +147,60 @@ export default async function FeatureDetailPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
+      {/* WORKFLOW */}
+      {feature.workflow && feature.workflow.length > 0 && (
+        <div className="bg-[#f8f9fa] border-b border-[#e8ecef]">
+          <div className="max-w-7xl mx-auto px-6 py-16">
+            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">How it works</p>
+            <h2 className="font-display uppercase text-[2rem] sm:text-[2.6rem] leading-[0.95] text-[#0a1722] mb-12">
+              From zero to done
+            </h2>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {feature.workflow.map((step) => (
+                <div key={step.step} className="relative bg-white rounded-2xl border border-[#e8ecef] p-6">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="w-8 h-8 rounded-full bg-[#ffb400] text-[#0a1722] font-display text-[1rem] flex items-center justify-center shrink-0 leading-none">
+                      {step.step}
+                    </span>
+                    <p className="font-bold text-[14.5px] text-[#0a1722] leading-tight">{step.title}</p>
+                  </div>
+                  <p className="text-[13.5px] text-[#5a6a78] leading-relaxed">{step.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* WHY SWIFTSCOPE */}
+      {feature.whySwiftscope && feature.whySwiftscope.length > 0 && (
+        <div className="bg-white border-b border-[#e8ecef]">
+          <div className="max-w-7xl mx-auto px-6 py-16">
+            <div className="grid md:grid-cols-2 gap-16 items-start">
+              <div>
+                <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Why Swiftscope</p>
+                <h2 className="font-display uppercase text-[2rem] sm:text-[2.6rem] leading-[0.95] text-[#0a1722] mb-4">
+                  Not another tool.<br />The last one.
+                </h2>
+                <p className="text-[14.5px] text-[#5a6a78] leading-relaxed border-l-2 border-[#ffb400] pl-4">
+                  {feature.valueStatement}
+                </p>
+                <div className="mt-8">
+                  <Link href="/signup" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-7 py-3.5 rounded-xl hover:opacity-90">
+                    Start free trial <ArrowRight size={15} />
+                  </Link>
+                </div>
+              </div>
+              <div className="space-y-6">
+                {feature.whySwiftscope.map((para, i) => (
+                  <p key={i} className="text-[15px] text-[#3a4a58] leading-relaxed">{para}</p>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* OTHER FEATURES */}
       <div className="bg-[#f8f9fa] border-b border-[#e8ecef]">
         <div className="max-w-7xl mx-auto px-6 py-16">
