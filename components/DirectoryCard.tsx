@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { MapPin, Star, Phone, Globe, Mail, ChevronLeft, ChevronRight, Check, BadgeCheck, MessageSquare, ArrowRight } from "lucide-react";
+import { MapPin, Star, Phone, Globe, Mail, ChevronLeft, ChevronRight, Check, BadgeCheck, ArrowRight } from "lucide-react";
 import { getGoogleReviewsUrl } from "@/lib/seo/gbp";
 import { buildDirectorySlug } from "@/lib/seo/meta";
-import { CLAIMED_DIRECTORY_PAGES_ENABLED, QUOTE_REQUESTS_ENABLED } from "@/lib/featureFlags";
+import { CLAIMED_DIRECTORY_PAGES_ENABLED } from "@/lib/featureFlags";
 
 // Temporarily off (kept in sync with app/directory/[slug]/page.tsx): with few
 // tradies in the directory yet, a homeowner submitting an enquiry that never
@@ -331,17 +331,9 @@ export default function DirectoryCard({ listing, index = 0 }: { listing: Listing
           {/* Actions */}
           <div className="mt-auto space-y-2 pt-3 border-t border-gray-50">
             <Link
-              href={`/directory/${listing.suburb ? buildDirectorySlug(listing as { id: string; business_name: string; suburb: string }) : listing.id}${QUOTE_REQUESTS_ENABLED ? "#quote-form" : ""}`}
+              href={`/directory/${listing.suburb ? buildDirectorySlug(listing as { id: string; business_name: string; suburb: string }) : listing.id}`}
               className="group w-full bg-[#0a1722] text-white font-bold text-[13.5px] py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#132538] active:scale-[0.98] transition-all">
-              {QUOTE_REQUESTS_ENABLED ? (
-                <>
-                  <MessageSquare size={14} className="group-hover:rotate-[-6deg] transition-transform" /> Request a quote
-                </>
-              ) : (
-                <>
-                  View profile <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
-                </>
-              )}
+              View profile <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
             </Link>
 
             <div className="flex gap-2 justify-center flex-wrap">
