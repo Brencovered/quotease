@@ -21,6 +21,7 @@ import AnimatedCounter from "./_components/AnimatedCounter";
 import DirectorySearchForm from "./_components/DirectorySearchForm";
 import FindTradieHeroSearch from "./_components/FindTradieHeroSearch";
 import { CLAIMED_DIRECTORY_PAGES_ENABLED } from "@/lib/featureFlags";
+import { parseSearchQuery } from "@/lib/directorySearch";
 
 // Sitewide hero counters (total listings, suburbs covered) don't depend on
 // searchParams at all - every visitor to /directory sees the same two
@@ -274,21 +275,35 @@ export default async function DirectoryPage({
       .from("directory_listing")
       .select("*", { count: "exact" });
 
-    if (trade) query = query.contains("trades", [trade]);
+    // A trade keyword detected in the free-text search (e.g. "urgent
+    // plumber" -> plumber) only applies if the user hasn't already picked
+    // a trade via the structured Trade field -- that explicit choice
+    // always wins.
+    let effectiveTrade = trade;
 
     if (search) {
-      // Match business name, description, and services offered -- so a
-      // search like "deck building" or "roof repairs" can surface a
-      // tradie whose blurb/services mention it even if their trade
-      // category alone wouldn't (e.g. a carpenter who does deck work).
-      // services_offered is a text[] column -- ::text cast lets ilike
-      // match against its serialized contents (PostgREST supports column
-      // casts directly in filter expressions).
-      const escaped = search.replace(/[%,]/g, "");
-      query = query.or(
-        `business_name.ilike.%${escaped}%,blurb.ilike.%${escaped}%,services_offered::text.ilike.%${escaped}%`
-      );
+      const { detectedTrade, significantWords } = parseSearchQuery(search);
+      if (!effectiveTrade && detectedTrade) effectiveTrade = detectedTrade;
+
+      // Each remaining word (after stripping a detected trade and noise
+      // words like "urgent"/"asap") must appear *somewhere* across
+      // business_name/blurb/services_offered, in any order -- far more
+      // forgiving than requiring the entire original phrase to match
+      // verbatim, which almost never happens. Each .or() call ANDs
+      // against the others; only conditions *within* one .or() call are
+      // OR'd. Values are individual words post-tokenizing, so they can't
+      // contain the raw spaces that previously broke PostgREST's filter
+      // parser -- quoted anyway as a safety net.
+      for (const word of significantWords) {
+        const escaped = word.replace(/["%,()]/g, "");
+        if (!escaped) continue;
+        query = query.or(
+          `business_name.ilike."%${escaped}%",blurb.ilike."%${escaped}%",services_offered::text.ilike."%${escaped}%"`
+        );
+      }
     }
+
+    if (effectiveTrade) query = query.contains("trades", [effectiveTrade]);
 
     if (postcode) {
       query = query.ilike("postcode", `${postcode}%`);
