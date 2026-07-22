@@ -162,7 +162,7 @@ export default function QuoteForm({ listing }: { listing: Listing }) {
         <button
           onClick={submit}
           disabled={sending}
-          className="w-full bg-[#0a1722] text-white font-bold text-[14px] py-3.5 rounded-xl flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 transition-opacity"
+          className="w-full bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] py-3.5 rounded-xl flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
           <Send size={14} /> {sending ? "Sending..." : "Send quote request"}
         </button>
