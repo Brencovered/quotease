@@ -44,7 +44,19 @@ const NOISE_WORDS = new Set([
 
 export interface ParsedSearchQuery {
   detectedTrade: string | null;
+  /** Non-noise words with any detected trade keyword removed -- meant to
+   * be ANDed together as a text search, used when the query is NOT
+   * confidently just "trade + noise" (see significantWords vs
+   * nonNoiseWords below). */
   significantWords: string[];
+  /** Every non-noise word, trade keyword included -- use this instead of
+   * significantWords whenever there's anything left besides the detected
+   * trade, since a word that happens to match a trade keyword might just
+   * be part of a business name ("Spark Ease Electrical") rather than an
+   * actual intent to filter by trade. Only treat detectedTrade as a real
+   * filter when significantWords is empty, i.e. the whole query resolved
+   * to nothing but a trade + filler words ("urgent plumber"). */
+  nonNoiseWords: string[];
 }
 
 export function parseSearchQuery(rawQuery: string): ParsedSearchQuery {
@@ -68,9 +80,11 @@ export function parseSearchQuery(rawQuery: string): ParsedSearchQuery {
 
   const words = remaining.split(/\s+/).map((w) => w.trim()).filter(Boolean);
   const significantWords: string[] = [];
+  const nonNoiseWords: string[] = [];
 
   for (const word of words) {
     if (NOISE_WORDS.has(word)) continue;
+    nonNoiseWords.push(word);
 
     if (!detectedTrade) {
       const match = Object.entries(TRADE_KEYWORDS).find(([, keywords]) => keywords.includes(word));
@@ -83,5 +97,5 @@ export function parseSearchQuery(rawQuery: string): ParsedSearchQuery {
     significantWords.push(word);
   }
 
-  return { detectedTrade, significantWords };
+  return { detectedTrade, significantWords, nonNoiseWords };
 }

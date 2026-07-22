@@ -282,23 +282,36 @@ export default async function DirectoryPage({
     let effectiveTrade = trade;
 
     if (search) {
-      const { detectedTrade, significantWords } = parseSearchQuery(search);
-      if (!effectiveTrade && detectedTrade) effectiveTrade = detectedTrade;
+      const { detectedTrade, significantWords, nonNoiseWords } = parseSearchQuery(search);
 
-      // Each remaining word (after stripping a detected trade and noise
-      // words like "urgent"/"asap") must appear *somewhere* across
+      // Only treat the detected trade as a real filter when the query
+      // resolved to *nothing but* that trade + noise words ("urgent
+      // plumber", "roofer asap") -- confidently a trade search. If
+      // anything else is left over, a trade-like word might just be
+      // part of a business name ("Spark Ease Electrical"), so fall back
+      // to a plain text search across all non-noise words instead,
+      // trade keyword included, rather than risk excluding the exact
+      // business being searched for.
+      const isPureTradeQuery = significantWords.length === 0 && !!detectedTrade;
+      const wordsToSearch = isPureTradeQuery ? [] : nonNoiseWords;
+
+      if (isPureTradeQuery && !effectiveTrade) effectiveTrade = detectedTrade;
+
+      // Each remaining word must appear *somewhere* across
       // business_name/blurb/services_offered, in any order -- far more
       // forgiving than requiring the entire original phrase to match
       // verbatim, which almost never happens. Each .or() call ANDs
       // against the others; only conditions *within* one .or() call are
-      // OR'd. Values are individual words post-tokenizing, so they can't
-      // contain the raw spaces that previously broke PostgREST's filter
-      // parser -- quoted anyway as a safety net.
-      for (const word of significantWords) {
+      // OR'd. PostgREST's or() filter values must NOT be wrapped in
+      // quotes for a plain word like this (that was the actual bug --
+      // "%spark%" quoted like that fails to parse); quoting is only for
+      // values containing the syntax's own reserved characters, which
+      // are already stripped below.
+      for (const word of wordsToSearch) {
         const escaped = word.replace(/["%,()]/g, "");
         if (!escaped) continue;
         query = query.or(
-          `business_name.ilike."%${escaped}%",blurb.ilike."%${escaped}%",services_offered::text.ilike."%${escaped}%"`
+          `business_name.ilike.%${escaped}%,blurb.ilike.%${escaped}%,services_offered::text.ilike.%${escaped}%`
         );
       }
     }
