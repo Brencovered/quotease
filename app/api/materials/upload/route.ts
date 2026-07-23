@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveBusinessId } from "@/lib/team";
+import { normalizeTradeValue } from "@/lib/genericTrades";
 
 /* ------------------------------------------------------------------ */
 /*  Simple CSV helpers                                                 */
@@ -125,7 +126,7 @@ export async function POST(request: Request) {
   let defaultTrade = "electrician";
   try {
     const { data: profile } = await supabase.from("profiles").select("trade").eq("id", businessId).single();
-    if (profile?.trade) defaultTrade = profile.trade;
+    if (profile?.trade) defaultTrade = normalizeTradeValue(profile.trade) ?? defaultTrade;
   } catch { /* ignore */ }
 
   /* ---- build column index map ---- */
@@ -182,6 +183,7 @@ export async function POST(request: Request) {
     let sku: string | null = null;
     let unit = "ea";
     let trade = defaultTrade;
+    let category: string | null = null;
 
     if (hasHeader) {
       if (ci.description >= 0) description = fields[ci.description] ?? "";
@@ -189,7 +191,24 @@ export async function POST(request: Request) {
       if (ci.supplier >= 0) supplier = fields[ci.supplier] ?? "";
       if (ci.sku >= 0) sku = fields[ci.sku] ?? null;
       if (ci.unit >= 0) unit = fields[ci.unit] ?? "ea";
-      if (ci.trade >= 0) trade = fields[ci.trade] ?? defaultTrade;
+      if (ci.trade >= 0) {
+        const rawTradeValue = fields[ci.trade] ?? "";
+        const normalized = normalizeTradeValue(rawTradeValue);
+        if (normalized) {
+          // Genuinely a recognised trade (e.g. the column really did say
+          // "carpenter", or a synonym like "electrical") -- safe to use
+          // as the hard trade filter.
+          trade = normalized;
+        } else if (rawTradeValue.trim()) {
+          // Not a real trade -- this is the supplier's own product
+          // category (e.g. Bunnings' "Timber - Posts", "Decking").
+          // Keep it for reference/search, but never let it silently
+          // become the trade filter -- that's exactly the bug where a
+          // real "Treated Pine Post" became unfindable in every trade's
+          // quote builder because nothing was ever tagged "carpenter".
+          category = rawTradeValue.trim();
+        }
+      }
 
       /* Fallback: first unclaimed col = description, second with $/number = cost.
          Never fall back to the SKU column -- importing codes as descriptions
@@ -234,7 +253,8 @@ export async function POST(request: Request) {
       description,
       unit: (unit || "ea").trim(),
       cost_price: costPrice,
-      trade: (trade || defaultTrade).trim(),
+      trade,
+      category,
       imported_at: new Date().toISOString(),
     });
 

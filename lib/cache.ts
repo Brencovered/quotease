@@ -25,6 +25,9 @@
 
 import { unstable_cache } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { ALL_TRADES } from "@/lib/genericTrades";
+
+const ALL_CANONICAL_TRADE_KEYS = ALL_TRADES.map((t) => t.key);
 
 /* ------------------------------------------------------------------ */
 /*  Price book items (the biggest payload on the new-quote page)       */
@@ -32,19 +35,46 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export const getCachedPriceBook = unstable_cache(
   async (businessId: string, trade: string) => {
     const supabase = createAdminClient();
-    const { data, error } = await supabase
-      .from("price_book_items")
-      .select("id,description,cost_price")
-      .eq("profile_id", businessId)
-      .eq("trade", trade)
-      .order("description")
-      .limit(2000);
 
-    if (error) {
-      console.error("getCachedPriceBook error:", error.message);
+    // Real bug this works around: price_book_items.trade should always be
+    // one of the canonical trade keys, but CSV import used to (see
+    // app/api/materials/upload's history) write a raw supplier product
+    // category straight into this column instead ("Timber - Posts",
+    // "Decking", etc, from a Bunnings Trade export) -- those rows can
+    // never match .eq("trade", requestedTrade), so they were silently
+    // invisible to every trade's quote builder despite clearly being
+    // real, relevant materials. Import now validates against real trade
+    // values (see normalizeTradeValue), but existing rows imported before
+    // that fix still carry the raw category as their trade value --
+    // surface them here too rather than leave them orphaned.
+    const [exactMatch, miscategorized] = await Promise.all([
+      supabase
+        .from("price_book_items")
+        .select("id,description,cost_price")
+        .eq("profile_id", businessId)
+        .eq("trade", trade)
+        .order("description")
+        .limit(2000),
+      supabase
+        .from("price_book_items")
+        .select("id,description,cost_price")
+        .eq("profile_id", businessId)
+        .not("trade", "in", `(${ALL_CANONICAL_TRADE_KEYS.join(",")})`)
+        .order("description")
+        .limit(2000),
+    ]);
+
+    if (exactMatch.error) {
+      console.error("getCachedPriceBook error:", exactMatch.error.message);
       return [];
     }
-    return data ?? [];
+    if (miscategorized.error) {
+      // Not fatal -- still return the exact-match rows we did get.
+      console.error("getCachedPriceBook (miscategorized) error:", miscategorized.error.message);
+      return exactMatch.data ?? [];
+    }
+
+    return [...(exactMatch.data ?? []), ...(miscategorized.data ?? [])];
   },
   ["price-book"],
   { revalidate: 300 } // 5 minutes
@@ -56,18 +86,31 @@ export const getCachedPriceBook = unstable_cache(
 export const getCachedLegacyMaterials = unstable_cache(
   async (businessId: string, trade: string) => {
     const supabase = createAdminClient();
-    const { data, error } = await supabase
-      .from("material_items")
-      .select("*")
-      .eq("profile_id", businessId)
-      .eq("trade", trade)
-      .order("label");
+    const [exactMatch, miscategorized] = await Promise.all([
+      supabase
+        .from("material_items")
+        .select("*")
+        .eq("profile_id", businessId)
+        .eq("trade", trade)
+        .order("label"),
+      supabase
+        .from("material_items")
+        .select("*")
+        .eq("profile_id", businessId)
+        .not("trade", "in", `(${ALL_CANONICAL_TRADE_KEYS.join(",")})`)
+        .order("label"),
+    ]);
 
-    if (error) {
-      console.error("getCachedLegacyMaterials error:", error.message);
+    if (exactMatch.error) {
+      console.error("getCachedLegacyMaterials error:", exactMatch.error.message);
       return [];
     }
-    return data ?? [];
+    if (miscategorized.error) {
+      console.error("getCachedLegacyMaterials (miscategorized) error:", miscategorized.error.message);
+      return exactMatch.data ?? [];
+    }
+
+    return [...(exactMatch.data ?? []), ...(miscategorized.data ?? [])];
   },
   ["legacy-materials"],
   { revalidate: 300 }

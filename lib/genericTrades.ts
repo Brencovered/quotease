@@ -177,3 +177,44 @@ export const ALL_TRADES = [
   { key: "surveyor",    label: "Surveyor",          dedicated: false },
   { key: "custom",      label: "Custom",            dedicated: false },
 ];
+
+/**
+ * lib/genericTrades.ts -- normalizeTradeValue()
+ * ----------------------------------------------
+ * Validates a raw string against the real, canonical trade keys above
+ * (plus a few common synonyms/variants), returning null if it doesn't
+ * genuinely match one.
+ *
+ * Exists because of a real bug: price_book_items.trade is the column the
+ * quote builder hard-filters materials on (.eq("trade", tradeKey)), but
+ * CSV import treated any column named "category"/"type"/"discipline" as
+ * an interchangeable synonym for "trade" and wrote the raw value straight
+ * through -- so a supplier's own product category ("Timber - Posts",
+ * "Decking", "Pipe & Fittings") silently became the trade tag, and those
+ * materials could then never be found via .eq("trade", "carpenter"),
+ * despite obviously being carpenter-relevant. Anything writing to or
+ * trusting price_book_items.trade as a real trade filter should validate
+ * through this first.
+ */
+const TRADE_SYNONYMS: Record<string, string> = {
+  electrical: "electrician", electricians: "electrician",
+  plumbing: "plumber", plumbers: "plumber",
+  carpentry: "carpenter", carpenters: "carpenter", joinery: "carpenter", joiner: "carpenter",
+  roofing: "roofer", roofers: "roofer",
+  painting: "painter", painters: "painter",
+  tiling: "tiler", tilers: "tiler",
+  landscaping: "landscaper", landscapers: "landscaper",
+  concreting: "concreter", concreters: "concreter", concrete: "concreter",
+  fencing: "fencer", fencers: "fencer",
+  "air conditioning": "aircon", "air-conditioning": "aircon", hvac: "aircon",
+  surveying: "surveyor", surveyors: "surveyor",
+};
+
+export function normalizeTradeValue(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const cleaned = raw.trim().toLowerCase();
+  if (!cleaned) return null;
+  if (ALL_TRADES.some((t) => t.key === cleaned)) return cleaned;
+  if (TRADE_SYNONYMS[cleaned]) return TRADE_SYNONYMS[cleaned];
+  return null;
+}
