@@ -143,7 +143,7 @@ export default function DashboardPanel({ stats, profit }: Props) {
               const maxVal = Math.max(...stats.monthly.map((x) => x.value), 1);
               const height = Math.max((m.value / maxVal) * 100, 4);
               return (
-                <div key={m.label} className="flex-1 flex flex-col items-center gap-1">
+                <div key={m.label} className="flex-1 h-32 flex flex-col justify-end items-center gap-1">
                   <div className="w-full bg-[var(--amber)] rounded-t-lg" style={{ height: `${height}%` }} />
                   <p className="text-[10px] font-bold text-[var(--ink-faint)]">{m.label}</p>
                 </div>
