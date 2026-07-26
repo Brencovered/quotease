@@ -274,9 +274,16 @@ export function calcElectricianQuote(
     });
   }
 
-  // COES -- always included, not shown as a checkbox
-  const coesHrs = 0.5;
-  lines.push({ label: "Certificate of Electrical Safety (COES)", qty: 1, unit: "each", unitCost: 0, labour: coesHrs, total: Math.round(coesHrs * hourlyRate) });
+  // COES -- always included once there's actually some electrical work
+  // being quoted (genuinely required for real electrical work), not shown
+  // as a checkbox. Was previously pushed completely unconditionally, so a
+  // brand new, entirely blank quote (nothing entered yet) already showed
+  // 0.5h labour and a non-zero total before any actual work was specified
+  // -- same class of bug as the carpenter fixings-allowance fix.
+  if (lines.length > 0) {
+    const coesHrs = 0.5;
+    lines.push({ label: "Certificate of Electrical Safety (COES)", qty: 1, unit: "each", unitCost: 0, labour: coesHrs, total: Math.round(coesHrs * hourlyRate) });
+  }
 
   // CCEW
   if (intake.ccew) addLine("Certificate of Compliance (CCEW)", 1, "each", 0.5, "ccew");
