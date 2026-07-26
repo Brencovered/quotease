@@ -164,7 +164,7 @@ export async function generateQuotePdf(
 
   // ── SCOPE ────────────────────────────────────────────────────────
   sectionLabel("Scope of works");
-  const scopeLines = humanizeIntake(quote.intake_data);
+  const scopeLines = humanizeIntake(quote.intake_data, quote.trade ?? "electrician");
   if (scopeLines.length === 0) {
     text("As discussed on site.", { size: 10.5, color: INK_FAINT });
   } else {

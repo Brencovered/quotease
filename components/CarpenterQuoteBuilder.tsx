@@ -5,9 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
 import { Paperclip, X, ChevronRight, ChevronLeft, Check, Sparkles, AlertTriangle } from "lucide-react";
 import { calcCarpenterQuote, CARPENTER_DEFAULT_MATERIALS, type CarpenterIntake } from "@/lib/calcCarpenter";
-import MaterialsEditor from "@/components/MaterialsEditor";
-import CalcKeyPricingPanel from "@/components/CalcKeyPricingPanel";
-import { resolveCalcCosts, hasRealPriceBook, serializeLinkedItemKeys } from "@/lib/resolveCalcCosts";
+import { resolveCalcCosts, serializeLinkedItemKeys } from "@/lib/resolveCalcCosts";
 import StepCustomer from "./StepCustomer";
 import PackagePicker from "@/components/PackagePicker";
 import VoiceNoteRecorder from "./VoiceNoteRecorder";
@@ -44,7 +42,6 @@ const STEPS = [
   { id: "drawing",   label: "Quote capture" },
   { id: "job",       label: "Job"       },
   { id: "scope",     label: "Scope"     },
-  { id: "materials", label: "Materials" },
   { id: "send",      label: "Send"      },
 ];
 
@@ -570,17 +567,6 @@ export default function CarpenterQuoteBuilder({
           </div>
         </div>
       )}
-
-      {stepId === "materials" && hasRealPriceBook(lib) && (
-        <CalcKeyPricingPanel
-          trade="carpenter"
-          defaults={CARPENTER_DEFAULT_MATERIALS}
-          lib={lib}
-          archetypeDefaults={archetypeDefaults}
-          onSaveDefault={saveCalcDefault}
-        />
-      )}
-      {stepId === "materials" && !hasRealPriceBook(lib) && <MaterialsEditor lib={lib} setLib={setLib} trade="carpenter" defaults={CARPENTER_DEFAULT_MATERIALS} />}
 
       {stepId === "send" && (
         <div className="space-y-4">

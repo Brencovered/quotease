@@ -106,9 +106,15 @@ export default function GenericQuoteBuilder({
   const [description, setDescription] = useState("");
   const [siteAccess,  setSiteAccess]  = useState<GenericIntake["siteAccess"]>("na");
   const [siteAccessNote, setSiteAccessNote] = useState("");
-  const [items,       setItems]       = useState<GenericLineItem[]>(
-    template.defaultItems.map((it) => ({ ...it, id: uid() }))
-  );
+  // A brand new quote starts genuinely empty -- previously seeded from
+  // template.defaultItems, an example starter set with real costs (e.g.
+  // painter: 8h labour @ $75 + paint/primer costs, hundreds of dollars),
+  // so a new quote already showed a substantial total before the tradie
+  // had specified any actual work for this specific job. Same class of
+  // fix as the carpenter fixings-allowance and electrician COES bugs --
+  // a genuinely blank quote should total $0 until something real is
+  // added, via the same materials search used everywhere else.
+  const [items,       setItems]       = useState<GenericLineItem[]>([]);
 
   const [clientName,  setClientName]  = useState("");
   const [clientEmail, setClientEmail] = useState("");

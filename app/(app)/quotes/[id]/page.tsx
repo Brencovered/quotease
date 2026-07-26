@@ -42,7 +42,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
     // missing) - fall through and show the quote page rather than 404.
   }
 
-  const scopeLines = humanizeIntake(quote.intake_data);
+  const scopeLines = humanizeIntake(quote.intake_data, quote.trade ?? "electrician");
   const conditionLines = summarizeConditions(quote.intake_data);
   const savedAnnotations = (quote.intake_data as { annotation_meta?: AnnotationMetaPersisted[] } | null)?.annotation_meta;
   const resolvedAnnotations = await resolveAnnotationFrameUrls(supabase, savedAnnotations);

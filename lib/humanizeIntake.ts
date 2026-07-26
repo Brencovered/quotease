@@ -95,7 +95,7 @@ export const SUPPRESS_VALUES: Record<string, Set<string>> = {
   switchboardRcboMode: new Set(["full_board"]),  // only show per_pole since full_board is obvious
 };
 
-export function humanizeIntakePublic(intake: Record<string, unknown> | null | undefined): string[] {
+export function humanizeIntakePublic(intake: Record<string, unknown> | null | undefined, trade?: string): string[] {
   if (!intake) return [];
   const lines: string[] = [];
 
@@ -197,8 +197,14 @@ export function humanizeIntakePublic(intake: Record<string, unknown> | null | un
     }
   }
 
-  // COES always included
-  lines.push("Certificate of Electrical Safety (COES) - included");
+  // Certificate of Electrical Safety is an electrical-work-specific
+  // compliance document -- was previously pushed unconditionally for
+  // every trade's quote (a carpenter or plumber quote would show it too,
+  // which makes no sense and could look like a fabricated compliance
+  // claim). Only relevant for electrician quotes.
+  if (trade === "electrician") {
+    lines.push("Certificate of Electrical Safety (COES) - included");
+  }
 
   return lines;
 }

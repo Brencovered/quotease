@@ -18,7 +18,7 @@ import MaterialsEditor from "@/components/MaterialsEditor";
 import CalcKeyPricingPanel from "@/components/CalcKeyPricingPanel";
 import PriceHint from "@/components/PriceHint";
 import PackagePicker from "@/components/PackagePicker";
-import { resolveCalcCosts, hasRealPriceBook, serializeLinkedItemKeys } from "@/lib/resolveCalcCosts";
+import { resolveCalcCosts, serializeLinkedItemKeys } from "@/lib/resolveCalcCosts";
 import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import SiteAnnotationReport from "@/components/SiteAnnotationReport";

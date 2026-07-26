@@ -10,9 +10,7 @@ import { analyzeDrawingFile } from "@/lib/analyzeDrawingClient";
 import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import PlanMarkupQuickAdd from "./PlanMarkupQuickAdd";
 import { calcPlumberQuote, PLUMBER_DEFAULT_MATERIALS, type PlumberIntake } from "@/lib/calcPlumber";
-import MaterialsEditor from "@/components/MaterialsEditor";
-import CalcKeyPricingPanel from "@/components/CalcKeyPricingPanel";
-import { resolveCalcCosts, hasRealPriceBook, serializeLinkedItemKeys } from "@/lib/resolveCalcCosts";
+import { resolveCalcCosts, serializeLinkedItemKeys } from "@/lib/resolveCalcCosts";
 import StepCustomer from "./StepCustomer";
 import PackagePicker from "@/components/PackagePicker";
 import ExtraJobLines, { type ExtraLine, extraLinesTotals } from "./ExtraJobLines";
@@ -46,7 +44,6 @@ const STEPS = [
   { id: "drawing",   label: "Quote capture" },
   { id: "job",       label: "Job"       },
   { id: "scope",     label: "Scope"     },
-  { id: "materials", label: "Materials" },
   { id: "send",      label: "Send"      },
 ];
 
@@ -630,17 +627,6 @@ export default function PlumberQuoteBuilder({
           </div>
         </div>
       )}
-
-      {stepId === "materials" && hasRealPriceBook(lib) && (
-        <CalcKeyPricingPanel
-          trade="plumber"
-          defaults={PLUMBER_DEFAULT_MATERIALS}
-          lib={lib}
-          archetypeDefaults={archetypeDefaults}
-          onSaveDefault={saveCalcDefault}
-        />
-      )}
-      {stepId === "materials" && !hasRealPriceBook(lib) && <MaterialsEditor lib={lib} setLib={setLib} trade="plumber" defaults={PLUMBER_DEFAULT_MATERIALS} />}
 
       {stepId === "send" && (
         <div className="space-y-4">
