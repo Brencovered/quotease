@@ -45,16 +45,28 @@ export async function generateStaticParams() {
   // on-demand at runtime (dynamicParams defaults to true).
   try {
     const admin = createAdminClient();
-    const { data: rows } = await admin
-      .from("directory_listing")
-      .select("trades, suburb, postcode")
-      .not("suburb", "is", null);
+    // PostgREST silently caps an unpaginated select at 1,000 rows --
+    // directory_listing has 4,889+ rows with a suburb, so this was only
+    // ever pre-building static params from a fraction of the real
+    // directory. Page through explicitly instead.
+    const PAGE_SIZE = 1000;
+    const rows: { trades: string[] | null; suburb: string | null; postcode: string | null }[] = [];
+    for (let from = 0; ; from += PAGE_SIZE) {
+      const { data: page } = await admin
+        .from("directory_listing")
+        .select("trades, suburb, postcode")
+        .not("suburb", "is", null)
+        .range(from, from + PAGE_SIZE - 1);
+      if (!page || page.length === 0) break;
+      rows.push(...page);
+      if (page.length < PAGE_SIZE) break;
+    }
 
     const counts = new Map<string, number>();
-    for (const row of rows ?? []) {
+    for (const row of rows) {
       const state = postcodeToState(row.postcode);
       for (const trade of row.trades ?? []) {
-        const key = `${tradeToSlug(trade)}-${suburbToSlug(row.suburb)}-${state}`;
+        const key = `${tradeToSlug(trade)}-${suburbToSlug(row.suburb!)}-${state}`;
         counts.set(key, (counts.get(key) ?? 0) + 1);
       }
     }

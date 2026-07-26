@@ -47,12 +47,30 @@ export async function runSeoRefresh(): Promise<SeoRefreshResult> {
   let pagesNewlyDeindexed = 0;
 
   try {
-    const { data: rows, error: rowsErr } = await admin
-      .from("directory_listing")
-      .select("trades, suburb, postcode, google_rating, google_reviews_count")
-      .not("suburb", "is", null);
+    // PostgREST silently caps an unpaginated select at 1,000 rows --
+    // directory_listing now has 4,889+ rows with a suburb, so a plain
+    // .select() here was quietly aggregating against roughly a fifth of
+    // the real directory and calling it the whole thing. This is exactly
+    // why trade counts per suburb looked far lower here than in the admin
+    // directory's own search (e.g. 81 results for a suburb there, a
+    // fraction of that reflected in trade_suburb_pages). Page through the
+    // full table explicitly rather than relying on one unbounded select --
+    // same fix already applied once before to the admin coverage
+    // dashboard for this exact class of bug.
+    const PAGE_SIZE = 1000;
+    const rows: { trades: string[] | null; suburb: string | null; postcode: string | null; google_rating: number | null; google_reviews_count: number | null }[] = [];
+    for (let from = 0; ; from += PAGE_SIZE) {
+      const { data: page, error: rowsErr } = await admin
+        .from("directory_listing")
+        .select("trades, suburb, postcode, google_rating, google_reviews_count")
+        .not("suburb", "is", null)
+        .range(from, from + PAGE_SIZE - 1);
 
-    if (rowsErr) throw new Error(`directory_listing fetch failed: ${rowsErr.message}`);
+      if (rowsErr) throw new Error(`directory_listing fetch failed: ${rowsErr.message}`);
+      if (!page || page.length === 0) break;
+      rows.push(...page);
+      if (page.length < PAGE_SIZE) break;
+    }
 
     type Agg = { suburb: string; state: string; count: number; ratingSum: number; ratingCount: number; reviews: number };
     // Key includes state -- suburb name alone can collide across states
@@ -61,7 +79,7 @@ export async function runSeoRefresh(): Promise<SeoRefreshResult> {
     // different physical locations into one aggregate.
     const aggregates = new Map<string, Agg>(); // key: `${trade}|${suburbSlug}|${state}`
 
-    for (const row of rows ?? []) {
+    for (const row of rows) {
       if (!row.suburb) continue;
       const suburbSlug = suburbToSlug(row.suburb);
       const state = postcodeToState(row.postcode);
@@ -79,11 +97,18 @@ export async function runSeoRefresh(): Promise<SeoRefreshResult> {
     }
     pagesScanned = aggregates.size;
 
-    const { data: existingPages } = await admin
-      .from("trade_suburb_pages")
-      .select("trade, suburb_slug, state, is_indexed");
+    const existingPages: { trade: string; suburb_slug: string; state: string; is_indexed: boolean }[] = [];
+    for (let from = 0; ; from += PAGE_SIZE) {
+      const { data: page } = await admin
+        .from("trade_suburb_pages")
+        .select("trade, suburb_slug, state, is_indexed")
+        .range(from, from + PAGE_SIZE - 1);
+      if (!page || page.length === 0) break;
+      existingPages.push(...page);
+      if (page.length < PAGE_SIZE) break;
+    }
     const existingIndexed = new Map<string, boolean>(
-      (existingPages ?? []).map((p) => [`${p.trade}|${p.suburb_slug}|${p.state}`, p.is_indexed])
+      existingPages.map((p) => [`${p.trade}|${p.suburb_slug}|${p.state}`, p.is_indexed])
     );
 
     const pathsToRevalidate = new Set<string>();
