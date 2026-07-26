@@ -63,6 +63,8 @@ export default function AdminManualScraper() {
   const [preview,   setPreview]   = useState<PreviewResponse | null>(null);
   const [fields,    setFields]    = useState<EditableFields | null>(null);
   const [result,    setResult]    = useState<ConfirmResponse | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoUrlDraft,  setPhotoUrlDraft]  = useState("");
 
   async function scrape() {
     const trimmed = url.trim();
@@ -124,6 +126,37 @@ export default function AdminManualScraper() {
 
   function removePhoto(idx: number) {
     setFields((prev) => (prev ? { ...prev, photo_urls: prev.photo_urls.filter((_, i) => i !== idx) } : prev));
+  }
+
+  function addPhotoUrl() {
+    const trimmed = photoUrlDraft.trim();
+    if (!trimmed) return;
+    setFields((prev) => (prev && prev.photo_urls.length < 6 ? { ...prev, photo_urls: [...prev.photo_urls, trimmed] } : prev));
+    setPhotoUrlDraft("");
+  }
+
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+
+    setUploadingPhoto(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/admin/scrape-url/upload-photo", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Photo upload failed");
+        return;
+      }
+      setFields((prev) => (prev && prev.photo_urls.length < 6 ? { ...prev, photo_urls: [...prev.photo_urls, data.url] } : prev));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Photo upload failed");
+    } finally {
+      setUploadingPhoto(false);
+    }
   }
 
   function updateLicense(idx: number, patch: Partial<License>) {
@@ -361,12 +394,12 @@ export default function AdminManualScraper() {
             </div>
 
             {/* Photos */}
-            {fields.photo_urls.length > 0 && (
-              <div>
-                <p className="text-[11px] font-bold uppercase text-[var(--ink-faint)] mb-2">
-                  Photos ({fields.photo_urls.length}) -- remove any that don&apos;t belong
-                </p>
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            <div>
+              <p className="text-[11px] font-bold uppercase text-[var(--ink-faint)] mb-2">
+                Photos ({fields.photo_urls.length}/6) -- remove any that don&apos;t belong, or add your own
+              </p>
+              {fields.photo_urls.length > 0 && (
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-2">
                   {fields.photo_urls.map((src, i) => (
                     <div key={src + i} className="relative aspect-square rounded-lg overflow-hidden bg-[var(--app-bg)] border border-[var(--line)]">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -380,8 +413,34 @@ export default function AdminManualScraper() {
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
+
+              {fields.photo_urls.length < 6 && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <input type="file" accept="image/*" onChange={handlePhotoUpload} disabled={uploadingPhoto} className="hidden" id="scraper-photo-upload" />
+                  <label
+                    htmlFor="scraper-photo-upload"
+                    className="btn-secondary text-[12.5px] py-1.5 px-3 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    {uploadingPhoto ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}
+                    {uploadingPhoto ? "Uploading..." : "Upload a photo"}
+                  </label>
+
+                  <div className="flex items-center gap-1.5 flex-1 min-w-[220px]">
+                    <input
+                      value={photoUrlDraft}
+                      onChange={e => setPhotoUrlDraft(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") addPhotoUrl(); }}
+                      placeholder="or paste an image URL"
+                      className="app-field flex-1 !py-1.5 text-[12.5px]"
+                    />
+                    <button onClick={addPhotoUrl} disabled={!photoUrlDraft.trim()} className="btn-secondary text-[12.5px] py-1.5 px-3 disabled:opacity-40">
+                      Add
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           <label className="flex items-center gap-2.5 cursor-pointer select-none">
