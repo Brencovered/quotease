@@ -375,9 +375,23 @@ export async function middleware(request: NextRequest) {
   // Fetch the business's profile for subscription and onboarding status
   const { data: profile } = await supabase
     .from("profiles")
-    .select("subscription_status, trial_ends_at, comp_access, onboarded_at")
+    .select("subscription_status, trial_ends_at, comp_access, onboarded_at, trades")
     .eq("id", businessId)
     .single();
+
+  // Trade selection is mandatory -- quoting is trade-specific, so an
+  // account with no trade set can't meaningfully use the app at all.
+  // Client-side signup validation exists but isn't airtight on its own
+  // (confirmed: real accounts have ended up with an empty trades array
+  // despite that) -- this is the actual, unbypassable guarantee, checked
+  // on every protected page regardless of onboarded_at, since an account
+  // could in principle be marked onboarded with no trade ever having
+  // been set. Redirects to /onboarding, which shows a mandatory trade
+  // picker first when it detects this.
+  const hasNoTrade = !profile?.trades || profile.trades.length === 0;
+  if (hasNoTrade && pathname !== "/onboarding" && pathname !== "/billing") {
+    return NextResponse.redirect(new URL("/onboarding", request.url));
+  }
 
   // Onboarding check: if not onboarded, redirect to /onboarding
   // (allow the onboarding page itself and the billing page so they can pay)

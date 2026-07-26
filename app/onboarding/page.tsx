@@ -13,6 +13,29 @@ import {
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
+/*  Trades (same list as app/signup/page.tsx) -- shown as a mandatory  */
+/*  picker if an account somehow reaches onboarding with none set      */
+/* ------------------------------------------------------------------ */
+
+const TRADES = [
+  { key: "electrician", label: "Electrician" },
+  { key: "plumber",     label: "Plumber" },
+  { key: "carpenter",   label: "Carpenter" },
+  { key: "roofer",      label: "Roofer" },
+  { key: "painter",     label: "Painter" },
+  { key: "tiler",       label: "Tiler" },
+  { key: "landscaper",  label: "Landscaper" },
+  { key: "builder",     label: "Builder" },
+  { key: "fencer",      label: "Fencer" },
+  { key: "concreter",   label: "Concreter" },
+  { key: "aircon",      label: "Air Conditioning" },
+  { key: "handyman",    label: "Handyman" },
+  { key: "surveyor",    label: "Surveyor" },
+  { key: "arborist",    label: "Arborist" },
+  { key: "plasterer",   label: "Plasterer" },
+];
+
+/* ------------------------------------------------------------------ */
 /*  Digital tools list                                                 */
 /* ------------------------------------------------------------------ */
 
@@ -86,17 +109,44 @@ export default function OnboardingPage() {
   // Prevent redirect loops
   const hasRedirected = useRef(false);
 
+  // Mandatory trade gate -- quoting is trade-specific, so an account with
+  // no trade set can't meaningfully use any part of the app. Client-side
+  // signup validation exists but isn't airtight on its own (confirmed:
+  // real accounts have ended up here with an empty trades array anyway),
+  // and middleware.ts now redirects any such account straight to
+  // /onboarding regardless of onboarded_at -- this is what actually lets
+  // them fix it, blocking the rest of onboarding until a real trade is
+  // saved.
+  const [needsTrade, setNeedsTrade] = useState(false);
+  const [selectedTrade, setSelectedTrade] = useState("");
+  const [savingTrade, setSavingTrade] = useState(false);
+  const [tradeError, setTradeError] = useState("");
+
+  async function saveMandatoryTrade() {
+    if (!selectedTrade) { setTradeError("Please select your trade."); return; }
+    setSavingTrade(true);
+    setTradeError("");
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSavingTrade(false); return; }
+    const { error } = await supabase.from("profiles").update({ trades: [selectedTrade] }).eq("id", user.id);
+    setSavingTrade(false);
+    if (error) { setTradeError("Could not save your trade, please try again."); return; }
+    setNeedsTrade(false);
+  }
+
   // Load existing profile data on mount
   useEffect(() => {
     async function loadProfile() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: profile } = await supabase.from("profiles").select("suburb, digital_tools, quote_frequency, team_size").eq("id", user.id).single();
+      const { data: profile } = await supabase.from("profiles").select("suburb, digital_tools, quote_frequency, team_size, trades").eq("id", user.id).single();
       if (profile?.suburb) setSuburb(profile.suburb);
       if (profile?.digital_tools) setSelectedTools(profile.digital_tools);
       if (profile?.quote_frequency) setQuoteFrequency(profile.quote_frequency);
       if (profile?.team_size) setTeamSize(profile.team_size);
+      if (!profile?.trades || profile.trades.length === 0) setNeedsTrade(true);
     }
     loadProfile();
   }, []);
@@ -335,6 +385,39 @@ export default function OnboardingPage() {
         <p className="fadeUp2 text-[12px] text-[var(--ink-faint)] mt-4">
           Redirecting in {redirectCountdown}s...
         </p>
+      </div>
+    );
+  }
+
+  if (needsTrade) {
+    return (
+      <div className="min-h-screen bg-[var(--app-bg)] flex items-center justify-center px-6">
+        <div className="max-w-md w-full bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-8">
+          <HardHat size={28} className="text-[var(--amber)] mb-3" />
+          <h1 className="font-display text-[22px] text-[var(--ink)] mb-2">What&apos;s your trade?</h1>
+          <p className="text-[13.5px] text-[var(--ink-soft)] mb-5">
+            Quoting is built around your specific trade, so we need this before you can continue.
+          </p>
+          <select
+            value={selectedTrade}
+            onChange={(e) => { setSelectedTrade(e.target.value); setTradeError(""); }}
+            className="app-field w-full mb-3"
+          >
+            <option value="">Select your trade...</option>
+            {TRADES.map((t) => (
+              <option key={t.key} value={t.key}>{t.label}</option>
+            ))}
+          </select>
+          {tradeError && <p className="text-[12.5px] text-red-600 font-semibold mb-3">{tradeError}</p>}
+          <button
+            onClick={saveMandatoryTrade}
+            disabled={savingTrade}
+            className="btn-primary w-full flex items-center justify-center gap-2"
+          >
+            {savingTrade ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
+            {savingTrade ? "Saving..." : "Continue"}
+          </button>
+        </div>
       </div>
     );
   }
