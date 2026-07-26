@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
   // bad address on file kill every quote request for that listing, fall
   // back to Swiftscope's own inbox so the enquiry still gets somewhere.
   const scrapedToEmail = typeof to_email === "string" ? to_email.trim() : "";
-  const toAddress = EMAIL_RE.test(scrapedToEmail) ? scrapedToEmail : "hello@swiftscope.com.au";
+  const toAddress = EMAIL_RE.test(scrapedToEmail) ? scrapedToEmail : "team@swiftscope.com.au";
 
   /* ── 3. Save enquiry to database (always persist) ──────────────── */
   // Uses the admin (service-role) client rather than the session-scoped

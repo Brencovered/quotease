@@ -70,8 +70,8 @@ export default function BillingPanel({ trialEndsAt, isSubscribed, now }: { trial
 
       <p className="text-[13px] text-[var(--ink-faint)] leading-relaxed">
         Questions about billing? Contact us at{" "}
-        <a href="mailto:hello@swiftscope.com.au" className="font-semibold text-[var(--navy)] underline">
-          hello@swiftscope.com.au
+        <a href="mailto:team@swiftscope.com.au" className="font-semibold text-[var(--navy)] underline">
+          team@swiftscope.com.au
         </a>
       </p>
     </main>
