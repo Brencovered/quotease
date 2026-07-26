@@ -52,7 +52,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   if (!data) notFound();
   const { job, quote, variations, dockets, docketInvoices, docketRates, actuals, certsWithUrls, attachmentsWithUrls, payments, hourlyRate, marginPct } = data;
 
-  const scopeLines = quote ? humanizeIntake(quote.intake_data) : [];
+  const scopeLines = quote ? humanizeIntake(quote.intake_data, quote.trade ?? "electrician") : [];
   const conditionLines = quote ? summarizeConditions(quote.intake_data) : [];
   const savedAnnotations = quote ? (quote.intake_data as { annotation_meta?: AnnotationMetaPersisted[] } | null)?.annotation_meta : undefined;
   const labourCost = (job.labour_hours ?? 0) * hourlyRate;

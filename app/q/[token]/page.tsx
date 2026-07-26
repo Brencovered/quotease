@@ -40,7 +40,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
   ];
   const hasBankDetails = !!(profile.bank_bsb && profile.bank_account_number);
 
-  const scopeLines = humanizeIntakePublic(quote.intake_data as Record<string, unknown> | null);
+  const scopeLines = humanizeIntakePublic(quote.intake_data as Record<string, unknown> | null, quote.trade ?? "electrician");
   const savedAnnotations = (quote.intake_data as { annotation_meta?: AnnotationMetaPersisted[] } | null)?.annotation_meta;
   const resolvedAnnotations = await resolveAnnotationFrameUrls(supabase, savedAnnotations);
 
