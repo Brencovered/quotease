@@ -10,9 +10,7 @@ import { analyzeDrawingFile } from "@/lib/analyzeDrawingClient";
 import VoiceNoteRecorder from "./VoiceNoteRecorder";
 import PlanMarkupQuickAdd from "./PlanMarkupQuickAdd";
 import { calcPlumberQuote, PLUMBER_DEFAULT_MATERIALS, type PlumberIntake } from "@/lib/calcPlumber";
-import MaterialsEditor from "@/components/MaterialsEditor";
-import CalcKeyPricingPanel from "@/components/CalcKeyPricingPanel";
-import { resolveCalcCosts, hasRealPriceBook, serializeLinkedItemKeys } from "@/lib/resolveCalcCosts";
+import { resolveCalcCosts, serializeLinkedItemKeys } from "@/lib/resolveCalcCosts";
 import StepCustomer from "./StepCustomer";
 import PackagePicker from "@/components/PackagePicker";
 import ExtraJobLines, { type ExtraLine, extraLinesTotals } from "./ExtraJobLines";
@@ -46,7 +44,6 @@ const STEPS = [
   { id: "drawing",   label: "Quote capture" },
   { id: "job",       label: "Job"       },
   { id: "scope",     label: "Scope"     },
-  { id: "materials", label: "Materials" },
   { id: "send",      label: "Send"      },
 ];
 
@@ -314,20 +311,6 @@ export default function PlumberQuoteBuilder({
   }
 
   const stepId = STEPS[step].id;
-
-  // See CarpenterQuoteBuilder.tsx for the full explanation -- Materials is
-  // a one-time "link generic calculator keys to real products" setup task,
-  // not a per-quote step. Skip it in forward/back navigation once
-  // everything's already linked; still reachable via its tab directly.
-  const materialsStepNeedsAttention =
-    hasRealPriceBook(lib) &&
-    PLUMBER_DEFAULT_MATERIALS.some((m) => !archetypeDefaults[`plumber:calc:${m.item_key}`]);
-  const materialsStepIndex = STEPS.findIndex((s) => s.id === "materials");
-  function nextVisibleStep(from: number, direction: 1 | -1): number {
-    let target = from + direction;
-    if (target === materialsStepIndex && !materialsStepNeedsAttention) target += direction;
-    return Math.max(0, Math.min(STEPS.length - 1, target));
-  }
 
   return (
     <div className="page-wrap-narrow">
@@ -645,17 +628,6 @@ export default function PlumberQuoteBuilder({
         </div>
       )}
 
-      {stepId === "materials" && hasRealPriceBook(lib) && (
-        <CalcKeyPricingPanel
-          trade="plumber"
-          defaults={PLUMBER_DEFAULT_MATERIALS}
-          lib={lib}
-          archetypeDefaults={archetypeDefaults}
-          onSaveDefault={saveCalcDefault}
-        />
-      )}
-      {stepId === "materials" && !hasRealPriceBook(lib) && <MaterialsEditor lib={lib} setLib={setLib} trade="plumber" defaults={PLUMBER_DEFAULT_MATERIALS} />}
-
       {stepId === "send" && (
         <div className="space-y-4">
           <JobDescriptionField value={siteNotes} onChange={setSiteNotes} />
@@ -714,8 +686,8 @@ export default function PlumberQuoteBuilder({
       )}
 
       <div className="flex gap-3 mt-6">
-        {step > 0 && <button onClick={() => setStep(nextVisibleStep(step, -1))} className="btn-secondary flex-1"><ChevronLeft size={16}/> Back</button>}
-        {step < STEPS.length-1 && <button onClick={() => setStep(nextVisibleStep(step, 1))} className="btn-primary flex-1">{STEPS[nextVisibleStep(step, 1)].label} <ChevronRight size={16}/></button>}
+        {step > 0 && <button onClick={() => setStep(step-1)} className="btn-secondary flex-1"><ChevronLeft size={16}/> Back</button>}
+        {step < STEPS.length-1 && <button onClick={() => setStep(step+1)} className="btn-primary flex-1">{STEPS[step+1].label} <ChevronRight size={16}/></button>}
       </div>
     </div>
   );

@@ -5,9 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
 import { Paperclip, X, ChevronRight, ChevronLeft, Check, Sparkles, AlertTriangle } from "lucide-react";
 import { calcCarpenterQuote, CARPENTER_DEFAULT_MATERIALS, type CarpenterIntake } from "@/lib/calcCarpenter";
-import MaterialsEditor from "@/components/MaterialsEditor";
-import CalcKeyPricingPanel from "@/components/CalcKeyPricingPanel";
-import { resolveCalcCosts, hasRealPriceBook, serializeLinkedItemKeys } from "@/lib/resolveCalcCosts";
+import { resolveCalcCosts, serializeLinkedItemKeys } from "@/lib/resolveCalcCosts";
 import StepCustomer from "./StepCustomer";
 import PackagePicker from "@/components/PackagePicker";
 import VoiceNoteRecorder from "./VoiceNoteRecorder";
@@ -44,7 +42,6 @@ const STEPS = [
   { id: "drawing",   label: "Quote capture" },
   { id: "job",       label: "Job"       },
   { id: "scope",     label: "Scope"     },
-  { id: "materials", label: "Materials" },
   { id: "send",      label: "Send"      },
 ];
 
@@ -298,26 +295,6 @@ export default function CarpenterQuoteBuilder({
   }
 
   const stepId = STEPS[step].id;
-
-  // The Materials step's job (once a real price book exists) is a one-time
-  // "link your trade's generic calculator building blocks to your real
-  // products" setup task -- CalcKeyPricingPanel's own doc comment says so
-  // explicitly ("pick once, remembered forever"). Re-showing it as a
-  // mandatory stop on *every* quote once everything's already linked is
-  // exactly why it read as duplicating Scope (which is genuinely this
-  // quote's own line items, an entirely different thing). Skip it in
-  // forward/back navigation once there's nothing left to link -- still
-  // reachable by clicking its tab directly, in case someone wants to
-  // review or change a link later.
-  const materialsStepNeedsAttention =
-    hasRealPriceBook(lib) &&
-    CARPENTER_DEFAULT_MATERIALS.some((m) => !archetypeDefaults[`carpenter:calc:${m.item_key}`]);
-  const materialsStepIndex = STEPS.findIndex((s) => s.id === "materials");
-  function nextVisibleStep(from: number, direction: 1 | -1): number {
-    let target = from + direction;
-    if (target === materialsStepIndex && !materialsStepNeedsAttention) target += direction;
-    return Math.max(0, Math.min(STEPS.length - 1, target));
-  }
 
   return (
     <div className="page-wrap-narrow">
@@ -591,17 +568,6 @@ export default function CarpenterQuoteBuilder({
         </div>
       )}
 
-      {stepId === "materials" && hasRealPriceBook(lib) && (
-        <CalcKeyPricingPanel
-          trade="carpenter"
-          defaults={CARPENTER_DEFAULT_MATERIALS}
-          lib={lib}
-          archetypeDefaults={archetypeDefaults}
-          onSaveDefault={saveCalcDefault}
-        />
-      )}
-      {stepId === "materials" && !hasRealPriceBook(lib) && <MaterialsEditor lib={lib} setLib={setLib} trade="carpenter" defaults={CARPENTER_DEFAULT_MATERIALS} />}
-
       {stepId === "send" && (
         <div className="space-y-4">
           <JobDescriptionField value={siteNotes} onChange={setSiteNotes} />
@@ -658,8 +624,8 @@ export default function CarpenterQuoteBuilder({
       )}
 
       <div className="flex gap-3 mt-6">
-        {step > 0 && <button onClick={() => setStep(nextVisibleStep(step, -1))} className="btn-secondary flex-1"><ChevronLeft size={16}/> Back</button>}
-        {step < STEPS.length-1 && <button onClick={() => setStep(nextVisibleStep(step, 1))} className="btn-primary flex-1">{STEPS[nextVisibleStep(step, 1)].label} <ChevronRight size={16}/></button>}
+        {step > 0 && <button onClick={() => setStep(step-1)} className="btn-secondary flex-1"><ChevronLeft size={16}/> Back</button>}
+        {step < STEPS.length-1 && <button onClick={() => setStep(step+1)} className="btn-primary flex-1">{STEPS[step+1].label} <ChevronRight size={16}/></button>}
       </div>
     </div>
   );
