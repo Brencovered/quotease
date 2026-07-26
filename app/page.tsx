@@ -328,6 +328,7 @@ export default function Home() {
               <Link href="/features" className="hover:text-white transition-colors">Features</Link>
               <Link href="/how-it-works" className="hover:text-white transition-colors">How it works</Link>
               <Link href="/directory" className="hover:text-white transition-colors">Directory</Link>
+              <Link href="/areas" className="hover:text-white transition-colors">Areas we cover</Link>
               {LEADS_ENABLED && (
                 <Link href="/get-quotes" className="hover:text-white transition-colors">Get quotes</Link>
               )}

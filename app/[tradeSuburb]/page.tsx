@@ -27,7 +27,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Star, MapPin, Shield, ArrowRight, Phone, Globe } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { parseTradeSuburbSlug, suburbToSlug, tradeToSlug, tradeSuburbMeta } from "@/lib/seo/meta";
+import { parseTradeSuburbSlug, suburbToSlug, tradeToSlug, tradeSuburbMeta, postcodeToState } from "@/lib/seo/meta";
 import { generateTradeSuburbContent } from "@/lib/seo/generateTradeSuburbContent";
 import FaqSchema from "@/components/seo/FaqSchema";
 import { DirectoryPageSchema } from "@/components/seo/TradieSchema";
@@ -47,13 +47,14 @@ export async function generateStaticParams() {
     const admin = createAdminClient();
     const { data: rows } = await admin
       .from("directory_listing")
-      .select("trades, suburb")
+      .select("trades, suburb, postcode")
       .not("suburb", "is", null);
 
     const counts = new Map<string, number>();
     for (const row of rows ?? []) {
+      const state = postcodeToState(row.postcode);
       for (const trade of row.trades ?? []) {
-        const key = `${tradeToSlug(trade)}-${suburbToSlug(row.suburb)}-vic`;
+        const key = `${tradeToSlug(trade)}-${suburbToSlug(row.suburb)}-${state}`;
         counts.set(key, (counts.get(key) ?? 0) + 1);
       }
     }

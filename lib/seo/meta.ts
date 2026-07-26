@@ -240,6 +240,33 @@ const SLUG_TO_TRADE: Record<string, string> = {
 
 const VALID_STATE_SLUGS = ["vic", "nsw", "qld", "wa", "sa", "tas", "act", "nt"];
 
+/**
+ * Derives an Australian state from a postcode, returning the same lowercase
+ * slug format used throughout this file's URL scheme (VALID_STATE_SLUGS
+ * above) -- e.g. "vic", "nsw". Approximate official Australia Post
+ * postcode ranges; good enough for URL/SEO grouping, not meant to resolve
+ * every edge-case PO box range.
+ *
+ * Exists because state was hardcoded to "vic" everywhere that needed it
+ * (app/api/cron/refresh-seo, app/[tradeSuburb]/page.tsx's
+ * generateStaticParams) -- directory_listing.postcode is already
+ * populated for real listings, so there was never actually a need to wait
+ * for a dedicated state column, just to derive it here consistently.
+ */
+export function postcodeToState(postcode: string | null | undefined): string {
+  const n = parseInt(postcode ?? "", 10);
+  if (isNaN(n)) return "vic"; // unresolvable -- fall back rather than produce an invalid/missing state segment
+  if (n >= 800 && n <= 899) return "nt";
+  if ((n >= 2600 && n <= 2618) || (n >= 2900 && n <= 2920)) return "act";
+  if ((n >= 1000 && n <= 2599) || (n >= 2619 && n <= 2899) || (n >= 2921 && n <= 2999)) return "nsw";
+  if (n >= 3000 && n <= 3999) return "vic";
+  if (n >= 4000 && n <= 4999) return "qld";
+  if (n >= 5000 && n <= 5799) return "sa";
+  if (n >= 6000 && n <= 6797) return "wa";
+  if (n >= 7000 && n <= 7799) return "tas";
+  return "vic";
+}
+
 export function getSlugToTradeMap(): Record<string, string> {
   return SLUG_TO_TRADE;
 }
