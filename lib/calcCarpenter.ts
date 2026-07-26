@@ -106,8 +106,15 @@ export function calcCarpenterQuote(
   const labourCost   = totalHours * hourlyRate;
   const calloutFee   = intake.callout ? (costs.callout ?? 0) : 0;
 
-  // Always include a fixings allowance
-  materials += costs.fixings ?? 0;
+  // Fixings allowance -- genuinely needed whenever there's real carpentry
+  // work being quoted (every job uses some screws/nails/brackets), but was
+  // previously added completely unconditionally, so a brand new, entirely
+  // blank quote (every quantity still at 0) already showed a non-zero
+  // materials total before a tradie had entered anything at all. Only
+  // apply it once there's actually some labour or materials in the quote.
+  if (labour > 0 || materials > 0) {
+    materials += costs.fixings ?? 0;
+  }
 
   const matWithMargin = materials * (1 + marginPct / 100);
   const totalCost = labourCost + matWithMargin + calloutFee;
