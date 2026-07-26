@@ -315,6 +315,20 @@ export default function PlumberQuoteBuilder({
 
   const stepId = STEPS[step].id;
 
+  // See CarpenterQuoteBuilder.tsx for the full explanation -- Materials is
+  // a one-time "link generic calculator keys to real products" setup task,
+  // not a per-quote step. Skip it in forward/back navigation once
+  // everything's already linked; still reachable via its tab directly.
+  const materialsStepNeedsAttention =
+    hasRealPriceBook(lib) &&
+    PLUMBER_DEFAULT_MATERIALS.some((m) => !archetypeDefaults[`plumber:calc:${m.item_key}`]);
+  const materialsStepIndex = STEPS.findIndex((s) => s.id === "materials");
+  function nextVisibleStep(from: number, direction: 1 | -1): number {
+    let target = from + direction;
+    if (target === materialsStepIndex && !materialsStepNeedsAttention) target += direction;
+    return Math.max(0, Math.min(STEPS.length - 1, target));
+  }
+
   return (
     <div className="page-wrap-narrow">
       {/* Live total */}
@@ -700,8 +714,8 @@ export default function PlumberQuoteBuilder({
       )}
 
       <div className="flex gap-3 mt-6">
-        {step > 0 && <button onClick={() => setStep(step-1)} className="btn-secondary flex-1"><ChevronLeft size={16}/> Back</button>}
-        {step < STEPS.length-1 && <button onClick={() => setStep(step+1)} className="btn-primary flex-1">{STEPS[step+1].label} <ChevronRight size={16}/></button>}
+        {step > 0 && <button onClick={() => setStep(nextVisibleStep(step, -1))} className="btn-secondary flex-1"><ChevronLeft size={16}/> Back</button>}
+        {step < STEPS.length-1 && <button onClick={() => setStep(nextVisibleStep(step, 1))} className="btn-primary flex-1">{STEPS[nextVisibleStep(step, 1)].label} <ChevronRight size={16}/></button>}
       </div>
     </div>
   );

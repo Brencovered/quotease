@@ -299,6 +299,26 @@ export default function CarpenterQuoteBuilder({
 
   const stepId = STEPS[step].id;
 
+  // The Materials step's job (once a real price book exists) is a one-time
+  // "link your trade's generic calculator building blocks to your real
+  // products" setup task -- CalcKeyPricingPanel's own doc comment says so
+  // explicitly ("pick once, remembered forever"). Re-showing it as a
+  // mandatory stop on *every* quote once everything's already linked is
+  // exactly why it read as duplicating Scope (which is genuinely this
+  // quote's own line items, an entirely different thing). Skip it in
+  // forward/back navigation once there's nothing left to link -- still
+  // reachable by clicking its tab directly, in case someone wants to
+  // review or change a link later.
+  const materialsStepNeedsAttention =
+    hasRealPriceBook(lib) &&
+    CARPENTER_DEFAULT_MATERIALS.some((m) => !archetypeDefaults[`carpenter:calc:${m.item_key}`]);
+  const materialsStepIndex = STEPS.findIndex((s) => s.id === "materials");
+  function nextVisibleStep(from: number, direction: 1 | -1): number {
+    let target = from + direction;
+    if (target === materialsStepIndex && !materialsStepNeedsAttention) target += direction;
+    return Math.max(0, Math.min(STEPS.length - 1, target));
+  }
+
   return (
     <div className="page-wrap-narrow">
       <div className="sticky top-12 sm:top-0 z-30 mb-4 -mx-4 sm:mx-0 px-4 sm:px-0">
@@ -638,8 +658,8 @@ export default function CarpenterQuoteBuilder({
       )}
 
       <div className="flex gap-3 mt-6">
-        {step > 0 && <button onClick={() => setStep(step-1)} className="btn-secondary flex-1"><ChevronLeft size={16}/> Back</button>}
-        {step < STEPS.length-1 && <button onClick={() => setStep(step+1)} className="btn-primary flex-1">{STEPS[step+1].label} <ChevronRight size={16}/></button>}
+        {step > 0 && <button onClick={() => setStep(nextVisibleStep(step, -1))} className="btn-secondary flex-1"><ChevronLeft size={16}/> Back</button>}
+        {step < STEPS.length-1 && <button onClick={() => setStep(nextVisibleStep(step, 1))} className="btn-primary flex-1">{STEPS[nextVisibleStep(step, 1)].label} <ChevronRight size={16}/></button>}
       </div>
     </div>
   );
