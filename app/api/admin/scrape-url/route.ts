@@ -182,6 +182,24 @@ async function downloadAndStore(
   } catch { return null; }
 }
 
+interface EditableFields {
+  business_name: string | null;
+  website_url: string;
+  logo_url: string | null;
+  blurb: string | null;
+  phone: string | null;
+  suburb: string | null;
+  postcode: string | null;
+  state: string | null;
+  trades: string[];
+  facebook_url: string | null;
+  instagram_url: string | null;
+  years_experience: number | null;
+  licenses: { type: string; number: string }[];
+  services_offered: string[];
+  photo_urls: string[]; // raw source URLs at preview time; downloaded/stored only on confirm
+}
+
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -189,23 +207,165 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
-  const { url, overwrite = false } = await req.json();
+  const body = await req.json();
+  const admin = createAdminClient();
+
+  // ------------------------------------------------------------------
+  // Mode 1: confirm -- the admin has reviewed (and possibly edited) a
+  // previous preview, and is now committing it. Nothing gets re-scraped
+  // here -- every field comes from what was actually reviewed and
+  // approved, which is the whole point of this step existing at all.
+  // ------------------------------------------------------------------
+  if (body.mode === "confirm") {
+    const fields = body.fields as EditableFields;
+    const overwrite: boolean = body.overwrite ?? false;
+    if (!fields?.website_url) {
+      return NextResponse.json({ error: "Missing website_url in confirmed fields" }, { status: 400 });
+    }
+
+    const siteUrl = fields.website_url;
+
+    const { data: existing } = await admin
+      .from("directory_listing")
+      .select("id, business_name, photo_references")
+      .ilike("website_url", siteUrl)
+      .limit(1);
+
+    const existingListing = existing?.[0];
+    const listingId = existingListing?.id ?? crypto.randomUUID();
+
+    // Download and store photos now -- only at confirm time, using
+    // whichever photo URLs the admin actually approved in the preview
+    // (they may have removed some).
+    const storedPhotos: string[] = [];
+    for (let i = 0; i < Math.min(fields.photo_urls?.length ?? 0, 6); i++) {
+      const stored = await downloadAndStore(fields.photo_urls[i], listingId, i, admin);
+      if (stored) storedPhotos.push(stored);
+    }
+    const existingPhotos = existingListing
+      ? ((existingListing.photo_references ?? []) as string[]).filter((p: string) => p.startsWith("http"))
+      : [];
+    const allPhotos = [...new Set([...storedPhotos, ...existingPhotos])].slice(0, 6);
+
+    const payload = {
+      business_name:          fields.business_name,
+      website_url:            siteUrl,
+      logo_url:               fields.logo_url,
+      blurb:                  fields.blurb,
+      scraped_contact_phone:  fields.phone,
+      suburb:                 fields.suburb,
+      postcode:               fields.postcode,
+      state:                  fields.state,
+      trades:                 fields.trades,
+      photo_references:       allPhotos.length > 0 ? allPhotos : null,
+      photos_cached_at:       allPhotos.length > 0 ? new Date().toISOString() : null,
+      website_scraped_at:     new Date().toISOString(),
+      source:                 "manual",
+      is_claimed:             false,
+      facebook_url:           fields.facebook_url,
+      instagram_url:          fields.instagram_url,
+      years_experience:       fields.years_experience,
+      licenses:               fields.licenses.length > 0 ? fields.licenses : null,
+      services_offered:       fields.services_offered.length > 0 ? fields.services_offered : null,
+    };
+
+    const clean: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(payload)) {
+      if (v !== null || overwrite) clean[k] = v;
+    }
+
+    let action: "created" | "updated";
+
+    if (existingListing) {
+      const updateData = overwrite
+        ? clean
+        : Object.fromEntries(Object.entries(clean).filter(([k]) => !["id", "source"].includes(k)));
+      const { error: updateErr } = await admin
+        .from("directory_listing")
+        .update(updateData)
+        .eq("id", existingListing.id);
+      if (updateErr) console.error("[scrape-url confirm] update error:", updateErr);
+      action = "updated";
+    } else {
+      const { error: rpcErr } = await admin.rpc("upsert_directory_listing", {
+        p_business_name:         fields.business_name ?? siteUrl,
+        p_trades:                fields.trades,
+        p_website_url:           siteUrl,
+        p_suburb:                fields.suburb,
+        p_postcode:              fields.postcode,
+        p_latitude:              null,
+        p_longitude:             null,
+        p_place_id:              null,
+        p_google_rating:         null,
+        p_google_reviews_count:  null,
+        p_photo_references:      allPhotos.length > 0 ? allPhotos : [],
+        p_scraped_contact_phone: fields.phone,
+        p_private_email:         null,
+        p_logo_url:              fields.logo_url,
+      });
+
+      if (rpcErr) {
+        console.error("[scrape-url confirm] RPC error, falling back to direct insert:", rpcErr);
+        const slug = (fields.business_name ?? "listing")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "")
+          + (fields.suburb ? "-" + fields.suburb.toLowerCase().replace(/[^a-z0-9]+/g, "-") : "")
+          + "-" + Date.now().toString(36);
+
+        await admin.from("directory_listing").insert({ ...clean, id: listingId, slug });
+      }
+
+      const { data: fresh } = await admin
+        .from("directory_listing")
+        .select("id")
+        .ilike("website_url", siteUrl)
+        .limit(1);
+
+      if (fresh?.[0]) {
+        await admin.from("directory_listing").update({
+          blurb:              fields.blurb,
+          photos_cached_at:   allPhotos.length > 0 ? new Date().toISOString() : null,
+          website_scraped_at: new Date().toISOString(),
+          source:             "manual",
+        }).eq("id", fresh[0].id);
+      }
+
+      action = "created";
+    }
+
+    const { data: finalListing } = await admin
+      .from("directory_listing")
+      .select("id, slug")
+      .ilike("website_url", siteUrl)
+      .limit(1);
+
+    return NextResponse.json({
+      action,
+      id:   finalListing?.[0]?.id ?? existingListing?.id ?? listingId,
+      slug: finalListing?.[0]?.slug ?? null,
+    });
+  }
+
+  // ------------------------------------------------------------------
+  // Mode 2 (default): preview -- extract everything for review, but
+  // don't touch the database or download/store any photos yet. This is
+  // the actual fix: previously this single request scraped AND saved in
+  // one shot, with no chance to check or correct what got extracted
+  // before it went live in the directory.
+  // ------------------------------------------------------------------
+  const { url } = body;
   if (!url?.startsWith("http")) {
     return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
   }
 
-  const admin = createAdminClient();
-
-  // Normalise URL
   const siteUrl = url.trim().replace(/\/$/, "");
 
-  // Fetch HTML
   const html = await fetchWebsiteHtml(siteUrl);
   if (!html) {
     return NextResponse.json({ error: "Could not fetch that URL. The site may be down or blocking scrapers." }, { status: 422 });
   }
 
-  // Extract all fields
   const businessName = extractBusinessName(html, siteUrl);
   const logo         = extractLogoUrl(html, siteUrl);
   const blurb        = extractBlurb(html);
@@ -216,165 +376,46 @@ export async function POST(req: NextRequest) {
   const yearsExp      = extractYearsExperience(html);
   const licenses      = extractLicenses(html);
   const services      = extractServices ? extractServices(html) : [];
-  // Scrape about/services sub-pages for richer content
   const subPages      = await scrapeSubPages(html, siteUrl);
-  const trades       = extractTrades(html, siteUrl);
-  const rawPhotos    = extractPhotos(html, siteUrl);
-  const photoUrls    = filterPhotos(rawPhotos, logo);
+  const trades        = extractTrades(html, siteUrl);
+  const rawPhotos      = extractPhotos(html, siteUrl);
+  const photoUrls      = filterPhotos(rawPhotos, logo).slice(0, 6);
 
-  // Check if listing already exists (by website_url)
   const { data: existing } = await admin
     .from("directory_listing")
-    .select("id, business_name, photo_references")
+    .select("id, business_name")
     .ilike("website_url", siteUrl)
     .limit(1);
-
   const existingListing = existing?.[0];
-  const listingId = existingListing?.id ?? crypto.randomUUID();
 
-  // Download and store photos
-  const storedPhotos: string[] = [];
-  for (let i = 0; i < Math.min(photoUrls.length, 6); i++) {
-    const stored = await downloadAndStore(photoUrls[i], listingId, i, admin);
-    if (stored) storedPhotos.push(stored);
-  }
-
-  // Merge with existing photos if updating
-  const existingPhotos = existingListing
-    ? ((existingListing.photo_references ?? []) as string[]).filter((p: string) => p.startsWith("http"))
-    : [];
-  const allPhotos = [...new Set([...storedPhotos, ...existingPhotos])].slice(0, 6);
-
-  // Best blurb: about section > subpage about > meta description
   const bestBlurb = about ?? subPages.aboutText ?? blurb;
-  // Best services: homepage services + subpage services
   const allServices = [...new Set([
     ...services,
     ...(subPages.servicesText ? subPages.servicesText.split("\n").filter(Boolean) : []),
   ])].slice(0, 12);
 
-  const payload = {
-    business_name:          businessName,
-    website_url:            siteUrl,
-    logo_url:               logo,
-    blurb:                  bestBlurb,
-    scraped_contact_phone:  phone,
+  const fields: EditableFields = {
+    business_name: businessName,
+    website_url: siteUrl,
+    logo_url: logo,
+    blurb: bestBlurb,
+    phone,
     suburb,
     postcode,
     state,
     trades,
-    photo_references:       allPhotos.length > 0 ? allPhotos : null,
-    photos_cached_at:       allPhotos.length > 0 ? new Date().toISOString() : null,
-    website_scraped_at:     new Date().toISOString(),
-    source:                 "manual",
-    is_claimed:             false,
-    facebook_url:           socialLinks.facebook,
-    instagram_url:          socialLinks.instagram,
-    years_experience:       yearsExp,
-    licenses:               licenses.length > 0 ? licenses : null,
-    services_offered:       allServices.length > 0 ? allServices : null,
+    facebook_url: socialLinks.facebook,
+    instagram_url: socialLinks.instagram,
+    years_experience: yearsExp,
+    licenses,
+    services_offered: allServices,
+    photo_urls: photoUrls,
   };
 
-  // Remove null values unless overwriting
-  const clean: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(payload)) {
-    if (v !== null || overwrite) clean[k] = v;
-  }
-
-  let action: "created" | "updated";
-
-  if (existingListing) {
-    // Update existing -- use direct update so we preserve the slug
-    const updateData = overwrite
-      ? clean
-      : Object.fromEntries(Object.entries(clean).filter(([k]) => !["id", "source"].includes(k)));
-    const { error: updateErr } = await admin
-      .from("directory_listing")
-      .update(updateData)
-      .eq("id", existingListing.id);
-    if (updateErr) console.error("[scrape-url] update error:", updateErr);
-    action = "updated";
-  } else {
-    // Create new -- use RPC so slug is auto-generated from business_name + suburb
-    const { error: rpcErr } = await admin.rpc("upsert_directory_listing", {
-      p_business_name:         businessName ?? siteUrl,
-      p_trades:                trades,
-      p_website_url:           siteUrl,
-      p_suburb:                suburb,
-      p_postcode:              postcode,
-      p_latitude:              null,
-      p_longitude:             null,
-      p_place_id:              null,
-      p_google_rating:         null,
-      p_google_reviews_count:  null,
-      p_photo_references:      allPhotos.length > 0 ? allPhotos : [],
-      p_scraped_contact_phone: phone,
-      p_private_email:         null,
-      p_logo_url:              logo,
-    });
-
-    if (rpcErr) {
-      console.error("[scrape-url] RPC error, falling back to direct insert:", rpcErr);
-      // Fallback: direct insert with manual slug
-      const slug = (businessName ?? "listing")
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "")
-        + (suburb ? "-" + suburb.toLowerCase().replace(/[^a-z0-9]+/g, "-") : "")
-        + "-" + Date.now().toString(36);
-
-      await admin.from("directory_listing").insert({
-        ...clean,
-        id:   listingId,
-        slug,
-      });
-    }
-
-    // Now update the freshly created listing with photos/blurb (RPC doesn't take all fields)
-    const { data: fresh } = await admin
-      .from("directory_listing")
-      .select("id")
-      .ilike("website_url", siteUrl)
-      .limit(1);
-
-    if (fresh?.[0]) {
-      await admin.from("directory_listing").update({
-        blurb:              about ?? blurb,
-        photos_cached_at:   allPhotos.length > 0 ? new Date().toISOString() : null,
-        website_scraped_at: new Date().toISOString(),
-        source:             "manual",
-      }).eq("id", fresh[0].id);
-    }
-
-    action = "created";
-  }
-
-  // Fetch the slug for the public listing URL
-  const { data: finalListing } = await admin
-    .from("directory_listing")
-    .select("id, slug")
-    .ilike("website_url", siteUrl)
-    .limit(1);
-
   return NextResponse.json({
-    action,
-    id:   finalListing?.[0]?.id ?? existingListing?.id ?? listingId,
-    slug: finalListing?.[0]?.slug ?? null,
-    extracted: {
-      business_name: businessName,
-      trades,
-      suburb,
-      postcode,
-      state,
-      phone,
-      logo:           !!logo,
-      blurb:          !!bestBlurb,
-      photos:         storedPhotos.length,
-      facebook:       !!socialLinks.facebook,
-      instagram:      !!socialLinks.instagram,
-      years_experience: yearsExp,
-      licenses:       licenses.length,
-      services:       allServices.length,
-    },
+    mode: "preview",
+    existingListingId: existingListing?.id ?? null,
+    existingBusinessName: existingListing?.business_name ?? null,
+    fields,
   });
 }
