@@ -26,7 +26,41 @@ import { parseSuburbSlug, suburbLandingCanonical, getTradeDisplay, tradeToSlug }
 import MarketingNav from "@/components/MarketingNav";
 import { buildDirectorySlug } from "@/lib/seo/meta";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 604800; // 1 week -- same cadence as the trade+suburb pages
+
+export async function generateStaticParams() {
+  try {
+    const admin = createAdminClient();
+    // Paginate explicitly -- PostgREST silently caps an unpaginated
+    // select at 1,000 rows, and trade_suburb_pages now has 2,900+ rows
+    // (same class of bug already fixed elsewhere in this file's sibling
+    // routes -- applying it here too rather than repeat it a third time).
+    const PAGE_SIZE = 1000;
+    const rows: { suburb_slug: string; state: string; listing_count: number | null }[] = [];
+    for (let from = 0; ; from += PAGE_SIZE) {
+      const { data: page } = await admin
+        .from("trade_suburb_pages")
+        .select("suburb_slug, state, listing_count")
+        .eq("is_indexed", true)
+        .range(from, from + PAGE_SIZE - 1);
+      if (!page || page.length === 0) break;
+      rows.push(...page);
+      if (page.length < PAGE_SIZE) break;
+    }
+
+    const bySuburb = new Map<string, number>();
+    for (const row of rows) {
+      const key = `${row.suburb_slug}-${row.state}`;
+      bySuburb.set(key, (bySuburb.get(key) ?? 0) + (row.listing_count ?? 0));
+    }
+    return Array.from(bySuburb.entries())
+      .filter(([, count]) => count >= MIN_LISTINGS_FOR_INDEX)
+      .map(([suburbState]) => ({ suburbState }));
+  } catch (err) {
+    console.error("[tradies-in generateStaticParams] skipped:", err);
+    return [];
+  }
+}
 
 interface PageProps {
   params: Promise<{ suburbState: string }>;
@@ -35,7 +69,8 @@ interface PageProps {
 const MIN_LISTINGS_FOR_INDEX = 3;
 
 async function fetchTradeSuburbPages(admin: ReturnType<typeof createAdminClient>, suburbSlug: string, state: string) {
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  const delaysMs = [300, 900]; // 3 attempts total: try, wait 300ms, try, wait 900ms, try
+  for (let attempt = 1; attempt <= delaysMs.length + 1; attempt++) {
     const { data, error } = await admin
       .from("trade_suburb_pages")
       .select("trade, suburb, listing_count, avg_rating, total_reviews, is_indexed")
@@ -44,9 +79,11 @@ async function fetchTradeSuburbPages(admin: ReturnType<typeof createAdminClient>
       .order("listing_count", { ascending: false });
 
     if (!error) return { data, error: null };
-    if (attempt === 1) {
-      console.warn(`[tradies-in] trade_suburb_pages query failed for ${suburbSlug}-${state}, retrying once:`, error.message);
-      await new Promise((r) => setTimeout(r, 200));
+
+    const delay = delaysMs[attempt - 1];
+    if (delay !== undefined) {
+      console.warn(`[tradies-in] trade_suburb_pages query failed for ${suburbSlug}-${state} (attempt ${attempt}), retrying in ${delay}ms:`, error.message);
+      await new Promise((r) => setTimeout(r, delay));
     } else {
       return { data: null, error };
     }
