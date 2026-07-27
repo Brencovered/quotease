@@ -26,7 +26,7 @@ import { parseSuburbSlug, suburbLandingCanonical, getTradeDisplay, tradeToSlug }
 import MarketingNav from "@/components/MarketingNav";
 import { buildDirectorySlug } from "@/lib/seo/meta";
 
-export const revalidate = 604800; // 1 week - same cadence as the trade+suburb pages
+export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ suburbState: string }>;
@@ -66,28 +66,6 @@ async function loadSuburbContent(suburbSlug: string, state: string) {
   return { suburb, state, trades, totalListings, totalReviews, avgRating, topListings: topListings ?? [] };
 }
 
-export async function generateStaticParams() {
-  try {
-    const admin = createAdminClient();
-    const { data: rows } = await admin
-      .from("trade_suburb_pages")
-      .select("suburb_slug, state, listing_count")
-      .eq("is_indexed", true);
-
-    const bySuburb = new Map<string, number>();
-    for (const row of rows ?? []) {
-      const key = `${row.suburb_slug}-${row.state}`;
-      bySuburb.set(key, (bySuburb.get(key) ?? 0) + (row.listing_count ?? 0));
-    }
-    return Array.from(bySuburb.entries())
-      .filter(([, count]) => count >= MIN_LISTINGS_FOR_INDEX)
-      .map(([suburbState]) => ({ suburbState }));
-  } catch (err) {
-    console.error("[tradies-in generateStaticParams] skipped:", err);
-    return [];
-  }
-}
-
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { suburbState } = await params;
   const parsed = parseSuburbSlug(suburbState);
@@ -113,7 +91,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     // trades to be worth ranking. MIN_LISTINGS_FOR_INDEX is duplicated
     // here rather than imported since it lives in the page component,
     // not this lib file.
-    robots: { index: content.totalListings >= 3, follow: true },
+    robots: { index: content.totalListings >= MIN_LISTINGS_FOR_INDEX, follow: true },
   };
 }
 
