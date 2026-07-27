@@ -34,15 +34,43 @@ interface PageProps {
 
 const MIN_LISTINGS_FOR_INDEX = 3;
 
+async function fetchTradeSuburbPages(admin: ReturnType<typeof createAdminClient>, suburbSlug: string, state: string) {
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const { data, error } = await admin
+      .from("trade_suburb_pages")
+      .select("trade, suburb, listing_count, avg_rating, total_reviews, is_indexed")
+      .eq("suburb_slug", suburbSlug)
+      .eq("state", state)
+      .order("listing_count", { ascending: false });
+
+    if (!error) return { data, error: null };
+    if (attempt === 1) {
+      console.warn(`[tradies-in] trade_suburb_pages query failed for ${suburbSlug}-${state}, retrying once:`, error.message);
+      await new Promise((r) => setTimeout(r, 200));
+    } else {
+      return { data: null, error };
+    }
+  }
+  return { data: null, error: null }; // unreachable, satisfies TS
+}
+
 async function loadSuburbContent(suburbSlug: string, state: string) {
   const admin = createAdminClient();
 
-  const { data: trades } = await admin
-    .from("trade_suburb_pages")
-    .select("trade, suburb, listing_count, avg_rating, total_reviews, is_indexed")
-    .eq("suburb_slug", suburbSlug)
-    .eq("state", state)
-    .order("listing_count", { ascending: false });
+  const { data: trades, error: tradesErr } = await fetchTradeSuburbPages(admin, suburbSlug, state);
+
+  // A genuine query failure (timeout, transient network blip, connection
+  // pressure -- more likely now that this route is force-dynamic and every
+  // request hits the database fresh) must NOT be treated the same as "this
+  // suburb genuinely has no data". Confirmed exactly this symptom: the
+  // identical URL flip-flopped between 200 and 404 within seconds on the
+  // same deployment -- that's a transient query failure being silently
+  // read as "not found", not a real content gap. Throwing here lets
+  // Next.js's error boundary handle it (and Vercel retry/log it properly)
+  // instead of permanently telling users and Google the page doesn't exist.
+  if (tradesErr) {
+    throw new Error(`[tradies-in] trade_suburb_pages query failed for ${suburbSlug}-${state}: ${tradesErr.message}`);
+  }
 
   if (!trades || trades.length === 0) return null;
 
@@ -54,7 +82,7 @@ async function loadSuburbContent(suburbSlug: string, state: string) {
     ? ratedTrades.reduce((sum, t) => sum + Number(t.avg_rating), 0) / ratedTrades.length
     : null;
 
-  const { data: topListings } = await admin
+  const { data: topListings, error: listingsErr } = await admin
     .from("directory_listing")
     .select("id, business_name, suburb, trades, google_rating, google_reviews_count")
     .eq("suburb", suburb)
@@ -62,6 +90,12 @@ async function loadSuburbContent(suburbSlug: string, state: string) {
     .order("google_rating", { ascending: false })
     .order("google_reviews_count", { ascending: false })
     .limit(6);
+
+  if (listingsErr) {
+    // Non-fatal -- the page is still meaningful without the "top rated"
+    // section, so degrade gracefully here rather than fail the whole page.
+    console.error(`[tradies-in] directory_listing top-listings query failed for ${suburb}:`, listingsErr.message);
+  }
 
   return { suburb, state, trades, totalListings, totalReviews, avgRating, topListings: topListings ?? [] };
 }
