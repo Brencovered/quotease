@@ -29,6 +29,8 @@
 import { NextResponse } from "next/server";
 import { runSeoRefresh } from "@/lib/seo/refreshSeo";
 
+export const maxDuration = 60;
+
 function isAuthorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) {

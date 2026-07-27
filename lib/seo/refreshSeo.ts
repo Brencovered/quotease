@@ -112,40 +112,56 @@ export async function runSeoRefresh(): Promise<SeoRefreshResult> {
     );
 
     const pathsToRevalidate = new Set<string>();
+    const upsertRows: {
+      trade: string; suburb: string; suburb_slug: string; state: string;
+      listing_count: number; avg_rating: number | null; total_reviews: number;
+      is_indexed: boolean; last_refreshed_at: string;
+    }[] = [];
 
+    const nowIso = new Date().toISOString();
     for (const [key, agg] of aggregates.entries()) {
       const [trade, suburbSlug, state] = key.split("|");
       const isIndexed = agg.count >= MIN_LISTINGS_FOR_INDEX;
       const avgRating = agg.ratingCount > 0 ? agg.ratingSum / agg.ratingCount : null;
 
-      const { error: upsertErr } = await admin
-        .from("trade_suburb_pages")
-        .upsert(
-          {
-            trade,
-            suburb: agg.suburb,
-            suburb_slug: suburbSlug,
-            state,
-            listing_count: agg.count,
-            avg_rating: avgRating,
-            total_reviews: agg.reviews,
-            is_indexed: isIndexed,
-            last_refreshed_at: new Date().toISOString(),
-          },
-          { onConflict: "trade,suburb_slug,state" }
-        );
+      upsertRows.push({
+        trade,
+        suburb: agg.suburb,
+        suburb_slug: suburbSlug,
+        state,
+        listing_count: agg.count,
+        avg_rating: avgRating,
+        total_reviews: agg.reviews,
+        is_indexed: isIndexed,
+        last_refreshed_at: nowIso,
+      });
 
-      if (upsertErr) {
-        console.error(`[refresh-seo] upsert failed for ${key}:`, upsertErr.message);
-        continue;
-      }
-      pagesUpdated++;
-
-      const wasIndexed = existingIndexed.get(`${trade}|${suburbSlug}|${state}`);
+      const wasIndexed = existingIndexed.get(key);
       if (wasIndexed !== isIndexed) {
         if (isIndexed) pagesNewlyIndexed++; else pagesNewlyDeindexed++;
         pathsToRevalidate.add(`/${tradeToSlug(trade)}-${suburbSlug}-${state}`);
       }
+    }
+
+    // Bulk upsert in chunks rather than one row at a time -- with ~1,000+
+    // distinct trade+suburb+state combinations, a sequential await-per-row
+    // loop here was thousands of individual network round trips (multiple
+    // minutes, genuinely at risk of exceeding this route's execution
+    // limit before finishing). Supabase's upsert accepts an array
+    // directly; chunking just keeps each request body/response a
+    // reasonable size, not because a single big array wouldn't work.
+    const UPSERT_CHUNK_SIZE = 500;
+    for (let i = 0; i < upsertRows.length; i += UPSERT_CHUNK_SIZE) {
+      const chunk = upsertRows.slice(i, i + UPSERT_CHUNK_SIZE);
+      const { error: upsertErr } = await admin
+        .from("trade_suburb_pages")
+        .upsert(chunk, { onConflict: "trade,suburb_slug,state" });
+
+      if (upsertErr) {
+        console.error(`[refresh-seo] bulk upsert failed for chunk starting at ${i}:`, upsertErr.message);
+        continue;
+      }
+      pagesUpdated += chunk.length;
     }
 
     for (const path of pathsToRevalidate) {
