@@ -15,7 +15,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import DirectoryCard from "@/components/DirectoryCard";
-import { directoryMeta } from "@/lib/seo/meta";
+import { directoryMeta, getTradeVariants } from "@/lib/seo/meta";
 import MarketingNav from "@/components/MarketingNav";
 import AnimatedCounter from "./_components/AnimatedCounter";
 import DirectorySearchForm from "./_components/DirectorySearchForm";
@@ -320,7 +320,7 @@ export default async function DirectoryPage({
       }
     }
 
-    if (effectiveTrade) query = query.contains("trades", [effectiveTrade]);
+    if (effectiveTrade) query = query.overlaps("trades", getTradeVariants(effectiveTrade));
 
     if (postcode) {
       query = query.ilike("postcode", `${postcode}%`);

@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdminEmail } from "@/lib/admin";
 import { findAndFetchGoogleListing } from "@/lib/googlePlaces";
 import { scrapeWebsite } from "@/lib/websiteScrape";
-import { tradeToSlug, suburbToSlug } from "@/lib/seo/meta";
+import { tradeToSlug, suburbToSlug, getTradeVariants } from "@/lib/seo/meta";
 
 async function requireAdmin(): Promise<NextResponse | null> {
   const supabase = await createClient();
@@ -24,7 +24,7 @@ function applyFilters(
   const { trade, email, phone, website, rating, claimed, search } = params;
   let q = query;
 
-  if (trade) q = q.contains("trades", [trade]);
+  if (trade) q = q.overlaps("trades", getTradeVariants(trade));
 
   if (email === "yes") q = q.or("scraped_contact_email.not.is.null,private_email.not.is.null");
   else if (email === "no") q = q.is("scraped_contact_email", null).is("private_email", null);
@@ -216,7 +216,7 @@ export async function POST(req: NextRequest) {
           .from("directory_listing")
           .select("google_rating, google_reviews_count")
           .eq("suburb", suburb)
-          .contains("trades", [trade]);
+          .overlaps("trades", getTradeVariants(trade));
 
         let ratingSum = 0, ratingCount = 0, reviews = 0;
         for (const row of rows ?? []) {

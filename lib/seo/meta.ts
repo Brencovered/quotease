@@ -20,25 +20,31 @@ const DEFAULT_OG = `${BASE_URL}/og-default-image`; // generated on request, see 
 
 // -- Canonical helpers ----------------------------------------------------
 
+// Single source of truth for trade -> URL slug. Two different raw trade
+// strings can legitimately map to the same slug ("aircon" and "air
+// conditioning" both -> "air-conditioning", since both occur as real
+// values in directory_listing.trades) - see getTradeVariants() below for
+// why that matters for querying, not just display.
+const TRADE_SLUG_IRREGULAR: Record<string, string> = {
+  plumber:         "plumbers",
+  electrician:     "electricians",
+  builder:         "builders",
+  roofer:          "roofers",
+  painter:         "painters",
+  carpenter:       "carpenters",
+  tiler:           "tilers",
+  landscaper:      "landscapers",
+  arborist:        "arborists",
+  concreter:       "concreters",
+  fencer:          "fencers",
+  aircon:          "air-conditioning",
+  surveyor:        "surveyors",
+  "air conditioning": "air-conditioning",
+};
+
 /** "electrician" -> "electricians" */
 function tradeToSlug(trade: string): string {
-  const IRREGULAR: Record<string, string> = {
-    plumber:         "plumbers",
-    electrician:     "electricians",
-    builder:         "builders",
-    roofer:          "roofers",
-    painter:         "painters",
-    carpenter:       "carpenters",
-    tiler:           "tilers",
-    landscaper:      "landscapers",
-    arborist:        "arborists",
-    concreter:       "concreters",
-    fencer:          "fencers",
-    aircon:          "air-conditioning",
-    surveyor:        "surveyors",
-    "air conditioning": "air-conditioning",
-  };
-  return IRREGULAR[trade.toLowerCase()] ?? `${trade.toLowerCase()}s`;
+  return TRADE_SLUG_IRREGULAR[trade.toLowerCase()] ?? `${trade.toLowerCase()}s`;
 }
 
 /** "South Melbourne" -> "south-melbourne" */
@@ -269,6 +275,28 @@ export function postcodeToState(postcode: string | null | undefined): string {
 
 export function getSlugToTradeMap(): Record<string, string> {
   return SLUG_TO_TRADE;
+}
+
+/**
+ * Some trades exist as more than one raw string in directory_listing.trades
+ * (e.g. "aircon" and "air conditioning" both occur in real scraped data,
+ * and both correctly collapse to the same "/air-conditioning-{suburb}-
+ * {state}" URL via tradeToSlug). SLUG_TO_TRADE's reverse mapping only ever
+ * returns one canonical value per slug ("aircon"), which is fine for
+ * display, but querying directory_listing with just that one value misses
+ * every listing tagged with the other raw variant - confirmed real:
+ * Parkdale VIC has 2 real "air conditioning"-tagged listings (visible on
+ * the suburb hub card), but /air-con-installers-parkdale-vic queried only
+ * for "aircon" and found none.
+ *
+ * Returns every raw trade string that maps to the same slug as the given
+ * canonical trade, so a listings query can check for any of them rather
+ * than just the one SLUG_TO_TRADE happens to return.
+ */
+export function getTradeVariants(trade: string): string[] {
+  const targetSlug = tradeToSlug(trade);
+  const variants = Object.keys(TRADE_SLUG_IRREGULAR).filter((key) => TRADE_SLUG_IRREGULAR[key] === targetSlug);
+  return variants.length > 0 ? variants : [trade];
 }
 
 /**

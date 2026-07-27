@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolvePostcode } from "@/lib/resolvePostcode";
+import { getTradeVariants } from "@/lib/seo/meta";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY!;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL!;
@@ -78,7 +79,7 @@ export async function POST(req: NextRequest) {
   const { data: matchingProfiles } = await supabase
     .from("profiles")
     .select("id, trades, suburb, directory_postcode")
-    .contains("trades", [requestTrade]);
+    .overlaps("trades", getTradeVariants(requestTrade));
 
   if (matchingProfiles && matchingProfiles.length > 0) {
     let filtered = matchingProfiles;

@@ -24,7 +24,7 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
-import { getTradeDisplay, suburbToSlug, slugToSuburbDisplay, buildDirectorySlug } from "@/lib/seo/meta";
+import { getTradeDisplay, suburbToSlug, slugToSuburbDisplay, buildDirectorySlug, getTradeVariants } from "@/lib/seo/meta";
 import { generateTradeSuburbFaqs, type FaqItem } from "@/components/seo/FaqSchema";
 
 export interface TradeSuburbListing {
@@ -106,10 +106,23 @@ export async function generateTradeSuburbContent(
     // every punctuation/casing variant, pull every listing for the trade and
     // match in code by re-slugifying each row's suburb -- small dataset,
     // simpler and more reliable than fragile ILIKE patterns.
+    //
+    // Real bug, confirmed against live data: two different raw trade
+    // strings ("aircon" and "air conditioning") both legitimately occur in
+    // directory_listing.trades and both collapse to the same URL slug
+    // ("air-conditioning") via tradeToSlug - but querying
+    // .contains("trades", [trade]) only ever checked for the single value
+    // SLUG_TO_TRADE happened to reverse-map to ("aircon"), silently
+    // missing every listing tagged with "air conditioning" instead.
+    // Parkdale VIC has 2 real air-conditioning listings (visible on its
+    // suburb hub page) that /air-con-installers-parkdale-vic showed as
+    // "No air con installers listed" because of this. getTradeVariants()
+    // returns every raw string that maps to the same slug, and
+    // .overlaps() matches if the trades array contains any of them.
     const { data: tradeRows, error } = await supabase
       .from("directory_listing")
       .select("id, business_name, trades, suburb, google_rating, google_reviews_count, logo_url, photo_references, blurb, scraped_contact_phone, website_url")
-      .contains("trades", [trade]);
+      .overlaps("trades", getTradeVariants(trade));
 
     if (error) {
       console.error("[generateTradeSuburbContent] query failed:", error.message);

@@ -11,7 +11,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { CLAIMED_DIRECTORY_PAGES_ENABLED, QUOTE_REQUESTS_ENABLED } from "@/lib/featureFlags";
 import MarketingNav from "@/components/MarketingNav";
 import DirectoryCard from "@/components/DirectoryCard";
-import { tradieListingMeta, buildDirectorySlug } from "@/lib/seo/meta";
+import { tradieListingMeta, buildDirectorySlug, getTradeVariants } from "@/lib/seo/meta";
 import { getGoogleReviewsUrl } from "@/lib/seo/gbp";
 import PhotoGallery from "./_components/PhotoGallery";
 import QuoteForm from "./_components/QuoteForm";
@@ -192,7 +192,7 @@ export default async function TradieProfilePage({
     let q = supabase.from("directory_listing").select("*").not("id", "in", `(${excludeIds.join(",")})`);
     if (filters.suburb) q = q.eq("suburb", filters.suburb);
     if (filters.postcode) q = q.eq("postcode", filters.postcode);
-    if (filters.trade) q = q.contains("trades", [filters.trade]);
+    if (filters.trade) q = q.overlaps("trades", getTradeVariants(filters.trade));
     const { data } = await q.limit(3 - similar.length);
     if (data) similar = [...similar, ...(data as Listing[])];
   }
