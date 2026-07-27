@@ -58,6 +58,7 @@ async function loadSuburbContent(suburbSlug: string, state: string) {
   const admin = createAdminClient();
 
   const { data: trades, error: tradesErr } = await fetchTradeSuburbPages(admin, suburbSlug, state);
+  console.error(`[tradies-in] DIAG: query for suburbSlug="${suburbSlug}" state="${state}" -> error=${tradesErr ? tradesErr.message : "null"}, rowCount=${trades ? trades.length : "null"}`);
 
   // A genuine query failure (timeout, transient network blip, connection
   // pressure -- more likely now that this route is force-dynamic and every
@@ -132,10 +133,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function SuburbLandingPage({ params }: PageProps) {
   const { suburbState } = await params;
   const parsed = parseSuburbSlug(suburbState);
-  if (!parsed) notFound();
+  if (!parsed) {
+    console.error(`[tradies-in] DIAG: parseSuburbSlug returned null for raw param "${suburbState}"`);
+    notFound();
+  }
 
   const content = await loadSuburbContent(parsed.suburbSlug, parsed.state);
-  if (!content) notFound();
+  if (!content) {
+    console.error(`[tradies-in] DIAG: loadSuburbContent returned null for suburbSlug="${parsed.suburbSlug}" state="${parsed.state}" (parsed from raw param "${suburbState}")`);
+    notFound();
+  }
 
   const { suburb, state, trades, totalListings, totalReviews, avgRating, topListings } = content;
 
