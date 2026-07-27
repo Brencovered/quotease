@@ -112,6 +112,7 @@ export async function runSeoRefresh(): Promise<SeoRefreshResult> {
     );
 
     const pathsToRevalidate = new Set<string>();
+    const suburbHubPaths = new Set<string>(); // /tradies-in-{suburb}-{state}, distinct from the trade+suburb paths above
     const upsertRows: {
       trade: string; suburb: string; suburb_slug: string; state: string;
       listing_count: number; avg_rating: number | null; total_reviews: number;
@@ -141,6 +142,13 @@ export async function runSeoRefresh(): Promise<SeoRefreshResult> {
         if (isIndexed) pagesNewlyIndexed++; else pagesNewlyDeindexed++;
         pathsToRevalidate.add(`/${tradeToSlug(trade)}-${suburbSlug}-${state}`);
       }
+      // Every suburb hub page touched this run, unconditionally -- not
+      // just ones whose indexed status changed. Suburb hub pages were
+      // never revalidated at all before this fix existed, so a page
+      // visited before its suburb had enough real data (caching a 404)
+      // needs to be cleared regardless of whether anything "changes" on
+      // this particular run.
+      suburbHubPaths.add(`/tradies-in-${suburbSlug}-${state}`);
     }
 
     // Bulk upsert in chunks rather than one row at a time -- with ~1,000+
@@ -165,6 +173,9 @@ export async function runSeoRefresh(): Promise<SeoRefreshResult> {
     }
 
     for (const path of pathsToRevalidate) {
+      try { revalidatePath(path); } catch (err) { console.error(`[refresh-seo] revalidatePath failed for ${path}:`, err); }
+    }
+    for (const path of suburbHubPaths) {
       try { revalidatePath(path); } catch (err) { console.error(`[refresh-seo] revalidatePath failed for ${path}:`, err); }
     }
     revalidatePath("/sitemap.xml");
