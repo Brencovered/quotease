@@ -34,29 +34,64 @@ interface SuburbGroup {
   totalListings: number;
 }
 
+const MIN_LISTINGS_FOR_INDEX = 3; // matches app/tradies-in/[suburbState]'s own threshold
+
 async function loadAreas(): Promise<Record<string, SuburbGroup[]>> {
   const admin = createAdminClient();
-  const { data: rows } = await admin
-    .from("trade_suburb_pages")
-    .select("suburb, suburb_slug, state, listing_count")
-    .eq("is_indexed", true);
 
-  const bySuburb = new Map<string, SuburbGroup>();
-  for (const row of rows ?? []) {
+  // Paginate explicitly - PostgREST silently caps an unpaginated select at
+  // 1,000 rows, and trade_suburb_pages has 2,900+ rows.
+  const PAGE_SIZE = 1000;
+  const rows: { suburb: string; suburb_slug: string; state: string; listing_count: number | null; is_indexed: boolean }[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data: page } = await admin
+      .from("trade_suburb_pages")
+      .select("suburb, suburb_slug, state, listing_count, is_indexed")
+      .range(from, from + PAGE_SIZE - 1);
+    if (!page || page.length === 0) break;
+    rows.push(...page);
+    if (page.length < PAGE_SIZE) break;
+  }
+
+  // The real bug: this page only ever summed is_indexed=true rows, but a
+  // suburb's own "Tradies in {suburb}" hub page
+  // (app/tradies-in/[suburbState]) shows every trade present there,
+  // indexed or not, once the suburb as a whole qualifies. Box Hill VIC is
+  // the confirmed example - 7 trade rows/13 listings total, but only 1 of
+  // those rows (electrician, 3 listings) individually crosses the
+  // per-trade indexed threshold, so this page showed "1 trade - 3
+  // listings" for a suburb whose own hub page correctly shows "7 trades -
+  // 13 listings". Now sums ALL rows for display, and only uses the
+  // is_indexed subset to decide whether the suburb qualifies to be listed
+  // at all - the same qualification logic the hub page's own
+  // generateStaticParams uses, so a suburb shown here is guaranteed to
+  // actually render when clicked through.
+  const bySuburb = new Map<string, SuburbGroup & { indexedListingSum: number }>();
+  for (const row of rows) {
     const key = `${row.suburb_slug}-${row.state}`;
     const existing = bySuburb.get(key);
+    const listingCount = row.listing_count ?? 0;
     if (existing) {
       existing.tradeCount += 1;
-      existing.totalListings += row.listing_count ?? 0;
+      existing.totalListings += listingCount;
+      if (row.is_indexed) existing.indexedListingSum += listingCount;
     } else {
       bySuburb.set(key, {
         suburb: row.suburb,
         suburbSlug: row.suburb_slug,
         state: row.state,
         tradeCount: 1,
-        totalListings: row.listing_count ?? 0,
+        totalListings: listingCount,
+        indexedListingSum: row.is_indexed ? listingCount : 0,
       });
     }
+  }
+
+  // Only suburbs that actually qualify for their own hub page get listed
+  // here - otherwise this page would link to a suburb whose hub page
+  // 404s (the suburb hub route's own generateStaticParams gate).
+  for (const [key, group] of bySuburb) {
+    if (group.indexedListingSum < MIN_LISTINGS_FOR_INDEX) bySuburb.delete(key);
   }
 
   const grouped: Record<string, SuburbGroup[]> = {};
