@@ -330,5 +330,5 @@ export function parseSuburbSlug(segment: string): { suburbSlug: string; state: s
 }
 
 export function suburbLandingCanonical(suburbSlug: string, state: string): string {
-  return `${BASE_URL}/tradies-in-${suburbSlug}-${state}`;
+  return `${BASE_URL}/tradies-in/${suburbSlug}-${state}`;
 }

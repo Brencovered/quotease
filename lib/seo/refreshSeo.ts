@@ -30,7 +30,7 @@ export interface SeoRefreshResult {
 
 /**
  * Recomputes trade x suburb aggregates from directory_listing, upserts
- * trade_suburb_pages (which /areas, /tradies-in-[suburbState], and
+ * trade_suburb_pages (which /areas, /tradies-in/[suburbState], and
  * app/[tradeSuburb]'s generateStaticParams all read from), revalidates any
  * page whose indexability crossed the 3-listing threshold, and pings
  * Google with the sitemap. Shared by the weekly cron
@@ -148,7 +148,7 @@ export async function runSeoRefresh(): Promise<SeoRefreshResult> {
       // visited before its suburb had enough real data (caching a 404)
       // needs to be cleared regardless of whether anything "changes" on
       // this particular run.
-      suburbHubPaths.add(`/tradies-in-${suburbSlug}-${state}`);
+      suburbHubPaths.add(`/tradies-in/${suburbSlug}-${state}`);
     }
 
     // Bulk upsert in chunks rather than one row at a time -- with ~1,000+

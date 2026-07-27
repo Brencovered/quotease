@@ -128,7 +128,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const suburbPages: MetadataRoute.Sitemap = Array.from(suburbTotals.entries())
     .filter(([, v]) => v.count >= MIN_LISTINGS_FOR_INDEX)
     .map(([suburbSlug, v]) => ({
-      url: `${BASE_URL}/tradies-in-${suburbSlug}-${v.state}`,
+      url: `${BASE_URL}/tradies-in/${suburbSlug}-${v.state}`,
       changeFrequency: "weekly" as const,
       priority: 0.8,
     }));

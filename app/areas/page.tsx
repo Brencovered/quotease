@@ -2,7 +2,7 @@
  * app/areas/page.tsx
  * -------------------
  * "Areas we cover" -- the top of the hub-and-spoke SEO structure:
- * /areas (this page) -> /tradies-in-{suburb}-{state} -> /{trade}-{suburb}-{state}
+ * /areas (this page) -> /tradies-in/{suburb}-{state} -> /{trade}-{suburb}-{state}
  *
  * Lists every suburb with real, indexed coverage (trade_suburb_pages.is_indexed),
  * grouped by state, each linking to that suburb's "Tradies in {suburb}" hub
@@ -104,7 +104,7 @@ export default async function AreasPage() {
                   {grouped[state].map((s) => (
                     <Link
                       key={`${s.suburbSlug}-${s.state}`}
-                      href={`/tradies-in-${s.suburbSlug}-${s.state}`}
+                      href={`/tradies-in/${s.suburbSlug}-${s.state}`}
                       className="group flex items-center justify-between gap-3 bg-white border border-[#e5e9ec] rounded-xl px-4 py-3.5 hover:border-[#ffb400] transition-colors"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">

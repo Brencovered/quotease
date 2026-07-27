@@ -110,7 +110,7 @@ export default async function TradeSuburbPage({ params }: PageProps) {
             <span>/</span>
             <Link href="/directory" className="hover:text-white">Directory</Link>
             <span>/</span>
-            <Link href={`/tradies-in-${suburbToSlug(suburb)}-${parsed.state}`} className="hover:text-white">{suburb}</Link>
+            <Link href={`/tradies-in/${suburbToSlug(suburb)}-${parsed.state}`} className="hover:text-white">{suburb}</Link>
             <span>/</span>
             <span className="text-white/70">{tradePlural} in {suburb}</span>
           </nav>

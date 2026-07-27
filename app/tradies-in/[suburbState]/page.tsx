@@ -1,5 +1,5 @@
 /**
- * app/tradies-in-[suburbState]/page.tsx
+ * app/tradies-in/[suburbState]/page.tsx
  * --------------------------------------
  * "Tradies in {Suburb}" - lists every trade with listings in a suburb,
  * one page per suburb rather than per trade x suburb combo.
@@ -10,11 +10,22 @@
  * (no trade specified) had no dedicated page to match against - Google
  * had nothing better to show than the generic directory/homepage.
  *
- * URL shape mirrors the trade+suburb pages but drops the trade prefix:
- * "seaford-vic" instead of "electricians-seaford-vic" - a static
- * "tradies-in-" folder prefix keeps this route distinct from
- * app/[tradeSuburb]'s bare single dynamic segment (Next.js doesn't allow
- * two different dynamic param names at the same path level otherwise).
+ * URL shape: /tradies-in/{suburb}-{state}, e.g. /tradies-in/seaford-vic.
+ *
+ * This used to live at app/tradies-in-[suburbState] (a literal "tradies-in-"
+ * string glued directly onto a dynamic segment in the same folder name),
+ * which looked like it should keep this route distinct from
+ * app/[tradeSuburb]'s bare single dynamic segment - it doesn't. Next.js
+ * has no concept of a partial-literal-plus-dynamic single path segment;
+ * both folders are just two competing single dynamic segments at the
+ * same level, and Next.js silently resolved every request to
+ * [tradeSuburb] instead, which then correctly 404'd trying to parse
+ * "tradies-in-seaford" as a trade name. Every previous fix (retries, ISR
+ * caching, region migration) was chasing symptoms of a request that
+ * was, at least some of the time, never reaching this file at all -
+ * confirmed directly via the x-matched-path response header showing
+ * /[tradeSuburb], not this route. Nesting under a genuinely static
+ * "tradies-in" parent folder removes the ambiguity entirely.
  */
 
 import { notFound } from "next/navigation";
