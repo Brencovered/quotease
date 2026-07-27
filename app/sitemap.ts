@@ -29,7 +29,7 @@
 
 import { MetadataRoute } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { tradeToSlug, suburbToSlug, buildDirectorySlug } from "@/lib/seo/meta";
+import { tradeToSlug, buildDirectorySlug } from "@/lib/seo/meta";
 import { LEADS_ENABLED } from "@/lib/featureFlags";
 
 // The site's canonical host is www -- the apex domain 301s to it. Sitemap
@@ -86,42 +86,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   // ── 3. Trade×suburb programmatic pages ───────────────────────────────
-  // Fetch distinct trade+suburb combos above the minimum listing threshold.
-  const { data: tradeSuburbRows, error: tsErr } = await admin.rpc(
-    "get_trade_suburb_counts"
-  ).select("trade, suburb, listing_count");
-
-  // ASSUMPTION: the RPC above may not exist yet. Fall back to a direct
-  // query if the RPC fails.
-  let tradeSuburbs: Array<{ trade: string; suburb: string; count: number }> = [];
-
-  if (tsErr || !tradeSuburbRows) {
-    // Direct query fallback -- slightly slower but always available
-    const { data: directRows } = await admin
-      .from("directory_listing")
-      .select("trades, suburb")
-      .not("suburb", "is", null);
-
-    const counts = new Map<string, number>();
-    for (const row of directRows ?? []) {
-      for (const trade of row.trades ?? []) {
-        const key = `${trade}|${row.suburb}`;
-        counts.set(key, (counts.get(key) ?? 0) + 1);
-      }
+  // Source directly from trade_suburb_pages -- same table the actual
+  // trade+suburb and suburb-hub pages read from, already has correct
+  // per-listing state (derived from postcode, not a hardcoded "vic").
+  // Previously used a separate RPC/direct-query path that never had
+  // state at all, so every sitemap entry claimed "-vic" regardless of
+  // the listing's real state.
+  const PAGE_SIZE = 1000;
+  const tradeSuburbs: Array<{ trade: string; suburb: string; suburbSlug: string; state: string; count: number }> = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data: page } = await admin
+      .from("trade_suburb_pages")
+      .select("trade, suburb, suburb_slug, state, listing_count")
+      .eq("is_indexed", true)
+      .range(from, from + PAGE_SIZE - 1);
+    if (!page || page.length === 0) break;
+    for (const r of page) {
+      tradeSuburbs.push({ trade: r.trade, suburb: r.suburb, suburbSlug: r.suburb_slug, state: r.state, count: r.listing_count ?? 0 });
     }
-    for (const [key, count] of counts.entries()) {
-      const [trade, suburb] = key.split("|");
-      tradeSuburbs.push({ trade, suburb, count });
-    }
-  } else {
-    tradeSuburbs = (tradeSuburbRows as Array<{ trade: string; suburb: string; listing_count: number }>)
-      .map((r) => ({ trade: r.trade, suburb: r.suburb, count: r.listing_count }));
+    if (page.length < PAGE_SIZE) break;
   }
 
   const programmaticPages: MetadataRoute.Sitemap = tradeSuburbs
     .filter((r) => r.count >= MIN_LISTINGS_FOR_INDEX)
     .map((r) => ({
-      url: `${BASE_URL}/${tradeToSlug(r.trade)}-${suburbToSlug(r.suburb)}-vic`,
+      url: `${BASE_URL}/${tradeToSlug(r.trade)}-${r.suburbSlug}-${r.state}`,
       changeFrequency: "weekly" as const,
       priority: 0.8,
     }));
@@ -130,15 +119,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // One page per suburb (all trades combined) alongside the trade+suburb
   // pages above - covers broad "tradies in {suburb}" searches that don't
   // specify a trade, which none of the trade-specific pages target.
-  const suburbTotals = new Map<string, number>();
+  const suburbTotals = new Map<string, { count: number; state: string }>();
   for (const r of tradeSuburbs) {
-    const key = suburbToSlug(r.suburb);
-    suburbTotals.set(key, (suburbTotals.get(key) ?? 0) + r.count);
+    const key = r.suburbSlug;
+    const existing = suburbTotals.get(key);
+    suburbTotals.set(key, { count: (existing?.count ?? 0) + r.count, state: r.state });
   }
   const suburbPages: MetadataRoute.Sitemap = Array.from(suburbTotals.entries())
-    .filter(([, count]) => count >= MIN_LISTINGS_FOR_INDEX)
-    .map(([suburbSlug]) => ({
-      url: `${BASE_URL}/tradies-in-${suburbSlug}-vic`,
+    .filter(([, v]) => v.count >= MIN_LISTINGS_FOR_INDEX)
+    .map(([suburbSlug, v]) => ({
+      url: `${BASE_URL}/tradies-in-${suburbSlug}-${v.state}`,
       changeFrequency: "weekly" as const,
       priority: 0.8,
     }));
