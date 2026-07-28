@@ -72,13 +72,13 @@ export default function Home() {
           </div>
           <div className="flex items-center justify-center gap-4 sm:gap-6 flex-wrap">
             <div className="relative w-[110px] sm:w-[150px] aspect-[453/918] hidden md:block">
-              <Image src="/marketing/v2/dashboard.png" alt="Swiftscope dashboard showing operations and business insights" fill sizes="150px" className="object-contain drop-shadow-lg" />
+              <Image src="/marketing/v2/dashboard.png" alt="Swiftscope dashboard showing operations and business insights" fill sizes="150px" className="object-contain" />
             </div>
             <div className="relative w-[150px] sm:w-[210px] aspect-[453/918] z-10 -mt-4 sm:-mt-8">
-              <Image src="/marketing/v2/quoting.png" alt="Building a priced quote in Swiftscope" fill sizes="(max-width: 640px) 150px, 210px" className="object-contain drop-shadow-2xl" priority />
+              <Image src="/marketing/v2/quoting.png" alt="Building a priced quote in Swiftscope" fill sizes="(max-width: 640px) 150px, 210px" className="object-contain" priority />
             </div>
             <div className="relative w-[110px] sm:w-[150px] aspect-[453/918] hidden md:block">
-              <Image src="/marketing/v2/job-management.png" alt="Job management board in Swiftscope" fill sizes="150px" className="object-contain drop-shadow-lg" />
+              <Image src="/marketing/v2/job-management.png" alt="Job management board in Swiftscope" fill sizes="150px" className="object-contain" />
             </div>
           </div>
         </div>
@@ -150,7 +150,7 @@ export default function Home() {
             </div>
             <div className="lg:col-span-3 order-1 lg:order-2 lg:sticky lg:top-24 flex justify-center">
               <div className="relative w-full max-w-[380px] aspect-[453/918]">
-                <Image src="/marketing/v2/quote-capture.png" alt="Capturing a quote live on site in Swiftscope" fill sizes="380px" className="object-contain drop-shadow-2xl" />
+                <Image src="/marketing/v2/quote-capture.png" alt="Capturing a quote live on site in Swiftscope" fill sizes="380px" className="object-contain" />
               </div>
             </div>
           </div>
@@ -172,7 +172,7 @@ export default function Home() {
               ].map((f) => (
                 <div key={f.label} className="flex flex-col items-center text-center">
                   <div className="relative w-full max-w-[170px] mx-auto aspect-[453/918]">
-                    <Image src={`/marketing/v2/${f.img}`} alt={f.label} fill sizes="170px" className="object-contain drop-shadow-lg" />
+                    <Image src={`/marketing/v2/${f.img}`} alt={f.label} fill sizes="170px" className="object-contain" />
                   </div>
                   <div className="mt-3">
                     <p className="font-display text-[1.05rem] text-white mb-1">{f.label}</p>
@@ -251,7 +251,7 @@ export default function Home() {
                 ))}
               </div>
               <div className="relative w-full max-w-[220px] mx-auto aspect-[453/918] mb-6">
-                <Image src="/marketing/v2/quote-management.png" alt="Managing quotes and jobs in Swiftscope" fill sizes="220px" className="object-contain drop-shadow-lg" />
+                <Image src="/marketing/v2/quote-management.png" alt="Managing quotes and jobs in Swiftscope" fill sizes="220px" className="object-contain" />
               </div>
               <Link href="/signup" className="flex items-center justify-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] py-4 rounded-xl hover:opacity-90 transition-opacity">
                 Start free trial - 7 days, no card <ArrowRight size={15} />
