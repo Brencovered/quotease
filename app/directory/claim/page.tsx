@@ -113,12 +113,50 @@ function ClaimDirectoryListingInner() {
     supabase.auth.getUser().then(async ({ data }) => {
       if (data.user) {
         const redirected = await redirectIfAlreadyClaimed();
-        if (!redirected) setStep("search");
+        if (!redirected) await resolveEntryStep();
       }
       setCheckingAuth(false);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Claim links (outreach emails, HubSpot export, admin-triggered invites)
+  // carry a claim_token that resolves straight to one exact listing --
+  // skips the fuzzy search-and-pick step entirely. Falls back to the
+  // normal search step if there's no token, or if it doesn't resolve.
+  async function resolveEntryStep() {
+    const token = searchParams.get("token");
+    if (!token) {
+      setStep("search");
+      return;
+    }
+    try {
+      const res = await fetch("/api/directory/lookup-by-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.match) {
+        setStep("search");
+        return;
+      }
+      if (data.isClaimed) {
+        // Already claimed by someone else by the time they clicked through
+        // -- fall back to search rather than dead-ending them.
+        setStep("search");
+        return;
+      }
+      setBusinessName(data.match.business_name ?? businessName);
+      setSuburb(data.match.suburb ?? suburb);
+      if (Array.isArray(data.match.trades) && data.match.trades[0]) setTrade(data.match.trades[0]);
+      setStrongMatch(data.match);
+      setMatches([data.match]);
+      setStep("resolve");
+    } catch {
+      setStep("search");
+    }
+  }
 
   async function handleAuth(e: React.FormEvent) {
     e.preventDefault();
@@ -137,13 +175,16 @@ function ClaimDirectoryListingInner() {
           options: {
             // Explicitly back to /directory/claim -- never the $45 plan's
             // /onboarding default that a bare signUp() would otherwise send
-            // an email-confirmation link to.
-            emailRedirectTo: `${window.location.origin}/directory/claim`,
+            // an email-confirmation link to. Preserve the query string so
+            // a claim_token (or pre-filled name/trade/suburb) survives the
+            // email-confirmation round trip instead of dropping the user
+            // back at a blank search step.
+            emailRedirectTo: `${window.location.origin}/directory/claim${window.location.search}`,
           },
         });
         if (signUpError) { setError(signUpError.message); return; }
         if (data.session) {
-          setStep("search");
+          await resolveEntryStep();
         } else {
           setCheckYourEmail(true);
         }
@@ -154,7 +195,7 @@ function ClaimDirectoryListingInner() {
         });
         if (signInError) { setError(signInError.message); return; }
         const redirected = await redirectIfAlreadyClaimed();
-        if (!redirected) setStep("search");
+        if (!redirected) await resolveEntryStep();
       }
     } catch {
       setError("Could not reach the server. Please try again.");

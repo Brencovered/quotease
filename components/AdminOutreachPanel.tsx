@@ -211,6 +211,39 @@ export default function AdminOutreachPanel({
         </p>
       </div>
 
+      <div className="card flex flex-wrap items-center justify-between gap-3 bg-[var(--app-bg)] border-2 border-dashed border-[var(--line)]">
+        <div>
+          <p className="font-bold text-[14px] text-[var(--ink)]">Sending through HubSpot instead?</p>
+          <p className="text-[12.5px] text-[var(--ink-soft)] mt-0.5 max-w-lg">
+            Export unclaimed listings with an email as a CSV, ready to import as a HubSpot list. Each row includes a
+            personalised claim link (via <code className="text-[11px] bg-[var(--line-subtle)] px-1 py-0.5 rounded">claim_url</code>)
+            that resolves straight to that exact business — no searching required on their end.
+          </p>
+        </div>
+        <div className="flex gap-2 shrink-0">
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- file download from an API route, not page navigation; next/link's client-side routing is the wrong tool here */}
+          <a
+            href="/api/admin/directory/export-outreach-csv?includeContacted=true"
+            className="btn-secondary px-4 py-2 text-[12.5px]"
+          >
+            <Eye size={13} /> Preview CSV
+          </a>
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- same as above */}
+          <a
+            href="/api/admin/directory/export-outreach-csv"
+            className="btn-primary px-4 py-2 text-[12.5px]"
+            style={{ width: "auto" }}
+            onClick={(e) => {
+              if (!window.confirm("This marks every exported listing as contacted, so a future export won't include them again. Continue?")) {
+                e.preventDefault();
+              }
+            }}
+          >
+            <Mail size={13} /> Download CSV & mark contacted
+          </a>
+        </div>
+      </div>
+
       <div className="grid lg:grid-cols-[1fr_420px] gap-5 items-start">
 
         {/* ── LEFT: Contact list ─────────────────────────────── */}
