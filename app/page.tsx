@@ -149,7 +149,7 @@ export default function Home() {
               </div>
             </div>
             <div className="lg:col-span-3 order-1 lg:order-2 lg:sticky lg:top-24 flex justify-center">
-              <div className="relative w-full max-w-[380px] aspect-[453/918] rounded-3xl overflow-hidden shadow-2xl bg-[#0a1722]">
+              <div className="relative w-full max-w-[380px] aspect-[453/918] rounded-3xl overflow-hidden shadow-2xl">
                 <Image src="/marketing/v2/quote-capture.png" alt="Capturing a quote live on site in Swiftscope" fill sizes="380px" className="object-contain" />
               </div>
             </div>
@@ -159,7 +159,7 @@ export default function Home() {
           <div className="mt-14 bg-[#0a1722] rounded-3xl p-8 md:p-10">
             <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-2 text-center">Plus everything else you&apos;d expect</p>
             <h3 className="font-display text-[1.8rem] text-white text-center mb-10">Running the rest of the business</h3>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
                 { img: "job-management-2.png", label: "Job & site management", value: "See every job's status, value and profit at a glance." },
                 { img: "team-management.png", label: "Team management", value: "Assign jobs and tasks to your crew, from anywhere." },
@@ -167,12 +167,14 @@ export default function Home() {
                 { img: "schedule.png", label: "Schedule & job calendar", value: "Jobs, follow-ups and quote expiries, all in one calendar." },
                 { img: "dayworks-docket.png", label: "Dayworks dockets", value: "Signed, per-day work records that bundle into one EOM invoice." },
                 { img: "materials-pricing.png", label: "Materials & price book", value: "Your own pricing, pulled straight into every quote automatically." },
+                { img: "lead-gen.png", label: "Homeowner leads", value: "Included leads from the public directory, no auction, no per-lead cost." },
+                { img: "quoting-customer-accepts.png", label: "Client accepts online", value: "Customer reviews and accepts the quote from their phone. You get notified." },
               ].map((f) => (
-                <div key={f.label} className="bg-white/[0.04] border border-white/10 rounded-2xl overflow-hidden">
-                  <div className="relative w-full h-64 bg-[#0a1722]">
-                    <Image src={`/marketing/v2/${f.img}`} alt={f.label} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-contain" />
+                <div key={f.label} className="bg-white/[0.04] border border-white/10 rounded-2xl overflow-hidden flex flex-col">
+                  <div className="relative w-full max-w-[170px] mx-auto aspect-[453/918] mt-6">
+                    <Image src={`/marketing/v2/${f.img}`} alt={f.label} fill sizes="170px" className="object-contain" />
                   </div>
-                  <div className="p-4">
+                  <div className="p-4 mt-2">
                     <p className="font-display text-[1.05rem] text-white mb-1">{f.label}</p>
                     <p className="text-[13px] text-[#8aa4b4] leading-snug">{f.value}</p>
                   </div>
@@ -248,7 +250,7 @@ export default function Home() {
                   </div>
                 ))}
               </div>
-              <div className="relative w-full max-w-[220px] mx-auto aspect-[453/918] rounded-2xl overflow-hidden mb-6 bg-white/5">
+              <div className="relative w-full max-w-[220px] mx-auto aspect-[453/918] rounded-2xl overflow-hidden mb-6">
                 <Image src="/marketing/v2/quote-management.png" alt="Managing quotes and jobs in Swiftscope" fill sizes="220px" className="object-contain" />
               </div>
               <Link href="/signup" className="flex items-center justify-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] py-4 rounded-xl hover:opacity-90 transition-opacity">
