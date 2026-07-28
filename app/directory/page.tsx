@@ -207,21 +207,32 @@ export default async function DirectoryPage({
 
   // Resolve the search term to one or more postcodes, and (if a radius is
   // set) a centre point to measure distance from.
+  //
+  // Real bug, confirmed via a live fetch of the actual rendered page:
+  // the location field's HTML name is "postcode" (placeholder "Postcode,
+  // e.g. 3199"), but nothing stops someone typing a suburb name into it
+  // instead - and plenty of people don't know their postcode off-hand.
+  // Typing "Parkdale" there submitted postcode=Parkdale literally, which
+  // directory_postcode_centroid() then searched for as an EXACT postcode
+  // match - no listing has postcode='Parkdale', so the centroid RPC
+  // returned nothing and the radius search silently found zero results,
+  // even though real, nearby listings existed. The numeric-vs-suburb-name
+  // check below already existed for the (basically unused, legacy SEO-
+  // link-only) `suburb` param - it just needed to also apply to the
+  // field real users actually type into.
   let resolvedPostcodes: string[] = [];
-  if (hasActiveFilters) {
-    if (postcode) {
-      resolvedPostcodes = [postcode];
-    } else if (suburb) {
-      if (/^\d+$/.test(suburb)) {
-        resolvedPostcodes = [suburb];
-      } else {
-        const { data: postcodeRows } = await supabase
-          .from("directory_listing")
-          .select("postcode")
-          .ilike("suburb", `%${suburb}%`)
-          .not("postcode", "is", null);
-        resolvedPostcodes = Array.from(new Set((postcodeRows ?? []).map((r) => r.postcode).filter((p): p is string => !!p)));
-      }
+  const rawLocation = postcode || suburb;
+  const looksLikePostcode = !!rawLocation && /^\d+$/.test(rawLocation);
+  if (hasActiveFilters && rawLocation) {
+    if (looksLikePostcode) {
+      resolvedPostcodes = [rawLocation];
+    } else {
+      const { data: postcodeRows } = await supabase
+        .from("directory_listing")
+        .select("postcode")
+        .ilike("suburb", `%${rawLocation}%`)
+        .not("postcode", "is", null);
+      resolvedPostcodes = Array.from(new Set((postcodeRows ?? []).map((r) => r.postcode).filter((p): p is string => !!p)));
     }
   }
 
@@ -322,15 +333,15 @@ export default async function DirectoryPage({
 
     if (effectiveTrade) query = query.overlaps("trades", getTradeVariants(effectiveTrade));
 
-    if (postcode) {
-      query = query.ilike("postcode", `${postcode}%`);
+    if (looksLikePostcode) {
+      query = query.ilike("postcode", `${rawLocation}%`);
     } else if (resolvedPostcodes.length > 0) {
       query = query.in("postcode", resolvedPostcodes);
-    } else if (suburb) {
-      // Couldn't resolve any postcode for this suburb text at all (typo,
-      // or not in our data) - fall back to the raw suburb match so
+    } else if (rawLocation) {
+      // Couldn't resolve any postcode for this location text at all
+      // (typo, or not in our data) - fall back to a raw suburb match so
       // search doesn't silently return everything.
-      query = query.ilike("suburb", `%${suburb}%`);
+      query = query.ilike("suburb", `%${rawLocation}%`);
     }
 
     if (minReviews !== undefined) query = query.gte("google_reviews_count", minReviews);
