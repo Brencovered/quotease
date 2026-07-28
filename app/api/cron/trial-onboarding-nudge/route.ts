@@ -26,6 +26,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { computeTrialDay, getOnboardingProgress } from "@/lib/onboarding";
 import { Resend } from "resend";
+import { buildTrialNudgeEmail } from "@/lib/email/templates";
 
 function isAuthorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET;
@@ -34,14 +35,6 @@ function isAuthorized(request: Request): boolean {
     return false;
   }
   return request.headers.get("authorization") === `Bearer ${secret}`;
-}
-
-function htmlEscape(str: string) {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
 
 export async function GET(request: Request) {
@@ -108,34 +101,20 @@ export async function GET(request: Request) {
     const remainingTasks = dayInfo.tasks.filter((t) => !t.done);
     const businessName = profile.business_name || "there";
 
-    const taskRows = remainingTasks
-      .map(
-        (t) => `
-        <tr>
-          <td style="padding:10px 0;border-bottom:1px solid #e5e7eb;">
-            <a href="${appUrl}${t.href}" style="color:#0f172a;text-decoration:none;font-size:14px;font-weight:700;">${htmlEscape(t.label)} &rarr;</a>
-          </td>
-        </tr>`
-      )
-      .join("");
-
-    const html = `
-      <div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:24px;">
-        <p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#d97706;">Day ${day} of your trial</p>
-        <h1 style="margin:0 0 16px;font-size:22px;color:#0f172a;">${htmlEscape(dayInfo.title)}</h1>
-        <p style="font-size:14px;color:#334155;line-height:1.5;margin:0 0 20px;">Hi ${htmlEscape(businessName)}, here's today's focus in Swiftscope:</p>
-        <table width="100%" cellpadding="0" cellspacing="0">${taskRows}</table>
-        <p style="font-size:12px;color:#94a3b8;margin:24px 0 0;">
-          ${progress.daysRemaining} day${progress.daysRemaining !== 1 ? "s" : ""} left in your trial.
-        </p>
-      </div>
-    `;
+    const { subject, html } = buildTrialNudgeEmail({
+      businessName,
+      day,
+      dayTitle: dayInfo.title,
+      tasks: remainingTasks.map((t) => ({ label: t.label, href: t.href })),
+      daysRemaining: progress.daysRemaining,
+      appUrl,
+    });
 
     try {
       await resend.emails.send({
         from: FROM_EMAIL,
         to: profile.contact_email,
-        subject: `Day ${day}: ${dayInfo.title}`,
+        subject,
         html,
       });
       await admin
