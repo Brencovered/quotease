@@ -4,7 +4,8 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import {
   Home as HomeIcon, Briefcase, CheckCircle, ArrowRight,
-  Crosshair, Mic, PenTool, FileSearch,
+  Crosshair, Mic, PenTool, FileSearch, ListChecks, TrendingUp,
+  CalendarClock, FileText, Users2, RefreshCw,
 } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
 import FaqSchema, { SWIFTSCOPE_FAQS } from "@/components/seo/FaqSchema";
@@ -61,29 +62,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* PRODUCT SHOWCASE - the first real look at the actual app, not just a stock photo */}
-      <div className="bg-[#f8f9fa] border-b border-[#e8ecef] overflow-hidden">
-        <div className="max-w-7xl mx-auto px-6 pt-16 pb-20 sm:pt-20 sm:pb-24">
-          <div className="text-center mb-12">
-            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">See it in action</p>
-            <h2 className="font-display uppercase text-[2rem] sm:text-[2.6rem] leading-[0.95] text-[#0a1722]">
-              This is what it actually looks like
-            </h2>
-          </div>
-          <div className="flex items-center justify-center gap-4 sm:gap-6 flex-wrap">
-            <div className="relative w-[110px] sm:w-[150px] aspect-[453/918] rounded-xl overflow-hidden shadow-lg hidden md:block">
-              <Image src="/marketing/v2/dashboard.png" alt="Swiftscope dashboard showing operations and business insights" fill sizes="150px" className="object-contain" />
-            </div>
-            <div className="relative w-[150px] sm:w-[210px] aspect-[453/918] rounded-2xl overflow-hidden shadow-2xl z-10 -mt-4 sm:-mt-8">
-              <Image src="/marketing/v2/quoting.png" alt="Building a priced quote in Swiftscope" fill sizes="(max-width: 640px) 150px, 210px" className="object-contain" priority />
-            </div>
-            <div className="relative w-[110px] sm:w-[150px] aspect-[453/918] rounded-xl overflow-hidden shadow-lg hidden md:block">
-              <Image src="/marketing/v2/job-management.png" alt="Job management board in Swiftscope" fill sizes="150px" className="object-contain" />
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* DIFFERENTIATORS - the core "built site-first" pitch */}
       <div className="bg-white border-b border-[#e8ecef]">
         <div className="max-w-7xl mx-auto px-6 py-20">
@@ -97,89 +75,79 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid lg:grid-cols-5 gap-10 items-start">
-            <div className="lg:col-span-2 space-y-6 order-2 lg:order-1">
-              <div className="flex gap-4">
-                <div className="w-10 h-10 bg-[#0a1722] rounded-xl flex items-center justify-center shrink-0">
-                  <Crosshair size={18} className="text-[#ffb400]" />
-                </div>
-                <div>
-                  <h3 className="font-display text-[1.25rem] text-[#0a1722] mb-1">Live on-screen quoting</h3>
-                  <p className="text-[14px] text-[#5a6a78] leading-relaxed">
-                    Mark straight onto your screen what needs capturing. Materials and labour autoload with your
-                    own pricing. Press send.
-                  </p>
-                </div>
+          <div className="grid md:grid-cols-2 gap-5">
+            <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
+              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
+                <Crosshair size={20} className="text-[#ffb400]" />
               </div>
-              <div className="flex gap-4">
-                <div className="w-10 h-10 bg-[#0a1722] rounded-xl flex items-center justify-center shrink-0">
-                  <Mic size={18} className="text-[#ffb400]" />
-                </div>
-                <div>
-                  <h3 className="font-display text-[1.25rem] text-[#0a1722] mb-1">AI voice quote generator</h3>
-                  <p className="text-[14px] text-[#5a6a78] leading-relaxed">
-                    Talk through the job and materials needed. A priced quote generates automatically using your
-                    own pricing.
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="w-10 h-10 bg-[#0a1722] rounded-xl flex items-center justify-center shrink-0">
-                  <PenTool size={18} className="text-[#ffb400]" />
-                </div>
-                <div>
-                  <h3 className="font-display text-[1.25rem] text-[#0a1722] mb-1">Plan &amp; drawing markup</h3>
-                  <p className="text-[14px] text-[#5a6a78] leading-relaxed">
-                    Upload a plan, drop markers or draw runs. Every markup syncs straight into a quote, quantities
-                    and costs already calculated.
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="w-10 h-10 bg-[#0a1722] rounded-xl flex items-center justify-center shrink-0">
-                  <FileSearch size={18} className="text-[#ffb400]" />
-                </div>
-                <div>
-                  <h3 className="font-display text-[1.25rem] text-[#0a1722] mb-1">AI plan reading</h3>
-                  <p className="text-[14px] text-[#5a6a78] leading-relaxed">
-                    Upload the plan, direct what needs reading and calculating, and save straight to a quote.
-                  </p>
-                  <p className="text-[12px] text-[#8a9ba8] italic mt-1">* AI output should always be checked before sending.</p>
-                </div>
-              </div>
+              <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">Live on-screen quoting</h3>
+              <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
+                Open Swiftscope and mark straight onto your screen what material, work, or zone needs capturing.
+                Press done - the materials and labour autoload into a quote with your pre-configured pricing.
+                Press send. That&apos;s it.
+              </p>
+              <p className="text-[13px] font-bold text-[#0a1722]">Customers can accept in 30 seconds from send.</p>
             </div>
-            <div className="lg:col-span-3 order-1 lg:order-2 lg:sticky lg:top-24 flex justify-center">
-              <div className="relative w-full max-w-[380px] aspect-[453/918] rounded-3xl overflow-hidden shadow-2xl bg-[#0a1722]">
-                <Image src="/marketing/v2/quote-capture.png" alt="Capturing a quote live on site in Swiftscope" fill sizes="380px" className="object-contain" />
+
+            <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
+              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
+                <Mic size={20} className="text-[#ffb400]" />
               </div>
+              <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">AI voice quote generator</h3>
+              <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
+                Walk the job and talk to Swiftscope - describe the work and materials needed. Save, and a quote
+                generates automatically using your own pricing and materials. Not your thing on site? Record it
+                on the drive home instead - same result either way.
+              </p>
+              <p className="text-[13px] font-bold text-[#0a1722]">Customers can accept in 30 seconds from end of recording.</p>
+            </div>
+
+            <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
+              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
+                <PenTool size={20} className="text-[#ffb400]" />
+              </div>
+              <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">Plan &amp; drawing markup</h3>
+              <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
+                Upload a plan or drawing. Drop markers configured to your materials, draw lines for cable or pipe
+                runs, or block out work zones. Press save - every markup syncs straight into a quote, quantities
+                and costs already calculated.
+              </p>
+            </div>
+
+            <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
+              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
+                <FileSearch size={20} className="text-[#ffb400]" />
+              </div>
+              <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">AI plan reading</h3>
+              <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
+                Plans can be exhaustive and time-consuming to read properly. Upload the plan, direct what needs
+                reading and calculating for the job, and save straight to a quote.
+              </p>
+              <p className="text-[12.5px] text-[#8a9ba8] italic">* AI output should always be checked by a qualified person before sending.</p>
             </div>
           </div>
 
           {/* Everything else */}
           <div className="mt-14 bg-[#0a1722] rounded-3xl p-8 md:p-10">
             <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-2 text-center">Plus everything else you&apos;d expect</p>
-            <h3 className="font-display text-[1.8rem] text-white text-center mb-10">Running the rest of the business</h3>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <h3 className="font-display text-[1.8rem] text-white text-center mb-8">Running the rest of the business</h3>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-5">
               {[
-                { img: "job-management-2.png", label: "Job & site management", value: "See every job's status, value and profit at a glance." },
-                { img: "team-management.png", label: "Team management", value: "Assign jobs and tasks to your crew, from anywhere." },
-                { img: "margins-pricing.png", label: "Margin & profit tracking", value: "Real margin on every job, not just a guess at tax time." },
-                { img: "schedule.png", label: "Schedule & job calendar", value: "Jobs, follow-ups and quote expiries, all in one calendar." },
-                { img: "dayworks-docket.png", label: "Dayworks dockets", value: "Signed, per-day work records that bundle into one EOM invoice." },
-                { img: "materials-pricing.png", label: "Materials & price book", value: "Your own pricing, pulled straight into every quote automatically." },
+                { icon: Briefcase,     label: "Job & site management" },
+                { icon: ListChecks,    label: "Tasks for your team" },
+                { icon: TrendingUp,    label: "Margin & profit tracking" },
+                { icon: CalendarClock, label: "Schedule & quote expiry tracking" },
+                { icon: FileText,      label: "Standard quote builder" },
+                { icon: Users2,        label: "Client list & job history" },
+                { icon: RefreshCw,     label: "Xero live sync" },
               ].map((f) => (
-                <div key={f.label} className="bg-white/[0.04] border border-white/10 rounded-2xl overflow-hidden">
-                  <div className="relative w-full h-64 bg-[#0a1722]">
-                    <Image src={`/marketing/v2/${f.img}`} alt={f.label} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-contain" />
-                  </div>
-                  <div className="p-4">
-                    <p className="font-display text-[1.05rem] text-white mb-1">{f.label}</p>
-                    <p className="text-[13px] text-[#8aa4b4] leading-snug">{f.value}</p>
-                  </div>
+                <div key={f.label} className="flex items-center gap-3">
+                  <f.icon size={17} className="text-[#ffb400] shrink-0" />
+                  <span className="text-[14px] font-semibold text-white">{f.label}</span>
                 </div>
               ))}
             </div>
-            <div className="text-center mt-10">
+            <div className="text-center mt-8">
               <Link href="/features" className="inline-flex items-center gap-1.5 text-[13.5px] font-bold text-[#ffb400] hover:underline">
                 See the full feature list <ArrowRight size={13} />
               </Link>
@@ -226,7 +194,7 @@ export default function Home() {
               </Link>
             </div>
 
-            <div className="bg-[#0a1722] rounded-3xl p-8 overflow-hidden">
+            <div className="bg-[#0a1722] rounded-3xl p-8">
               <div className="w-12 h-12 bg-[#ffb400] rounded-2xl flex items-center justify-center mb-5">
                 <Briefcase size={22} className="text-[#0a1722]" />
               </div>
@@ -236,7 +204,7 @@ export default function Home() {
                 Quote, win, manage, and invoice jobs from your phone. Get homeowner leads
                 in your area included with your plan - no auction, no per-lead cost.
               </p>
-              <div className="space-y-3 mb-6">
+              <div className="space-y-3 mb-8">
                 {[
                   "Quote from your phone in 4 minutes on site",
                   "Homeowner leads included in your plan",
@@ -247,9 +215,6 @@ export default function Home() {
                     <CheckCircle size={16} className="text-[#ffb400] shrink-0" /> {f}
                   </div>
                 ))}
-              </div>
-              <div className="relative w-full max-w-[220px] mx-auto aspect-[453/918] rounded-2xl overflow-hidden mb-6 bg-white/5">
-                <Image src="/marketing/v2/quote-management.png" alt="Managing quotes and jobs in Swiftscope" fill sizes="220px" className="object-contain" />
               </div>
               <Link href="/signup" className="flex items-center justify-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] py-4 rounded-xl hover:opacity-90 transition-opacity">
                 Start free trial - 7 days, no card <ArrowRight size={15} />
