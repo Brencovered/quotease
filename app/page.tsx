@@ -4,8 +4,7 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import {
   Home as HomeIcon, Briefcase, CheckCircle, ArrowRight,
-  Crosshair, Mic, PenTool, FileSearch, ListChecks, TrendingUp,
-  CalendarClock, FileText, Users2, RefreshCw,
+  Crosshair, Mic, PenTool, FileSearch,
 } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
 import FaqSchema, { SWIFTSCOPE_FAQS } from "@/components/seo/FaqSchema";
@@ -71,15 +70,15 @@ export default function Home() {
               This is what it actually looks like
             </h2>
           </div>
-          <div className="flex items-end justify-center gap-3 sm:gap-6">
-            <div className="relative w-[130px] sm:w-[170px] aspect-[4/5] rounded-2xl overflow-hidden shadow-xl -rotate-6 -mr-3 sm:-mr-6 mb-4 hidden sm:block">
-              <Image src="/marketing/mobile-quoting-quote-builder.png" alt="Building a quote on site in Swiftscope" fill sizes="170px" className="object-cover object-top" />
+          <div className="flex items-center justify-center gap-4 sm:gap-6 flex-wrap">
+            <div className="relative w-[200px] sm:w-[260px] aspect-[1300/956] rounded-xl overflow-hidden shadow-lg hidden md:block">
+              <Image src="/marketing/v2/dashboard.png" alt="Swiftscope dashboard showing operations and business insights" fill sizes="260px" className="object-cover" />
             </div>
-            <div className="relative w-[190px] sm:w-[250px] aspect-[4/5] rounded-2xl overflow-hidden shadow-2xl z-10">
-              <Image src="/marketing/drawing-markup-floorplan.png" alt="Marking up a floor plan to auto-price a quote in Swiftscope" fill sizes="(max-width: 640px) 190px, 250px" className="object-cover object-top" priority />
+            <div className="relative w-[260px] sm:w-[360px] aspect-[1300/956] rounded-2xl overflow-hidden shadow-2xl z-10 -mt-4 sm:-mt-8">
+              <Image src="/marketing/v2/quoting.png" alt="Building a priced quote in Swiftscope" fill sizes="(max-width: 640px) 260px, 360px" className="object-cover" priority />
             </div>
-            <div className="relative w-[130px] sm:w-[170px] aspect-[4/5] rounded-2xl overflow-hidden shadow-xl rotate-6 -ml-3 sm:-ml-6 mb-4 hidden sm:block">
-              <Image src="/marketing/job-management-schedule.png" alt="Scheduling jobs in Swiftscope" fill sizes="170px" className="object-cover object-top" />
+            <div className="relative w-[200px] sm:w-[260px] aspect-[1300/956] rounded-xl overflow-hidden shadow-lg hidden md:block">
+              <Image src="/marketing/v2/job-management.png" alt="Job management board in Swiftscope" fill sizes="260px" className="object-cover" />
             </div>
           </div>
         </div>
@@ -150,8 +149,8 @@ export default function Home() {
               </div>
             </div>
             <div className="lg:col-span-3 order-1 lg:order-2 lg:sticky lg:top-24">
-              <div className="relative w-full aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl bg-[#0a1722]">
-                <Image src="/marketing/job-costing-materials.png" alt="Swiftscope's price book and materials search, live on site" fill sizes="(max-width: 1024px) 100vw, 60vw" className="object-cover" />
+              <div className="relative w-full aspect-[1300/956] rounded-3xl overflow-hidden shadow-2xl bg-[#0a1722]">
+                <Image src="/marketing/v2/quote-capture.png" alt="Capturing a quote live on site in Swiftscope" fill sizes="(max-width: 1024px) 100vw, 60vw" className="object-cover" />
               </div>
             </div>
           </div>
@@ -159,24 +158,28 @@ export default function Home() {
           {/* Everything else */}
           <div className="mt-14 bg-[#0a1722] rounded-3xl p-8 md:p-10">
             <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-2 text-center">Plus everything else you&apos;d expect</p>
-            <h3 className="font-display text-[1.8rem] text-white text-center mb-8">Running the rest of the business</h3>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-5">
+            <h3 className="font-display text-[1.8rem] text-white text-center mb-10">Running the rest of the business</h3>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {[
-                { icon: Briefcase,     label: "Job & site management" },
-                { icon: ListChecks,    label: "Tasks for your team" },
-                { icon: TrendingUp,    label: "Margin & profit tracking" },
-                { icon: CalendarClock, label: "Schedule & quote expiry tracking" },
-                { icon: FileText,      label: "Standard quote builder" },
-                { icon: Users2,        label: "Client list & job history" },
-                { icon: RefreshCw,     label: "Xero live sync" },
+                { img: "job-management-2.png", label: "Job & site management", value: "See every job's status, value and profit at a glance." },
+                { img: "team-management.png", label: "Team management", value: "Assign jobs and tasks to your crew, from anywhere." },
+                { img: "margins-pricing.png", label: "Margin & profit tracking", value: "Real margin on every job, not just a guess at tax time." },
+                { img: "schedule.png", label: "Schedule & job calendar", value: "Jobs, follow-ups and quote expiries, all in one calendar." },
+                { img: "dayworks-docket.png", label: "Dayworks dockets", value: "Signed, per-day work records that bundle into one EOM invoice." },
+                { img: "materials-pricing.png", label: "Materials & price book", value: "Your own pricing, pulled straight into every quote automatically." },
               ].map((f) => (
-                <div key={f.label} className="flex items-center gap-3">
-                  <f.icon size={17} className="text-[#ffb400] shrink-0" />
-                  <span className="text-[14px] font-semibold text-white">{f.label}</span>
+                <div key={f.label} className="bg-white/[0.04] border border-white/10 rounded-2xl overflow-hidden">
+                  <div className="relative w-full aspect-[1300/956]">
+                    <Image src={`/marketing/v2/${f.img}`} alt={f.label} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover" />
+                  </div>
+                  <div className="p-4">
+                    <p className="font-display text-[1.05rem] text-white mb-1">{f.label}</p>
+                    <p className="text-[13px] text-[#8aa4b4] leading-snug">{f.value}</p>
+                  </div>
                 </div>
               ))}
             </div>
-            <div className="text-center mt-8">
+            <div className="text-center mt-10">
               <Link href="/features" className="inline-flex items-center gap-1.5 text-[13.5px] font-bold text-[#ffb400] hover:underline">
                 See the full feature list <ArrowRight size={13} />
               </Link>
@@ -245,8 +248,8 @@ export default function Home() {
                   </div>
                 ))}
               </div>
-              <div className="relative w-full max-w-[220px] mx-auto aspect-[4/5] rounded-2xl overflow-hidden mb-6 bg-white/5">
-                <Image src="/marketing/job-management-jobslist.png" alt="Job list showing value, profit and status in Swiftscope" fill sizes="220px" className="object-cover" />
+              <div className="relative w-full aspect-[1300/956] rounded-2xl overflow-hidden mb-6 bg-white/5">
+                <Image src="/marketing/v2/quote-management.png" alt="Managing quotes and jobs in Swiftscope" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
               </div>
               <Link href="/signup" className="flex items-center justify-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] py-4 rounded-xl hover:opacity-90 transition-opacity">
                 Start free trial - 7 days, no card <ArrowRight size={15} />
