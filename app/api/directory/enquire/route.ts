@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { buildDirectoryEnquiryEmail } from "@/lib/email/templates";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -102,49 +103,20 @@ export async function POST(req: NextRequest) {
   }
 
   /* ── 4. Build email HTML ───────────────────────────────────────── */
-  const extraFields: string[] = [];
-  if (typeof phone === "string" && phone.trim()) {
-    extraFields.push(`<p><strong>Phone:</strong> ${escapeHtml(phone.trim())}</p>`);
-  }
-  if (typeof budget === "string" && budget.trim()) {
-    extraFields.push(`<p><strong>Budget:</strong> ${escapeHtml(budget)}</p>`);
-  }
-  if (typeof stage === "string" && stage.trim()) {
-    extraFields.push(`<p><strong>Stage:</strong> ${escapeHtml(stage)}</p>`);
-  }
-  if (typeof others === "string" && others.trim()) {
-    extraFields.push(`<p><strong>Other quotes:</strong> ${escapeHtml(others)}</p>`);
-  }
-  if (typeof message === "string" && message.trim()) {
-    extraFields.push(`<p><strong>Notes:</strong> ${escapeHtml(message)}</p>`);
-  }
-
   const isClaimed = is_claimed === true;
 
-  const claimNudge = isClaimed
-    ? ""
-    : `
-    <hr/>
-    <p style="background:#fffbeb;border:1px solid #ffe58f;border-radius:8px;padding:12px 16px;font-size:13px;color:#5a4a00;">
-      This lead came through your free, unclaimed Swiftscope directory page. Claim it to receive enquiries like
-      this straight to your own account, manage your photos and services, and get a verified badge --
-      <a href="https://swiftscope.com.au/directory/claim" style="color:#c98600;font-weight:600;">claim your listing free</a>.
-    </p>
-  `;
-
-  const html = `
-    <h2>${isClaimed ? "New quote request via your Swiftscope page" : "New quote request from Swiftscope Directory"}</h2>
-    <p><strong>Business:</strong> ${escapeHtml(typeof business_name === "string" ? business_name : "")}</p>
-    <hr/>
-    <p><strong>From:</strong> ${escapeHtml(customerName)}</p>
-    <p><strong>Email:</strong> ${escapeHtml(customerEmail)}</p>
-    ${extraFields.join("")}
-    <hr/>
-    <p><strong>Job:</strong> ${escapeHtml(jobDesc)}</p>
-    ${claimNudge}
-    <hr/>
-    <p style="color:#888;font-size:12px">Sent via Swiftscope Directory - swiftscope.com.au/directory</p>
-  `;
+  const { subject, html } = buildDirectoryEnquiryEmail({
+    businessName: typeof business_name === "string" ? business_name : "",
+    isClaimed,
+    customerName,
+    customerEmail,
+    jobDesc,
+    phone: typeof phone === "string" ? phone : undefined,
+    budget: typeof budget === "string" ? budget : undefined,
+    stage: typeof stage === "string" ? stage : undefined,
+    others: typeof others === "string" ? others : undefined,
+    message: typeof message === "string" ? message : undefined,
+  });
 
   /* ── 5. Send via Resend ────────────────────────────────────────── */
   try {
@@ -158,7 +130,7 @@ export async function POST(req: NextRequest) {
         from: "Swiftscope Directory <directory@swiftscope.com.au>",
         to: [toAddress],
         reply_to: customerEmail,
-        subject: `Quote request from ${customerName} - Swiftscope`,
+        subject,
         html,
       }),
     });
@@ -217,11 +189,3 @@ export async function POST(req: NextRequest) {
   }
 }
 
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}

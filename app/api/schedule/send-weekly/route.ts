@@ -14,6 +14,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
+import { buildWeeklyScheduleEmail, type WeeklyScheduleJob } from "@/lib/email/templates";
 
 const FROM_EMAIL = "Swiftscope <noreply@swiftscope.com.au>";
 
@@ -38,14 +39,6 @@ function fmtDate(d: string | null) {
     day: "numeric",
     month: "short",
   });
-}
-
-function htmlEscape(str: string) {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
 
 export async function POST(request: Request) {
@@ -126,110 +119,32 @@ export async function POST(request: Request) {
       continue;
     }
 
-    const greeting = member.name ? `Hi ${htmlEscape(member.name)},` : "Hi,";
+    // Map to the shared template's job shape
+    const jobs: WeeklyScheduleJob[] = assignedJobs.map((job) => ({
+      id: job.id,
+      clientName: job.client_name || "Unnamed client",
+      siteAddress: job.site_address,
+      title: job.title,
+      status: job.status,
+      dateRange: job.scheduled_end
+        ? `${fmtDate(job.scheduled_start)} — ${fmtDate(job.scheduled_end)}`
+        : fmtDate(job.scheduled_start),
+    }));
 
-    // Build job rows
-    const jobRows = assignedJobs
-      .map((job) => {
-        const jobUrl = `${appUrl}/jobs/${job.id}`;
-        const dateRange = job.scheduled_end
-          ? `${fmtDate(job.scheduled_start)} — ${fmtDate(job.scheduled_end)}`
-          : fmtDate(job.scheduled_start);
-        const statusColor =
-          job.status === "complete"
-            ? "#16a34a"
-            : job.status === "in_progress"
-              ? "#d97706"
-              : job.status === "on_hold"
-                ? "#dc2626"
-                : "#334155";
-        const statusLabel =
-          job.status === "scheduled"
-            ? "Scheduled"
-            : job.status === "in_progress"
-              ? "In progress"
-              : job.status === "on_hold"
-                ? "On hold"
-                : job.status === "awaiting_sign_off"
-                  ? "Awaiting sign-off"
-                  : job.status === "complete"
-                    ? "Complete"
-                    : job.status;
-
-        return `
-          <tr>
-            <td style="padding:12px 0;border-bottom:1px solid #e5e7eb;vertical-align:top;">
-              <p style="margin:0;font-size:15px;font-weight:700;color:#0f172a;">
-                <a href="${jobUrl}" style="color:#0f172a;text-decoration:none;">${htmlEscape(job.client_name || "Unnamed client")}</a>
-              </p>
-              ${job.site_address ? `<p style="margin:4px 0 0;font-size:13px;color:#64748b;">${htmlEscape(job.site_address)}</p>` : ""}
-              ${job.title ? `<p style="margin:4px 0 0;font-size:12px;color:#94a3b8;">${htmlEscape(job.title)}</p>` : ""}
-            </td>
-            <td style="padding:12px 0;border-bottom:1px solid #e5e7eb;vertical-align:top;text-align:right;white-space:nowrap;">
-              <p style="margin:0;font-size:13px;font-weight:600;color:#334155;">${dateRange}</p>
-              <p style="margin:4px 0 0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:${statusColor};">${statusLabel}</p>
-            </td>
-            <td style="padding:12px 0;border-bottom:1px solid #e5e7eb;vertical-align:top;text-align:right;white-space:nowrap;">
-              <a href="${jobUrl}" style="display:inline-block;padding:6px 14px;background:#0f172a;color:#fff;font-size:12px;font-weight:700;text-decoration:none;border-radius:8px;">Open job</a>
-            </td>
-          </tr>
-        `;
-      })
-      .join("");
-
-    const totalJobs = assignedJobs.length;
+    const { subject, html } = buildWeeklyScheduleEmail({
+      businessName,
+      weekLabel,
+      memberName: member.name,
+      jobs,
+      appUrl,
+    });
 
     try {
       await resend.emails.send({
         from: FROM_EMAIL,
         to: [member.email],
-        subject: `${businessName} — Your schedule ${weekLabel} (${totalJobs} job${totalJobs > 1 ? "s" : ""})`,
-        html: `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-</head>
-<body style="margin:0;padding:0;background:#f8fafc;font-family:Inter,system-ui,-apple-system,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f8fafc;">
-    <tr>
-      <td align="center" style="padding:32px 16px;">
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;">
-          <tr>
-            <td style="padding:28px 24px 20px;background:#0f172a;">
-              <p style="margin:0;font-size:20px;font-weight:800;color:#fbbf24;letter-spacing:-0.02em;">${htmlEscape(businessName)}</p>
-              <p style="margin:4px 0 0;font-size:13px;color:#94a3b8;">Weekly schedule — ${htmlEscape(weekLabel)}</p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:20px 24px 0;">
-              <p style="margin:0;font-size:14px;color:#334155;line-height:1.6;">${greeting}</p>
-              <p style="margin:8px 0 0;font-size:14px;color:#334155;line-height:1.6;">You have <strong>${totalJobs} job${totalJobs > 1 ? "s" : ""}</strong> scheduled. Tap any job to open it in Swiftscope.</p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:16px 24px 24px;">
-              <table width="100%" cellpadding="0" cellspacing="0" border="0">${jobRows}</table>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:0 24px 24px;text-align:center;">
-              <a href="${appUrl}/schedule" style="display:inline-block;padding:12px 24px;background:#0f172a;color:#fbbf24;font-size:14px;font-weight:800;text-decoration:none;border-radius:10px;">View full schedule in Swiftscope</a>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:16px 24px;border-top:1px solid #e5e7eb;text-align:center;">
-              <p style="margin:0;font-size:11px;color:#94a3b8;">Sent from Swiftscope • <a href="${appUrl}" style="color:#64748b;">Open Swiftscope</a></p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-        `,
+        subject,
+        html,
       });
       sent++;
     } catch (err) {

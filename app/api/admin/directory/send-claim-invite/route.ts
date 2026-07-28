@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdminEmail } from "@/lib/admin";
 import { buildDirectorySlug } from "@/lib/seo/meta";
+import { buildDirectoryClaimInviteEmail } from "@/lib/email/templates";
 
 /**
  * Sends a "claim your free listing" invite email to selected directory_listing
@@ -60,17 +61,11 @@ export async function POST(req: NextRequest) {
     const claimUrl = `https://swiftscope.com.au/directory/claim?name=${encodeURIComponent(listing.business_name)}&suburb=${encodeURIComponent(listing.suburb ?? "")}&trade=${encodeURIComponent(trade)}`;
     const listingUrl = `https://swiftscope.com.au/directory/${buildDirectorySlug({ id: listing.id, business_name: listing.business_name, suburb: listing.suburb ?? "" })}`;
 
-    const subject = `${listing.business_name} -- your free Swiftscope directory page is ready`;
-    const html = `
-      <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; color: #0a1722;">
-        <p>Hi,</p>
-        <p>We've set up a free directory page for <strong>${listing.business_name}</strong> on Swiftscope, an Australian directory for trade businesses, built for homeowners searching for a tradie in your area.</p>
-        <p>You can see it here: <a href="${listingUrl}">${listingUrl}</a></p>
-        <p>It's free to claim, no credit card, no catch. Once you claim it you can add photos, your licence details, services you offer, and start receiving quote requests directly.</p>
-        <p><a href="${claimUrl}" style="display:inline-block;background:#ffb400;color:#0a1722;font-weight:700;padding:12px 24px;border-radius:8px;text-decoration:none;">Claim your free listing</a></p>
-        <p style="color:#5a6b78;font-size:13px;">If this isn't your business, you can ignore this email.</p>
-      </div>
-    `;
+    const { subject, html } = buildDirectoryClaimInviteEmail({
+      businessName: listing.business_name,
+      claimUrl,
+      listingUrl,
+    });
 
     try {
       const res = await fetch("https://api.resend.com/emails", {

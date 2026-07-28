@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolvePostcode } from "@/lib/resolvePostcode";
 import { getTradeVariants } from "@/lib/seo/meta";
+import { buildLeadMatchEmail, buildNoMatchLeadEmail } from "@/lib/email/templates";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY!;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL!;
@@ -118,15 +119,12 @@ export async function POST(req: NextRequest) {
 
   if (!profileIds.length) {
     // No tradies matched — notify team so they can manually route or follow up
-    await sendEmail(
-      "team@swiftscope.com.au",
-      `New ${request.trade} lead - ${request.suburb} (no matched tradies)`,
-      `<p>A new lead was submitted but no tradies matched yet.</p>
-       <p><strong>Trade:</strong> ${request.trade}</p>
-       <p><strong>Suburb:</strong> ${request.suburb}</p>
-       <p><strong>Job:</strong> ${request.description}</p>
-       <p><strong>Tips:</strong> Check if the suburb needs normalizing, or if tradies need to be added for this area.</p>`
-    );
+    const noMatch = buildNoMatchLeadEmail({
+      trade: request.trade,
+      suburb: request.suburb,
+      description: request.description,
+    });
+    await sendEmail("team@swiftscope.com.au", noMatch.subject, noMatch.html);
     return NextResponse.json({ ok: true, sent: 0, reason: "no_matching_tradies" });
   }
 
@@ -140,47 +138,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, sent: 0, reason: "no_emails" });
   }
 
-  const tempLabel: Record<string, string> = {
-    early: "Early stage",
-    warm:  "Warm — interested in speaking soon",
-    hot:   "Hot — budget approved, ready to go",
-  };
-
   let sent = 0;
   const notifiedAt = new Date().toISOString();
 
   for (const profile of profiles) {
     if (!profile.contact_email) continue;
 
-    const html = `
-      <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
-        <div style="background: #0a1722; color: white; padding: 20px 24px; border-radius: 12px 12px 0 0;">
-          <h1 style="margin: 0; font-size: 18px; color: #ffb400;">New ${request.trade} lead in ${request.suburb}</h1>
-        </div>
-        <div style="background: #f8f9fa; padding: 24px; border-radius: 0 0 12px 12px;">
-          <p style="margin: 0 0 8px;"><strong style="color: #0a1722;">Stage:</strong> <span style="color: ${request.lead_temperature === 'hot' ? '#dc2626' : request.lead_temperature === 'warm' ? '#ea580c' : '#ca8a04'}">${tempLabel[request.lead_temperature] ?? request.lead_temperature}</span></p>
-          <p style="margin: 0 0 8px;"><strong style="color: #0a1722;">Job:</strong> ${request.description}</p>
-          ${request.additional_details ? `<p style="margin: 0 0 8px;"><strong style="color: #0a1722;">Details:</strong> ${request.additional_details}</p>` : ""}
-          ${request.budget ? `<p style="margin: 0 0 8px;"><strong style="color: #0a1722;">Budget:</strong> ${request.budget}</p>` : ""}
-          ${request.timeline ? `<p style="margin: 0 0 8px;"><strong style="color: #0a1722;">Timeline:</strong> ${request.timeline}</p>` : ""}
-          ${request.photo_paths?.length ? `<p style="margin: 0 0 16px;"><strong style="color: #0a1722;">Photos:</strong> ${request.photo_paths.length} attached — view and claim to see them</p>` : ""}
-          <p style="margin: 0 0 24px;"><strong style="color: #0a1722;">Suburb:</strong> ${request.suburb}${request.postcode ? ` ${request.postcode}` : ""}</p>
-          <a href="${APP_URL}/leads" style="display: inline-block; background: #ffb400; color: #0a1722; padding: 14px 28px; border-radius: 10px; font-weight: bold; text-decoration: none; font-size: 15px;">
-            View and claim this lead →
-          </a>
-          <p style="color: #9ca3af; font-size: 12px; margin-top: 24px; line-height: 1.5;">
-            You're receiving this because you're subscribed to ${request.trade} leads in ${request.suburb} on Swiftscope.
-            Every tradie is auto-subscribed by default. <a href="${APP_URL}/settings" style="color: #0a1722; text-decoration: underline;">Manage your lead preferences</a> to opt out.
-          </p>
-        </div>
-      </div>
-    `;
+    const { subject, html } = buildLeadMatchEmail({
+      trade: request.trade,
+      suburb: request.suburb,
+      postcode: request.postcode ?? undefined,
+      leadTemperature: request.lead_temperature,
+      description: request.description,
+      additionalDetails: request.additional_details ?? undefined,
+      budget: request.budget ?? undefined,
+      timeline: request.timeline ?? undefined,
+      photoCount: request.photo_paths?.length ?? undefined,
+      appUrl: APP_URL,
+    });
 
-    const emailSent = await sendEmail(
-      profile.contact_email,
-      `New ${request.trade} lead — ${request.suburb} (${tempLabel[request.lead_temperature] ?? ""})`,
-      html
-    );
+    const emailSent = await sendEmail(profile.contact_email, subject, html);
 
     // Log the notification
     // (lead_matching_log has RLS enabled with no policies -- it's a purely
