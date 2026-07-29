@@ -27,6 +27,34 @@ const nextConfig: NextConfig = {
   },
 
   /* ------------------------------------------------------------------ */
+  /*  Security headers - none of these were set explicitly before; only */
+  /*  whatever defaults Vercel's edge applies on its own.                */
+  /* ------------------------------------------------------------------ */
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          // Never let the app be framed by another site (clickjacking).
+          { key: "X-Frame-Options", value: "DENY" },
+          // Stop browsers guessing content-types away from what's declared.
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          // Don't leak the full referring URL (which can contain tokens in
+          // query strings, e.g. docket sign links, quote response links)
+          // to third-party destinations.
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          // Force HTTPS for a year, including subdomains, and allow this
+          // domain to be added to browsers' HSTS preload lists.
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+          // Disable browser features this app never uses, so a compromised
+          // dependency/XSS can't silently request them.
+          { key: "Permissions-Policy", value: "camera=(self), microphone=(self), geolocation=(self), payment=()" },
+        ],
+      },
+    ];
+  },
+
+  /* ------------------------------------------------------------------ */
   /*  Performance                                                       */
   /* ------------------------------------------------------------------ */
   compress: true,
