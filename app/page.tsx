@@ -1,5 +1,6 @@
 import Link from "next/link";
 import SavingsCalculator from "@/components/SavingsCalculator";
+import InteractiveQuoteDemo from "@/components/InteractiveQuoteDemo";
 import Image from "next/image";
 import type { Metadata } from "next";
 import {
@@ -59,6 +60,13 @@ export default function Home() {
               <span>196 curated tradie listings</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* INTERACTIVE DEMO - no images, no crop issues, just the real pricing logic */}
+      <div className="bg-white border-b border-[#e8ecef]">
+        <div className="max-w-7xl mx-auto px-6 py-20">
+          <InteractiveQuoteDemo />
         </div>
       </div>
 
