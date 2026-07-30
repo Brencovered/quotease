@@ -223,7 +223,7 @@ export default function TeamPageClient({
             {pendingInvites.map((inv) => (
               <div key={inv.id} className="flex items-center justify-between gap-3 py-2 border-b border-[var(--line-subtle)] last:border-0">
                 <div>
-                  <p className="text-[14px] font-semibold text-[var(ink)]">{inv.email}</p>
+                  <p className="text-[14px] font-semibold text-[var(--ink)]">{inv.email}</p>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className={`pill ${ROLE_STYLE[inv.role]?.bg ?? ROLE_STYLE.member.bg} ${ROLE_STYLE[inv.role]?.text ?? ROLE_STYLE.member.text}`}>{inv.role}</span>
                     <span className="text-[11px] text-[var(--ink-faint)]">Sent {new Date(inv.invited_at).toLocaleDateString("en-AU")}</span>
@@ -243,7 +243,7 @@ export default function TeamPageClient({
 
       {/* Active members */}
       <div className="card">
-        <h3 className="font-bold text-[16px] text-[var(ink)] mb-3 flex items-center gap-2">
+        <h3 className="font-bold text-[16px] text-[var(--ink)] mb-3 flex items-center gap-2">
           <UserCheck size={16} /> Team members
         </h3>
         {members.length === 0 ? (
@@ -266,7 +266,7 @@ export default function TeamPageClient({
                       <span className="text-[13px] font-bold text-[var(--ink-soft)]">{(m.name || m.email).charAt(0).toUpperCase()}</span>
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[14px] font-semibold text-[var(ink)] truncate">{m.name || m.email}</p>
+                      <p className="text-[14px] font-semibold text-[var(--ink)] truncate">{m.name || m.email}</p>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className={`pill ${role.bg} ${role.text}`}>{m.role}</span>
                         <span className={`pill ${status.bg} ${status.text}`}>{status.label}</span>

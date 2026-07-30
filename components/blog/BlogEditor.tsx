@@ -646,7 +646,7 @@ function BlockCard({
       {/* Block header bar */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--line)]/50 bg-[var(--app-bg)] rounded-t-2xl">
         <GripVertical size={14} className="text-[var(--ink-faint)]" />
-        <Icon size={13} className="text-[var(amber)]" />
+        <Icon size={13} className="text-[var(--amber)]" />
         <span className="text-[11px] font-bold text-[var(--ink-soft)] uppercase tracking-wide flex-1">{def?.label ?? block.type}</span>
         <span className="text-[10px] text-[var(--ink-faint)] mr-1">{index + 1} / {total}</span>
         <div className="flex items-center gap-0.5 opacity-0 group-hover/card:opacity-100 transition-opacity">

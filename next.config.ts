@@ -2,7 +2,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["pdf-lib"],
-  eslint: { ignoreDuringBuilds: false },
   typescript: { ignoreBuildErrors: false },
 
   /* ------------------------------------------------------------------ */
@@ -39,16 +38,20 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        net: false,
-        tls: false,
-      };
-    }
-    return config;
+  // Turbopack is the default bundler as of Next.js 16 and doesn't run the
+  // webpack() function at all -- this replaces the old client-side fs/net/
+  // tls fallback (previously needed so some server-only dependency doesn't
+  // break the client bundle) with Turbopack's equivalent. If nothing
+  // actually imports these on the client, this is a no-op; if something
+  // does, Turbopack fails the build loudly rather than silently breaking
+  // at runtime, so a build failure here is the signal to go find and fix
+  // the real import instead of re-adding a fallback.
+  turbopack: {
+    resolveAlias: {
+      fs: { browser: "./lib/empty-module.ts" },
+      net: { browser: "./lib/empty-module.ts" },
+      tls: { browser: "./lib/empty-module.ts" },
+    },
   },
 };
 

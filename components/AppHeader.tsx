@@ -188,7 +188,7 @@ export default function AppHeader() {
               <Link prefetch={false} href="/clients" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <Users size={15} className="text-[var(--ink-faint)]" /> Clients
               </Link>
-              <Link prefetch={false} href="/team" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(ink)] border-b border-[var(--line)]">
+              <Link prefetch={false} href="/team" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <UsersRound size={15} className="text-[var(--ink-faint)]" /> Team
               </Link>
               <Link prefetch={false} href="/leads" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">

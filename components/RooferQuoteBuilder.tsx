@@ -935,7 +935,7 @@ export default function RooferQuoteBuilder({
 
       {/* ── Extras ───────────────────────────────────────────── */}
       <div className="space-y-3">
-        <h3 className="font-semibold text-[14px] text-[var(ink)] flex items-center gap-2">
+        <h3 className="font-semibold text-[14px] text-[var(--ink)] flex items-center gap-2">
           <PlusCircle size={16} className="text-[var(--amber-deep)]" /> Extras
         </h3>
         <div className="space-y-2">
@@ -1003,7 +1003,7 @@ export default function RooferQuoteBuilder({
             )}
             {summary.colorSurcharge > 0 && (
               <div className="flex justify-between">
-                <span className="text-[var(ink-soft)]">Colour premium</span>
+                <span className="text-[var(--ink-soft)]">Colour premium</span>
                 <span className="font-semibold">${Math.round(summary.colorSurcharge).toLocaleString()}</span>
               </div>
             )}

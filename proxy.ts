@@ -121,6 +121,15 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   ].join("; ");
   response.headers.set("Content-Security-Policy", csp);
 
+  // Explicitly disable browser features this app never uses, so a
+  // compromised dependency or XSS can't silently request them. Camera and
+  // microphone are used same-origin (site markup camera, voice notes), so
+  // allowed for self, not blanket-disabled.
+  response.headers.set(
+    "Permissions-Policy",
+    "camera=(self), microphone=(self), geolocation=(self), payment=()"
+  );
+
   return response;
 }
 
@@ -141,7 +150,7 @@ function isAdminEmail(email: string | undefined): boolean {
 /*  Main middleware                                                    */
 /* ------------------------------------------------------------------ */
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // ------------------------------------------------------------------

@@ -388,7 +388,7 @@ export default function SeoKeywordsPanel() {
                   </button>
                 </th>
                 <th className="text-right py-2.5 px-3 w-20">
-                  <button onClick={() => toggleSort("volume")} className="flex items-center gap-1 font-bold text-[var(--ink-soft)] hover:text-[var(ink)] ml-auto">
+                  <button onClick={() => toggleSort("volume")} className="flex items-center gap-1 font-bold text-[var(--ink-soft)] hover:text-[var(--ink)] ml-auto">
                     Vol <SortIcon col="volume" />
                   </button>
                 </th>
