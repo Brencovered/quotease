@@ -747,7 +747,7 @@ export function BlogEditor({ blocks, onChange, onImageUploadRequest }: BlogEdito
   // graphs and reordering; markdown is better for writing prose straight
   // through. Both serialize to the same string, so switching is lossless
   // apart from block ids, which are regenerated on parse anyway.
-  const [mode, setMode] = useState<"blocks" | "markdown">("blocks");
+  const [mode, setMode] = useState<"blocks" | "markdown">("markdown");
   const updateBlock = useCallback((index: number, updated: ContentBlock) => {
     const next = [...blocks];
     next[index] = updated;
@@ -774,21 +774,31 @@ export function BlogEditor({ blocks, onChange, onImageUploadRequest }: BlogEdito
   }, [blocks, onChange]);
 
   const modeToggle = (
-    <div className="flex gap-1 p-1 rounded-xl bg-[var(--line)]/30 w-fit mb-3">
-      {(["blocks", "markdown"] as const).map((m) => (
-        <button
-          key={m}
-          type="button"
-          onClick={() => setMode(m)}
-          className={`px-3 py-1.5 rounded-lg text-[12px] font-bold uppercase tracking-wide transition-colors ${
-            mode === m
-              ? "bg-white text-[var(--ink)] shadow-sm"
-              : "text-[var(--ink-faint)] hover:text-[var(--ink-soft)]"
-          }`}
-        >
-          {m === "blocks" ? "Blocks" : "Markdown"}
-        </button>
-      ))}
+    <div className="flex items-center justify-between gap-3 mb-4 pb-4 border-b border-[var(--line)]">
+      <div className="flex gap-1 p-1 rounded-xl bg-[var(--line)]/40">
+        {([
+          { key: "markdown" as const, label: "Write" },
+          { key: "blocks" as const, label: "Blocks" },
+        ]).map(({ key, label }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setMode(key)}
+            className={`px-4 py-2 rounded-lg text-[13px] font-bold transition-colors ${
+              mode === key
+                ? "bg-white text-[var(--ink)] shadow-sm"
+                : "text-[var(--ink-faint)] hover:text-[var(--ink-soft)]"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <p className="text-[12px] text-[var(--ink-faint)] text-right">
+        {mode === "markdown"
+          ? "Type straight through. Buttons below insert tables and charts."
+          : "One card per block. Better for reordering and fiddly layout."}
+      </p>
     </div>
   );
 

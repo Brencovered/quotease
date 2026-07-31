@@ -459,7 +459,7 @@ export default function AdminBlogPanel({ posts: initialPosts }: { posts: Post[] 
           {/* ── THE NEW MODULAR BLOCK EDITOR ────────────────── */}
           <div className="card space-y-3">
             <div className="flex items-center justify-between">
-              <label className="text-[11px] font-bold uppercase text-[var(--ink-faint)]">Content blocks</label>
+              <label className="text-[11px] font-bold uppercase text-[var(--ink-faint)]">Content</label>
               <span className="text-[10.5px] text-[var(--ink-faint)]">{post.blocks.length} block{post.blocks.length !== 1 ? "s" : ""}</span>
             </div>
             <BlogEditor
