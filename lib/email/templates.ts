@@ -37,7 +37,7 @@ export function buildWelcomeEmail(vars: { businessName: string }) {
         <li>Try building your first quote - even a test one, to get a feel for it</li>
         <li>Add your team if you're not working solo</li>
       </ul>
-      <p><a href="https://www.swiftscope.com.au/onboarding">Continue setting up your account</a></p>
+      <p><a href="https://swiftscope.com.au/onboarding">Continue setting up your account</a></p>
       <hr/>
       <p style="color:#888;font-size:12px">Questions? Just reply to this email.</p>
     `,

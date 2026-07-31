@@ -35,7 +35,7 @@ import { LEADS_ENABLED } from "@/lib/featureFlags";
 // The site's canonical host is www -- the apex domain 301s to it. Sitemap
 // URLs must be the final canonical form; URLs that redirect get flagged in
 // audits and waste crawl budget.
-const BASE_URL = "https://www.swiftscope.com.au";
+const BASE_URL = "https://swiftscope.com.au";
 
 // NOTE: adjust as listings grow -- don't index trade×suburb pages that are
 // too thin, as thin pages dilute overall domain quality in Google's eyes.

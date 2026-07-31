@@ -23,7 +23,7 @@ export const revalidate = 604800; // 1 week, same cadence as the other SEO pages
 export const metadata: Metadata = {
   title: "Areas we cover | Swiftscope Directory",
   description: "Every suburb and region where Swiftscope has curated, verified trade business listings across Australia.",
-  alternates: { canonical: "https://www.swiftscope.com.au/areas" },
+  alternates: { canonical: "https://swiftscope.com.au/areas" },
 };
 
 interface SuburbGroup {

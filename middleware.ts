@@ -145,36 +145,48 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // ------------------------------------------------------------------
-  // 0. Canonicalise host: redirect the production Vercel alias domains
-  //    to the real custom domain -- PAGE requests only.
+  // 0. Canonicalise host: redirect every non-canonical production host
+  //    (Vercel's own aliases, plus www) to the real canonical domain --
+  //    PAGE requests only.
   // ------------------------------------------------------------------
+  // Canonical host is the bare apex (swiftscope.com.au), not www --
+  // matches every claim link, email template, and external reference
+  // already in use elsewhere in this app. There's no SEO difference
+  // between www/non-www once one is picked and enforced; what matters is
+  // picking one and actually redirecting the other, which this didn't do
+  // for www itself until now. Confirmed via Search Console: both
+  // https://swiftscope.com.au/sitemap.xml and
+  // https://www.swiftscope.com.au/sitemap.xml were independently
+  // submitted and successfully crawled (1,722 pages each) with no
+  // redirect between the two hosts -- Google was indexing the same
+  // content under two separate hostnames, which is exactly what produces
+  // "Duplicate without user-selected canonical" in Search Console.
+  //
   // These specific hostnames are the fixed production aliases Vercel
   // assigns to this project (confirmed via the project's domains list) --
   // NOT the per-deployment preview URLs (which have unique hashes/branch
   // names and must keep working unredirected for reviewing branches
-  // before merge). Without this, the same content is independently
-  // browsable/indexable under multiple hostnames, which muddies which
-  // URL search engines and social scrapers treat as authoritative --
-  // canonical tags already point at www.swiftscope.com.au, but an actual
-  // redirect removes any ambiguity rather than relying on a hint.
+  // before merge).
   //
-  // Deliberately excludes /api/* -- if the app is already loaded from an
-  // alias domain (e.g. someone opened quotease.vercel.app directly) and
-  // its client-side JS calls fetch("/api/..."), redirecting that call
-  // turns it into a cross-origin request. The browser then won't carry
-  // the swiftscope.com.au session cookie along, and the redirected
-  // response isn't necessarily readable back to the calling page either
-  // -- this broke "Send" on a quote for exactly this reason. API
-  // correctness matters more here than SEO canonicalisation, and
-  // robots.txt already disallows crawling /api/ anyway.
-  const CANONICAL_HOST = "www.swiftscope.com.au";
-  const VERCEL_ALIAS_HOSTS = new Set([
+  // Deliberately excludes /api/* -- if the app is already loaded from a
+  // non-canonical host (e.g. someone opened www.swiftscope.com.au or
+  // quotease.vercel.app directly) and its client-side JS calls
+  // fetch("/api/..."), redirecting that call turns it into a
+  // cross-origin request. The browser then won't carry the
+  // swiftscope.com.au session cookie along, and the redirected response
+  // isn't necessarily readable back to the calling page either -- this
+  // broke "Send" on a quote for exactly this reason. API correctness
+  // matters more here than SEO canonicalisation, and robots.txt already
+  // disallows crawling /api/ anyway.
+  const CANONICAL_HOST = "swiftscope.com.au";
+  const NON_CANONICAL_HOSTS = new Set([
+    "www.swiftscope.com.au",
     "quotease.vercel.app",
     "quotease-brennorris360-3348s-projects.vercel.app",
     "quotease-git-main-brennorris360-3348s-projects.vercel.app",
   ]);
   const requestHost = request.headers.get("host") ?? "";
-  if (!pathname.startsWith("/api/") && VERCEL_ALIAS_HOSTS.has(requestHost)) {
+  if (!pathname.startsWith("/api/") && NON_CANONICAL_HOSTS.has(requestHost)) {
     const canonicalUrl = new URL(request.nextUrl.pathname + request.nextUrl.search, `https://${CANONICAL_HOST}`);
     return NextResponse.redirect(canonicalUrl, 308);
   }

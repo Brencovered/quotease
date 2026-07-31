@@ -15,7 +15,7 @@
 
 import type { Metadata } from "next";
 
-const BASE_URL = "https://www.swiftscope.com.au";
+const BASE_URL = "https://swiftscope.com.au";
 const DEFAULT_OG = `${BASE_URL}/og-default-image`; // generated on request, see app/og-default-image/route.tsx
 
 // -- Canonical helpers ----------------------------------------------------
