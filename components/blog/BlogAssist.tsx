@@ -9,14 +9,14 @@
  * prose for individual sections via /api/admin/blog/assist/draft.
  *
  * This only ever proposes structure and, if asked, section drafts -- it
- * never silently overwrites anything. "Use this outline" and "Draft this"
- * are both explicit clicks, and using the outline only fills in metadata
- * plus empty section headings, never invented body copy the author didn't
- * ask for.
+ * never silently overwrites anything. "Use this outline" only fills in
+ * metadata plus empty section headings. Body copy always requires an
+ * explicit "Draft this" (one section) or "Draft all sections" (every
+ * section not already drafted) click.
  */
 
 import { useState } from "react";
-import { Sparkles, Loader2, X, PenLine } from "lucide-react";
+import { Sparkles, Loader2, X, PenLine, Check, ListChecks } from "lucide-react";
 
 const KEYWORD_SUGGESTIONS = [
   "ServiceM8 alternative", "Tradify alternative", "Fergus alternative", "SimPro alternative",
@@ -54,12 +54,16 @@ export default function BlogAssist({ postTitle, onUseOutline, onInsertSection }:
   const [notes, setNotes] = useState("");
   const [planning, setPlanning] = useState(false);
   const [drafting, setDrafting] = useState<number | null>(null);
+  const [draftingAll, setDraftingAll] = useState(false);
+  const [draftedIdx, setDraftedIdx] = useState<Set<number>>(new Set());
   const [error, setError] = useState("");
   const [plan, setPlan] = useState<Plan | null>(null);
 
+  const busy = drafting !== null || draftingAll;
+
   async function planOutline() {
     if (!keyword.trim()) { setError("Enter a target keyword first."); return; }
-    setError(""); setPlanning(true); setPlan(null);
+    setError(""); setPlanning(true); setPlan(null); setDraftedIdx(new Set());
     try {
       const res = await fetch("/api/admin/blog/assist/plan", {
         method: "POST",
@@ -76,29 +80,58 @@ export default function BlogAssist({ postTitle, onUseOutline, onInsertSection }:
     }
   }
 
+  /** Fetches the draft for one section. Throws on failure -- caller decides how to handle. */
+  async function fetchSectionDraft(section: PlanSection): Promise<string> {
+    if (!plan) throw new Error("No outline loaded");
+    const res = await fetch("/api/admin/blog/assist/draft", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        postTitle: postTitle || plan.title,
+        keyword: keyword.trim(),
+        heading: section.heading,
+        brief: section.brief,
+        otherHeadings: plan.sections.map(s => s.heading),
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+    return data.text as string;
+  }
+
   async function draftSection(i: number) {
     if (!plan) return;
-    const section = plan.sections[i];
     setDrafting(i); setError("");
     try {
-      const res = await fetch("/api/admin/blog/assist/draft", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          postTitle: postTitle || plan.title,
-          keyword: keyword.trim(),
-          heading: section.heading,
-          brief: section.brief,
-          otherHeadings: plan.sections.map(s => s.heading),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
-      onInsertSection(data.text as string);
+      const text = await fetchSectionDraft(plan.sections[i]);
+      onInsertSection(text);
+      setDraftedIdx(prev => new Set(prev).add(i));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Drafting failed");
     } finally {
       setDrafting(null);
+    }
+  }
+
+  async function draftAllSections() {
+    if (!plan) return;
+    setDraftingAll(true); setError("");
+    const failures: string[] = [];
+    for (let i = 0; i < plan.sections.length; i++) {
+      if (draftedIdx.has(i)) continue; // already drafted -- don't overwrite or waste a call
+      setDrafting(i);
+      try {
+        const text = await fetchSectionDraft(plan.sections[i]);
+        onInsertSection(text);
+        setDraftedIdx(prev => new Set(prev).add(i));
+      } catch {
+        failures.push(plan.sections[i].heading);
+      }
+    }
+    setDrafting(null);
+    setDraftingAll(false);
+    if (failures.length) {
+      setError(`Drafted the rest, but failed on: ${failures.join(", ")}. Try those individually.`);
     }
   }
 
@@ -175,31 +208,48 @@ export default function BlogAssist({ postTitle, onUseOutline, onInsertSection }:
 
       {plan && (
         <div className="pt-2 border-t border-[var(--line)] space-y-3">
-          <div>
-            <p className="text-[15px] font-bold text-[var(--ink)]">{plan.title}</p>
-            <p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5">{plan.excerpt}</p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[15px] font-bold text-[var(--ink)]">{plan.title}</p>
+              <p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5">{plan.excerpt}</p>
+            </div>
+            <button
+              onClick={draftAllSections}
+              disabled={busy || draftedIdx.size === plan.sections.length}
+              className="btn-secondary text-[11.5px] py-1.5 px-3 flex items-center gap-1.5 shrink-0"
+            >
+              {draftingAll
+                ? <><Loader2 size={12} className="animate-spin" /> Drafting {(drafting ?? 0) + 1} of {plan.sections.length}...</>
+                : <><ListChecks size={12} /> Draft all sections</>
+              }
+            </button>
           </div>
 
           <div className="space-y-2">
-            {plan.sections.map((s, i) => (
-              <div key={i} className="flex items-start gap-3 py-2 border-t border-[var(--line-subtle)] first:border-t-0">
-                <span className="text-[16px] font-bold text-[var(--amber-deep)] font-mono min-w-[22px]">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-bold text-[var(--ink)]">{s.heading}</p>
-                  <p className="text-[12px] text-[var(--ink-faint)]">{s.brief}</p>
+            {plan.sections.map((s, i) => {
+              const done = draftedIdx.has(i);
+              return (
+                <div key={i} className="flex items-start gap-3 py-2 border-t border-[var(--line-subtle)] first:border-t-0">
+                  <span className="text-[16px] font-bold text-[var(--amber-deep)] font-mono min-w-[22px]">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-bold text-[var(--ink)]">{s.heading}</p>
+                    <p className="text-[12px] text-[var(--ink-faint)]">{s.brief}</p>
+                  </div>
+                  <button
+                    onClick={() => draftSection(i)}
+                    disabled={busy || done}
+                    className="btn-secondary text-[11.5px] py-1.5 px-2.5 flex items-center gap-1 shrink-0"
+                  >
+                    {drafting === i
+                      ? <Loader2 size={11} className="animate-spin" />
+                      : done ? <Check size={11} className="text-green-600" /> : <PenLine size={11} />}
+                    {drafting === i ? "Drafting..." : done ? "Drafted" : "Draft this"}
+                  </button>
                 </div>
-                <button
-                  onClick={() => draftSection(i)}
-                  disabled={drafting !== null}
-                  className="btn-secondary text-[11.5px] py-1.5 px-2.5 flex items-center gap-1 shrink-0"
-                >
-                  {drafting === i ? <Loader2 size={11} className="animate-spin" /> : <PenLine size={11} />}
-                  {drafting === i ? "Drafting..." : "Draft this"}
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="flex items-center gap-3 pt-1">
@@ -207,7 +257,8 @@ export default function BlogAssist({ postTitle, onUseOutline, onInsertSection }:
               Use this outline
             </button>
             <span className="text-[11.5px] text-[var(--ink-faint)]">
-              Fills in the title, slug, excerpt and headings only. The words stay yours.
+              Fills in the title, slug, excerpt and headings. Draft buttons above add body copy per section --
+              review and edit before publishing either way.
             </span>
           </div>
         </div>
