@@ -108,7 +108,7 @@ const SC_API = "https://www.googleapis.com/webmasters/v3/sites";
  * Google will recrawl the sitemap on its own schedule after this, same as
  * if you'd clicked "Submit" in the Search Console UI.
  */
-export async function submitSitemap(sitemapUrl = "https://www.swiftscope.com.au/sitemap.xml"): Promise<void> {
+export async function submitSitemap(sitemapUrl = "https://swiftscope.com.au/sitemap.xml"): Promise<void> {
   const token = await getAccessToken();
   const res = await fetch(
     `${SC_API}/${encodeURIComponent(SITE_URL)}/sitemaps/${encodeURIComponent(sitemapUrl)}`,
