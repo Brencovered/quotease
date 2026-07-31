@@ -65,17 +65,20 @@ function parseContent(md: string): ContentBlock[] {
       continue;
     }
 
-    // Standard headings: ## text
-    const h2Match = line.match(/^##\s*(.+)$/);
-    if (h2Match) {
-      blocks.push({ type: "heading", content: h2Match[1], level: 2 });
+    // Standard headings. ### MUST be tested before ##, because the ##
+    // pattern also matches a ### line (^## consumes the first two hashes,
+    // then (.+) captures "# text"), which silently rendered every H3 as an
+    // H2 with a stray leading hash.
+    const h3Match = line.match(/^###\s*(.+)$/);
+    if (h3Match) {
+      blocks.push({ type: "heading", content: h3Match[1], level: 3 });
       i++;
       continue;
     }
 
-    const h3Match = line.match(/^###\s*(.+)$/);
-    if (h3Match) {
-      blocks.push({ type: "heading", content: h3Match[1], level: 3 });
+    const h2Match = line.match(/^##\s*(.+)$/);
+    if (h2Match) {
+      blocks.push({ type: "heading", content: h2Match[1], level: 2 });
       i++;
       continue;
     }

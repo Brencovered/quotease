@@ -32,9 +32,16 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { tradeToSlug, buildDirectorySlug } from "@/lib/seo/meta";
 import { LEADS_ENABLED } from "@/lib/featureFlags";
 
-// The site's canonical host is www -- the apex domain 301s to it. Sitemap
-// URLs must be the final canonical form; URLs that redirect get flagged in
-// audits and waste crawl budget.
+// The site's canonical host is the bare apex -- www 308s to it, enforced
+// in both middleware.ts (NON_CANONICAL_HOSTS) and the Vercel domain
+// config. Sitemap URLs must be the final canonical form; URLs that
+// redirect get flagged in audits and waste crawl budget.
+//
+// This comment previously claimed the opposite (www canonical, apex
+// redirecting). It was wrong, and the two layers were briefly configured
+// in opposite directions, which produced an ERR_TOO_MANY_REDIRECTS loop
+// that took every directory page offline. Keep this in sync with
+// middleware.ts if the canonical host ever changes.
 const BASE_URL = "https://swiftscope.com.au";
 
 // NOTE: adjust as listings grow -- don't index trade×suburb pages that are
@@ -53,6 +60,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: BASE_URL,                       changeFrequency: "weekly",  priority: 1.0 },
     { url: `${BASE_URL}/directory`,        changeFrequency: "daily",   priority: 0.9 },
     ...(LEADS_ENABLED ? [{ url: `${BASE_URL}/get-quotes`, changeFrequency: "monthly" as const, priority: 0.8 }] : []),
+    { url: `${BASE_URL}/blog`,             changeFrequency: "weekly",  priority: 0.7 },
     { url: `${BASE_URL}/features`,         changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE_URL}/how-it-works`,     changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE_URL}/signup`,           changeFrequency: "monthly", priority: 0.6 },
@@ -133,5 +141,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     }));
 
-  return [...staticPages, ...listingPages, ...programmaticPages, ...suburbPages];
+  // ── 5. Blog posts ────────────────────────────────────────────────────
+  // /blog and /blog/[slug] have existed as routes since launch but were
+  // never emitted here, so Google had no discovery path to them at all --
+  // absent from the sitemap and reachable only via the marketing nav.
+  // That made every published post effectively invisible in search, which
+  // is the whole reason the blog exists.
+  //
+  // Published only: `published = false` rows are drafts and must never be
+  // exposed here, since a sitemap entry is a crawl invitation and
+  // /blog/[slug] 404s on unpublished slugs anyway.
+  const { data: posts, error: postsErr } = await admin
+    .from("blog_posts")
+    .select("slug, published_at, updated_at, created_at")
+    .eq("published", true)
+    .not("slug", "is", null);
+
+  if (postsErr) console.error("[sitemap] blog posts fetch failed:", postsErr.message);
+
+  const blogPages: MetadataRoute.Sitemap = (posts ?? []).map((row) => ({
+    url: `${BASE_URL}/blog/${row.slug}`,
+    lastModified: new Date(row.updated_at ?? row.published_at ?? row.created_at),
+    changeFrequency: "monthly" as const,
+    priority: 0.6,
+  }));
+
+  return [...staticPages, ...listingPages, ...programmaticPages, ...suburbPages, ...blogPages];
 }

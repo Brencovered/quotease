@@ -19,7 +19,7 @@
  * this using the same brand mark as the favicon.
  */
 
-const BASE_URL = "https://www.swiftscope.com.au";
+const BASE_URL = "https://swiftscope.com.au";
 
 export default function OrganizationSchema() {
   const schema = {
