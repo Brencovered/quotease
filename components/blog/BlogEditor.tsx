@@ -1,4 +1,5 @@
 "use client";
+import MarkdownMode from "./MarkdownMode";
 
 import { useState, useCallback, useRef } from "react";
 import {
@@ -742,6 +743,11 @@ export interface BlogEditorProps {
 }
 
 export function BlogEditor({ blocks, onChange, onImageUploadRequest }: BlogEditorProps) {
+  // Two ways to edit the same content. Blocks are better for tables,
+  // graphs and reordering; markdown is better for writing prose straight
+  // through. Both serialize to the same string, so switching is lossless
+  // apart from block ids, which are regenerated on parse anyway.
+  const [mode, setMode] = useState<"blocks" | "markdown">("blocks");
   const updateBlock = useCallback((index: number, updated: ContentBlock) => {
     const next = [...blocks];
     next[index] = updated;
@@ -767,8 +773,37 @@ export function BlogEditor({ blocks, onChange, onImageUploadRequest }: BlogEdito
     onChange([...blocks, createBlock(type)]);
   }, [blocks, onChange]);
 
+  const modeToggle = (
+    <div className="flex gap-1 p-1 rounded-xl bg-[var(--line)]/30 w-fit mb-3">
+      {(["blocks", "markdown"] as const).map((m) => (
+        <button
+          key={m}
+          type="button"
+          onClick={() => setMode(m)}
+          className={`px-3 py-1.5 rounded-lg text-[12px] font-bold uppercase tracking-wide transition-colors ${
+            mode === m
+              ? "bg-white text-[var(--ink)] shadow-sm"
+              : "text-[var(--ink-faint)] hover:text-[var(--ink-soft)]"
+          }`}
+        >
+          {m === "blocks" ? "Blocks" : "Markdown"}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (mode === "markdown") {
+    return (
+      <div>
+        {modeToggle}
+        <MarkdownMode key="md" blocks={blocks} onChange={onChange} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
+      {modeToggle}
       {blocks.map((block, i) => (
         <BlockCard
           key={block.id}
