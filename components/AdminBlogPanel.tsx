@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { BlogEditor, createBlock } from "@/components/blog/BlogEditor";
+import BlogAssist from "@/components/blog/BlogAssist";
 import { parseBlocks } from "@/components/blog/parseBlocks";
 import { serializeBlocks } from "@/components/blog/serializeBlocks";
 import type { BlogPostData } from "@/components/blog/BlogEditor";
@@ -186,6 +187,51 @@ export default function AdminBlogPanel({ posts: initialPosts }: { posts: Post[] 
       imageBlockRef.current = null;
     };
     input.click();
+  }
+
+  /* ── AI outline assist ─────────────────────────────────────── */
+  function applyOutline(plan: {
+    title: string; slug: string; excerpt: string; category: string;
+    tags: string[]; takeaways: string[]; sections: { heading: string; brief: string }[];
+  }) {
+    const skeleton =
+      "Key Takeaways\n" + plan.takeaways.map(t => `- ${t}`).join("\n") + "\n\n" +
+      plan.sections.map(s => `## ${s.heading}\n`).join("\n");
+    setPost(p => ({
+      ...p,
+      title: p.title || plan.title,
+      slug: p.slug || slugify(plan.slug || plan.title),
+      excerpt: p.excerpt || plan.excerpt,
+      category: plan.category || p.category,
+      tags: p.tags.length ? p.tags : plan.tags,
+      blocks: parseBlocks(skeleton),
+    }));
+    toast("Outline added -- headings and takeaways only");
+  }
+
+  function insertDraftedSection(markdown: string) {
+    const draftBlocks = parseBlocks(markdown);
+    const heading = draftBlocks[0];
+
+    setPost(p => {
+      // If an empty stub for this exact heading already exists (added by
+      // "Use this outline"), replace that heading plus whatever sits under
+      // it -- up to the next heading/divider -- with the real draft rather
+      // than duplicating the heading.
+      if (heading && (heading.type === "h2" || heading.type === "h3")) {
+        const idx = p.blocks.findIndex(
+          b => b.type === heading.type && b.content.trim() === heading.content.trim()
+        );
+        if (idx !== -1) {
+          let end = idx + 1;
+          while (end < p.blocks.length && !["h1", "h2", "h3", "hr"].includes(p.blocks[end].type)) end++;
+          return { ...p, blocks: [...p.blocks.slice(0, idx), ...draftBlocks, ...p.blocks.slice(end)] };
+        }
+      }
+      // No matching stub -- just append.
+      return { ...p, blocks: [...p.blocks, ...draftBlocks] };
+    });
+    toast("Section drafted -- review before publishing");
   }
 
   /* ── Save ───────────────────────────────────────────────────── */
@@ -455,6 +501,13 @@ export default function AdminBlogPanel({ posts: initialPosts }: { posts: Post[] 
               className="app-field text-[13.5px] resize-none"
             />
           </div>
+
+          {/* ── AI outline assist ────────────────────────────── */}
+          <BlogAssist
+            postTitle={post.title}
+            onUseOutline={applyOutline}
+            onInsertSection={insertDraftedSection}
+          />
 
           {/* ── THE NEW MODULAR BLOCK EDITOR ────────────────── */}
           <div className="card space-y-3">
