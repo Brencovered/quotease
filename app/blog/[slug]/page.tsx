@@ -25,6 +25,26 @@ interface ContentBlock {
   graphTitle?: string;
 }
 
+/**
+ * Splits a "| a | b | c |" row into ["a", "b", "c"]. A naive line.split("|")
+ * produces a leading AND trailing empty string for a row with outer pipes
+ * (the standard markdown table format) -- stripping exactly one leading and
+ * one trailing pipe character before splitting, rather than filtering empty
+ * strings out of the split result, is what keeps a genuinely blank interior
+ * cell (e.g. an intentionally empty price) intact instead of collapsing it
+ * away along with the outer-pipe artifacts.
+ */
+function splitTableRow(line: string): string[] {
+  const trimmed = line.trim().replace(/^\|/, "").replace(/\|$/, "");
+  return trimmed.split("|").map(c => c.trim());
+}
+
+/** Pads a short row with empty cells or truncates a long one to exactly `n` columns. */
+function padOrTrim(cells: string[], n: number): string[] {
+  if (cells.length >= n) return cells.slice(0, n);
+  return [...cells, ...Array(n - cells.length).fill("")];
+}
+
 function parseContent(md: string): ContentBlock[] {
   if (!md) return [];
   const blocks: ContentBlock[] = [];
@@ -179,10 +199,10 @@ function parseContent(md: string): ContentBlock[] {
       // Remove separator line (| --- | --- |)
       const dataLines = tableLines.filter(l => !/^\s*\|[\s\-|]+\|\s*$/.test(l));
       if (dataLines.length >= 1) {
-        const headers = dataLines[0].split("|").map(h => h.trim()).filter(Boolean);
-        const rows = dataLines.slice(1).map(row =>
-          row.split("|").map(c => c.trim()).filter((_, idx) => idx < headers.length)
-        ).filter(r => r.length > 0);
+        const headers = splitTableRow(dataLines[0]);
+        const rows = dataLines.slice(1)
+          .map(row => padOrTrim(splitTableRow(row), headers.length))
+          .filter(r => r.some(c => c !== ""));
         blocks.push({ type: "table", headers, rows });
       }
       continue;
@@ -706,7 +726,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                                 {j + 1}
                               </span>
                               <span>
-                                <strong className="text-[#0a1722]">{inlineMarkdown(label)}</strong>
+                                <strong className="text-[#0a1722]" dangerouslySetInnerHTML={{ __html: inlineMarkdown(label) }} />
                                 <span dangerouslySetInnerHTML={{ __html: inlineMarkdown(rest) }} />
                               </span>
                             </li>

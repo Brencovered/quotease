@@ -74,18 +74,24 @@ export function parseBlocks(md: string): ContentBlock[] {
       continue;
     }
 
-    // Standard H2: ## text
-    const h2Match = line.match(/^##\s*(.+)$/);
-    if (h2Match) {
-      blocks.push({ id: pid(), type: "h2", content: h2Match[1] });
+    // Standard headings. ### MUST be tested before ##, because the ##
+    // pattern also matches a ### line (^## consumes the first two hashes,
+    // then (.+) captures "# text"), which silently mistyped every H3 as
+    // an H2 containing a stray leading "#". This is the same bug that was
+    // fixed in app/blog/[slug]/page.tsx's parseContent -- that fix never
+    // made it into this parser, which is the one the admin editor and
+    // AI-drafted sections actually round-trip through.
+    const h3Match = line.match(/^###\s*(.+)$/);
+    if (h3Match) {
+      blocks.push({ id: pid(), type: "h3", content: h3Match[1] });
       i++;
       continue;
     }
 
-    // Standard H3: ### text
-    const h3Match = line.match(/^###\s*(.+)$/);
-    if (h3Match) {
-      blocks.push({ id: pid(), type: "h3", content: h3Match[1] });
+    // Standard H2: ## text
+    const h2Match = line.match(/^##\s*(.+)$/);
+    if (h2Match) {
+      blocks.push({ id: pid(), type: "h2", content: h2Match[1] });
       i++;
       continue;
     }
@@ -190,10 +196,10 @@ export function parseBlocks(md: string): ContentBlock[] {
       // Remove separator line
       const dataLines = tableLines.filter(l => !/^\s*\|[\s\-|]+\|\s*$/.test(l));
       if (dataLines.length >= 1) {
-        const headers = dataLines[0].split("|").map(h => h.trim()).filter(Boolean);
-        const rows = dataLines.slice(1).map(row =>
-          row.split("|").map(c => c.trim()).filter((_, idx) => idx < headers.length)
-        ).filter(r => r.length > 0);
+        const headers = splitTableRow(dataLines[0]);
+        const rows = dataLines.slice(1)
+          .map(row => padOrTrim(splitTableRow(row), headers.length))
+          .filter(r => r.some(c => c !== ""));
         blocks.push({
           id: pid(),
           type: "table",
@@ -278,4 +284,24 @@ function isBlockStart(line: string): boolean {
     /^sources/i.test(line) ||          // sources
     /^references/i.test(line)          // sources alt
   );
+}
+
+/**
+ * Splits a "| a | b | c |" row into ["a", "b", "c"]. A naive line.split("|")
+ * produces a leading AND trailing empty string for a row with outer pipes
+ * (the standard markdown table format) -- stripping exactly one leading and
+ * one trailing pipe character before splitting, rather than filtering empty
+ * strings out of the split result, is what keeps a genuinely blank interior
+ * cell (e.g. an intentionally empty price) intact instead of collapsing it
+ * away along with the outer-pipe artifacts.
+ */
+function splitTableRow(line: string): string[] {
+  const trimmed = line.trim().replace(/^\|/, "").replace(/\|$/, "");
+  return trimmed.split("|").map(c => c.trim());
+}
+
+/** Pads a short row with empty cells or truncates a long one to exactly `n` columns. */
+function padOrTrim(cells: string[], n: number): string[] {
+  if (cells.length >= n) return cells.slice(0, n);
+  return [...cells, ...Array(n - cells.length).fill("")];
 }

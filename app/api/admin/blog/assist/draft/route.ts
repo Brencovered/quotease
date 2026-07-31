@@ -19,7 +19,11 @@ import { checkRateLimit, rateLimitResponseInit } from "@/lib/rateLimit";
 const FORMAT_NOTES = `CONTENT FORMAT this section must follow (plain markdown, no HTML):
 - "## " for this section's own H2 heading (include it, as the first line)
 - "### " for any sub-headings
-- "- " for bullet lists
+- "- " for bullet lists. For a labelled bullet like "Area calculations: notes on that",
+  write the label in plain text followed by a colon -- do NOT wrap the label in "**" as
+  well. The renderer already bolds everything before the first colon in a list item
+  automatically, so adding "**" around it too just leaves literal asterisks/duplicate
+  markup in the output.
 - pipe tables: | Col 1 | Col 2 |
 - "> " for a pull quote
 - inline links as [text](/path) -- only real Swiftscope paths: /features /how-it-works
