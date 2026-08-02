@@ -120,7 +120,7 @@ async function SettingsData() {
           <p className="text-[13px] text-[var(--ink-faint)] mb-3">
             Invite team members to log in and work on your jobs, quotes, and clients.
           </p>
-          <Link href="/settings/team" className="btn-secondary inline-flex">
+          <Link href="/team" className="btn-secondary inline-flex">
             <Users size={14} /> Manage team
           </Link>
         </div>

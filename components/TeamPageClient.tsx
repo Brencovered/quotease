@@ -18,6 +18,7 @@ export interface TeamMemberRow {
   email: string;
   name: string | null;
   role: string;
+  accessScope: string | null;
   status: string;
   invited_at: string;
   joined_at: string | null;
@@ -49,10 +50,11 @@ const STATUS_STYLE: Record<string, { bg: string; text: string; label: string }> 
   active: { bg: "bg-green-50", text: "text-green-700", label: "Active" },
 };
 
-const ROLE_STYLE: Record<string, { bg: string; text: string }> = {
-  owner: { bg: "bg-[var(--amber-light)]", text: "text-[var(--amber-deep)]" },
-  admin: { bg: "bg-blue-50", text: "text-blue-700" },
-  member: { bg: "bg-[var(--steel-2)]/10", text: "text-[var(--steel-3)]" },
+const ROLE_STYLE: Record<string, { bg: string; text: string; label: string }> = {
+  owner: { bg: "bg-[var(--amber-light)]", text: "text-[var(--amber-deep)]", label: "Owner" },
+  admin: { bg: "bg-blue-50", text: "text-blue-700", label: "Admin" },
+  manager: { bg: "bg-purple-50", text: "text-purple-700", label: "Manager" },
+  site_member: { bg: "bg-[var(--steel-2)]/10", text: "text-[var(--steel-3)]", label: "Site member" },
 };
 
 export default function TeamPageClient({
@@ -69,10 +71,13 @@ export default function TeamPageClient({
   const [pendingInvites, setPendingInvites] = useState(initialPendingInvites);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
-  const [inviteRole, setInviteRole] = useState("member");
+  const [inviteRole, setInviteRole] = useState("site_member");
+  const [inviteAccessScope, setInviteAccessScope] = useState("all");
   const [sending, setSending] = useState(false);
   const [sendMsg, setSendMsg] = useState("");
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
+  const [resendMsg, setResendMsg] = useState("");
   const [updatingRoleId, setUpdatingRoleId] = useState<string | null>(null);
   const [editingRateId, setEditingRateId] = useState<string | null>(null);
   const [rateDraft, setRateDraft] = useState("");
@@ -87,14 +92,20 @@ export default function TeamPageClient({
       const res = await fetch("/api/team/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: inviteEmail.trim(), name: inviteName.trim() || null, role: inviteRole }),
+        body: JSON.stringify({
+          email: inviteEmail.trim(),
+          name: inviteName.trim() || null,
+          role: inviteRole,
+          accessScope: inviteRole === "manager" ? inviteAccessScope : undefined,
+        }),
       });
       const data = await res.json();
       if (res.ok) {
         setSendMsg(`Invite sent to ${inviteEmail.trim()}`);
         setInviteEmail("");
         setInviteName("");
-        setInviteRole("member");
+        setInviteRole("site_member");
+        setInviteAccessScope("all");
         router.refresh();
       } else {
         setSendMsg(data.error || "Failed to send invite");
@@ -108,28 +119,48 @@ export default function TeamPageClient({
   async function removeMember(id: string) {
     if (!confirm("Remove this team member?")) return;
     setRemovingId(id);
-    await fetch("/api/team/" + id, { method: "DELETE" });
+    await fetch("/api/team/" + id, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "remove" }),
+    });
     setMembers((prev) => prev.filter((m) => m.id !== id));
     setRemovingId(null);
   }
 
-  async function updateRole(id: string, newRole: string) {
+  async function updateRole(id: string, newRole: string, accessScope?: string) {
     setUpdatingRoleId(id);
     await fetch("/api/team/" + id, {
-      method: "PATCH",
+      method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role: newRole }),
+      body: JSON.stringify({ action: "set_role", role: newRole, accessScope }),
     });
-    setMembers((prev) => prev.map((m) => m.id === id ? { ...m, role: newRole } : m));
+    setMembers((prev) => prev.map((m) => m.id === id ? { ...m, role: newRole, accessScope: accessScope ?? m.accessScope } : m));
     setUpdatingRoleId(null);
   }
 
   async function cancelInvite(id: string) {
     if (!confirm("Cancel this invite?")) return;
     setRemovingId(id);
-    await fetch("/api/team/" + id, { method: "DELETE" });
+    await fetch("/api/team/" + id, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "remove" }),
+    });
     setPendingInvites((prev) => prev.filter((i) => i.id !== id));
     setRemovingId(null);
+  }
+
+  async function resendInvite(id: string) {
+    setResendingId(id);
+    const res = await fetch("/api/team/" + id, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "resend" }),
+    });
+    setResendingId(null);
+    setResendMsg(res.ok ? "Reminder sent" : "Couldn't send - try again shortly");
+    setTimeout(() => setResendMsg(""), 3000);
   }
 
   async function saveRate(memberId: string) {
@@ -196,11 +227,18 @@ export default function TeamPageClient({
               <input type="email" required placeholder="Email address" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} className="app-field" />
               <input type="text" placeholder="Name (optional)" value={inviteName} onChange={(e) => setInviteName(e.target.value)} className="app-field" />
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className="app-field text-[13px] w-auto py-2">
-                <option value="member">Member - can view and edit</option>
+                <option value="site_member">Site member - no pricing, just their own jobs</option>
+                <option value="manager">Manager - sees pricing</option>
                 <option value="admin">Admin - can also manage team</option>
               </select>
+              {inviteRole === "manager" && (
+                <select value={inviteAccessScope} onChange={(e) => setInviteAccessScope(e.target.value)} className="app-field text-[13px] w-auto py-2">
+                  <option value="all">All jobs</option>
+                  <option value="assigned_only">Only jobs they&apos;re assigned to</option>
+                </select>
+              )}
               <button type="submit" disabled={sending} className="btn-primary" style={{ width: "auto", padding: "10px 20px" }}>
                 {sending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
                 {sending ? " Sending..." : " Send invite"}
@@ -219,21 +257,30 @@ export default function TeamPageClient({
           <h3 className="font-bold text-[16px] text-[var(--ink)] mb-3 flex items-center gap-2">
             <Mail size={16} className="text-amber-600" /> Pending invites
           </h3>
+          {resendMsg && <p className="text-[12px] font-semibold text-[var(--ink-soft)] mb-2">{resendMsg}</p>}
           <div className="space-y-2">
             {pendingInvites.map((inv) => (
               <div key={inv.id} className="flex items-center justify-between gap-3 py-2 border-b border-[var(--line-subtle)] last:border-0">
                 <div>
                   <p className="text-[14px] font-semibold text-[var(ink)]">{inv.email}</p>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className={`pill ${ROLE_STYLE[inv.role]?.bg ?? ROLE_STYLE.member.bg} ${ROLE_STYLE[inv.role]?.text ?? ROLE_STYLE.member.text}`}>{inv.role}</span>
+                    <span className={`pill ${ROLE_STYLE[inv.role]?.bg ?? ROLE_STYLE.site_member.bg} ${ROLE_STYLE[inv.role]?.text ?? ROLE_STYLE.site_member.text}`}>
+                      {ROLE_STYLE[inv.role]?.label ?? inv.role}
+                    </span>
                     <span className="text-[11px] text-[var(--ink-faint)]">Sent {new Date(inv.invited_at).toLocaleDateString("en-AU")}</span>
                   </div>
                 </div>
                 {isOwner && (
-                  <button onClick={() => cancelInvite(inv.id)} disabled={removingId === inv.id}
-                    className="text-[12px] font-bold text-[var(--red)] hover:bg-[var(--red-bg)] rounded-lg px-2.5 py-1.5 transition-colors disabled:opacity-50">
-                    {removingId === inv.id ? "Canceling..." : "Cancel"}
-                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => resendInvite(inv.id)} disabled={resendingId === inv.id}
+                      className="text-[12px] font-bold text-[var(--ink-soft)] hover:bg-[var(--app-bg)] rounded-lg px-2.5 py-1.5 transition-colors disabled:opacity-50">
+                      {resendingId === inv.id ? "Sending..." : "Resend"}
+                    </button>
+                    <button onClick={() => cancelInvite(inv.id)} disabled={removingId === inv.id}
+                      className="text-[12px] font-bold text-[var(--red)] hover:bg-[var(--red-bg)] rounded-lg px-2.5 py-1.5 transition-colors disabled:opacity-50">
+                      {removingId === inv.id ? "Canceling..." : "Cancel"}
+                    </button>
+                  </div>
                 )}
               </div>
             ))}
@@ -258,7 +305,7 @@ export default function TeamPageClient({
           <div className="space-y-2">
             {members.map((m) => {
               const status = STATUS_STYLE[m.status] ?? STATUS_STYLE.active;
-              const role = ROLE_STYLE[m.role] ?? ROLE_STYLE.member;
+              const role = ROLE_STYLE[m.role] ?? ROLE_STYLE.site_member;
               return (
                 <div key={m.id} className="flex items-center justify-between gap-3 py-2 border-b border-[var(--line-subtle)] last:border-0">
                   <div className="flex items-center gap-3 min-w-0">
@@ -268,7 +315,7 @@ export default function TeamPageClient({
                     <div className="min-w-0">
                       <p className="text-[14px] font-semibold text-[var(ink)] truncate">{m.name || m.email}</p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className={`pill ${role.bg} ${role.text}`}>{m.role}</span>
+                        <span className={`pill ${role.bg} ${role.text}`}>{role.label}</span>
                         <span className={`pill ${status.bg} ${status.text}`}>{status.label}</span>
                       </div>
                     </div>
@@ -302,11 +349,19 @@ export default function TeamPageClient({
                     )}
                     {isOwner && m.role !== "owner" && (
                       <div className="flex items-center gap-2">
-                        <select value={m.role} onChange={(e) => updateRole(m.id, e.target.value)} disabled={updatingRoleId === m.id}
+                        <select value={m.role} onChange={(e) => updateRole(m.id, e.target.value, m.accessScope ?? "all")} disabled={updatingRoleId === m.id}
                           className="app-field text-[12px] py-1 w-auto">
-                          <option value="member">Member</option>
+                          <option value="site_member">Site member</option>
+                          <option value="manager">Manager</option>
                           <option value="admin">Admin</option>
                         </select>
+                        {m.role === "manager" && (
+                          <select value={m.accessScope ?? "all"} onChange={(e) => updateRole(m.id, "manager", e.target.value)} disabled={updatingRoleId === m.id}
+                            className="app-field text-[12px] py-1 w-auto">
+                            <option value="all">All jobs</option>
+                            <option value="assigned_only">Assigned only</option>
+                          </select>
+                        )}
                         <button onClick={() => removeMember(m.id)} disabled={removingId === m.id}
                           className="p-1.5 rounded-lg hover:bg-[var(--red-bg)] transition-colors disabled:opacity-50">
                           <Trash2 size={14} className="text-[var(--ink-faint)]" />

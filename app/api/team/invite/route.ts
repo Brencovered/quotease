@@ -6,7 +6,7 @@
  * login, accepting just links their existing account -- no second signup
  * needed.
  *
- * Body: { email: string, name?: string, role?: "admin" | "member" }
+ * Body: { email: string, name?: string, role?: "admin" | "manager" | "site_member", accessScope?: "all" | "assigned_only" }
  */
 
 import { NextResponse } from "next/server";
@@ -27,7 +27,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Only the owner or an admin can invite team members." }, { status: 403 });
   }
 
-  const { email, name, role } = (await request.json()) as { email?: string; name?: string; role?: string };
+  const { email, name, role, accessScope } = (await request.json()) as {
+    email?: string; name?: string; role?: string; accessScope?: string;
+  };
   const cleanEmail = email?.trim().toLowerCase();
   if (!cleanEmail) {
     return NextResponse.json({ error: "Email is required" }, { status: 400 });
@@ -35,6 +37,8 @@ export async function POST(request: Request) {
   if (cleanEmail === userData.user.email?.toLowerCase()) {
     return NextResponse.json({ error: "That's your own email." }, { status: 400 });
   }
+
+  const cleanRole = role === "admin" ? "admin" : role === "manager" ? "manager" : "site_member";
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -48,7 +52,11 @@ export async function POST(request: Request) {
       owner_profile_id: ctx.businessId,
       email: cleanEmail,
       name: name?.trim() || null,
-      role: role === "admin" ? "admin" : "member",
+      role: cleanRole,
+      // Only meaningful for managers -- defaults to "all" for everyone else
+      // via the column default, which matches how the role itself works
+      // (site_member is always job-scoped, admin is always unrestricted).
+      ...(cleanRole === "manager" ? { access_scope: accessScope === "assigned_only" ? "assigned_only" : "all" } : {}),
     })
     .select("id, invite_token")
     .single();

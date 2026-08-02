@@ -77,7 +77,7 @@ export default function JobCrewPanel({
         <p className="section-tag mb-1">Crew</p>
         <p className="font-semibold text-[var(--ink)] mb-1">Who&apos;s on site</p>
         <p className="text-[11px] text-[var(--ink-faint)]">
-          <Link href="/settings/team" className="underline font-semibold">Add a team member</Link> to build a crew for this job.
+          <Link href="/team" className="underline font-semibold">Add a team member</Link> to build a crew for this job.
         </p>
       </div>
     );

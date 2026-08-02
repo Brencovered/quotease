@@ -4,7 +4,7 @@
  * Owner or admin only (enforced by RLS -- "Owner manages team" and
  * "Admin manages team" policies).
  *
- * Body: { action: "remove" } | { action: "set_role", role: "admin" | "member" } | { action: "resend" }
+ * Body: { action: "remove" } | { action: "set_role", role: "admin" | "manager" | "site_member", accessScope?: "all" | "assigned_only" } | { action: "resend" }
  */
 
 import { NextResponse } from "next/server";
@@ -26,7 +26,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Only the owner or an admin can manage the team." }, { status: 403 });
   }
 
-  const body = (await request.json()) as { action?: string; role?: string };
+  const body = (await request.json()) as { action?: string; role?: string; accessScope?: string };
 
   if (body.action === "remove") {
     const { error } = await supabase
@@ -39,10 +39,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   if (body.action === "set_role") {
-    const role = body.role === "admin" ? "admin" : "member";
+    const role = body.role === "admin" ? "admin" : body.role === "manager" ? "manager" : "site_member";
     const { error } = await supabase
       .from("team_members")
-      .update({ role })
+      .update({
+        role,
+        access_scope: role === "manager" ? (body.accessScope === "assigned_only" ? "assigned_only" : "all") : "all",
+      })
       .eq("id", id)
       .eq("owner_profile_id", ctx.businessId);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });

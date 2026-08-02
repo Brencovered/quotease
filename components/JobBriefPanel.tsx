@@ -104,7 +104,7 @@ export default function JobBriefPanel({
       </div>
       {!hasTeam && (
         <p className="text-[11px] text-[var(--ink-faint)] mb-3">
-          <Link href="/settings/team" className="underline font-semibold">Add a team member</Link> to assign this job to someone.
+          <Link href="/team" className="underline font-semibold">Add a team member</Link> to assign this job to someone.
         </p>
       )}
       <p className="text-[11px] text-[var(--ink-faint)] mb-3">This appears on your Schedule calendar automatically.</p>
