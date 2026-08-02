@@ -52,13 +52,13 @@ async function DashboardData() {
       ] = await Promise.all([
         supabase
           .from("quotes")
-          .select("id, client_name, status, total_cost, amount_paid, created_at, follow_up_at, quote_expires_at, sent_at, labour_hours, materials_cost")
+          .select("id, client_name, site_address, status, total_cost, amount_paid, created_at, follow_up_at, quote_expires_at, sent_at, labour_hours, materials_cost")
           .eq("profile_id", businessId),
         supabase.from("job_actuals").select("quote_id, actual_hours, actual_materials_cost, unexpected_costs").eq("profile_id", businessId),
         supabase.from("profiles").select("hourly_rate").eq("id", businessId).single(),
         supabase
           .from("jobs")
-          .select("id, client_name, status, updated_at, invoiced_at, completed_at, total_cost, amount_paid, assigned_to_member_id")
+          .select("id, job_number, client_name, status, updated_at, invoiced_at, completed_at, total_cost, amount_paid, assigned_to_member_id")
           .eq("profile_id", businessId),
         supabase.from("timesheets").select("job_id").eq("profile_id", businessId),
         supabase.from("team_members").select("id, name, status").eq("owner_profile_id", businessId),

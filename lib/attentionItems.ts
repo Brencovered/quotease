@@ -24,6 +24,7 @@ export interface AttentionItem {
 export interface QuoteForAttention {
   id: string;
   client_name: string | null;
+  site_address?: string | null;
   status: string;
   follow_up_at?: string | null;
   quote_expires_at?: string | null;
@@ -32,6 +33,7 @@ export interface QuoteForAttention {
 export interface JobForAttention {
   id: string;
   client_name: string | null;
+  job_number?: number | null;
   status: string;
   updated_at: string;
   invoiced_at: string | null;
@@ -65,6 +67,20 @@ const DAY_MS = 86400000;
 function daysAgo(dateStr: string | null | undefined, now: number): number | null {
   if (!dateStr) return null;
   return Math.floor((now - new Date(dateStr).getTime()) / DAY_MS);
+}
+
+// Quotes have no persistent quote number yet, so the closest thing to a
+// stable identifier at a glance is the site address. Falls back to the
+// client name alone if no address is on file.
+function quoteLabel(q: QuoteForAttention): string {
+  const client = q.client_name || "client";
+  return q.site_address ? `${q.site_address} - ${client}` : client;
+}
+
+// Jobs have a persistent, human-assigned job number -- lead with that.
+function jobLabel(j: JobForAttention): string {
+  const client = j.client_name || "client";
+  return j.job_number ? `Job #${j.job_number} - ${client}` : client;
 }
 
 // Active (non-terminal) job statuses - the ones where "no activity in a
@@ -109,8 +125,8 @@ export function computeAttentionItems(
           id: `quote_follow_up:${q.id}`,
           type: "quote_follow_up",
           severity: d > 3 ? "high" : "medium",
-          label: `Follow up with ${q.client_name || "client"}`,
-          sublabel: `Quote sent, follow-up was due ${d === 0 ? "today" : `${d} day${d !== 1 ? "s" : ""} ago`}`,
+          label: quoteLabel(q),
+          sublabel: `Follow-up due ${d === 0 ? "today" : `${d} day${d !== 1 ? "s" : ""} ago`}`,
           href: `/quotes/${q.id}`,
         });
       }
@@ -122,8 +138,8 @@ export function computeAttentionItems(
           id: `quote_expired:${q.id}`,
           type: "quote_expired",
           severity: "medium",
-          label: `Quote for ${q.client_name || "client"} has expired`,
-          sublabel: `Expired ${d === 0 ? "today" : `${d} day${d !== 1 ? "s" : ""} ago`} - resend or update the price`,
+          label: quoteLabel(q),
+          sublabel: `Quote expired ${d === 0 ? "today" : `${d} day${d !== 1 ? "s" : ""} ago`} - resend or update the price`,
           href: `/quotes/${q.id}`,
         });
       }
@@ -142,8 +158,8 @@ export function computeAttentionItems(
         id: `job_stalled:${j.id}`,
         type: "job_stalled",
         severity: d > stalledJobDays * 2 ? "high" : "medium",
-        label: `${j.client_name || "Job"} hasn't moved in ${d} days`,
-        sublabel: `Status: ${j.status.replace(/_/g, " ")}`,
+        label: jobLabel(j),
+        sublabel: `${j.status.replace(/_/g, " ")} - no movement in ${d} day${d !== 1 ? "s" : ""}`,
         href: `/jobs/${j.id}`,
       });
     }
@@ -161,8 +177,8 @@ export function computeAttentionItems(
         id: `invoice_overdue:${j.id}`,
         type: "invoice_overdue",
         severity: d > overdueInvoiceDays * 2 ? "high" : "medium",
-        label: `${j.client_name || "Invoice"} unpaid for ${d} days`,
-        sublabel: `$${outstanding.toLocaleString()} outstanding`,
+        label: jobLabel(j),
+        sublabel: `$${outstanding.toLocaleString()} outstanding, unpaid for ${d} day${d !== 1 ? "s" : ""}`,
         href: `/jobs/${j.id}`,
       });
     }
@@ -183,8 +199,8 @@ export function computeAttentionItems(
         id: `timesheet_missing:${j.id}`,
         type: "timesheet_missing",
         severity: "medium",
-        label: `No hours logged for ${j.client_name || "a completed job"}`,
-        sublabel: `Completed ${d === 0 ? "today" : `${d} day${d !== 1 ? "s" : ""} ago`} - margin data is incomplete without it`,
+        label: jobLabel(j),
+        sublabel: `No hours logged - completed ${d === 0 ? "today" : `${d} day${d !== 1 ? "s" : ""} ago`}`,
         href: `/jobs/${j.id}`,
       });
     }
@@ -202,8 +218,8 @@ export function computeAttentionItems(
       id: `docket_ready_to_invoice:${d.id}`,
       type: "docket_ready_to_invoice",
       severity: "medium",
-      label: `Docket signed - ${job?.client_name || "a job"}`,
-      sublabel: `${workDate} - $${d.total_cost.toLocaleString()} ready to invoice`,
+      label: job ? jobLabel(job) : "Job",
+      sublabel: `Docket signed ${workDate} - $${d.total_cost.toLocaleString()} ready to invoice`,
       href: `/jobs/${d.job_id}`,
     });
   }
