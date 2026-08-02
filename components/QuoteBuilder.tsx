@@ -494,6 +494,7 @@ export default function QuoteBuilder({
 
       {stepId === "drawing" && (
         <>
+          <PackagePicker trade="electrician" onSelect={(items) => setSiteItems((prev) => [...prev, ...items])} />
           <StepDrawing
           drawingFiles={drawingFiles}
           drawingInstructions={drawingInstructions}
@@ -603,16 +604,13 @@ export default function QuoteBuilder({
       )}
 
       {stepId === "customer" && (
-        <>
-          <PackagePicker trade="electrician" />
-          <StepCustomer
-            clientName={clientName} setClientName={setClientName}
-            clientEmail={clientEmail} setClientEmail={setClientEmail}
-            siteAddress={siteAddress} setSiteAddress={setSiteAddress}
-            onCeilingHint={(hint) => set("ceilingType", hint as ElectricianIntake["ceilingType"])}
-            setClientId={setClientId}
-          />
-        </>
+        <StepCustomer
+          clientName={clientName} setClientName={setClientName}
+          clientEmail={clientEmail} setClientEmail={setClientEmail}
+          siteAddress={siteAddress} setSiteAddress={setSiteAddress}
+          onCeilingHint={(hint) => set("ceilingType", hint as ElectricianIntake["ceilingType"])}
+          setClientId={setClientId}
+        />
       )}
 
       {stepId === "send" && (

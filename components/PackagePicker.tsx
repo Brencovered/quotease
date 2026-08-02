@@ -5,24 +5,24 @@
  * -------------
  * Lets a tradie start a quote from one of their saved packages, right from
  * inside the quote wizard, instead of having to know packages live under
- * Materials > Packages and click through from there. Selecting a package
- * reloads the wizard with ?package_id=<id> -- the same mechanism the
- * Materials > Packages tab's "Use in new quote" link already uses, so
- * pricing/materials pre-fill exactly the same way.
+ * Materials > Packages and click through from there.
  *
- * Because that reload wipes all local wizard state, this must only ever be
- * rendered on the Customer step (the first step, before anything else has
- * been entered) -- rendering it later, e.g. on Quote capture, silently
- * wipes out the customer details someone just typed in. All five trade
- * builders render it there for exactly this reason; don't move it without
- * fixing the reload mechanism first.
+ * Selecting a package fetches its line items and hands them to the caller
+ * via onSelect, which merges them straight into the wizard's in-memory
+ * scope list (setSiteItems) -- the same "package" source channel that
+ * ScopeItem already had a slot for. This deliberately does NOT navigate or
+ * reload the page (an earlier version did, via ?package_id=<id>, which
+ * wiped every other field in the wizard the moment it ran). Because
+ * nothing here touches the URL or remounts anything, it's safe to render
+ * on the Quote capture step, mid-workflow, where a package is actually
+ * useful -- not just at the very start before anything's been entered.
  */
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Package, ChevronRight, X, Clock, DollarSign } from "lucide-react";
+import { Package, ChevronRight, X, Clock, DollarSign, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveBusinessId } from "@/lib/team";
+import type { ScopeItem } from "@/components/ScopeOfWorkStep";
 
 interface PkgSummary {
   id: string;
@@ -33,12 +33,12 @@ interface PkgSummary {
   total_cost: number;
 }
 
-export default function PackagePicker({ trade }: { trade: string }) {
-  const router = useRouter();
+export default function PackagePicker({ trade, onSelect }: { trade: string; onSelect: (items: ScopeItem[]) => void }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [packages, setPackages] = useState<PkgSummary[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [adding, setAdding] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || loaded) return;
@@ -75,9 +75,49 @@ export default function PackagePicker({ trade }: { trade: string }) {
     })();
   }, [open, loaded, trade]);
 
-  function selectPackage(pkg: PkgSummary) {
-    router.push(`?package_id=${pkg.id}&trade=${trade}`);
-    setOpen(false);
+  async function selectPackage(pkg: PkgSummary) {
+    setAdding(pkg.id);
+    try {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("package_items")
+        .select("label, qty, unit, unit_cost")
+        .eq("package_id", pkg.id)
+        .order("sort_order");
+      const rows = (data ?? []) as Array<{ label: string; qty: number; unit: string; unit_cost: number }>;
+
+      const items: ScopeItem[] = rows.map((r) => ({
+        id: Math.random().toString(36).slice(2),
+        label: r.label,
+        qty: r.qty,
+        unit: r.unit,
+        note: "",
+        materialsCost: r.qty * r.unit_cost,
+        labourHrs: 0,
+        source: "package",
+      }));
+
+      // Packages carry one total labour figure for the whole bundle rather
+      // than per-item hours, so that becomes its own line rather than being
+      // split arbitrarily across the material items above.
+      if (pkg.labour_hours) {
+        items.push({
+          id: Math.random().toString(36).slice(2),
+          label: `${pkg.title} - labour`,
+          qty: pkg.labour_hours,
+          unit: "hrs",
+          note: "",
+          materialsCost: 0,
+          labourHrs: pkg.labour_hours,
+          source: "package",
+        });
+      }
+
+      onSelect(items);
+      setOpen(false);
+    } finally {
+      setAdding(null);
+    }
   }
 
   return (
@@ -87,7 +127,7 @@ export default function PackagePicker({ trade }: { trade: string }) {
         className="w-full flex items-center justify-between gap-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl px-4 py-3 hover:border-[var(--navy)]/40 transition-colors mb-4 shadow-sm"
       >
         <span className="flex items-center gap-2 text-[13.5px] font-bold text-[var(--ink)]">
-          <Package size={16} className="text-[var(--navy)]" /> Start from a saved package
+          <Package size={16} className="text-[var(--navy)]" /> Add a saved package
         </span>
         <ChevronRight size={15} className="text-[var(--ink-faint)]" />
       </button>
@@ -115,9 +155,13 @@ export default function PackagePicker({ trade }: { trade: string }) {
                 <button
                   key={pkg.id}
                   onClick={() => selectPackage(pkg)}
-                  className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[var(--app-bg)]"
+                  disabled={adding !== null}
+                  className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[var(--app-bg)] disabled:opacity-60"
                 >
-                  <p className="text-[13.5px] font-bold text-[var(--ink)]">{pkg.title}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[13.5px] font-bold text-[var(--ink)]">{pkg.title}</p>
+                    {adding === pkg.id && <Loader2 size={14} className="animate-spin text-[var(--ink-faint)] shrink-0" />}
+                  </div>
                   {pkg.description && (
                     <p className="text-[12px] text-[var(--ink-faint)] truncate">{pkg.description}</p>
                   )}

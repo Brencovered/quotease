@@ -338,19 +338,17 @@ export default function GenericQuoteBuilder({
 
       {/* Step: Customer */}
       {stepId === "customer" && (
-        <>
-          <PackagePicker trade={tradeKey} />
-          <StepCustomer
-            clientName={clientName} setClientName={setClientName}
-            clientEmail={clientEmail} setClientEmail={setClientEmail}
-            siteAddress={siteAddress} setSiteAddress={setSiteAddress}
-            setClientId={setClientId}
-          />
-        </>
+        <StepCustomer
+          clientName={clientName} setClientName={setClientName}
+          clientEmail={clientEmail} setClientEmail={setClientEmail}
+          siteAddress={siteAddress} setSiteAddress={setSiteAddress}
+          setClientId={setClientId}
+        />
       )}
 
       {stepId === "drawing" && (
         <div className="space-y-4">
+          <PackagePicker trade={tradeKey} onSelect={(items) => setSiteItems((prev) => [...prev, ...items])} />
           <LiveSiteAnnotation
             trade={tradeKey}
             lib={lib}
