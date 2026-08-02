@@ -10,8 +10,12 @@
  * Materials > Packages tab's "Use in new quote" link already uses, so
  * pricing/materials pre-fill exactly the same way.
  *
- * Shown at the start of the wizard (Customer step) where nothing has been
- * entered yet, so there's nothing to lose by reloading the page.
+ * Because that reload wipes all local wizard state, this must only ever be
+ * rendered on the Customer step (the first step, before anything else has
+ * been entered) -- rendering it later, e.g. on Quote capture, silently
+ * wipes out the customer details someone just typed in. All five trade
+ * builders render it there for exactly this reason; don't move it without
+ * fixing the reload mechanism first.
  */
 
 import { useEffect, useState } from "react";

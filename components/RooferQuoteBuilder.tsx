@@ -578,6 +578,11 @@ export default function RooferQuoteBuilder({
         )}
       </div>
 
+      {/* Start from a saved package -- shown before Customer since selecting
+          one reloads the wizard via a URL param; anything entered below
+          would otherwise get wiped out. */}
+      <PackagePicker trade="roofer" />
+
       {/* Customer & site -- previously missing entirely */}
       <StepCustomer
         clientName={clientName} setClientName={setClientName}
@@ -613,7 +618,6 @@ export default function RooferQuoteBuilder({
 
       {/* ── Quote capture: photos, AI drawing analysis, AI voice, packages ── */}
       <div className="space-y-4">
-        <PackagePicker trade="roofer" />
         <div className="card">
           <p className="section-tag mb-1">Quote capture</p>
           <p className="font-semibold text-[17px] mb-1">Upload photos or plans</p>

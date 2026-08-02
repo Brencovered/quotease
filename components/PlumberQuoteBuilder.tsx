@@ -337,17 +337,19 @@ export default function PlumberQuoteBuilder({
 
       {/* Step content */}
       {stepId === "customer" && (
-        <StepCustomer
-          clientName={clientName} setClientName={setClientName}
-          clientEmail={clientEmail} setClientEmail={setClientEmail}
-          siteAddress={siteAddress} setSiteAddress={setSiteAddress}
-          setClientId={setClientId}
-        />
+        <>
+          <PackagePicker trade="plumber" />
+          <StepCustomer
+            clientName={clientName} setClientName={setClientName}
+            clientEmail={clientEmail} setClientEmail={setClientEmail}
+            siteAddress={siteAddress} setSiteAddress={setSiteAddress}
+            setClientId={setClientId}
+          />
+        </>
       )}
 
       {stepId === "drawing" && (
         <div className="space-y-4">
-          <PackagePicker trade="plumber" />
           <LiveSiteAnnotation
             trade="plumber"
             lib={lib}

@@ -313,17 +313,19 @@ export default function CarpenterQuoteBuilder({
       </div>
 
       {stepId === "customer" && (
-        <StepCustomer
-          clientName={clientName} setClientName={setClientName}
-          clientEmail={clientEmail} setClientEmail={setClientEmail}
-          siteAddress={siteAddress} setSiteAddress={setSiteAddress}
-          setClientId={setClientId}
-        />
+        <>
+          <PackagePicker trade="carpenter" />
+          <StepCustomer
+            clientName={clientName} setClientName={setClientName}
+            clientEmail={clientEmail} setClientEmail={setClientEmail}
+            siteAddress={siteAddress} setSiteAddress={setSiteAddress}
+            setClientId={setClientId}
+          />
+        </>
       )}
 
       {stepId === "drawing" && (
         <div className="space-y-4">
-          <PackagePicker trade="carpenter" />
           <LiveSiteAnnotation
             trade="carpenter"
             lib={lib}
