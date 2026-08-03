@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveBusinessId } from "@/lib/team";
+import GoogleSignInButton from "@/components/GoogleSignInButton";
 import {
   Timer,
   DollarSign,
@@ -387,6 +388,14 @@ function LoginForm() {
               <p className="text-[13.5px] text-[var(--ink-faint)] mb-6">
                 Log in to your Swiftscope account
               </p>
+
+              <GoogleSignInButton next={next} label="Log in with Google" />
+
+              <div className="flex items-center gap-3 my-5">
+                <div className="flex-1 h-px bg-[var(--line)]" />
+                <span className="text-[11.5px] font-bold uppercase text-[var(--ink-faint)]">or</span>
+                <div className="flex-1 h-px bg-[var(--line)]" />
+              </div>
 
               <form onSubmit={handleSubmit} className="space-y-3">
                 {/* Email */}

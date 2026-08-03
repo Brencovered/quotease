@@ -4,6 +4,7 @@ import { Suspense, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import GoogleSignInButton from "@/components/GoogleSignInButton";
 import {
   Timer, DollarSign, Search, Shield, X, Check, Mail,
   ArrowRight, Sparkles, Users, MapPin, Briefcase,
@@ -232,6 +233,14 @@ function SignupForm() {
                 <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-8 shadow-sm">
                   <h1 className="font-display text-[26px] text-[var(--ink)] mb-1">Create your account</h1>
                   <p className="text-[13.5px] text-[var(--ink-faint)] mb-6">7-day free trial. $45/month after that.</p>
+
+                  <GoogleSignInButton next={next} label="Sign up with Google" />
+
+                  <div className="flex items-center gap-3 my-5">
+                    <div className="flex-1 h-px bg-[var(--line)]" />
+                    <span className="text-[11.5px] font-bold uppercase text-[var(--ink-faint)]">or</span>
+                    <div className="flex-1 h-px bg-[var(--line)]" />
+                  </div>
 
                   <form onSubmit={handleSubmit} className="space-y-3">
                     {/* Business name */}

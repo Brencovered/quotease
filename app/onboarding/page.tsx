@@ -7,7 +7,7 @@ import { seedDefaultMaterials } from "@/lib/tradeMaterialSeed";
 import {
   Upload, Download, SkipForward, ArrowRight, ArrowLeft,
   Check, Package, Monitor, Smartphone, ClipboardList,
-  HardHat, PenTool, FileText, Wrench, TrendingUp,
+  HardHat, PenTool, FileText, Wrench, TrendingUp, Briefcase,
   Loader2, Sparkles, MapPin, AlertCircle, Users, FileUp,
   ExternalLink, X, Minus, Plus, Globe,
 } from "lucide-react";
@@ -135,18 +135,43 @@ export default function OnboardingPage() {
     setNeedsTrade(false);
   }
 
+  // Mandatory business-name gate -- same idea as the trade gate above, for
+  // the same reason: the email/password signup form always required a
+  // business name, so onboarding never needed to collect it itself. A
+  // Google sign-in/sign-up skips that form entirely, so an account can
+  // reach here with business_name still null and nowhere else that would
+  // ever ask for it.
+  const [needsBusinessName, setNeedsBusinessName] = useState(false);
+  const [businessNameInput, setBusinessNameInput] = useState("");
+  const [savingBusinessName, setSavingBusinessName] = useState(false);
+  const [businessNameError, setBusinessNameError] = useState("");
+
+  async function saveMandatoryBusinessName() {
+    if (!businessNameInput.trim()) { setBusinessNameError("Please enter your business name."); return; }
+    setSavingBusinessName(true);
+    setBusinessNameError("");
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSavingBusinessName(false); return; }
+    const { error } = await supabase.from("profiles").update({ business_name: businessNameInput.trim() }).eq("id", user.id);
+    setSavingBusinessName(false);
+    if (error) { setBusinessNameError("Could not save that, please try again."); return; }
+    setNeedsBusinessName(false);
+  }
+
   // Load existing profile data on mount
   useEffect(() => {
     async function loadProfile() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: profile } = await supabase.from("profiles").select("suburb, digital_tools, quote_frequency, team_size, trades").eq("id", user.id).single();
+      const { data: profile } = await supabase.from("profiles").select("suburb, digital_tools, quote_frequency, team_size, trades, business_name").eq("id", user.id).single();
       if (profile?.suburb) setSuburb(profile.suburb);
       if (profile?.digital_tools) setSelectedTools(profile.digital_tools);
       if (profile?.quote_frequency) setQuoteFrequency(profile.quote_frequency);
       if (profile?.team_size) setTeamSize(profile.team_size);
       if (!profile?.trades || profile.trades.length === 0) setNeedsTrade(true);
+      if (!profile?.business_name) setNeedsBusinessName(true);
     }
     loadProfile();
   }, []);
@@ -385,6 +410,37 @@ export default function OnboardingPage() {
         <p className="fadeUp2 text-[12px] text-[var(--ink-faint)] mt-4">
           Redirecting in {redirectCountdown}s...
         </p>
+      </div>
+    );
+  }
+
+  if (needsBusinessName) {
+    return (
+      <div className="min-h-screen bg-[var(--app-bg)] flex items-center justify-center px-6">
+        <div className="max-w-md w-full bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-8">
+          <Briefcase size={28} className="text-[var(--amber)] mb-3" />
+          <h1 className="font-display text-[22px] text-[var(--ink)] mb-2">What&apos;s your business called?</h1>
+          <p className="text-[13.5px] text-[var(--ink-soft)] mb-5">
+            This is what shows up on your quotes and invoices, so we need it before you can continue.
+          </p>
+          <input
+            type="text"
+            value={businessNameInput}
+            onChange={(e) => { setBusinessNameInput(e.target.value); setBusinessNameError(""); }}
+            placeholder="e.g. Smith Electrical Services"
+            autoFocus
+            className="app-field w-full mb-3"
+          />
+          {businessNameError && <p className="text-[12.5px] text-red-600 font-semibold mb-3">{businessNameError}</p>}
+          <button
+            onClick={saveMandatoryBusinessName}
+            disabled={savingBusinessName}
+            className="btn-primary w-full flex items-center justify-center gap-2"
+          >
+            {savingBusinessName ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
+            {savingBusinessName ? "Saving..." : "Continue"}
+          </button>
+        </div>
       </div>
     );
   }
