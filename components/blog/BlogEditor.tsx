@@ -4,7 +4,7 @@ import MarkdownMode from "./MarkdownMode";
 import { useState, useCallback, useRef } from "react";
 import {
   Plus, GripVertical, Trash2, ChevronUp, ChevronDown,
-  Type, Image, Quote, List, BarChart3, Table2, Heading1,
+  Type, Image as ImageIcon, Quote, List, BarChart3, Table2, Heading1,
   Heading2, Heading3, SeparatorHorizontal, CheckCircle,
   BookOpen, Bold, Italic, Link2, X,
 } from "lucide-react";
@@ -74,7 +74,7 @@ const BLOCK_DEFS: BlockDef[] = [
   { type: "blockquote",    label: "Quote",           description: "Pull quote or testimonial",                icon: Quote,           category: "text" },
   { type: "bullet_list",   label: "Bullet List",     description: "List with bullet points",                  icon: List,            category: "text" },
   { type: "numbered_list", label: "Numbered List",   description: "Ordered step-by-step list",                icon: List,            category: "text" },
-  { type: "image",         label: "Image",           description: "Photo with optional caption",              icon: Image,           category: "visual" },
+  { type: "image",         label: "Image",           description: "Photo with optional caption",              icon: ImageIcon,           category: "visual" },
   { type: "table",         label: "Data Table",      description: "Rows and columns of data",                 icon: Table2,          category: "data" },
   { type: "graph",         label: "Bar Chart",       description: "Horizontal bar chart comparison",          icon: BarChart3,       category: "data" },
   { type: "key_takeaways", label: "Key Takeaways",   description: "Highlighted summary box with checkmarks",  icon: CheckCircle,     category: "layout" },
@@ -376,9 +376,9 @@ function ImageEditor({ block, onChange, onUpload }: { block: ContentBlock; onCha
       ) : (
         <button onClick={onUpload}
           className="w-full border-2 border-dashed border-[var(--line)] rounded-xl py-8 flex flex-col items-center gap-2 hover:border-[var(--amber)] transition-colors bg-[var(--app-bg)]">
-          <Image size={20} className="text-[var(--ink-faint)]" />
+          <ImageIcon size={20} className="text-[var(--ink-faint)]" />
           <span className="text-[13px] font-semibold text-[var(--ink-soft)]">Upload image</span>
-          <span className="text-[11.5px] text-[var(--ink-faint)]">JPG, PNG, WebP — recommended 1200x630</span>
+          <span className="text-[11.5px] text-[var(--ink-faint)]">JPG, PNG, WebP, recommended 1200x630</span>
         </button>
       )}
       <div className="grid grid-cols-2 gap-2">

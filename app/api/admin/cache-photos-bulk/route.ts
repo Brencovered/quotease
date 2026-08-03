@@ -6,7 +6,7 @@ import { isAdminEmail } from "@/lib/admin";
 const GOOGLE_API_KEY = process.env.GOOGLE_PLACES_API_KEY!;
 const BATCH = 50; // per single invocation -- call repeatedly to drain backlog
 
-export async function POST(req: NextRequest) {
+export async function POST(_req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user || !isAdminEmail(user.email)) {

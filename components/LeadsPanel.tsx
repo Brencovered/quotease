@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, Clock, ThumbsUp, X, ChevronDown, ChevronUp, Phone, Mail } from "lucide-react";
+import { Clock, ThumbsUp, X, ChevronDown, ChevronUp, Phone, Mail } from "lucide-react";
 
 const TEMP_LABELS: Record<string,{label:string;color:string;bg:string}> = {
   early: { label:"Early stage", color:"text-yellow-700", bg:"bg-yellow-50" },

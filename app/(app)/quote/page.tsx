@@ -74,7 +74,7 @@ async function loadPackage(
   supabase: Awaited<ReturnType<typeof createClient>>,
   businessId: string,
   packageId: string | undefined,
-  tradeParm: string | undefined
+  _tradeParm: string | undefined
 ) {
   if (!packageId) return null;
   const { data: pkg } = await supabase

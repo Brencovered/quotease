@@ -2,7 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import Link from "next/link";
 import Image from "next/image";
 import MarketingNav from "@/components/MarketingNav";
-import { ArrowRight, Calendar, Tag } from "lucide-react";
+import { ArrowRight, Calendar } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 

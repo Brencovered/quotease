@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Download, Filter, Check, FileText } from "lucide-react";
+import { Download, Filter, Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 type Quote = {
@@ -92,7 +92,12 @@ export default function ExportPanel({
   }
 
   function toggleOne(id: string) {
-    setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setSelected(s => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
   }
 
   function buildXeroCSV(rows: Quote[]): string {
@@ -274,7 +279,7 @@ export default function ExportPanel({
           </div>
         ) : (
           <div className="divide-y divide-[var(--line-subtle)]">
-            {filtered.map((q, i) => {
+            {filtered.map((q, _i) => {
               const inv   = invoiceNum(q, quotes.indexOf(q));
               const total = effectiveTotals[q.id] ?? 0;
               const act   = actuals.find(a => a.quote_id === q.id);

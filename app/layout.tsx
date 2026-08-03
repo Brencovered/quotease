@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -43,12 +43,21 @@ export const metadata: Metadata = {
       { rel: "manifest", url: "/site.webmanifest" },
     ],
   },
-  themeColor: "#1c252d",
   appleWebApp: {
     title: "Swiftscope",
     statusBarStyle: "black-translucent",
   },
   manifest: "/site.webmanifest",
+};
+
+// themeColor lives here, not in `metadata`. Next moved the viewport-ish
+// keys (themeColor, width, initialScale, colorScheme) to their own export;
+// leaving themeColor in `metadata` is a no-op that logs a warning for
+// every single page rendered. With ~2,900 prerendered SEO routes that was
+// several hundred lines of build log from one line of source, which is
+// exactly the kind of noise that hides a real failure.
+export const viewport: Viewport = {
+  themeColor: "#1c252d",
 };
 
 const GA_ID = "G-GVM9GY952S";

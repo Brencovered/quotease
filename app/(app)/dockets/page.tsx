@@ -3,6 +3,14 @@ import { getActiveBusinessId } from "@/lib/team";
 import AppHeader from "@/components/AppHeader";
 import DocketsOverviewClient, { type DocketRow } from "@/components/DocketsOverviewClient";
 
+
+// Signed-in page: reads cookies to resolve the current user, so it can
+// never be statically prerendered. Declaring that here stops Next
+// attempting a static render at build time, which previously threw
+// DYNAMIC_SERVER_USAGE into the build log on every deploy and made real
+// build failures much harder to spot.
+export const dynamic = "force-dynamic";
+
 export default async function DocketsOverviewPage() {
   let signed: DocketRow[] = [];
   let awaiting: DocketRow[] = [];

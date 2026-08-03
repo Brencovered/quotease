@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { ChevronDown, ChevronUp, Plus, Trash2, PenLine, Image, FileText, MessageSquare, Maximize2, Camera, SquareCheck, Phone, ArrowRight, Loader2, PlusCircle, X, Paperclip, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Trash2, PenLine, Image as ImageIcon, FileText, MessageSquare, Maximize2, Camera, SquareCheck, Phone, ArrowRight, Loader2, PlusCircle, X, Paperclip, Sparkles } from "lucide-react";
 import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import VoiceNoteRecorder from "./VoiceNoteRecorder";
@@ -795,7 +795,7 @@ export default function RooferQuoteBuilder({
       {/* ── Materials ────────────────────────────────────────── */}
       <div className="space-y-3">
         <h3 className="font-semibold text-[14px] text-[var(--ink)] flex items-center gap-2">
-          <Image size={16} className="text-[var(--amber-deep)]" /> Material
+          <ImageIcon size={16} className="text-[var(--amber-deep)]" /> Material
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {(Object.entries(MATERIALS) as [MaterialType, typeof MATERIALS[MaterialType]][]).map(([key, m]) => (

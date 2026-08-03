@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import MarketingNav from "@/components/MarketingNav";
-import { ArrowLeft, Calendar, Tag, Clock, BookOpen, Quote, CheckCircle, ArrowRight, BarChart3, ExternalLink } from "lucide-react";
+import { ArrowLeft, Calendar, Tag, Clock, BookOpen, Quote, CheckCircle, ArrowRight, BarChart3 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
