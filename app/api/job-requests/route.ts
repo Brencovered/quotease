@@ -26,6 +26,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { randomUUID } from "crypto";
 import { resolvePostcode } from "@/lib/resolvePostcode";
+import { LEADS_ENABLED } from "@/lib/featureFlags";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_PHOTOS = 6;
@@ -46,6 +47,16 @@ function str(v: FormDataEntryValue | null): string {
 }
 
 export async function POST(req: NextRequest) {
+  // The public form (/get-quotes) already redirects away when this flow is
+  // off, but that only stops people using the page -- this route was still
+  // directly POST-able the whole time, with nothing here checking the flag.
+  // That gap is how stray/test submissions kept reaching real tradies'
+  // inboxes (and the internal "no tradies matched" notification) even
+  // after the flow was supposedly switched off.
+  if (!LEADS_ENABLED) {
+    return NextResponse.json({ error: "This flow is currently disabled." }, { status: 404 });
+  }
+
   let form: FormData;
   try {
     form = await req.formData();

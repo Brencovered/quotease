@@ -18,9 +18,13 @@
  * (browse, call, email, visit website) is the focus until there's enough
  * tradie density for the lead flow to reliably deliver a response.
  *
- * Nothing downstream was deleted -- /get-quotes, the directory enquiry
- * form/modal, /api/directory/enquire, /api/job-requests/*, and their
- * tables are all intact. Flip this back to true (and the matching
+ * Nothing downstream was deleted -- /get-quotes, /leads, the directory
+ * enquiry form/modal, /api/directory/enquire, /api/job-requests/*, and
+ * their tables are all intact. Every one of those now checks this flag
+ * directly (the API routes didn't originally -- only the pages did, which
+ * meant a direct POST to /api/job-requests or /api/job-requests/notify
+ * still worked, and stray test/old requests kept reaching real inboxes
+ * despite the UI being dark). Flip this back to true (and the matching
  * per-file flags in app/directory/[slug]/page.tsx and
  * components/DirectoryCard.tsx, which are kept in sync manually) to
  * bring it all back with no other code changes.

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { LEADS_ENABLED } from "@/lib/featureFlags";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -116,10 +117,12 @@ export default function AppHeader() {
             );
           })}
 
-          <Link prefetch={false} href="/leads" className={navLinkClasses("/leads")}>
-            <Zap size={17} strokeWidth={isActive("/leads") ? 2.2 : 1.8} />
-            Leads
-          </Link>
+          {LEADS_ENABLED && (
+            <Link prefetch={false} href="/leads" className={navLinkClasses("/leads")}>
+              <Zap size={17} strokeWidth={isActive("/leads") ? 2.2 : 1.8} />
+              Leads
+            </Link>
+          )}
           <Link prefetch={false} href="/clients" className={navLinkClasses("/clients")}>
             <Users size={17} strokeWidth={isActive("/clients") ? 2.2 : 1.8} />
             Clients
@@ -191,9 +194,11 @@ export default function AppHeader() {
               <Link prefetch={false} href="/team" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(ink)] border-b border-[var(--line)]">
                 <UsersRound size={15} className="text-[var(--ink-faint)]" /> Team
               </Link>
-              <Link prefetch={false} href="/leads" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
-                <Zap size={15} className="text-[var(--ink-faint)]" /> Leads
-              </Link>
+              {LEADS_ENABLED && (
+                <Link prefetch={false} href="/leads" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
+                  <Zap size={15} className="text-[var(--ink-faint)]" /> Leads
+                </Link>
+              )}
               <Link prefetch={false} href="/export" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <Download size={15} className="text-[var(--ink-faint)]" /> Export to Xero / MYOB
               </Link>

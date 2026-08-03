@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { resolvePostcode } from "@/lib/resolvePostcode";
 import { getTradeVariants } from "@/lib/seo/meta";
 import { buildLeadMatchEmail, buildNoMatchLeadEmail } from "@/lib/email/templates";
+import { LEADS_ENABLED } from "@/lib/featureFlags";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY!;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL!;
@@ -27,6 +28,16 @@ async function sendEmail(to: string, subject: string, html: string) {
 }
 
 export async function POST(req: NextRequest) {
+  // Same gap as /api/job-requests: the public form and page already stop
+  // people submitting new leads while this flow is off, but this route --
+  // the one that actually sends every email, including the internal
+  // "no tradies matched" one -- never checked the flag itself. Guarding
+  // here means nothing gets emailed regardless of how this gets called
+  // (direct hit, a stray old request, or the escalate-leads cron).
+  if (!LEADS_ENABLED) {
+    return NextResponse.json({ ok: true, sent: 0, reason: "leads_disabled" });
+  }
+
   const { requestId, widerRadius } = await req.json();
   if (!requestId) return NextResponse.json({ error: "No requestId" }, { status: 400 });
 

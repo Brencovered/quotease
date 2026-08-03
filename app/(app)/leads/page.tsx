@@ -5,8 +5,16 @@ import AppHeader from "@/components/AppHeader";
 import LeadsPanel from "@/components/LeadsPanel";
 import { getActiveBusinessId } from "@/lib/team";
 import { resolvePostcode } from "@/lib/resolvePostcode";
+import { LEADS_ENABLED } from "@/lib/featureFlags";
 
 export default async function LeadsPage() {
+  // Same as /get-quotes: nav no longer links here, but redirect rather
+  // than leaving a dead-end "claim a lead" page live for anyone with an
+  // old bookmark. Flip LEADS_ENABLED back to true to restore.
+  if (!LEADS_ENABLED) {
+    redirect("/dashboard");
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
