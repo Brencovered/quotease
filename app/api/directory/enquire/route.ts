@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { buildDirectoryEnquiryEmail } from "@/lib/email/templates";
+import {
+  buildDirectoryEnquiryEmail,
+  buildDirectoryEnquiryAdminNotifyEmail,
+  buildDirectoryEnquiryCustomerConfirmationEmail,
+} from "@/lib/email/templates";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -61,7 +65,8 @@ export async function POST(req: NextRequest) {
   // bad address on file kill every quote request for that listing, fall
   // back to Swiftscope's own inbox so the enquiry still gets somewhere.
   const scrapedToEmail = typeof to_email === "string" ? to_email.trim() : "";
-  const toAddress = EMAIL_RE.test(scrapedToEmail) ? scrapedToEmail : "team@swiftscope.com.au";
+  const hasListingEmail = EMAIL_RE.test(scrapedToEmail);
+  const toAddress = hasListingEmail ? scrapedToEmail : "team@swiftscope.com.au";
 
   /* ── 3. Save enquiry to database (always persist) ──────────────── */
   // Uses the admin (service-role) client rather than the session-scoped
@@ -170,6 +175,81 @@ export async function POST(req: NextRequest) {
         .from("directory_enquiries")
         .update({ email_sent: true })
         .eq("id", enquiryId);
+    }
+
+    // The listing had a real email on file (quote actually went to the
+    // tradie, not just Swiftscope's fallback inbox): also notify the team
+    // and reassure the customer their request was actually sent somewhere.
+    // Best-effort - failures here don't affect the main enquiry, which is
+    // already saved and sent.
+    if (hasListingEmail) {
+      const businessNameStr = typeof business_name === "string" ? business_name : "";
+
+      const adminEmail = buildDirectoryEnquiryAdminNotifyEmail({
+        businessName: businessNameStr,
+        toEmail: toAddress,
+        isClaimed,
+        customerName,
+        customerEmail,
+        jobDesc,
+      });
+
+      const customerEmailContent = buildDirectoryEnquiryCustomerConfirmationEmail({
+        customerName,
+        businessName: businessNameStr,
+      });
+
+      const [adminResult, customerResult] = await Promise.allSettled([
+        fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${RESEND_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: "Swiftscope Directory <directory@swiftscope.com.au>",
+            to: ["team@swiftscope.com.au"],
+            subject: adminEmail.subject,
+            html: adminEmail.html,
+          }),
+        }),
+        fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${RESEND_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: "Swiftscope Directory <directory@swiftscope.com.au>",
+            to: [customerEmail],
+            reply_to: "team@swiftscope.com.au",
+            subject: customerEmailContent.subject,
+            html: customerEmailContent.html,
+          }),
+        }),
+      ]);
+
+      const adminOk = adminResult.status === "fulfilled" && adminResult.value.ok;
+      const customerOk = customerResult.status === "fulfilled" && customerResult.value.ok;
+
+      if (adminResult.status === "rejected") {
+        console.error("[directory/enquire] admin notify exception:", adminResult.reason);
+      } else if (!adminResult.value.ok) {
+        console.error("[directory/enquire] admin notify failed:", adminResult.value.status);
+      }
+
+      if (customerResult.status === "rejected") {
+        console.error("[directory/enquire] customer confirmation exception:", customerResult.reason);
+      } else if (!customerResult.value.ok) {
+        console.error("[directory/enquire] customer confirmation failed:", customerResult.value.status);
+      }
+
+      if (enquiryId) {
+        await admin
+          .from("directory_enquiries")
+          .update({ admin_notified: adminOk, customer_notified: customerOk })
+          .eq("id", enquiryId);
+      }
     }
 
     return NextResponse.json({ ok: true, id: enquiryId });

@@ -286,6 +286,65 @@ export function buildDirectoryEnquiryEmail(vars: {
 }
 
 /* ────────────────────────────────────────────────────────────────────
+ * 6b. Directory enquiry - admin copy (to Swiftscope team)
+ *
+ * Sent alongside the tradie's copy whenever the listing has a real email
+ * on file. Previously the team only ever saw these enquiries when the
+ * listing email was missing/malformed (the fallback case) -- this gives
+ * visibility into every quote request that goes out, not just the ones
+ * that had nowhere else to go.
+ * ──────────────────────────────────────────────────────────────────── */
+export function buildDirectoryEnquiryAdminNotifyEmail(vars: {
+  businessName: string;
+  toEmail: string;
+  isClaimed: boolean;
+  customerName: string;
+  customerEmail: string;
+  jobDesc: string;
+}) {
+  return {
+    subject: `[Directory] Quote request forwarded: ${vars.businessName}`,
+    html: `
+      <h2>Quote request forwarded to listing</h2>
+      <p><strong>Business:</strong> ${htmlEscape(vars.businessName)} (${vars.isClaimed ? "claimed" : "unclaimed"})</p>
+      <p><strong>Sent to:</strong> ${htmlEscape(vars.toEmail)}</p>
+      <hr/>
+      <p><strong>Customer:</strong> ${htmlEscape(vars.customerName)} (${htmlEscape(vars.customerEmail)})</p>
+      <p><strong>Job:</strong> ${htmlEscape(vars.jobDesc)}</p>
+      <hr/>
+      <p style="color:#888;font-size:12px">Automated copy - the tradie's copy was sent separately to the address above.</p>
+    `,
+  };
+}
+
+/* ────────────────────────────────────────────────────────────────────
+ * 6c. Directory enquiry - customer confirmation
+ *
+ * Sent to the homeowner only when the listing had a real email on file
+ * (i.e. their request actually went to the tradie, not just Swiftscope's
+ * fallback inbox), so the reassurance is honest about what happened.
+ * ──────────────────────────────────────────────────────────────────── */
+export function buildDirectoryEnquiryCustomerConfirmationEmail(vars: {
+  customerName: string;
+  businessName: string;
+}) {
+  const firstName = vars.customerName.trim().split(/\s+/)[0] || "there";
+  return {
+    subject: `Your quote request to ${vars.businessName} has been sent`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; color: #0a1722;">
+        <p>Hi ${htmlEscape(firstName)},</p>
+        <p>Your quote request has been sent to <strong>${htmlEscape(vars.businessName)}</strong>.</p>
+        <p>We'll do everything we can to make sure your request gets seen to as soon as possible.</p>
+        <p style="color:#5a6b78;font-size:13px;">If you don't hear back within a couple of days, feel free to reply to this email and our team will follow up.</p>
+        <hr/>
+        <p style="color:#888;font-size:12px">Sent via Swiftscope Directory - swiftscope.com.au/directory</p>
+      </div>
+    `,
+  };
+}
+
+/* ────────────────────────────────────────────────────────────────────
  * 7. New lead match notification (to matched tradies)
  * ──────────────────────────────────────────────────────────────────── */
 export function buildLeadMatchEmail(vars: {
