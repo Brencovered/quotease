@@ -23,7 +23,7 @@
  *   since directory_listing doesn't store state directly yet.
  */
 
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import { getTradeDisplay, suburbToSlug, slugToSuburbDisplay, buildDirectorySlug, getTradeVariants } from "@/lib/seo/meta";
 import { generateTradeSuburbFaqs, type FaqItem } from "@/components/seo/FaqSchema";
 
@@ -98,7 +98,16 @@ export async function generateTradeSuburbContent(
 
   let rows: Array<Omit<TradeSuburbListing, "slug">> = [];
   try {
-    const supabase = await createClient();
+    // Must be the cookieless public client. This route has
+    // generateStaticParams + revalidate, so it prerenders at build time,
+    // and the cookie-aware server client throws DYNAMIC_SERVER_USAGE in a
+    // prerender rather than returning a client. The catch below then
+    // swallowed that throw and rendered the page with zero listings --
+    // every prebuilt trade/suburb page shipped empty AND noindexed (see
+    // hasEnoughListingsToIndex), and stayed that way for a full
+    // revalidate window. Directory data is public and has an anon SELECT
+    // policy, so RLS is unaffected by the switch.
+    const supabase = createPublicClient();
 
     // directory_listing stores suburb names with proper casing/spacing
     // (e.g. "South Melbourne"), but the URL only has a slug
@@ -129,12 +138,18 @@ export async function generateTradeSuburbContent(
     }
     rows = tradeRows ?? [];
   } catch (err) {
-    // A missing/unavailable Supabase client (e.g. a transient env issue
-    // during background ISR revalidation) should render this page as a
-    // low-listing/not-yet-indexed suburb page, not crash the whole route --
-    // the page component already has a real empty state for listingCount 0,
-    // and hasEnoughListingsToIndex below keeps it out of search until a
-    // successful revalidation actually finds listings.
+    // A genuinely unavailable Supabase client (missing env vars in CI, a
+    // transient network failure during background ISR revalidation) should
+    // render this as a low-listing/not-yet-indexed page rather than crash
+    // the route: the component has a real empty state for listingCount 0,
+    // and hasEnoughListingsToIndex keeps it out of search until a later
+    // revalidation finds listings.
+    //
+    // Keep this catch narrow in spirit. It previously masked a systematic
+    // build-time failure for months because "render empty" is
+    // indistinguishable from "there is genuinely nothing here". If empty
+    // pages ever appear again, check this log before assuming the data is
+    // missing.
     console.error("[generateTradeSuburbContent] Supabase client unavailable:", err);
     rows = [];
   }
