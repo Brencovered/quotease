@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdminEmail } from "@/lib/admin";
+import { buildDirectorySlug } from "@/lib/seo/meta";
 
 const APP_URL = "https://swiftscope.com.au";
 const PAGE = 1000;
@@ -15,10 +16,19 @@ function csvField(value: string | number | null | undefined): string {
 
 /**
  * Exports unclaimed directory listings with a usable email as a CSV, ready
- * to import into HubSpot as a list. Each row includes a claim_token-based
- * URL that resolves straight to that exact listing on /directory/claim --
- * use it as a merge field/personalization token in the HubSpot email so
- * clicking through skips the search-and-match step entirely.
+ * to import into HubSpot as a list. Each row includes two URLs, both usable
+ * as HubSpot personalization tokens:
+ *
+ *   listing_url  the public directory page for that business. Link this in
+ *                the email body so the recipient can see what already
+ *                exists before being asked to do anything. Far stronger
+ *                than describing it, and it is the page Google indexes.
+ *   claim_url    the claim_token deep link that resolves straight to that
+ *                exact listing on /directory/claim, skipping search-and-match.
+ *
+ * Slug is computed with buildDirectorySlug rather than stored: there is no
+ * slug column on directory_listing, and app/directory/[slug] derives the
+ * same value, so this stays correct as long as both use the shared helper.
  *
  * Marks outreach_contacted_at on every exported row (unless
  * ?includeContacted=true is passed) so re-running this later only pulls
@@ -86,13 +96,23 @@ export async function GET(req: NextRequest) {
 
   const header = [
     "business_name", "email", "trade", "suburb", "postcode",
-    "google_rating", "google_reviews_count", "claim_url", "listing_id",
+    "google_rating", "google_reviews_count", "listing_url", "claim_url", "listing_id",
   ];
 
   const csvRows = deduped.map((r) => {
     const email = (r.private_email ?? r.scraped_contact_email ?? "").toLowerCase().trim();
     const trade = Array.isArray(r.trades) && r.trades.length > 0 ? r.trades[0] : "";
     const claimUrl = `${APP_URL}/directory/claim?token=${r.claim_token}`;
+    // business_name is non-null in practice for every exportable row, but
+    // guard anyway: a blank name would produce a slug that 404s, and a dead
+    // link in a first-contact cold email is worse than an omitted one.
+    const listingUrl = r.business_name
+      ? `${APP_URL}/directory/${buildDirectorySlug({
+          id: r.id,
+          business_name: r.business_name,
+          suburb: r.suburb ?? "",
+        })}`
+      : "";
     return [
       csvField(r.business_name),
       csvField(email),
@@ -101,6 +121,7 @@ export async function GET(req: NextRequest) {
       csvField(r.postcode),
       csvField(r.google_rating),
       csvField(r.google_reviews_count),
+      csvField(listingUrl),
       csvField(claimUrl),
       csvField(r.id),
     ].join(",");
