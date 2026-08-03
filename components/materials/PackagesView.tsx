@@ -18,7 +18,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { Pkg, PackageItem, PackageRow } from "./shared";
+import type { Pkg, PackageItem } from "./shared";
 import { TRADE_COLORS, TRADES, formatCurrency, calcItemTotal, calcPackageTotal } from "./shared";
 import AIPackageAssistant from "./AIPackageAssistant";
 

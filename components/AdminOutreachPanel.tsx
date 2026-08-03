@@ -136,7 +136,8 @@ export default function AdminOutreachPanel({
   function toggleOne(email: string) {
     setSelected(prev => {
       const n = new Set(prev);
-      n.has(email) ? n.delete(email) : n.add(email);
+      if (n.has(email)) n.delete(email);
+      else n.add(email);
       return n;
     });
   }

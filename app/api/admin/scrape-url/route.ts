@@ -68,7 +68,7 @@ function extractAddress(html: string): { suburb: string | null; postcode: string
   return { suburb: null, postcode: null, state: null };
 }
 
-function extractTrades(html: string, url: string): string[] {
+function extractTrades(html: string, _url: string): string[] {
   // Score each trade by keyword frequency -- avoids false positives from
   // generic words like "building" on an electrician's site
   const TRADE_KEYWORDS: Record<string, { words: string[]; weight: number }[]> = {

@@ -3,7 +3,7 @@
 import { useState, useRef, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveBusinessId } from "@/lib/team";
-import { Upload, Trash2, Search, Check, AlertCircle, ChevronDown } from "lucide-react";
+import { Upload, Trash2, Search, Check, AlertCircle } from "lucide-react";
 
 type PriceBookItem = {
   id: string; supplier: string; sku: string | null;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, AlertCircle, RefreshCw, Unlink } from "lucide-react";
+import { Check, AlertCircle, Unlink } from "lucide-react";
 
 export default function XeroConnectPanel({
   connected,

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdminEmail } from "@/lib/admin";
-import { getRandomUserAgent, resolveUrl } from "@/lib/websiteScraper";
+import { getRandomUserAgent } from "@/lib/websiteScraper";
 
 const DELAY_MS = 1500; // be polite -- don't hammer their servers
 const RESULTS_PER_PAGE = 20;

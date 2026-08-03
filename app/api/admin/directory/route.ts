@@ -17,7 +17,7 @@ async function requireAdmin(): Promise<NextResponse | null> {
   return null;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function applyFilters(
   query: any,
   params: { trade: string; email: string; phone: string; website: string; rating: string; claimed: string; search: string }

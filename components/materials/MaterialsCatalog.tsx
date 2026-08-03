@@ -19,7 +19,7 @@ import {
   FileUp,
 } from "lucide-react";
 import type { Material, Supplier, PricingTier } from "./shared";
-import { TRADE_COLORS, TRADES, UNITS, PAGE_SIZE, formatCurrency, calcSellPrice } from "./shared";
+import { TRADE_COLORS, TRADES, UNITS, formatCurrency, calcSellPrice } from "./shared";
 
 /* ================================================================== */
 /*  TAB 1: MATERIALS                                                   */

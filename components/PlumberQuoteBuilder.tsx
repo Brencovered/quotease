@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
-import { AlertTriangle, Paperclip, X, Sparkles, ChevronRight, ChevronLeft, Check } from "lucide-react";
+import { Paperclip, X, Sparkles, ChevronRight, ChevronLeft, Check } from "lucide-react";
 import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import { safeParseApiResponse } from "@/lib/safeParseApiResponse";
 import { analyzeDrawingFile } from "@/lib/analyzeDrawingClient";
@@ -162,7 +162,7 @@ export default function PlumberQuoteBuilder({
       if (saved.manualLabourHrs != null) setManualLabourHrs(saved.manualLabourHrs);
       if (saved.siteNotes)   setSiteNotes(saved.siteNotes);
     } catch {}
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, []);
 
   const costs = useMemo(

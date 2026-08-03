@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
-import { Paperclip, X, ChevronRight, ChevronLeft, Check, Sparkles, AlertTriangle } from "lucide-react";
+import { Paperclip, X, ChevronRight, ChevronLeft, Check, Sparkles } from "lucide-react";
 import { calcCarpenterQuote, CARPENTER_DEFAULT_MATERIALS, type CarpenterIntake } from "@/lib/calcCarpenter";
 import { resolveCalcCosts, serializeLinkedItemKeys } from "@/lib/resolveCalcCosts";
 import StepCustomer from "./StepCustomer";
@@ -154,7 +154,7 @@ export default function CarpenterQuoteBuilder({
       if (saved.manualLabourHrs != null) setManualLabourHrs(saved.manualLabourHrs);
       if (saved.siteNotes)   setSiteNotes(saved.siteNotes);
     } catch {}
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, []);
 
   const costs = useMemo(

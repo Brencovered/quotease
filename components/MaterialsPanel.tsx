@@ -115,6 +115,12 @@ export default function MaterialsPanel() {
       setBundlesLoading(false);
     }
     init();
+    // loadPackages/loadBundles are plain function declarations, so they are
+    // new identities every render; adding them to the dep array would loop
+    // forever. This effect is deliberately mount-once initialisation, which
+    // the rule cannot infer. Disabling with a reason rather than leaving a
+    // permanent warning in the build log.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, supabase]);
 
   /* --- Load materials --- */
