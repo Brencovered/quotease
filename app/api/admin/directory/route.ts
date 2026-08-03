@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { buildDirectorySlug } from "@/lib/seo/meta";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdminEmail } from "@/lib/admin";
 import { findAndFetchGoogleListing } from "@/lib/googlePlaces";
@@ -49,11 +50,39 @@ function applyFilters(
   return q;
 }
 
+// listing_url and claim_url are computed per row rather than read from a
+// column: there is no slug column on directory_listing, so the public URL
+// is derived with the same buildDirectorySlug helper that
+// app/directory/[slug] uses. Both are here so a CSV imported into HubSpot
+// can hyperlink the listing in the email body and deep-link the claim CTA
+// without a second lookup.
 const CSV_COLUMNS = [
   "business_name", "trades", "suburb", "postcode",
   "scraped_contact_email", "scraped_contact_phone", "private_email", "website_url",
   "google_rating", "google_reviews_count", "blurb", "place_id", "created_at",
+  "listing_url", "claim_url",
 ] as const;
+
+const APP_URL = "https://swiftscope.com.au";
+
+/** Values for the computed columns above. Empty string when the row lacks
+ *  the parts needed to build a URL that would actually resolve -- a dead
+ *  link in a cold email is worse than a blank cell. */
+function computedColumn(column: string, row: Record<string, unknown>): string {
+  const id = typeof row.id === "string" ? row.id : "";
+  const name = typeof row.business_name === "string" ? row.business_name : "";
+  const suburb = typeof row.suburb === "string" ? row.suburb : "";
+
+  if (column === "listing_url") {
+    if (!id || !name) return "";
+    return `${APP_URL}/directory/${buildDirectorySlug({ id, business_name: name, suburb })}`;
+  }
+  if (column === "claim_url") {
+    const token = typeof row.claim_token === "string" ? row.claim_token : "";
+    return token ? `${APP_URL}/directory/claim?token=${token}` : "";
+  }
+  return "";
+}
 
 function csvEscape(value: unknown): string {
   if (value === null || value === undefined) return "";
@@ -100,7 +129,13 @@ export async function GET(req: NextRequest) {
     }
 
     const header = CSV_COLUMNS.join(",");
-    const lines = rows.map((r) => CSV_COLUMNS.map((c) => csvEscape(r[c])).join(","));
+    const lines = rows.map((r) =>
+      CSV_COLUMNS.map((c) =>
+        c === "listing_url" || c === "claim_url"
+          ? csvEscape(computedColumn(c, r))
+          : csvEscape(r[c])
+      ).join(",")
+    );
     const csv = [header, ...lines].join("\n");
     const stamp = new Date().toISOString().slice(0, 10);
 
