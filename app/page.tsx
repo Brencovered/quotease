@@ -12,6 +12,7 @@ import FaqSchema, { SWIFTSCOPE_FAQS } from "@/components/seo/FaqSchema";
 import { homepageMeta } from "@/lib/seo/meta";
 import { LEADS_ENABLED } from "@/lib/featureFlags";
 import { createPublicClient } from "@/lib/supabase/public";
+import { TRADE_PAGES } from "@/lib/marketing/tradePages";
 
 // Rebuild daily. The homepage quoted "196 curated tradie listings" as a
 // hardcoded string while the table held 4,889 -- understating the directory
@@ -47,26 +48,6 @@ const HERO_IMG = "/trades/hero-onsite.jpg";
 
 // 16x9 blurred thumbnail, inlined. Shows a colour-matched smudge instead of
 // a black rectangle while the hero decodes, with no extra request.
-const TRADE_CARDS = [
-  { name: "Electricians", img: "/trades/electrician.jpg", dedicated: true,
-    alt: "Electrician fitting a ceiling light from a step ladder",
-    line: "Points, runs and switchboard work, counted off a marked-up plan instead of tallied on paper." },
-  { name: "Plumbers", img: "/trades/plumber.jpg", dedicated: true,
-    alt: "Plumber working under a kitchen sink",
-    line: "Fixtures, rough-in and hot water swaps, with variations captured before they turn into arguments." },
-  { name: "Roofers", img: "/trades/roofer.jpg", dedicated: true,
-    alt: "Roofer fixing sheeting on a metal roof",
-    line: "Restoration or full replace, priced by area and pitch from photos taken on the roof." },
-  { name: "Carpenters", img: "/trades/carpenter.jpg", dedicated: true,
-    alt: "Carpenter carrying a sheet through a stud-framed room",
-    line: "Framing, decks and fit-out, priced by linear or square metre without rebuilding the sheet each time." },
-  { name: "Painters & plasterers", img: "/trades/plasterer.jpg", dedicated: false,
-    alt: "Plasterer holding a trowel on a work site",
-    line: "Room by room or whole house on the generic builder, with your own rates and coat counts." },
-  { name: "Every other trade", img: "/trades/general.jpg", dedicated: false,
-    alt: "Tradesperson kneeling with a cordless drill",
-    line: "Concreters, tilers, fencers, landscapers and the rest all run the same site-first flow." },
-] as const;
 
 const HERO_BLUR =
   "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABQODxIPDRQSEBIXFRQYHjIhHhwcHj0sLiQySUBMS0dARkVQWnNiUFVtVkVGZIhlbXd7gYKBTmCNl4x9lnN+gXz/2wBDARUXFx4aHjshITt8U0ZTfHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHz/wAARCAAJABADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwBAm6IL0JFQ/ZZYFZ7jhO1aZ+9HTtd/5Bq/WmJWP//Z";
@@ -117,6 +98,65 @@ export default async function Home() {
                 <span>{listingCount.toLocaleString("en-AU")} tradie listings</span>
               )}
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* YOUR TRADE ─────────────────────────────────────────────────────
+          Concrete proof that the product knows the difference between a
+          switchboard and a rafter. Four dedicated builders are named as
+          such; the last card is honest that everything else runs on the
+          generic builder rather than implying a bespoke one per trade. */}
+      <div className="bg-[#0a1722] border-b border-[#12212f]">
+        <div className="max-w-7xl mx-auto px-6 py-20">
+          <div className="max-w-[680px] mb-12">
+            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Your trade</p>
+            <h2 className="font-display uppercase text-[2.6rem] sm:text-[3.4rem] leading-[0.93] text-white mb-5">
+              A quote builder that<br />knows your trade
+            </h2>
+            <p className="text-[16px] leading-[1.7] text-[#8aa4b4]">
+              Generic job software makes you bend your quote to fit its form. Swiftscope ships a
+              separate builder per trade, so the fields are the ones you actually price on.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {TRADE_PAGES.map((t) => (
+              <Link
+                key={t.slug}
+                href={`/quoting-software/${t.slug}`}
+                className="group rounded-2xl overflow-hidden bg-[#12212f] border border-white/10 hover:border-[#ffb400]/40 transition-colors flex flex-col"
+              >
+                <div className="relative aspect-[16/9] overflow-hidden">
+                  <Image
+                    src={t.image}
+                    alt={t.alt}
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    className="object-cover group-hover:scale-[1.03] transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#12212f] via-transparent to-transparent" />
+                </div>
+                <div className="p-5 flex flex-col flex-1">
+                  <div className="flex items-baseline gap-2 mb-2">
+                    <h3 className="font-display uppercase text-[1.25rem] text-white">{t.Trade}</h3>
+                    {t.dedicated && (
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#ffb400]">Dedicated</span>
+                    )}
+                  </div>
+                  <p className="text-[14px] leading-[1.6] text-[#8aa4b4] flex-1">{t.lede}</p>
+                  <span className="mt-4 inline-flex items-center gap-1.5 text-[13px] font-bold text-[#ffb400] group-hover:gap-2.5 transition-all">
+                    Quoting software for {t.trade} <ArrowRight size={14} />
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          <div className="mt-10">
+            <Link href="/signup" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-7 py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors">
+              Start free for 7 days <ArrowRight size={16} />
+            </Link>
           </div>
         </div>
       </div>
@@ -216,58 +256,6 @@ export default async function Home() {
       </div>
 
       {/* TWO AUDIENCES */}
-      {/* YOUR TRADE ─────────────────────────────────────────────────────
-          Concrete proof that the product knows the difference between a
-          switchboard and a rafter. Four dedicated builders are named as
-          such; the last card is honest that everything else runs on the
-          generic builder rather than implying a bespoke one per trade. */}
-      <div className="bg-[#0a1722] border-b border-[#12212f]">
-        <div className="max-w-7xl mx-auto px-6 py-20">
-          <div className="max-w-[680px] mb-12">
-            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Your trade</p>
-            <h2 className="font-display uppercase text-[2.6rem] sm:text-[3.4rem] leading-[0.93] text-white mb-5">
-              A quote builder that<br />knows your trade
-            </h2>
-            <p className="text-[16px] leading-[1.7] text-[#8aa4b4]">
-              Generic job software makes you bend your quote to fit its form. Swiftscope ships a
-              separate builder per trade, so the fields are the ones you actually price on.
-            </p>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {TRADE_CARDS.map((t) => (
-              <div key={t.name} className="group rounded-2xl overflow-hidden bg-[#12212f] border border-white/10 hover:border-[#ffb400]/40 transition-colors">
-                <div className="relative aspect-[16/9] overflow-hidden">
-                  <Image
-                    src={t.img}
-                    alt={t.alt}
-                    fill
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    className="object-cover group-hover:scale-[1.03] transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#12212f] via-transparent to-transparent" />
-                </div>
-                <div className="p-5">
-                  <div className="flex items-baseline gap-2 mb-2">
-                    <h3 className="font-display uppercase text-[1.25rem] text-white">{t.name}</h3>
-                    {t.dedicated && (
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#ffb400]">Dedicated</span>
-                    )}
-                  </div>
-                  <p className="text-[14px] leading-[1.6] text-[#8aa4b4]">{t.line}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-10">
-            <Link href="/signup" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-7 py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors">
-              Start free for 7 days <ArrowRight size={16} />
-            </Link>
-          </div>
-        </div>
-      </div>
-
       <div className="bg-white border-b border-[#e8ecef]">
         <div className="max-w-7xl mx-auto px-6 py-20">
           <div className="text-center mb-14">
