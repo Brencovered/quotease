@@ -2,18 +2,14 @@
 
 import { useState } from "react";
 import { Crosshair, Mic, PenTool, FileSearch, type LucideIcon } from "lucide-react";
-import PhoneShot from "./PhoneShot";
+import PhoneStage, { type PhoneToast } from "./PhoneStage";
 import type { Screenshot } from "@/lib/marketing/screenshots";
 
-// Icons are resolved from a string key inside this client component rather
-// than accepted as a prop. A Server Component parent (app/page.tsx is one)
-// cannot pass a live Lucide component reference across the server/client
-// boundary -- React Server Components only serialize plain data, and a
-// component reference is a function, not data. Next throws on that during
-// static export, not at compile time, so it slips past `tsc` and even past
-// a local `next build` if the build never reaches this route's prerender
-// step. Passing `icon: "crosshair"` (a string) sidesteps the whole class of
-// bug: add a mode's icon here once, reference it by key everywhere else.
+// Icons resolved from a string key inside this client component, never
+// accepted as a component-reference prop -- see the commit that broke the
+// build the one time that rule got skipped. A Server Component parent
+// (app/page.tsx) cannot pass a live Lucide component across the
+// server/client boundary; React Server Components only serialize data.
 const ICONS: Record<string, LucideIcon> = {
   crosshair: Crosshair,
   mic: Mic,
@@ -24,29 +20,31 @@ const ICONS: Record<string, LucideIcon> = {
 export interface SwitcherMode {
   key: string;
   icon: keyof typeof ICONS;
+  kicker: string;
   title: string;
-  body: string;
+  bullets: string[];
   pullLine: string;
   footnote?: string;
   shot: Screenshot;
+  toast?: PhoneToast;
 }
 
 /**
  * components/marketing/FeatureSwitcher.tsx
  * -----------------------------------------
- * Four static cards, each with its own small screenshot, read as a spec
- * sheet: same shape repeated four times, no reason to look at any one of
- * them longer than the others. This picks one thing to show properly
- * instead of four things shown briefly -- a tab strip on the left drives a
- * single large screenshot on the right, so only one image loads until the
- * visitor asks for another.
+ * Four static cards, each carrying its own small side-shot, read as a spec
+ * sheet: same shape repeated four times, nothing pulling focus to any one
+ * of them. This picks one thing to show properly instead of four things
+ * shown briefly -- a tab strip drives which mode is active, its copy runs
+ * as short bullets rather than a paragraph, and the screenshot on the
+ * right carries a floating notification card so it reads as the product
+ * doing something rather than a photo of a screen.
  *
  * Only the active shot is mounted, not all four stacked with visibility
  * toggled, so switching modes triggers a real image request rather than
- * revealing something already downloaded. That trades a few hundred
- * milliseconds of tab-switch latency for not loading three screenshots
- * nobody may ever look at on first paint -- worth it on a marketing page
- * where LCP matters more than switcher snappiness.
+ * revealing something already downloaded -- a few hundred milliseconds of
+ * tab-switch latency traded for not loading three screenshots nobody may
+ * ever look at on first paint.
  */
 export default function FeatureSwitcher({ modes }: { modes: SwitcherMode[] }) {
   const [active, setActive] = useState(0);
@@ -64,7 +62,7 @@ export default function FeatureSwitcher({ modes }: { modes: SwitcherMode[] }) {
   }
 
   return (
-    <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-10 lg:gap-16 items-start">
+    <div className="grid lg:grid-cols-[minmax(0,1fr)_360px] gap-10 lg:gap-16 items-center">
       <div>
         <div className="flex flex-wrap gap-2 mb-9" role="tablist" aria-label="Ways to quote on site">
           {modes.map((m, i) => {
@@ -90,24 +88,27 @@ export default function FeatureSwitcher({ modes }: { modes: SwitcherMode[] }) {
         </div>
 
         <div className={`transition-opacity duration-150 ${visible ? "opacity-100" : "opacity-0"}`}>
-          <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
-            <Icon size={20} className="text-[#ffb400]" />
-          </div>
-          <h3 className="font-display text-[1.7rem] text-[#0a1722] mb-3">{mode.title}</h3>
-          <p className="text-[15px] leading-[1.7] text-[#5a6a78] mb-4 max-w-[540px]">{mode.body}</p>
-          <p className="text-[14px] font-bold text-[#0a1722]">{mode.pullLine}</p>
+          <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-2">{mode.kicker}</p>
+          <h3 className="font-display text-[1.9rem] text-[#0a1722] mb-5">{mode.title}</h3>
+
+          <ul className="space-y-3 mb-6 max-w-[500px]">
+            {mode.bullets.map((line) => (
+              <li key={line} className="flex gap-3 text-[15px] leading-[1.5] text-[#5a6a78]">
+                <Icon size={16} className="text-[#ffb400] mt-[3px] shrink-0" />
+                {line}
+              </li>
+            ))}
+          </ul>
+
+          <p className="text-[14.5px] font-bold text-[#0a1722] max-w-[480px]">{mode.pullLine}</p>
           {mode.footnote && (
             <p className="text-[12px] text-[#8a9ba8] italic mt-3">{mode.footnote}</p>
           )}
         </div>
       </div>
 
-      <div
-        className={`mx-auto w-full max-w-[260px] transition-opacity duration-150 ${
-          visible ? "opacity-100" : "opacity-0"
-        }`}
-      >
-        <PhoneShot shot={mode.shot} tone="light" showCaption={false} sizes="(max-width: 1024px) 55vw, 260px" />
+      <div className={`transition-opacity duration-150 ${visible ? "opacity-100" : "opacity-0"}`}>
+        <PhoneStage shot={mode.shot} toast={mode.toast} tone="light" />
       </div>
     </div>
   );
