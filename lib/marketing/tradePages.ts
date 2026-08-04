@@ -222,7 +222,7 @@ export const TRADE_PAGES: TradePage[] = [
     singular: "chippy",
     dedicated: true,
     image: "/trades/carpenter.jpg",
-    alt: "Carpenter carrying a sheet through a stud-framed room",
+    alt: "Carpenter using a nail gun on timber wall framing",
     metaTitle: "Quoting Software for Carpenters | Swiftscope",
     metaDescription:
       "Quote carpentry by linear and square metre: framing, decking, doors, skirting and fit-out. Built for framing, decks and renovation work. Flat $45/month, 7-day free trial.",

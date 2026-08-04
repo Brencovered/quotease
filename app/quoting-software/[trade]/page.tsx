@@ -75,12 +75,12 @@ export default async function TradeQuotingPage({
 
       {/* HERO */}
       <div className="bg-[#0a1722]">
-        <div className="max-w-7xl mx-auto px-6 pt-16 pb-20 grid lg:grid-cols-2 gap-12 items-center">
+        <div className="max-w-7xl mx-auto px-6 pt-12 pb-16 grid lg:grid-cols-2 gap-12 items-center">
           <div>
             <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-4">
               {page.dedicated ? "Dedicated quote builder" : "Built on the generic builder"}
             </p>
-            <h1 className="font-display uppercase text-[2.8rem] sm:text-[3.6rem] leading-[0.92] text-white mb-5">
+            <h1 className="font-display uppercase text-[2.5rem] sm:text-[3.1rem] leading-[0.92] text-white mb-4">
               Quoting software<br />for {page.trade}
             </h1>
             <p className="text-[17px] leading-[1.7] text-[#c8d8e4] mb-8 max-w-[520px]">{page.lede}</p>
@@ -120,26 +120,48 @@ export default async function TradeQuotingPage({
           are up against rather than a feature list, because a tradie who
           does not recognise their own situation in the first screen leaves. */}
       <div className="border-b border-[#e8ecef]">
-        <div className="max-w-7xl mx-auto px-6 py-20 grid lg:grid-cols-2 gap-14">
+        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16 grid lg:grid-cols-2 gap-10">
           <div>
             <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">
               Why {page.trade} switch
             </p>
-            <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.95] mb-5">
+            <h2 className="font-display uppercase text-[1.9rem] sm:text-[2.35rem] leading-[0.95] mb-4">
               Where the money<br />actually goes
             </h2>
-            <p className="text-[16px] leading-[1.75] text-[#5a6a78] mb-5">{page.problem}</p>
-            <p className="text-[16px] leading-[1.75] text-[#0a1722] font-medium">{page.answer}</p>
+            <p className="text-[15.5px] leading-[1.7] text-[#5a6a78] mb-4">{page.problem}</p>
+            <p className="text-[15.5px] leading-[1.7] text-[#0a1722] font-medium">{page.answer}</p>
           </div>
-          <div className="bg-[#f8f9fa] rounded-3xl p-8 border border-[#e8ecef]">
-            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#5a6a78] mb-5">
+          <div className="bg-[#f8f9fa] rounded-2xl p-6 border border-[#e8ecef]">
+            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#5a6a78] mb-4">
               What generic job software gets wrong
             </p>
-            <ul className="space-y-4">
+            <ul className="space-y-3">
               {page.genericFails.map((f) => (
                 <li key={f} className="flex gap-3 items-start">
                   <X size={17} className="text-[#c94a3b] mt-1 shrink-0" />
-                  <span className="text-[15px] leading-[1.65] text-[#5a6a78]">{f}</span>
+                  <span className="text-[14.5px] leading-[1.6] text-[#5a6a78]">{f}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Folded into the same block as the problem: three consecutive
+              full-height list sections read as filler, and the argument is
+              stronger when the fields sit directly under the complaint. */}
+          <div className="lg:col-span-2 pt-10 mt-10 border-t border-[#e8ecef]">
+            <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-6">
+              <h3 className="font-display uppercase text-[1.5rem]">What we ask for instead</h3>
+              <p className="text-[14.5px] text-[#5a6a78]">
+                {page.dedicated
+                  ? "The fields that actually move the number."
+                  : "Line items and units you define yourself."}
+              </p>
+            </div>
+            <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-2.5">
+              {page.prices.map((item) => (
+                <li key={item} className="flex gap-2.5 items-start">
+                  <Check size={16} className="text-[#ffb400] mt-[3px] shrink-0" />
+                  <span className="text-[14.5px] leading-[1.55] text-[#0a1722]">{item}</span>
                 </li>
               ))}
             </ul>
@@ -147,115 +169,92 @@ export default async function TradeQuotingPage({
         </div>
       </div>
 
-      {/* WHAT IT PRICES ── the credibility section. Every bullet is a real
-          field in this trade's intake type, not a generic benefit. */}
-      <div className="border-b border-[#e8ecef]">
-        <div className="max-w-7xl mx-auto px-6 py-20">
-          <div className="max-w-[680px] mb-10">
-            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">
-              What it prices
-            </p>
-            <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.95] mb-4">
-              The fields you actually price on
-            </h2>
-            <p className="text-[16px] leading-[1.7] text-[#5a6a78]">
-              {page.dedicated
-                ? `Not a blank line-item table with your trade written at the top. The ${page.trade} builder asks for the things that change the number.`
-                : `A builder you shape to your own line items, rather than one that forces ${page.trade} into someone else's template.`}
-            </p>
-          </div>
-          <ul className="grid sm:grid-cols-2 gap-x-10 gap-y-4">
-            {page.prices.map((item) => (
-              <li key={item} className="flex gap-3 items-start">
-                <Check size={18} className="text-[#ffb400] mt-1 shrink-0" />
-                <span className="text-[15px] leading-[1.65] text-[#0a1722]">{item}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
-
       {/* SETUP ── the objection that kills trade software adoption is not
-          price, it is the fortnight of data entry people assume comes first. */}
+          price, it is the fortnight of data entry people assume comes first.
+          Deliberately a numbered row rather than another card grid: three
+          identical grids in a row is what made this page feel padded. */}
       <div className="bg-[#f8f9fa] border-b border-[#e8ecef]">
-        <div className="max-w-7xl mx-auto px-6 py-20">
-          <div className="max-w-[680px] mb-12">
-            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">
-              Getting started
-            </p>
-            <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.95] mb-4">
-              Set up in minutes,<br />not a fortnight
-            </h2>
-            <p className="text-[16px] leading-[1.75] text-[#5a6a78]">
-              The reason most tradies never finish setting up job software is the data entry nobody
-              warns them about. Swiftscope starts from the price file your supplier already sends you.
+        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16">
+          <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
+            <div className="max-w-[560px]">
+              <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">
+                Getting started
+              </p>
+              <h2 className="font-display uppercase text-[1.9rem] sm:text-[2.35rem] leading-[0.95] mb-3">
+                Set up in minutes,<br />not a fortnight
+              </h2>
+              <p className="text-[15.5px] leading-[1.7] text-[#5a6a78]">
+                The reason most tradies never finish setting up job software is the data entry nobody
+                warns them about. Swiftscope starts from the price file your supplier already sends you.
+              </p>
+            </div>
+            <p className="text-[13px] text-[#5a6a78] max-w-[260px] border-l-2 border-[#ffb400] pl-4">
+              Materials and labour stay split, so a supplier price rise shows up in your margin instead
+              of hiding in it.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="bg-white rounded-2xl p-7 border border-[#e8ecef]">
-              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-5">
-                <Upload size={20} className="text-[#ffb400]" />
+          <div className="grid sm:grid-cols-3 gap-px bg-[#e8ecef] rounded-2xl overflow-hidden border border-[#e8ecef]">
+            <div className="bg-white p-6">
+              <div className="flex items-center gap-2.5 mb-3">
+                <Upload size={17} className="text-[#ffb400]" />
+                <span className="font-display text-[1.1rem] uppercase">01 Upload</span>
               </div>
-              <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-2">Step one</p>
-              <h3 className="font-display text-[1.35rem] mb-3">Upload your price file</h3>
-              <p className="text-[15px] leading-[1.65] text-[#5a6a78]">{page.setupMaterials}</p>
+              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78]">{page.setupMaterials}</p>
             </div>
-
-            <div className="bg-white rounded-2xl p-7 border border-[#e8ecef]">
-              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-5">
-                <Package size={20} className="text-[#ffb400]" />
+            <div className="bg-white p-6">
+              <div className="flex items-center gap-2.5 mb-3">
+                <Package size={17} className="text-[#ffb400]" />
+                <span className="font-display text-[1.1rem] uppercase">02 Bundle</span>
               </div>
-              <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-2">Step two</p>
-              <h3 className="font-display text-[1.35rem] mb-3">Save a package</h3>
-              <p className="text-[15px] leading-[1.65] text-[#5a6a78] mb-4">
-                Bundle the job you quote most often once, and it becomes a single tap forever after.
+              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78]">
+                Save the job you quote most often as a package. After that it is one tap, not a rebuild.
               </p>
-              <div className="rounded-xl bg-[#f8f9fa] border border-[#e8ecef] p-4">
-                <p className="text-[13px] font-bold text-[#0a1722] mb-1">{page.packageName}</p>
-                <p className="text-[13.5px] leading-[1.6] text-[#5a6a78]">{page.packageContents}</p>
-              </div>
             </div>
-
-            <div className="bg-white rounded-2xl p-7 border border-[#e8ecef]">
-              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-5">
-                <Check size={20} className="text-[#ffb400]" />
+            <div className="bg-white p-6">
+              <div className="flex items-center gap-2.5 mb-3">
+                <Check size={17} className="text-[#ffb400]" />
+                <span className="font-display text-[1.1rem] uppercase">03 Set rates</span>
               </div>
-              <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-2">Step three</p>
-              <h3 className="font-display text-[1.35rem] mb-3">Set your rates once</h3>
-              <p className="text-[15px] leading-[1.65] text-[#5a6a78]">
-                Your hourly rate, your margin and your terms become the baseline on every quote. Change
-                them once and every future quote follows, rather than editing each one by hand.
+              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78]">
+                Your hourly rate, margin and terms become the baseline on every quote. Change them once
+                and everything after follows.
               </p>
             </div>
           </div>
 
-          <p className="text-[14px] text-[#5a6a78] mt-8">
-            Materials and labour stay split throughout, so when your supplier lifts prices you can see
-            what it did to your margin instead of finding out at the end of the job.
-          </p>
+          <div className="mt-4 rounded-2xl bg-white border border-[#e8ecef] p-6 flex flex-col sm:flex-row gap-5 sm:items-center">
+            <div className="shrink-0">
+              <p className="text-[10.5px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-1">
+                Example package
+              </p>
+              <p className="font-display text-[1.3rem] uppercase">{page.packageName}</p>
+            </div>
+            <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] sm:border-l sm:border-[#e8ecef] sm:pl-5">
+              {page.packageContents}
+            </p>
+          </div>
         </div>
       </div>
 
       {/* HOW QUOTING WORKS */}
       <div className="border-b border-[#e8ecef]">
-        <div className="max-w-7xl mx-auto px-6 py-20">
-          <div className="max-w-[680px] mb-12">
+        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16">
+          <div className="max-w-[680px] mb-8">
             <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">
               How the quoting works
             </p>
-            <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.95] mb-4">
+            <h2 className="font-display uppercase text-[1.9rem] sm:text-[2.35rem] leading-[0.95] mb-4">
               Quoted before you<br />leave the driveway
             </h2>
-            <p className="text-[16px] leading-[1.75] text-[#5a6a78]">
+            <p className="text-[15.5px] leading-[1.7] text-[#5a6a78]">
               The quote that wins is usually the one that arrives first, while the job is still fresh
               in the client&apos;s head. Everything below happens standing in the job, on a phone, one
               handed.
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {page.quotingFlow.map((f, i) => (
               <div key={f.step} className="relative rounded-2xl p-6 bg-[#f8f9fa] border border-[#e8ecef]">
                 <span className="font-display text-[2.4rem] leading-none text-[#ffb400] block mb-3">
@@ -267,7 +266,7 @@ export default async function TradeQuotingPage({
             ))}
           </div>
 
-          <div className="mt-10 rounded-2xl bg-[#0a1722] p-8">
+          <div className="mt-10 rounded-2xl bg-[#0a1722] p-6">
             <p className="text-[15px] leading-[1.75] text-[#c8d8e4]">
               <span className="text-white font-bold">Against a spreadsheet:</span> no hunting for the
               last similar job, no retyping client details, no formatting. <span className="text-white font-bold">Against
@@ -281,12 +280,12 @@ export default async function TradeQuotingPage({
       {/* AI ── three real capabilities: trade-aware drawing analysis,
           trade-aware voice quoting, and variations. */}
       <div className="bg-[#f8f9fa] border-b border-[#e8ecef]">
-        <div className="max-w-7xl mx-auto px-6 py-20">
-          <div className="max-w-[680px] mb-12">
+        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16">
+          <div className="max-w-[680px] mb-8">
             <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">
               AI that knows your trade
             </p>
-            <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.95] mb-4">
+            <h2 className="font-display uppercase text-[1.9rem] sm:text-[2.35rem] leading-[0.95] mb-4">
               Two ways in, both on site
             </h2>
             <p className="text-[16px] leading-[1.7] text-[#5a6a78]">
@@ -296,21 +295,21 @@ export default async function TradeQuotingPage({
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="bg-white rounded-2xl p-7 border border-[#e8ecef]">
-              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-5">
+          <div className="grid md:grid-cols-3 gap-4">
+            <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
+              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
                 <PenLine size={20} className="text-[#ffb400]" />
               </div>
               <h3 className="font-display text-[1.35rem] mb-3">Mark up the drawing</h3>
-              <p className="text-[15px] leading-[1.65] text-[#5a6a78]">{page.drawing}</p>
+              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78]">{page.drawing}</p>
             </div>
 
-            <div className="bg-white rounded-2xl p-7 border border-[#e8ecef]">
-              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-5">
+            <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
+              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
                 <Mic size={20} className="text-[#ffb400]" />
               </div>
               <h3 className="font-display text-[1.35rem] mb-3">Or just talk</h3>
-              <p className="text-[15px] leading-[1.65] text-[#5a6a78] mb-4">
+              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">
                 Describe the job out loud, walking the site. Swiftscope turns it into priced line
                 items you can correct before sending.
               </p>
@@ -319,12 +318,12 @@ export default async function TradeQuotingPage({
               </p>
             </div>
 
-            <div className="bg-white rounded-2xl p-7 border border-[#e8ecef]">
-              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-5">
+            <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
+              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
                 <FileText size={20} className="text-[#ffb400]" />
               </div>
               <h3 className="font-display text-[1.35rem] mb-3">Variations that stick</h3>
-              <p className="text-[15px] leading-[1.65] text-[#5a6a78]">{page.variation}</p>
+              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78]">{page.variation}</p>
             </div>
           </div>
         </div>
@@ -333,22 +332,22 @@ export default async function TradeQuotingPage({
 
       {/* JOB MANAGEMENT ── the quote is the start, not the deliverable. */}
       <div className="bg-[#f8f9fa] border-b border-[#e8ecef]">
-        <div className="max-w-7xl mx-auto px-6 py-20">
-          <div className="max-w-[680px] mb-12">
+        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16">
+          <div className="max-w-[680px] mb-8">
             <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">
               After they say yes
             </p>
-            <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.95] mb-4">
+            <h2 className="font-display uppercase text-[1.9rem] sm:text-[2.35rem] leading-[0.95] mb-4">
               The quote becomes<br />the job
             </h2>
-            <p className="text-[16px] leading-[1.75] text-[#5a6a78] mb-5">{page.afterAccept}</p>
-            <p className="text-[16px] leading-[1.75] text-[#5a6a78]">
+            <p className="text-[15.5px] leading-[1.7] text-[#5a6a78] mb-4">{page.afterAccept}</p>
+            <p className="text-[15.5px] leading-[1.7] text-[#5a6a78]">
               Nothing is retyped between quote, job and invoice, which is where most double-entry and
               most disputes come from.
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
               <CalendarDays size={20} className="text-[#ffb400] mb-4" />
               <h3 className="font-display text-[1.15rem] mb-2">Schedule and crew</h3>
@@ -387,8 +386,8 @@ export default async function TradeQuotingPage({
 
       {/* PRICING */}
       <div className="border-b border-[#e8ecef]">
-        <div className="max-w-7xl mx-auto px-6 py-20 text-center">
-          <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.95] mb-4">
+        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16 text-center">
+          <h2 className="font-display uppercase text-[1.9rem] sm:text-[2.35rem] leading-[0.95] mb-4">
             $45 a month. That is the whole price.
           </h2>
           <p className="text-[16px] leading-[1.7] text-[#5a6a78] max-w-[560px] mx-auto mb-8">
@@ -407,7 +406,7 @@ export default async function TradeQuotingPage({
       {/* OTHER TRADES ── real internal linking between the SaaS pages, which
           the site had almost none of. */}
       <div className="bg-[#0a1722]">
-        <div className="max-w-7xl mx-auto px-6 py-16">
+        <div className="max-w-7xl mx-auto px-6 py-12">
           <h2 className="font-display uppercase text-[1.6rem] text-white mb-8">Other trades</h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {others.map((t) => (

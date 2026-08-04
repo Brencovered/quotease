@@ -108,10 +108,10 @@ export default async function Home() {
           such; the last card is honest that everything else runs on the
           generic builder rather than implying a bespoke one per trade. */}
       <div className="bg-[#0a1722] border-b border-[#12212f]">
-        <div className="max-w-7xl mx-auto px-6 py-20">
-          <div className="max-w-[680px] mb-12">
+        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16">
+          <div className="max-w-[680px] mb-8">
             <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Your trade</p>
-            <h2 className="font-display uppercase text-[2.6rem] sm:text-[3.4rem] leading-[0.93] text-white mb-5">
+            <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.9rem] leading-[0.93] text-white mb-5">
               A quote builder that<br />knows your trade
             </h2>
             <p className="text-[16px] leading-[1.7] text-[#8aa4b4]">
@@ -120,7 +120,7 @@ export default async function Home() {
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {TRADE_PAGES.map((t) => (
               <Link
                 key={t.slug}
@@ -163,7 +163,7 @@ export default async function Home() {
 
       {/* DIFFERENTIATORS - the core "built site-first" pitch */}
       <div className="bg-white border-b border-[#e8ecef]">
-        <div className="max-w-7xl mx-auto px-6 py-20">
+        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16">
           <div className="text-center mb-14">
             <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Why tradies switch</p>
             <h2 className="font-display uppercase text-[2.6rem] sm:text-[3.2rem] leading-[0.93] text-[#0a1722] mb-4">
@@ -174,7 +174,7 @@ export default async function Home() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-5">
+          <div className="grid md:grid-cols-2 gap-4">
             <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
               <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
                 <Crosshair size={20} className="text-[#ffb400]" />
@@ -257,7 +257,7 @@ export default async function Home() {
 
       {/* TWO AUDIENCES */}
       <div className="bg-white border-b border-[#e8ecef]">
-        <div className="max-w-7xl mx-auto px-6 py-20">
+        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16">
           <div className="text-center mb-14">
             <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Who it&apos;s for</p>
             <h2 className="font-display uppercase text-[2.8rem] sm:text-[3.5rem] leading-[0.93] text-[#0a1722]">
@@ -330,8 +330,8 @@ export default async function Home() {
 
       {/* PRICING */}
       <div className="bg-white border-b border-[#e8ecef]">
-        <div className="max-w-7xl mx-auto px-6 py-20">
-          <div className="text-center mb-12">
+        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16">
+          <div className="text-center mb-8">
             <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Pricing</p>
             <h2 className="font-display uppercase text-[2.4rem] sm:text-[3rem] leading-[0.93] text-[#0a1722]">Simple. Flat. No surprises.</h2>
           </div>
@@ -386,8 +386,8 @@ export default async function Home() {
 
       {/* SAVINGS CALCULATOR */}
       <div className="bg-white border-b border-[#e8ecef]">
-        <div className="max-w-7xl mx-auto px-6 py-20">
-          <div className="text-center mb-12">
+        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16">
+          <div className="text-center mb-8">
             <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Savings calculator</p>
             <h2 className="font-display uppercase text-[2.4rem] sm:text-[3rem] leading-[0.93] text-[#0a1722] mb-4">
               See what you&apos;d save switching to Swiftscope
@@ -402,7 +402,7 @@ export default async function Home() {
 
       {/* FOOTER CTA */}
       <div className="bg-[#0a1722]">
-        <div className="max-w-7xl mx-auto px-6 py-20 grid sm:grid-cols-2 gap-6">
+        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16 grid sm:grid-cols-2 gap-6">
           <div className="bg-white/[0.04] rounded-2xl p-8 border border-white/10">
             <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Tradies</p>
             <h3 className="font-display text-[1.8rem] text-white mb-2">The other tradie just sent their quote.</h3>
