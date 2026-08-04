@@ -22,7 +22,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { ArrowRight, Check, Mic, PenLine, FileText } from "lucide-react";
+import { ArrowRight, Check, Mic, PenLine, FileText, Upload, Package, CalendarDays, Receipt, X } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
 import { TRADE_PAGES, getTradePage } from "@/lib/marketing/tradePages";
 
@@ -115,6 +115,38 @@ export default async function TradeQuotingPage({
         </div>
       </div>
 
+
+      {/* THE PROBLEM ── trade-specific differentiation. Leads with what they
+          are up against rather than a feature list, because a tradie who
+          does not recognise their own situation in the first screen leaves. */}
+      <div className="border-b border-[#e8ecef]">
+        <div className="max-w-7xl mx-auto px-6 py-20 grid lg:grid-cols-2 gap-14">
+          <div>
+            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">
+              Why {page.trade} switch
+            </p>
+            <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.95] mb-5">
+              Where the money<br />actually goes
+            </h2>
+            <p className="text-[16px] leading-[1.75] text-[#5a6a78] mb-5">{page.problem}</p>
+            <p className="text-[16px] leading-[1.75] text-[#0a1722] font-medium">{page.answer}</p>
+          </div>
+          <div className="bg-[#f8f9fa] rounded-3xl p-8 border border-[#e8ecef]">
+            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#5a6a78] mb-5">
+              What generic job software gets wrong
+            </p>
+            <ul className="space-y-4">
+              {page.genericFails.map((f) => (
+                <li key={f} className="flex gap-3 items-start">
+                  <X size={17} className="text-[#c94a3b] mt-1 shrink-0" />
+                  <span className="text-[15px] leading-[1.65] text-[#5a6a78]">{f}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+
       {/* WHAT IT PRICES ── the credibility section. Every bullet is a real
           field in this trade's intake type, not a generic benefit. */}
       <div className="border-b border-[#e8ecef]">
@@ -140,6 +172,109 @@ export default async function TradeQuotingPage({
               </li>
             ))}
           </ul>
+        </div>
+      </div>
+
+
+      {/* SETUP ── the objection that kills trade software adoption is not
+          price, it is the fortnight of data entry people assume comes first. */}
+      <div className="bg-[#f8f9fa] border-b border-[#e8ecef]">
+        <div className="max-w-7xl mx-auto px-6 py-20">
+          <div className="max-w-[680px] mb-12">
+            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">
+              Getting started
+            </p>
+            <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.95] mb-4">
+              Set up in minutes,<br />not a fortnight
+            </h2>
+            <p className="text-[16px] leading-[1.75] text-[#5a6a78]">
+              The reason most tradies never finish setting up job software is the data entry nobody
+              warns them about. Swiftscope starts from the price file your supplier already sends you.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="bg-white rounded-2xl p-7 border border-[#e8ecef]">
+              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-5">
+                <Upload size={20} className="text-[#ffb400]" />
+              </div>
+              <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-2">Step one</p>
+              <h3 className="font-display text-[1.35rem] mb-3">Upload your price file</h3>
+              <p className="text-[15px] leading-[1.65] text-[#5a6a78]">{page.setupMaterials}</p>
+            </div>
+
+            <div className="bg-white rounded-2xl p-7 border border-[#e8ecef]">
+              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-5">
+                <Package size={20} className="text-[#ffb400]" />
+              </div>
+              <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-2">Step two</p>
+              <h3 className="font-display text-[1.35rem] mb-3">Save a package</h3>
+              <p className="text-[15px] leading-[1.65] text-[#5a6a78] mb-4">
+                Bundle the job you quote most often once, and it becomes a single tap forever after.
+              </p>
+              <div className="rounded-xl bg-[#f8f9fa] border border-[#e8ecef] p-4">
+                <p className="text-[13px] font-bold text-[#0a1722] mb-1">{page.packageName}</p>
+                <p className="text-[13.5px] leading-[1.6] text-[#5a6a78]">{page.packageContents}</p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-7 border border-[#e8ecef]">
+              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-5">
+                <Check size={20} className="text-[#ffb400]" />
+              </div>
+              <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-2">Step three</p>
+              <h3 className="font-display text-[1.35rem] mb-3">Set your rates once</h3>
+              <p className="text-[15px] leading-[1.65] text-[#5a6a78]">
+                Your hourly rate, your margin and your terms become the baseline on every quote. Change
+                them once and every future quote follows, rather than editing each one by hand.
+              </p>
+            </div>
+          </div>
+
+          <p className="text-[14px] text-[#5a6a78] mt-8">
+            Materials and labour stay split throughout, so when your supplier lifts prices you can see
+            what it did to your margin instead of finding out at the end of the job.
+          </p>
+        </div>
+      </div>
+
+      {/* HOW QUOTING WORKS */}
+      <div className="border-b border-[#e8ecef]">
+        <div className="max-w-7xl mx-auto px-6 py-20">
+          <div className="max-w-[680px] mb-12">
+            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">
+              How the quoting works
+            </p>
+            <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.95] mb-4">
+              Quoted before you<br />leave the driveway
+            </h2>
+            <p className="text-[16px] leading-[1.75] text-[#5a6a78]">
+              The quote that wins is usually the one that arrives first, while the job is still fresh
+              in the client&apos;s head. Everything below happens standing in the job, on a phone, one
+              handed.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {page.quotingFlow.map((f, i) => (
+              <div key={f.step} className="relative rounded-2xl p-6 bg-[#f8f9fa] border border-[#e8ecef]">
+                <span className="font-display text-[2.4rem] leading-none text-[#ffb400] block mb-3">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <h3 className="font-display text-[1.2rem] mb-2">{f.step}</h3>
+                <p className="text-[14.5px] leading-[1.6] text-[#5a6a78]">{f.detail}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-10 rounded-2xl bg-[#0a1722] p-8">
+            <p className="text-[15px] leading-[1.75] text-[#c8d8e4]">
+              <span className="text-white font-bold">Against a spreadsheet:</span> no hunting for the
+              last similar job, no retyping client details, no formatting. <span className="text-white font-bold">Against
+              a desktop tool:</span> no waiting until 9pm, which is the real reason quotes go out late
+              or not at all.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -190,6 +325,61 @@ export default async function TradeQuotingPage({
               </div>
               <h3 className="font-display text-[1.35rem] mb-3">Variations that stick</h3>
               <p className="text-[15px] leading-[1.65] text-[#5a6a78]">{page.variation}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      {/* JOB MANAGEMENT ── the quote is the start, not the deliverable. */}
+      <div className="bg-[#f8f9fa] border-b border-[#e8ecef]">
+        <div className="max-w-7xl mx-auto px-6 py-20">
+          <div className="max-w-[680px] mb-12">
+            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">
+              After they say yes
+            </p>
+            <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.95] mb-4">
+              The quote becomes<br />the job
+            </h2>
+            <p className="text-[16px] leading-[1.75] text-[#5a6a78] mb-5">{page.afterAccept}</p>
+            <p className="text-[16px] leading-[1.75] text-[#5a6a78]">
+              Nothing is retyped between quote, job and invoice, which is where most double-entry and
+              most disputes come from.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
+              <CalendarDays size={20} className="text-[#ffb400] mb-4" />
+              <h3 className="font-display text-[1.15rem] mb-2">Schedule and crew</h3>
+              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78]">
+                Put the job in the calendar, assign who is on it, and see the week on a map so you are
+                not crossing town twice.
+              </p>
+            </div>
+            <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
+              <FileText size={20} className="text-[#ffb400] mb-4" />
+              <h3 className="font-display text-[1.15rem] mb-2">Dockets and variations</h3>
+              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78]">
+                Day works signed on the spot on the client&apos;s phone, and variations accepted in
+                writing before the extra work starts.
+              </p>
+            </div>
+            <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
+              <Receipt size={20} className="text-[#ffb400] mb-4" />
+              <h3 className="font-display text-[1.15rem] mb-2">Invoice and Xero</h3>
+              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78]">
+                Deposits, progress claims and final invoices built from the quote, pushed straight to
+                Xero rather than exported and re-keyed.
+              </p>
+            </div>
+            <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
+              <Check size={20} className="text-[#ffb400] mb-4" />
+              <h3 className="font-display text-[1.15rem] mb-2">Margin, job by job</h3>
+              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78]">
+                Hours and materials tracked against what you quoted, so you find out which jobs make
+                money while you can still do something about it.
+              </p>
             </div>
           </div>
         </div>
