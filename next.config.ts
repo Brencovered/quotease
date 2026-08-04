@@ -32,7 +32,12 @@ const nextConfig: NextConfig = {
   compress: true,
 
   images: {
-    formats: ["image/webp", "image/avif"],
+    // Order is a preference list: Next serves the first format the browser
+    // accepts. AVIF is meaningfully smaller than WebP for photographic
+    // content like the hero, so it should be tried first. Encoding is a bit
+    // slower, but that cost is paid once per source image on Vercel and
+    // cached, while the byte saving is paid on every mobile visit.
+    formats: ["image/avif", "image/webp"],
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "ltmxsmoyaoennqksxyqt.supabase.co" },
