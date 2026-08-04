@@ -106,9 +106,10 @@ export default async function Home() {
 
       {/* YOUR TRADE ─────────────────────────────────────────────────────
           Concrete proof that the product knows the difference between a
-          switchboard and a rafter. Four dedicated builders are named as
-          such; the last card is honest that everything else runs on the
-          generic builder rather than implying a bespoke one per trade. */}
+          switchboard and a rafter. The cards no longer carry a "Dedicated"
+          badge, so nothing here distinguishes the four purpose-built
+          builders from the two that run on the generic one. Each trade
+          page still states which it is in its own hero. */}
       <div className="bg-[#0a1722] border-b border-[#12212f]">
         <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16">
           <div className="max-w-[680px] mb-8">
@@ -140,12 +141,7 @@ export default async function Home() {
                   <div className="absolute inset-0 bg-gradient-to-t from-[#12212f] via-transparent to-transparent" />
                 </div>
                 <div className="p-5 flex flex-col flex-1">
-                  <div className="flex items-baseline gap-2 mb-2">
-                    <h3 className="font-display uppercase text-[1.25rem] text-white">{t.Trade}</h3>
-                    {t.dedicated && (
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#ffb400]">Dedicated</span>
-                    )}
-                  </div>
+                  <h3 className="font-display uppercase text-[1.25rem] text-white mb-2">{t.Trade}</h3>
                   <p className="text-[14px] leading-[1.6] text-[#8aa4b4] flex-1">{t.lede}</p>
                   <span className="mt-4 inline-flex items-center gap-1.5 text-[13px] font-bold text-[#ffb400] group-hover:gap-2.5 transition-all">
                     Quoting software for {t.trade} <ArrowRight size={14} />

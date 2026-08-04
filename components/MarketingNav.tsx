@@ -82,14 +82,9 @@ export default function MarketingNav({ transparent = false }: { transparent?: bo
                       key={t.slug}
                       href={`/quoting-software/${t.slug}`}
                       onClick={() => setTradesOpen(false)}
-                      className="flex items-baseline justify-between gap-3 px-4 py-2.5 text-white/80 hover:text-white hover:bg-white/[0.06] transition-colors"
+                      className="block px-4 py-2.5 font-semibold text-[14px] text-white/80 hover:text-white hover:bg-white/[0.06] transition-colors"
                     >
-                      <span className="font-semibold text-[14px]">{t.Trade}</span>
-                      {t.dedicated && (
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#ffb400] shrink-0">
-                          Dedicated
-                        </span>
-                      )}
+                      {t.Trade}
                     </Link>
                   ))}
                 </div>
