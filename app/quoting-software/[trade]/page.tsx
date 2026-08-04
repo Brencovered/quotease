@@ -233,7 +233,7 @@ export default async function TradeQuotingPage({
               <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">{page.setupMaterials}</p>
               {hasRealScreens && (
                 <div className="w-[160px] mx-auto">
-                  <PhoneStage shot={SHOTS.materials} tone="light" compact />
+                  <PhoneStage shot={SHOTS.materials} tone="light" />
                 </div>
               )}
             </div>
@@ -247,7 +247,7 @@ export default async function TradeQuotingPage({
               </p>
               {hasRealScreens && (
                 <div className="w-[160px] mx-auto">
-                  <PhoneStage shot={SHOTS.packages} tone="light" compact />
+                  <PhoneStage shot={SHOTS.packages} tone="light" />
                 </div>
               )}
             </div>
@@ -261,8 +261,8 @@ export default async function TradeQuotingPage({
                 and everything after follows.
               </p>
               <div className="grid grid-cols-2 gap-2">
-                <PhoneStage shot={SHOTS.pricingTiers} tone="light" compact />
-                <PhoneStage shot={SHOTS.jobSizeTiers} tone="light" compact />
+                <PhoneStage shot={SHOTS.pricingTiers} tone="light" />
+                <PhoneStage shot={SHOTS.jobSizeTiers} tone="light" />
               </div>
             </div>
           </div>
@@ -309,7 +309,7 @@ export default async function TradeQuotingPage({
               one screen in this sequence that carries no trade-specific
               text -- the other three stay text-only rather than showing
               an electrician mid-quote. */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+          <div className="grid sm:grid-cols-2 gap-4 items-start">
             {page.quotingFlow.map((f, i) => {
               const shot = hasRealScreens
                 ? [SHOTS.quoteCapture, SHOTS.planMarkup, SHOTS.quoteJobPricing, SHOTS.quoteSend][i]
@@ -325,7 +325,7 @@ export default async function TradeQuotingPage({
                   <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">{f.detail}</p>
                   {shot && (
                     <div className="w-[150px] mx-auto">
-                      <PhoneStage shot={shot} tone="light" compact />
+                      <PhoneStage shot={shot} tone="light" />
                     </div>
                   )}
                 </div>
@@ -421,7 +421,7 @@ export default async function TradeQuotingPage({
               crew" is the one loose pairing: there's no calendar screen
               in the set yet, so it takes the job screen, which is at
               least the closest thing to "the job you're now running". */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+          <div className="grid sm:grid-cols-2 gap-4 items-start">
             <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
               <CalendarDays size={20} className="text-[#ffb400] mb-4" />
               <h3 className="font-display text-[1.15rem] mb-2">Schedule and crew</h3>
@@ -430,7 +430,7 @@ export default async function TradeQuotingPage({
                 not crossing town twice.
               </p>
               <div className="w-[150px] mx-auto">
-                <PhoneStage shot={SHOTS.jobDetail} tone="light" compact />
+                <PhoneStage shot={SHOTS.jobDetail} tone="light" />
               </div>
             </div>
             <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
@@ -441,7 +441,7 @@ export default async function TradeQuotingPage({
                 writing before the extra work starts.
               </p>
               <div className="w-[150px] mx-auto">
-                <PhoneStage shot={SHOTS.docketsSigned} tone="light" compact />
+                <PhoneStage shot={SHOTS.docketsSigned} tone="light" />
               </div>
             </div>
             <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
@@ -452,7 +452,7 @@ export default async function TradeQuotingPage({
                 Xero rather than exported and re-keyed.
               </p>
               <div className="w-[150px] mx-auto">
-                <PhoneStage shot={SHOTS.xeroExport} tone="light" compact />
+                <PhoneStage shot={SHOTS.xeroExport} tone="light" />
               </div>
             </div>
             <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
@@ -463,7 +463,7 @@ export default async function TradeQuotingPage({
                 money while you can still do something about it.
               </p>
               <div className="w-[150px] mx-auto">
-                <PhoneStage shot={SHOTS.dashboard} tone="light" compact />
+                <PhoneStage shot={SHOTS.dashboard} tone="light" />
               </div>
             </div>
           </div>

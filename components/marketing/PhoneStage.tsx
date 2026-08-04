@@ -30,49 +30,42 @@ const TOAST_ICONS: Record<string, LucideIcon> = {
  * product. What makes it read as the product *doing something* is a small
  * floating card overlaid on top of it -- the way a phone notification sits
  * on top of whatever app is underneath it. This wraps PhoneShot with
- * exactly that: a soft background stage, the phone, and a small toast
- * pinned over its top-left corner.
+ * exactly that: a soft background stage, the phone, and a toast pinned
+ * over its top-left corner, carrying the number or status that makes the
+ * screenshot worth a second look.
  *
- * Root has NO horizontal padding, which looks like an odd choice until
- * you know why: the toast (position: absolute) and the phone (a normal
- * block child) resolve percentage widths against two *different* boxes.
- * An absolutely positioned element's percentage resolves against the
- * padding box of its containing block; a normal-flow child's resolves
- * against the content box, i.e. padding already subtracted. With
- * horizontal padding on the root, those are different numbers, and the
- * gap between them is a fixed 48px regardless of the root's own width --
- * trivial at a 360px stage, a third of the total at a 150px one. That
- * mismatch is what put the toast (58% of 150px = 87px) wider than the
- * phone (82% of a padding-shrunk 102px = 84px): the toast visually
- * dominated a screenshot it was supposed to be a small accent on, at
- * exactly the sizes this component is used at most (every per-card
- * embed on the trade pages). Moving the visual inset to margin on the
- * phone wrapper (`mx-auto` at a percentage below 100%) instead of
- * padding on the root means both elements measure against the identical
- * box, so the ratio between them holds at any size, not just the wide
- * single-image context this was built and eyeballed in.
+ * A previous version tried a `compact` mode -- icon and title only, no
+ * subtitle -- to fix wrapping in narrow per-card contexts. That was
+ * backwards: the subtitle is the actual content ("$8,179 received on
+ * this job", not just "Paid in full"), and cutting it didn't even fix
+ * the underlying problem -- the title alone kept truncating too, because
+ * the real fault was `whitespace-nowrap` plus `text-ellipsis` on
+ * something without a reliably large enough box, not the presence of a
+ * second line of text. Deleted entirely. Text here wraps normally --
+ * never nowrap, never ellipsis -- so the worst case is a slightly taller
+ * card, never a mid-word cut. That's a strictly safer failure mode than
+ * chasing exact pixel widths across every context this renders in.
  *
- * `compact` controls how much text the toast tries to hold: icon and
- * title only, no brand row, no subtitle. Every embedded per-card use on
- * the trade pages should pass it; FeatureSwitcher's large single-image
- * slot is the one place with enough room for the full version with a
- * subtitle.
+ * Root has no horizontal padding, and the phone is inset via `mx-auto`
+ * margin rather than root padding, so the phone and the toast measure
+ * their percentage widths against the same box. (An absolutely
+ * positioned element's percentage resolves against the padding box; a
+ * normal-flow child's resolves against the content box -- two different
+ * numbers if the root has its own horizontal padding, which is what
+ * previously let the toast render wider than the phone it was supposed
+ * to be an accent on.)
  *
- * The pulsing dot on the full toast is the only actual motion on an
- * otherwise static image, and it's cheap: no animation library, just
- * Tailwind's built-in ping.
+ * The pulsing dot is the only actual motion on an otherwise static image,
+ * and it's cheap: no animation library, just Tailwind's built-in ping.
  */
 export default function PhoneStage({
   shot,
   toast,
   tone = "light",
-  compact = false,
 }: {
   shot: Screenshot;
   toast?: ScreenshotToast;
   tone?: "light" | "dark";
-  /** Icon + title only, no brand row or subtitle. Use in any narrow/card-grid placement. */
-  compact?: boolean;
 }) {
   const activeToast = toast ?? shot.toast;
   const ToastIcon = activeToast ? TOAST_ICONS[activeToast.icon] : null;
@@ -81,20 +74,11 @@ export default function PhoneStage({
   return (
     <div className={`relative w-full min-w-0 rounded-[28px] ${stageBg} pt-9 pb-5`}>
       <div className="mx-auto w-[70%] max-w-[220px]">
-        <PhoneShot shot={shot} tone={tone} showCaption={false} sizes="(max-width: 1024px) 40vw, 220px" />
+        <PhoneShot shot={shot} tone={tone} showCaption={false} sizes="(max-width: 1024px) 45vw, 220px" />
       </div>
 
-      {activeToast && ToastIcon && (compact ? (
-        <div className="absolute -left-1 top-5 max-w-[58%] flex items-center gap-1.5 bg-white rounded-lg shadow-[0_10px_24px_rgba(10,23,34,0.16)] border border-[#e8ecef] py-1.5 pl-1.5 pr-2.5">
-          <div className="w-5 h-5 rounded bg-[#0a1722] flex items-center justify-center shrink-0">
-            <ToastIcon size={11} className="text-[#ffb400]" />
-          </div>
-          <p className="text-[11px] font-extrabold text-[#0a1722] leading-tight whitespace-nowrap overflow-hidden text-ellipsis">
-            {activeToast.title}
-          </p>
-        </div>
-      ) : (
-        <div className="absolute -left-1 top-5 w-[50%] max-w-[175px] bg-white rounded-xl shadow-[0_14px_32px_rgba(10,23,34,0.16)] border border-[#e8ecef] p-2.5">
+      {activeToast && ToastIcon && (
+        <div className="absolute -left-1 top-5 w-[68%] max-w-[190px] bg-white rounded-xl shadow-[0_14px_32px_rgba(10,23,34,0.16)] border border-[#e8ecef] p-2.5">
           <div className="flex items-center gap-1.5 mb-1.5">
             <span className="relative flex h-1.5 w-1.5 shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ffb400] opacity-75" />
@@ -112,7 +96,7 @@ export default function PhoneStage({
             </div>
           </div>
         </div>
-      ))}
+      )}
     </div>
   );
 }
