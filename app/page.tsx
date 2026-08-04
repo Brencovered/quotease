@@ -15,6 +15,7 @@ import { createPublicClient } from "@/lib/supabase/public";
 import { TRADE_PAGES } from "@/lib/marketing/tradePages";
 import { SHOTS } from "@/lib/marketing/screenshots";
 import PhoneShot from "@/components/marketing/PhoneShot";
+import FeatureSwitcher from "@/components/marketing/FeatureSwitcher";
 
 // Rebuild daily. The homepage quoted "196 curated tradie listings" as a
 // hardcoded string while the table held 4,889 -- understating the directory
@@ -172,91 +173,49 @@ export default async function Home() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
-            {/* Each of the four ways in gets the screen it actually happens
-                on. These are the claims hardest to picture from prose -- a
-                conduit run measuring itself, a job description you can talk
-                instead of type -- and a paragraph does not land the way the
-                screen does. Fixed-width shot column so all four cards keep
-                the same shape. */}
-            <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
-              <div className="flex flex-col sm:flex-row gap-6">
-                <div className="flex-1">
-                  <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
-                    <Crosshair size={20} className="text-[#ffb400]" />
-                  </div>
-                  <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">Live on-screen quoting</h3>
-                  <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
-                    Open Swiftscope and mark straight onto your screen what material, work, or zone needs capturing.
-                    Press done - the materials and labour autoload into a quote with your pre-configured pricing.
-                    Press send. That&apos;s it.
-                  </p>
-                  <p className="text-[13px] font-bold text-[#0a1722]">Customers can accept in 30 seconds from send.</p>
-                </div>
-                <div className="sm:w-[175px] sm:shrink-0">
-                  <PhoneShot shot={SHOTS.liveCameraMarkup} tone="light" showCaption={false} sizes="(max-width: 640px) 60vw, 175px" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
-              <div className="flex flex-col sm:flex-row gap-6">
-                <div className="flex-1">
-                  <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
-                    <Mic size={20} className="text-[#ffb400]" />
-                  </div>
-                  <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">AI voice quote generator</h3>
-                  <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
-                    Walk the job and talk to Swiftscope - describe the work and materials needed. Save, and a quote
-                    generates automatically using your own pricing and materials. Not your thing on site? Record it
-                    on the drive home instead - same result either way.
-                  </p>
-                  <p className="text-[13px] font-bold text-[#0a1722]">Customers can accept in 30 seconds from end of recording.</p>
-                </div>
-                <div className="sm:w-[175px] sm:shrink-0">
-                  <PhoneShot shot={SHOTS.quoteSend} tone="light" showCaption={false} sizes="(max-width: 640px) 60vw, 175px" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
-              <div className="flex flex-col sm:flex-row gap-6">
-                <div className="flex-1">
-                  <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
-                    <PenTool size={20} className="text-[#ffb400]" />
-                  </div>
-                  <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">Plan &amp; drawing markup</h3>
-                  <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
-                    Upload a plan or drawing. Drop markers configured to your materials, draw lines for cable or pipe
-                    runs, or block out work zones. Press save - every markup syncs straight into a quote, quantities
-                    and costs already calculated.
-                  </p>
-                </div>
-                <div className="sm:w-[175px] sm:shrink-0">
-                  <PhoneShot shot={SHOTS.planMarkup} tone="light" showCaption={false} sizes="(max-width: 640px) 60vw, 175px" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
-              <div className="flex flex-col sm:flex-row gap-6">
-                <div className="flex-1">
-                  <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
-                    <FileSearch size={20} className="text-[#ffb400]" />
-                  </div>
-                  <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">AI plan reading</h3>
-                  <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
-                    Plans can be exhaustive and time-consuming to read properly. Upload the plan, direct what needs
-                    reading and calculating for the job, and save straight to a quote.
-                  </p>
-                  <p className="text-[12.5px] text-[#8a9ba8] italic">* AI output should always be checked by a qualified person before sending.</p>
-                </div>
-                <div className="sm:w-[175px] sm:shrink-0">
-                  <PhoneShot shot={SHOTS.quoteCapture} tone="light" showCaption={false} sizes="(max-width: 640px) 60vw, 175px" />
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Interactive rather than four static cards: one large screenshot
+              driven by a tab strip, in the style of the software this section
+              is trying to convince someone to switch away from. Picking a
+              mode is a more active thing to do on the page than scrolling
+              past a row of cards, and the active tab decides which claim
+              gets the full-size screenshot. */}
+          <FeatureSwitcher
+            modes={[
+              {
+                key: "camera",
+                icon: Crosshair,
+                title: "Live on-screen quoting",
+                body: "Open Swiftscope and mark straight onto your screen what material, work, or zone needs capturing. Press done - the materials and labour autoload into a quote with your pre-configured pricing. Press send. That's it.",
+                pullLine: "Customers can accept in 30 seconds from send.",
+                shot: SHOTS.liveCameraMarkup,
+              },
+              {
+                key: "voice",
+                icon: Mic,
+                title: "AI voice quote generator",
+                body: "Walk the job and talk to Swiftscope - describe the work and materials needed. Save, and a quote generates automatically using your own pricing and materials. Not your thing on site? Record it on the drive home instead - same result either way.",
+                pullLine: "Customers can accept in 30 seconds from end of recording.",
+                shot: SHOTS.quoteSend,
+              },
+              {
+                key: "plan",
+                icon: PenTool,
+                title: "Plan & drawing markup",
+                body: "Upload a plan or drawing. Drop markers configured to your materials, draw lines for cable or pipe runs, or block out work zones. Press save - every markup syncs straight into a quote, quantities and costs already calculated.",
+                pullLine: "Every marked zone becomes a priced line, automatically.",
+                shot: SHOTS.planMarkup,
+              },
+              {
+                key: "ai-read",
+                icon: FileSearch,
+                title: "AI plan reading",
+                body: "Plans can be exhaustive and time-consuming to read properly. Upload the plan, direct what needs reading and calculating for the job, and save straight to a quote.",
+                pullLine: "Hand it a plan instead of reading one yourself.",
+                footnote: "* AI output should always be checked by a qualified person before sending.",
+                shot: SHOTS.quoteCapture,
+              },
+            ]}
+          />
 
           {/* Everything else */}
           <div className="mt-14 bg-[#0a1722] rounded-3xl p-8 md:p-10">
@@ -298,59 +257,12 @@ export default async function Home() {
         </div>
       </div>
 
-      {/* SEE IT ─────────────────────────────────────────────────────────
-          Everything above this point is a claim. Tradies have been sold job
-          software before, so the page needs to stop asserting and start
-          showing. Two rows, in the order the work actually happens: win it,
-          then run it. Real screens from the live product, not mockups.
-
-          Portrait shots at true aspect rather than cropped into landscape
-          tiles: the bottom of these screens is where the totals and the
-          signatures are, which is the part worth seeing. */}
-      <div className="bg-[#0a1722] border-b border-[#12212f]">
-        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16">
-          <div className="max-w-[680px] mb-12">
-            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">See it</p>
-            <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.9rem] leading-[0.93] text-white mb-5">
-              This is the actual app,<br />not a mock-up
-            </h2>
-            <p className="text-[16px] leading-[1.7] text-[#8aa4b4]">
-              Every screen below is running Swiftscope on a phone. Same app on the tools, in the ute
-              and at the desk - there is no cut-down mobile version, because the phone is where the
-              work gets quoted.
-            </p>
-          </div>
-
-          <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-6">
-            Pricing the job
-          </p>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6 mb-14">
-            <PhoneShot shot={SHOTS.materials} tone="dark" />
-            <PhoneShot shot={SHOTS.packages} tone="dark" />
-            <PhoneShot shot={SHOTS.quoteJobPricing} tone="dark" />
-            <PhoneShot shot={SHOTS.scopeConditions} tone="dark" />
-          </div>
-
-          <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-6">
-            Running it once you have won it
-          </p>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
-            <PhoneShot shot={SHOTS.quoteSentDetail} tone="dark" />
-            <PhoneShot shot={SHOTS.jobDetail} tone="dark" />
-            <PhoneShot shot={SHOTS.docketEntry} tone="dark" />
-            <PhoneShot shot={SHOTS.dashboard} tone="dark" />
-          </div>
-
-          <div className="mt-12 flex flex-wrap items-center gap-x-6 gap-y-3">
-            <Link href="/signup" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-7 py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors">
-              Try it on your next quote <ArrowRight size={16} />
-            </Link>
-            <Link href="/features" className="inline-flex items-center gap-1.5 text-[13.5px] font-bold text-[#ffb400] hover:underline">
-              See every feature <ArrowRight size={13} />
-            </Link>
-          </div>
-        </div>
-      </div>
+      {/* The two rows of eight static phones that used to sit here were
+          re-proving claims the FeatureSwitcher above and the trade page
+          strips already make, with none of the interactivity. Deleted
+          rather than kept "for proof": four of those eight shots resurface
+          properly-sized on /quoting-software, and repeating them here just
+          added scroll length. */}
 
       {/* TWO AUDIENCES */}
       <div className="bg-white border-b border-[#e8ecef]">
