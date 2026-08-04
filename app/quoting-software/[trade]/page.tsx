@@ -159,14 +159,23 @@ export default async function TradeQuotingPage({
                   : "Line items and units you define yourself."}
               </p>
             </div>
-            <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-2.5">
-              {page.prices.map((item) => (
-                <li key={item} className="flex gap-2.5 items-start">
-                  <Check size={16} className="text-[#ffb400] mt-[3px] shrink-0" />
-                  <span className="text-[14.5px] leading-[1.55] text-[#0a1722]">{item}</span>
-                </li>
-              ))}
-            </ul>
+            {/* The screenshot sits with the list rather than in its own strip:
+                access and site conditions are the abstract half of this
+                argument, and they stop being abstract once you can see
+                "tight crawl" and a $350 connection fee on the screen. */}
+            <div className="flex flex-col lg:flex-row gap-10">
+              <ul className="flex-1 grid sm:grid-cols-2 gap-x-8 gap-y-2.5 self-start">
+                {page.prices.map((item) => (
+                  <li key={item} className="flex gap-2.5 items-start">
+                    <Check size={16} className="text-[#ffb400] mt-[3px] shrink-0" />
+                    <span className="text-[14.5px] leading-[1.55] text-[#0a1722]">{item}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="lg:w-[250px] lg:shrink-0">
+                <PhoneShot shot={SHOTS.scopeConditions} tone="light" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -237,16 +246,17 @@ export default async function TradeQuotingPage({
             </p>
           </div>
 
-          {/* The three screens behind the three steps above. Claims about
-              setup being quick are cheap; showing the actual pricing screens
-              is the part a sceptical tradie can check. */}
+          {/* The four screens behind the three steps above. Claims about
+              setup being quick are cheap; showing the actual pricebook and
+              pricing screens is the part a sceptical tradie can check. */}
           <div className="mt-12 pt-10 border-t border-[#e8ecef]">
             <p className="text-[14.5px] leading-[1.7] text-[#5a6a78] max-w-[620px] mb-8">
               Set your prices once and every quote after that inherits them. Change a markup and it
               applies from the next quote on, not retrospectively to work you have already sent.
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 items-start">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 items-start">
               <PhoneShot shot={SHOTS.materials} tone="light" />
+              <PhoneShot shot={SHOTS.packages} tone="light" />
               <PhoneShot shot={SHOTS.pricingTiers} tone="light" />
               <PhoneShot shot={SHOTS.jobSizeTiers} tone="light" />
             </div>
@@ -283,14 +293,15 @@ export default async function TradeQuotingPage({
             ))}
           </div>
 
-          {/* The strip that carries the whole page. Everything above is a
-              claim about quoting on site; this is the screen it happens on.
-              Deliberately placed after the four steps rather than in the
-              hero, so the reader already knows what they are looking at. */}
-          <div className="mt-12 pt-10 border-t border-[#e8ecef] grid grid-cols-1 sm:grid-cols-3 gap-8 items-start">
+          {/* The strip that carries the whole page: the four steps above, as
+              the four screens they actually are. Deliberately placed after
+              the copy rather than in the hero, so the reader already knows
+              what they are looking at. */}
+          <div className="mt-12 pt-10 border-t border-[#e8ecef] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 items-start">
             <PhoneShot shot={SHOTS.quoteCapture} tone="light" />
             <PhoneShot shot={SHOTS.planMarkup} tone="light" />
             <PhoneShot shot={SHOTS.quoteJobPricing} tone="light" />
+            <PhoneShot shot={SHOTS.quoteSend} tone="light" />
           </div>
 
           <div className="mt-10 rounded-2xl bg-[#0a1722] p-6">
@@ -409,10 +420,11 @@ export default async function TradeQuotingPage({
             </div>
           </div>
 
-          {/* Quote to job to signed docket to invoice, as three real screens.
-              The docket one is doing the most work here: it is the part
+          {/* Sent quote through to signed docket to invoice, as four real
+              screens. The docket one is doing the most work: it is the part
               competitors either charge extra for or do not have at all. */}
-          <div className="mt-12 pt-10 border-t border-[#e8ecef] grid grid-cols-1 sm:grid-cols-3 gap-8 items-start">
+          <div className="mt-12 pt-10 border-t border-[#e8ecef] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 items-start">
+            <PhoneShot shot={SHOTS.quoteSentDetail} tone="light" />
             <PhoneShot shot={SHOTS.jobDetail} tone="light" />
             <PhoneShot shot={SHOTS.docketsSigned} tone="light" />
             <PhoneShot shot={SHOTS.xeroExport} tone="light" />

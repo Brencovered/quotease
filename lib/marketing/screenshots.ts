@@ -22,8 +22,19 @@
  *
  * Source files are cropped of OS chrome (status bar, home indicator,
  * browser URL bar) and encoded as WebP. Next re-encodes to AVIF on top of
- * that. The whole set is ~600KB, against 2MB for a single one of the old
+ * that. The whole set is ~1MB, against 2MB for a single one of the old
  * /public/marketing PNGs.
+ *
+ * Known gap. Every shot here is captured from the electrician builder:
+ * downlights in the pricebook, ceiling type and CCEW on the job step,
+ * smoke alarms on the scope step. That is fine on the homepage and on
+ * /quoting-software/electricians, and slightly undercuts the argument on
+ * the roofer, plumber and carpenter pages, which claim a builder that
+ * knows their trade and then show someone else's. Roughly half the set is
+ * trade-neutral (quote capture, dashboard, job detail, dockets, Xero,
+ * clients, team, both pricing tier screens) and would stay as is. The rest
+ * wants a per-trade capture, at which point this becomes a keyed lookup
+ * rather than a flat object.
  */
 
 export interface Screenshot {
@@ -60,10 +71,45 @@ export const SHOTS = {
   },
   quoteJobPricing: {
     src: "/product/quote-job-pricing.webp",
-    alt: "Swiftscope quote builder job step showing job type, ceiling type, call-out fee and certificate options, customer pricing tier, job size, hourly rate and effective margin",
-    caption: "Access, call-out, customer tier and job size, applied before the number is set.",
+    alt: "Swiftscope quote builder job step with customer type set to residential at six percent, job size set to medium at twelve percent, and an effective margin of eighteen percent shown as six plus twelve",
+    caption: "Customer type and job size stack into one margin, and it shows its working.",
+    width: 706,
+    height: 1474,
+  },
+  scopeConditions: {
+    src: "/product/scope-conditions.webp",
+    alt: "Swiftscope scope step with roof cavity access set to tight crawl, subfloor to easy crawl, overall site access to moderate, and site condition fees for level 2 connection and switchboard isolation",
+    caption: "Tight crawl, moderate access, level 2 connection. The things that blow a job out.",
+    width: 714,
+    height: 1472,
+  },
+  quoteSend: {
+    src: "/product/quote-send.webp",
+    alt: "Swiftscope send step listing on-site items pulled from a package with quantities and prices, a site items total of $1,181, and a job description field with a record option",
+    caption: "Priced, itemised and ready to send, with the job description talked in if you prefer.",
+    width: 714,
+    height: 1480,
+  },
+  packages: {
+    src: "/product/packages.webp",
+    alt: "Swiftscope packages list showing a ten downlight install pack, a five downlight quote and a kitchen lighting package, each with item counts, estimated hours and price",
+    caption: "The job you quote most often, saved once and reused in a tap.",
+    width: 704,
+    height: 1472,
+  },
+  quoteSentDetail: {
+    src: "/product/quote-sent-detail.webp",
+    alt: "A sent Swiftscope quote for $829 showing scope and cost, the site conditions considered, labour and materials split, accept and decline actions, and a follow-up overdue by three days",
+    caption: "What the client sees, plus a nudge when the follow-up is overdue.",
     width: 712,
-    height: 1476,
+    height: 1480,
+  },
+  settingsSiteConditions: {
+    src: "/product/settings-site-conditions.webp",
+    alt: "Swiftscope settings screen listing per-trade site condition starting fees for electricians, including level 2 connection fees at $350 and main switchboard isolation at $120",
+    caption: "Your own starting fees per trade, editable on any quote, never fixed.",
+    width: 702,
+    height: 1470,
   },
   materials: {
     src: "/product/materials.webp",

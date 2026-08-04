@@ -263,10 +263,11 @@ export default async function Home() {
                 to write and the easiest to disbelieve, so three of the less
                 glamorous screens sit under it. Small on purpose: supporting
                 evidence, not another feature pitch. */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 items-start mt-10 pt-8 border-t border-white/10">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 items-start mt-10 pt-8 border-t border-white/10">
               <PhoneShot shot={SHOTS.clients} size="sm" tone="dark" />
               <PhoneShot shot={SHOTS.team} size="sm" tone="dark" />
               <PhoneShot shot={SHOTS.dayworksRates} size="sm" tone="dark" />
+              <PhoneShot shot={SHOTS.settingsSiteConditions} size="sm" tone="dark" />
             </div>
 
             <div className="text-center mt-10">
@@ -304,16 +305,18 @@ export default async function Home() {
           <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-6">
             Winning the job
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 items-start mb-14">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 items-start mb-14">
             <PhoneShot shot={SHOTS.quoteCapture} tone="dark" />
             <PhoneShot shot={SHOTS.planMarkup} tone="dark" />
             <PhoneShot shot={SHOTS.quoteJobPricing} tone="dark" />
+            <PhoneShot shot={SHOTS.quoteSend} tone="dark" />
           </div>
 
           <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-6">
             Running it once you have won it
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 items-start">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 items-start">
+            <PhoneShot shot={SHOTS.quoteSentDetail} tone="dark" />
             <PhoneShot shot={SHOTS.jobDetail} tone="dark" />
             <PhoneShot shot={SHOTS.docketEntry} tone="dark" />
             <PhoneShot shot={SHOTS.dashboard} tone="dark" />
