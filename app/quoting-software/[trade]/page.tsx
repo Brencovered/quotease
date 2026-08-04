@@ -25,7 +25,6 @@ import { notFound } from "next/navigation";
 import { ArrowRight, Check, Mic, PenLine, FileText, Upload, Package, CalendarDays, Receipt, X } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
 import PhoneStage from "@/components/marketing/PhoneStage";
-import ComingSoonStage from "@/components/marketing/ComingSoonStage";
 import { SHOTS } from "@/lib/marketing/screenshots";
 import { TRADE_PAGES, getTradePage } from "@/lib/marketing/tradePages";
 
@@ -75,13 +74,15 @@ export default async function TradeQuotingPage({
   // Every screenshot captured so far is from the electrician builder --
   // downlights, CCEW, level 2 connection fees are visible text in the
   // actual pixels. That's accurate on this page for electricians and
-  // inaccurate everywhere else, so the other five pages get the subset of
-  // shots that carry no trade-specific text (dashboard, pricing tiers,
-  // dockets, Xero export) plus an honest placeholder where a real capture
-  // doesn't exist yet, rather than a plumber page showing an electrician's
-  // fields. Becomes a per-trade lookup once plumber/roofer/carpenter/
-  // generic-builder captures exist; a single flag is the honest state of
-  // the asset library today.
+  // inaccurate everywhere else, so the other five pages only show the
+  // subset of shots that carry no trade-specific text (quote capture,
+  // dashboard, pricing tiers, dockets, Xero export) rather than a plumber
+  // page showing an electrician's fields. No placeholder for what's
+  // missing -- just the real screens shown properly, and page.prices /
+  // page.quotingFlow already carry the trade-specific detail in text.
+  // Becomes a per-trade lookup once plumber/roofer/carpenter/generic-
+  // builder captures exist; a single flag is the honest state of the
+  // asset library today.
   const hasRealScreens = page.slug === "electricians";
 
   return (
@@ -268,9 +269,12 @@ export default async function TradeQuotingPage({
             ) : (
               // Materials and packages are real screens, just of an
               // electrician's pricebook -- wrong trade's items to show
-              // here. Pricing tiers and job size tiers carry no
-              // trade-specific text, so they're honest for any trade.
-              <div className="grid grid-cols-2 gap-5 sm:gap-6 max-w-[500px]">
+              // here. Quote capture, pricing tiers and job size tiers
+              // carry no trade-specific text, so all three are honest for
+              // any trade -- one solid row of three rather than a thin
+              // strip apologising for what isn't there yet.
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 sm:gap-6 max-w-[620px]">
+                <PhoneStage shot={SHOTS.quoteCapture} tone="light" />
                 <PhoneStage shot={SHOTS.pricingTiers} tone="light" />
                 <PhoneStage shot={SHOTS.jobSizeTiers} tone="light" />
               </div>
@@ -312,26 +316,22 @@ export default async function TradeQuotingPage({
               as the five screens it actually is. Placed after the copy
               rather than in the hero, so the reader already knows what
               they are looking at. */}
-          <div className="mt-12 pt-10 border-t border-[#e8ecef] grid grid-cols-2 lg:grid-cols-5 gap-5 sm:gap-6">
-            {hasRealScreens ? (
-              <>
-                <PhoneStage shot={SHOTS.quoteCapture} tone="light" />
-                <PhoneStage shot={SHOTS.planMarkup} tone="light" />
-                <PhoneStage shot={SHOTS.quoteJobPricing} tone="light" />
-                <PhoneStage shot={SHOTS.scopeConditions} tone="light" />
-                <PhoneStage shot={SHOTS.quoteSend} tone="light" />
-              </>
-            ) : (
-              // Only the entry menu (quoteCapture) is trade-neutral; the
-              // other four steps are the electrician builder mid-quote,
-              // downlights and all. Rather than four wrong-trade screens
-              // filling the row, one real screen plus an honest gap.
-              <div className="col-span-2 lg:col-span-5 grid grid-cols-2 sm:grid-cols-3 gap-5 sm:gap-6 max-w-[620px]">
-                <PhoneStage shot={SHOTS.quoteCapture} tone="light" />
-                <ComingSoonStage label={`The ${page.trade} builder — screens coming soon`} />
-              </div>
-            )}
-          </div>
+          {hasRealScreens && (
+            // The strip that carries the whole page for the electrician: the
+            // wizard, in order, as the five screens it actually is. Other
+            // trades don't get a thinner version of this row -- the numbered
+            // steps above already carry real per-trade copy from
+            // page.quotingFlow, and quote capture (the one honestly
+            // trade-neutral screen in this sequence) already appears in the
+            // setup strip above. Nothing duplicated, nothing padded out.
+            <div className="mt-12 pt-10 border-t border-[#e8ecef] grid grid-cols-2 lg:grid-cols-5 gap-5 sm:gap-6">
+              <PhoneStage shot={SHOTS.quoteCapture} tone="light" />
+              <PhoneStage shot={SHOTS.planMarkup} tone="light" />
+              <PhoneStage shot={SHOTS.quoteJobPricing} tone="light" />
+              <PhoneStage shot={SHOTS.scopeConditions} tone="light" />
+              <PhoneStage shot={SHOTS.quoteSend} tone="light" />
+            </div>
+          )}
 
           <div className="mt-10 rounded-2xl bg-[#0a1722] p-6">
             <p className="text-[15px] leading-[1.75] text-[#c8d8e4]">
