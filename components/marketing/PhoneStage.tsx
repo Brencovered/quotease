@@ -33,28 +33,30 @@ const TOAST_ICONS: Record<string, LucideIcon> = {
  * exactly that: a soft background stage, the phone, and a small toast
  * pinned over its top-left corner.
  *
- * Both the phone and the toast are sized as percentages of the stage,
- * not fixed pixels, so they scale together at any column width, and the
- * root has `w-full min-w-0` so it stretches correctly whether it's a
- * normal block child or a direct grid item (see the RSC-boundary and
- * min-width:auto write-ups in git history -- both were real bugs here).
+ * Root has NO horizontal padding, which looks like an odd choice until
+ * you know why: the toast (position: absolute) and the phone (a normal
+ * block child) resolve percentage widths against two *different* boxes.
+ * An absolutely positioned element's percentage resolves against the
+ * padding box of its containing block; a normal-flow child's resolves
+ * against the content box, i.e. padding already subtracted. With
+ * horizontal padding on the root, those are different numbers, and the
+ * gap between them is a fixed 48px regardless of the root's own width --
+ * trivial at a 360px stage, a third of the total at a 150px one. That
+ * mismatch is what put the toast (58% of 150px = 87px) wider than the
+ * phone (82% of a padding-shrunk 102px = 84px): the toast visually
+ * dominated a screenshot it was supposed to be a small accent on, at
+ * exactly the sizes this component is used at most (every per-card
+ * embed on the trade pages). Moving the visual inset to margin on the
+ * phone wrapper (`mx-auto` at a percentage below 100%) instead of
+ * padding on the root means both elements measure against the identical
+ * box, so the ratio between them holds at any size, not just the wide
+ * single-image context this was built and eyeballed in.
  *
- * `compact` controls a third thing entirely: how much text the toast
- * tries to hold. The full toast -- brand row, icon, title, subtitle --
- * needs roughly 150px of real width to wrap its subtitle across two
- * lines without looking broken. That's fine in a wide single-image
- * context like FeatureSwitcher's 360px column, and it is not fine in a
- * card grid where PhoneStage renders at 150-180px total: at that size
- * the toast itself is under 90px, and the text column left over after
- * its own padding and icon box is roughly 35px -- not enough room for
- * "9 exported" to hold together as a word, let alone a full subtitle.
- * No amount of width-tuning fixes that; the honest fix is less text.
- * `compact` drops the brand row and the subtitle and shows only the
- * icon and title, which is already short by design ("$282", "Signed",
- * "9 exported") and holds up at any width this component is used at.
- * Every embedded per-card use on the trade pages should pass compact;
- * FeatureSwitcher's large single-image slot is the one place with
- * enough room for the full version.
+ * `compact` controls how much text the toast tries to hold: icon and
+ * title only, no brand row, no subtitle. Every embedded per-card use on
+ * the trade pages should pass it; FeatureSwitcher's large single-image
+ * slot is the one place with enough room for the full version with a
+ * subtitle.
  *
  * The pulsing dot on the full toast is the only actual motion on an
  * otherwise static image, and it's cheap: no animation library, just
@@ -77,13 +79,13 @@ export default function PhoneStage({
   const stageBg = tone === "dark" ? "bg-white/[0.04] border border-white/10" : "bg-[#f3f5f6]";
 
   return (
-    <div className={`relative w-full min-w-0 rounded-[28px] ${stageBg} pt-10 pb-6 px-6`}>
-      <div className="mx-auto w-[82%] max-w-[250px]">
-        <PhoneShot shot={shot} tone={tone} showCaption={false} sizes="(max-width: 1024px) 45vw, 250px" />
+    <div className={`relative w-full min-w-0 rounded-[28px] ${stageBg} pt-9 pb-5`}>
+      <div className="mx-auto w-[70%] max-w-[220px]">
+        <PhoneShot shot={shot} tone={tone} showCaption={false} sizes="(max-width: 1024px) 40vw, 220px" />
       </div>
 
       {activeToast && ToastIcon && (compact ? (
-        <div className="absolute -left-1.5 top-6 sm:top-7 max-w-[85%] flex items-center gap-1.5 bg-white rounded-lg shadow-[0_10px_24px_rgba(10,23,34,0.16)] border border-[#e8ecef] py-1.5 pl-1.5 pr-2.5">
+        <div className="absolute -left-1 top-5 max-w-[58%] flex items-center gap-1.5 bg-white rounded-lg shadow-[0_10px_24px_rgba(10,23,34,0.16)] border border-[#e8ecef] py-1.5 pl-1.5 pr-2.5">
           <div className="w-5 h-5 rounded bg-[#0a1722] flex items-center justify-center shrink-0">
             <ToastIcon size={11} className="text-[#ffb400]" />
           </div>
@@ -92,7 +94,7 @@ export default function PhoneStage({
           </p>
         </div>
       ) : (
-        <div className="absolute -left-1.5 top-6 sm:top-7 w-[58%] max-w-[175px] bg-white rounded-xl shadow-[0_14px_32px_rgba(10,23,34,0.16)] border border-[#e8ecef] p-2.5">
+        <div className="absolute -left-1 top-5 w-[50%] max-w-[175px] bg-white rounded-xl shadow-[0_14px_32px_rgba(10,23,34,0.16)] border border-[#e8ecef] p-2.5">
           <div className="flex items-center gap-1.5 mb-1.5">
             <span className="relative flex h-1.5 w-1.5 shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ffb400] opacity-75" />
