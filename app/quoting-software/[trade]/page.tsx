@@ -233,7 +233,7 @@ export default async function TradeQuotingPage({
               <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">{page.setupMaterials}</p>
               {hasRealScreens && (
                 <div className="w-[160px] mx-auto">
-                  <PhoneStage shot={SHOTS.materials} tone="light" />
+                  <PhoneStage shot={SHOTS.materials} tone="light" compact />
                 </div>
               )}
             </div>
@@ -247,7 +247,7 @@ export default async function TradeQuotingPage({
               </p>
               {hasRealScreens && (
                 <div className="w-[160px] mx-auto">
-                  <PhoneStage shot={SHOTS.packages} tone="light" />
+                  <PhoneStage shot={SHOTS.packages} tone="light" compact />
                 </div>
               )}
             </div>
@@ -261,8 +261,8 @@ export default async function TradeQuotingPage({
                 and everything after follows.
               </p>
               <div className="grid grid-cols-2 gap-2">
-                <PhoneStage shot={SHOTS.pricingTiers} tone="light" />
-                <PhoneStage shot={SHOTS.jobSizeTiers} tone="light" />
+                <PhoneStage shot={SHOTS.pricingTiers} tone="light" compact />
+                <PhoneStage shot={SHOTS.jobSizeTiers} tone="light" compact />
               </div>
             </div>
           </div>
@@ -325,7 +325,7 @@ export default async function TradeQuotingPage({
                   <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">{f.detail}</p>
                   {shot && (
                     <div className="w-[150px] mx-auto">
-                      <PhoneStage shot={shot} tone="light" />
+                      <PhoneStage shot={shot} tone="light" compact />
                     </div>
                   )}
                 </div>
@@ -430,7 +430,7 @@ export default async function TradeQuotingPage({
                 not crossing town twice.
               </p>
               <div className="w-[150px] mx-auto">
-                <PhoneStage shot={SHOTS.jobDetail} tone="light" />
+                <PhoneStage shot={SHOTS.jobDetail} tone="light" compact />
               </div>
             </div>
             <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
@@ -441,7 +441,7 @@ export default async function TradeQuotingPage({
                 writing before the extra work starts.
               </p>
               <div className="w-[150px] mx-auto">
-                <PhoneStage shot={SHOTS.docketsSigned} tone="light" />
+                <PhoneStage shot={SHOTS.docketsSigned} tone="light" compact />
               </div>
             </div>
             <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
@@ -452,7 +452,7 @@ export default async function TradeQuotingPage({
                 Xero rather than exported and re-keyed.
               </p>
               <div className="w-[150px] mx-auto">
-                <PhoneStage shot={SHOTS.xeroExport} tone="light" />
+                <PhoneStage shot={SHOTS.xeroExport} tone="light" compact />
               </div>
             </div>
             <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
@@ -463,7 +463,7 @@ export default async function TradeQuotingPage({
                 money while you can still do something about it.
               </p>
               <div className="w-[150px] mx-auto">
-                <PhoneStage shot={SHOTS.dashboard} tone="light" />
+                <PhoneStage shot={SHOTS.dashboard} tone="light" compact />
               </div>
             </div>
           </div>

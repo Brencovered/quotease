@@ -34,33 +34,43 @@ const TOAST_ICONS: Record<string, LucideIcon> = {
  * pinned over its top-left corner.
  *
  * Both the phone and the toast are sized as percentages of the stage,
- * not fixed pixels, so they scale together at any column width. That
- * fixed the disproportion bug from the previous version. A second,
- * separate bug surfaced after that: PhoneStage's own root div had no
- * explicit width, which is fine as a normal block child (it fills
- * whatever its parent gives it) but breaks the moment PhoneStage is used
- * as a *direct grid item* -- CSS Grid items default to `min-width: auto`,
- * which for an item containing image content can resist shrinking below
- * the content's own preferred size, overriding the grid's `stretch`
- * behaviour and letting the item overflow its column instead of filling
- * it. That's exactly what happened where two PhoneStage instances sat
- * directly inside a `grid-cols-2` -- each rendered near its own max-width
- * cap regardless of how narrow the actual column was, spilling out of
- * the card. `w-full min-w-0` on the root makes PhoneStage behave
- * correctly in both contexts: it fills a block parent as before, and it
- * now actually stretches to its grid track instead of resisting it.
+ * not fixed pixels, so they scale together at any column width, and the
+ * root has `w-full min-w-0` so it stretches correctly whether it's a
+ * normal block child or a direct grid item (see the RSC-boundary and
+ * min-width:auto write-ups in git history -- both were real bugs here).
  *
- * The pulsing dot is the only actual motion on an otherwise static image,
- * and it's cheap: no animation library, just Tailwind's built-in ping.
+ * `compact` controls a third thing entirely: how much text the toast
+ * tries to hold. The full toast -- brand row, icon, title, subtitle --
+ * needs roughly 150px of real width to wrap its subtitle across two
+ * lines without looking broken. That's fine in a wide single-image
+ * context like FeatureSwitcher's 360px column, and it is not fine in a
+ * card grid where PhoneStage renders at 150-180px total: at that size
+ * the toast itself is under 90px, and the text column left over after
+ * its own padding and icon box is roughly 35px -- not enough room for
+ * "9 exported" to hold together as a word, let alone a full subtitle.
+ * No amount of width-tuning fixes that; the honest fix is less text.
+ * `compact` drops the brand row and the subtitle and shows only the
+ * icon and title, which is already short by design ("$282", "Signed",
+ * "9 exported") and holds up at any width this component is used at.
+ * Every embedded per-card use on the trade pages should pass compact;
+ * FeatureSwitcher's large single-image slot is the one place with
+ * enough room for the full version.
+ *
+ * The pulsing dot on the full toast is the only actual motion on an
+ * otherwise static image, and it's cheap: no animation library, just
+ * Tailwind's built-in ping.
  */
 export default function PhoneStage({
   shot,
   toast,
   tone = "light",
+  compact = false,
 }: {
   shot: Screenshot;
   toast?: ScreenshotToast;
   tone?: "light" | "dark";
+  /** Icon + title only, no brand row or subtitle. Use in any narrow/card-grid placement. */
+  compact?: boolean;
 }) {
   const activeToast = toast ?? shot.toast;
   const ToastIcon = activeToast ? TOAST_ICONS[activeToast.icon] : null;
@@ -72,7 +82,16 @@ export default function PhoneStage({
         <PhoneShot shot={shot} tone={tone} showCaption={false} sizes="(max-width: 1024px) 45vw, 250px" />
       </div>
 
-      {activeToast && ToastIcon && (
+      {activeToast && ToastIcon && (compact ? (
+        <div className="absolute -left-1.5 top-6 sm:top-7 max-w-[85%] flex items-center gap-1.5 bg-white rounded-lg shadow-[0_10px_24px_rgba(10,23,34,0.16)] border border-[#e8ecef] py-1.5 pl-1.5 pr-2.5">
+          <div className="w-5 h-5 rounded bg-[#0a1722] flex items-center justify-center shrink-0">
+            <ToastIcon size={11} className="text-[#ffb400]" />
+          </div>
+          <p className="text-[11px] font-extrabold text-[#0a1722] leading-tight whitespace-nowrap overflow-hidden text-ellipsis">
+            {activeToast.title}
+          </p>
+        </div>
+      ) : (
         <div className="absolute -left-1.5 top-6 sm:top-7 w-[58%] max-w-[175px] bg-white rounded-xl shadow-[0_14px_32px_rgba(10,23,34,0.16)] border border-[#e8ecef] p-2.5">
           <div className="flex items-center gap-1.5 mb-1.5">
             <span className="relative flex h-1.5 w-1.5 shrink-0">
@@ -91,7 +110,7 @@ export default function PhoneStage({
             </div>
           </div>
         </div>
-      )}
+      ))}
     </div>
   );
 }
