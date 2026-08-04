@@ -74,12 +74,14 @@ export default async function TradeQuotingPage({
   // Every screenshot captured so far is from the electrician builder --
   // downlights, CCEW, level 2 connection fees are visible text in the
   // actual pixels. That's accurate on this page for electricians and
-  // inaccurate everywhere else, so the other five pages only show the
-  // subset of shots that carry no trade-specific text (quote capture,
-  // dashboard, pricing tiers, dockets, Xero export) rather than a plumber
-  // page showing an electrician's fields. No placeholder for what's
-  // missing -- just the real screens shown properly, and page.prices /
-  // page.quotingFlow already carry the trade-specific detail in text.
+  // inaccurate everywhere else, so the other five pages only pair the
+  // steps below with the handful of shots that carry no trade-specific
+  // text (quote capture, pricing tiers, job size tiers, and the four
+  // trade-neutral screens after acceptance) rather than a plumber page
+  // showing an electrician's fields. No placeholder for what's missing --
+  // page.prices and page.quotingFlow already carry the trade-specific
+  // detail in text, and each screenshot is embedded directly in the step
+  // or card it illustrates rather than gathered into a separate row.
   // Becomes a per-trade lookup once plumber/roofer/carpenter/generic-
   // builder captures exist; a single flag is the honest state of the
   // asset library today.
@@ -210,32 +212,58 @@ export default async function TradeQuotingPage({
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-3 gap-px bg-[#e8ecef] rounded-2xl overflow-hidden border border-[#e8ecef]">
-            <div className="bg-white p-6">
+          {/* Each step carries its own screenshot directly beneath it now,
+              rather than three text cards followed by a separate row of
+              images underneath. The separate-row version had two faults at
+              once: nothing tied a given image to a given step except being
+              roughly below it, and the row's own width cap (a leftover
+              from when it held fewer items) rendered smaller than every
+              other screenshot row on the page. Embedding removes both --
+              the pairing is now physical, and every PhoneStage on this
+              page sits in a same-sized grid cell. 01 Upload has no
+              screenshot for any trade (no CSV-import screen in the set);
+              02 Bundle only has one on the electrician page, since the
+              packages screen shown is an electrician's downlight packs. */}
+          <div className="grid sm:grid-cols-3 gap-4">
+            <div className="bg-white rounded-2xl border border-[#e8ecef] p-6">
               <div className="flex items-center gap-2.5 mb-3">
                 <Upload size={17} className="text-[#ffb400]" />
                 <span className="font-display text-[1.1rem] uppercase">01 Upload</span>
               </div>
-              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78]">{page.setupMaterials}</p>
+              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">{page.setupMaterials}</p>
+              {hasRealScreens && (
+                <div className="w-[160px] mx-auto">
+                  <PhoneStage shot={SHOTS.materials} tone="light" />
+                </div>
+              )}
             </div>
-            <div className="bg-white p-6">
+            <div className="bg-white rounded-2xl border border-[#e8ecef] p-6">
               <div className="flex items-center gap-2.5 mb-3">
                 <Package size={17} className="text-[#ffb400]" />
                 <span className="font-display text-[1.1rem] uppercase">02 Bundle</span>
               </div>
-              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78]">
+              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">
                 Save the job you quote most often as a package. After that it is one tap, not a rebuild.
               </p>
+              {hasRealScreens && (
+                <div className="w-[160px] mx-auto">
+                  <PhoneStage shot={SHOTS.packages} tone="light" />
+                </div>
+              )}
             </div>
-            <div className="bg-white p-6">
+            <div className="bg-white rounded-2xl border border-[#e8ecef] p-6">
               <div className="flex items-center gap-2.5 mb-3">
                 <Check size={17} className="text-[#ffb400]" />
                 <span className="font-display text-[1.1rem] uppercase">03 Set rates</span>
               </div>
-              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78]">
+              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">
                 Your hourly rate, margin and terms become the baseline on every quote. Change them once
                 and everything after follows.
               </p>
+              <div className="grid grid-cols-2 gap-2">
+                <PhoneStage shot={SHOTS.pricingTiers} tone="light" />
+                <PhoneStage shot={SHOTS.jobSizeTiers} tone="light" />
+              </div>
             </div>
           </div>
 
@@ -249,36 +277,6 @@ export default async function TradeQuotingPage({
             <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] sm:border-l sm:border-[#e8ecef] sm:pl-5">
               {page.packageContents}
             </p>
-          </div>
-
-          {/* The four screens behind the three steps above. Claims about
-              setup being quick are cheap; showing the actual pricebook and
-              pricing screens is the part a sceptical tradie can check. */}
-          <div className="mt-12 pt-10 border-t border-[#e8ecef]">
-            <p className="text-[14.5px] leading-[1.7] text-[#5a6a78] max-w-[620px] mb-8">
-              Set your prices once and every quote after that inherits them. Change a markup and it
-              applies from the next quote on, not retrospectively to work you have already sent.
-            </p>
-            {hasRealScreens ? (
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
-                <PhoneStage shot={SHOTS.materials} tone="light" />
-                <PhoneStage shot={SHOTS.packages} tone="light" />
-                <PhoneStage shot={SHOTS.pricingTiers} tone="light" />
-                <PhoneStage shot={SHOTS.jobSizeTiers} tone="light" />
-              </div>
-            ) : (
-              // Materials and packages are real screens, just of an
-              // electrician's pricebook -- wrong trade's items to show
-              // here. Quote capture, pricing tiers and job size tiers
-              // carry no trade-specific text, so all three are honest for
-              // any trade -- one solid row of three rather than a thin
-              // strip apologising for what isn't there yet.
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 sm:gap-6 max-w-[620px]">
-                <PhoneStage shot={SHOTS.quoteCapture} tone="light" />
-                <PhoneStage shot={SHOTS.pricingTiers} tone="light" />
-                <PhoneStage shot={SHOTS.jobSizeTiers} tone="light" />
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -300,38 +298,40 @@ export default async function TradeQuotingPage({
             </p>
           </div>
 
+          {/* One screenshot per step, embedded in the card, not a separate
+              row underneath. The old row showed five electrician screens
+              under four trade-specific steps -- a count mismatch on top of
+              the same disconnection problem the setup section had. Four
+              steps, four images now. scopeConditions drops out of this
+              strip as a result; it isn't the weakest of the five, there
+              just isn't a fifth step to pair it with. Non-electrician
+              pages only pair the first step, since quote capture is the
+              one screen in this sequence that carries no trade-specific
+              text -- the other three stay text-only rather than showing
+              an electrician mid-quote. */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {page.quotingFlow.map((f, i) => (
-              <div key={f.step} className="relative rounded-2xl p-6 bg-[#f8f9fa] border border-[#e8ecef]">
-                <span className="font-display text-[2.4rem] leading-none text-[#ffb400] block mb-3">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <h3 className="font-display text-[1.2rem] mb-2">{f.step}</h3>
-                <p className="text-[14.5px] leading-[1.6] text-[#5a6a78]">{f.detail}</p>
-              </div>
-            ))}
+            {page.quotingFlow.map((f, i) => {
+              const shot = hasRealScreens
+                ? [SHOTS.quoteCapture, SHOTS.planMarkup, SHOTS.quoteJobPricing, SHOTS.quoteSend][i]
+                : i === 0
+                  ? SHOTS.quoteCapture
+                  : null;
+              return (
+                <div key={f.step} className="relative rounded-2xl p-6 bg-[#f8f9fa] border border-[#e8ecef]">
+                  <span className="font-display text-[2.4rem] leading-none text-[#ffb400] block mb-3">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <h3 className="font-display text-[1.2rem] mb-2">{f.step}</h3>
+                  <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">{f.detail}</p>
+                  {shot && (
+                    <div className="w-[150px] mx-auto">
+                      <PhoneStage shot={shot} tone="light" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
-
-          {/* The strip that carries the whole page: the wizard, in order,
-              as the five screens it actually is. Placed after the copy
-              rather than in the hero, so the reader already knows what
-              they are looking at. */}
-          {hasRealScreens && (
-            // The strip that carries the whole page for the electrician: the
-            // wizard, in order, as the five screens it actually is. Other
-            // trades don't get a thinner version of this row -- the numbered
-            // steps above already carry real per-trade copy from
-            // page.quotingFlow, and quote capture (the one honestly
-            // trade-neutral screen in this sequence) already appears in the
-            // setup strip above. Nothing duplicated, nothing padded out.
-            <div className="mt-12 pt-10 border-t border-[#e8ecef] grid grid-cols-2 lg:grid-cols-5 gap-5 sm:gap-6">
-              <PhoneStage shot={SHOTS.quoteCapture} tone="light" />
-              <PhoneStage shot={SHOTS.planMarkup} tone="light" />
-              <PhoneStage shot={SHOTS.quoteJobPricing} tone="light" />
-              <PhoneStage shot={SHOTS.scopeConditions} tone="light" />
-              <PhoneStage shot={SHOTS.quoteSend} tone="light" />
-            </div>
-          )}
 
           <div className="mt-10 rounded-2xl bg-[#0a1722] p-6">
             <p className="text-[15px] leading-[1.75] text-[#c8d8e4]">
@@ -414,65 +414,58 @@ export default async function TradeQuotingPage({
             </p>
           </div>
 
+          {/* Embedded per card, same as setup and the quoting steps above.
+              All four of these screens are trade-neutral -- none show an
+              electrician's fields -- so unlike the two sections above,
+              every trade gets the identical four here. "Schedule and
+              crew" is the one loose pairing: there's no calendar screen
+              in the set yet, so it takes the job screen, which is at
+              least the closest thing to "the job you're now running". */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
               <CalendarDays size={20} className="text-[#ffb400] mb-4" />
               <h3 className="font-display text-[1.15rem] mb-2">Schedule and crew</h3>
-              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78]">
+              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">
                 Put the job in the calendar, assign who is on it, and see the week on a map so you are
                 not crossing town twice.
               </p>
+              <div className="w-[150px] mx-auto">
+                <PhoneStage shot={SHOTS.jobDetail} tone="light" />
+              </div>
             </div>
             <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
               <FileText size={20} className="text-[#ffb400] mb-4" />
               <h3 className="font-display text-[1.15rem] mb-2">Dockets and variations</h3>
-              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78]">
+              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">
                 Day works signed on the spot on the client&apos;s phone, and variations accepted in
                 writing before the extra work starts.
               </p>
+              <div className="w-[150px] mx-auto">
+                <PhoneStage shot={SHOTS.docketsSigned} tone="light" />
+              </div>
             </div>
             <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
               <Receipt size={20} className="text-[#ffb400] mb-4" />
               <h3 className="font-display text-[1.15rem] mb-2">Invoice and Xero</h3>
-              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78]">
+              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">
                 Deposits, progress claims and final invoices built from the quote, pushed straight to
                 Xero rather than exported and re-keyed.
               </p>
+              <div className="w-[150px] mx-auto">
+                <PhoneStage shot={SHOTS.xeroExport} tone="light" />
+              </div>
             </div>
             <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
               <Check size={20} className="text-[#ffb400] mb-4" />
               <h3 className="font-display text-[1.15rem] mb-2">Margin, job by job</h3>
-              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78]">
+              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">
                 Hours and materials tracked against what you quoted, so you find out which jobs make
                 money while you can still do something about it.
               </p>
-            </div>
-          </div>
-
-          {/* Sent quote through to signed docket to invoice, as four real
-              screens. The docket one is doing the most work: it is the part
-              competitors either charge extra for or do not have at all. */}
-          <div className="mt-12 pt-10 border-t border-[#e8ecef] grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
-            {hasRealScreens ? (
-              <>
-                <PhoneStage shot={SHOTS.quoteSentDetail} tone="light" />
-                <PhoneStage shot={SHOTS.jobDetail} tone="light" />
-                <PhoneStage shot={SHOTS.docketsSigned} tone="light" />
-                <PhoneStage shot={SHOTS.xeroExport} tone="light" />
-              </>
-            ) : (
-              // Job management, dockets, Xero export and the dashboard are
-              // all trade-neutral -- none of them show an electrician's
-              // fields, so all four are honest here without needing a
-              // sent-quote-detail swap (that one shows COES, an electrical
-              // safety certificate).
-              <>
-                <PhoneStage shot={SHOTS.jobDetail} tone="light" />
-                <PhoneStage shot={SHOTS.docketsSigned} tone="light" />
-                <PhoneStage shot={SHOTS.xeroExport} tone="light" />
+              <div className="w-[150px] mx-auto">
                 <PhoneStage shot={SHOTS.dashboard} tone="light" />
-              </>
-            )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
