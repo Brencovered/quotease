@@ -37,6 +37,13 @@
  * rather than a flat object.
  */
 
+export interface ScreenshotToast {
+  /** Looked up against PhoneStage's own icon map; an unknown key just means no icon renders. */
+  icon: string;
+  title: string;
+  subtitle: string;
+}
+
 export interface Screenshot {
   src: string;
   /** Describes the screen for a reader who cannot see it. */
@@ -45,6 +52,16 @@ export interface Screenshot {
   caption: string;
   width: number;
   height: number;
+  /**
+   * Default content for the floating notification card PhoneStage overlays
+   * on the screenshot. Tied to a real number already visible in the shot
+   * itself -- the $829 on quoteSentDetail is the actual total in that
+   * screenshot, not a made-up figure -- because a toast that contradicts
+   * the screen behind it reads as fake, and one that echoes it reads as
+   * the product surfacing its own result. A page can still override this
+   * per-use by passing its own `toast` prop to PhoneStage.
+   */
+  toast?: ScreenshotToast;
 }
 
 export const SHOTS = {
@@ -54,6 +71,7 @@ export const SHOTS = {
     caption: "Four ways into a quote: camera markup, drawings, a traced plan, or just talking.",
     width: 718,
     height: 1474,
+    toast: { icon: "layers", title: "4 ways in", subtitle: "Camera, plan, drawings or voice" },
   },
   liveCameraMarkup: {
     src: "/product/live-camera-markup.webp",
@@ -61,6 +79,7 @@ export const SHOTS = {
     caption: "Draw a conduit run on the live camera view and it measures itself.",
     width: 257,
     height: 482,
+    toast: { icon: "ruler", title: "0.62m", subtitle: "Conduit run - added to the quote" },
   },
   planMarkup: {
     src: "/product/plan-markup.webp",
@@ -68,6 +87,7 @@ export const SHOTS = {
     caption: "Tap downlights onto the plan. The total moves as you place them.",
     width: 600,
     height: 1330,
+    toast: { icon: "pin", title: "$282", subtitle: "10 downlights placed on the plan" },
   },
   quoteJobPricing: {
     src: "/product/quote-job-pricing.webp",
@@ -75,6 +95,7 @@ export const SHOTS = {
     caption: "Customer type and job size stack into one margin, and it shows its working.",
     width: 706,
     height: 1474,
+    toast: { icon: "percent", title: "18% margin", subtitle: "6% customer + 12% job size" },
   },
   scopeConditions: {
     src: "/product/scope-conditions.webp",
@@ -82,6 +103,7 @@ export const SHOTS = {
     caption: "Tight crawl, moderate access, level 2 connection. The things that blow a job out.",
     width: 714,
     height: 1472,
+    toast: { icon: "dollar", title: "$350", subtitle: "Level 2 connection fee, added" },
   },
   quoteSend: {
     src: "/product/quote-send.webp",
@@ -89,6 +111,7 @@ export const SHOTS = {
     caption: "Priced, itemised and ready to send, with the job description talked in if you prefer.",
     width: 714,
     height: 1474,
+    toast: { icon: "check", title: "$1,181", subtitle: "8 downlights, priced and ready" },
   },
   packages: {
     src: "/product/packages.webp",
@@ -96,6 +119,7 @@ export const SHOTS = {
     caption: "The job you quote most often, saved once and reused in a tap.",
     width: 704,
     height: 1472,
+    toast: { icon: "package", title: "$1,189", subtitle: "10-downlight pack, 8 hrs, one tap" },
   },
   quoteSentDetail: {
     src: "/product/quote-sent-detail.webp",
@@ -103,6 +127,7 @@ export const SHOTS = {
     caption: "What the client sees, plus a nudge when the follow-up is overdue.",
     width: 712,
     height: 1478,
+    toast: { icon: "check", title: "$829", subtitle: "Sent - follow-up overdue 3 days" },
   },
   settingsSiteConditions: {
     src: "/product/settings-site-conditions.webp",
@@ -110,6 +135,7 @@ export const SHOTS = {
     caption: "Your own starting fees per trade, editable on any quote, never fixed.",
     width: 702,
     height: 1470,
+    toast: { icon: "dollar", title: "$350", subtitle: "Starting fee, set once" },
   },
   materials: {
     src: "/product/materials.webp",
@@ -117,6 +143,7 @@ export const SHOTS = {
     caption: "Your supplier price file, searchable, with cost and sell price side by side.",
     width: 646,
     height: 1472,
+    toast: { icon: "package", title: "72 items", subtitle: "Imported from one supplier CSV" },
   },
   pricingTiers: {
     src: "/product/pricing-tiers.webp",
@@ -124,6 +151,7 @@ export const SHOTS = {
     caption: "A markup per customer type, so builder work is not priced like a homeowner.",
     width: 652,
     height: 1478,
+    toast: { icon: "percent", title: "+6%", subtitle: "Residential markup, set once" },
   },
   jobSizeTiers: {
     src: "/product/job-size-tiers.webp",
@@ -131,6 +159,7 @@ export const SHOTS = {
     caption: "Small jobs carry a premium, big ones a discount, without you doing the maths.",
     width: 642,
     height: 1476,
+    toast: { icon: "layers", title: "+12%", subtitle: "Medium job bracket" },
   },
   jobDetail: {
     src: "/product/job-detail.webp",
@@ -138,6 +167,7 @@ export const SHOTS = {
     caption: "Scheduled, in progress, complete, invoiced, with the whole history underneath.",
     width: 654,
     height: 1475,
+    toast: { icon: "check", title: "Paid in full", subtitle: "$8,179 received on this job" },
   },
   docketEntry: {
     src: "/product/docket-entry.webp",
@@ -145,6 +175,7 @@ export const SHOTS = {
     caption: "A day's labour, plant and materials logged on site, ready to be signed.",
     width: 708,
     height: 1476,
+    toast: { icon: "file", title: "$900", subtitle: "Docket total, logged on site" },
   },
   docketsSigned: {
     src: "/product/dockets-signed.webp",
@@ -152,6 +183,7 @@ export const SHOTS = {
     caption: "Signed on the client's phone, timestamped, and ready to invoice.",
     width: 720,
     height: 1430,
+    toast: { icon: "check", title: "Signed", subtitle: "Timestamped, ready to invoice" },
   },
   dayworksRates: {
     src: "/product/dayworks-rates.webp",
@@ -159,6 +191,7 @@ export const SHOTS = {
     caption: "Your usual day rates saved once, picked from a list on every docket.",
     width: 646,
     height: 1478,
+    toast: { icon: "dollar", title: "$900/day", subtitle: "Full day rate, saved once" },
   },
   xeroExport: {
     src: "/product/xero-export.webp",
@@ -166,6 +199,7 @@ export const SHOTS = {
     caption: "Completed jobs out to Xero or MYOB, with what you already sent marked off.",
     width: 594,
     height: 1330,
+    toast: { icon: "refresh", title: "9 exported", subtitle: "Marked off, nothing re-typed" },
   },
   dashboard: {
     src: "/product/dashboard.webp",
@@ -173,6 +207,7 @@ export const SHOTS = {
     caption: "What is out, what came back, and what it actually made you.",
     width: 654,
     height: 1481,
+    toast: { icon: "trending", title: "$2,139 profit", subtitle: "Tracked automatically across jobs" },
   },
   team: {
     src: "/product/team.webp",
@@ -180,6 +215,7 @@ export const SHOTS = {
     caption: "Invite the crew by email and set what each of them can see.",
     width: 648,
     height: 1478,
+    toast: { icon: "users", title: "Invite by email", subtitle: "Set what each person can see" },
   },
   clients: {
     src: "/product/clients.webp",
@@ -187,6 +223,7 @@ export const SHOTS = {
     caption: "Every client with their job history and total, one tap from a new quote.",
     width: 592,
     height: 1332,
+    toast: { icon: "users", title: "$9,415", subtitle: "Two jobs, one client history" },
   },
 } as const;
 

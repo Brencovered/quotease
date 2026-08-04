@@ -24,7 +24,8 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ArrowRight, Check, Mic, PenLine, FileText, Upload, Package, CalendarDays, Receipt, X } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
-import PhoneShot from "@/components/marketing/PhoneShot";
+import PhoneStage from "@/components/marketing/PhoneStage";
+import ComingSoonStage from "@/components/marketing/ComingSoonStage";
 import { SHOTS } from "@/lib/marketing/screenshots";
 import { TRADE_PAGES, getTradePage } from "@/lib/marketing/tradePages";
 
@@ -70,6 +71,18 @@ export default async function TradeQuotingPage({
   if (!page) notFound();
 
   const others = TRADE_PAGES.filter((t) => t.slug !== page.slug);
+
+  // Every screenshot captured so far is from the electrician builder --
+  // downlights, CCEW, level 2 connection fees are visible text in the
+  // actual pixels. That's accurate on this page for electricians and
+  // inaccurate everywhere else, so the other five pages get the subset of
+  // shots that carry no trade-specific text (dashboard, pricing tiers,
+  // dockets, Xero export) plus an honest placeholder where a real capture
+  // doesn't exist yet, rather than a plumber page showing an electrician's
+  // fields. Becomes a per-trade lookup once plumber/roofer/carpenter/
+  // generic-builder captures exist; a single flag is the honest state of
+  // the asset library today.
+  const hasRealScreens = page.slug === "electricians";
 
   return (
     <main className="bg-white text-[#0a1722]">
@@ -245,12 +258,23 @@ export default async function TradeQuotingPage({
               Set your prices once and every quote after that inherits them. Change a markup and it
               applies from the next quote on, not retrospectively to work you have already sent.
             </p>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
-              <PhoneShot shot={SHOTS.materials} tone="light" />
-              <PhoneShot shot={SHOTS.packages} tone="light" />
-              <PhoneShot shot={SHOTS.pricingTiers} tone="light" />
-              <PhoneShot shot={SHOTS.jobSizeTiers} tone="light" />
-            </div>
+            {hasRealScreens ? (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
+                <PhoneStage shot={SHOTS.materials} tone="light" />
+                <PhoneStage shot={SHOTS.packages} tone="light" />
+                <PhoneStage shot={SHOTS.pricingTiers} tone="light" />
+                <PhoneStage shot={SHOTS.jobSizeTiers} tone="light" />
+              </div>
+            ) : (
+              // Materials and packages are real screens, just of an
+              // electrician's pricebook -- wrong trade's items to show
+              // here. Pricing tiers and job size tiers carry no
+              // trade-specific text, so they're honest for any trade.
+              <div className="grid grid-cols-2 gap-5 sm:gap-6 max-w-[500px]">
+                <PhoneStage shot={SHOTS.pricingTiers} tone="light" />
+                <PhoneStage shot={SHOTS.jobSizeTiers} tone="light" />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -289,11 +313,24 @@ export default async function TradeQuotingPage({
               rather than in the hero, so the reader already knows what
               they are looking at. */}
           <div className="mt-12 pt-10 border-t border-[#e8ecef] grid grid-cols-2 lg:grid-cols-5 gap-5 sm:gap-6">
-            <PhoneShot shot={SHOTS.quoteCapture} tone="light" sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 235px" />
-            <PhoneShot shot={SHOTS.planMarkup} tone="light" sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 235px" />
-            <PhoneShot shot={SHOTS.quoteJobPricing} tone="light" sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 235px" />
-            <PhoneShot shot={SHOTS.scopeConditions} tone="light" sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 235px" />
-            <PhoneShot shot={SHOTS.quoteSend} tone="light" sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 235px" />
+            {hasRealScreens ? (
+              <>
+                <PhoneStage shot={SHOTS.quoteCapture} tone="light" />
+                <PhoneStage shot={SHOTS.planMarkup} tone="light" />
+                <PhoneStage shot={SHOTS.quoteJobPricing} tone="light" />
+                <PhoneStage shot={SHOTS.scopeConditions} tone="light" />
+                <PhoneStage shot={SHOTS.quoteSend} tone="light" />
+              </>
+            ) : (
+              // Only the entry menu (quoteCapture) is trade-neutral; the
+              // other four steps are the electrician builder mid-quote,
+              // downlights and all. Rather than four wrong-trade screens
+              // filling the row, one real screen plus an honest gap.
+              <div className="col-span-2 lg:col-span-5 grid grid-cols-2 sm:grid-cols-3 gap-5 sm:gap-6 max-w-[620px]">
+                <PhoneStage shot={SHOTS.quoteCapture} tone="light" />
+                <ComingSoonStage label={`The ${page.trade} builder — screens coming soon`} />
+              </div>
+            )}
           </div>
 
           <div className="mt-10 rounded-2xl bg-[#0a1722] p-6">
@@ -416,10 +453,26 @@ export default async function TradeQuotingPage({
               screens. The docket one is doing the most work: it is the part
               competitors either charge extra for or do not have at all. */}
           <div className="mt-12 pt-10 border-t border-[#e8ecef] grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
-            <PhoneShot shot={SHOTS.quoteSentDetail} tone="light" />
-            <PhoneShot shot={SHOTS.jobDetail} tone="light" />
-            <PhoneShot shot={SHOTS.docketsSigned} tone="light" />
-            <PhoneShot shot={SHOTS.xeroExport} tone="light" />
+            {hasRealScreens ? (
+              <>
+                <PhoneStage shot={SHOTS.quoteSentDetail} tone="light" />
+                <PhoneStage shot={SHOTS.jobDetail} tone="light" />
+                <PhoneStage shot={SHOTS.docketsSigned} tone="light" />
+                <PhoneStage shot={SHOTS.xeroExport} tone="light" />
+              </>
+            ) : (
+              // Job management, dockets, Xero export and the dashboard are
+              // all trade-neutral -- none of them show an electrician's
+              // fields, so all four are honest here without needing a
+              // sent-quote-detail swap (that one shows COES, an electrical
+              // safety certificate).
+              <>
+                <PhoneStage shot={SHOTS.jobDetail} tone="light" />
+                <PhoneStage shot={SHOTS.docketsSigned} tone="light" />
+                <PhoneStage shot={SHOTS.xeroExport} tone="light" />
+                <PhoneStage shot={SHOTS.dashboard} tone="light" />
+              </>
+            )}
           </div>
         </div>
       </div>

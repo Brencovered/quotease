@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Crosshair, Mic, PenTool, FileSearch, type LucideIcon } from "lucide-react";
 import PhoneStage, { type PhoneToast } from "./PhoneStage";
 import type { Screenshot } from "@/lib/marketing/screenshots";
@@ -16,6 +16,11 @@ const ICONS: Record<string, LucideIcon> = {
   "pen-tool": PenTool,
   "file-search": FileSearch,
 };
+
+/** How long each mode stays active before autoplay moves on. */
+const AUTOPLAY_MS = 4800;
+/** How often the progress bar redraws. 20fps is smooth enough for a fill bar and cheap. */
+const TICK_MS = 50;
 
 export interface SwitcherMode {
   key: string;
@@ -36,51 +41,114 @@ export interface SwitcherMode {
  * sheet: same shape repeated four times, nothing pulling focus to any one
  * of them. This picks one thing to show properly instead of four things
  * shown briefly -- a tab strip drives which mode is active, its copy runs
- * as short bullets rather than a paragraph, and the screenshot on the
- * right carries a floating notification card so it reads as the product
- * doing something rather than a photo of a screen.
+ * as short bullets rather than a paragraph, and the screenshot carries a
+ * floating notification card so it reads as the product doing something.
+ *
+ * Autoplay with a per-tab progress bar, the Stripe/Linear pattern: without
+ * it, four buttons that already look clickable didn't read as "this
+ * changes" to a first-time visitor, because nothing demonstrated it. The
+ * bar filling and the mode swapping on its own is what makes "these are
+ * switchable" obvious without anyone needing to read a hint. Manually
+ * clicking a tab jumps there and restarts the cycle from that tab; hovering
+ * or focusing the tab strip pauses it, so it never yanks content away
+ * mid-read. Respects prefers-reduced-motion by not autoplaying at all --
+ * clicking still works, nothing is lost, just nothing moves on its own.
  *
  * Only the active shot is mounted, not all four stacked with visibility
  * toggled, so switching modes triggers a real image request rather than
- * revealing something already downloaded -- a few hundred milliseconds of
- * tab-switch latency traded for not loading three screenshots nobody may
- * ever look at on first paint.
+ * revealing something already downloaded.
  */
 export default function FeatureSwitcher({ modes }: { modes: SwitcherMode[] }) {
   const [active, setActive] = useState(0);
   const [visible, setVisible] = useState(true);
-  const mode = modes[active];
-  const Icon = ICONS[mode.icon];
+  const [progress, setProgress] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [autoplayEnabled, setAutoplayEnabled] = useState(true);
+  // Typed as plain number rather than ReturnType<typeof window.setTimeout>:
+  // this project's tsconfig pulls in @types/node, which overrides the
+  // ambient setTimeout signature to return NodeJS.Timeout even when called
+  // via window.setTimeout. The runtime value is a number regardless; only
+  // the inferred type was wrong.
+  const switchTimer = useRef<number | null>(null);
 
-  function select(i: number) {
-    if (i === active) return;
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setAutoplayEnabled(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!autoplayEnabled || paused) return;
+    const id = window.setInterval(() => {
+      // Clamped, not just incremented: once progress reaches 100 it stays
+      // there until something resets it. Without the clamp, this interval
+      // (which keeps running for the ~140ms fade between select() firing
+      // and the actual setActive) would keep pushing progress past 100 on
+      // every tick, and each of those changes re-fires the effect below,
+      // repeatedly restarting the same 140ms transition and never letting
+      // it complete -- the switcher would visibly stall rather than move
+      // on to the next tab.
+      setProgress((p) => Math.min(p + (TICK_MS / AUTOPLAY_MS) * 100, 100));
+    }, TICK_MS);
+    return () => window.clearInterval(id);
+  }, [autoplayEnabled, paused, active]);
+
+  useEffect(() => {
+    if (progress < 100) return;
+    select((active + 1) % modes.length, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progress]);
+
+  function select(i: number, resetByUser = true) {
+    if (switchTimer.current) window.clearTimeout(switchTimer.current);
+    if (i === active) {
+      if (resetByUser) setProgress(0);
+      return;
+    }
     setVisible(false);
-    window.setTimeout(() => {
+    switchTimer.current = window.setTimeout(() => {
       setActive(i);
       setVisible(true);
+      setProgress(0);
     }, 140);
   }
 
+  const mode = modes[active];
+  const Icon = ICONS[mode.icon];
+
   return (
-    <div className="grid lg:grid-cols-[minmax(0,1fr)_360px] gap-10 lg:gap-16 items-center">
+    <div
+      className="grid lg:grid-cols-[minmax(0,1fr)_360px] gap-10 lg:gap-16 items-center"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocus={() => setPaused(true)}
+      onBlur={() => setPaused(false)}
+    >
       <div>
         <div className="flex flex-wrap gap-2 mb-9" role="tablist" aria-label="Ways to quote on site">
           {modes.map((m, i) => {
             const TabIcon = ICONS[m.icon];
+            const isActive = i === active;
             return (
               <button
                 key={m.key}
                 type="button"
                 role="tab"
-                aria-selected={i === active}
+                aria-selected={isActive}
                 onClick={() => select(i)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13.5px] font-bold transition-colors ${
-                  i === active
+                className={`relative overflow-hidden flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13.5px] font-bold transition-colors ${
+                  isActive
                     ? "bg-[#0a1722] text-white"
                     : "bg-[#f8f9fa] text-[#5a6a78] border border-[#e8ecef] hover:bg-[#eef1f3]"
                 }`}
               >
-                <TabIcon size={16} className={i === active ? "text-[#ffb400]" : "text-[#8a9ba8]"} />
+                {isActive && autoplayEnabled && (
+                  <span
+                    className="absolute left-0 bottom-0 h-[3px] bg-[#ffb400]"
+                    style={{ width: `${progress}%` }}
+                  />
+                )}
+                <TabIcon size={16} className={isActive ? "text-[#ffb400]" : "text-[#8a9ba8]"} />
                 {m.title}
               </button>
             );
