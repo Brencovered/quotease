@@ -13,6 +13,8 @@ import { homepageMeta } from "@/lib/seo/meta";
 import { LEADS_ENABLED } from "@/lib/featureFlags";
 import { createPublicClient } from "@/lib/supabase/public";
 import { TRADE_PAGES } from "@/lib/marketing/tradePages";
+import { SHOTS } from "@/lib/marketing/screenshots";
+import PhoneShot from "@/components/marketing/PhoneShot";
 
 // Rebuild daily. The homepage quoted "196 curated tradie listings" as a
 // hardcoded string while the table held 4,889 -- understating the directory
@@ -175,17 +177,28 @@ export default async function Home() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
+            {/* The one card that gets a screenshot inline: "mark straight onto
+                your screen" is the hardest claim on the page to picture, and
+                the shot of a conduit run drawn on a live camera view with its
+                own measurement explains it faster than the paragraph does. */}
             <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
-              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
-                <Crosshair size={20} className="text-[#ffb400]" />
+              <div className="flex flex-col sm:flex-row gap-6">
+                <div className="flex-1">
+                  <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
+                    <Crosshair size={20} className="text-[#ffb400]" />
+                  </div>
+                  <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">Live on-screen quoting</h3>
+                  <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
+                    Open Swiftscope and mark straight onto your screen what material, work, or zone needs capturing.
+                    Press done - the materials and labour autoload into a quote with your pre-configured pricing.
+                    Press send. That&apos;s it.
+                  </p>
+                  <p className="text-[13px] font-bold text-[#0a1722]">Customers can accept in 30 seconds from send.</p>
+                </div>
+                <div className="sm:w-[175px] sm:shrink-0">
+                  <PhoneShot shot={SHOTS.liveCameraMarkup} size="sm" tone="light" showCaption={false} />
+                </div>
               </div>
-              <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">Live on-screen quoting</h3>
-              <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
-                Open Swiftscope and mark straight onto your screen what material, work, or zone needs capturing.
-                Press done - the materials and labour autoload into a quote with your pre-configured pricing.
-                Press send. That&apos;s it.
-              </p>
-              <p className="text-[13px] font-bold text-[#0a1722]">Customers can accept in 30 seconds from send.</p>
             </div>
 
             <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
@@ -246,11 +259,73 @@ export default async function Home() {
                 </div>
               ))}
             </div>
-            <div className="text-center mt-8">
+            {/* "Everything else you'd expect" is the easiest line on the page
+                to write and the easiest to disbelieve, so three of the less
+                glamorous screens sit under it. Small on purpose: supporting
+                evidence, not another feature pitch. */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 items-start mt-10 pt-8 border-t border-white/10">
+              <PhoneShot shot={SHOTS.clients} size="sm" tone="dark" />
+              <PhoneShot shot={SHOTS.team} size="sm" tone="dark" />
+              <PhoneShot shot={SHOTS.dayworksRates} size="sm" tone="dark" />
+            </div>
+
+            <div className="text-center mt-10">
               <Link href="/features" className="inline-flex items-center gap-1.5 text-[13.5px] font-bold text-[#ffb400] hover:underline">
                 See the full feature list <ArrowRight size={13} />
               </Link>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* SEE IT ─────────────────────────────────────────────────────────
+          Everything above this point is a claim. Tradies have been sold job
+          software before, so the page needs to stop asserting and start
+          showing. Two rows, in the order the work actually happens: win it,
+          then run it. Real screens from the live product, not mockups.
+
+          Portrait shots at true aspect rather than cropped into landscape
+          tiles: the bottom of these screens is where the totals and the
+          signatures are, which is the part worth seeing. */}
+      <div className="bg-[#0a1722] border-b border-[#12212f]">
+        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16">
+          <div className="max-w-[680px] mb-12">
+            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">See it</p>
+            <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.9rem] leading-[0.93] text-white mb-5">
+              This is the actual app,<br />not a mock-up
+            </h2>
+            <p className="text-[16px] leading-[1.7] text-[#8aa4b4]">
+              Every screen below is running Swiftscope on a phone. Same app on the tools, in the ute
+              and at the desk - there is no cut-down mobile version, because the phone is where the
+              work gets quoted.
+            </p>
+          </div>
+
+          <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-6">
+            Winning the job
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 items-start mb-14">
+            <PhoneShot shot={SHOTS.quoteCapture} tone="dark" />
+            <PhoneShot shot={SHOTS.planMarkup} tone="dark" />
+            <PhoneShot shot={SHOTS.quoteJobPricing} tone="dark" />
+          </div>
+
+          <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-6">
+            Running it once you have won it
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 items-start">
+            <PhoneShot shot={SHOTS.jobDetail} tone="dark" />
+            <PhoneShot shot={SHOTS.docketEntry} tone="dark" />
+            <PhoneShot shot={SHOTS.dashboard} tone="dark" />
+          </div>
+
+          <div className="mt-12 flex flex-wrap items-center gap-x-6 gap-y-3">
+            <Link href="/signup" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-7 py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors">
+              Try it on your next quote <ArrowRight size={16} />
+            </Link>
+            <Link href="/features" className="inline-flex items-center gap-1.5 text-[13.5px] font-bold text-[#ffb400] hover:underline">
+              See every feature <ArrowRight size={13} />
+            </Link>
           </div>
         </div>
       </div>

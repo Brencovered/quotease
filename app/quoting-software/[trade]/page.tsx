@@ -24,6 +24,8 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ArrowRight, Check, Mic, PenLine, FileText, Upload, Package, CalendarDays, Receipt, X } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
+import PhoneShot from "@/components/marketing/PhoneShot";
+import { SHOTS } from "@/lib/marketing/screenshots";
 import { TRADE_PAGES, getTradePage } from "@/lib/marketing/tradePages";
 
 export const revalidate = 604800; // 1 week, same cadence as the other SEO pages
@@ -234,6 +236,21 @@ export default async function TradeQuotingPage({
               {page.packageContents}
             </p>
           </div>
+
+          {/* The three screens behind the three steps above. Claims about
+              setup being quick are cheap; showing the actual pricing screens
+              is the part a sceptical tradie can check. */}
+          <div className="mt-12 pt-10 border-t border-[#e8ecef]">
+            <p className="text-[14.5px] leading-[1.7] text-[#5a6a78] max-w-[620px] mb-8">
+              Set your prices once and every quote after that inherits them. Change a markup and it
+              applies from the next quote on, not retrospectively to work you have already sent.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 items-start">
+              <PhoneShot shot={SHOTS.materials} tone="light" />
+              <PhoneShot shot={SHOTS.pricingTiers} tone="light" />
+              <PhoneShot shot={SHOTS.jobSizeTiers} tone="light" />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -264,6 +281,16 @@ export default async function TradeQuotingPage({
                 <p className="text-[14.5px] leading-[1.6] text-[#5a6a78]">{f.detail}</p>
               </div>
             ))}
+          </div>
+
+          {/* The strip that carries the whole page. Everything above is a
+              claim about quoting on site; this is the screen it happens on.
+              Deliberately placed after the four steps rather than in the
+              hero, so the reader already knows what they are looking at. */}
+          <div className="mt-12 pt-10 border-t border-[#e8ecef] grid grid-cols-1 sm:grid-cols-3 gap-8 items-start">
+            <PhoneShot shot={SHOTS.quoteCapture} tone="light" />
+            <PhoneShot shot={SHOTS.planMarkup} tone="light" />
+            <PhoneShot shot={SHOTS.quoteJobPricing} tone="light" />
           </div>
 
           <div className="mt-10 rounded-2xl bg-[#0a1722] p-6">
@@ -380,6 +407,15 @@ export default async function TradeQuotingPage({
                 money while you can still do something about it.
               </p>
             </div>
+          </div>
+
+          {/* Quote to job to signed docket to invoice, as three real screens.
+              The docket one is doing the most work here: it is the part
+              competitors either charge extra for or do not have at all. */}
+          <div className="mt-12 pt-10 border-t border-[#e8ecef] grid grid-cols-1 sm:grid-cols-3 gap-8 items-start">
+            <PhoneShot shot={SHOTS.jobDetail} tone="light" />
+            <PhoneShot shot={SHOTS.docketsSigned} tone="light" />
+            <PhoneShot shot={SHOTS.xeroExport} tone="light" />
           </div>
         </div>
       </div>
