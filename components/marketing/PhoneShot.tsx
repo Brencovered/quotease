@@ -52,17 +52,24 @@ export default function PhoneShot({
   priority?: boolean;
   sizes?: string;
 }) {
+  // The dark bezel is deliberately lighter than the section it sits on.
+  // Painting it #0a1722 matched both the section background and the app's
+  // own header bar, so the top third of every shot was one undifferentiated
+  // navy mass with no phone edge in it at all.
   const bezel =
     tone === "dark"
-      ? "bg-[#0a1722] ring-1 ring-white/10"
-      : "bg-white ring-1 ring-[#e8ecef] shadow-[0_10px_30px_rgba(10,23,34,0.08)]";
+      ? "bg-[#22364a] ring-1 ring-white/15"
+      : "bg-white ring-1 ring-[#dfe5ea] shadow-[0_10px_30px_rgba(10,23,34,0.10)]";
   const captionColour = tone === "dark" ? "text-[#8aa4b4]" : "text-[#5a6a78]";
 
   return (
     <figure className="w-full">
-      <div className={`rounded-[24px] p-1.5 sm:p-2 ${bezel}`}>
+      {/* Radii are concentric: inner = outer minus padding, at each
+          breakpoint. Mismatched radii are what make a frame read as a div
+          with a border rather than as a device. */}
+      <div className={`rounded-[22px] p-1.5 sm:rounded-[26px] sm:p-2 ${bezel}`}>
         <div
-          className="relative w-full overflow-hidden rounded-[17px] bg-[#f8f9fa]"
+          className="relative w-full overflow-hidden rounded-[16px] sm:rounded-[18px] bg-[#f8f9fa] ring-1 ring-black/5"
           style={{ aspectRatio: FRAME }}
         >
           <Image

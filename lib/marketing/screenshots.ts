@@ -88,7 +88,7 @@ export const SHOTS = {
     alt: "Swiftscope send step listing on-site items pulled from a package with quantities and prices, a site items total of $1,181, and a job description field with a record option",
     caption: "Priced, itemised and ready to send, with the job description talked in if you prefer.",
     width: 714,
-    height: 1480,
+    height: 1474,
   },
   packages: {
     src: "/product/packages.webp",
@@ -102,7 +102,7 @@ export const SHOTS = {
     alt: "A sent Swiftscope quote for $829 showing scope and cost, the site conditions considered, labour and materials split, accept and decline actions, and a follow-up overdue by three days",
     caption: "What the client sees, plus a nudge when the follow-up is overdue.",
     width: 712,
-    height: 1480,
+    height: 1478,
   },
   settingsSiteConditions: {
     src: "/product/settings-site-conditions.webp",
@@ -123,7 +123,7 @@ export const SHOTS = {
     alt: "Customer pricing tiers screen showing four tiers including residential at six percent markup and sub contracting at fifteen percent",
     caption: "A markup per customer type, so builder work is not priced like a homeowner.",
     width: 652,
-    height: 1480,
+    height: 1478,
   },
   jobSizeTiers: {
     src: "/product/job-size-tiers.webp",
@@ -137,7 +137,7 @@ export const SHOTS = {
     alt: "Swiftscope job screen showing progress from scheduled to invoiced, tasks, dayworks dockets and a timeline of the quote being accepted and paid",
     caption: "Scheduled, in progress, complete, invoiced, with the whole history underneath.",
     width: 654,
-    height: 1476,
+    height: 1475,
   },
   docketEntry: {
     src: "/product/docket-entry.webp",
@@ -158,7 +158,7 @@ export const SHOTS = {
     alt: "Dayworks rates screen listing a full day and half day labour rate and an excavator plant rate",
     caption: "Your usual day rates saved once, picked from a list on every docket.",
     width: 646,
-    height: 1480,
+    height: 1478,
   },
   xeroExport: {
     src: "/product/xero-export.webp",
@@ -172,7 +172,7 @@ export const SHOTS = {
     alt: "Swiftscope dashboard showing a quote pipeline of draft, sent, accepted, declined and paid quotes, a profit snapshot and time saved on quoting",
     caption: "What is out, what came back, and what it actually made you.",
     width: 654,
-    height: 1484,
+    height: 1481,
   },
   team: {
     src: "/product/team.webp",
