@@ -177,10 +177,12 @@ export default async function Home() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
-            {/* The one card that gets a screenshot inline: "mark straight onto
-                your screen" is the hardest claim on the page to picture, and
-                the shot of a conduit run drawn on a live camera view with its
-                own measurement explains it faster than the paragraph does. */}
+            {/* Each of the four ways in gets the screen it actually happens
+                on. These are the claims hardest to picture from prose -- a
+                conduit run measuring itself, a job description you can talk
+                instead of type -- and a paragraph does not land the way the
+                screen does. Fixed-width shot column so all four cards keep
+                the same shape. */}
             <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
               <div className="flex flex-col sm:flex-row gap-6">
                 <div className="flex-1">
@@ -196,46 +198,67 @@ export default async function Home() {
                   <p className="text-[13px] font-bold text-[#0a1722]">Customers can accept in 30 seconds from send.</p>
                 </div>
                 <div className="sm:w-[175px] sm:shrink-0">
-                  <PhoneShot shot={SHOTS.liveCameraMarkup} size="sm" tone="light" showCaption={false} />
+                  <PhoneShot shot={SHOTS.liveCameraMarkup} tone="light" showCaption={false} sizes="(max-width: 640px) 60vw, 175px" />
                 </div>
               </div>
             </div>
 
             <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
-              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
-                <Mic size={20} className="text-[#ffb400]" />
+              <div className="flex flex-col sm:flex-row gap-6">
+                <div className="flex-1">
+                  <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
+                    <Mic size={20} className="text-[#ffb400]" />
+                  </div>
+                  <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">AI voice quote generator</h3>
+                  <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
+                    Walk the job and talk to Swiftscope - describe the work and materials needed. Save, and a quote
+                    generates automatically using your own pricing and materials. Not your thing on site? Record it
+                    on the drive home instead - same result either way.
+                  </p>
+                  <p className="text-[13px] font-bold text-[#0a1722]">Customers can accept in 30 seconds from end of recording.</p>
+                </div>
+                <div className="sm:w-[175px] sm:shrink-0">
+                  <PhoneShot shot={SHOTS.quoteSend} tone="light" showCaption={false} sizes="(max-width: 640px) 60vw, 175px" />
+                </div>
               </div>
-              <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">AI voice quote generator</h3>
-              <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
-                Walk the job and talk to Swiftscope - describe the work and materials needed. Save, and a quote
-                generates automatically using your own pricing and materials. Not your thing on site? Record it
-                on the drive home instead - same result either way.
-              </p>
-              <p className="text-[13px] font-bold text-[#0a1722]">Customers can accept in 30 seconds from end of recording.</p>
             </div>
 
             <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
-              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
-                <PenTool size={20} className="text-[#ffb400]" />
+              <div className="flex flex-col sm:flex-row gap-6">
+                <div className="flex-1">
+                  <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
+                    <PenTool size={20} className="text-[#ffb400]" />
+                  </div>
+                  <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">Plan &amp; drawing markup</h3>
+                  <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
+                    Upload a plan or drawing. Drop markers configured to your materials, draw lines for cable or pipe
+                    runs, or block out work zones. Press save - every markup syncs straight into a quote, quantities
+                    and costs already calculated.
+                  </p>
+                </div>
+                <div className="sm:w-[175px] sm:shrink-0">
+                  <PhoneShot shot={SHOTS.planMarkup} tone="light" showCaption={false} sizes="(max-width: 640px) 60vw, 175px" />
+                </div>
               </div>
-              <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">Plan &amp; drawing markup</h3>
-              <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
-                Upload a plan or drawing. Drop markers configured to your materials, draw lines for cable or pipe
-                runs, or block out work zones. Press save - every markup syncs straight into a quote, quantities
-                and costs already calculated.
-              </p>
             </div>
 
             <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
-              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
-                <FileSearch size={20} className="text-[#ffb400]" />
+              <div className="flex flex-col sm:flex-row gap-6">
+                <div className="flex-1">
+                  <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
+                    <FileSearch size={20} className="text-[#ffb400]" />
+                  </div>
+                  <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">AI plan reading</h3>
+                  <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
+                    Plans can be exhaustive and time-consuming to read properly. Upload the plan, direct what needs
+                    reading and calculating for the job, and save straight to a quote.
+                  </p>
+                  <p className="text-[12.5px] text-[#8a9ba8] italic">* AI output should always be checked by a qualified person before sending.</p>
+                </div>
+                <div className="sm:w-[175px] sm:shrink-0">
+                  <PhoneShot shot={SHOTS.quoteCapture} tone="light" showCaption={false} sizes="(max-width: 640px) 60vw, 175px" />
+                </div>
               </div>
-              <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">AI plan reading</h3>
-              <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
-                Plans can be exhaustive and time-consuming to read properly. Upload the plan, direct what needs
-                reading and calculating for the job, and save straight to a quote.
-              </p>
-              <p className="text-[12.5px] text-[#8a9ba8] italic">* AI output should always be checked by a qualified person before sending.</p>
             </div>
           </div>
 
@@ -263,11 +286,11 @@ export default async function Home() {
                 to write and the easiest to disbelieve, so three of the less
                 glamorous screens sit under it. Small on purpose: supporting
                 evidence, not another feature pitch. */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 items-start mt-10 pt-8 border-t border-white/10">
-              <PhoneShot shot={SHOTS.clients} size="sm" tone="dark" />
-              <PhoneShot shot={SHOTS.team} size="sm" tone="dark" />
-              <PhoneShot shot={SHOTS.dayworksRates} size="sm" tone="dark" />
-              <PhoneShot shot={SHOTS.settingsSiteConditions} size="sm" tone="dark" />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6 mt-10 pt-8 border-t border-white/10">
+              <PhoneShot shot={SHOTS.clients} tone="dark" sizes="(max-width: 640px) 45vw, 250px" />
+              <PhoneShot shot={SHOTS.team} tone="dark" sizes="(max-width: 640px) 45vw, 250px" />
+              <PhoneShot shot={SHOTS.dayworksRates} tone="dark" sizes="(max-width: 640px) 45vw, 250px" />
+              <PhoneShot shot={SHOTS.settingsSiteConditions} tone="dark" sizes="(max-width: 640px) 45vw, 250px" />
             </div>
 
             <div className="text-center mt-10">
@@ -303,19 +326,19 @@ export default async function Home() {
           </div>
 
           <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-6">
-            Winning the job
+            Pricing the job
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 items-start mb-14">
-            <PhoneShot shot={SHOTS.quoteCapture} tone="dark" />
-            <PhoneShot shot={SHOTS.planMarkup} tone="dark" />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6 mb-14">
+            <PhoneShot shot={SHOTS.materials} tone="dark" />
+            <PhoneShot shot={SHOTS.packages} tone="dark" />
             <PhoneShot shot={SHOTS.quoteJobPricing} tone="dark" />
-            <PhoneShot shot={SHOTS.quoteSend} tone="dark" />
+            <PhoneShot shot={SHOTS.scopeConditions} tone="dark" />
           </div>
 
           <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-6">
             Running it once you have won it
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 items-start">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
             <PhoneShot shot={SHOTS.quoteSentDetail} tone="dark" />
             <PhoneShot shot={SHOTS.jobDetail} tone="dark" />
             <PhoneShot shot={SHOTS.docketEntry} tone="dark" />

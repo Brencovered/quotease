@@ -4,52 +4,53 @@ import type { Screenshot } from "@/lib/marketing/screenshots";
 /**
  * components/marketing/PhoneShot.tsx
  * ----------------------------------
- * Renders one product screenshot at its true aspect ratio inside a phone
- * bezel, with the caption underneath.
+ * One product screenshot in a phone bezel, with the caption underneath.
  *
- * Two decisions worth keeping:
+ * Every shot renders at exactly the same size. That is the whole point of
+ * this component and it is worth spelling out, because the obvious
+ * implementation gets it wrong.
  *
- *  - No `fill` and no `object-cover`. Every screenshot in the set is
- *    portrait at roughly 1:2.2. Forcing those into a landscape or 4:5 box
- *    with object-cover silently deletes the bottom of the screen, which is
- *    where the totals, the signatures and the buttons are. Intrinsic
- *    width/height plus `h-auto` shows the whole screen and still reserves
- *    the correct space, so there is no layout shift.
+ * The captures come off a phone at slightly different sizes: widths run
+ * 592 to 720, heights 1330 to 1484, so aspect ratios range from 0.435 to
+ * 0.503. Rendering each at its own true ratio inside a grid gives four
+ * phones of four different heights, with four captions starting at four
+ * different points down the page. It reads as broken rather than as
+ * faithful to the source.
  *
- *  - Width is capped, not stretched. A 1:2.2 image given a full desktop
- *    column would be 800px tall and push everything else off the screen.
- *    The `size` prop caps it so a row of three fits in a normal section.
+ * So: a fixed-ratio box, `fill`, and a top-anchored cover crop. FRAME is
+ * the *widest* ratio in the set, which guarantees every crop is vertical
+ * rather than horizontal, so nothing is sliced off the sides. What comes
+ * off the bottom is at most about 14%, and the bottom of these screens is
+ * the app's own navigation bar: repeated furniture on every capture,
+ * carrying no information.
+ *
+ * A future capture wider than FRAME would start cropping at the sides
+ * instead, so widen FRAME rather than letting that happen quietly.
+ *
+ * Width is deliberately not set here. The parent grid decides how wide a
+ * phone is, so the column edges line up with the heading and body copy
+ * above them instead of each phone floating centred in its own column.
  *
  * Server component: no state, no handlers, so it stays out of the client
  * bundle.
  */
 
-const SIZE = {
-  sm: "max-w-[190px]",
-  md: "max-w-[250px]",
-  lg: "max-w-[310px]",
-} as const;
-
-/** Rough CSS width at each size, so the browser picks a sane candidate. */
-const SIZES_ATTR = {
-  sm: "190px",
-  md: "(max-width: 640px) 60vw, 250px",
-  lg: "(max-width: 640px) 75vw, 310px",
-} as const;
+/** Widest source ratio in the set, rounded up. See note above. */
+const FRAME = "101 / 200";
 
 export default function PhoneShot({
   shot,
-  size = "md",
   tone = "dark",
   showCaption = true,
   priority = false,
+  sizes = "(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 300px",
 }: {
   shot: Screenshot;
-  size?: keyof typeof SIZE;
   /** Bezel and caption colour. Pick the one that contrasts the section. */
   tone?: "dark" | "light";
   showCaption?: boolean;
   priority?: boolean;
+  sizes?: string;
 }) {
   const bezel =
     tone === "dark"
@@ -58,20 +59,24 @@ export default function PhoneShot({
   const captionColour = tone === "dark" ? "text-[#8aa4b4]" : "text-[#5a6a78]";
 
   return (
-    <figure className={`w-full ${SIZE[size]} mx-auto`}>
-      <div className={`rounded-[26px] p-2 ${bezel}`}>
-        <Image
-          src={shot.src}
-          alt={shot.alt}
-          width={shot.width}
-          height={shot.height}
-          sizes={SIZES_ATTR[size]}
-          priority={priority}
-          className="w-full h-auto block rounded-[18px]"
-        />
+    <figure className="w-full">
+      <div className={`rounded-[24px] p-1.5 sm:p-2 ${bezel}`}>
+        <div
+          className="relative w-full overflow-hidden rounded-[17px] bg-[#f8f9fa]"
+          style={{ aspectRatio: FRAME }}
+        >
+          <Image
+            src={shot.src}
+            alt={shot.alt}
+            fill
+            sizes={sizes}
+            priority={priority}
+            className="object-cover object-top"
+          />
+        </div>
       </div>
       {showCaption && (
-        <figcaption className={`mt-3.5 text-[13.5px] leading-[1.55] ${captionColour}`}>
+        <figcaption className={`mt-3 text-[13px] leading-[1.5] ${captionColour}`}>
           {shot.caption}
         </figcaption>
       )}

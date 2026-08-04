@@ -3,7 +3,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
-import { FEATURES_GRID, getFeatureBySlug, isPortraitShot } from "@/lib/marketing/features-grid-data";
+import { FEATURES_GRID, getFeatureBySlug } from "@/lib/marketing/features-grid-data";
 
 /** Renders `**bold**` segments in a string as <strong>, everything else as plain text */
 function renderEmphasis(text: string) {
@@ -86,13 +86,13 @@ export default async function FeatureDetailPage({ params }: { params: Promise<{ 
                 </Link>
               </div>
             </div>
-            <div className={`relative w-full overflow-hidden rounded-2xl bg-white/5 ${isPortraitShot(feature.heroImage || feature.image) ? "aspect-[4/5]" : "aspect-[3/2]"}`}>
+            <div className={`relative w-full overflow-hidden rounded-2xl bg-white/5 ${(feature.heroImage || feature.image).startsWith("/marketing/") ? "aspect-[4/5]" : "aspect-[3/2]"}`}>
               <Image
                 src={feature.heroImage || feature.image}
                 alt={feature.heroImageAlt || feature.imageAlt}
                 fill
                 sizes="(max-width: 768px) 100vw, 50vw"
-                className="object-cover object-top"
+                className="object-cover"
                 priority
               />
             </div>
@@ -217,13 +217,13 @@ export default async function FeatureDetailPage({ params }: { params: Promise<{ 
                   href={`/features/${r.slug}`}
                   className="group block rounded-2xl border bg-white border-[#e8ecef] overflow-hidden transition-shadow hover:shadow-lg"
                 >
-                  <div className={`relative w-full overflow-hidden bg-[#0a1722] ${isPortraitShot(r.image) ? "aspect-[4/5]" : "aspect-[3/2]"}`}>
+                  <div className={`relative w-full overflow-hidden bg-[#0a1722] ${r.image.startsWith("/marketing/") ? "aspect-[4/5]" : "aspect-[3/2]"}`}>
                     <Image
                       src={r.image}
                       alt={r.imageAlt}
                       fill
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      className="object-cover object-top transition-transform duration-300 group-hover:scale-105"
+                      className="object-cover transition-transform duration-300 group-hover:scale-105"
                     />
                   </div>
                   <div className="p-5">

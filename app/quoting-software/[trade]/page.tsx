@@ -159,23 +159,14 @@ export default async function TradeQuotingPage({
                   : "Line items and units you define yourself."}
               </p>
             </div>
-            {/* The screenshot sits with the list rather than in its own strip:
-                access and site conditions are the abstract half of this
-                argument, and they stop being abstract once you can see
-                "tight crawl" and a $350 connection fee on the screen. */}
-            <div className="flex flex-col lg:flex-row gap-10">
-              <ul className="flex-1 grid sm:grid-cols-2 gap-x-8 gap-y-2.5 self-start">
-                {page.prices.map((item) => (
-                  <li key={item} className="flex gap-2.5 items-start">
-                    <Check size={16} className="text-[#ffb400] mt-[3px] shrink-0" />
-                    <span className="text-[14.5px] leading-[1.55] text-[#0a1722]">{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <div className="lg:w-[250px] lg:shrink-0">
-                <PhoneShot shot={SHOTS.scopeConditions} tone="light" />
-              </div>
-            </div>
+            <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-2.5">
+              {page.prices.map((item) => (
+                <li key={item} className="flex gap-2.5 items-start">
+                  <Check size={16} className="text-[#ffb400] mt-[3px] shrink-0" />
+                  <span className="text-[14.5px] leading-[1.55] text-[#0a1722]">{item}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </div>
@@ -254,7 +245,7 @@ export default async function TradeQuotingPage({
               Set your prices once and every quote after that inherits them. Change a markup and it
               applies from the next quote on, not retrospectively to work you have already sent.
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 items-start">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
               <PhoneShot shot={SHOTS.materials} tone="light" />
               <PhoneShot shot={SHOTS.packages} tone="light" />
               <PhoneShot shot={SHOTS.pricingTiers} tone="light" />
@@ -293,15 +284,16 @@ export default async function TradeQuotingPage({
             ))}
           </div>
 
-          {/* The strip that carries the whole page: the four steps above, as
-              the four screens they actually are. Deliberately placed after
-              the copy rather than in the hero, so the reader already knows
-              what they are looking at. */}
-          <div className="mt-12 pt-10 border-t border-[#e8ecef] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 items-start">
-            <PhoneShot shot={SHOTS.quoteCapture} tone="light" />
-            <PhoneShot shot={SHOTS.planMarkup} tone="light" />
-            <PhoneShot shot={SHOTS.quoteJobPricing} tone="light" />
-            <PhoneShot shot={SHOTS.quoteSend} tone="light" />
+          {/* The strip that carries the whole page: the wizard, in order,
+              as the five screens it actually is. Placed after the copy
+              rather than in the hero, so the reader already knows what
+              they are looking at. */}
+          <div className="mt-12 pt-10 border-t border-[#e8ecef] grid grid-cols-2 lg:grid-cols-5 gap-5 sm:gap-6">
+            <PhoneShot shot={SHOTS.quoteCapture} tone="light" sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 235px" />
+            <PhoneShot shot={SHOTS.planMarkup} tone="light" sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 235px" />
+            <PhoneShot shot={SHOTS.quoteJobPricing} tone="light" sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 235px" />
+            <PhoneShot shot={SHOTS.scopeConditions} tone="light" sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 235px" />
+            <PhoneShot shot={SHOTS.quoteSend} tone="light" sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 235px" />
           </div>
 
           <div className="mt-10 rounded-2xl bg-[#0a1722] p-6">
@@ -423,7 +415,7 @@ export default async function TradeQuotingPage({
           {/* Sent quote through to signed docket to invoice, as four real
               screens. The docket one is doing the most work: it is the part
               competitors either charge extra for or do not have at all. */}
-          <div className="mt-12 pt-10 border-t border-[#e8ecef] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 items-start">
+          <div className="mt-12 pt-10 border-t border-[#e8ecef] grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
             <PhoneShot shot={SHOTS.quoteSentDetail} tone="light" />
             <PhoneShot shot={SHOTS.jobDetail} tone="light" />
             <PhoneShot shot={SHOTS.docketsSigned} tone="light" />

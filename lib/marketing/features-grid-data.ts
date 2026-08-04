@@ -81,10 +81,10 @@ export const FEATURES_GRID: FeatureGridItem[] = [
     replaces: "Fergus / Tradify",
     label: "Job management",
     note: "Quotes, jobs, scheduling, variations, job costing. All in one place, all on your phone.",
-    image: "/product/job-detail.webp",
-    imageAlt: "Swiftscope job screen showing progress from scheduled to invoiced, tasks, dayworks dockets and a timeline of the quote being accepted and paid",
-    heroImage: "/product/dockets-signed.webp",
-    heroImageAlt: "Dayworks dockets on a job, two sent for signature and two signed by the site contact and marked ready to invoice",
+    image: "/marketing/job-management-schedule.png",
+    imageAlt: "Swiftscope Schedule screen showing a month calendar of jobs and follow-ups",
+    heroImage: "/marketing/job-management-jobslist.png",
+    heroImageAlt: "Swiftscope Jobs screen showing job value, amount still owing, estimated profit, and active jobs in progress",
     heroTitle: "Everything about a job, in one place",
     heroSubtitle: "Quotes, jobs, scheduling, variations and costing together",
     valueStatement: "One board that carries a job from first quote to final invoice, so nothing gets lost between apps or forgotten in a notebook on the dash.",
@@ -125,10 +125,10 @@ export const FEATURES_GRID: FeatureGridItem[] = [
     replaces: "ServiceM8",
     label: "Mobile quoting",
     note: "Trade-specific quote builder on your phone. Send the quote before you leave the driveway.",
-    image: "/product/quote-capture.webp",
-    imageAlt: "Swiftscope quote capture screen with options for live site markup, uploading drawings, tracing over a floor plan and recording a voice note",
-    heroImage: "/product/quote-job-pricing.webp",
-    heroImageAlt: "Swiftscope quote builder job step with customer type set to residential at six percent, job size set to medium at twelve percent, and an effective margin of eighteen percent",
+    image: "/marketing/mobile-quoting-quote-builder.png",
+    imageAlt: "Swiftscope quote builder screen showing labour, materials and on-site items, with two tradies reviewing it on site",
+    heroImage: "/marketing/mobile-quoting-quotes-list.png",
+    heroImageAlt: "Swiftscope Quotes screen showing follow-up reminders and quote statuses",
     heroTitle: "Quote before you leave the driveway",
     heroSubtitle: "A trade-specific quote builder that lives on your phone",
     valueStatement: "Build and send a proper quote before you have even packed the ute back up. Numbers calculated live, in fields built for your trade, not a generic form.",
@@ -169,8 +169,8 @@ export const FEATURES_GRID: FeatureGridItem[] = [
     replaces: "GroundPlan",
     label: "Drawing markup",
     note: "Upload site plans, draw cable runs or pipe routes, count items. Costs link to your quote.",
-    image: "/product/plan-markup.webp",
-    imageAlt: "Floor plan uploaded to Swiftscope with ten numbered downlights placed on it and a running labour and materials total above",
+    image: "/marketing/drawing-markup-floorplan.png",
+    imageAlt: "Swiftscope drawing markup screen showing numbered downlight points placed on a floor plan",
     heroTitle: "Mark up a plan, get a priced quote",
     heroSubtitle: "Upload a drawing, click to count items, costs flow straight through",
     valueStatement: "Turn a floor plan into a priced quote by working through it once. No separate takeoff step, no re-keying numbers into a different tool.",
@@ -211,10 +211,10 @@ export const FEATURES_GRID: FeatureGridItem[] = [
     replaces: "SimPro",
     label: "Job costing",
     note: "Track actual hours and materials against what you quoted. Know your real margin on every job.",
-    image: "/product/materials.webp",
-    imageAlt: "Swiftscope materials catalogue with 72 items imported by CSV, searched for downlights, each showing cost price and sell price at residential markup",
-    heroImage: "/product/packages.webp",
-    heroImageAlt: "Swiftscope packages list showing a ten downlight install pack, a five downlight quote and a kitchen lighting package, each with item counts, estimated hours and price",
+    image: "/marketing/job-costing-materials.png",
+    imageAlt: "Swiftscope Materials screen showing the pricing catalog with search and supplier filters",
+    heroImage: "/marketing/job-costing-packages.png",
+    heroImageAlt: "Swiftscope Packages screen showing reusable priced quote templates",
     heroTitle: "Know your real margin on every job",
     heroSubtitle: "Actual hours and materials, tracked against what you quoted",
     valueStatement: "See exactly what a job earned the moment it wraps up, not months later when the annual numbers don't quite add up.",
@@ -255,8 +255,8 @@ export const FEATURES_GRID: FeatureGridItem[] = [
     replaces: "Xero",
     label: "Xero live sync",
     note: "Swiftscope integrates with Xero. Accepted quotes push as invoices automatically - no double entry.",
-    image: "/product/xero-export.webp",
-    imageAlt: "Export to Xero or MYOB screen listing completed jobs with invoice numbers, amounts and the date each was previously exported",
+    image: "/marketing/xero-sync-export.png",
+    imageAlt: "Swiftscope Export to Xero / MYOB screen showing job export filters and a list of exported invoices",
     heroTitle: "Your books, sorted without re-typing anything",
     heroSubtitle: "Accepted quotes push straight into Xero as invoices",
     valueStatement: "An accepted quote becomes an invoice in Xero automatically, so your books match what actually happened on site without you touching a keyboard twice.",
@@ -292,15 +292,4 @@ export const FEATURES_GRID: FeatureGridItem[] = [
 
 export function getFeatureBySlug(slug: string) {
   return FEATURES_GRID.find((f) => f.slug === slug);
-}
-
-/**
- * Product screenshots are portrait phone captures at roughly 1:2.2, not
- * landscape photography. They need a taller box, and the crop has to be
- * anchored to the top of the screen: centred cropping cuts the app header
- * off the top and the totals off the bottom, leaving a strip of middle that
- * identifies nothing. Photography (`/trades/*`) keeps the landscape box.
- */
-export function isPortraitShot(src: string) {
-  return src.startsWith("/marketing/") || src.startsWith("/product/");
 }
