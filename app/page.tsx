@@ -4,7 +4,7 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import {
   Home as HomeIcon, Briefcase, CheckCircle, ArrowRight,
-  Crosshair, Mic, PenTool, FileSearch, ListChecks, TrendingUp,
+  ListChecks, TrendingUp,
   CalendarClock, FileText, Users2, RefreshCw,
 } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
@@ -183,7 +183,7 @@ export default async function Home() {
             modes={[
               {
                 key: "camera",
-                icon: Crosshair,
+                icon: "crosshair",
                 title: "Live on-screen quoting",
                 body: "Open Swiftscope and mark straight onto your screen what material, work, or zone needs capturing. Press done - the materials and labour autoload into a quote with your pre-configured pricing. Press send. That's it.",
                 pullLine: "Customers can accept in 30 seconds from send.",
@@ -191,7 +191,7 @@ export default async function Home() {
               },
               {
                 key: "voice",
-                icon: Mic,
+                icon: "mic",
                 title: "AI voice quote generator",
                 body: "Walk the job and talk to Swiftscope - describe the work and materials needed. Save, and a quote generates automatically using your own pricing and materials. Not your thing on site? Record it on the drive home instead - same result either way.",
                 pullLine: "Customers can accept in 30 seconds from end of recording.",
@@ -199,7 +199,7 @@ export default async function Home() {
               },
               {
                 key: "plan",
-                icon: PenTool,
+                icon: "pen-tool",
                 title: "Plan & drawing markup",
                 body: "Upload a plan or drawing. Drop markers configured to your materials, draw lines for cable or pipe runs, or block out work zones. Press save - every markup syncs straight into a quote, quantities and costs already calculated.",
                 pullLine: "Every marked zone becomes a priced line, automatically.",
@@ -207,7 +207,7 @@ export default async function Home() {
               },
               {
                 key: "ai-read",
-                icon: FileSearch,
+                icon: "file-search",
                 title: "AI plan reading",
                 body: "Plans can be exhaustive and time-consuming to read properly. Upload the plan, direct what needs reading and calculating for the job, and save straight to a quote.",
                 pullLine: "Hand it a plan instead of reading one yourself.",
