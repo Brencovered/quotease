@@ -34,19 +34,21 @@ const TOAST_ICONS: Record<string, LucideIcon> = {
  * pinned over its top-left corner.
  *
  * Both the phone and the toast are sized as percentages of the stage,
- * not fixed pixels. The first version used fixed widths for both --
- * `max-w-[230px]` on the phone, `w-[195px] sm:w-[210px]` on the toast --
- * which held up in the wide single-item columns it was built and checked
- * in, and broke as soon as a narrower grid column used it: a
- * position:absolute element with a fixed pixel width doesn't shrink with
- * its parent, so in a two-column strip the toast rendered at its full
- * fixed size regardless of how much narrower the actual column was,
- * overflowing the stage and dwarfing the phone underneath it -- visually
- * backwards from a small accent card on a dominant screenshot. Percentage
- * widths resolve against the stage's actual rendered size (the nearest
- * positioned ancestor, which is this component's own wrapper), so toast
- * and phone now scale together and the proportion between them holds at
- * any column width, narrow or wide.
+ * not fixed pixels, so they scale together at any column width. That
+ * fixed the disproportion bug from the previous version. A second,
+ * separate bug surfaced after that: PhoneStage's own root div had no
+ * explicit width, which is fine as a normal block child (it fills
+ * whatever its parent gives it) but breaks the moment PhoneStage is used
+ * as a *direct grid item* -- CSS Grid items default to `min-width: auto`,
+ * which for an item containing image content can resist shrinking below
+ * the content's own preferred size, overriding the grid's `stretch`
+ * behaviour and letting the item overflow its column instead of filling
+ * it. That's exactly what happened where two PhoneStage instances sat
+ * directly inside a `grid-cols-2` -- each rendered near its own max-width
+ * cap regardless of how narrow the actual column was, spilling out of
+ * the card. `w-full min-w-0` on the root makes PhoneStage behave
+ * correctly in both contexts: it fills a block parent as before, and it
+ * now actually stretches to its grid track instead of resisting it.
  *
  * The pulsing dot is the only actual motion on an otherwise static image,
  * and it's cheap: no animation library, just Tailwind's built-in ping.
@@ -65,7 +67,7 @@ export default function PhoneStage({
   const stageBg = tone === "dark" ? "bg-white/[0.04] border border-white/10" : "bg-[#f3f5f6]";
 
   return (
-    <div className={`relative rounded-[28px] ${stageBg} pt-10 pb-6 px-6`}>
+    <div className={`relative w-full min-w-0 rounded-[28px] ${stageBg} pt-10 pb-6 px-6`}>
       <div className="mx-auto w-[82%] max-w-[250px]">
         <PhoneShot shot={shot} tone={tone} showCaption={false} sizes="(max-width: 1024px) 45vw, 250px" />
       </div>

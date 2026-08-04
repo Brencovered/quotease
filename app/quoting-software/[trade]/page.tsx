@@ -224,7 +224,7 @@ export default async function TradeQuotingPage({
               screenshot for any trade (no CSV-import screen in the set);
               02 Bundle only has one on the electrician page, since the
               packages screen shown is an electrician's downlight packs. */}
-          <div className="grid sm:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-3 gap-4 items-start">
             <div className="bg-white rounded-2xl border border-[#e8ecef] p-6">
               <div className="flex items-center gap-2.5 mb-3">
                 <Upload size={17} className="text-[#ffb400]" />
@@ -309,7 +309,7 @@ export default async function TradeQuotingPage({
               one screen in this sequence that carries no trade-specific
               text -- the other three stay text-only rather than showing
               an electrician mid-quote. */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
             {page.quotingFlow.map((f, i) => {
               const shot = hasRealScreens
                 ? [SHOTS.quoteCapture, SHOTS.planMarkup, SHOTS.quoteJobPricing, SHOTS.quoteSend][i]
@@ -421,7 +421,7 @@ export default async function TradeQuotingPage({
               crew" is the one loose pairing: there's no calendar screen
               in the set yet, so it takes the job screen, which is at
               least the closest thing to "the job you're now running". */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
             <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
               <CalendarDays size={20} className="text-[#ffb400] mb-4" />
               <h3 className="font-display text-[1.15rem] mb-2">Schedule and crew</h3>
