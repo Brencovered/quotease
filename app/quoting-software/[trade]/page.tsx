@@ -79,30 +79,49 @@ export default async function TradeQuotingPage({
   // (a builder that knows your trade), so screens are looked up per trade
   // here rather than shared. quoteCapture is the one genuine exception --
   // it's the entry menu (camera, plan, drawings, voice), which has no
-  // trade-specific text and is honest to show on any trade's page.
+  // trade-specific text and is honest to show on any trade's page, so it
+  // anchors wizard step 1 by default below.
   //
-  // Roofers and the two generic-builder trades don't have captures yet,
-  // so their entries are null and those cards stay text-only rather than
-  // showing a different trade's fields or a placeholder apologising for
-  // the gap. page.prices and page.quotingFlow already carry the
-  // trade-specific detail in words regardless of what's on screen.
+  // wizardShots is an explicit 4-slot array per trade rather than an
+  // inferred "send is always step 4" rule, because that rule breaks for
+  // roofers: their one real wizard-relevant capture (Standard/Premium
+  // pricing plus whirlybird and skylight extras) is the job step, which
+  // is step 3 ("Runs and extras") in this trade's own quotingFlow copy,
+  // not step 4. Roofers and the two generic-builder trades don't have a
+  // captured send screen at all yet, so that slot stays null for them --
+  // no placeholder, the card just stays text-only.
   const TRADE_SCREENS: Record<
     string,
-    { materials: Screenshot | null; packages: Screenshot | null; send: Screenshot | null }
+    { materials: Screenshot | null; packages: Screenshot | null; wizardShots: (Screenshot | null)[] }
   > = {
-    electricians: { materials: SHOTS.materials, packages: SHOTS.packages, send: SHOTS.quoteSend },
-    plumbers: { materials: SHOTS.plumberMaterials, packages: SHOTS.plumberPackages, send: SHOTS.plumberSend },
-    carpenters: { materials: SHOTS.carpenterMaterials, packages: SHOTS.carpenterPackages, send: SHOTS.carpenterSend },
+    electricians: {
+      materials: SHOTS.materials,
+      packages: SHOTS.packages,
+      wizardShots: [SHOTS.quoteCapture, SHOTS.planMarkup, SHOTS.quoteJobPricing, SHOTS.quoteSend],
+    },
+    plumbers: {
+      materials: SHOTS.plumberMaterials,
+      packages: SHOTS.plumberPackages,
+      wizardShots: [SHOTS.quoteCapture, null, null, SHOTS.plumberSend],
+    },
+    carpenters: {
+      materials: SHOTS.carpenterMaterials,
+      packages: SHOTS.carpenterPackages,
+      wizardShots: [SHOTS.quoteCapture, null, null, SHOTS.carpenterSend],
+    },
+    roofers: {
+      materials: SHOTS.roofingMaterials,
+      packages: SHOTS.roofingPackages,
+      wizardShots: [SHOTS.quoteCapture, null, SHOTS.roofingScope, null],
+    },
+    "painters-and-plasterers": {
+      materials: null,
+      packages: SHOTS.paintingPackages,
+      wizardShots: [SHOTS.quoteCapture, null, null, SHOTS.paintingSend],
+    },
   };
-  const screens = TRADE_SCREENS[page.slug] ?? { materials: null, packages: null, send: null };
-  // Only the electrician page has a real capture of the middle two wizard
-  // steps (plan markup, job pricing) -- plumber and carpenter have real
-  // captures of step 1's entry screen (shared, see above) and step 4's
-  // send screen, but nothing yet for their own version of steps 2-3.
-  const wizardShots =
-    page.slug === "electricians"
-      ? [SHOTS.quoteCapture, SHOTS.planMarkup, SHOTS.quoteJobPricing, SHOTS.quoteSend]
-      : [SHOTS.quoteCapture, null, null, screens.send];
+  const screens = TRADE_SCREENS[page.slug] ?? { materials: null, packages: null, wizardShots: [SHOTS.quoteCapture, null, null, null] };
+  const wizardShots = screens.wizardShots;
 
   return (
     <main className="bg-white text-[#0a1722]">

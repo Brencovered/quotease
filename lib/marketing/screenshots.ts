@@ -282,6 +282,64 @@ export const SHOTS = {
     height: 1312,
     toast: { icon: "check", title: "$4,601", subtitle: "Ready to send, 14-day terms" },
   },
+
+  // Roofer-specific captures. Materials and packages show real pixels
+  // (Anti-Ponding Board, Barge Capping, a roof maintenance package) even
+  // though the trade chip in that same demo account is mistagged
+  // "electrician" -- pre-existing account data, not something introduced
+  // here, and the captions below describe the items shown rather than
+  // repeating the wrong chip. roofingScope is the standout of the batch:
+  // the job step with Standard/Premium pricing and the real
+  // whirlybird/skylight/gutter extras, which is the direct visual match
+  // for "Runs and extras" in this trade's own quotingFlow copy.
+  roofingMaterials: {
+    src: "/product/roofer-materials.webp",
+    alt: "Swiftscope materials catalogue with 25 items, showing an Anti-Ponding Board and Barge Capping in Colorbond with cost and sell price",
+    caption: "Roofing supplies priced from your own list, not a generic default.",
+    width: 704,
+    height: 1306,
+    toast: { icon: "package", title: "Anti-Ponding Board", subtitle: "$6.45, roofing supplies" },
+  },
+  roofingPackages: {
+    src: "/product/roofer-packages.webp",
+    alt: "Roof Maintenance Package with three items including a roof inspection, roof sealant and roof screws, 4 hours and an estimate of $1,399.60",
+    caption: "A routine maintenance call saved once, priced the same every time.",
+    width: 706,
+    height: 1302,
+    toast: { icon: "package", title: "$1,400", subtitle: "Roof maintenance, 3 items in one tap" },
+  },
+  roofingScope: {
+    src: "/product/roofer-scope.webp",
+    alt: "Roofer job step with a Standard or Premium pricing tier and roofing extras including ceiling insulation, gutter replacement, a whirlybird ventilator at $350 each and a roof window or skylight at $1200 each",
+    caption: "Whirlybirds, skylights, sarking -- the extras a generic tool folds into one line.",
+    width: 710,
+    height: 1306,
+    toast: { icon: "dollar", title: "$350", subtitle: "Whirlybird ventilator, added in one tap" },
+  },
+
+  // Painter and plasterer captures, from the generic builder this trade
+  // actually runs on. No materials shot: the one captured alongside these
+  // (25 items, Anti-Ponding Board, Barge Capping) is the same roofing
+  // catalogue as roofingMaterials above, not painting or plastering
+  // items, so it isn't used here -- showing a roofer's supplies on a
+  // painting page would be the exact mismatch this registry exists to
+  // avoid. packages and send are both genuinely from a plastering job.
+  paintingPackages: {
+    src: "/product/painter-packages.webp",
+    alt: "Basic Plastering and Painting Package with five items including plasterboard, joint compound and fibreglass tape, 12 hours and an estimate of $1,463",
+    caption: "A single-room skim and paint, saved once and reused on the next one.",
+    width: 708,
+    height: 1310,
+    toast: { icon: "package", title: "$1,463", subtitle: "Plastering & painting, 5 items in one tap" },
+  },
+  paintingSend: {
+    src: "/product/painter-send.webp",
+    alt: "Quote summary showing 12 hours labour, $388 materials and a $1,528 total, with the send step active on a five-step Customer, Quote capture, Job, Scope, Send flow",
+    caption: "Margin applied, ready to send, before you leave the walk-through.",
+    width: 710,
+    height: 1312,
+    toast: { icon: "check", title: "$1,528", subtitle: "12h labour, $388 materials" },
+  },
 } as const;
 
 export type ScreenshotKey = keyof typeof SHOTS;
