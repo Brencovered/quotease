@@ -25,7 +25,7 @@ import { notFound } from "next/navigation";
 import { ArrowRight, Check, Mic, PenLine, FileText, Upload, Package, CalendarDays, Receipt, X } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
 import PhoneStage from "@/components/marketing/PhoneStage";
-import { SHOTS } from "@/lib/marketing/screenshots";
+import { SHOTS, type Screenshot } from "@/lib/marketing/screenshots";
 import { TRADE_PAGES, getTradePage } from "@/lib/marketing/tradePages";
 
 export const revalidate = 604800; // 1 week, same cadence as the other SEO pages
@@ -71,21 +71,38 @@ export default async function TradeQuotingPage({
 
   const others = TRADE_PAGES.filter((t) => t.slug !== page.slug);
 
-  // Every screenshot captured so far is from the electrician builder --
-  // downlights, CCEW, level 2 connection fees are visible text in the
-  // actual pixels. That's accurate on this page for electricians and
-  // inaccurate everywhere else, so the other five pages only pair the
-  // steps below with the handful of shots that carry no trade-specific
-  // text (quote capture, pricing tiers, job size tiers, and the four
-  // trade-neutral screens after acceptance) rather than a plumber page
-  // showing an electrician's fields. No placeholder for what's missing --
-  // page.prices and page.quotingFlow already carry the trade-specific
-  // detail in text, and each screenshot is embedded directly in the step
-  // or card it illustrates rather than gathered into a separate row.
-  // Becomes a per-trade lookup once plumber/roofer/carpenter/generic-
-  // builder captures exist; a single flag is the honest state of the
-  // asset library today.
-  const hasRealScreens = page.slug === "electricians";
+  // Every screenshot in the registry is a real capture of one specific
+  // trade's builder -- there's no such thing as a neutral "materials
+  // screen", only the electrician's, the plumber's, or the carpenter's,
+  // each with that trade's own items and text in the pixels. Showing the
+  // wrong trade's capture undercuts the exact claim this page is making
+  // (a builder that knows your trade), so screens are looked up per trade
+  // here rather than shared. quoteCapture is the one genuine exception --
+  // it's the entry menu (camera, plan, drawings, voice), which has no
+  // trade-specific text and is honest to show on any trade's page.
+  //
+  // Roofers and the two generic-builder trades don't have captures yet,
+  // so their entries are null and those cards stay text-only rather than
+  // showing a different trade's fields or a placeholder apologising for
+  // the gap. page.prices and page.quotingFlow already carry the
+  // trade-specific detail in words regardless of what's on screen.
+  const TRADE_SCREENS: Record<
+    string,
+    { materials: Screenshot | null; packages: Screenshot | null; send: Screenshot | null }
+  > = {
+    electricians: { materials: SHOTS.materials, packages: SHOTS.packages, send: SHOTS.quoteSend },
+    plumbers: { materials: SHOTS.plumberMaterials, packages: SHOTS.plumberPackages, send: SHOTS.plumberSend },
+    carpenters: { materials: SHOTS.carpenterMaterials, packages: SHOTS.carpenterPackages, send: SHOTS.carpenterSend },
+  };
+  const screens = TRADE_SCREENS[page.slug] ?? { materials: null, packages: null, send: null };
+  // Only the electrician page has a real capture of the middle two wizard
+  // steps (plan markup, job pricing) -- plumber and carpenter have real
+  // captures of step 1's entry screen (shared, see above) and step 4's
+  // send screen, but nothing yet for their own version of steps 2-3.
+  const wizardShots =
+    page.slug === "electricians"
+      ? [SHOTS.quoteCapture, SHOTS.planMarkup, SHOTS.quoteJobPricing, SHOTS.quoteSend]
+      : [SHOTS.quoteCapture, null, null, screens.send];
 
   return (
     <main className="bg-white text-[#0a1722]">
@@ -221,9 +238,9 @@ export default async function TradeQuotingPage({
               other screenshot row on the page. Embedding removes both --
               the pairing is now physical, and every PhoneStage on this
               page sits in a same-sized grid cell. 01 Upload has no
-              screenshot for any trade (no CSV-import screen in the set);
-              02 Bundle only has one on the electrician page, since the
-              packages screen shown is an electrician's downlight packs. */}
+              screenshot on trades without a captured materials screen;
+              02 Bundle likewise depends on whether that trade's packages
+              screen has been captured yet -- see TRADE_SCREENS above. */}
           <div className="grid sm:grid-cols-3 gap-4 items-start">
             <div className="bg-white rounded-2xl border border-[#e8ecef] p-6">
               <div className="flex items-center gap-2.5 mb-3">
@@ -231,9 +248,9 @@ export default async function TradeQuotingPage({
                 <span className="font-display text-[1.1rem] uppercase">01 Upload</span>
               </div>
               <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">{page.setupMaterials}</p>
-              {hasRealScreens && (
+              {screens.materials && (
                 <div className="w-[160px] mx-auto">
-                  <PhoneStage shot={SHOTS.materials} tone="light" />
+                  <PhoneStage shot={screens.materials} tone="light" />
                 </div>
               )}
             </div>
@@ -245,9 +262,9 @@ export default async function TradeQuotingPage({
               <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">
                 Save the job you quote most often as a package. After that it is one tap, not a rebuild.
               </p>
-              {hasRealScreens && (
+              {screens.packages && (
                 <div className="w-[160px] mx-auto">
-                  <PhoneStage shot={SHOTS.packages} tone="light" />
+                  <PhoneStage shot={screens.packages} tone="light" />
                 </div>
               )}
             </div>
@@ -299,23 +316,13 @@ export default async function TradeQuotingPage({
           </div>
 
           {/* One screenshot per step, embedded in the card, not a separate
-              row underneath. The old row showed five electrician screens
-              under four trade-specific steps -- a count mismatch on top of
-              the same disconnection problem the setup section had. Four
-              steps, four images now. scopeConditions drops out of this
-              strip as a result; it isn't the weakest of the five, there
-              just isn't a fifth step to pair it with. Non-electrician
-              pages only pair the first step, since quote capture is the
-              one screen in this sequence that carries no trade-specific
-              text -- the other three stay text-only rather than showing
-              an electrician mid-quote. */}
+              row underneath. Four steps, four possible images -- see
+              wizardShots above for which trades have a real capture of
+              which step. scopeConditions never appears here; there isn't
+              a step to pair it with, not because it's the weakest shot. */}
           <div className="grid sm:grid-cols-2 gap-4 items-start">
             {page.quotingFlow.map((f, i) => {
-              const shot = hasRealScreens
-                ? [SHOTS.quoteCapture, SHOTS.planMarkup, SHOTS.quoteJobPricing, SHOTS.quoteSend][i]
-                : i === 0
-                  ? SHOTS.quoteCapture
-                  : null;
+              const shot = wizardShots[i];
               return (
                 <div key={f.step} className="relative rounded-2xl p-6 bg-[#f8f9fa] border border-[#e8ecef]">
                   <span className="font-display text-[2.4rem] leading-none text-[#ffb400] block mb-3">

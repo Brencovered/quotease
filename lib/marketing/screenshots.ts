@@ -28,13 +28,14 @@
  * Known gap. Every shot here is captured from the electrician builder:
  * downlights in the pricebook, ceiling type and CCEW on the job step,
  * smoke alarms on the scope step. That is fine on the homepage and on
- * /quoting-software/electricians, and slightly undercuts the argument on
- * the roofer, plumber and carpenter pages, which claim a builder that
- * knows their trade and then show someone else's. Roughly half the set is
- * trade-neutral (quote capture, dashboard, job detail, dockets, Xero,
- * clients, team, both pricing tier screens) and would stay as is. The rest
- * wants a per-trade capture, at which point this becomes a keyed lookup
- * rather than a flat object.
+ * /quoting-software/electricians. Plumbers and carpenters have their own
+ * real captures now too (materials, packages, send), used on their own
+ * pages via app/quoting-software/[trade]/page.tsx's per-trade shot maps.
+ * Roofers and the two generic-builder trades (painters-and-plasterers,
+ * the catch-all trades page) still don't -- those three pages fall back
+ * to the trade-neutral subset (quote capture, dashboard, job detail,
+ * dockets, Xero, clients, team, both pricing tier screens) rather than
+ * showing a different trade's fields.
  */
 
 export interface ScreenshotToast {
@@ -224,6 +225,62 @@ export const SHOTS = {
     width: 592,
     height: 1332,
     toast: { icon: "users", title: "$9,415", subtitle: "Two jobs, one client history" },
+  },
+
+  // Plumber-specific captures. Real pixels from the plumber builder, not
+  // the electrician one -- pipe fittings in the pricebook, a plumbing
+  // package, a plumbing quote's actual totals.
+  plumberMaterials: {
+    src: "/product/plumber-materials.webp",
+    alt: "Swiftscope materials catalogue searched for pipe, showing copper pipe and PVC pressure pipe from Reece with cost and sell price",
+    caption: "Your plumbing supplier's price list, searchable by item or SKU.",
+    width: 718,
+    height: 1310,
+    toast: { icon: "package", title: "Copper Pipe Type B", subtitle: "$18.50 from Reece" },
+  },
+  plumberPackages: {
+    src: "/product/plumber-packages.webp",
+    alt: "Standard Bathroom Reno Package with five items including a toilet, vanity unit and shower base, 32 hours and an estimate of $5,194",
+    caption: "A bathroom reno saved once, with labour and materials both included.",
+    width: 702,
+    height: 1310,
+    toast: { icon: "package", title: "$5,194", subtitle: "Bathroom reno, 5 items in one tap" },
+  },
+  plumberSend: {
+    src: "/product/plumber-send.webp",
+    alt: "Plumbing quote summary showing 32 hours labour, $2,585 materials, a $5,625 total and payment terms of 100% on completion within 14 days",
+    caption: "Priced, totalled, and ready to send with terms already attached.",
+    width: 718,
+    height: 1307,
+    toast: { icon: "check", title: "$5,625", subtitle: "Ready to send, 14-day terms" },
+  },
+
+  // Carpenter-specific captures. Real pixels from the carpenter builder --
+  // treated pine and decking in the pricebook, a framing package, a
+  // carpentry quote's actual totals.
+  carpenterMaterials: {
+    src: "/product/carpenter-materials.webp",
+    alt: "Swiftscope materials catalogue with 51 items, showing treated pine posts and Merbau decking from Bunnings Trade with cost and sell price",
+    caption: "Timber, decking and hardware, priced from your supplier's own list.",
+    width: 720,
+    height: 1306,
+    toast: { icon: "package", title: "51 items", subtitle: "Bunnings Trade pricing, synced" },
+  },
+  carpenterPackages: {
+    src: "/product/carpenter-packages.webp",
+    alt: "Basic Framing Package with three items including pine studs, steel wall brackets and timber screws, 12 hours and an estimate of $4,024",
+    caption: "Standard wall framing saved once, priced correctly every time after.",
+    width: 712,
+    height: 1314,
+    toast: { icon: "package", title: "$4,024", subtitle: "Framing pack, 3 items in one tap" },
+  },
+  carpenterSend: {
+    src: "/product/carpenter-send.webp",
+    alt: "Carpentry quote summary showing 12 hours labour, $3,461 materials, a $4,601 total and payment terms of 100% on completion within 14 days",
+    caption: "Priced, totalled, and ready to send with terms already attached.",
+    width: 716,
+    height: 1312,
+    toast: { icon: "check", title: "$4,601", subtitle: "Ready to send, 14-day terms" },
   },
 } as const;
 
