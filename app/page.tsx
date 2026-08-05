@@ -4,19 +4,59 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import {
   Home as HomeIcon, Briefcase, CheckCircle, ArrowRight,
-  Crosshair, Mic, PenTool, FileSearch, ListChecks, TrendingUp,
+  ListChecks, TrendingUp,
   CalendarClock, FileText, Users2, RefreshCw,
 } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
 import FaqSchema, { SWIFTSCOPE_FAQS } from "@/components/seo/FaqSchema";
 import { homepageMeta } from "@/lib/seo/meta";
 import { LEADS_ENABLED } from "@/lib/featureFlags";
+import { createPublicClient } from "@/lib/supabase/public";
+import { TRADE_PAGES } from "@/lib/marketing/tradePages";
+import { SHOTS } from "@/lib/marketing/screenshots";
+import PhoneShot from "@/components/marketing/PhoneShot";
+import FeatureSwitcher from "@/components/marketing/FeatureSwitcher";
+
+// Rebuild daily. The homepage quoted "196 curated tradie listings" as a
+// hardcoded string while the table held 4,889 -- understating the directory
+// by 25x on the one page most visitors see. Reading it from the database
+// means it cannot drift again.
+export const revalidate = 86400;
+
+// createPublicClient, NOT the cookie-aware server client: this page is
+// prerendered, and touching cookies() in a prerender throws
+// DYNAMIC_SERVER_USAGE. That exact mistake shipped every trade/suburb page
+// empty and noindexed for weeks.
+async function getListingCount(): Promise<number | null> {
+  try {
+    const { count, error } = await createPublicClient()
+      .from("directory_listing")
+      .select("id", { count: "exact", head: true });
+    if (error) throw error;
+    return count ?? null;
+  } catch (err) {
+    console.error("[homepage] listing count failed:", err);
+    return null; // fall back to omitting the stat rather than showing a wrong one
+  }
+}
 
 export const metadata: Metadata = homepageMeta();
 
-const HERO_IMG = "https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=1800&q=85&auto=format&fit=crop";
+// Self-hosted rather than hotlinked. A remote hero means Vercel has to
+// fetch and optimise the source on every cold cache, which is exactly the
+// state a Lighthouse run hits, and it puts a third party on the critical
+// path for the LCP element. Local file, re-encoded from PNG to progressive
+// JPEG (5.9MB of PNGs across the set became 0.43MB).
+const HERO_IMG = "/trades/hero-onsite.jpg";
 
-export default function Home() {
+// 16x9 blurred thumbnail, inlined. Shows a colour-matched smudge instead of
+// a black rectangle while the hero decodes, with no extra request.
+
+const HERO_BLUR =
+  "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABQODxIPDRQSEBIXFRQYHjIhHhwcHj0sLiQySUBMS0dARkVQWnNiUFVtVkVGZIhlbXd7gYKBTmCNl4x9lnN+gXz/2wBDARUXFx4aHjshITt8U0ZTfHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHz/wAARCAAJABADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwBAm6IL0JFQ/ZZYFZ7jhO1aZ+9HTtd/5Bq/WmJWP//Z";
+
+export default async function Home() {
+  const listingCount = await getListingCount();
   return (
     <main className="bg-white text-[#0a1722] overflow-hidden">
 
@@ -24,7 +64,8 @@ export default function Home() {
       <div className="relative h-screen min-h-[700px] max-h-[960px] flex items-end bg-[#0a1722]">
         <MarketingNav transparent />
         <div className="absolute inset-0 z-0">
-          <Image src={HERO_IMG} alt="Tradie on site" fill sizes="100vw" className="object-cover object-center" priority />
+          <Image src={HERO_IMG} alt="Tradie cutting on site in dust mask and ear protection" fill sizes="100vw"
+            className="object-cover object-center" priority placeholder="blur" blurDataURL={HERO_BLUR} />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0a1722] via-[#0a1722]/50 to-[#0a1722]/20" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#0a1722]/70 to-transparent" />
         </div>
@@ -56,15 +97,72 @@ export default function Home() {
               <span className="text-[#2a3a47]">|</span>
               <span>Unlimited users</span>
               <span className="text-[#2a3a47]">|</span>
-              <span>196 curated tradie listings</span>
+              {listingCount !== null && (
+                <span>{listingCount.toLocaleString("en-AU")} tradie listings</span>
+              )}
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* YOUR TRADE ─────────────────────────────────────────────────────
+          Concrete proof that the product knows the difference between a
+          switchboard and a rafter. The cards no longer carry a "Dedicated"
+          badge, so nothing here distinguishes the four purpose-built
+          builders from the two that run on the generic one. Each trade
+          page still states which it is in its own hero. */}
+      <div className="bg-[#0a1722] border-b border-[#12212f]">
+        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16">
+          <div className="max-w-[680px] mb-8">
+            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Your trade</p>
+            <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.9rem] leading-[0.93] text-white mb-5">
+              A quote builder that<br />knows your trade
+            </h2>
+            <p className="text-[16px] leading-[1.7] text-[#8aa4b4]">
+              Generic job software makes you bend your quote to fit its form. Swiftscope ships a
+              separate builder per trade, so the fields are the ones you actually price on.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {TRADE_PAGES.map((t) => (
+              <Link
+                key={t.slug}
+                href={`/quoting-software/${t.slug}`}
+                className="group rounded-2xl overflow-hidden bg-[#12212f] border border-white/10 hover:border-[#ffb400]/40 transition-colors flex flex-col"
+              >
+                <div className="relative aspect-[16/9] overflow-hidden">
+                  <Image
+                    src={t.image}
+                    alt={t.alt}
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    className="object-cover group-hover:scale-[1.03] transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#12212f] via-transparent to-transparent" />
+                </div>
+                <div className="p-5 flex flex-col flex-1">
+                  <h3 className="font-display uppercase text-[1.25rem] text-white mb-2">{t.Trade}</h3>
+                  <p className="text-[14px] leading-[1.6] text-[#8aa4b4] flex-1">{t.lede}</p>
+                  <span className="mt-4 inline-flex items-center gap-1.5 text-[13px] font-bold text-[#ffb400] group-hover:gap-2.5 transition-all">
+                    Quoting software for {t.trade} <ArrowRight size={14} />
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          <div className="mt-10">
+            <Link href="/signup" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-7 py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors">
+              Start free for 7 days <ArrowRight size={16} />
+            </Link>
           </div>
         </div>
       </div>
 
       {/* DIFFERENTIATORS - the core "built site-first" pitch */}
       <div className="bg-white border-b border-[#e8ecef]">
-        <div className="max-w-7xl mx-auto px-6 py-20">
+        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16">
           <div className="text-center mb-14">
             <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Why tradies switch</p>
             <h2 className="font-display uppercase text-[2.6rem] sm:text-[3.2rem] leading-[0.93] text-[#0a1722] mb-4">
@@ -75,57 +173,73 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-5">
-            <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
-              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
-                <Crosshair size={20} className="text-[#ffb400]" />
-              </div>
-              <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">Live on-screen quoting</h3>
-              <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
-                Open Swiftscope and mark straight onto your screen what material, work, or zone needs capturing.
-                Press done - the materials and labour autoload into a quote with your pre-configured pricing.
-                Press send. That&apos;s it.
-              </p>
-              <p className="text-[13px] font-bold text-[#0a1722]">Customers can accept in 30 seconds from send.</p>
-            </div>
-
-            <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
-              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
-                <Mic size={20} className="text-[#ffb400]" />
-              </div>
-              <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">AI voice quote generator</h3>
-              <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
-                Walk the job and talk to Swiftscope - describe the work and materials needed. Save, and a quote
-                generates automatically using your own pricing and materials. Not your thing on site? Record it
-                on the drive home instead - same result either way.
-              </p>
-              <p className="text-[13px] font-bold text-[#0a1722]">Customers can accept in 30 seconds from end of recording.</p>
-            </div>
-
-            <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
-              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
-                <PenTool size={20} className="text-[#ffb400]" />
-              </div>
-              <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">Plan &amp; drawing markup</h3>
-              <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
-                Upload a plan or drawing. Drop markers configured to your materials, draw lines for cable or pipe
-                runs, or block out work zones. Press save - every markup syncs straight into a quote, quantities
-                and costs already calculated.
-              </p>
-            </div>
-
-            <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
-              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
-                <FileSearch size={20} className="text-[#ffb400]" />
-              </div>
-              <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">AI plan reading</h3>
-              <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
-                Plans can be exhaustive and time-consuming to read properly. Upload the plan, direct what needs
-                reading and calculating for the job, and save straight to a quote.
-              </p>
-              <p className="text-[12.5px] text-[#8a9ba8] italic">* AI output should always be checked by a qualified person before sending.</p>
-            </div>
-          </div>
+          {/* Interactive rather than four static cards: one large screenshot
+              driven by a tab strip, in the style of the software this section
+              is trying to convince someone to switch away from. Picking a
+              mode is a more active thing to do on the page than scrolling
+              past a row of cards, and the active tab decides which claim
+              gets the full-size screenshot. */}
+          <FeatureSwitcher
+            modes={[
+              {
+                key: "camera",
+                icon: "crosshair",
+                kicker: "Live markup",
+                title: "Live on-screen quoting",
+                bullets: [
+                  "Open Swiftscope and mark straight onto your screen.",
+                  "Materials and labour autoload with your pre-set pricing.",
+                  "Press send - quote's away before you're off site.",
+                ],
+                pullLine: "Customers can accept in 30 seconds from send.",
+                shot: SHOTS.liveCameraMarkup,
+                toast: { icon: "ruler", title: "0.62m", subtitle: "Conduit run - added to the quote" },
+              },
+              {
+                key: "voice",
+                icon: "mic",
+                kicker: "Voice quoting",
+                title: "AI voice quote generator",
+                bullets: [
+                  "Walk the job and describe the work out loud.",
+                  "A quote drafts automatically from what you said.",
+                  "Or record it on the drive home - same result either way.",
+                ],
+                pullLine: "Customers can accept in 30 seconds from end of recording.",
+                shot: SHOTS.quoteSend,
+                toast: { icon: "check", title: "Quote ready - $1,181", subtitle: "8 downlights, priced and ready to send" },
+              },
+              {
+                key: "plan",
+                icon: "pen-tool",
+                kicker: "Plan markup",
+                title: "Plan & drawing markup",
+                bullets: [
+                  "Upload a plan or drawing from your phone.",
+                  "Drop markers, draw runs, or block out zones.",
+                  "Every markup becomes a priced line, instantly.",
+                ],
+                pullLine: "Every marked zone becomes a priced line, automatically.",
+                shot: SHOTS.planMarkup,
+                toast: { icon: "pin", title: "$282", subtitle: "10 downlights placed on the plan" },
+              },
+              {
+                key: "ai-read",
+                icon: "file-search",
+                kicker: "AI reading",
+                title: "AI plan reading",
+                bullets: [
+                  "Upload the plan - no need to read it yourself.",
+                  "Direct what needs calculating for the job.",
+                  "Save straight to a quote, ready to check and send.",
+                ],
+                pullLine: "Hand it a plan instead of reading one yourself.",
+                footnote: "* AI output should always be checked by a qualified person before sending.",
+                shot: SHOTS.quoteCapture,
+                toast: { icon: "file", title: "Plan uploaded", subtitle: "AI reads it and quotes the job" },
+              },
+            ]}
+          />
 
           {/* Everything else */}
           <div className="mt-14 bg-[#0a1722] rounded-3xl p-8 md:p-10">
@@ -147,7 +261,18 @@ export default function Home() {
                 </div>
               ))}
             </div>
-            <div className="text-center mt-8">
+            {/* "Everything else you'd expect" is the easiest line on the page
+                to write and the easiest to disbelieve, so three of the less
+                glamorous screens sit under it. Small on purpose: supporting
+                evidence, not another feature pitch. */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6 mt-10 pt-8 border-t border-white/10">
+              <PhoneShot shot={SHOTS.clients} tone="dark" sizes="(max-width: 640px) 45vw, 250px" />
+              <PhoneShot shot={SHOTS.team} tone="dark" sizes="(max-width: 640px) 45vw, 250px" />
+              <PhoneShot shot={SHOTS.dayworksRates} tone="dark" sizes="(max-width: 640px) 45vw, 250px" />
+              <PhoneShot shot={SHOTS.settingsSiteConditions} tone="dark" sizes="(max-width: 640px) 45vw, 250px" />
+            </div>
+
+            <div className="text-center mt-10">
               <Link href="/features" className="inline-flex items-center gap-1.5 text-[13.5px] font-bold text-[#ffb400] hover:underline">
                 See the full feature list <ArrowRight size={13} />
               </Link>
@@ -156,9 +281,16 @@ export default function Home() {
         </div>
       </div>
 
+      {/* The two rows of eight static phones that used to sit here were
+          re-proving claims the FeatureSwitcher above and the trade page
+          strips already make, with none of the interactivity. Deleted
+          rather than kept "for proof": four of those eight shots resurface
+          properly-sized on /quoting-software, and repeating them here just
+          added scroll length. */}
+
       {/* TWO AUDIENCES */}
       <div className="bg-white border-b border-[#e8ecef]">
-        <div className="max-w-7xl mx-auto px-6 py-20">
+        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16">
           <div className="text-center mb-14">
             <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Who it&apos;s for</p>
             <h2 className="font-display uppercase text-[2.8rem] sm:text-[3.5rem] leading-[0.93] text-[#0a1722]">
@@ -231,8 +363,8 @@ export default function Home() {
 
       {/* PRICING */}
       <div className="bg-white border-b border-[#e8ecef]">
-        <div className="max-w-7xl mx-auto px-6 py-20">
-          <div className="text-center mb-12">
+        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16">
+          <div className="text-center mb-8">
             <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Pricing</p>
             <h2 className="font-display uppercase text-[2.4rem] sm:text-[3rem] leading-[0.93] text-[#0a1722]">Simple. Flat. No surprises.</h2>
           </div>
@@ -287,8 +419,8 @@ export default function Home() {
 
       {/* SAVINGS CALCULATOR */}
       <div className="bg-white border-b border-[#e8ecef]">
-        <div className="max-w-7xl mx-auto px-6 py-20">
-          <div className="text-center mb-12">
+        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16">
+          <div className="text-center mb-8">
             <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Savings calculator</p>
             <h2 className="font-display uppercase text-[2.4rem] sm:text-[3rem] leading-[0.93] text-[#0a1722] mb-4">
               See what you&apos;d save switching to Swiftscope
@@ -303,7 +435,7 @@ export default function Home() {
 
       {/* FOOTER CTA */}
       <div className="bg-[#0a1722]">
-        <div className="max-w-7xl mx-auto px-6 py-20 grid sm:grid-cols-2 gap-6">
+        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16 grid sm:grid-cols-2 gap-6">
           <div className="bg-white/[0.04] rounded-2xl p-8 border border-white/10">
             <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Tradies</p>
             <h3 className="font-display text-[1.8rem] text-white mb-2">The other tradie just sent their quote.</h3>

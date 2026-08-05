@@ -28,6 +28,7 @@
  */
 
 import { MetadataRoute } from "next";
+import { TRADE_PAGES } from "@/lib/marketing/tradePages";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { tradeToSlug, buildDirectorySlug } from "@/lib/seo/meta";
 import { LEADS_ENABLED } from "@/lib/featureFlags";
@@ -61,6 +62,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/directory`,        changeFrequency: "daily",   priority: 0.9 },
     ...(LEADS_ENABLED ? [{ url: `${BASE_URL}/get-quotes`, changeFrequency: "monthly" as const, priority: 0.8 }] : []),
     { url: `${BASE_URL}/blog`,             changeFrequency: "weekly",  priority: 0.7 },
+    // Per-trade SaaS landing pages. These carry the "quoting software for
+    // {trade}" keywords, which previously had no page behind them at all.
+    ...TRADE_PAGES.map((t) => ({
+      url: `${BASE_URL}/quoting-software/${t.slug}`,
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+    })),
     { url: `${BASE_URL}/features`,         changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE_URL}/how-it-works`,     changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE_URL}/signup`,           changeFrequency: "monthly", priority: 0.6 },
