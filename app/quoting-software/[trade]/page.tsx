@@ -102,7 +102,7 @@ export default async function TradeQuotingPage({
     plumbers: {
       materials: SHOTS.plumberMaterials,
       packages: SHOTS.plumberPackages,
-      wizardShots: [SHOTS.quoteCapture, null, null, SHOTS.plumberSend],
+      wizardShots: [SHOTS.quoteCapture, SHOTS.plumberScope, SHOTS.plumberHotWater, SHOTS.plumberSend],
     },
     carpenters: {
       materials: SHOTS.carpenterMaterials,
@@ -112,7 +112,7 @@ export default async function TradeQuotingPage({
     roofers: {
       materials: SHOTS.roofingMaterials,
       packages: SHOTS.roofingPackages,
-      wizardShots: [SHOTS.quoteCapture, null, SHOTS.roofingScope, null],
+      wizardShots: [SHOTS.quoteCapture, SHOTS.roofingRoofType, SHOTS.roofingScope, null],
     },
     "painters-and-plasterers": {
       materials: null,

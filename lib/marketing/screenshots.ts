@@ -310,10 +310,10 @@ export const SHOTS = {
   },
   roofingScope: {
     src: "/product/roofer-scope.webp",
-    alt: "Roofer job step with a Standard or Premium pricing tier and roofing extras including ceiling insulation, gutter replacement, a whirlybird ventilator at $350 each and a roof window or skylight at $1200 each",
-    caption: "Whirlybirds, skylights, sarking -- the extras a generic tool folds into one line.",
-    width: 710,
-    height: 1306,
+    alt: "Roofer job step with extras including ceiling insulation, gutter replacement, a whirlybird ventilator at $350 each, a roof window or skylight at $1200 each, notes and conditions, and warranty text reading 10-year manufacturer warranty plus 5-year workmanship guarantee",
+    caption: "Whirlybirds, skylights, sarking, even the warranty wording -- one screen, not five.",
+    width: 708,
+    height: 1310,
     toast: { icon: "dollar", title: "$350", subtitle: "Whirlybird ventilator, added in one tap" },
   },
 
@@ -339,6 +339,32 @@ export const SHOTS = {
     width: 710,
     height: 1312,
     toast: { icon: "check", title: "$1,528", subtitle: "12h labour, $388 materials" },
+  },
+
+  // Fills the two roofer and plumber wizard steps that were still text-only.
+  roofingRoofType: {
+    src: "/product/roofer-roof-type.webp",
+    alt: "Roof type selection showing Colorbond Steel at $28 per square metre, Concrete Tiles at $35, Terracotta at $48, Natural Slate at $75 and Zinc at $65, plus colour and labour rate options",
+    caption: "Five roof types, five rates -- not one average guess across all of them.",
+    width: 716,
+    height: 1310,
+    toast: { icon: "dollar", title: "$28/m²", subtitle: "Colorbond, priced on its own rate" },
+  },
+  plumberScope: {
+    src: "/product/plumber-scope.webp",
+    alt: "Plumber scope step showing moderate overall site access, a gas compliance certificate required toggle, and site conditions for excavator hire, confined space access and asbestos management",
+    caption: "Excavator hire, confined space, asbestos -- priced before they become an argument.",
+    width: 708,
+    height: 1310,
+    toast: { icon: "dollar", title: "$450/day", subtitle: "Excavator hire, added when it's needed" },
+  },
+  plumberHotWater: {
+    src: "/product/plumber-hotwater.webp",
+    alt: "Plumber job step showing job type set to fault or leak repair, an hourly rate of $95, a materials margin field, and a hot water unit replacement section",
+    caption: "Job type, rate and margin on one screen, hot water handled as its own step.",
+    width: 720,
+    height: 1308,
+    toast: { icon: "dollar", title: "$95/hr", subtitle: "Rate and margin, set per quote" },
   },
 } as const;
 
