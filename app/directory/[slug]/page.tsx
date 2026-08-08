@@ -392,6 +392,14 @@ export default async function TradieProfilePage({
               {CLAIMED_DIRECTORY_PAGES_ENABLED && !listing.is_claimed && (
                 <Link
                   href={`/directory/claim?name=${encodeURIComponent(listing.business_name)}&suburb=${encodeURIComponent(listing.suburb ?? "")}&trade=${encodeURIComponent(primaryTrade ?? "")}`}
+                  // nofollow: this link exists on all 4,889 listing pages, each
+                  // with different prefill params, so Googlebot had a crawlable
+                  // path to 4,889 distinct URLs that all render the same form.
+                  // It reported 250 of them as "Duplicate without user-selected
+                  // canonical". The claim page is noindexed via its layout;
+                  // this stops new variants being discovered at all, and keeps
+                  // crawl budget on the pages we want ranked.
+                  rel="nofollow"
                   className="block mt-4 pt-3 border-t border-gray-100 text-[12.5px] font-semibold text-[#0a1722] hover:underline"
                 >
                   Is this your business? Claim this free listing →
