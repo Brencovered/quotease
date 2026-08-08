@@ -242,6 +242,20 @@ const SLUG_TO_TRADE: Record<string, string> = {
   fencers: "fencer",
   "air-conditioning": "aircon",
   surveyors: "surveyor",
+  // tradeToSlug() appends "s" to anything not in TRADE_SLUG_IRREGULAR, so
+  // every trade present in trade_suburb_pages needs its plural back here or
+  // the /{trade}-{suburb}-{state} route cannot reverse the slug and 404s.
+  // These three were missing, which meant 311 generated pages returned 404:
+  // plasterer (172 pages), handyman (138) and an "airconditioning" data typo
+  // (1). Google had crawled only 11 of them when this was found, so the
+  // report understated it by 28x.
+  //
+  // If you add a trade to trade_suburb_pages, add its slug here in the same
+  // change. The audit is: for every distinct trade in that table, confirm
+  // tradeToSlug(trade) appears as a key below.
+  plasterers: "plasterer",
+  handymans: "handyman",
+  airconditionings: "airconditioning",
 };
 
 const VALID_STATE_SLUGS = ["vic", "nsw", "qld", "wa", "sa", "tas", "act", "nt"];

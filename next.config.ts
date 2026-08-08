@@ -23,6 +23,18 @@ const nextConfig: NextConfig = {
     return [
       { source: "/electrician", destination: "/quote", permanent: true },
       { source: "/electrician/:path+", destination: "/:path+", permanent: true },
+
+      // Legacy suburb-hub URLs used a hyphen where the route now uses a
+      // slash: /tradies-in-brighton-vic vs /tradies-in/brighton-vic. Every
+      // internal link and the sitemap emit the slash form, so nothing
+      // generates these any more, but Google still has 159 of them indexed
+      // and returning 404. A 301 recovers whatever equity they hold instead
+      // of discarding it, and costs nothing to keep.
+      {
+        source: "/tradies-in-:suburbState",
+        destination: "/tradies-in/:suburbState",
+        permanent: true,
+      },
     ];
   },
 
