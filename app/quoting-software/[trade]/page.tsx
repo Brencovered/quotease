@@ -24,8 +24,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ArrowRight, Check, Mic, PenLine, FileText, Upload, Package, CalendarDays, Receipt, X } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
-import PhoneShot from "@/components/marketing/PhoneShot";
-import { SHOTS, type Screenshot } from "@/lib/marketing/screenshots";
+import TradeDocket from "@/components/marketing/TradeDocket";
 import { TRADE_PAGES, getTradePage } from "@/lib/marketing/tradePages";
 
 export const revalidate = 604800; // 1 week, same cadence as the other SEO pages
@@ -90,37 +89,11 @@ export default async function TradeQuotingPage({
   // not step 4. Roofers and the two generic-builder trades don't have a
   // captured send screen at all yet, so that slot stays null for them --
   // no placeholder, the card just stays text-only.
-  const TRADE_SCREENS: Record<
-    string,
-    { materials: Screenshot | null; packages: Screenshot | null; wizardShots: (Screenshot | null)[] }
-  > = {
-    electricians: {
-      materials: SHOTS.materials,
-      packages: SHOTS.packages,
-      wizardShots: [SHOTS.quoteCapture, SHOTS.planMarkup, SHOTS.quoteJobPricing, SHOTS.quoteSend],
-    },
-    plumbers: {
-      materials: SHOTS.plumberMaterials,
-      packages: SHOTS.plumberPackages,
-      wizardShots: [SHOTS.quoteCapture, SHOTS.plumberScope, SHOTS.plumberHotWater, SHOTS.plumberSend],
-    },
-    carpenters: {
-      materials: SHOTS.carpenterMaterials,
-      packages: SHOTS.carpenterPackages,
-      wizardShots: [SHOTS.quoteCapture, null, null, SHOTS.carpenterSend],
-    },
-    roofers: {
-      materials: SHOTS.roofingMaterials,
-      packages: SHOTS.roofingPackages,
-      wizardShots: [SHOTS.quoteCapture, SHOTS.roofingRoofType, SHOTS.roofingScope, null],
-    },
-    "painters-and-plasterers": {
-      materials: null,
-      packages: SHOTS.paintingPackages,
-      wizardShots: [SHOTS.quoteCapture, null, null, SHOTS.paintingSend],
-    },
-  };
-  const screens = TRADE_SCREENS[page.slug] ?? { materials: null, packages: null, wizardShots: [SHOTS.quoteCapture, null, null, null] };
+  // The TRADE_SCREENS map and its per-trade captures were removed from this
+  // page along with the PhoneShot rows. They are still exported from
+  // lib/marketing/screenshots.ts and used by FeatureSwitcher, which has the
+  // width to show a capture properly. See components/marketing/TradeDocket
+  // for why this page shows the artefact rather than the app.
   // screens.wizardShots is intentionally unread for now. The per-step
   // thumbnails it fed were removed because the grid cells were too narrow to
   // render a capture legibly, but the per-trade mapping above is correct and
@@ -160,14 +133,18 @@ export default async function TradeQuotingPage({
               $45/month flat, unlimited users, unlimited quotes
             </p>
           </div>
-          <div className="relative aspect-[16/9] rounded-2xl overflow-hidden border border-white/10">
-            <Image
-              src={page.image}
-              alt={page.alt}
-              fill
-              sizes="(max-width: 1024px) 100vw, 50vw"
-              className="object-cover"
-              priority
+          {/* The hero visual is the quote itself, not a stock photo of
+              someone else's tradie. A sparky already knows what a sparky
+              looks like; what he does not know is whether this thing counts
+              points and cable runs the way he does. The docket answers that
+              in the first screen, and it is text, so it costs no image
+              request and stays legible at every width. */}
+          <div className="flex lg:justify-end">
+            <TradeDocket
+              trade={page.Trade}
+              lines={page.docket}
+              labourHours={page.docketHours}
+              variation={page.variation}
             />
           </div>
         </div>
@@ -316,21 +293,6 @@ export default async function TradeQuotingPage({
             </p>
           </div>
 
-          {/* Screenshots get their own full-width row, three across, plain
-              PhoneShot with no overlay. This is how 300b82d had it and it
-              was right: at 1232px container width three columns give each
-              capture about 390px, which is enough to read the screen.
-
-              The regression was d054ec8, "Embed each screenshot in its own
-              step card". Inside a 400px text card a capture has to shrink to
-              a thumbnail, and once a floating toast was added on top there
-              was no width at which both fit. Ten commits went into trying to
-              make that work. The row layout needs none of them. */}
-          <div className="mt-10 pt-10 border-t border-[#e8ecef] grid grid-cols-1 sm:grid-cols-3 gap-8 items-start">
-            {screens.materials && <PhoneShot shot={screens.materials} tone="light" />}
-            {screens.packages && <PhoneShot shot={screens.packages} tone="light" />}
-            <PhoneShot shot={SHOTS.pricingTiers} tone="light" />
-          </div>
         </div>
       </div>
 
@@ -369,13 +331,6 @@ export default async function TradeQuotingPage({
             })}
           </div>
 
-          {/* The wizard itself, full width, three across. Placed after the
-              four steps so the reader knows what they are looking at. */}
-          <div className="mt-10 pt-10 border-t border-[#e8ecef] grid grid-cols-1 sm:grid-cols-3 gap-8 items-start">
-            {screens.wizardShots.filter(Boolean).slice(0, 3).map((sh, i) => (
-              <PhoneShot key={i} shot={sh!} tone="light" />
-            ))}
-          </div>
 
           <div className="mt-10 rounded-2xl bg-[#0a1722] p-6">
             <p className="text-[15px] leading-[1.75] text-[#c8d8e4]">
@@ -500,11 +455,6 @@ export default async function TradeQuotingPage({
             </div>
           </div>
 
-          <div className="mt-10 pt-10 border-t border-[#e8ecef] grid grid-cols-1 sm:grid-cols-3 gap-8 items-start">
-            <PhoneShot shot={SHOTS.jobDetail} tone="light" />
-            <PhoneShot shot={SHOTS.docketsSigned} tone="light" />
-            <PhoneShot shot={SHOTS.dashboard} tone="light" />
-          </div>
         </div>
       </div>
 

@@ -22,6 +22,14 @@
  * When a builder gains or loses a field, update the matching entry here.
  */
 
+export interface DocketLine {
+  label: string;
+  /** The trade's own unit: 'each', 'lm', 'm2', 'hrs'. This column is the point. */
+  qty: string;
+  unit: string;
+  amount: number;
+}
+
 export interface TradePage {
   slug: string;
   /** Plural, lowercase: used mid-sentence. */
@@ -64,6 +72,10 @@ export interface TradePage {
   quotingFlow: { step: string; detail: string }[];
   /** What happens after the client accepts, for this trade. */
   afterAccept: string;
+
+  /** Lines for the example quote card. Real fields, illustrative numbers. */
+  docket: DocketLine[];
+  docketHours: number;
 }
 
 export const TRADE_PAGES: TradePage[] = [
@@ -116,6 +128,14 @@ export const TRADE_PAGES: TradePage[] = [
     ],
     afterAccept:
       "The quote becomes the job. Schedule it, assign your apprentice, track hours against the estimate, raise a variation when the board turns out to be a Federal Pacific, then invoice and push to Xero without retyping a line.",
+  docket: [
+    { label: "Double GPO, installed",            qty: "6",  unit: "each",        amount: 780 },
+    { label: "Downlight, standard grade",        qty: "12", unit: "each",        amount: 1140 },
+    { label: "Cable run, 2.5mm T&E",  qty: "42", unit: "lm",          amount: 336 },
+    { label: "Switchboard upgrade, RCBO",        qty: "8",  unit: "poles",       amount: 1240 },
+    { label: "Roof access, tiled", qty: "1",  unit: "allowance",   amount: 180 },
+  ],
+  docketHours: 14,
   },
   {
     slug: "plumbers",
@@ -165,6 +185,14 @@ export const TRADE_PAGES: TradePage[] = [
     ],
     afterAccept:
       "Job scheduled, hours tracked against estimate, and when the floor comes up and the drainage is not where the plan said, the variation is raised and signed before you keep digging. Invoice and Xero at the end.",
+  docket: [
+    { label: "Shower mixer, supplied and fitted", qty: "1", unit: "each",      amount: 340 },
+    { label: "Basin mixer",                       qty: "2", unit: "each",      amount: 420 },
+    { label: "Toilet suite",                      qty: "1", unit: "each",      amount: 620 },
+    { label: "Bathroom rough-in",                 qty: "1", unit: "room",      amount: 1450 },
+    { label: "Hot water unit, heat pump",         qty: "1", unit: "each",      amount: 2890 },
+  ],
+  docketHours: 22,
   },
   {
     slug: "roofers",
@@ -214,6 +242,14 @@ export const TRADE_PAGES: TradePage[] = [
     ],
     afterAccept:
       "Schedule around the weather, track the crew's hours, and when the battens come up rotten, raise the variation with the photo attached so nobody argues about whether it was there. Then invoice and push to Xero.",
+  docket: [
+    { label: "Colorbond, standard pitch", qty: "182", unit: "m2",     amount: 9100 },
+    { label: "Ridge capping",                      qty: "22",  unit: "lm",     amount: 1078 },
+    { label: "Valley, sarking and flashing",       qty: "14",  unit: "lm",     amount: 966 },
+    { label: "Gutter replacement",                 qty: "48",  unit: "lm",     amount: 1632 },
+    { label: "Downpipes",                          qty: "3",   unit: "each",   amount: 285 },
+  ],
+  docketHours: 46,
   },
   {
     slug: "carpenters",
@@ -264,6 +300,14 @@ export const TRADE_PAGES: TradePage[] = [
     ],
     afterAccept:
       "The quote becomes a scheduled job with hours tracked against estimate. Rot in the bearers becomes a signed variation, not a favour. Invoice and Xero when it is done.",
+  docket: [
+    { label: "Merbau decking, laid",        qty: "32", unit: "m2",   amount: 4160 },
+    { label: "Decking beams and bearers",   qty: "26", unit: "lm",   amount: 988 },
+    { label: "Internal door, hung",         qty: "6",  unit: "each", amount: 1740 },
+    { label: "Skirting and architrave",     qty: "64", unit: "lm",   amount: 1216 },
+    { label: "New stud wall, 3m",           qty: "2",  unit: "each", amount: 940 },
+  ],
+  docketHours: 38,
   },
   {
     slug: "painters-and-plasterers",
@@ -312,6 +356,14 @@ export const TRADE_PAGES: TradePage[] = [
     ],
     afterAccept:
       "Scheduled, hours tracked, and the wall that needs a full skim instead of a patch becomes a signed variation before the extra day starts. Invoice and Xero at completion.",
+  docket: [
+    { label: "Walls, two coats",            qty: "196", unit: "m2",   amount: 3920 },
+    { label: "Ceilings, living areas",      qty: "54",  unit: "m2",   amount: 1188 },
+    { label: "Prep, patch and sand",        qty: "1",   unit: "job",  amount: 680 },
+    { label: "Cutting in, doors and trim",  qty: "18",  unit: "each", amount: 810 },
+    { label: "Paint and materials",         qty: "1",   unit: "lot",  amount: 1240 },
+  ],
+  docketHours: 34,
   },
   {
     slug: "trades",
@@ -360,6 +412,14 @@ export const TRADE_PAGES: TradePage[] = [
     ],
     afterAccept:
       "Scheduled, tracked against estimate, variations signed on site, invoiced and pushed to Xero. The same flow every dedicated trade gets.",
+  docket: [
+    { label: "Exposed aggregate driveway",  qty: "60", unit: "m2",   amount: 7200 },
+    { label: "Reinforcing mesh",            qty: "60", unit: "m2",   amount: 720 },
+    { label: "Concrete pump hire",          qty: "1",  unit: "day",  amount: 950 },
+    { label: "Edging, formed and finished", qty: "12", unit: "lm",   amount: 540 },
+    { label: "Site prep and excavation",    qty: "1",  unit: "job",  amount: 1180 },
+  ],
+  docketHours: 26,
   },
 ];
 
