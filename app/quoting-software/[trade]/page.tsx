@@ -121,7 +121,11 @@ export default async function TradeQuotingPage({
     },
   };
   const screens = TRADE_SCREENS[page.slug] ?? { materials: null, packages: null, wizardShots: [SHOTS.quoteCapture, null, null, null] };
-  const wizardShots = screens.wizardShots;
+  // screens.wizardShots is intentionally unread for now. The per-step
+  // thumbnails it fed were removed because the grid cells were too narrow to
+  // render a capture legibly, but the per-trade mapping above is correct and
+  // worth keeping: it is what a future wide alternating row per step would
+  // draw from.
 
   return (
     <main className="bg-white text-[#0a1722]">
@@ -357,14 +361,12 @@ export default async function TradeQuotingPage({
             </p>
           </div>
 
-          {/* One screenshot per step, embedded in the card, not a separate
-              row underneath. Four steps, four possible images -- see
-              wizardShots above for which trades have a real capture of
-              which step. scopeConditions never appears here; there isn't
-              a step to pair it with, not because it's the weakest shot. */}
+          {/* Text-only steps. These cards are half-width and carry a heading
+              plus two lines of copy; there is no room left for a readable
+              capture, which is why the wizardShots thumbnails were pulled
+              from here. */}
           <div className="grid sm:grid-cols-2 gap-4 items-start">
             {page.quotingFlow.map((f, i) => {
-              const shot = wizardShots[i];
               return (
                 <div key={f.step} className="relative rounded-2xl p-6 bg-[#f8f9fa] border border-[#e8ecef]">
                   <span className="font-display text-[2.4rem] leading-none text-[#ffb400] block mb-3">
