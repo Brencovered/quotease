@@ -296,10 +296,12 @@ export default async function TradeQuotingPage({
                 Your hourly rate, margin and terms become the baseline on every quote. Change them once
                 and everything after follows.
               </p>
-              <div className="grid grid-cols-2 gap-2">
-                <PhoneStage shot={SHOTS.pricingTiers} tone="light" />
-                <PhoneStage shot={SHOTS.jobSizeTiers} tone="light" />
-              </div>
+              {/* One stage, not two. Two PhoneStages in a grid-cols-2 inside
+                  an already-narrow card gave each about 180px, so the phones
+                  shrank to ~126px of unreadable UI and the toasts overflowed
+                  the card edge. The other two cards show one shot each, so
+                  this was also the only cell breaking the row's rhythm. */}
+              <PhoneStage shot={SHOTS.pricingTiers} tone="light" />
             </div>
           </div>
 

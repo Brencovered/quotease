@@ -72,27 +72,42 @@ export default function PhoneStage({
   const stageBg = tone === "dark" ? "bg-white/[0.04] border border-white/10" : "bg-[#f3f5f6]";
 
   return (
-    <div className={`relative w-full min-w-0 rounded-[28px] ${stageBg} pt-9 pb-5`}>
-      <div className="mx-auto w-[70%] max-w-[220px]">
-        <PhoneShot shot={shot} tone={tone} showCaption={false} sizes="(max-width: 1024px) 45vw, 220px" />
+    <div className={`relative w-full min-w-0 rounded-[28px] ${stageBg} pt-7 pb-4 px-3`}>
+      {/* Was w-[70%] max-w-[220px]. These sources are full app screens at
+          592x1332, so at 220px wide the UI inside was an unreadable smudge
+          while the stage around it sat mostly empty. Wider, and capped on the
+          stage rather than an arbitrary pixel figure. */}
+      <div className="mx-auto w-[88%] max-w-[290px]">
+        <PhoneShot shot={shot} tone={tone} showCaption={false} sizes="(max-width: 1024px) 60vw, 290px" />
       </div>
 
       {activeToast && ToastIcon && (
-        <div className="absolute -left-1 top-5 w-[68%] max-w-[190px] bg-white rounded-xl shadow-[0_14px_32px_rgba(10,23,34,0.16)] border border-[#e8ecef] p-2.5">
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <span className="relative flex h-1.5 w-1.5 shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ffb400] opacity-75" />
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#ffb400]" />
-            </span>
-            <span className="text-[8.5px] font-bold uppercase tracking-wider text-[#8a9ba8] truncate">Swiftscope</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <div className="w-6 h-6 rounded-md bg-[#0a1722] flex items-center justify-center shrink-0">
-              <ToastIcon size={12} className="text-[#ffb400]" />
+        /* The toast was w-[68%] max-w-[190px] with p-2.5 and a 24px icon,
+           leaving roughly 130px of text column. "Copper Pipe Type B" wrapped
+           to three lines and "$450/day, excavator hire, added when it's
+           needed" to five, which is what made these read as broken rather
+           than designed.
+
+           Now: a single row, icon and text side by side with no stacked
+           eyebrow above them, so the whole width goes to the copy. Sized in
+           ch units off the text rather than a percentage of the stage, and
+           inset rather than hanging off the left edge, which is what pushed
+           it outside the card in narrow grid cells. */
+        <div className="absolute left-1.5 top-3 right-1.5 max-w-[275px] bg-white rounded-xl shadow-[0_14px_32px_rgba(10,23,34,0.16)] border border-[#e8ecef] px-3 py-2.5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-[#0a1722] flex items-center justify-center shrink-0">
+              <ToastIcon size={14} className="text-[#ffb400]" />
             </div>
-            <div className="min-w-0">
-              <p className="text-[12px] font-extrabold text-[#0a1722] leading-tight">{activeToast.title}</p>
-              <p className="text-[10px] text-[#5a6a78] leading-snug mt-0.5">{activeToast.subtitle}</p>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="relative flex h-1.5 w-1.5 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ffb400] opacity-75" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#ffb400]" />
+                </span>
+                <span className="text-[8px] font-bold uppercase tracking-[.14em] text-[#8a9ba8]">Swiftscope</span>
+              </div>
+              <p className="text-[12.5px] font-extrabold text-[#0a1722] leading-[1.25] mt-0.5">{activeToast.title}</p>
+              <p className="text-[10.5px] text-[#5a6a78] leading-[1.35] mt-0.5">{activeToast.subtitle}</p>
             </div>
           </div>
         </div>
