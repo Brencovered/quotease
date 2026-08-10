@@ -24,6 +24,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ArrowRight, Check, Mic, PenLine, FileText, Upload, Package, CalendarDays, Receipt, X } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
+import TradePlan, { type PlanKind } from "@/components/marketing/TradePlan";
 import TradeDocket from "@/components/marketing/TradeDocket";
 import { TRADE_PAGES, getTradePage } from "@/lib/marketing/tradePages";
 
@@ -133,19 +134,15 @@ export default async function TradeQuotingPage({
               $45/month flat, unlimited users, unlimited quotes
             </p>
           </div>
-          {/* The hero visual is the quote itself, not a stock photo of
-              someone else's tradie. A sparky already knows what a sparky
-              looks like; what he does not know is whether this thing counts
-              points and cable runs the way he does. The docket answers that
-              in the first screen, and it is text, so it costs no image
-              request and stays legible at every width. */}
+          {/* The hero visual is a marked-up plan, not a stock photo and not a
+              screenshot. It is the one thing the page argues for and never
+              showed: mark up the drawing, the quantities flow into the quote.
+              It is also the most trade-specific artwork possible, since a roof
+              plan with a ridge and valleys cannot be mistaken for an
+              electrical plan with GPOs and a run to the shed. Inline SVG, so
+              no image request and sharp at any width. */}
           <div className="flex lg:justify-end">
-            <TradeDocket
-              trade={page.Trade}
-              lines={page.docket}
-              labourHours={page.docketHours}
-              variation={page.variation}
-            />
+            <TradePlan kind={page.slug as PlanKind} />
           </div>
         </div>
       </div>
@@ -331,6 +328,17 @@ export default async function TradeQuotingPage({
             })}
           </div>
 
+
+          {/* Plan in the hero, quote here: input and output of the same job,
+              with the same numbers in both. */}
+          <div className="mt-10 flex justify-center">
+            <TradeDocket
+              trade={page.Trade}
+              lines={page.docket}
+              labourHours={page.docketHours}
+              variation={page.variation}
+            />
+          </div>
 
           <div className="mt-10 rounded-2xl bg-[#0a1722] p-6">
             <p className="text-[15px] leading-[1.75] text-[#c8d8e4]">
