@@ -24,8 +24,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ArrowRight, Check, Mic, PenLine, FileText, Upload, Package, CalendarDays, Receipt, X } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
-import TradePlan, { type PlanKind } from "@/components/marketing/TradePlan";
-import TradeDocket from "@/components/marketing/TradeDocket";
+import QuoteItUp from "@/components/marketing/QuoteItUp";
 import { TRADE_PAGES, getTradePage } from "@/lib/marketing/tradePages";
 
 export const revalidate = 604800; // 1 week, same cadence as the other SEO pages
@@ -93,8 +92,8 @@ export default async function TradeQuotingPage({
   // The TRADE_SCREENS map and its per-trade captures were removed from this
   // page along with the PhoneShot rows. They are still exported from
   // lib/marketing/screenshots.ts and used by FeatureSwitcher, which has the
-  // width to show a capture properly. See components/marketing/TradeDocket
-  // for why this page shows the artefact rather than the app.
+  // width to show a capture properly. See components/marketing/QuoteItUp for
+  // why this page is interactive rather than showing a picture of the app.
   // screens.wizardShots is intentionally unread for now. The per-step
   // thumbnails it fed were removed because the grid cells were too narrow to
   // render a capture legibly, but the per-trade mapping above is correct and
@@ -134,15 +133,15 @@ export default async function TradeQuotingPage({
               $45/month flat, unlimited users, unlimited quotes
             </p>
           </div>
-          {/* The hero visual is a marked-up plan, not a stock photo and not a
-              screenshot. It is the one thing the page argues for and never
-              showed: mark up the drawing, the quantities flow into the quote.
-              It is also the most trade-specific artwork possible, since a roof
-              plan with a ridge and valleys cannot be mistaken for an
-              electrical plan with GPOs and a run to the shed. Inline SVG, so
-              no image request and sharp at any width. */}
+          {/* The hero is interactive, not a picture. Three static attempts
+              came first (a screenshot, a quote document, a marked-up plan)
+              and all three failed the same way: the product is a
+              transformation, and a still frame of either end cannot show
+              one. Here the visitor performs it, which takes about eight
+              seconds and proves the trade-specific claim by letting them
+              read their own line items on the chips. */}
           <div className="flex lg:justify-end">
-            <TradePlan kind={page.slug as PlanKind} />
+            <QuoteItUp lines={page.docket} labourHours={page.docketHours} />
           </div>
         </div>
       </div>
@@ -328,17 +327,6 @@ export default async function TradeQuotingPage({
             })}
           </div>
 
-
-          {/* Plan in the hero, quote here: input and output of the same job,
-              with the same numbers in both. */}
-          <div className="mt-10 flex justify-center">
-            <TradeDocket
-              trade={page.Trade}
-              lines={page.docket}
-              labourHours={page.docketHours}
-              variation={page.variation}
-            />
-          </div>
 
           <div className="mt-10 rounded-2xl bg-[#0a1722] p-6">
             <p className="text-[15px] leading-[1.75] text-[#c8d8e4]">
