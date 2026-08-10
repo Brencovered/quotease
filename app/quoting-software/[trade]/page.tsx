@@ -248,18 +248,29 @@ export default async function TradeQuotingPage({
             </p>
           </div>
 
-          {/* Each step carries its own screenshot directly beneath it now,
-              rather than three text cards followed by a separate row of
-              images underneath. The separate-row version had two faults at
-              once: nothing tied a given image to a given step except being
-              roughly below it, and the row's own width cap (a leftover
-              from when it held fewer items) rendered smaller than every
-              other screenshot row on the page. Embedding removes both --
-              the pairing is now physical, and every PhoneStage on this
-              page sits in a same-sized grid cell. 01 Upload has no
-              screenshot on trades without a captured materials screen;
-              02 Bundle likewise depends on whether that trade's packages
-              screen has been captured yet -- see TRADE_SCREENS above. */}
+          {/* No screenshots in this row, deliberately, after four attempts at
+              making them work here.
+
+              These cards are about 400px wide with four lines of copy above
+              the image. A PhoneStage needs roughly 290px for the capture to
+              be readable, and its toast is absolutely positioned across the
+              top of that capture. At 400px minus padding there is no width
+              at which both fit: the phone was hard-capped at w-[160px] on
+              two of the three cards, where the toast covered the entire
+              phone, while the third had no cap at all and overflowed the
+              card edge. Same row, two different sizing rules, neither
+              working.
+
+              The pattern is fine where there is room. The alternating
+              full-width feature rows further down this page use it with a
+              tall frame and they read well. The fault was the container,
+              not the component, so the component stays and this row goes
+              back to being three short text steps.
+
+              Screenshots for materials, packages and pricing tiers all
+              appear elsewhere on the page in contexts wide enough to show
+              them properly. Nothing is lost by not repeating them at
+              thumbnail size here. */}
           <div className="grid sm:grid-cols-3 gap-4 items-start">
             <div className="bg-white rounded-2xl border border-[#e8ecef] p-6">
               <div className="flex items-center gap-2.5 mb-3">
@@ -267,11 +278,6 @@ export default async function TradeQuotingPage({
                 <span className="font-display text-[1.1rem] uppercase">01 Upload</span>
               </div>
               <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">{page.setupMaterials}</p>
-              {screens.materials && (
-                <div className="w-[160px] mx-auto">
-                  <PhoneStage shot={screens.materials} tone="light" />
-                </div>
-              )}
             </div>
             <div className="bg-white rounded-2xl border border-[#e8ecef] p-6">
               <div className="flex items-center gap-2.5 mb-3">
@@ -281,11 +287,6 @@ export default async function TradeQuotingPage({
               <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">
                 Save the job you quote most often as a package. After that it is one tap, not a rebuild.
               </p>
-              {screens.packages && (
-                <div className="w-[160px] mx-auto">
-                  <PhoneStage shot={screens.packages} tone="light" />
-                </div>
-              )}
             </div>
             <div className="bg-white rounded-2xl border border-[#e8ecef] p-6">
               <div className="flex items-center gap-2.5 mb-3">
@@ -296,14 +297,34 @@ export default async function TradeQuotingPage({
                 Your hourly rate, margin and terms become the baseline on every quote. Change them once
                 and everything after follows.
               </p>
-              {/* One stage, not two. Two PhoneStages in a grid-cols-2 inside
-                  an already-narrow card gave each about 180px, so the phones
-                  shrank to ~126px of unreadable UI and the toasts overflowed
-                  the card edge. The other two cards show one shot each, so
-                  this was also the only cell breaking the row's rhythm. */}
-              <PhoneStage shot={SHOTS.pricingTiers} tone="light" />
             </div>
           </div>
+
+          {/* One wide row instead of eight thumbnails. This is the layout that
+              works: roughly half the container to the capture, so the phone
+              gets ~380px and the screen inside is genuinely readable, with
+              the toast sitting over it rather than swallowing it. If more
+              screenshots are wanted on this page, add more rows like this
+              one, alternating the side. Do not put them back in the grid
+              cards. */}
+          {screens.materials && (
+            <div className="mt-8 grid lg:grid-cols-2 gap-8 items-center rounded-2xl bg-white border border-[#e8ecef] p-6 sm:p-8">
+              <div>
+                <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">
+                  Your pricebook
+                </p>
+                <h3 className="font-display uppercase text-[1.6rem] sm:text-[1.9rem] leading-[0.98] mb-3">
+                  Every price you<br />quote against
+                </h3>
+                <p className="text-[15px] leading-[1.7] text-[#5a6a78]">
+                  Imported once from your supplier&apos;s file, searchable on site, and split into
+                  materials and labour so you can see the margin before you send. Change a cost here
+                  and every future quote picks it up.
+                </p>
+              </div>
+              <PhoneStage shot={screens.materials} tone="light" frame="tall" />
+            </div>
+          )}
 
           <div className="mt-4 rounded-2xl bg-white border border-[#e8ecef] p-6 flex flex-col sm:flex-row gap-5 sm:items-center">
             <div className="shrink-0">
@@ -351,11 +372,6 @@ export default async function TradeQuotingPage({
                   </span>
                   <h3 className="font-display text-[1.2rem] mb-2">{f.step}</h3>
                   <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">{f.detail}</p>
-                  {shot && (
-                    <div className="w-[150px] mx-auto">
-                      <PhoneStage shot={shot} tone="light" />
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -457,9 +473,6 @@ export default async function TradeQuotingPage({
                 Put the job in the calendar, assign who is on it, and see the week on a map so you are
                 not crossing town twice.
               </p>
-              <div className="w-[150px] mx-auto">
-                <PhoneStage shot={SHOTS.jobDetail} tone="light" />
-              </div>
             </div>
             <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
               <FileText size={20} className="text-[#ffb400] mb-4" />
@@ -468,9 +481,6 @@ export default async function TradeQuotingPage({
                 Day works signed on the spot on the client&apos;s phone, and variations accepted in
                 writing before the extra work starts.
               </p>
-              <div className="w-[150px] mx-auto">
-                <PhoneStage shot={SHOTS.docketsSigned} tone="light" />
-              </div>
             </div>
             <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
               <Receipt size={20} className="text-[#ffb400] mb-4" />
@@ -479,9 +489,6 @@ export default async function TradeQuotingPage({
                 Deposits, progress claims and final invoices built from the quote, pushed straight to
                 Xero rather than exported and re-keyed.
               </p>
-              <div className="w-[150px] mx-auto">
-                <PhoneStage shot={SHOTS.xeroExport} tone="light" />
-              </div>
             </div>
             <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
               <Check size={20} className="text-[#ffb400] mb-4" />
@@ -490,9 +497,6 @@ export default async function TradeQuotingPage({
                 Hours and materials tracked against what you quoted, so you find out which jobs make
                 money while you can still do something about it.
               </p>
-              <div className="w-[150px] mx-auto">
-                <PhoneStage shot={SHOTS.dashboard} tone="light" />
-              </div>
             </div>
           </div>
         </div>
