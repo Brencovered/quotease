@@ -36,12 +36,21 @@ import type { Screenshot } from "@/lib/marketing/screenshots";
  */
 
 /** Widest source ratio in the set, rounded up. See note above. */
-const FRAME = "101 / 200";
+const FRAME_TALL = "101 / 200";   // whole screen, for hero/feature contexts with vertical room
+// A window onto the top of the screen. The full-phone ratio is 1:1.98, so in
+// a grid card ~400px wide the phone wants to be ~570px tall: taller than the
+// card, so it either clips or the parent shrinks it to an illegible thumbnail.
+// Both happened. The top of every capture carries the heading, the primary
+// action and the first data rows, which is the part being talked about; the
+// bottom is empty space and the nav bar. Cropping there is the point, not a
+// compromise.
+const FRAME_WINDOW = "101 / 116";
 
 export default function PhoneShot({
   shot,
   tone = "dark",
   showCaption = true,
+  frame = "tall",
   priority = false,
   sizes = "(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 300px",
 }: {
@@ -49,6 +58,8 @@ export default function PhoneShot({
   /** Bezel and caption colour. Pick the one that contrasts the section. */
   tone?: "dark" | "light";
   showCaption?: boolean;
+  /** "window" crops to the top of the screen for grid cards; "tall" shows the whole phone. */
+  frame?: "tall" | "window";
   priority?: boolean;
   sizes?: string;
 }) {
@@ -70,7 +81,7 @@ export default function PhoneShot({
       <div className={`rounded-[22px] p-1.5 sm:rounded-[26px] sm:p-2 ${bezel}`}>
         <div
           className="relative w-full overflow-hidden rounded-[16px] sm:rounded-[18px] bg-[#f8f9fa] ring-1 ring-black/5"
-          style={{ aspectRatio: FRAME }}
+          style={{ aspectRatio: frame === "window" ? FRAME_WINDOW : FRAME_TALL }}
         >
           <Image
             src={shot.src}

@@ -62,10 +62,13 @@ export default function PhoneStage({
   shot,
   toast,
   tone = "light",
+  frame = "window",
 }: {
   shot: Screenshot;
   toast?: ScreenshotToast;
   tone?: "light" | "dark";
+  /** Cards get the cropped window; pass "tall" only where there is real vertical room. */
+  frame?: "tall" | "window";
 }) {
   const activeToast = toast ?? shot.toast;
   const ToastIcon = activeToast ? TOAST_ICONS[activeToast.icon] : null;
@@ -78,7 +81,7 @@ export default function PhoneStage({
           while the stage around it sat mostly empty. Wider, and capped on the
           stage rather than an arbitrary pixel figure. */}
       <div className="mx-auto w-[88%] max-w-[290px]">
-        <PhoneShot shot={shot} tone={tone} showCaption={false} sizes="(max-width: 1024px) 60vw, 290px" />
+        <PhoneShot shot={shot} tone={tone} frame={frame} showCaption={false} sizes="(max-width: 1024px) 60vw, 290px" />
       </div>
 
       {activeToast && ToastIcon && (
