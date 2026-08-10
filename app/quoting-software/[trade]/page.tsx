@@ -24,7 +24,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ArrowRight, Check, Mic, PenLine, FileText, Upload, Package, CalendarDays, Receipt, X } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
-import PhoneStage from "@/components/marketing/PhoneStage";
+import PhoneShot from "@/components/marketing/PhoneShot";
 import { SHOTS, type Screenshot } from "@/lib/marketing/screenshots";
 import { TRADE_PAGES, getTradePage } from "@/lib/marketing/tradePages";
 
@@ -304,32 +304,6 @@ export default async function TradeQuotingPage({
             </div>
           </div>
 
-          {/* One wide row instead of eight thumbnails. This is the layout that
-              works: roughly half the container to the capture, so the phone
-              gets ~380px and the screen inside is genuinely readable, with
-              the toast sitting over it rather than swallowing it. If more
-              screenshots are wanted on this page, add more rows like this
-              one, alternating the side. Do not put them back in the grid
-              cards. */}
-          {screens.materials && (
-            <div className="mt-8 grid lg:grid-cols-2 gap-8 items-center rounded-2xl bg-white border border-[#e8ecef] p-6 sm:p-8">
-              <div>
-                <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">
-                  Your pricebook
-                </p>
-                <h3 className="font-display uppercase text-[1.6rem] sm:text-[1.9rem] leading-[0.98] mb-3">
-                  Every price you<br />quote against
-                </h3>
-                <p className="text-[15px] leading-[1.7] text-[#5a6a78]">
-                  Imported once from your supplier&apos;s file, searchable on site, and split into
-                  materials and labour so you can see the margin before you send. Change a cost here
-                  and every future quote picks it up.
-                </p>
-              </div>
-              <PhoneStage shot={screens.materials} tone="light" frame="tall" />
-            </div>
-          )}
-
           <div className="mt-4 rounded-2xl bg-white border border-[#e8ecef] p-6 flex flex-col sm:flex-row gap-5 sm:items-center">
             <div className="shrink-0">
               <p className="text-[10.5px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-1">
@@ -340,6 +314,22 @@ export default async function TradeQuotingPage({
             <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] sm:border-l sm:border-[#e8ecef] sm:pl-5">
               {page.packageContents}
             </p>
+          </div>
+
+          {/* Screenshots get their own full-width row, three across, plain
+              PhoneShot with no overlay. This is how 300b82d had it and it
+              was right: at 1232px container width three columns give each
+              capture about 390px, which is enough to read the screen.
+
+              The regression was d054ec8, "Embed each screenshot in its own
+              step card". Inside a 400px text card a capture has to shrink to
+              a thumbnail, and once a floating toast was added on top there
+              was no width at which both fit. Ten commits went into trying to
+              make that work. The row layout needs none of them. */}
+          <div className="mt-10 pt-10 border-t border-[#e8ecef] grid grid-cols-1 sm:grid-cols-3 gap-8 items-start">
+            {screens.materials && <PhoneShot shot={screens.materials} tone="light" />}
+            {screens.packages && <PhoneShot shot={screens.packages} tone="light" />}
+            <PhoneShot shot={SHOTS.pricingTiers} tone="light" />
           </div>
         </div>
       </div>
@@ -377,6 +367,14 @@ export default async function TradeQuotingPage({
                 </div>
               );
             })}
+          </div>
+
+          {/* The wizard itself, full width, three across. Placed after the
+              four steps so the reader knows what they are looking at. */}
+          <div className="mt-10 pt-10 border-t border-[#e8ecef] grid grid-cols-1 sm:grid-cols-3 gap-8 items-start">
+            {screens.wizardShots.filter(Boolean).slice(0, 3).map((sh, i) => (
+              <PhoneShot key={i} shot={sh!} tone="light" />
+            ))}
           </div>
 
           <div className="mt-10 rounded-2xl bg-[#0a1722] p-6">
@@ -500,6 +498,12 @@ export default async function TradeQuotingPage({
                 money while you can still do something about it.
               </p>
             </div>
+          </div>
+
+          <div className="mt-10 pt-10 border-t border-[#e8ecef] grid grid-cols-1 sm:grid-cols-3 gap-8 items-start">
+            <PhoneShot shot={SHOTS.jobDetail} tone="light" />
+            <PhoneShot shot={SHOTS.docketsSigned} tone="light" />
+            <PhoneShot shot={SHOTS.dashboard} tone="light" />
           </div>
         </div>
       </div>
