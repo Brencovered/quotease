@@ -73,6 +73,28 @@ export async function GET() {
     const payload = (await res.json()) as { data?: { id: string }[]; models?: { id: string }[] };
     const ids = (payload.data ?? payload.models ?? []).map((m) => m.id).filter(Boolean);
 
+    // The decisive number. The gateway dashboard confirmed both model ids
+    // resolve and both were rejected at zero tokens and zero cost, so this is
+    // entitlement rather than a bad string. Balance separates the two
+    // remaining explanations: a spent free allocation, which a top-up fixes,
+    // or a per-model restriction that a top-up also fixes but for a different
+    // reason. Either way, stop guessing and read it.
+    let credits: unknown = null;
+    try {
+      const cRes = await fetch("https://ai-gateway.vercel.sh/v1/credits", {
+        headers: {
+          Authorization: `Bearer ${process.env.AI_GATEWAY_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      });
+      credits = cRes.ok
+        ? await cRes.json()
+        : { error: `credits endpoint returned ${cRes.status}`, detail: (await cRes.text()).slice(0, 200) };
+    } catch (e) {
+      credits = { error: e instanceof Error ? e.message : String(e) };
+    }
+
     // Which of the IDs the app actually asks for are real.
     const configured = Object.entries(MODELS).map(([key, id]) => ({
       key,
@@ -81,6 +103,7 @@ export async function GET() {
     }));
 
     return NextResponse.json({
+      credits,
       totalAvailable: ids.length,
       configured,
       anthropic: ids.filter((id) => id.startsWith("anthropic/")),
