@@ -123,7 +123,7 @@ Plan 4 to 6 sections.`;
     return NextResponse.json(
       {
         error: isAccessIssue
-          ? "The AI gateway rejected the request: the Vercel AI Gateway account needs paid credits before these models can be used. Retrying will not help."
+          ? "The AI gateway rejected these models. Either the model IDs in lib/ai/gateway.ts no longer resolve, or the account lacks access. Check GET /api/admin/ai/models for the definitive list. Retrying will not help."
           : "Planning failed. Please try again.",
         detail: message.slice(0, 300),
       },
