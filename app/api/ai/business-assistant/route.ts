@@ -41,6 +41,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { toUserFacingError } from "@/lib/ai/userFacingError";
 import { generateText, tool, stepCountIs } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
@@ -253,6 +254,10 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({ text: result.text, actions });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "AI error" }, { status: 502 });
+    // Never return the provider's own message: the chat UI renders this field
+    // as the assistant's reply, so a gateway billing error became customer
+    // facing product output. See lib/ai/userFacingError.
+    const ufe = toUserFacingError(err, "ai/business-assistant");
+    return NextResponse.json({ error: ufe.message, kind: ufe.kind }, { status: ufe.status });
   }
 }

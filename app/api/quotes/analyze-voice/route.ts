@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { toUserFacingError } from "@/lib/ai/userFacingError";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveBusinessId } from "@/lib/team";
@@ -141,7 +142,8 @@ export async function POST(request: Request) {
       parsed = result.object;
     }
   } catch (err) {
-    return NextResponse.json({ error: `Claude API error: ${err instanceof Error ? err.message : "unknown"}` }, { status: 502 });
+    const ufe = toUserFacingError(err, "quotes/analyze-voice");
+    return NextResponse.json({ error: ufe.message, kind: ufe.kind }, { status: ufe.status });
   }
 
   if (usage.via === "free") {
