@@ -5,6 +5,7 @@ import { getActiveBusinessId } from "@/lib/team";
 import { CLAIMED_DIRECTORY_PAGES_ENABLED } from "@/lib/featureFlags";
 import { buildDirectorySlug } from "@/lib/seo/meta";
 import { verifyAbn } from "@/lib/abnLookup";
+import { getClientIp, getUserAgent } from "@/lib/clientIp";
 
 const VALID_TRADES = [
   "electrician", "plumber", "builder", "roofer", "painter", "carpenter",
@@ -44,6 +45,13 @@ export async function POST(req: NextRequest) {
 
   const businessId = await getActiveBusinessId(supabase, user.id);
   const admin = createAdminClient();
+
+  // Recorded on every claim attempt, successful or not. There was no way to
+  // investigate four suspicious signups because nothing captured where they
+  // came from, and Supabase's own auth audit log is pruned and empty.
+  // Evidence for a human to weigh, never an authorisation control.
+  const ipAddress = getClientIp(req);
+  const userAgent = getUserAgent(req);
 
   let body: Record<string, unknown>;
   try {
@@ -115,7 +123,7 @@ export async function POST(req: NextRequest) {
     // Claiming an existing scraped listing.
     const { data: listing, error: fetchErr } = await admin
       .from("directory_listing")
-      .select("id, is_claimed, business_name, suburb, logo_url")
+      .select("id, is_claimed, business_name, suburb, logo_url, scraped_contact_email, private_email, claim_token")
       .eq("id", listingId)
       .single();
 
@@ -131,12 +139,31 @@ export async function POST(req: NextRequest) {
         matched_listing_id: listingId,
         attempted_by_profile_id: businessId,
         outcome: "disputed",
+        ip_address: ipAddress,
+        user_agent: userAgent,
       });
       return NextResponse.json(
         { error: "This listing has already been claimed. Contact support if you believe this is a mistake." },
         { status: 409 }
       );
     }
+
+    // Ownership check. Claiming a scraped listing is the case that can
+    // actually harm someone: the business did not sign up, has no idea the
+    // page exists, and a competitor taking it over would be invisible to
+    // them. Creating a brand new listing carries no such risk, which is why
+    // this gate applies only here.
+    //
+    // The test is whether the signed-in address matches the contact address
+    // already on the listing, which came from the business's own public
+    // Google entry. Matching means they demonstrably control the address the
+    // business publishes. Not matching does not block the claim -- plenty of
+    // tradies genuinely run a Gmail while their website shows info@ on their
+    // domain -- but it is recorded as unverified so a dispute can be settled
+    // on evidence rather than argument.
+    const knownContact = (listing.scraped_contact_email || listing.private_email || "").toLowerCase().trim();
+    const claimantEmail = (user.email ?? "").toLowerCase().trim();
+    const verifiedViaEmail = knownContact && knownContact === claimantEmail ? claimantEmail : null;
 
     const { error: updateErr } = await admin
       .from("directory_listing")
@@ -162,10 +189,13 @@ export async function POST(req: NextRequest) {
       matched_listing_id: listingId,
       attempted_by_profile_id: businessId,
       outcome: "claimed",
+      ip_address: ipAddress,
+      user_agent: userAgent,
+      verified_via_email: verifiedViaEmail,
     });
 
     const slug = buildDirectorySlug({ id: listing.id, business_name: listing.business_name, suburb: listing.suburb ?? "" });
-    return NextResponse.json({ listingId, outcome: "claimed", slug, verifiedBadge });
+    return NextResponse.json({ listingId, outcome: "claimed", slug, verifiedBadge, ownershipVerified: verifiedViaEmail !== null });
   }
 
   // No match -- create a brand new listing, owned and verified from day one.
@@ -195,6 +225,8 @@ export async function POST(req: NextRequest) {
     matched_listing_id: created.id,
     attempted_by_profile_id: businessId,
     outcome: "created_new",
+    ip_address: ipAddress,
+    user_agent: userAgent,
   });
 
   const slug = buildDirectorySlug({ id: created.id, business_name: businessName, suburb });
