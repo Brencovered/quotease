@@ -110,9 +110,24 @@ Plan 4 to 6 sections.`;
     return NextResponse.json({ plan: result.object, model: result.model });
   } catch (err) {
     console.error("[blog-assist/plan] Error:", err);
+
+    // "Please try again" was actively misleading for the failure that actually
+    // happens here. The Vercel AI Gateway rejects the Claude models on a free
+    // tier account with a 403 and "Free tier users do not have access to this
+    // model", which no amount of retrying fixes. This route is admin-only, so
+    // surfacing the real reason costs nothing and saves digging through
+    // runtime logs to find out the account needs credits.
+    const message = err instanceof Error ? err.message : String(err);
+    const isAccessIssue = /free tier|do not have access|quota|credit|402|403/i.test(message);
+
     return NextResponse.json(
-      { error: "Planning failed. Please try again." },
-      { status: 500 }
+      {
+        error: isAccessIssue
+          ? "The AI gateway rejected the request: the Vercel AI Gateway account needs paid credits before these models can be used. Retrying will not help."
+          : "Planning failed. Please try again.",
+        detail: message.slice(0, 300),
+      },
+      { status: isAccessIssue ? 502 : 500 }
     );
   }
 }
