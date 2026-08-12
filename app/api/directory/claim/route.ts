@@ -6,6 +6,7 @@ import { CLAIMED_DIRECTORY_PAGES_ENABLED } from "@/lib/featureFlags";
 import { buildDirectorySlug } from "@/lib/seo/meta";
 import { verifyAbn } from "@/lib/abnLookup";
 import { getClientIp, getUserAgent } from "@/lib/clientIp";
+import { isIpBlocked } from "@/lib/ipBlocklist";
 
 const VALID_TRADES = [
   "electrician", "plumber", "builder", "roofer", "painter", "carpenter",
@@ -52,6 +53,14 @@ export async function POST(req: NextRequest) {
   // Evidence for a human to weigh, never an authorisation control.
   const ipAddress = getClientIp(req);
   const userAgent = getUserAgent(req);
+
+  if (await isIpBlocked(ipAddress)) {
+    console.warn(`[directory/claim] blocked IP attempted a claim: ${ipAddress}`);
+    return NextResponse.json(
+      { error: "Unable to process this request. Contact support if you believe this is a mistake." },
+      { status: 403 }
+    );
+  }
 
   let body: Record<string, unknown>;
   try {

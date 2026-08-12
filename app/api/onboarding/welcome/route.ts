@@ -16,6 +16,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getClientIp, getUserAgent } from "@/lib/clientIp";
+import { isIpBlocked } from "@/lib/ipBlocklist";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminEmails } from "@/lib/admin";
 import { buildWelcomeEmail, buildAdminNewSignupEmail } from "@/lib/email/templates";
@@ -52,6 +53,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
   const user = userData.user;
+
+  // Signup itself happens browser-to-Supabase and cannot be gated here, but
+  // this route fires once, immediately after, on first authenticated load.
+  // A blocked IP never gets past this point, so the account exists in
+  // auth.users but never completes onboarding or reaches the directory.
+  const clientIp = getClientIp(req);
+  if (await isIpBlocked(clientIp)) {
+    console.warn(`[onboarding/welcome] blocked IP reached onboarding: ${clientIp}, user ${user.id}`);
+    return NextResponse.json(
+      { error: "Unable to complete signup. Contact support if you believe this is a mistake." },
+      { status: 403 }
+    );
+  }
 
   const { data: profile } = await supabase
     .from("profiles")
