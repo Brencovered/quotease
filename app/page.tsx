@@ -36,7 +36,7 @@ export default async function Home() {
 
       <HomeHero />
 
-      {/* Proof strip — mitti-style scale, honest numbers */}
+      {/* Proof strip */}
       <section className="bg-white border-b border-[#e8ecef]">
         <div className="max-w-[1280px] mx-auto px-6 py-14 sm:py-16">
           <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-8">
@@ -94,20 +94,21 @@ export default async function Home() {
           </div>
           <div className="relative">
             <div className="absolute -inset-8 bg-[radial-gradient(ellipse_at_center,rgba(255,180,0,0.12),transparent_60%)] pointer-events-none" />
-            <div className="relative home-glass rounded-2xl p-3 max-w-[420px] mx-auto shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
+            <div className="relative home-glass rounded-2xl p-2.5 max-w-[320px] mx-auto shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
               <Image
                 src="/marketing/v2/quoting-customer-accepts.png"
                 alt="Client accepting a quote on their phone"
-                width={840}
-                height={1100}
-                className="w-full h-auto rounded-xl"
+                width={900}
+                height={1824}
+                quality={90}
+                className="w-full h-auto rounded-[14px]"
               />
             </div>
           </div>
         </div>
       </section>
 
-      {/* Homeowners — one job */}
+      {/* Homeowners: one job */}
       <section className="relative min-h-[60vh] flex items-end overflow-hidden">
         <div className="absolute inset-0">
           <Image
@@ -115,6 +116,7 @@ export default async function Home() {
             alt=""
             fill
             sizes="100vw"
+            quality={90}
             className="object-cover object-center"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-[#071018] via-[#071018]/80 to-[#071018]/35" />
@@ -131,7 +133,7 @@ export default async function Home() {
             <p className="text-[16px] leading-[1.65] text-[#c8d8e4] mb-8">
               Browse by trade and suburb
               {listingCount !== null
-                ? ` — ${listingCount.toLocaleString("en-AU")} listings`
+                ? ` (${listingCount.toLocaleString("en-AU")} listings)`
                 : ""}
               . Real Google ratings. No lead auction.
             </p>
@@ -145,7 +147,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Pricing — one offer */}
+      {/* Pricing: one offer */}
       <section className="bg-white">
         <div className="max-w-[1280px] mx-auto px-6 py-16 sm:py-20">
           <div className="max-w-2xl">

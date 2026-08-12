@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Check, Mic, Crosshair, Send } from "lucide-react";
+import ProductShot from "@/components/marketing/ProductShot";
 
 type Scene = {
   key: string;
@@ -75,7 +76,7 @@ export default function HomeHero() {
       onMouseLeave={() => setPaused(false)}
     >
       <div className="max-w-[1280px] mx-auto px-6">
-        {/* Editorial copy row — brand dominates, then promise + CTAs */}
+        {/* Editorial copy row: brand dominates, then promise + CTAs */}
         <div className="grid lg:grid-cols-12 gap-6 lg:gap-10 mb-10 lg:mb-12 home-hero-copy">
           <div className="lg:col-span-7">
             <p className="font-display text-[clamp(2.6rem,7vw,4.8rem)] leading-[0.88] tracking-wide text-white mb-5">
@@ -106,7 +107,7 @@ export default function HomeHero() {
           </div>
         </div>
 
-        {/* Media stage — dominant visual with product overlay */}
+        {/* Media stage: dominant visual with product overlay */}
         <div className="relative">
           <div className="relative aspect-[16/10] sm:aspect-[16/9] lg:aspect-[2.2/1] overflow-hidden rounded-2xl sm:rounded-3xl bg-[#0e2030]">
             {SCENES.map((s, i) => (
@@ -124,6 +125,7 @@ export default function HomeHero() {
                   fill
                   sizes="(max-width: 1280px) 100vw, 1280px"
                   priority={i === 0}
+                  quality={90}
                   className={[
                     "object-cover",
                     s.objectPos,
@@ -135,7 +137,7 @@ export default function HomeHero() {
             <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10" />
 
             {/* Floating product UI */}
-            <div className="absolute inset-x-4 bottom-4 sm:inset-auto sm:right-6 sm:bottom-6 sm:left-auto w-auto sm:w-[340px] home-overlay-in" key={scene.key}>
+            <div className="absolute inset-x-4 bottom-4 sm:inset-auto sm:right-5 sm:bottom-5 sm:left-auto w-auto sm:w-[250px] home-overlay-in" key={scene.key}>
               <ProductOverlay kind={scene.overlay} />
             </div>
           </div>
@@ -177,29 +179,28 @@ export default function HomeHero() {
 function ProductOverlay({ kind }: { kind: Scene["overlay"] }) {
   if (kind === "markup") {
     return (
-      <div className="home-glass rounded-2xl p-3.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
-        <div className="flex items-center gap-2 mb-3">
+      <div className="home-glass rounded-2xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
+        <div className="flex items-center gap-2 mb-2.5 px-1">
           <span className="w-7 h-7 rounded-md bg-[#ffb400] flex items-center justify-center">
             <Crosshair size={14} className="text-[#050b11]" aria-hidden />
           </span>
           <div>
             <p className="text-[12px] font-bold text-white leading-tight">Live on-screen markup</p>
-            <p className="text-[11px] text-white/50">Tap the zone · price loads</p>
+            <p className="text-[11px] text-white/50">Tap the zone, price loads</p>
           </div>
         </div>
-        <div className="relative aspect-[16/10] rounded-xl overflow-hidden bg-[#0e2030] mb-3">
-          <Image
-            src="/product/live-camera-markup.webp"
-            alt="Marking materials on a live camera view"
-            fill
-            sizes="320px"
-            className="object-cover object-top"
-          />
-        </div>
-        <div className="space-y-1.5">
+        <ProductShot
+          src="/product/live-camera-markup.webp"
+          alt="Marking materials on a live camera view"
+          width={1080}
+          height={2026}
+          sizes="250px"
+          className="rounded-[12px]"
+        />
+        <div className="space-y-1.5 mt-2.5 px-0.5">
           {[
-            { label: "Downlights × 8", price: "$940" },
-            { label: "Cable run · 12m", price: "$186" },
+            { label: "Downlights x 8", price: "$940" },
+            { label: "Cable run, 12m", price: "$186" },
           ].map((row) => (
             <div key={row.label} className="flex items-center justify-between rounded-lg bg-white/8 px-3 py-2">
               <span className="text-[12.5px] font-semibold text-white">{row.label}</span>
@@ -230,7 +231,7 @@ function ProductOverlay({ kind }: { kind: Scene["overlay"] }) {
           <p className="text-[10px] font-bold uppercase tracking-widest text-[#8b96a1] mb-1.5">Draft quote</p>
           <p className="text-[26px] font-black text-[#050b11] tabular-nums leading-none mb-2.5">$2,870</p>
           <div className="space-y-1">
-            {["Downlights × 8", "Switchboard upgrade", "Ceiling fans × 2"].map((line) => (
+            {["Downlights x 8", "Switchboard upgrade", "Ceiling fans x 2"].map((line) => (
               <div key={line} className="flex items-center gap-2 text-[12px] font-semibold text-[#0a1722]">
                 <Check size={12} className="text-[#16a34a]" aria-hidden />
                 {line}
@@ -243,8 +244,8 @@ function ProductOverlay({ kind }: { kind: Scene["overlay"] }) {
   }
 
   return (
-    <div className="home-glass rounded-2xl p-3.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
-      <div className="flex items-center gap-2 mb-3">
+    <div className="home-glass rounded-2xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
+      <div className="flex items-center gap-2 mb-2.5 px-1">
         <span className="w-7 h-7 rounded-md bg-[#16a34a] flex items-center justify-center">
           <Send size={13} className="text-white" aria-hidden />
         </span>
@@ -253,18 +254,18 @@ function ProductOverlay({ kind }: { kind: Scene["overlay"] }) {
           <p className="text-[11px] text-white/50">Client accepted in 47s</p>
         </div>
       </div>
-      <div className="relative aspect-[16/10] rounded-xl overflow-hidden bg-[#0e2030] mb-3">
-        <Image
-          src="/product/quote-send.webp"
-          alt="Quote ready to send screen"
-          fill
-          sizes="320px"
-          className="object-cover object-top"
-        />
-      </div>
-      <div className="rounded-xl bg-[#e8f5ec] px-3.5 py-2.5 flex items-center gap-2">
+      <ProductShot
+        src="/product/quote-send.webp"
+        alt="Quote ready to send screen"
+        width={1080}
+        height={1500}
+        fit="cover-top"
+        sizes="250px"
+        className="rounded-[12px]"
+      />
+      <div className="rounded-xl bg-[#e8f5ec] px-3.5 py-2.5 flex items-center gap-2 mt-2.5">
         <Check size={15} className="text-[#16a34a]" aria-hidden />
-        <p className="text-[12.5px] font-extrabold text-[#1c7a3a]">Accepted · job booked</p>
+        <p className="text-[12.5px] font-extrabold text-[#1c7a3a]">Accepted, job booked</p>
       </div>
     </div>
   );

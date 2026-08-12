@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import ProductShot from "@/components/marketing/ProductShot";
 
 type Band = {
   kicker: string;
@@ -10,6 +11,8 @@ type Band = {
   photoAlt: string;
   shot: string;
   shotAlt: string;
+  shotW: number;
+  shotH: number;
   reverse?: boolean;
 };
 
@@ -17,11 +20,13 @@ const BANDS: Band[] = [
   {
     kicker: "On the tools",
     title: "Mark the job. Watch it price.",
-    body: "Open the camera, tap the zone, draw the run. Materials and labour load from your book — not from memory at the desk later.",
+    body: "Open the camera, tap the zone, draw the run. Materials and labour load from your book, not from memory at the desk later.",
     photo: "/trades/electrician.jpg",
     photoAlt: "Electrician working on a residential site",
     shot: "/product/live-camera-markup.webp",
     shotAlt: "Live camera markup in Swiftscope",
+    shotW: 1080,
+    shotH: 2026,
   },
   {
     kicker: "Voice quoting",
@@ -31,6 +36,8 @@ const BANDS: Band[] = [
     photoAlt: "Plumber on a residential job",
     shot: "/product/quote-capture.webp",
     shotAlt: "Quote capture after voice note",
+    shotW: 1080,
+    shotH: 2218,
     reverse: true,
   },
   {
@@ -41,6 +48,8 @@ const BANDS: Band[] = [
     photoAlt: "Carpenter measuring timber on site",
     shot: "/product/plan-markup.webp",
     shotAlt: "Plan markup with priced markers",
+    shotW: 1080,
+    shotH: 2394,
   },
 ];
 
@@ -55,6 +64,7 @@ export default function CapabilityBands() {
               alt={band.photoAlt}
               fill
               sizes="100vw"
+              quality={90}
               className="object-cover object-center"
             />
             <div
@@ -94,16 +104,15 @@ export default function CapabilityBands() {
               </div>
 
               <div className={["lg:col-span-6 flex", band.reverse ? "lg:justify-start lg:[direction:ltr]" : "lg:justify-end"].join(" ")}>
-                <div className="w-full max-w-[340px] home-glass rounded-2xl p-3 shadow-[0_28px_70px_rgba(0,0,0,0.5)]">
-                  <div className="relative aspect-[9/16] max-h-[460px] rounded-xl overflow-hidden bg-[#0e2030]">
-                    <Image
-                      src={band.shot}
-                      alt={band.shotAlt}
-                      fill
-                      sizes="340px"
-                      className="object-cover object-top"
-                    />
-                  </div>
+                <div className="w-full max-w-[300px] home-glass rounded-2xl p-2.5 shadow-[0_28px_70px_rgba(0,0,0,0.5)]">
+                  <ProductShot
+                    src={band.shot}
+                    alt={band.shotAlt}
+                    width={band.shotW}
+                    height={band.shotH}
+                    sizes="300px"
+                    className="rounded-[14px]"
+                  />
                 </div>
               </div>
             </div>

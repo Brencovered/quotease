@@ -14,7 +14,7 @@ const POOL: Item[] = [
 ];
 
 /**
- * Compact interactive proof — tap lines into a live total.
+ * Compact interactive proof: tap lines into a live total.
  * Kept short so it earns its place after the photo bands, not as the whole page.
  */
 export default function QuoteTapDemo() {
@@ -84,7 +84,7 @@ export default function QuoteTapDemo() {
         <div className="bg-white min-h-[180px] px-4 py-3">
           {picked.length === 0 ? (
             <p className="h-[150px] flex items-center justify-center text-[13px] text-[#8b96a1] text-center px-6">
-              Empty quote — tap a line on the left
+              Empty quote. Tap a line on the left.
             </p>
           ) : (
             <ul className="space-y-2">
