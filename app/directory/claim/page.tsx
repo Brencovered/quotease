@@ -180,6 +180,16 @@ function ClaimDirectoryListingInner() {
             // email-confirmation round trip instead of dropping the user
             // back at a blank search step.
             emailRedirectTo: `${window.location.origin}/directory/claim${window.location.search}`,
+            // Read by handle_new_user() (see migration) to skip starting a
+            // platform trial. Without this, every directory-only signup got
+            // trial_ends_at = now() + 7 days like a real platform signup,
+            // and middleware's trialStillValid check does not look at
+            // subscription_status, only trial_ends_at -- so a listing-only
+            // account got full access to quoting, jobs, materials etc for
+            // a week with no card and no intent to use any of it. Found via
+            // team+demosu@swiftscope.com.au, created purely to test this
+            // form, which came out with live platform access.
+            data: { signup_source: "directory_claim" },
           },
         });
         if (signUpError) { setError(signUpError.message); return; }
