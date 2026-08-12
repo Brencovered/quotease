@@ -22,9 +22,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { ArrowRight, Check, Mic, PenLine, FileText, Upload, Package, CalendarDays, Receipt, X } from "lucide-react";
+import { ArrowRight, Check, Mic, PenLine, FileText, Upload, Package, CalendarDays, Receipt, X, ClipboardList, Ruler, Layers, Send } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
 import QuoteItUp from "@/components/marketing/QuoteItUp";
+import PhoneShot from "@/components/marketing/PhoneShot";
+import { SHOTS } from "@/lib/marketing/screenshots";
 import { TRADE_PAGES, getTradePage } from "@/lib/marketing/tradePages";
 
 export const revalidate = 604800; // 1 week, same cadence as the other SEO pages
@@ -277,16 +279,56 @@ export default async function TradeQuotingPage({
             </div>
           </div>
 
-          <div className="mt-4 rounded-2xl bg-white border border-[#e8ecef] p-6 flex flex-col sm:flex-row gap-5 sm:items-center">
-            <div className="shrink-0">
-              <p className="text-[10.5px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-1">
-                Example package
-              </p>
-              <p className="font-display text-[1.3rem] uppercase">{page.packageName}</p>
+          {/* Package preview: real line items and rates, not a phone
+              screenshot. The flat single-line strip this replaced ("Example
+              package: Standard bathroom rough-in / Exhaust fan, two
+              downlights...") did not actually show a package, it described
+              one in a sentence. This renders the trade's own docket lines
+              as a priced package -- the same numbers QuoteItUp and the
+              hero use, so nothing here can drift from what is shown
+              elsewhere on the page. One fixed layout reused for every
+              trade, so sizing is identical across all six pages rather
+              than varying with how much prose happened to fit. */}
+          <div className="mt-4 rounded-2xl bg-white border border-[#e8ecef] overflow-hidden">
+            <div className="px-6 py-5 border-b border-[#eef1f3] flex items-baseline justify-between gap-4">
+              <div>
+                <p className="text-[10.5px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-1">
+                  Example package
+                </p>
+                <p className="font-display text-[1.3rem] uppercase">{page.packageName}</p>
+              </div>
+              <p className="text-[12px] text-[#8a9ba8] shrink-0">Saved once, one tap after that</p>
             </div>
-            <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] sm:border-l sm:border-[#e8ecef] sm:pl-5">
-              {page.packageContents}
-            </p>
+            <div className="divide-y divide-[#f2f5f7]">
+              {page.docket.map((l) => (
+                <div key={l.label} className="flex items-baseline gap-3 px-6 py-2.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13.5px] font-semibold text-[#0a1722]">{l.label}</p>
+                    <p className="text-[11px] text-[#8a9ba8] tabular-nums mt-0.5">
+                      {l.qty} {l.unit}
+                    </p>
+                  </div>
+                  <p className="text-[13px] font-semibold text-[#0a1722] tabular-nums shrink-0">
+                    ${l.amount.toLocaleString("en-AU")}
+                  </p>
+                </div>
+              ))}
+              <div className="flex items-baseline gap-3 px-6 py-2.5 bg-[#fafbfc]">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13.5px] font-semibold text-[#0a1722]">Labour</p>
+                  <p className="text-[11px] text-[#8a9ba8] tabular-nums mt-0.5">{page.docketHours} hrs at $95</p>
+                </div>
+                <p className="text-[13px] font-semibold text-[#0a1722] tabular-nums shrink-0">
+                  ${(page.docketHours * 95).toLocaleString("en-AU")}
+                </p>
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-[#0a1722] flex items-baseline justify-between">
+              <p className="text-[12px] text-[#8aa4b4]">One tap, every time you quote this job</p>
+              <p className="font-display text-[1.5rem] text-[#ffb400] tabular-nums">
+                ${(page.docket.reduce((s, l) => s + l.amount, 0) + page.docketHours * 95).toLocaleString("en-AU")}
+              </p>
+            </div>
           </div>
 
         </div>
@@ -309,19 +351,32 @@ export default async function TradeQuotingPage({
             </p>
           </div>
 
-          {/* Text-only steps. These cards are half-width and carry a heading
-              plus two lines of copy; there is no room left for a readable
-              capture, which is why the wizardShots thumbnails were pulled
-              from here. */}
+          {/* Text-only steps, with an icon and a worked example per trade
+              instead of a wall of prose. These cards are half-width, so
+              there is no room for a screenshot -- that is why the
+              wizardShots thumbnails were pulled from here originally -- but
+              an icon and one short example line fit easily and give each
+              step something concrete rather than only description. The
+              four icons mark the shape of the flow (count, configure,
+              extras, send), which is the same across every trade, so they
+              stay fixed while the example text is per-trade real data from
+              the same docket QuoteItUp and the package preview use above. */}
           <div className="grid sm:grid-cols-2 gap-4 items-start">
             {page.quotingFlow.map((f, i) => {
+              const StepIcon = [ClipboardList, Ruler, Layers, Send][i] ?? ClipboardList;
               return (
                 <div key={f.step} className="relative rounded-2xl p-6 bg-[#f8f9fa] border border-[#e8ecef]">
-                  <span className="font-display text-[2.4rem] leading-none text-[#ffb400] block mb-3">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
+                  <div className="flex items-start justify-between mb-3">
+                    <span className="font-display text-[2.4rem] leading-none text-[#ffb400]">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <StepIcon size={20} className="text-[#8a9ba8] mt-1.5" />
+                  </div>
                   <h3 className="font-display text-[1.2rem] mb-2">{f.step}</h3>
-                  <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">{f.detail}</p>
+                  <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-3">{f.detail}</p>
+                  <p className="text-[12.5px] font-semibold text-[#0a1722] bg-white border border-[#e8ecef] rounded-lg px-3 py-2">
+                    {f.example}
+                  </p>
                 </div>
               );
             })}
@@ -448,6 +503,28 @@ export default async function TradeQuotingPage({
                 Hours and materials tracked against what you quoted, so you find out which jobs make
                 money while you can still do something about it.
               </p>
+            </div>
+          </div>
+
+          {/* This is where four text cards stopped being enough: the
+              section argues "the quote becomes the job" and never showed a
+              job. jobDetail is the one capture that actually demonstrates
+              that claim -- it is the same job moving from scheduled to
+              invoiced, which is progress, not a static screen -- so it is
+              the wide hero shot here. team and dashboard sit alongside it
+              as the two things the note specifically asked for beyond
+              progress: managing the crew and seeing what the job made.
+              Full-width row with a tall frame, the pattern already proven
+              on this page and the homepage; not squeezed into one of the
+              four cards above, which is exactly the mistake that broke
+              three earlier attempts on this branch. */}
+          <div className="mt-10 pt-10 border-t border-[#e8ecef] grid lg:grid-cols-[1.1fr,0.9fr] gap-6 items-start">
+            <div>
+              <PhoneShot shot={SHOTS.jobDetail} tone="light" frame="tall" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <PhoneShot shot={SHOTS.team} tone="light" frame="tall" sizes="(max-width: 640px) 45vw, 220px" />
+              <PhoneShot shot={SHOTS.dashboard} tone="light" frame="tall" sizes="(max-width: 640px) 45vw, 220px" />
             </div>
           </div>
 
