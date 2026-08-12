@@ -66,19 +66,6 @@ export default function CapabilityBands() {
     <div>
       {BANDS.map((band) => (
         <section key={band.title} className="relative overflow-hidden bg-[#050b11]">
-          <div className="absolute inset-0">
-            <Image
-              src={band.photo}
-              alt=""
-              fill
-              sizes="100vw"
-              quality={88}
-              className={`object-cover ${band.photoPos ?? "object-center"}`}
-            />
-            <div className="absolute inset-0 bg-[#050b11]/78" />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#050b11] via-[#050b11]/85 to-[#050b11]/55" />
-          </div>
-
           <div className="relative max-w-[1280px] mx-auto px-6 py-16 lg:py-20">
             <div
               className={[
@@ -86,14 +73,14 @@ export default function CapabilityBands() {
                 band.reverse ? "lg:[direction:rtl]" : "",
               ].join(" ")}
             >
-              <div className={["lg:col-span-6", band.reverse ? "lg:[direction:ltr]" : ""].join(" ")}>
+              <div className={["lg:col-span-5", band.reverse ? "lg:[direction:ltr]" : ""].join(" ")}>
                 <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-3">
                   {band.kicker}
                 </p>
                 <h2 className="text-[clamp(1.9rem,4vw,3rem)] font-extrabold tracking-[-0.025em] leading-[1.08] text-white mb-4 max-w-[16ch]">
                   {band.title}
                 </h2>
-                <p className="text-[16px] leading-[1.65] text-[#d0dde8] max-w-[42ch] mb-7">
+                <p className="text-[16px] leading-[1.65] text-[#c5d4e0] max-w-[42ch] mb-7">
                   {band.body}
                 </p>
                 <Link
@@ -106,19 +93,37 @@ export default function CapabilityBands() {
 
               <div
                 className={[
-                  "lg:col-span-6 flex",
-                  band.reverse ? "lg:justify-start lg:[direction:ltr]" : "lg:justify-end",
+                  "lg:col-span-7 relative",
+                  band.reverse ? "lg:[direction:ltr]" : "",
                 ].join(" ")}
               >
-                <div className="w-full max-w-[260px] drop-shadow-[0_24px_50px_rgba(0,0,0,0.45)]">
-                  <ProductShot
-                    src={band.shot}
-                    alt={band.shotAlt}
-                    width={band.shotW}
-                    height={band.shotH}
-                    sizes="260px"
-                    className="rounded-[22px]"
+                <div className="relative aspect-[16/11] overflow-hidden rounded-2xl sm:rounded-3xl">
+                  <Image
+                    src={band.photo}
+                    alt={band.photoAlt}
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 640px"
+                    quality={90}
+                    className={`object-cover ${band.photoPos ?? "object-center"}`}
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10" />
+                  <div
+                    className={[
+                      "absolute bottom-4 w-[42%] max-w-[220px]",
+                      band.reverse ? "left-4" : "right-4",
+                    ].join(" ")}
+                  >
+                    <div className="drop-shadow-[0_24px_50px_rgba(0,0,0,0.55)]">
+                      <ProductShot
+                        src={band.shot}
+                        alt={band.shotAlt}
+                        width={band.shotW}
+                        height={band.shotH}
+                        sizes="220px"
+                        className="rounded-[18px]"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
