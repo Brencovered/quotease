@@ -78,14 +78,14 @@ export default async function Home() {
         <div className="relative z-10 flex-1 flex items-end">
           <div className="max-w-7xl mx-auto px-6 pb-16 sm:pb-20 w-full">
             <div className="max-w-[640px] home-hero-copy">
-              <p className="font-display text-[2.4rem] sm:text-[3.2rem] leading-none tracking-wide text-white mb-5">
+              <p className="font-display text-[3rem] sm:text-[4rem] lg:text-[4.6rem] leading-[0.9] tracking-wide text-white mb-4">
                 SWIFTSCOPE
               </p>
-              <h1 className="font-display uppercase leading-[0.9] mb-5">
-                <span className="block text-[2.6rem] sm:text-[4rem] lg:text-[4.4rem] text-white">
+              <h1 className="font-display uppercase leading-[0.92] mb-5">
+                <span className="block text-[2.1rem] sm:text-[3rem] lg:text-[3.4rem] text-white">
                   Quote it on site.
                 </span>
-                <span className="block text-[2.6rem] sm:text-[4rem] lg:text-[4.4rem] text-[#ffb400]">
+                <span className="block text-[2.1rem] sm:text-[3rem] lg:text-[3.4rem] text-[#ffb400]">
                   Win it before you leave.
                 </span>
               </h1>
@@ -151,16 +151,20 @@ export default async function Home() {
               ))}
             </ol>
 
-            <div className="relative">
-              <div className="absolute -inset-4 bg-[radial-gradient(ellipse_at_center,rgba(255,180,0,0.12),transparent_65%)] pointer-events-none" />
-              <Image
-                src="/marketing/v2/quoting.png"
-                alt="Swiftscope quote builder on a phone"
-                width={900}
-                height={1200}
-                className="relative w-full max-w-[420px] mx-auto h-auto"
-                sizes="(max-width: 1024px) 90vw, 420px"
-              />
+            <div className="relative flex justify-center">
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,180,0,0.14),transparent_60%)] pointer-events-none" />
+              <div className="relative w-full max-w-[280px] sm:max-w-[300px] bg-[#0a1722] p-2.5 shadow-[0_28px_60px_rgba(10,23,34,0.28)]" style={{ borderRadius: 28 }}>
+                <div className="overflow-hidden bg-white" style={{ borderRadius: 20 }}>
+                  <Image
+                    src="/marketing/v2/quoting.png"
+                    alt="Swiftscope quote builder on a phone"
+                    width={453}
+                    height={918}
+                    className="w-full h-auto"
+                    sizes="(max-width: 640px) 70vw, 300px"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
@@ -177,15 +181,16 @@ export default async function Home() {
 
       {/* HOMEOWNERS — one purpose */}
       <section className="relative border-b border-[#12212f] bg-[#0a1722] overflow-hidden">
-        <div className="absolute inset-0 opacity-35">
+        <div className="absolute inset-0">
           <Image
             src="/trades/electrician.jpg"
             alt=""
             fill
             sizes="100vw"
-            className="object-cover object-center"
+            className="object-cover object-[70%_center] opacity-55"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0a1722] via-[#0a1722]/85 to-[#0a1722]/55" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0a1722] via-[#0a1722]/80 to-[#0a1722]/45" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0a1722]/70 via-transparent to-[#0a1722]/30" />
         </div>
         <div className="relative max-w-7xl mx-auto px-6 py-16 sm:py-20">
           <div className="max-w-[520px]">
