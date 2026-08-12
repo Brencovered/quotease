@@ -109,12 +109,12 @@ export default async function Home() {
       <section className="relative min-h-[60vh] flex items-end overflow-hidden">
         <div className="absolute inset-0">
           <Image
-            src="/trades/roofer.jpg"
+            src="/trades/hero-onsite.jpg"
             alt=""
             fill
             sizes="100vw"
             quality={90}
-            className="object-cover object-center"
+            className="object-cover object-[center_70%]"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-[#071018] via-[#071018]/80 to-[#071018]/35" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#071018]/80 via-transparent to-[#071018]/30" />
