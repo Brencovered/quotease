@@ -25,6 +25,8 @@ import { notFound } from "next/navigation";
 import { ArrowRight, Check, Mic, PenLine, FileText, Upload, Package, CalendarDays, Receipt, X } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
 import QuoteItUp from "@/components/marketing/QuoteItUp";
+import PhoneStage from "@/components/marketing/PhoneStage";
+import { SHOTS } from "@/lib/marketing/screenshots";
 import { TRADE_PAGES, getTradePage } from "@/lib/marketing/tradePages";
 
 export const revalidate = 604800; // 1 week, same cadence as the other SEO pages
@@ -75,30 +77,19 @@ export default async function TradeQuotingPage({
   // screen", only the electrician's, the plumber's, or the carpenter's,
   // each with that trade's own items and text in the pixels. Showing the
   // wrong trade's capture undercuts the exact claim this page is making
-  // (a builder that knows your trade), so screens are looked up per trade
-  // here rather than shared. quoteCapture is the one genuine exception --
-  // it's the entry menu (camera, plan, drawings, voice), which has no
-  // trade-specific text and is honest to show on any trade's page, so it
-  // anchors wizard step 1 by default below.
+  // (a builder that knows your trade), so page.screens is looked up per
+  // trade rather than shared -- see the field's own comment in
+  // lib/marketing/tradePages.ts for what each of the two trades without a
+  // dedicated capture falls back to and why.
   //
-  // wizardShots is an explicit 4-slot array per trade rather than an
-  // inferred "send is always step 4" rule, because that rule breaks for
-  // roofers: their one real wizard-relevant capture (Standard/Premium
-  // pricing plus whirlybird and skylight extras) is the job step, which
-  // is step 3 ("Runs and extras") in this trade's own quotingFlow copy,
-  // not step 4. Roofers and the two generic-builder trades don't have a
-  // captured send screen at all yet, so that slot stays null for them --
-  // no placeholder, the card just stays text-only.
-  // The TRADE_SCREENS map and its per-trade captures were removed from this
-  // page along with the PhoneShot rows. They are still exported from
-  // lib/marketing/screenshots.ts and used by FeatureSwitcher, which has the
-  // width to show a capture properly. See components/marketing/QuoteItUp for
-  // why this page is interactive rather than showing a picture of the app.
-  // screens.wizardShots is intentionally unread for now. The per-step
-  // thumbnails it fed were removed because the grid cells were too narrow to
-  // render a capture legibly, but the per-trade mapping above is correct and
-  // worth keeping: it is what a future wide alternating row per step would
-  // draw from.
+  // These were pulled from this page once already: PhoneStage needs
+  // ~290px to stay legible, and the cards these used to sit inside were
+  // ~400px with four lines of copy above the image -- no width at which
+  // both fit. That was a real constraint on the card layout, not on
+  // PhoneStage itself, and it's why the setup/quoting-flow/job-management
+  // sections below now run as a wide two-column row (text left, one
+  // full-size capture right) instead of trying to cram a phone into a
+  // narrow card again.
 
   return (
     <main className="bg-white text-[#0a1722]">
@@ -202,140 +193,125 @@ export default async function TradeQuotingPage({
 
       {/* SETUP ── the objection that kills trade software adoption is not
           price, it is the fortnight of data entry people assume comes first.
-          Deliberately a numbered row rather than another card grid: three
-          identical grids in a row is what made this page feel padded. */}
+          Real capture on the right of this trade's own pricebook, not a
+          fourth card grid: this is the one section making a "your actual
+          price file" claim, so it is also the one that should show one. */}
       <div className="bg-[#f8f9fa] border-b border-[#e8ecef]">
-        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16">
-          <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
-            <div className="max-w-[560px]">
-              <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">
-                Getting started
-              </p>
-              <h2 className="font-display uppercase text-[1.9rem] sm:text-[2.35rem] leading-[0.95] mb-3">
-                Set up in minutes,<br />not a fortnight
-              </h2>
-              <p className="text-[15.5px] leading-[1.7] text-[#5a6a78]">
-                The reason most tradies never finish setting up job software is the data entry nobody
-                warns them about. Swiftscope starts from the price file your supplier already sends you.
+        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16 grid lg:grid-cols-[minmax(0,1fr)_460px] gap-10 lg:gap-14 items-start">
+          <div>
+            <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
+              <div className="max-w-[560px]">
+                <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">
+                  Getting started
+                </p>
+                <h2 className="font-display uppercase text-[1.9rem] sm:text-[2.35rem] leading-[0.95] mb-3">
+                  Set up in minutes,<br />not a fortnight
+                </h2>
+                <p className="text-[15.5px] leading-[1.7] text-[#5a6a78]">
+                  The reason most tradies never finish setting up job software is the data entry nobody
+                  warns them about. Swiftscope starts from the price file your supplier already sends you.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-3 gap-4 items-start">
+              <div className="bg-white rounded-2xl border border-[#e8ecef] p-6">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <Upload size={17} className="text-[#ffb400]" />
+                  <span className="font-display text-[1.1rem] uppercase">01 Upload</span>
+                </div>
+                <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">{page.setupMaterials}</p>
+              </div>
+              <div className="bg-white rounded-2xl border border-[#e8ecef] p-6">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <Package size={17} className="text-[#ffb400]" />
+                  <span className="font-display text-[1.1rem] uppercase">02 Bundle</span>
+                </div>
+                <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">
+                  Save the job you quote most often as a package. After that it is one tap, not a rebuild.
+                </p>
+              </div>
+              <div className="bg-white rounded-2xl border border-[#e8ecef] p-6">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <Check size={17} className="text-[#ffb400]" />
+                  <span className="font-display text-[1.1rem] uppercase">03 Set rates</span>
+                </div>
+                <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">
+                  Your hourly rate, margin and terms become the baseline on every quote. Change them once
+                  and everything after follows.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-2xl bg-white border border-[#e8ecef] p-6 flex flex-col sm:flex-row gap-5 sm:items-center">
+              <div className="shrink-0">
+                <p className="text-[10.5px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-1">
+                  Example package
+                </p>
+                <p className="font-display text-[1.3rem] uppercase">{page.packageName}</p>
+              </div>
+              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] sm:border-l sm:border-[#e8ecef] sm:pl-5">
+                {page.packageContents}
               </p>
             </div>
-            <p className="text-[13px] text-[#5a6a78] max-w-[260px] border-l-2 border-[#ffb400] pl-4">
+          </div>
+
+          <div>
+            <PhoneStage shot={SHOTS[page.screens.setup]} tone="light" frame="tall" />
+            <p className="text-[13px] text-[#5a6a78] mt-4 border-l-2 border-[#ffb400] pl-4">
               Materials and labour stay split, so a supplier price rise shows up in your margin instead
               of hiding in it.
             </p>
           </div>
-
-          {/* No screenshots in this row, deliberately, after four attempts at
-              making them work here.
-
-              These cards are about 400px wide with four lines of copy above
-              the image. A PhoneStage needs roughly 290px for the capture to
-              be readable, and its toast is absolutely positioned across the
-              top of that capture. At 400px minus padding there is no width
-              at which both fit: the phone was hard-capped at w-[160px] on
-              two of the three cards, where the toast covered the entire
-              phone, while the third had no cap at all and overflowed the
-              card edge. Same row, two different sizing rules, neither
-              working.
-
-              The pattern is fine where there is room. The alternating
-              full-width feature rows further down this page use it with a
-              tall frame and they read well. The fault was the container,
-              not the component, so the component stays and this row goes
-              back to being three short text steps.
-
-              Screenshots for materials, packages and pricing tiers all
-              appear elsewhere on the page in contexts wide enough to show
-              them properly. Nothing is lost by not repeating them at
-              thumbnail size here. */}
-          <div className="grid sm:grid-cols-3 gap-4 items-start">
-            <div className="bg-white rounded-2xl border border-[#e8ecef] p-6">
-              <div className="flex items-center gap-2.5 mb-3">
-                <Upload size={17} className="text-[#ffb400]" />
-                <span className="font-display text-[1.1rem] uppercase">01 Upload</span>
-              </div>
-              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">{page.setupMaterials}</p>
-            </div>
-            <div className="bg-white rounded-2xl border border-[#e8ecef] p-6">
-              <div className="flex items-center gap-2.5 mb-3">
-                <Package size={17} className="text-[#ffb400]" />
-                <span className="font-display text-[1.1rem] uppercase">02 Bundle</span>
-              </div>
-              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">
-                Save the job you quote most often as a package. After that it is one tap, not a rebuild.
-              </p>
-            </div>
-            <div className="bg-white rounded-2xl border border-[#e8ecef] p-6">
-              <div className="flex items-center gap-2.5 mb-3">
-                <Check size={17} className="text-[#ffb400]" />
-                <span className="font-display text-[1.1rem] uppercase">03 Set rates</span>
-              </div>
-              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">
-                Your hourly rate, margin and terms become the baseline on every quote. Change them once
-                and everything after follows.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-4 rounded-2xl bg-white border border-[#e8ecef] p-6 flex flex-col sm:flex-row gap-5 sm:items-center">
-            <div className="shrink-0">
-              <p className="text-[10.5px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-1">
-                Example package
-              </p>
-              <p className="font-display text-[1.3rem] uppercase">{page.packageName}</p>
-            </div>
-            <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] sm:border-l sm:border-[#e8ecef] sm:pl-5">
-              {page.packageContents}
-            </p>
-          </div>
-
         </div>
       </div>
 
-      {/* HOW QUOTING WORKS */}
+      {/* HOW QUOTING WORKS ── the numbered steps plus one real capture of
+          where they land: page.screens.flow, the actual result of this
+          trade's own flow (a sent quote, or for roofers the job step that
+          matches "Runs and extras" below). */}
       <div className="border-b border-[#e8ecef]">
-        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16">
-          <div className="max-w-[680px] mb-8">
-            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">
-              How the quoting works
-            </p>
-            <h2 className="font-display uppercase text-[1.9rem] sm:text-[2.35rem] leading-[0.95] mb-4">
-              Quoted before you<br />leave the driveway
-            </h2>
-            <p className="text-[15.5px] leading-[1.7] text-[#5a6a78]">
-              The quote that wins is usually the one that arrives first, while the job is still fresh
-              in the client&apos;s head. Everything below happens standing in the job, on a phone, one
-              handed.
-            </p>
+        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16 grid lg:grid-cols-[minmax(0,1fr)_460px] gap-10 lg:gap-14 items-start">
+          <div>
+            <div className="max-w-[680px] mb-8">
+              <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">
+                How the quoting works
+              </p>
+              <h2 className="font-display uppercase text-[1.9rem] sm:text-[2.35rem] leading-[0.95] mb-4">
+                Quoted before you<br />leave the driveway
+              </h2>
+              <p className="text-[15.5px] leading-[1.7] text-[#5a6a78]">
+                The quote that wins is usually the one that arrives first, while the job is still fresh
+                in the client&apos;s head. Everything below happens standing in the job, on a phone, one
+                handed.
+              </p>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4 items-start">
+              {page.quotingFlow.map((f, i) => {
+                return (
+                  <div key={f.step} className="relative rounded-2xl p-6 bg-[#f8f9fa] border border-[#e8ecef]">
+                    <span className="font-display text-[2.4rem] leading-none text-[#ffb400] block mb-3">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <h3 className="font-display text-[1.2rem] mb-2">{f.step}</h3>
+                    <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">{f.detail}</p>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-10 rounded-2xl bg-[#0a1722] p-6">
+              <p className="text-[15px] leading-[1.75] text-[#c8d8e4]">
+                <span className="text-white font-bold">Against a spreadsheet:</span> no hunting for the
+                last similar job, no retyping client details, no formatting. <span className="text-white font-bold">Against
+                a desktop tool:</span> no waiting until 9pm, which is the real reason quotes go out late
+                or not at all.
+              </p>
+            </div>
           </div>
 
-          {/* Text-only steps. These cards are half-width and carry a heading
-              plus two lines of copy; there is no room left for a readable
-              capture, which is why the wizardShots thumbnails were pulled
-              from here. */}
-          <div className="grid sm:grid-cols-2 gap-4 items-start">
-            {page.quotingFlow.map((f, i) => {
-              return (
-                <div key={f.step} className="relative rounded-2xl p-6 bg-[#f8f9fa] border border-[#e8ecef]">
-                  <span className="font-display text-[2.4rem] leading-none text-[#ffb400] block mb-3">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <h3 className="font-display text-[1.2rem] mb-2">{f.step}</h3>
-                  <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">{f.detail}</p>
-                </div>
-              );
-            })}
-          </div>
-
-
-          <div className="mt-10 rounded-2xl bg-[#0a1722] p-6">
-            <p className="text-[15px] leading-[1.75] text-[#c8d8e4]">
-              <span className="text-white font-bold">Against a spreadsheet:</span> no hunting for the
-              last similar job, no retyping client details, no formatting. <span className="text-white font-bold">Against
-              a desktop tool:</span> no waiting until 9pm, which is the real reason quotes go out late
-              or not at all.
-            </p>
-          </div>
+          <PhoneStage shot={SHOTS[page.screens.flow]} tone="light" frame="tall" />
         </div>
       </div>
 
@@ -392,65 +368,67 @@ export default async function TradeQuotingPage({
       </div>
 
 
-      {/* JOB MANAGEMENT ── the quote is the start, not the deliverable. */}
+      {/* JOB MANAGEMENT ── the quote is the start, not the deliverable.
+          SHOTS.dashboard on the right: genuinely trade-neutral (pipeline,
+          profit, time saved -- no trade-specific fields in the capture),
+          so unlike setup/flow above every trade gets the same one here. */}
       <div className="bg-[#f8f9fa] border-b border-[#e8ecef]">
-        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16">
-          <div className="max-w-[680px] mb-8">
-            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">
-              After they say yes
-            </p>
-            <h2 className="font-display uppercase text-[1.9rem] sm:text-[2.35rem] leading-[0.95] mb-4">
-              The quote becomes<br />the job
-            </h2>
-            <p className="text-[15.5px] leading-[1.7] text-[#5a6a78] mb-4">{page.afterAccept}</p>
-            <p className="text-[15.5px] leading-[1.7] text-[#5a6a78]">
-              Nothing is retyped between quote, job and invoice, which is where most double-entry and
-              most disputes come from.
-            </p>
+        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16 grid lg:grid-cols-[minmax(0,1fr)_460px] gap-10 lg:gap-14 items-start">
+          <div>
+            <div className="max-w-[680px] mb-8">
+              <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">
+                After they say yes
+              </p>
+              <h2 className="font-display uppercase text-[1.9rem] sm:text-[2.35rem] leading-[0.95] mb-4">
+                The quote becomes<br />the job
+              </h2>
+              <p className="text-[15.5px] leading-[1.7] text-[#5a6a78] mb-4">{page.afterAccept}</p>
+              <p className="text-[15.5px] leading-[1.7] text-[#5a6a78]">
+                Nothing is retyped between quote, job and invoice, which is where most double-entry and
+                most disputes come from.
+              </p>
+            </div>
+
+            {/* "Schedule and crew" is the one loose pairing: there's no
+                calendar screen in the set yet, so the capture beside this
+                column is the dashboard, not a per-card thumbnail. */}
+            <div className="grid sm:grid-cols-2 gap-4 items-start">
+              <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
+                <CalendarDays size={20} className="text-[#ffb400] mb-4" />
+                <h3 className="font-display text-[1.15rem] mb-2">Schedule and crew</h3>
+                <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">
+                  Put the job in the calendar, assign who is on it, and see the week on a map so you are
+                  not crossing town twice.
+                </p>
+              </div>
+              <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
+                <FileText size={20} className="text-[#ffb400] mb-4" />
+                <h3 className="font-display text-[1.15rem] mb-2">Dockets and variations</h3>
+                <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">
+                  Day works signed on the spot on the client&apos;s phone, and variations accepted in
+                  writing before the extra work starts.
+                </p>
+              </div>
+              <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
+                <Receipt size={20} className="text-[#ffb400] mb-4" />
+                <h3 className="font-display text-[1.15rem] mb-2">Invoice and Xero</h3>
+                <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">
+                  Deposits, progress claims and final invoices built from the quote, pushed straight to
+                  Xero rather than exported and re-keyed.
+                </p>
+              </div>
+              <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
+                <Check size={20} className="text-[#ffb400] mb-4" />
+                <h3 className="font-display text-[1.15rem] mb-2">Margin, job by job</h3>
+                <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">
+                  Hours and materials tracked against what you quoted, so you find out which jobs make
+                  money while you can still do something about it.
+                </p>
+              </div>
+            </div>
           </div>
 
-          {/* Embedded per card, same as setup and the quoting steps above.
-              All four of these screens are trade-neutral -- none show an
-              electrician's fields -- so unlike the two sections above,
-              every trade gets the identical four here. "Schedule and
-              crew" is the one loose pairing: there's no calendar screen
-              in the set yet, so it takes the job screen, which is at
-              least the closest thing to "the job you're now running". */}
-          <div className="grid sm:grid-cols-2 gap-4 items-start">
-            <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
-              <CalendarDays size={20} className="text-[#ffb400] mb-4" />
-              <h3 className="font-display text-[1.15rem] mb-2">Schedule and crew</h3>
-              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">
-                Put the job in the calendar, assign who is on it, and see the week on a map so you are
-                not crossing town twice.
-              </p>
-            </div>
-            <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
-              <FileText size={20} className="text-[#ffb400] mb-4" />
-              <h3 className="font-display text-[1.15rem] mb-2">Dockets and variations</h3>
-              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">
-                Day works signed on the spot on the client&apos;s phone, and variations accepted in
-                writing before the extra work starts.
-              </p>
-            </div>
-            <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
-              <Receipt size={20} className="text-[#ffb400] mb-4" />
-              <h3 className="font-display text-[1.15rem] mb-2">Invoice and Xero</h3>
-              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">
-                Deposits, progress claims and final invoices built from the quote, pushed straight to
-                Xero rather than exported and re-keyed.
-              </p>
-            </div>
-            <div className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
-              <Check size={20} className="text-[#ffb400] mb-4" />
-              <h3 className="font-display text-[1.15rem] mb-2">Margin, job by job</h3>
-              <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">
-                Hours and materials tracked against what you quoted, so you find out which jobs make
-                money while you can still do something about it.
-              </p>
-            </div>
-          </div>
-
+          <PhoneStage shot={SHOTS.dashboard} tone="light" frame="tall" />
         </div>
       </div>
 

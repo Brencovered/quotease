@@ -22,6 +22,8 @@
  * When a builder gains or loses a field, update the matching entry here.
  */
 
+import type { ScreenshotKey } from "@/lib/marketing/screenshots";
+
 export interface DocketLine {
   label: string;
   /** The trade's own unit: 'each', 'lm', 'm2', 'hrs'. This column is the point. */
@@ -76,6 +78,19 @@ export interface TradePage {
   /** Lines for the example quote card. Real fields, illustrative numbers. */
   docket: DocketLine[];
   docketHours: number;
+
+  /**
+   * Real screenshots embedded lower on the page. `setup` sits beside the
+   * "set up in minutes" section (the trade's own price file/pricebook where
+   * a real capture exists); `flow` sits beside "how the quoting works" (the
+   * result of that trade's flow -- a sent quote, or for roofers the one
+   * capture that actually matches their own "Runs and extras" step). Both
+   * are real captures from that trade's own builder where one was taken;
+   * the two trades without one (painters-and-plasterers, the generic
+   * catch-all) point at their closest genuine capture or a trade-neutral
+   * screen rather than another trade's mismatched fields.
+   */
+  screens: { setup: ScreenshotKey; flow: ScreenshotKey };
 }
 
 export const TRADE_PAGES: TradePage[] = [
@@ -136,6 +151,7 @@ export const TRADE_PAGES: TradePage[] = [
     { label: "Roof access, tiled", qty: "1",  unit: "allowance",   amount: 180 },
   ],
   docketHours: 14,
+  screens: { setup: "materials", flow: "quoteSend" },
   },
   {
     slug: "plumbers",
@@ -193,6 +209,7 @@ export const TRADE_PAGES: TradePage[] = [
     { label: "Hot water unit, heat pump",         qty: "1", unit: "each",      amount: 2890 },
   ],
   docketHours: 22,
+  screens: { setup: "plumberMaterials", flow: "plumberSend" },
   },
   {
     slug: "roofers",
@@ -250,6 +267,7 @@ export const TRADE_PAGES: TradePage[] = [
     { label: "Downpipes",                          qty: "3",   unit: "each",   amount: 285 },
   ],
   docketHours: 46,
+  screens: { setup: "roofingMaterials", flow: "roofingScope" },
   },
   {
     slug: "carpenters",
@@ -308,6 +326,7 @@ export const TRADE_PAGES: TradePage[] = [
     { label: "New stud wall, 3m",           qty: "2",  unit: "each", amount: 940 },
   ],
   docketHours: 38,
+  screens: { setup: "carpenterMaterials", flow: "carpenterSend" },
   },
   {
     slug: "painters-and-plasterers",
@@ -364,6 +383,11 @@ export const TRADE_PAGES: TradePage[] = [
     { label: "Paint and materials",         qty: "1",   unit: "lot",  amount: 1240 },
   ],
   docketHours: 34,
+  // No materials capture exists for this trade (the registry's comment on
+  // paintingPackages/paintingSend explains why -- the only "materials" shot
+  // taken alongside them is actually the roofer's catalogue). Packages is
+  // the closest real capture to "your price file" for this section.
+  screens: { setup: "paintingPackages", flow: "paintingSend" },
   },
   {
     slug: "trades",
@@ -420,6 +444,11 @@ export const TRADE_PAGES: TradePage[] = [
     { label: "Site prep and excavation",    qty: "1",  unit: "job",  amount: 1180 },
   ],
   docketHours: 26,
+  // No capture exists for this catch-all trade specifically -- both shots
+  // are from the trade-neutral subset (see screenshots.ts's own note on
+  // which captures carry no trade-specific fields) rather than showing a
+  // dedicated trade's fields on the page for everyone else.
+  screens: { setup: "pricingTiers", flow: "quoteSentDetail" },
   },
 ];
 
