@@ -1,54 +1,78 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Bot, User, HelpCircle, RefreshCw, MapPin, UserPlus, FileCheck2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Bot, User, RefreshCw, Pause, Play } from "lucide-react";
 
-interface ActivityEvent {
-  type: "claim" | "signup";
-  outcome: string | null;
-  business: string | null;
-  suburb: string | null;
-  trade: string | null;
-  ip: string | null;
-  deviceKind: "bot" | "human" | "unknown";
-  deviceLabel: string;
-  at: string;
+interface TrafficEvent {
+  id: number;
+  path: string;
+  method: string;
+  ip_address: string | null;
+  user_agent: string | null;
+  is_bot: boolean;
+  bot_label: string | null;
+  created_at: string;
 }
 
 interface ActivityResponse {
-  summary: { total: number; humans: number; bots: number; unknown: number };
+  summary: { total: number; humans: number; bots: number };
   repeatedIps: { ip: string; count: number }[];
-  events: ActivityEvent[];
+  events: TrafficEvent[];
   error?: string;
 }
+
+const POLL_MS = 4000;
 
 /**
  * components/admin/ActivityFeed.tsx
  * -----------------------------------
- * Renders GET /api/admin/activity as a glanceable feed rather than raw
- * JSON. Each row is one real database event (a signup or a claim
- * attempt), tagged bot/human/unknown by an icon and colour rather than a
- * word you have to read, since the entire point of this view is being
- * able to tell at a glance what a stretch of activity actually was.
+ * A genuinely live feed of real page traffic, bot and human both,
+ * polling public.traffic_log every few seconds via GET /api/admin/activity.
  *
- * Deliberately not a live-updating log tail. That would need a websocket
- * or polling loop for a page that gets checked occasionally, not watched
- * continuously -- a manual refresh button is the honest match for how
- * this is actually used.
+ * Polling rather than a websocket/SSE stream: this table can be written
+ * from every page request on the site, so a push-based live connection
+ * for an admin page that gets glanced at occasionally is more
+ * infrastructure than the problem needs. Polling every 4s is close enough
+ * to real time to watch traffic happen while staying simple.
+ *
+ * Incremental, not a full re-fetch each tick: after the first load, every
+ * poll passes sinceId (the newest row already shown) and the response is
+ * prepended rather than replacing the list, so rows do not visibly
+ * reshuffle or reset scroll position every few seconds.
  */
 export default function ActivityFeed() {
-  const [data, setData] = useState<ActivityResponse | null>(null);
+  const [events, setEvents] = useState<TrafficEvent[]>([]);
+  const [summary, setSummary] = useState<ActivityResponse["summary"] | null>(null);
+  const [repeatedIps, setRepeatedIps] = useState<ActivityResponse["repeatedIps"]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [live, setLive] = useState(true);
+  const newestId = useRef<number | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const load = useCallback(async (incremental: boolean) => {
     try {
-      const res = await fetch("/api/admin/activity?limit=100");
-      const json = await res.json();
+      const params = new URLSearchParams({ limit: "100" });
+      if (incremental && newestId.current !== null) {
+        params.set("sinceId", String(newestId.current));
+      }
+      const res = await fetch(`/api/admin/activity?${params}`);
+      const json: ActivityResponse = await res.json();
       if (!res.ok) throw new Error(json.error ?? `Request failed (${res.status})`);
-      setData(json);
+
+      setSummary(json.summary);
+      setRepeatedIps(json.repeatedIps);
+
+      if (json.events.length > 0) {
+        newestId.current = json.events[0].id;
+      }
+
+      setEvents((prev) => {
+        const merged = incremental ? [...json.events, ...prev] : json.events;
+        // Cap the client-side list so a long-open tab does not grow
+        // memory unbounded; the server is the source of truth for counts.
+        return merged.slice(0, 300);
+      });
+      setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load activity");
     } finally {
@@ -57,57 +81,56 @@ export default function ActivityFeed() {
   }, []);
 
   useEffect(() => {
-    load();
+    load(false);
   }, [load]);
 
-  const badge = (kind: ActivityEvent["deviceKind"]) => {
-    if (kind === "bot")
-      return { Icon: Bot, cls: "bg-[var(--line-subtle)] text-[var(--ink-faint)]" };
-    if (kind === "human")
-      return { Icon: User, cls: "bg-[#eaf6ee] text-[#2f7a4a]" };
-    return { Icon: HelpCircle, cls: "bg-[#fff4e5] text-[#9a6a1f]" };
-  };
-
-  const outcomeColour = (outcome: string | null) => {
-    if (outcome === "claimed") return "text-[#2f7a4a]";
-    if (outcome === "created_new") return "text-[var(--amber-deep)]";
-    if (outcome === "disputed") return "text-[#b3432f]";
-    return "text-[var(--ink-faint)]";
-  };
+  useEffect(() => {
+    if (!live) return;
+    const interval = setInterval(() => load(true), POLL_MS);
+    return () => clearInterval(interval);
+  }, [live, load]);
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        {data && (
-          <div className="flex gap-4 text-[12.5px] text-[var(--ink-soft)]">
-            <span><strong className="text-[var(--ink)]">{data.summary.total}</strong> events</span>
-            <span className="flex items-center gap-1"><User size={13} className="text-[#2f7a4a]" /> {data.summary.humans} human</span>
-            <span className="flex items-center gap-1"><Bot size={13} className="text-[var(--ink-faint)]" /> {data.summary.bots} bot</span>
-            {data.summary.unknown > 0 && (
-              <span className="flex items-center gap-1"><HelpCircle size={13} className="text-[#9a6a1f]" /> {data.summary.unknown} unknown</span>
-            )}
-          </div>
-        )}
-        <button
-          onClick={load}
-          disabled={loading}
-          className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--ink-soft)] hover:text-[var(--ink)] disabled:opacity-50"
-        >
-          <RefreshCw size={13} className={loading ? "animate-spin" : ""} /> Refresh
-        </button>
+        <div className="flex gap-4 text-[12.5px] text-[var(--ink-soft)]">
+          {summary && (
+            <>
+              <span><strong className="text-[var(--ink)]">{summary.total}</strong> in this window</span>
+              <span className="flex items-center gap-1"><User size={13} className="text-[#2f7a4a]" /> {summary.humans} human</span>
+              <span className="flex items-center gap-1"><Bot size={13} className="text-[var(--ink-faint)]" /> {summary.bots} bot</span>
+            </>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setLive((v) => !v)}
+            className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--ink-soft)] hover:text-[var(--ink)]"
+          >
+            {live ? <Pause size={13} /> : <Play size={13} />}
+            {live ? "Live" : "Paused"}
+          </button>
+          <button
+            onClick={() => load(false)}
+            disabled={loading}
+            className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--ink-soft)] hover:text-[var(--ink)] disabled:opacity-50"
+          >
+            <RefreshCw size={13} className={loading ? "animate-spin" : ""} /> Refresh
+          </button>
+        </div>
       </div>
 
       {error && (
         <div className="mb-4 px-3 py-2 rounded-lg bg-[#fdecea] text-[#b3432f] text-[13px]">{error}</div>
       )}
 
-      {data && data.repeatedIps.length > 0 && (
+      {repeatedIps.length > 0 && (
         <div className="mb-5 rounded-xl border border-[#fbd9cf] bg-[#fff7f5] p-3.5">
           <p className="text-[12px] font-bold uppercase tracking-wide text-[#b3432f] mb-2">
             IPs appearing more than once in this window
           </p>
           <div className="flex flex-wrap gap-2">
-            {data.repeatedIps.map((r) => (
+            {repeatedIps.map((r) => (
               <span key={r.ip} className="text-[12.5px] font-mono bg-white border border-[#fbd9cf] rounded-md px-2 py-1 text-[#8a3a2a]">
                 {r.ip} <span className="text-[#b3432f] font-bold">×{r.count}</span>
               </span>
@@ -116,48 +139,40 @@ export default function ActivityFeed() {
         </div>
       )}
 
-      <div className="rounded-xl border border-[var(--line)] divide-y divide-[var(--line-subtle)] overflow-hidden">
-        {loading && !data && (
+      <div className="rounded-xl border border-[var(--line)] divide-y divide-[var(--line-subtle)] overflow-hidden max-h-[70vh] overflow-y-auto">
+        {loading && events.length === 0 && (
           <div className="p-6 text-center text-[13px] text-[var(--ink-faint)]">Loading…</div>
         )}
-        {data?.events.length === 0 && (
-          <div className="p-6 text-center text-[13px] text-[var(--ink-faint)]">No activity in this window.</div>
+        {!loading && events.length === 0 && (
+          <div className="p-6 text-center text-[13px] text-[var(--ink-faint)]">No traffic in this window.</div>
         )}
-        {data?.events.map((e, i) => {
-          const { Icon, cls } = badge(e.deviceKind);
-          const TypeIcon = e.type === "signup" ? UserPlus : FileCheck2;
-          return (
-            <div key={i} className="flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--line-subtle)]/40">
-              <span className={`shrink-0 w-7 h-7 rounded-full grid place-items-center ${cls}`}>
-                <Icon size={14} />
-              </span>
-              <TypeIcon size={14} className="text-[var(--ink-faint)] shrink-0" />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-[13.5px] font-semibold text-[var(--ink)] truncate">
-                    {e.business ?? (e.type === "signup" ? "New account" : "Claim attempt")}
+        {events.map((e) => (
+          <div key={e.id} className="flex items-center gap-3 px-4 py-2 hover:bg-[var(--line-subtle)]/40">
+            <span
+              className={`shrink-0 w-6 h-6 rounded-full grid place-items-center ${
+                e.is_bot ? "bg-[var(--line-subtle)] text-[var(--ink-faint)]" : "bg-[#eaf6ee] text-[#2f7a4a]"
+              }`}
+            >
+              {e.is_bot ? <Bot size={12} /> : <User size={12} />}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline gap-2">
+                <span className="text-[13px] font-mono text-[var(--ink)] truncate">{e.path}</span>
+                {e.bot_label && (
+                  <span className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-faint)]">
+                    {e.bot_label}
                   </span>
-                  {e.outcome && (
-                    <span className={`text-[11px] font-bold uppercase tracking-wide ${outcomeColour(e.outcome)}`}>
-                      {e.outcome.replace("_", " ")}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2.5 text-[11.5px] text-[var(--ink-faint)]">
-                  {e.suburb && (
-                    <span className="flex items-center gap-0.5"><MapPin size={10} /> {e.suburb}</span>
-                  )}
-                  {e.trade && <span>{e.trade}</span>}
-                  <span>{e.deviceLabel}</span>
-                  {e.ip && <span className="font-mono">{e.ip}</span>}
-                </div>
+                )}
               </div>
-              <span className="text-[11.5px] text-[var(--ink-faint)] shrink-0 tabular-nums">
-                {new Date(e.at).toLocaleString("en-AU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-              </span>
+              {e.ip_address && (
+                <span className="text-[11px] text-[var(--ink-faint)] font-mono">{e.ip_address}</span>
+              )}
             </div>
-          );
-        })}
+            <span className="text-[11.5px] text-[var(--ink-faint)] shrink-0 tabular-nums">
+              {new Date(e.created_at).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );

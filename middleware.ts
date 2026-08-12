@@ -31,7 +31,7 @@
  */
 
 import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest, type NextFetchEvent } from "next/server";
 import { getActiveBusinessId } from "@/lib/team";
 
 /* ------------------------------------------------------------------ */
@@ -138,11 +138,98 @@ function isAdminEmail(email: string | undefined): boolean {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Main middleware                                                    */
+/*  Traffic logging, for /admin/activity                               */
 /* ------------------------------------------------------------------ */
 
-export async function middleware(request: NextRequest) {
+// Same list as lib/adminActivity's classification, kept here too since
+// middleware runs on the Edge runtime and cannot import from a route
+// that pulls in the full Supabase server client. Duplicated deliberately
+// rather than sharing a module with heavier dependencies.
+const BOT_PATTERNS: { pattern: RegExp; label: string }[] = [
+  { pattern: /googlebot-image/i, label: "Googlebot (images)" },
+  { pattern: /googlebot/i, label: "Googlebot" },
+  { pattern: /google-inspectiontool/i, label: "Google Search Console" },
+  { pattern: /googleother/i, label: "GoogleOther" },
+  { pattern: /bingbot/i, label: "Bingbot" },
+  { pattern: /duckduckbot/i, label: "DuckDuckBot" },
+  { pattern: /ahrefsbot/i, label: "AhrefsBot" },
+  { pattern: /semrushbot/i, label: "SemrushBot" },
+  { pattern: /facebookexternalhit/i, label: "Facebook link preview" },
+  { pattern: /slackbot/i, label: "Slack link preview" },
+  { pattern: /vercel-screenshot/i, label: "Vercel (internal)" },
+];
+
+/**
+ * Fire-and-forget insert into public.traffic_log via the REST API
+ * directly (plain fetch, no supabase-js client) -- this file runs on the
+ * Edge runtime, and a full client import here is unnecessary weight for
+ * one insert. Never awaited by the caller and never throws: a failure
+ * here must never be able to affect the response middleware returns.
+ */
+function logTraffic(request: NextRequest, pathname: string, event: NextFetchEvent) {
+  try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) return; // never block a request for a missing log config
+
+    const userAgent = request.headers.get("user-agent");
+    const bot = userAgent ? BOT_PATTERNS.find((b) => b.pattern.test(userAgent)) : undefined;
+
+    // Real client IP, left-most x-forwarded-for entry -- see lib/clientIp.ts
+    // for why the left-most (not last) entry is the one that is actually
+    // the visitor rather than a Vercel edge hop.
+    const forwardedFor = request.headers.get("x-forwarded-for");
+    const ip = forwardedFor?.split(",")[0]?.trim() ?? request.headers.get("x-real-ip") ?? null;
+
+    const body = JSON.stringify({
+      path: pathname,
+      method: request.method,
+      ip_address: ip,
+      user_agent: userAgent,
+      is_bot: !!bot,
+      bot_label: bot?.label ?? null,
+    });
+
+    const promise = fetch(`${url}/rest/v1/traffic_log`, {
+      method: "POST",
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body,
+    }).catch(() => {
+      // Logging is best-effort. A dropped row here is a gap in the
+      // activity feed, never a broken page for a real visitor.
+    });
+
+    // NextFetchEvent.waitUntil keeps this fetch alive past the point
+    // middleware returns its response, which is required on the Edge
+    // runtime -- without it, the function can tear down and cancel the
+    // in-flight insert before it completes, silently dropping the row.
+    event.waitUntil(promise);
+  } catch {
+    // Never let a logging bug affect the request it was trying to log.
+  }
+}
+
+export async function middleware(request: NextRequest, event: NextFetchEvent) {
   const { pathname } = request.nextUrl;
+
+  // ------------------------------------------------------------------
+  // -1. Traffic log, for the real-time admin activity view. Deliberately
+  //     the very first thing in this function, before any redirect or
+  //     auth branch, so every request middleware sees is captured
+  //     regardless of which path it takes afterward -- a 308 canonical
+  //     redirect, an admin 403, a normal page load, all logged the same.
+  //
+  //     Fire-and-forget: logTraffic() never throws and is never awaited
+  //     inline, so a Supabase hiccup or a slow insert can never delay or
+  //     break the actual response. request.body is not read here, so
+  //     this cannot interfere with anything downstream reading it.
+  // ------------------------------------------------------------------
+  logTraffic(request, pathname, event);
 
   // ------------------------------------------------------------------
   // 0. Canonicalise host: redirect every non-canonical production host
