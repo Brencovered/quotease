@@ -138,8 +138,71 @@ function isAdminEmail(email: string | undefined): boolean {
 }
 
 /* ------------------------------------------------------------------ */
+/*  IP blocklist, checked on every request                             */
+/* ------------------------------------------------------------------ */
+
+// Why this exists here, not only in the two app routes that already call
+// lib/ipBlocklist.ts: distinctplumbing4@gmail.com signed up via Google
+// OAuth and ended up with a fully populated profile (business_name
+// "plumber", trade, suburb, a 7-day trial) despite 103.78.46.30 being
+// blocked. Root cause: OAuth account creation happens on Supabase's own
+// infrastructure, and handle_new_user() -- a Postgres trigger -- fires
+// synchronously on that insert and populates the profile directly from
+// signup metadata. None of that ever touches my application code, so the
+// checks in app/api/directory/claim and app/api/onboarding/welcome never
+// got a chance to run; those routes protect specific actions, not account
+// creation itself, which Supabase's own infra handles before my app is
+// involved at all.
+//
+// What IS reachable: every request that lands back on swiftscope.com.au
+// after the OAuth redirect passes through this middleware first, before
+// any session is established or any page renders. Checking here cannot
+// undo the auth.users row Supabase already created, but it can stop a
+// blocked IP from doing anything further with it -- no working session,
+// no onboarding, no listing.
+//
+// Deliberately NOT a database round trip on every request. The comment
+// in lib/ipBlocklist.ts already explains why: that would add real
+// latency to every page view on the site for a list that currently holds
+// one row. Cached instead -- refetched at most once a minute, module
+// scope, which Vercel's Edge runtime persists across invocations within
+// the same isolate. Worst case, a newly blocked IP takes up to 60s to
+// start being enforced here; the two route-level checks remain instant
+// regardless, since they call the uncached lib/ipBlocklist.ts directly.
+let blockedIpCache: { ips: Set<string>; fetchedAt: number } | null = null;
+const BLOCKLIST_TTL_MS = 60_000;
+
+async function getBlockedIps(): Promise<Set<string>> {
+  if (blockedIpCache && Date.now() - blockedIpCache.fetchedAt < BLOCKLIST_TTL_MS) {
+    return blockedIpCache.ips;
+  }
+  try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) return blockedIpCache?.ips ?? new Set();
+
+    const res = await fetch(`${url}/rest/v1/ip_blocklist?select=ip_address`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+    });
+    if (!res.ok) return blockedIpCache?.ips ?? new Set();
+
+    const rows = (await res.json()) as { ip_address: string }[];
+    blockedIpCache = { ips: new Set(rows.map((r) => r.ip_address)), fetchedAt: Date.now() };
+    return blockedIpCache.ips;
+  } catch {
+    // Fail open on the cached value if we have one, otherwise fail open
+    // entirely -- same reasoning as lib/ipBlocklist.ts: a lookup failure
+    // blocking real traffic sitewide is worse than a known-bad IP getting
+    // through occasionally. This is a targeted response to specific
+    // abuse, never the primary defence.
+    return blockedIpCache?.ips ?? new Set();
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /*  Traffic logging, for /admin/activity                               */
 /* ------------------------------------------------------------------ */
+
 
 // Same list as lib/adminActivity's classification, kept here too since
 // middleware runs on the Edge runtime and cannot import from a route
@@ -230,6 +293,30 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
   //     this cannot interfere with anything downstream reading it.
   // ------------------------------------------------------------------
   logTraffic(request, pathname, event);
+
+  // ------------------------------------------------------------------
+  // -0.5. IP blocklist. After logging (a blocked attempt is itself worth
+  //       having in the activity feed) but before every other branch --
+  //       host canonicalisation, auth, admin checks all come after this,
+  //       so a blocked IP is refused before any of that logic runs, not
+  //       just before the routes that used to be the only enforcement
+  //       point. See the "IP blocklist, checked on every request"
+  //       comment block above for why this exists in middleware at all.
+  // ------------------------------------------------------------------
+  {
+    const xff = request.headers.get("x-forwarded-for");
+    const realIp = xff?.split(",")[0]?.trim() ?? request.headers.get("x-real-ip");
+    if (realIp) {
+      const blocked = await getBlockedIps();
+      if (blocked.has(realIp)) {
+        // 404, not 403. A 403 confirms "you have been specifically
+        // detected and blocked," which is exactly the signal that tells
+        // someone to switch IPs immediately. A 404 looks like the route
+        // does not exist and gives away nothing about why.
+        return new NextResponse("Not found", { status: 404 });
+      }
+    }
+  }
 
   // ------------------------------------------------------------------
   // 0. Canonicalise host: redirect every non-canonical production host
