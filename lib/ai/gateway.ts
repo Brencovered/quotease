@@ -25,12 +25,27 @@ export const MODELS = {
   TEXT_FALLBACK:   "anthropic/claude-3-haiku",
   VISION_PRIMARY:  "openai/gpt-4o",
   VISION_FALLBACK: "anthropic/claude-3-5-sonnet",
-  // Used by the chat, business-assistant, and analyze-voice routes below --
-  // named separately from the pair above since those were already in use
-  // by drawing-analysis/voice-quote and this keeps their behaviour
-  // untouched while migrating the remaining direct-fetch routes.
-  HAIKU:  "anthropic/claude-haiku-4.5",
-  SONNET: "anthropic/claude-sonnet-4.6",
+  // Used by the chat, business-assistant, and analyze-voice routes below.
+  //
+  // These were "anthropic/claude-haiku-4.5" and "anthropic/claude-sonnet-4.6"
+  // from when this constant was introduced (364f82d) until now. Both are
+  // versions nobody had confirmed the gateway account could actually reach --
+  // they were typed fresh for these three routes rather than reusing
+  // TEXT_FALLBACK/VISION_FALLBACK two lines up, which were already proven
+  // working. Every request through chat, business-assistant and
+  // analyze-voice failed at 403 "Free tier users do not have access to this
+  // model" from the day this file was created, primary and fallback both,
+  // which is why the assistant "stopped working" with no code change on the
+  // user's part: it never worked on this account, this constant just hadn't
+  // shipped to a route someone was actively using until later.
+  //
+  // Pointed at the same models VISION_FALLBACK and TEXT_FALLBACK already use
+  // and which the account has confirmed access to. If a newer Claude model
+  // is wanted here, verify it against GET /api/admin/ai/models first -- that
+  // endpoint exists specifically because guessing at a version string is
+  // what caused this.
+  HAIKU:  "anthropic/claude-3-haiku",
+  SONNET: "anthropic/claude-3-5-sonnet",
 } as const;
 
 /**
