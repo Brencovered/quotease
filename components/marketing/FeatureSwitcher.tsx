@@ -176,7 +176,14 @@ export default function FeatureSwitcher({ modes }: { modes: SwitcherMode[] }) {
       </div>
 
       <div className={`transition-opacity duration-150 ${visible ? "opacity-100" : "opacity-0"}`}>
-        <PhoneStage shot={mode.shot} toast={mode.toast} tone="light" />
+        {/* frame="tall": this column is a dedicated 360px-wide space, not a
+            cramped grid card, so there is no reason to use the "window"
+            crop meant for narrow cards. Without this it defaulted to
+            "window" and cropped off the bottom toolbar and most of the
+            in-app chrome, which is why the reference mockup (full screen,
+            status bar to bottom nav) looked different from what actually
+            shipped. */}
+        <PhoneStage shot={mode.shot} toast={mode.toast} tone="light" frame="tall" />
       </div>
     </div>
   );
