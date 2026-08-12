@@ -1,6 +1,8 @@
 // Shared human-readable label formatter for intake data fields.
 // Used by both generateQuotePdf.ts and the public quote page /q/[token].
 
+import { groupSiteItemsForDisplay } from "./groupSiteItemsForDisplay";
+
 export const INTAKE_FIELD_LABELS: Record<string, string> = {
   switchboardUpgrade: "Switchboard upgrade",    switchboardRcbo: "RCBO upgrade",
   switchboardRcboMode: "RCBO type",              switchboardPoles: "Number of poles",
@@ -187,12 +189,23 @@ export function humanizeIntakePublic(intake: Record<string, unknown> | null | un
     lines.push(unit !== undefined ? `${label}: ${value}${unit}` : `${label}: ${value}`);
   }
 
-  // Site annotation items
+  // Site annotation items, merged by (label, unit, note) before rendering.
+  // Every entry channel (manual add, voice, drawing takeoff, plan markup,
+  // packages, site annotations) appends a new row each time rather than
+  // incrementing an existing row's qty -- correct while the quote is being
+  // built, since each row stays independently editable in the builder, but
+  // wrong here: eighteen taps on "Downlight, client supply" must read as
+  // one line at 18 ea to the person paying the quote, not eighteen
+  // identical bullets. See lib/groupSiteItemsForDisplay for the full
+  // reasoning; this is the shared renderer for both the web quote page and
+  // the PDF (generateQuotePdf aliases this same function), so fixing it
+  // here fixes every surface and every trade in one place.
   const siteItems = intake.site_items as {label:string;qty:number;unit:string;note:string}[] | undefined;
   if (Array.isArray(siteItems)) {
-    for (const item of siteItems) {
+    for (const item of groupSiteItemsForDisplay(siteItems)) {
       if (item.label) {
-        lines.push(`${item.label}: ${item.qty} ${item.unit}`);
+        const noteSuffix = item.note ? ` (${item.note})` : "";
+        lines.push(`${item.label}: ${item.qty} ${item.unit}${noteSuffix}`);
       }
     }
   }
