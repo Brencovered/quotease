@@ -3,23 +3,16 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import { ArrowRight, CheckCircle } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
-import SavingsCalculator from "@/components/SavingsCalculator";
-import InteractiveQuoteDemo from "@/components/marketing/InteractiveQuoteDemo";
+import HomeHero from "@/components/marketing/HomeHero";
+import CapabilityBands from "@/components/marketing/CapabilityBands";
+import QuoteTapDemo from "@/components/marketing/QuoteTapDemo";
 import FaqSchema, { SWIFTSCOPE_FAQS } from "@/components/seo/FaqSchema";
 import { homepageMeta } from "@/lib/seo/meta";
 import { LEADS_ENABLED } from "@/lib/featureFlags";
 import { createPublicClient } from "@/lib/supabase/public";
 
-// Listing count drifts as the directory grows; refresh daily so the
-// homepage doesn't understate it for weeks. createPublicClient (not the
-// cookie client) keeps this page statically prerenderable.
 export const revalidate = 86400;
-
 export const metadata: Metadata = homepageMeta();
-
-const HERO_IMG = "/trades/hero-onsite.jpg";
-const HERO_BLUR =
-  "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABQODxIPDRQSEBIXFRQYHjIhHhwcHj0sLiQySUBMS0dARkVQWnNiUFVtVkVGZIhlbXd7gYKBTmCNl4x9lnN+gXz/2wBDARUXFx4aHjshITt8U0ZTfHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHz/wAARCAAJABADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwBAm6IL0JFQ/ZZYFZ7jhO1aZ+9HTtd/5Bq/WmJWP//Z";
 
 async function getListingCount(): Promise<number | null> {
   try {
@@ -34,182 +27,117 @@ async function getListingCount(): Promise<number | null> {
   }
 }
 
-const STEPS = [
-  {
-    n: "01",
-    title: "Scope it on site",
-    body: "Mark the photo, talk the job, or annotate the plan — whatever matches how you already work.",
-  },
-  {
-    n: "02",
-    title: "Price it from your book",
-    body: "Materials and labour load from your rates. No retyping numbers back at the desk.",
-  },
-  {
-    n: "03",
-    title: "Send before you leave",
-    body: "Client gets a clean quote they can accept on their phone. You get the yes while you're still there.",
-  },
-] as const;
-
 export default async function Home() {
   const listingCount = await getListingCount();
 
   return (
-    <main className="bg-white text-[#0a1722] overflow-hidden">
-      {/* HERO — one composition: brand, headline, sentence, CTAs, full-bleed site photo */}
-      <section className="relative min-h-[100svh] max-h-[960px] flex flex-col bg-[#0a1722]">
-        <MarketingNav transparent />
-        <div className="absolute inset-0 z-0">
-          <Image
-            src={HERO_IMG}
-            alt="Tradie working on site in dust mask and ear protection"
-            fill
-            sizes="100vw"
-            className="object-cover object-center home-hero-kenburns"
-            priority
-            placeholder="blur"
-            blurDataURL={HERO_BLUR}
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0a1722] via-[#0a1722]/55 to-[#0a1722]/25" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0a1722]/75 via-[#0a1722]/35 to-transparent" />
-        </div>
+    <main className="bg-[#071018] text-[#071018] overflow-hidden">
+      <MarketingNav transparent compact />
 
-        <div className="relative z-10 flex-1 flex items-end">
-          <div className="max-w-7xl mx-auto px-6 pb-16 sm:pb-20 w-full">
-            <div className="max-w-[640px] home-hero-copy">
-              <p className="font-display text-[3rem] sm:text-[4rem] lg:text-[4.6rem] leading-[0.9] tracking-wide text-white mb-4">
-                SWIFTSCOPE
-              </p>
-              <h1 className="font-display uppercase leading-[0.92] mb-5">
-                <span className="block text-[2.1rem] sm:text-[3rem] lg:text-[3.4rem] text-white">
-                  Quote it on site.
-                </span>
-                <span className="block text-[2.1rem] sm:text-[3rem] lg:text-[3.4rem] text-[#ffb400]">
-                  Win it before you leave.
-                </span>
-              </h1>
-              <p className="text-[17px] sm:text-[18px] leading-[1.6] text-[#c8d8e4] max-w-[480px] mb-9">
-                Site-first quoting for trade teams of 1 to 10. Mark it up, price it from your book, send it from the driveway.
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <Link
-                  href="/signup"
-                  className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[16px] px-8 py-4 rounded-xl hover:bg-[#e89e00] transition-colors"
-                >
-                  I&apos;m a tradie — start free
-                </Link>
-                <Link
-                  href="/directory"
-                  className="text-white font-bold text-[16px] px-6 py-4 rounded-xl border border-white/25 hover:border-white/50 transition-colors inline-flex items-center gap-2"
-                >
-                  I need a tradie <ArrowRight size={16} aria-hidden />
-                </Link>
+      <HomeHero />
+
+      {/* Proof strip — mitti-style scale, honest numbers */}
+      <section className="bg-white border-b border-[#e8ecef]">
+        <div className="max-w-[1280px] mx-auto px-6 py-14 sm:py-16">
+          <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-8">
+            Built for the people doing the work
+          </p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-6">
+            {[
+              { n: "7 days", d: "free trial, no card" },
+              { n: "$45", d: "flat per month, unlimited seats" },
+              { n: "< 4 min", d: "typical on-site quote" },
+              {
+                n: listingCount !== null ? listingCount.toLocaleString("en-AU") : "Local",
+                d: listingCount !== null ? "tradies in the directory" : "tradie directory, free to browse",
+              },
+            ].map((s) => (
+              <div key={s.d}>
+                <p className="text-[clamp(1.8rem,3.5vw,2.6rem)] font-extrabold tracking-[-0.03em] text-[#071018] leading-none mb-2">
+                  {s.n}
+                </p>
+                <p className="text-[13.5px] text-[#5a6a78] leading-snug">{s.d}</p>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* TRY IT — interaction is the point of this section */}
-      <section className="border-b border-[#e8ecef] bg-[linear-gradient(180deg,#f7f9fb_0%,#ffffff_42%)]">
-        <div className="max-w-7xl mx-auto px-6 py-16 sm:py-20">
-          <InteractiveQuoteDemo />
+      <CapabilityBands />
+
+      {/* Interactive feel */}
+      <section className="bg-[#f4f6f8]">
+        <div className="max-w-[1280px] mx-auto px-6 py-16 sm:py-20">
+          <QuoteTapDemo />
         </div>
       </section>
 
-      {/* HOW IT WORKS — one job, three steps, one product visual */}
-      <section className="border-b border-[#e8ecef] bg-white">
-        <div className="max-w-7xl mx-auto px-6 py-16 sm:py-20">
-          <div className="max-w-[560px] mb-12">
-            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">How it works</p>
-            <h2 className="font-display uppercase text-[2.3rem] sm:text-[3rem] leading-[0.93] text-[#0a1722] mb-4">
-              Three moves. Quote done.
-            </h2>
-            <p className="text-[15.5px] text-[#5a6a78] leading-relaxed">
-              Built to be used standing in the job — not back at a desk rewriting notes into a spreadsheet.
+      {/* Product acceptance moment */}
+      <section className="relative overflow-hidden bg-[#071018]">
+        <div className="max-w-[1280px] mx-auto px-6 py-16 sm:py-24 grid lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-3">
+              After you send
             </p>
-          </div>
-
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            <ol className="space-y-0">
-              {STEPS.map((step, i) => (
-                <li
-                  key={step.n}
-                  className={`py-6 ${i < STEPS.length - 1 ? "border-b border-[#e8ecef]" : ""}`}
-                >
-                  <div className="flex gap-5">
-                    <span className="font-display text-[1.5rem] text-[#ffb400] leading-none pt-0.5 tabular-nums">
-                      {step.n}
-                    </span>
-                    <div>
-                      <h3 className="font-display text-[1.35rem] text-[#0a1722] mb-1.5">{step.title}</h3>
-                      <p className="text-[14.5px] text-[#5a6a78] leading-relaxed max-w-[420px]">{step.body}</p>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ol>
-
-            <div className="relative flex justify-center">
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,180,0,0.14),transparent_60%)] pointer-events-none" />
-              <div className="relative w-full max-w-[280px] sm:max-w-[300px] bg-[#0a1722] p-2.5 shadow-[0_28px_60px_rgba(10,23,34,0.28)]" style={{ borderRadius: 28 }}>
-                <div className="overflow-hidden bg-white" style={{ borderRadius: 20 }}>
-                  <Image
-                    src="/marketing/v2/quoting.png"
-                    alt="Swiftscope quote builder on a phone"
-                    width={453}
-                    height={918}
-                    className="w-full h-auto"
-                    sizes="(max-width: 640px) 70vw, 300px"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-12">
+            <h2 className="text-[clamp(1.9rem,3.8vw,3rem)] font-extrabold tracking-[-0.025em] leading-[1.08] text-white mb-4 max-w-[16ch]">
+              They accept on their phone. You keep moving.
+            </h2>
+            <p className="text-[16px] leading-[1.65] text-[#b7c7d4] max-w-[42ch] mb-8">
+              Clean client portal, one-tap accept, job lands in your board. No chasing PDFs. No &ldquo;did you get my email?&rdquo;
+            </p>
             <Link
-              href="/how-it-works"
-              className="inline-flex items-center gap-1.5 text-[14px] font-bold text-[#0a1722] hover:text-[#e89e00] transition-colors"
+              href="/signup"
+              className="inline-flex items-center justify-center bg-[#ffb400] text-[#071018] font-extrabold text-[15px] px-7 py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors"
             >
-              See the full walkthrough <ArrowRight size={14} aria-hidden />
+              Start quoting free
             </Link>
           </div>
+          <div className="relative">
+            <div className="absolute -inset-8 bg-[radial-gradient(ellipse_at_center,rgba(255,180,0,0.12),transparent_60%)] pointer-events-none" />
+            <div className="relative home-glass rounded-2xl p-3 max-w-[420px] mx-auto shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
+              <Image
+                src="/marketing/v2/quoting-customer-accepts.png"
+                alt="Client accepting a quote on their phone"
+                width={840}
+                height={1100}
+                className="w-full h-auto rounded-xl"
+              />
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* HOMEOWNERS — one purpose */}
-      <section className="relative border-b border-[#12212f] bg-[#0a1722] overflow-hidden">
+      {/* Homeowners — one job */}
+      <section className="relative min-h-[60vh] flex items-end overflow-hidden">
         <div className="absolute inset-0">
           <Image
-            src="/trades/electrician.jpg"
+            src="/trades/roofer.jpg"
             alt=""
             fill
             sizes="100vw"
-            className="object-cover object-[70%_center] opacity-55"
+            className="object-cover object-center"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0a1722] via-[#0a1722]/80 to-[#0a1722]/45" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0a1722]/70 via-transparent to-[#0a1722]/30" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#071018] via-[#071018]/80 to-[#071018]/35" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#071018]/80 via-transparent to-[#071018]/30" />
         </div>
-        <div className="relative max-w-7xl mx-auto px-6 py-16 sm:py-20">
+        <div className="relative z-10 w-full max-w-[1280px] mx-auto px-6 py-16 sm:py-20">
           <div className="max-w-[520px]">
-            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">
-              Looking for a tradie?
+            <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-3">
+              Need a tradie?
             </p>
-            <h2 className="font-display uppercase text-[2.3rem] sm:text-[3rem] leading-[0.93] text-white mb-4">
+            <h2 className="text-[clamp(1.9rem,3.8vw,3rem)] font-extrabold tracking-[-0.025em] leading-[1.08] text-white mb-4">
               Find someone local. Free, always.
             </h2>
-            <p className="text-[15.5px] text-[#c8d8e4] leading-relaxed mb-8">
-              Browse by trade and suburb. Real Google ratings on every listing
+            <p className="text-[16px] leading-[1.65] text-[#c8d8e4] mb-8">
+              Browse by trade and suburb
               {listingCount !== null
-                ? ` — ${listingCount.toLocaleString("en-AU")} tradies across the directory`
+                ? ` — ${listingCount.toLocaleString("en-AU")} listings`
                 : ""}
-              . No lead auction, no signup required to look.
+              . Real Google ratings. No lead auction.
             </p>
             <Link
               href="/directory"
-              className="inline-flex items-center gap-2 bg-white text-[#0a1722] font-extrabold text-[15px] px-7 py-3.5 rounded-xl hover:bg-[#f0f3f5] transition-colors"
+              className="inline-flex items-center gap-2 bg-white text-[#071018] font-extrabold text-[15px] px-7 py-3.5 rounded-lg hover:bg-[#f0f3f5] transition-colors"
             >
               Browse the directory <ArrowRight size={15} aria-hidden />
             </Link>
@@ -217,105 +145,76 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* PRICING — one offer */}
-      <section className="border-b border-[#e8ecef] bg-white">
-        <div className="max-w-7xl mx-auto px-6 py-16 sm:py-20">
-          <div className="max-w-3xl mx-auto text-center mb-10">
-            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Pricing</p>
-            <h2 className="font-display uppercase text-[2.3rem] sm:text-[3rem] leading-[0.93] text-[#0a1722] mb-4">
+      {/* Pricing — one offer */}
+      <section className="bg-white">
+        <div className="max-w-[1280px] mx-auto px-6 py-16 sm:py-20">
+          <div className="max-w-2xl">
+            <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-3">Pricing</p>
+            <h2 className="text-[clamp(2rem,4vw,3.2rem)] font-extrabold tracking-[-0.03em] leading-[1.05] text-[#071018] mb-3">
               Flat $45 a month.
             </h2>
-            <p className="text-[15.5px] text-[#5a6a78] leading-relaxed">
-              7-day free trial, no card. Unlimited quotes, jobs, and team members. Directory listing included.
+            <p className="text-[16px] text-[#5a6a78] leading-relaxed mb-8 max-w-[42ch]">
+              7-day free trial. Unlimited quotes, jobs, and team members. Directory listing included. No per-lead fees.
             </p>
-          </div>
-
-          <div className="max-w-2xl mx-auto">
-            <ul className="grid sm:grid-cols-2 gap-x-8 gap-y-3 mb-10 text-left">
+            <ul className="grid sm:grid-cols-2 gap-x-8 gap-y-3 mb-10">
               {[
-                "Unlimited quotes and jobs",
-                "Unlimited team members",
-                "On-site markup and voice quoting",
-                "Job management and scheduling",
+                "On-site markup & voice quoting",
+                "Plan markup & AI plan assist",
+                "Job management & scheduling",
                 "Xero live sync",
-                "Listed in the public directory",
+                "Unlimited seats",
+                "Client accept on phone",
               ].map((f) => (
-                <li key={f} className="flex items-center gap-2.5 text-[14.5px] font-semibold text-[#0a1722]">
+                <li key={f} className="flex items-center gap-2.5 text-[14.5px] font-semibold text-[#071018]">
                   <CheckCircle size={16} className="text-[#ffb400] shrink-0" aria-hidden />
                   {f}
                 </li>
               ))}
             </ul>
-            <div className="flex flex-wrap justify-center gap-3">
+            <div className="flex flex-wrap gap-3">
               <Link
                 href="/signup"
-                className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-8 py-4 rounded-xl hover:bg-[#e89e00] transition-colors"
+                className="inline-flex items-center bg-[#ffb400] text-[#071018] font-extrabold text-[15px] px-7 py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors"
               >
                 Start free trial
               </Link>
               <Link
                 href="/features"
-                className="text-[#0a1722] font-bold text-[15px] px-6 py-4 rounded-xl border border-[#d5dbe0] hover:border-[#0a1722] transition-colors inline-flex items-center gap-2"
+                className="inline-flex items-center gap-2 text-[#071018] font-bold text-[15px] px-6 py-3.5 rounded-lg border border-[#d5dbe0] hover:border-[#071018] transition-colors"
               >
-                Compare features <ArrowRight size={14} aria-hidden />
+                See features <ArrowRight size={14} aria-hidden />
               </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* SAVINGS — interactive */}
-      <section className="border-b border-[#e8ecef] bg-[#f7f9fb]">
-        <div className="max-w-7xl mx-auto px-6 py-16 sm:py-20">
-          <div className="text-center mb-10 max-w-xl mx-auto">
-            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">
-              Savings calculator
-            </p>
-            <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.93] text-[#0a1722] mb-4">
-              What are you paying now?
-            </h2>
-            <p className="text-[15px] text-[#5a6a78]">
-              Pick the tools you already use. See the monthly difference against Swiftscope&apos;s flat rate.
-            </p>
-          </div>
-          <SavingsCalculator />
-        </div>
-      </section>
-
-      {/* CLOSING CTA */}
-      <section className="bg-[#0a1722]">
-        <div className="max-w-7xl mx-auto px-6 py-16 sm:py-20">
-          <div className="max-w-[560px]">
-            <p className="font-display text-[1.6rem] text-white mb-2">SWIFTSCOPE</p>
-            <h2 className="font-display uppercase text-[2.2rem] sm:text-[2.8rem] leading-[0.93] text-white mb-4">
-              The other tradie just sent their quote.
-            </h2>
-            <p className="text-[15.5px] text-[#8aa4b4] mb-8">How long does yours take?</p>
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href="/signup"
-                className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-8 py-4 rounded-xl hover:bg-[#e89e00] transition-colors"
-              >
-                Start quoting today <ArrowRight size={15} aria-hidden />
-              </Link>
-              <Link
-                href="/directory"
-                className="inline-flex items-center gap-2 text-white font-bold text-[15px] px-6 py-4 rounded-xl border border-white/20 hover:border-white/45 transition-colors"
-              >
-                Find a tradie
-              </Link>
-            </div>
-          </div>
+      {/* Close */}
+      <section className="bg-[#071018]">
+        <div className="max-w-[1280px] mx-auto px-6 py-16 sm:py-24">
+          <p className="font-display text-[clamp(2rem,5vw,3.5rem)] leading-[0.9] tracking-wide text-white mb-4">
+            SWIFTSCOPE
+          </p>
+          <h2 className="text-[clamp(1.7rem,3.2vw,2.4rem)] font-extrabold tracking-[-0.02em] text-white mb-3 max-w-[18ch]">
+            The other tradie just sent their quote.
+          </h2>
+          <p className="text-[16px] text-[#8aa4b4] mb-8">How long does yours take?</p>
+          <Link
+            href="/signup"
+            className="inline-flex items-center gap-2 bg-[#ffb400] text-[#071018] font-extrabold text-[15px] px-8 py-4 rounded-lg hover:bg-[#e89e00] transition-colors"
+          >
+            Start quoting today <ArrowRight size={15} aria-hidden />
+          </Link>
         </div>
 
         <div className="border-t border-white/[0.08]">
-          <div className="max-w-7xl mx-auto px-6 py-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="max-w-[1280px] mx-auto px-6 py-5 flex flex-wrap items-center justify-between gap-4">
             <span className="font-display text-lg text-white">SWIFTSCOPE</span>
             <div className="flex flex-wrap gap-x-6 gap-y-2 text-[12.5px] font-semibold text-white/40">
               <Link href="/features" className="hover:text-white transition-colors">Features</Link>
               <Link href="/how-it-works" className="hover:text-white transition-colors">How it works</Link>
               <Link href="/directory" className="hover:text-white transition-colors">Directory</Link>
-              <Link href="/areas" className="hover:text-white transition-colors">Areas we cover</Link>
+              <Link href="/areas" className="hover:text-white transition-colors">Areas</Link>
               {LEADS_ENABLED && (
                 <Link href="/get-quotes" className="hover:text-white transition-colors">Get quotes</Link>
               )}
@@ -328,13 +227,15 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="bg-[#f7f9fb] border-t border-[#e8ecef]">
+      <section className="bg-[#f4f6f8]">
         <div className="max-w-3xl mx-auto px-6 py-14 sm:py-16">
-          <h2 className="font-display uppercase text-[2rem] text-[#0a1722] mb-8">Common questions</h2>
+          <h2 className="text-[1.8rem] font-extrabold tracking-[-0.02em] text-[#071018] mb-8">
+            Common questions
+          </h2>
           <div className="space-y-5">
             {SWIFTSCOPE_FAQS.map((faq) => (
-              <div key={faq.question} className="border-b border-[#e8ecef] pb-5">
-                <p className="font-bold text-[15px] text-[#0a1722] mb-2">{faq.question}</p>
+              <div key={faq.question} className="border-b border-[#e2e5ea] pb-5">
+                <p className="font-bold text-[15px] text-[#071018] mb-2">{faq.question}</p>
                 <p className="text-[14px] text-[#5a6a78] leading-relaxed">{faq.answer}</p>
               </div>
             ))}

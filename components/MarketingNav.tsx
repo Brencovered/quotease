@@ -11,12 +11,19 @@ import { LEADS_ENABLED, CLAIMED_DIRECTORY_PAGES_ENABLED } from "@/lib/featureFla
  * image with no background of its own. Every other page passes false and
  * gets a solid navy bar instead.
  */
-export default function MarketingNav({ transparent = false }: { transparent?: boolean }) {
+export default function MarketingNav({
+  transparent = false,
+  compact = false,
+}: {
+  transparent?: boolean;
+  /** Homepage: fewer competing chrome buttons, closer to mitti-style restraint. */
+  compact?: boolean;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
     <div className={transparent ? "absolute top-0 left-0 right-0 z-30" : "relative z-30 bg-[#0a1722]"}>
-      <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+      <div className="max-w-[1280px] mx-auto px-6 py-5 flex items-center justify-between">
         <Link href="/" className="font-display text-xl tracking-wide text-white drop-shadow-lg shrink-0">
           SWIFTSCOPE
         </Link>
@@ -26,26 +33,38 @@ export default function MarketingNav({ transparent = false }: { transparent?: bo
           <Link href="/features" className="text-white/75 hover:text-white font-semibold text-sm transition-colors">Features</Link>
           <Link href="/how-it-works" className="text-white/75 hover:text-white font-semibold text-sm transition-colors">How it works</Link>
           <Link href="/blog" className="text-white/75 hover:text-white font-semibold text-sm transition-colors">Blog</Link>
+          {!compact && (
+            <Link href="/directory" className="text-white/75 hover:text-white font-semibold text-sm transition-colors">Directory</Link>
+          )}
         </div>
 
         <div className="hidden lg:flex items-center gap-2.5">
-          <Link href="/directory" className="text-white/85 hover:text-white font-semibold text-[13.5px] px-4 py-2 rounded-lg border border-white/20 hover:border-white/40 transition-colors">
-            Find a tradie
-          </Link>
-          {CLAIMED_DIRECTORY_PAGES_ENABLED && (
+          {!compact && (
+            <Link href="/directory" className="text-white/85 hover:text-white font-semibold text-[13.5px] px-4 py-2 rounded-lg border border-white/20 hover:border-white/40 transition-colors">
+              Find a tradie
+            </Link>
+          )}
+          {!compact && CLAIMED_DIRECTORY_PAGES_ENABLED && (
             <Link href="/directory/claim" className="text-white/85 hover:text-white font-semibold text-[13.5px] px-4 py-2 rounded-lg border border-white/20 hover:border-white/40 transition-colors">
               Manage your listing
             </Link>
           )}
-          {LEADS_ENABLED && (
+          {!compact && LEADS_ENABLED && (
             <Link href="/get-quotes" className="text-white/85 hover:text-white font-semibold text-[13.5px] px-4 py-2 rounded-lg border border-white/20 hover:border-white/40 transition-colors">
               Get a quote
             </Link>
           )}
-          <Link href="/login" className="text-white/75 hover:text-white font-semibold text-[13.5px] px-3 py-2 transition-colors">
+          <Link
+            href="/login"
+            className={
+              compact
+                ? "text-white font-semibold text-[13.5px] px-4 py-2 rounded-lg border border-white/25 hover:border-white/50 transition-colors"
+                : "text-white/75 hover:text-white font-semibold text-[13.5px] px-3 py-2 transition-colors"
+            }
+          >
             Log in
           </Link>
-          <Link href="/signup" className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[13.5px] px-5 py-2.5 rounded-xl hover:bg-[#e89e00] transition-colors">
+          <Link href="/signup" className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[13.5px] px-5 py-2.5 rounded-lg hover:bg-[#e89e00] transition-colors">
             Sign up free
           </Link>
         </div>
