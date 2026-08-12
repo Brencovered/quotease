@@ -40,7 +40,7 @@ export default async function Home() {
       <section className="bg-white border-b border-[#e8ecef]">
         <div className="max-w-[1280px] mx-auto px-6 py-14 sm:py-16">
           <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-8">
-            Built for the people doing the work
+            Built for solo tradies and small crews
           </p>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-6">
             {[
@@ -96,10 +96,10 @@ export default async function Home() {
             <Image
               src="/marketing/v2/quoting-customer-accepts.png"
               alt="Client accepting a quote on their phone"
-              width={453}
-              height={918}
+              width={856}
+              height={1720}
               quality={95}
-              className="w-full h-auto"
+              className="w-full h-auto drop-shadow-[0_24px_50px_rgba(0,0,0,0.45)]"
             />
           </div>
         </div>
@@ -109,12 +109,12 @@ export default async function Home() {
       <section className="relative min-h-[60vh] flex items-end overflow-hidden">
         <div className="absolute inset-0">
           <Image
-            src="/trades/hero-onsite.jpg"
+            src="/trades/homeowner-house.jpg"
             alt=""
             fill
             sizes="100vw"
             quality={90}
-            className="object-cover object-[center_70%]"
+            className="object-cover object-center"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-[#071018] via-[#071018]/80 to-[#071018]/35" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#071018]/80 via-transparent to-[#071018]/30" />

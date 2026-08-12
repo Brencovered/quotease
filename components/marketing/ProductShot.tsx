@@ -28,7 +28,7 @@ export default function ProductShot({
 }) {
   return (
     <div
-      className={`relative w-full overflow-hidden bg-[#0a1722] ${className}`}
+      className={`relative w-full overflow-hidden bg-transparent ${className}`}
       style={{ aspectRatio: `${width} / ${height}` }}
     >
       <Image
