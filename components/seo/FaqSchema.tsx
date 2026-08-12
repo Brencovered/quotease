@@ -9,6 +9,8 @@
  * - Answers are ≤ 300 characters for best display
  */
 
+import { articleFor } from "@/lib/seo/meta";
+
 export interface FaqItem {
   question: string;
   answer: string;
@@ -82,10 +84,11 @@ export function generateTradeSuburbFaqs(
   const ratingLine = avgRating
     ? ` They have an average Google rating of ${avgRating.toFixed(1)} stars.`
     : "";
+  const article = articleFor(tradeSingular);
 
   return [
     {
-      question: `How much does a ${tradeSingular.toLowerCase()} cost in ${suburb}?`,
+      question: `How much does ${article} ${tradeSingular.toLowerCase()} cost in ${suburb}?`,
       answer: `${tradeSingular} costs in ${suburb} vary by job complexity. Most ${suburb} residents use Swiftscope to get up to 3 free quotes and compare pricing before deciding.`,
     },
     {
@@ -93,7 +96,7 @@ export function generateTradeSuburbFaqs(
       answer: `There are ${listingCount} curated ${tradePlural.toLowerCase()} listings in ${suburb} on Swiftscope.${ratingLine}`,
     },
     {
-      question: `How do I find a reliable ${tradeSingular.toLowerCase()} in ${suburb}, ${state}?`,
+      question: `How do I find ${article} reliable ${tradeSingular.toLowerCase()} in ${suburb}, ${state}?`,
       answer: `Browse the ${suburb} ${tradePlural.toLowerCase()} listed on Swiftscope, it's free. Compare Google ratings, reviews, licences and photos, then contact your chosen ${tradeSingular.toLowerCase()} directly by phone, website, or quote request.`,
     },
     {

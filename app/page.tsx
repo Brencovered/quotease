@@ -9,7 +9,8 @@ import {
 } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
 import FaqSchema, { SWIFTSCOPE_FAQS } from "@/components/seo/FaqSchema";
-import { homepageMeta } from "@/lib/seo/meta";
+import { homepageMeta, getTradeDisplay } from "@/lib/seo/meta";
+import { getTradeVisual, getAllTradeKeys } from "@/lib/seo/tradeVisuals";
 import { LEADS_ENABLED } from "@/lib/featureFlags";
 
 export const metadata: Metadata = homepageMeta();
@@ -59,6 +60,27 @@ export default function Home() {
               <span>196 curated tradie listings</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* TRADES STRIP - scannable proof of breadth, links straight into the
+          trade x suburb landing pages for real internal linking/SEO value */}
+      <div className="bg-[#0a1722] border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-6 py-7 flex flex-wrap items-center justify-center gap-x-7 gap-y-3.5">
+          {getAllTradeKeys().map((trade) => {
+            const { icon: TradeIcon } = getTradeVisual(trade);
+            const { plural } = getTradeDisplay(trade);
+            return (
+              <Link
+                key={trade}
+                href={`/directory?trade=${trade}`}
+                className="flex items-center gap-2 text-[#8aa4b4] hover:text-[#ffb400] transition-colors"
+              >
+                <TradeIcon size={15} />
+                <span className="text-[12.5px] font-semibold">{plural}</span>
+              </Link>
+            );
+          })}
         </div>
       </div>
 

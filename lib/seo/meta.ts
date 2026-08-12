@@ -106,6 +106,11 @@ export function getTradeDisplay(trade: string) {
   return TRADE_DISPLAY[trade.toLowerCase()] ?? { singular: trade, plural: `${trade}s` };
 }
 
+/** "electrician" -> "an", "plumber" -> "a" -- for copy like "Need a/an {trade}". */
+export function articleFor(word: string): "a" | "an" {
+  return /^[aeiou]/i.test(word) ? "an" : "a";
+}
+
 // -- Page-level Metadata generators ---------------------------------------
 
 export function homepageMeta(): Metadata {

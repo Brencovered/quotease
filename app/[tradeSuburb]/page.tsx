@@ -27,8 +27,9 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Star, MapPin, Shield, ArrowRight, Phone, Globe } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { parseTradeSuburbSlug, suburbToSlug, tradeToSlug, tradeSuburbMeta, postcodeToState } from "@/lib/seo/meta";
+import { parseTradeSuburbSlug, suburbToSlug, tradeToSlug, tradeSuburbMeta, postcodeToState, articleFor } from "@/lib/seo/meta";
 import { generateTradeSuburbContent } from "@/lib/seo/generateTradeSuburbContent";
+import { getTradeVisual } from "@/lib/seo/tradeVisuals";
 import FaqSchema from "@/components/seo/FaqSchema";
 import { DirectoryPageSchema } from "@/components/seo/TradieSchema";
 import MarketingNav from "@/components/MarketingNav";
@@ -97,43 +98,64 @@ export default async function TradeSuburbPage({ params }: PageProps) {
 
   const content = await generateTradeSuburbContent(parsed.trade, parsed.suburbSlug, parsed.state);
   const { tradeSingular, tradePlural, suburb, state, listingCount, avgRating, totalReviews, topListings, pricingRange, faqs } = content;
+  const { icon: TradeIcon, impact } = getTradeVisual(parsed.trade);
+  const article = articleFor(tradeSingular);
 
   return (
     <main className="bg-white text-[#0a1722]">
       <MarketingNav />
 
       {/* HERO */}
-      <div className="bg-[#0a1722] border-b border-white/10">
-        <div className="max-w-5xl mx-auto px-6 pt-12 pb-16">
-          <nav className="text-[12px] text-white/40 mb-4 flex items-center gap-1.5 flex-wrap">
-            <Link href="/" className="hover:text-white">Home</Link>
-            <span>/</span>
-            <Link href="/directory" className="hover:text-white">Directory</Link>
-            <span>/</span>
-            <Link href={`/tradies-in/${suburbToSlug(suburb)}-${parsed.state}`} className="hover:text-white">{suburb}</Link>
-            <span>/</span>
-            <span className="text-white/70">{tradePlural} in {suburb}</span>
-          </nav>
-          <h1 className="font-display uppercase text-[2.4rem] sm:text-[3.2rem] leading-[0.95] text-white max-w-2xl mb-4">
-            {tradePlural} in {suburb}, {state}
-          </h1>
-          <p className="text-[16px] text-[#8aa4b4] max-w-xl mb-6">
-            {listingCount > 0
-              ? `Compare ${listingCount} local ${tradePlural.toLowerCase()} in ${suburb}${avgRating ? ` with an average rating of ${avgRating.toFixed(1)} stars` : ""}. Curated listings, real Google ratings.`
-              : `Looking for a ${tradeSingular.toLowerCase()} in ${suburb}? Browse nearby suburbs, or check back soon as more tradies join Swiftscope.`}
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <Link href={`/directory?trade=${parsed.trade}&suburb=${encodeURIComponent(suburb)}`} className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-7 py-3.5 rounded-xl hover:opacity-90">
-              Browse all {listingCount > 0 ? listingCount : ""} listings <ArrowRight size={15} />
-            </Link>
-          </div>
-          {totalReviews > 0 && (
-            <div className="flex items-center gap-4 mt-7 text-[13px] font-semibold text-[#8aa4b4]">
-              <span className="flex items-center gap-1.5"><Shield size={14} className="text-[#ffb400]" /> Verified Google ratings</span>
-              <span className="flex items-center gap-1.5"><Star size={14} className="text-[#ffb400]" /> {totalReviews.toLocaleString()} total reviews</span>
-              <span className="flex items-center gap-1.5"><MapPin size={14} className="text-[#ffb400]" /> {suburb}, {state}</span>
+      <div className="bg-[#0a1722] border-b border-white/10 overflow-hidden">
+        <div className="max-w-5xl mx-auto px-6 pt-12 pb-14 grid lg:grid-cols-[1fr_auto] gap-10 lg:items-center">
+          <div>
+            <nav className="text-[12px] text-white/40 mb-4 flex items-center gap-1.5 flex-wrap">
+              <Link href="/" className="hover:text-white">Home</Link>
+              <span>/</span>
+              <Link href="/directory" className="hover:text-white">Directory</Link>
+              <span>/</span>
+              <Link href={`/tradies-in/${suburbToSlug(suburb)}-${parsed.state}`} className="hover:text-white">{suburb}</Link>
+              <span>/</span>
+              <span className="text-white/70">{tradePlural} in {suburb}</span>
+            </nav>
+            <h1 className="font-display uppercase text-[2.4rem] sm:text-[3.2rem] leading-[0.95] text-white max-w-2xl mb-4">
+              {tradePlural} in {suburb}, {state}
+            </h1>
+            <p className="text-[16px] text-[#8aa4b4] max-w-xl mb-6">
+              {listingCount > 0
+                ? `Compare ${listingCount} local ${tradePlural.toLowerCase()} in ${suburb}${avgRating ? ` with an average rating of ${avgRating.toFixed(1)} stars` : ""}. Curated listings, real Google ratings.`
+                : `Looking for ${article} ${tradeSingular.toLowerCase()} in ${suburb}? Browse nearby suburbs, or check back soon as more tradies join Swiftscope.`}
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Link href={`/directory?trade=${parsed.trade}&suburb=${encodeURIComponent(suburb)}`} className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-7 py-3.5 rounded-xl hover:opacity-90">
+                Browse all {listingCount > 0 ? listingCount : ""} listings <ArrowRight size={15} />
+              </Link>
             </div>
-          )}
+            {totalReviews > 0 && (
+              <div className="flex items-center gap-4 mt-7 text-[13px] font-semibold text-[#8aa4b4]">
+                <span className="flex items-center gap-1.5"><Shield size={14} className="text-[#ffb400]" /> Verified Google ratings</span>
+                <span className="flex items-center gap-1.5"><Star size={14} className="text-[#ffb400]" /> {totalReviews.toLocaleString()} total reviews</span>
+                <span className="flex items-center gap-1.5"><MapPin size={14} className="text-[#ffb400]" /> {suburb}, {state}</span>
+              </div>
+            )}
+          </div>
+          <div className="hidden lg:flex relative shrink-0 w-52 h-52 rounded-3xl bg-white/[0.04] border border-white/10 items-center justify-center">
+            <div
+              className="absolute inset-0 rounded-3xl pointer-events-none"
+              style={{ background: "radial-gradient(circle at 30% 25%, rgba(255,180,0,.18), transparent 65%)" }}
+            />
+            <TradeIcon size={76} strokeWidth={1.5} className="text-[#ffb400] relative z-10" />
+          </div>
+        </div>
+        {/* IMPACT STRIP - what this trade actually delivers on a job */}
+        <div className="border-t border-white/10 bg-white/[0.03]">
+          <div className="max-w-5xl mx-auto px-6 py-4 flex items-center gap-3">
+            <TradeIcon size={16} className="text-[#ffb400] shrink-0 lg:hidden" />
+            <p className="text-[13.5px] text-[#c8d8e4] leading-relaxed">
+              <span className="font-bold text-[#ffb400]">What {article} {tradeSingular.toLowerCase()} delivers - </span>
+              {impact}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -197,10 +219,10 @@ export default async function TradeSuburbPage({ params }: PageProps) {
         <div className="bg-[#f8f9fa] border-b border-[#e8ecef]">
           <div className="max-w-5xl mx-auto px-6 py-14">
             <h2 className="font-display uppercase text-[1.6rem] text-[#0a1722] mb-3">
-              How much does a {tradeSingular.toLowerCase()} cost in {suburb}?
+              How much does {article} {tradeSingular.toLowerCase()} cost in {suburb}?
             </h2>
             <p className="text-[15px] text-[#5a6a78] leading-relaxed max-w-2xl mb-2">
-              {pricingRange}. Exact pricing depends on the job - get a free, no-obligation quote from a local {tradeSingular.toLowerCase()} to know exactly what your job will cost.
+              {pricingRange}. Exact pricing depends on the job - get a free, no-obligation quote from {article} local {tradeSingular.toLowerCase()} to know exactly what your job will cost.
             </p>
             <p className="text-[12px] text-[#8a9ba8] italic">
               General market guide only, not specific to any one business or job. Always confirm pricing directly with your chosen tradie.
@@ -228,7 +250,7 @@ export default async function TradeSuburbPage({ params }: PageProps) {
       <div className="bg-[#0a1722]">
         <div className="max-w-5xl mx-auto px-6 py-16 text-center">
           <h3 className="font-display text-[1.8rem] sm:text-[2.2rem] text-white mb-3">
-            Need a {tradeSingular.toLowerCase()} in {suburb}?
+            Need {article} {tradeSingular.toLowerCase()} in {suburb}?
           </h3>
           <p className="text-[#8aa4b4] text-[14px] mb-6">Browse curated {tradePlural.toLowerCase()} in {suburb}, free, always.</p>
           <Link href={`/directory?trade=${parsed.trade}&suburb=${encodeURIComponent(suburb)}`} className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-8 py-4 rounded-xl hover:opacity-90">
