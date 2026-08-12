@@ -88,6 +88,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Postcode must be 4 digits" }, { status: 400 });
   }
 
+  // City-only suburb, checked up front so it covers both branches below
+  // (claiming an existing listing and creating a new one), not just new
+  // listing creation. Two of the three 103.78.46.30 accounts entered
+  // "Melbourne" here instead of a real suburb.
+  if (/^(melbourne|sydney|brisbane|perth|adelaide|canberra|hobart|darwin)$/i.test(suburb)) {
+    return NextResponse.json(
+      { error: "Please enter your actual suburb, not just the city." },
+      { status: 400 }
+    );
+  }
+
   if (!VALID_TRADES.includes(trade)) {
     return NextResponse.json({ error: "Unrecognised trade" }, { status: 400 });
   }
@@ -207,6 +218,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ listingId, outcome: "claimed", slug, verifiedBadge, ownershipVerified: verifiedViaEmail !== null });
   }
 
+  // Rate limit new listing creation per IP. 103.78.46.30 created three
+  // listing-owning accounts (one later found to have created none, two that
+  // did) across 24 hours before anyone noticed. This is the mechanical
+  // version of what stopped it: three from one address in a day should
+  // throttle itself, not wait for someone to spot it in the logs.
+  if (ipAddress) {
+    const { count } = await admin
+      .from("listing_creation_attempts")
+      .select("id", { count: "exact", head: true })
+      .eq("ip_address", ipAddress)
+      .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+    if ((count ?? 0) >= 2) {
+      console.warn(`[directory/claim] rate limit hit for new listing creation: ${ipAddress}`);
+      return NextResponse.json(
+        { error: "Too many listings created recently from this connection. Contact support if you need help." },
+        { status: 429 }
+      );
+    }
+  }
+
   // No match -- create a brand new listing, owned and verified from day one.
   const { data: created, error: createErr } = await admin
     .from("directory_listing")
@@ -224,8 +256,20 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (createErr || !created) {
-    return NextResponse.json({ error: "Failed to create listing" }, { status: 500 });
+    console.error("[directory/claim] listing insert failed:", createErr?.message);
+    return NextResponse.json(
+      { error: createErr?.message?.includes("business_name is required")
+          ? "A business name is required."
+          : createErr?.message?.includes("suburb must be a real suburb")
+          ? "Please enter your actual suburb, not just the city."
+          : "Failed to create listing" },
+      { status: 400 }
+    );
   }
+
+  // Record the attempt for the rate limiter above, success or not mattering
+  // less than the fact an attempt was made from this IP.
+  await admin.from("listing_creation_attempts").insert({ ip_address: ipAddress, profile_id: businessId });
 
   await admin.from("directory_claim_attempts").insert({
     attempted_business_name: businessName,
