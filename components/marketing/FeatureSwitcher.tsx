@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Crosshair, Mic, PenTool, FileSearch, type LucideIcon } from "lucide-react";
 import PhoneStage, { type PhoneToast } from "./PhoneStage";
 import type { Screenshot } from "@/lib/marketing/screenshots";
@@ -70,11 +70,20 @@ export default function FeatureSwitcher({ modes }: { modes: SwitcherMode[] }) {
   // via window.setTimeout. The runtime value is a number regardless; only
   // the inferred type was wrong.
   const switchTimer = useRef<number | null>(null);
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setAutoplayEnabled(false);
     }
+  }, []);
+
+  // The 140ms setTimeout inside select() clears itself on the next call, but
+  // not if the component unmounts mid-transition -- clear it on teardown too.
+  useEffect(() => {
+    return () => {
+      if (switchTimer.current) window.clearTimeout(switchTimer.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -116,6 +125,22 @@ export default function FeatureSwitcher({ modes }: { modes: SwitcherMode[] }) {
   const mode = modes[active];
   const Icon = ICONS[mode.icon];
 
+  // Standard tabs keyboard contract: Left/Right move and activate (this
+  // switcher already auto-activates on click, so arrow keys match that),
+  // Home/End jump to the ends. Wraps at either edge.
+  function onTabsKeyDown(e: KeyboardEvent) {
+    const last = modes.length - 1;
+    let next: number | null = null;
+    if (e.key === "ArrowRight") next = active === last ? 0 : active + 1;
+    else if (e.key === "ArrowLeft") next = active === 0 ? last : active - 1;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = last;
+    if (next === null) return;
+    e.preventDefault();
+    select(next);
+    tabRefs.current[next]?.focus();
+  }
+
   return (
     <div
       className="grid lg:grid-cols-[minmax(0,1fr)_360px] gap-10 lg:gap-16 items-center"
@@ -125,16 +150,25 @@ export default function FeatureSwitcher({ modes }: { modes: SwitcherMode[] }) {
       onBlur={() => setPaused(false)}
     >
       <div>
-        <div className="flex flex-wrap gap-2 mb-9" role="tablist" aria-label="Ways to quote on site">
+        <div
+          className="flex flex-wrap gap-2 mb-9"
+          role="tablist"
+          aria-label="Ways to quote on site"
+          onKeyDown={onTabsKeyDown}
+        >
           {modes.map((m, i) => {
             const TabIcon = ICONS[m.icon];
             const isActive = i === active;
             return (
               <button
                 key={m.key}
+                ref={(el) => { tabRefs.current[i] = el; }}
+                id={`switcher-tab-${m.key}`}
                 type="button"
                 role="tab"
                 aria-selected={isActive}
+                aria-controls={`switcher-panel-${m.key}`}
+                tabIndex={isActive ? 0 : -1}
                 onClick={() => select(i)}
                 className={`relative overflow-hidden flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13.5px] font-bold transition-colors ${
                   isActive
@@ -155,7 +189,13 @@ export default function FeatureSwitcher({ modes }: { modes: SwitcherMode[] }) {
           })}
         </div>
 
-        <div className={`transition-opacity duration-150 ${visible ? "opacity-100" : "opacity-0"}`}>
+        <div
+          id={`switcher-panel-${mode.key}`}
+          role="tabpanel"
+          aria-labelledby={`switcher-tab-${mode.key}`}
+          tabIndex={0}
+          className={`transition-opacity duration-150 ${visible ? "opacity-100" : "opacity-0"}`}
+        >
           <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-2">{mode.kicker}</p>
           <h3 className="font-display text-[1.9rem] text-[#0a1722] mb-5">{mode.title}</h3>
 

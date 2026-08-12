@@ -97,9 +97,11 @@ export default async function Home() {
               <span>7-day free trial - then $45/month</span>
               <span className="text-[#2a3a47]">|</span>
               <span>Unlimited users</span>
-              <span className="text-[#2a3a47]">|</span>
               {listingCount !== null && (
-                <span>{listingCount.toLocaleString("en-AU")} tradie listings</span>
+                <>
+                  <span className="text-[#2a3a47]">|</span>
+                  <span>{listingCount.toLocaleString("en-AU")} tradie listings</span>
+                </>
               )}
             </div>
           </div>
@@ -194,7 +196,6 @@ export default async function Home() {
                 ],
                 pullLine: "Customers can accept in 30 seconds from send.",
                 shot: SHOTS.liveCameraMarkup,
-                toast: { icon: "ruler", title: "0.62m", subtitle: "Conduit run - added to the quote" },
               },
               {
                 key: "voice",
@@ -222,7 +223,6 @@ export default async function Home() {
                 ],
                 pullLine: "Every marked zone becomes a priced line, automatically.",
                 shot: SHOTS.planMarkup,
-                toast: { icon: "pin", title: "$282", subtitle: "10 downlights placed on the plan" },
               },
               {
                 key: "ai-read",

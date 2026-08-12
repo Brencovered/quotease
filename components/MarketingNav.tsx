@@ -116,14 +116,20 @@ export default function MarketingNav({ transparent = false }: { transparent?: bo
         </div>
 
         {/* Mobile toggle */}
-        <button onClick={() => setOpen((v) => !v)} className="lg:hidden text-white p-1" aria-label="Menu">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="lg:hidden text-white p-1"
+          aria-label={open ? "Close menu" : "Open menu"}
+          aria-expanded={open}
+          aria-controls="mobile-nav-menu"
+        >
           {open ? <X size={22} /> : <Menu size={22} />}
         </button>
       </div>
 
       {/* Mobile menu */}
       {open && (
-        <div className="lg:hidden bg-[#0a1722] border-t border-white/10 px-6 py-5 flex flex-col gap-1">
+        <div id="mobile-nav-menu" className="lg:hidden bg-[#0a1722] border-t border-white/10 px-6 py-5 flex flex-col gap-1">
           <Link href="/features" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Features</Link>
           <Link href="/how-it-works" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">How it works</Link>
           <Link href="/blog" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Blog</Link>

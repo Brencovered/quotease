@@ -120,10 +120,10 @@ export default function PhoneStage({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <span className="relative flex h-1.5 w-1.5 shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ffb400] opacity-75" />
+                    <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ffb400] opacity-75" />
                     <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#ffb400]" />
                   </span>
-                  <span className="text-[8px] font-bold uppercase tracking-[.14em] text-[#8a9ba8]">Swiftscope</span>
+                  <span className="text-[8px] font-bold uppercase tracking-[.14em] text-[#5a6a78]">Swiftscope</span>
                 </div>
                 <p className="text-[12.5px] font-extrabold text-[#0a1722] leading-[1.25] mt-0.5">{activeToast.title}</p>
                 <p className="text-[10.5px] text-[#5a6a78] leading-[1.35] mt-0.5">{activeToast.subtitle}</p>
