@@ -14,6 +14,9 @@
  */
 
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { getClientIp, getUserAgent } from "@/lib/clientIp";
+import { isIpBlocked } from "@/lib/ipBlocklist";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminEmails } from "@/lib/admin";
 import { buildWelcomeEmail, buildAdminNewSignupEmail } from "@/lib/email/templates";
@@ -43,13 +46,26 @@ async function sendEmail(to: string | string[], subject: string, html: string) {
   }
 }
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
   const user = userData.user;
+
+  // Signup itself happens browser-to-Supabase and cannot be gated here, but
+  // this route fires once, immediately after, on first authenticated load.
+  // A blocked IP never gets past this point, so the account exists in
+  // auth.users but never completes onboarding or reaches the directory.
+  const clientIp = getClientIp(req);
+  if (await isIpBlocked(clientIp)) {
+    console.warn(`[onboarding/welcome] blocked IP reached onboarding: ${clientIp}, user ${user.id}`);
+    return NextResponse.json(
+      { error: "Unable to complete signup. Contact support if you believe this is a mistake." },
+      { status: 403 }
+    );
+  }
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -68,9 +84,19 @@ export async function POST() {
   // actually flips the column from null wins. If another request already
   // claimed it between our select above and this update, rowCount is 0 and
   // we skip sending rather than double up.
+  // Signup forensics captured on the same write, since this route fires once
+  // per account at onboarding. Supabase's auth.audit_log_entries is pruned and
+  // came back completely empty when four suspicious signups needed
+  // investigating, so this is the only durable record of where an account was
+  // created from. Written once and never updated, so it stays the signup IP
+  // rather than drifting to wherever they last logged in.
   const { data: claimed } = await supabase
     .from("profiles")
-    .update({ welcome_email_sent_at: new Date().toISOString() })
+    .update({
+      welcome_email_sent_at: new Date().toISOString(),
+      signup_ip: getClientIp(req),
+      signup_user_agent: getUserAgent(req),
+    })
     .eq("id", user.id)
     .is("welcome_email_sent_at", null)
     .select("id")
