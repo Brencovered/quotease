@@ -92,18 +92,15 @@ export default async function Home() {
               Start quoting free
             </Link>
           </div>
-          <div className="relative">
-            <div className="absolute -inset-8 bg-[radial-gradient(ellipse_at_center,rgba(255,180,0,0.12),transparent_60%)] pointer-events-none" />
-            <div className="relative home-glass rounded-2xl p-2.5 max-w-[320px] mx-auto shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
-              <Image
-                src="/marketing/v2/quoting-customer-accepts.png"
-                alt="Client accepting a quote on their phone"
-                width={900}
-                height={1824}
-                quality={90}
-                className="w-full h-auto rounded-[14px]"
-              />
-            </div>
+          <div className="max-w-[280px] mx-auto w-full">
+            <Image
+              src="/marketing/v2/quoting-customer-accepts.png"
+              alt="Client accepting a quote on their phone"
+              width={453}
+              height={918}
+              quality={95}
+              className="w-full h-auto"
+            />
           </div>
         </div>
       </section>

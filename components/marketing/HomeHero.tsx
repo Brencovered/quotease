@@ -19,7 +19,7 @@ const SCENES: Scene[] = [
   {
     key: "markup",
     image: "/trades/hero-onsite.jpg",
-    alt: "Tradie on site with dust mask and ear protection",
+    alt: "Construction crew on site reviewing the floor slab",
     overlay: "markup",
     label: "Live markup",
     objectPos: "object-center",
@@ -27,18 +27,18 @@ const SCENES: Scene[] = [
   {
     key: "voice",
     image: "/trades/carpenter.jpg",
-    alt: "Carpenter using a nail gun on site",
+    alt: "Cordless drill on a job site floor",
     overlay: "voice",
     label: "Voice quote",
-    objectPos: "object-[30%_center]",
+    objectPos: "object-center",
   },
   {
     key: "sent",
     image: "/trades/electrician.jpg",
-    alt: "Electrician installing downlights on a ladder",
+    alt: "Tradie in hard hat on site",
     overlay: "sent",
     label: "Sent & accepted",
-    objectPos: "object-[40%_center]",
+    objectPos: "object-[30%_center]",
   },
 ];
 
@@ -190,10 +190,11 @@ function ProductOverlay({ kind }: { kind: Scene["overlay"] }) {
           </div>
         </div>
         <ProductShot
-          src="/product/live-camera-markup.webp"
-          alt="Marking materials on a live camera view"
-          width={1080}
-          height={2026}
+          src="/product/quote-capture.webp"
+          alt="Four ways into a quote including live camera markup"
+          width={718}
+          height={1100}
+          fit="cover-top"
           sizes="250px"
           className="rounded-[12px]"
         />
@@ -257,8 +258,8 @@ function ProductOverlay({ kind }: { kind: Scene["overlay"] }) {
       <ProductShot
         src="/product/quote-send.webp"
         alt="Quote ready to send screen"
-        width={1080}
-        height={1500}
+        width={714}
+        height={1100}
         fit="cover-top"
         sizes="250px"
         className="rounded-[12px]"

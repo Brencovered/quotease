@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import ProductShot from "@/components/marketing/ProductShot";
@@ -7,8 +6,6 @@ type Band = {
   kicker: string;
   title: string;
   body: string;
-  photo: string;
-  photoAlt: string;
   shot: string;
   shotAlt: string;
   shotW: number;
@@ -21,67 +18,45 @@ const BANDS: Band[] = [
     kicker: "On the tools",
     title: "Mark the job. Watch it price.",
     body: "Open the camera, tap the zone, draw the run. Materials and labour load from your book, not from memory at the desk later.",
-    photo: "/trades/electrician.jpg",
-    photoAlt: "Electrician working on a residential site",
-    shot: "/product/live-camera-markup.webp",
-    shotAlt: "Live camera markup in Swiftscope",
-    shotW: 1080,
-    shotH: 2026,
+    shot: "/product/quote-capture.webp",
+    shotAlt: "Quote capture options in Swiftscope",
+    shotW: 718,
+    shotH: 1474,
   },
   {
     kicker: "Voice quoting",
     title: "Talk the walk. Get a draft.",
     body: "Walk the job and describe the work. Swiftscope turns it into a priced quote with your rates. Or record it on the drive home.",
-    photo: "/trades/plumber.jpg",
-    photoAlt: "Plumber on a residential job",
-    shot: "/product/quote-capture.webp",
-    shotAlt: "Quote capture after voice note",
-    shotW: 1080,
-    shotH: 2218,
+    shot: "/product/quote-send.webp",
+    shotAlt: "Priced quote ready to send",
+    shotW: 714,
+    shotH: 1474,
     reverse: true,
   },
   {
     kicker: "Plans",
     title: "Same plan. Priced, not guessed.",
     body: "Upload a drawing, drop markers, block zones. Every markup becomes a line with quantity and cost already on it.",
-    photo: "/trades/carpenter.jpg",
-    photoAlt: "Carpenter measuring timber on site",
     shot: "/product/plan-markup.webp",
     shotAlt: "Plan markup with priced markers",
-    shotW: 1080,
-    shotH: 2394,
+    shotW: 600,
+    shotH: 1330,
   },
 ];
 
+/**
+ * Capability sections: phone only on a dark canvas.
+ * Soft trade photo backgrounds were reading as blur and visual noise.
+ */
 export default function CapabilityBands() {
   return (
     <div>
       {BANDS.map((band) => (
-        <section key={band.title} className="relative min-h-[78vh] flex items-end overflow-hidden bg-[#071018]">
-          <div className="absolute inset-0">
-            <Image
-              src={band.photo}
-              alt={band.photoAlt}
-              fill
-              sizes="100vw"
-              quality={90}
-              className="object-cover object-center"
-            />
+        <section key={band.title} className="bg-[#050b11]">
+          <div className="max-w-[1280px] mx-auto px-6 py-16 lg:py-20">
             <div
               className={[
-                "absolute inset-0",
-                band.reverse
-                  ? "bg-gradient-to-l from-[#071018] via-[#071018]/75 to-[#071018]/20"
-                  : "bg-gradient-to-r from-[#071018] via-[#071018]/75 to-[#071018]/20",
-              ].join(" ")}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#071018] via-transparent to-[#071018]/35" />
-          </div>
-
-          <div className="relative z-10 w-full max-w-[1280px] mx-auto px-6 py-16 lg:py-20">
-            <div
-              className={[
-                "grid lg:grid-cols-12 gap-10 items-end",
+                "grid lg:grid-cols-12 gap-10 lg:gap-14 items-center",
                 band.reverse ? "lg:[direction:rtl]" : "",
               ].join(" ")}
             >
@@ -104,15 +79,17 @@ export default function CapabilityBands() {
               </div>
 
               <div className={["lg:col-span-6 flex", band.reverse ? "lg:justify-start lg:[direction:ltr]" : "lg:justify-end"].join(" ")}>
-                <div className="w-full max-w-[300px] home-glass rounded-2xl p-2.5 shadow-[0_28px_70px_rgba(0,0,0,0.5)]">
-                  <ProductShot
-                    src={band.shot}
-                    alt={band.shotAlt}
-                    width={band.shotW}
-                    height={band.shotH}
-                    sizes="300px"
-                    className="rounded-[14px]"
-                  />
+                <div className="w-full max-w-[280px]">
+                  <div className="rounded-[22px] bg-[#1a2a38] p-2 ring-1 ring-white/10">
+                    <ProductShot
+                      src={band.shot}
+                      alt={band.shotAlt}
+                      width={band.shotW}
+                      height={band.shotH}
+                      sizes="280px"
+                      className="rounded-[14px]"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
