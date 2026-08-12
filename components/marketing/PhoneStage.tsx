@@ -66,15 +66,21 @@ export default function PhoneStage({
   const stageBg = tone === "dark" ? "bg-white/[0.04] border border-white/10" : "bg-[#f3f5f6]";
 
   return (
-    // pl-[190px]: room for the toast (~210px wide, offset -170px from the
-    // phone's left edge, overlapping the bezel by ~40px) to hang fully
-    // outside the phone without being clipped. The first attempt at this
-    // used -left-9 (36px), nowhere near enough to actually clear a phone
-    // ~230px wide -- verified by rendering the box model before shipping
-    // this time rather than guessing again. overflow-visible as a second
-    // line of defence if a parent grid cell is even tighter than this.
-    <div className={`relative w-full min-w-0 rounded-[28px] ${stageBg} pt-8 pb-6 pl-[190px] pr-4 overflow-visible`}>
-      <div className="relative mx-auto w-full max-w-[260px]">
+    // The previous pl-[190px]/max-w-[260px] pairing was tuned in isolation
+    // against a 260px phone and never checked against the stage width this
+    // component actually gets from its one call site (FeatureSwitcher's
+    // 360px column). 190px of left padding out of 360px total left only
+    // ~154px for the phone itself -- rendered and measured directly, not
+    // estimated -- well under the "roughly 290px" this same codebase's own
+    // trade-page comment says a PhoneStage capture needs to stay legible.
+    // Fix has two parts: FeatureSwitcher's column widened to 460px, and the
+    // padding reserved here cut to pl-[130px], so the phone actually gets
+    // to use the room. 170px offset - 130px padding = 40px of the toast
+    // bleeding past this stage's own left edge into the grid's gap-16
+    // (64px) rather than the phone's box -- rendered and measured again to
+    // confirm it lands inside that gap, not on the text column beside it.
+    <div className={`relative w-full min-w-0 rounded-[28px] ${stageBg} pt-8 pb-6 pl-[130px] pr-4 overflow-visible`}>
+      <div className="relative mx-auto w-full max-w-[300px]">
         {/* The phone silhouette. A plain rounded box read as "a div with an
             image in it" in the earlier version; a notch and a side button
             are what make it read as a phone, which is what the reference

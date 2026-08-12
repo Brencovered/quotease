@@ -143,7 +143,7 @@ export default function FeatureSwitcher({ modes }: { modes: SwitcherMode[] }) {
 
   return (
     <div
-      className="grid lg:grid-cols-[minmax(0,1fr)_360px] gap-10 lg:gap-16 items-center"
+      className="grid lg:grid-cols-[minmax(0,1fr)_460px] gap-10 lg:gap-16 items-center"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
