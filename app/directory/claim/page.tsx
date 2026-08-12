@@ -75,6 +75,12 @@ function ClaimDirectoryListingInner() {
   const [trade, setTrade] = useState(() => searchParams.get("trade") ?? "");
   const [suburb, setSuburb] = useState(() => searchParams.get("suburb") ?? "");
   const [postcode, setPostcode] = useState(() => searchParams.get("postcode") ?? "");
+  // Address and contact phone: only mandatory when creating a brand new
+  // listing (selectedListingId === "new"). A claimed scraped listing
+  // already carries scraped_contact_phone from the Google import, so these
+  // are collected but not force-required on that path.
+  const [streetAddress, setStreetAddress] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
 
   const [matches, setMatches] = useState<ListingMatch[]>([]);
   const [strongMatch, setStrongMatch] = useState<ListingMatch | null>(null);
@@ -276,6 +282,8 @@ function ClaimDirectoryListingInner() {
           postcode: postcode.trim() || undefined,
           abn: abn.trim() || undefined,
           logoUrl: logoUrl || undefined,
+          streetAddress: streetAddress.trim() || undefined,
+          contactPhone: contactPhone.trim() || undefined,
         }),
       });
       const data = await res.json();
@@ -531,6 +539,39 @@ function ClaimDirectoryListingInner() {
 
         {step === "abn" && (
           <div className="card p-6 rounded-2xl bg-white space-y-5">
+            {selectedListingId === "new" && (
+              <>
+                <div>
+                  <label className="block text-[13px] font-semibold text-[#0a1722] mb-1.5">Business address</label>
+                  <input
+                    type="text"
+                    value={streetAddress}
+                    onChange={(e) => setStreetAddress(e.target.value)}
+                    placeholder="e.g. 12 King Street"
+                    className="app-field w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[13px] font-semibold text-[#0a1722] mb-1.5">Contact number</label>
+                  <input
+                    type="tel"
+                    value={contactPhone}
+                    onChange={(e) => setContactPhone(e.target.value)}
+                    placeholder="e.g. 0412 345 678"
+                    className="app-field w-full"
+                  />
+                  {/* Not for verification: nobody calls this to confirm the
+                      business is real. It is the number a homeowner sees on
+                      the listing page, and it is shown behind a click-to-
+                      reveal rather than sitting in the page's raw HTML, so
+                      it is not immediately scrapeable by a bot that never
+                      renders JavaScript. */}
+                  <p className="text-[11.5px] text-[#8a97a1] mt-1.5">
+                    Shown on your listing page behind a tap-to-reveal, so it is not sitting in plain text for scrapers.
+                  </p>
+                </div>
+              </>
+            )}
             <div>
               <label className="block text-[13px] font-semibold text-[#0a1722] mb-2">Logo or photo (optional)</label>
               <div className="flex items-center gap-4">
@@ -563,7 +604,13 @@ function ClaimDirectoryListingInner() {
               />
             </div>
             <button
-              onClick={() => finaliseClaim(selectedListingId === "new" ? null : selectedListingId)}
+              onClick={() => {
+                if (selectedListingId === "new" && (!streetAddress.trim() || !contactPhone.trim())) {
+                  setError("Please add your business address and contact number.");
+                  return;
+                }
+                finaliseClaim(selectedListingId === "new" ? null : selectedListingId);
+              }}
               disabled={submitting}
               className="btn-primary w-full flex items-center justify-center gap-2"
             >
