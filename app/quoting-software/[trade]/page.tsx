@@ -25,6 +25,8 @@ import { notFound } from "next/navigation";
 import { ArrowRight, Check, Mic, PenLine, FileText, Upload, Package, CalendarDays, Receipt, X } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
 import QuoteItUp from "@/components/marketing/QuoteItUp";
+import FeatureSwitcher from "@/components/marketing/FeatureSwitcher";
+import { SHOTS } from "@/lib/marketing/screenshots";
 import { TRADE_PAGES, getTradePage } from "@/lib/marketing/tradePages";
 
 export const revalidate = 604800; // 1 week, same cadence as the other SEO pages
@@ -146,6 +148,96 @@ export default async function TradeQuotingPage({
         </div>
       </div>
 
+
+      {/* WHY TRADIES SWITCH ── the same four-way tab switcher that lives on
+          the homepage, placed here too. Brendan's mockup showed this
+          section flowing directly into this page's hero as one continuous
+          scroll, so it belongs on the trade page itself, not only on the
+          homepage a visitor may never see if they land here first from
+          search.
+
+          Same component, same shots, same copy as the homepage -- no new
+          content invented per trade. The toasts reference downlights
+          because that is the asset that exists; building bespoke captures
+          for four tabs across six trades is real production work (new
+          screenshots, new copy, new toasts) and not something to fabricate
+          numbers for here. Worth commissioning properly if every trade
+          needs its own set. */}
+      <div className="bg-white border-b border-[#e8ecef]">
+        <div className="max-w-7xl mx-auto px-6 py-14 sm:py-16">
+          <div className="text-center mb-14">
+            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Why tradies switch</p>
+            <h2 className="font-display uppercase text-[2.6rem] sm:text-[3.2rem] leading-[0.93] text-[#0a1722] mb-4">
+              Everything below happens<br />on site. Nothing waits for the desk.
+            </h2>
+            <p className="text-[15px] text-[#5a6a78] max-w-xl mx-auto">
+              Four ways to turn what you see on site into a sent, priced quote - pick whichever fits how you work.
+            </p>
+          </div>
+
+          <FeatureSwitcher
+            modes={[
+              {
+                key: "camera",
+                icon: "crosshair",
+                kicker: "Live markup",
+                title: "Live on-screen quoting",
+                bullets: [
+                  "Open Swiftscope and mark straight onto your screen.",
+                  "Materials and labour autoload with your pre-set pricing.",
+                  "Press send - quote's away before you're off site.",
+                ],
+                pullLine: "Customers can accept in 30 seconds from send.",
+                shot: SHOTS.liveCameraMarkup,
+                toast: { icon: "ruler", title: "0.62m", subtitle: "Conduit run - added to the quote" },
+              },
+              {
+                key: "voice",
+                icon: "mic",
+                kicker: "Voice quoting",
+                title: "AI voice quote generator",
+                bullets: [
+                  "Walk the job and describe the work out loud.",
+                  "A quote drafts automatically from what you said.",
+                  "Or record it on the drive home - same result either way.",
+                ],
+                pullLine: "Customers can accept in 30 seconds from end of recording.",
+                shot: SHOTS.quoteSend,
+                toast: { icon: "check", title: "Quote ready - $1,181", subtitle: "8 downlights, priced and ready to send" },
+              },
+              {
+                key: "plan",
+                icon: "pen-tool",
+                kicker: "Plan markup",
+                title: "Plan & drawing markup",
+                bullets: [
+                  "Upload a plan or drawing from your phone.",
+                  "Drop markers, draw runs, or block out zones.",
+                  "Every markup becomes a priced line, instantly.",
+                ],
+                pullLine: "Every marked zone becomes a priced line, automatically.",
+                shot: SHOTS.planMarkup,
+                toast: { icon: "pin", title: "$282", subtitle: "10 downlights placed on the plan" },
+              },
+              {
+                key: "ai-read",
+                icon: "file-search",
+                kicker: "AI reading",
+                title: "AI plan reading",
+                bullets: [
+                  "Upload the plan - no need to read it yourself.",
+                  "Direct what needs calculating for the job.",
+                  "Save straight to a quote, ready to check and send.",
+                ],
+                pullLine: "Hand it a plan instead of reading one yourself.",
+                footnote: "* AI output should always be checked by a qualified person before sending.",
+                shot: SHOTS.quoteCapture,
+                toast: { icon: "file", title: "Plan uploaded", subtitle: "AI reads it and quotes the job" },
+              },
+            ]}
+          />
+        </div>
+      </div>
 
       {/* THE PROBLEM ── trade-specific differentiation. Leads with what they
           are up against rather than a feature list, because a tradie who
