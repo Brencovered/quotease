@@ -69,7 +69,7 @@ export interface TradePage {
   packageName: string;
   packageContents: string;
   /** The shape of a real quote for this trade, start to send. */
-  quotingFlow: { step: string; detail: string; example: string }[];
+  quotingFlow: { step: string; detail: string }[];
   /** What happens after the client accepts, for this trade. */
   afterAccept: string;
 
@@ -120,11 +120,11 @@ export const TRADE_PAGES: TradePage[] = [
     packageName: "Standard bathroom rough-in",
     packageContents:
       "Exhaust fan, two downlights, one GPO, switch and the cable run, saved once and dropped into every bathroom you quote after that.",
-        quotingFlow: [
-      { step: "Count on site", detail: "Walk the job and tap in points, switches and downlights, or mark them straight onto the plan.", example: "e.g. 12 downlights, 6 GPOs" },
-      { step: "Set the runs and access", detail: "Cable metres, trench metres, roof and subfloor access. The multipliers do the work you would otherwise do in your head.", example: "e.g. 34m cable, subfloor access" },
-      { step: "Board and extras", detail: "Switchboard upgrade, RCBOs by board or per pole, three-phase, exhaust fans.", example: "e.g. 8-pole RCBO upgrade" },
-      { step: "Send before you leave", detail: "Margin applied, terms attached, PDF to the client from the driveway.", example: "e.g. $1,908, sent in under 2 min" },
+    quotingFlow: [
+      { step: "Count on site", detail: "Walk the job and tap in points, switches and downlights, or mark them straight onto the plan." },
+      { step: "Set the runs and access", detail: "Cable metres, trench metres, roof and subfloor access. The multipliers do the work you would otherwise do in your head." },
+      { step: "Board and extras", detail: "Switchboard upgrade, RCBOs by board or per pole, three-phase, exhaust fans." },
+      { step: "Send before you leave", detail: "Margin applied, terms attached, PDF to the client from the driveway." },
     ],
     afterAccept:
       "The quote becomes the job. Schedule it, assign your apprentice, track hours against the estimate, raise a variation when the board turns out to be a Federal Pacific, then invoice and push to Xero without retyping a line.",
@@ -177,11 +177,11 @@ export const TRADE_PAGES: TradePage[] = [
     packageName: "Full bathroom rough-in",
     packageContents:
       "Shower mixer, basin mixer, toilet, waste and vent, plus the labour allowance, saved once and reused on every bathroom.",
-        quotingFlow: [
-      { step: "Count the fixtures", detail: "Basin, kitchen, shower and bath mixers, and toilets, each on its own line.", example: "e.g. 2 mixers, 1 toilet suite" },
-      { step: "Add the rough-ins", detail: "Bathroom, kitchen or laundry, priced as the multi-day items they are rather than folded into fixtures.", example: "e.g. full bathroom rough-in" },
-      { step: "Hot water and gas", detail: "Unit type, gas points, and the certification flag set now instead of remembered later.", example: "e.g. heat pump swap, 1 gas point" },
-      { step: "Send it on the spot", detail: "Priced, marked up and emailed before you have packed the ute.", example: "e.g. $4,830, sent from the ute" },
+    quotingFlow: [
+      { step: "Count the fixtures", detail: "Basin, kitchen, shower and bath mixers, and toilets, each on its own line." },
+      { step: "Add the rough-ins", detail: "Bathroom, kitchen or laundry, priced as the multi-day items they are rather than folded into fixtures." },
+      { step: "Hot water and gas", detail: "Unit type, gas points, and the certification flag set now instead of remembered later." },
+      { step: "Send it on the spot", detail: "Priced, marked up and emailed before you have packed the ute." },
     ],
     afterAccept:
       "Job scheduled, hours tracked against estimate, and when the floor comes up and the drainage is not where the plan said, the variation is raised and signed before you keep digging. Invoice and Xero at the end.",
@@ -234,11 +234,11 @@ export const TRADE_PAGES: TradePage[] = [
     packageName: "Gutter and downpipe replacement",
     packageContents:
       "Gutter by the metre, brackets, downpipes, shoes and the disposal allowance, saved as one item you drop into any restoration quote.",
-        quotingFlow: [
-      { step: "Area and pitch", detail: "Square metres and low, standard or steep. The pitch multiplier handles the labour difference.", example: "e.g. 182m2 at standard pitch" },
-      { step: "Roof type", detail: "Colorbond, terracotta, concrete tile or mixed, each on its own rate.", example: "e.g. Colorbond, low pitch" },
-      { step: "Runs and extras", detail: "Ridge, valley, fascia, gutter and downpipe by the metre. Whirlybirds and skylights by count.", example: "e.g. 22m ridge, 3 downpipes" },
-      { step: "Send from the roof", detail: "Photograph what you found, attach it, and send the quote before you are back down the ladder.", example: "e.g. $11,270, sent off the ladder" },
+    quotingFlow: [
+      { step: "Area and pitch", detail: "Square metres and low, standard or steep. The pitch multiplier handles the labour difference." },
+      { step: "Roof type", detail: "Colorbond, terracotta, concrete tile or mixed, each on its own rate." },
+      { step: "Runs and extras", detail: "Ridge, valley, fascia, gutter and downpipe by the metre. Whirlybirds and skylights by count." },
+      { step: "Send from the roof", detail: "Photograph what you found, attach it, and send the quote before you are back down the ladder." },
     ],
     afterAccept:
       "Schedule around the weather, track the crew's hours, and when the battens come up rotten, raise the variation with the photo attached so nobody argues about whether it was there. Then invoice and push to Xero.",
@@ -292,11 +292,11 @@ export const TRADE_PAGES: TradePage[] = [
     packageName: "Standard internal door hang",
     packageContents:
       "Door, frame, hardware, architrave both sides and the labour allowance, saved once and multiplied by however many doors the job has.",
-        quotingFlow: [
-      { step: "Pick the job type", detail: "Deck, framing, fit-out, renovation or repair, each priced on its own basis.", example: "e.g. 6 doors, 2 stud walls" },
-      { step: "Measure what runs", detail: "Skirting, architrave, framing timber, decking beams and robe shelving by linear metre.", example: "e.g. 32m2 deck, 26m beams" },
-      { step: "Count what does not", detail: "Doors, frames, stud walls and plywood sheets as units. Decking by square metre.", example: "e.g. 64m skirting and architrave" },
-      { step: "Send it from site", detail: "Priced with your margin, terms attached, out before you are back in the ute.", example: "e.g. $5,890, sent on site" },
+    quotingFlow: [
+      { step: "Pick the job type", detail: "Deck, framing, fit-out, renovation or repair, each priced on its own basis." },
+      { step: "Measure what runs", detail: "Skirting, architrave, framing timber, decking beams and robe shelving by linear metre." },
+      { step: "Count what does not", detail: "Doors, frames, stud walls and plywood sheets as units. Decking by square metre." },
+      { step: "Send it from site", detail: "Priced with your margin, terms attached, out before you are back in the ute." },
     ],
     afterAccept:
       "The quote becomes a scheduled job with hours tracked against estimate. Rot in the bearers becomes a signed variation, not a favour. Invoice and Xero when it is done.",
@@ -348,11 +348,11 @@ export const TRADE_PAGES: TradePage[] = [
     packageName: "Standard bedroom, two coats",
     packageContents:
       "Walls and ceiling by area, cutting in, prep and patching allowance, and the paint at your current cost, saved once and reused room after room.",
-        quotingFlow: [
-      { step: "Build your line items", detail: "Per square metre, per room or per coat. Your units, not someone else's template.", example: "e.g. 196m2 walls, two coats" },
-      { step: "Pull from the pricebook", detail: "Saved rates and current material costs, so nothing is priced from memory.", example: "e.g. saved rates and packages" },
-      { step: "Drop in packages", detail: "Standard room, whole house repaint, or whatever you quote most, added in one tap.", example: "e.g. standard bedroom package" },
-      { step: "Send it on site", detail: "Margin applied, terms attached, gone before you leave the walk-through.", example: "e.g. $2,610, sent that afternoon" },
+    quotingFlow: [
+      { step: "Build your line items", detail: "Per square metre, per room or per coat. Your units, not someone else's template." },
+      { step: "Pull from the pricebook", detail: "Saved rates and current material costs, so nothing is priced from memory." },
+      { step: "Drop in packages", detail: "Standard room, whole house repaint, or whatever you quote most, added in one tap." },
+      { step: "Send it on site", detail: "Margin applied, terms attached, gone before you leave the walk-through." },
     ],
     afterAccept:
       "Scheduled, hours tracked, and the wall that needs a full skim instead of a patch becomes a signed variation before the extra day starts. Invoice and Xero at completion.",
@@ -404,11 +404,11 @@ export const TRADE_PAGES: TradePage[] = [
     packageName: "Your most repeated job",
     packageContents:
       "Whatever you quote every week, saved with its materials, labour and allowances, and dropped into a quote in one tap.",
-        quotingFlow: [
-      { step: "Define your line items", detail: "Your units, your rates, saved to a pricebook you own.", example: "e.g. 60m2 exposed aggregate" },
-      { step: "Price from the book", detail: "Current material costs and your labour rates, not a number from memory.", example: "e.g. your own units and rates" },
-      { step: "Reuse your packages", detail: "The jobs you quote most often, built once.", example: "e.g. your most repeated job" },
-      { step: "Send from site", detail: "Priced and emailed before you have left the job.", example: "e.g. $2,890, sent from site" },
+    quotingFlow: [
+      { step: "Define your line items", detail: "Your units, your rates, saved to a pricebook you own." },
+      { step: "Price from the book", detail: "Current material costs and your labour rates, not a number from memory." },
+      { step: "Reuse your packages", detail: "The jobs you quote most often, built once." },
+      { step: "Send from site", detail: "Priced and emailed before you have left the job." },
     ],
     afterAccept:
       "Scheduled, tracked against estimate, variations signed on site, invoiced and pushed to Xero. The same flow every dedicated trade gets.",
