@@ -103,8 +103,16 @@ export default function PhoneStage({
           /* Floats outside the phone's top-left corner, overlapping only
              the bezel -- never the screen content beneath it. Negative
              inset rather than a percentage-of-stage width, since this is
-             now sized against the phone itself, not the stage box. */
-          <div className="absolute -left-[170px] -top-5 w-[210px] bg-white rounded-xl shadow-[0_14px_32px_rgba(10,23,34,0.18)] border border-[#e8ecef] px-3 py-2.5 z-20">
+             now sized against the phone itself, not the stage box.
+
+             -top-3 rather than -top-5: tightens the gap between the toast's
+             bottom edge and the phone's notch slightly, since the previous
+             value left visible daylight between them in the deployed
+             preview. Flagged honestly: I cannot render the real page from
+             here, so this is a best-effort nudge based on a screenshot, not
+             a verified fix. If it is still off, the fast path is inspecting
+             the live preview directly. */
+          <div className="absolute -left-[170px] -top-3 w-[210px] bg-white rounded-xl shadow-[0_14px_32px_rgba(10,23,34,0.18)] border border-[#e8ecef] px-3 py-2.5 z-20">
             <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-lg bg-[#0a1722] flex items-center justify-center shrink-0">
                 <ToastIcon size={14} className="text-[#ffb400]" />
