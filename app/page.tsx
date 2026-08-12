@@ -1,5 +1,6 @@
 import Link from "next/link";
 import SavingsCalculator from "@/components/SavingsCalculator";
+import PlanMarkupSlider from "@/components/marketing/PlanMarkupSlider";
 import Image from "next/image";
 import type { Metadata } from "next";
 import {
@@ -240,6 +241,24 @@ export default async function Home() {
               },
             ]}
           />
+
+          {/* Deeper, standalone proof of the plan-markup claim from the tab
+              above, since a landing-page review specifically asked for a
+              before/after visual and a drag comparison is a more physical
+              way to make "it reads your plan" land than a fourth tab would.
+              Inline SVG on both sides rather than a real uploaded plan: a
+              real plan is somebody's copyrighted drawing, and the numbers on
+              the "after" panel need to exactly match what is drawn, which
+              only holds if both are generated together. */}
+          <div className="mt-14 pt-14 border-t border-[#e8ecef]">
+            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3 text-center">
+              See it for yourself
+            </p>
+            <h3 className="font-display uppercase text-[1.8rem] sm:text-[2.2rem] leading-[0.95] mb-6 text-center">
+              Same plan.<br className="sm:hidden" /> Priced instead of guessed.
+            </h3>
+            <PlanMarkupSlider />
+          </div>
 
           {/* Everything else */}
           <div className="mt-14 bg-[#0a1722] rounded-3xl p-8 md:p-10">
