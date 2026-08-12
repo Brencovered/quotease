@@ -31,7 +31,7 @@ export default async function Home() {
   const listingCount = await getListingCount();
 
   return (
-    <main className="bg-[#071018] text-[#071018] overflow-hidden">
+    <main className="bg-[#050b11] text-[#071018] overflow-hidden">
       <MarketingNav transparent compact />
 
       <HomeHero />
