@@ -199,7 +199,7 @@ export default async function SuburbLandingPage({ params }: PageProps) {
       <MarketingNav />
 
       {/* HERO */}
-      <div className="bg-[#0a1722] border-b border-white/10">
+      <div className="bg-[#1a242c] border-b border-white/10">
         <div className="max-w-5xl mx-auto px-6 pt-12 pb-16">
           <nav className="text-[12px] text-white/40 mb-4 flex items-center gap-1.5 flex-wrap">
             <Link href="/" className="hover:text-white">Home</Link>

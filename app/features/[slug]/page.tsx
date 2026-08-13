@@ -243,7 +243,7 @@ export default async function FeatureDetailPage({ params }: { params: Promise<{ 
       </div>
 
       {/* FOOTER CTA */}
-      <div className="bg-[#0a1722]">
+      <div className="bg-[#1a242c]">
         <div className="max-w-7xl mx-auto px-6 py-16 text-center">
           <h3 className="font-display text-[1.8rem] sm:text-[2.2rem] text-white mb-3">Ready to see it on your own jobs?</h3>
           <Link href="/signup" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-8 py-4 rounded-xl hover:opacity-90">

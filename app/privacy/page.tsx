@@ -21,7 +21,7 @@ export default function PrivacyPolicyPage() {
       <MarketingNav />
 
       {/* HEADER */}
-      <div className="bg-[#0a1722] border-b border-white/10">
+      <div className="bg-[#1a242c] border-b border-white/10">
         <div className="max-w-7xl mx-auto px-6 pt-10 pb-16">
           <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Legal</p>
           <h1 className="font-display uppercase text-[2.4rem] sm:text-[3rem] leading-[0.93] text-white max-w-2xl">
@@ -293,7 +293,7 @@ export default function PrivacyPolicyPage() {
       </div>
 
       {/* FOOTER */}
-      <div className="bg-[#0a1722] border-t border-white/[0.08]">
+      <div className="bg-[#1a242c] border-t border-white/[0.08]">
         <div className="max-w-7xl mx-auto px-6 py-5 flex flex-wrap items-center justify-between gap-4">
           <span className="font-display text-lg text-white">SWIFTSCOPE</span>
           <div className="flex gap-6 text-[12.5px] font-semibold text-white/40">
