@@ -37,6 +37,25 @@ export default function robots(): MetadataRoute.Robots {
           "/camera/",
         ],
       },
+      // Ahrefs and Semrush do not send traffic to this site or influence
+      // its Google/Bing rankings -- they crawl to build data products they
+      // sell to their own customers. 72 AhrefsBot hits in 24h vs 158
+      // Googlebot + 170 GoogleOther, so this is not currently a load
+      // problem, but there is no reason to give them the same unthrottled
+      // access as the crawlers that actually matter. crawl-delay asks for
+      // seconds between requests; both bots are documented to respect it.
+      // Deliberately not a hard block: an outright disallow here would
+      // also hide the site from anyone who does pay for Ahrefs/Semrush to
+      // do legitimate competitive research, which is a normal thing
+      // prospective advertisers or partners might do.
+      {
+        userAgent: "AhrefsBot",
+        crawlDelay: 10,
+      },
+      {
+        userAgent: "SemrushBot",
+        crawlDelay: 10,
+      },
     ],
     sitemap: `${BASE_URL}/sitemap.xml`,
   };
