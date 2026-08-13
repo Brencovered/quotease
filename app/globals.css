@@ -294,7 +294,24 @@ input[type="radio"] {
   to   { width: 100%; }
 }
 .home-tab-progress {
-  animation: home-tab-progress 5.2s linear both;
+  animation: home-tab-progress 5.6s linear both;
+}
+
+@keyframes home-result-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.home-result-in {
+  animation: home-result-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes home-word-active {
+  0%   { text-shadow: 0 0 0 rgba(255,180,0,0); }
+  40%  { text-shadow: 0 0 24px rgba(255,180,0,0.35); }
+  100% { text-shadow: 0 0 0 rgba(255,180,0,0); }
+}
+.home-word-active {
+  animation: home-word-active 0.7s ease-out both;
 }
 
 @keyframes home-mic-pulse {
@@ -348,7 +365,9 @@ input[type="radio"] {
   .home-mic-pulse,
   .home-phone-float,
   .home-dot-pulse,
-  .home-icon-pop {
+  .home-icon-pop,
+  .home-result-in,
+  .home-word-active {
     animation: none !important;
   }
 }
