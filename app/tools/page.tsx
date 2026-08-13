@@ -19,7 +19,7 @@ const TOOLS = [
 
 export default function ToolsIndexPage() {
   return (
-    <main className="bg-[#050b11] text-white min-h-screen">
+    <main className="bg-[#1a242c] text-white min-h-screen">
       <MarketingNav />
       <section className="max-w-[1280px] mx-auto px-6 pt-14 pb-20">
         <p className="font-sans text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-3">

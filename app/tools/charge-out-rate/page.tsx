@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export default function ChargeOutRatePage() {
   return (
-    <main className="bg-[#050b11] text-white min-h-screen">
+    <main className="bg-[#1a242c] text-white min-h-screen">
       <MarketingNav />
 
       <section className="relative overflow-hidden border-b border-white/10">

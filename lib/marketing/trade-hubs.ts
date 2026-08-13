@@ -24,6 +24,114 @@ export type TradeHub = {
   jobTypes: string[];
   quoteFields: string[];
   faqs: TradeHubFaq[];
+  heroImage: string;
+  heroAlt: string;
+  heroPos: string;
+  phoneImage: string;
+  phoneAlt: string;
+};
+
+type TradeVisual = {
+  heroImage: string;
+  heroAlt: string;
+  heroPos: string;
+  phoneImage: string;
+  phoneAlt: string;
+};
+
+/** Best-fit lifestyle + product shots from the current marketing set. */
+const VISUALS: Record<string, TradeVisual> = {
+  electrician: {
+    heroImage: "/trades/new-electrician.png",
+    heroAlt: "Electrician on a residential site scoping the job",
+    heroPos: "object-[30%_center]",
+    phoneImage: "/marketing/v2/phone-plan-drawing.png",
+    phoneAlt: "Floor plan markup pricing electrical work in Swiftscope",
+  },
+  plumber: {
+    heroImage: "/trades/new-scaffold.png",
+    heroAlt: "Tradie on a residential site scoping plumbing work",
+    heroPos: "object-[25%_center]",
+    phoneImage: "/marketing/v2/phone-quote.png",
+    phoneAlt: "On-site plumbing quote building in Swiftscope",
+  },
+  carpenter: {
+    heroImage: "/trades/new-carpenter.png",
+    heroAlt: "Carpenter framing on a residential interior site",
+    heroPos: "object-[center_40%]",
+    phoneImage: "/marketing/v2/phone-quote-send.png",
+    phoneAlt: "Carpentry quote ready to send from Swiftscope",
+  },
+  roofer: {
+    heroImage: "/trades/new-roofer.png",
+    heroAlt: "Roofer working on a residential roof",
+    heroPos: "object-left",
+    phoneImage: "/marketing/v2/phone-quote-send.png",
+    phoneAlt: "Roofing quote ready to send from Swiftscope",
+  },
+  painter: {
+    heroImage: "/trades/new-plasterer.png",
+    heroAlt: "Finishing work on a residential interior",
+    heroPos: "object-center",
+    phoneImage: "/marketing/v2/phone-quote.png",
+    phoneAlt: "Painting quote scoped in Swiftscope",
+  },
+  tiler: {
+    heroImage: "/trades/new-internal-site.png",
+    heroAlt: "Residential interior site ready for fit-out work",
+    heroPos: "object-center",
+    phoneImage: "/marketing/v2/phone-plan-drawing.png",
+    phoneAlt: "Plan markup for tiling scope in Swiftscope",
+  },
+  landscaper: {
+    heroImage: "/trades/new-external.png",
+    heroAlt: "Residential exterior site for landscaping work",
+    heroPos: "object-center",
+    phoneImage: "/marketing/v2/phone-job-details.png",
+    phoneAlt: "Landscaping job details in Swiftscope",
+  },
+  arborist: {
+    heroImage: "/trades/new-external.png",
+    heroAlt: "Outdoor residential site for tree work",
+    heroPos: "object-[70%_center]",
+    phoneImage: "/marketing/v2/phone-job-management.png",
+    phoneAlt: "Tree work job on the board in Swiftscope",
+  },
+  concreter: {
+    heroImage: "/trades/new-grinder.png",
+    heroAlt: "Tradie on a hardscape residential site",
+    heroPos: "object-center",
+    phoneImage: "/marketing/v2/phone-quote.png",
+    phoneAlt: "Concrete quote building in Swiftscope",
+  },
+  fencer: {
+    heroImage: "/trades/new-site.png",
+    heroAlt: "Residential boundary site for fencing work",
+    heroPos: "object-[70%_center]",
+    phoneImage: "/marketing/v2/phone-quote-send.png",
+    phoneAlt: "Fencing quote ready to send from Swiftscope",
+  },
+  aircon: {
+    heroImage: "/trades/new-electrician-2.png",
+    heroAlt: "Technician on a residential install visit",
+    heroPos: "object-center",
+    phoneImage: "/marketing/v2/phone-job-details.png",
+    phoneAlt: "Air conditioning install job in Swiftscope",
+  },
+  surveyor: {
+    heroImage: "/trades/new-scaffold.png",
+    heroAlt: "Residential site ready for survey and set-out",
+    heroPos: "object-[40%_center]",
+    phoneImage: "/marketing/v2/phone-job-management.png",
+    phoneAlt: "Survey job managed in Swiftscope",
+  },
+  custom: {
+    heroImage: "/trades/new-site.png",
+    heroAlt: "Tradie on a residential job site",
+    heroPos: "object-center",
+    phoneImage: "/marketing/v2/phone-quote.png",
+    phoneAlt: "Specialist trade quote in Swiftscope",
+  },
 };
 
 const PLURAL_LABEL: Record<string, string> = {
@@ -46,7 +154,10 @@ const HUB_SLUG_OVERRIDE: Record<string, string> = {
   custom: "other-trades",
 };
 
-type HubCopy = Omit<TradeHub, "key" | "slug" | "label" | "plural" | "dedicated">;
+type HubCopy = Omit<
+  TradeHub,
+  "key" | "slug" | "label" | "plural" | "dedicated" | "heroImage" | "heroAlt" | "heroPos" | "phoneImage" | "phoneAlt"
+>;
 
 const COPY: Record<string, HubCopy> = {
   electrician: {
@@ -586,8 +697,12 @@ const COPY: Record<string, HubCopy> = {
 
 function buildHub(trade: (typeof ALL_TRADES)[number]): TradeHub {
   const copy = COPY[trade.key];
+  const visual = VISUALS[trade.key];
   if (!copy) {
     throw new Error(`[trade-hubs] Missing copy for trade key: ${trade.key}`);
+  }
+  if (!visual) {
+    throw new Error(`[trade-hubs] Missing visuals for trade key: ${trade.key}`);
   }
   const slug = HUB_SLUG_OVERRIDE[trade.key] ?? tradeToSlug(trade.key);
   return {
@@ -597,6 +712,7 @@ function buildHub(trade: (typeof ALL_TRADES)[number]): TradeHub {
     plural: PLURAL_LABEL[trade.key] ?? `${trade.label.toLowerCase()}s`,
     dedicated: trade.dedicated,
     ...copy,
+    ...visual,
   };
 }
 
