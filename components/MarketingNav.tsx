@@ -16,7 +16,7 @@ export default function MarketingNav({
   compact = false,
 }: {
   transparent?: boolean;
-  /** Homepage: fewer competing chrome buttons, closer to mitti-style restraint. */
+  /** Homepage: hide secondary mid-nav Directory link; keep Find a tradie / Manage listing. */
   compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -39,12 +39,10 @@ export default function MarketingNav({
         </div>
 
         <div className="hidden lg:flex items-center gap-2.5">
-          {!compact && (
-            <Link href="/directory" className="text-white/85 hover:text-white font-semibold text-[13.5px] px-4 py-2 rounded-lg border border-white/20 hover:border-white/40 transition-colors">
-              Find a tradie
-            </Link>
-          )}
-          {!compact && CLAIMED_DIRECTORY_PAGES_ENABLED && (
+          <Link href="/directory" className="text-white/85 hover:text-white font-semibold text-[13.5px] px-4 py-2 rounded-lg border border-white/20 hover:border-white/40 transition-colors">
+            Find a tradie
+          </Link>
+          {CLAIMED_DIRECTORY_PAGES_ENABLED && (
             <Link href="/directory/claim" className="text-white/85 hover:text-white font-semibold text-[13.5px] px-4 py-2 rounded-lg border border-white/20 hover:border-white/40 transition-colors">
               Manage your listing
             </Link>
@@ -56,11 +54,7 @@ export default function MarketingNav({
           )}
           <Link
             href="/login"
-            className={
-              compact
-                ? "text-white font-semibold text-[13.5px] px-4 py-2 rounded-lg border border-white/25 hover:border-white/50 transition-colors"
-                : "text-white/75 hover:text-white font-semibold text-[13.5px] px-3 py-2 transition-colors"
-            }
+            className="text-white/75 hover:text-white font-semibold text-[13.5px] px-3 py-2 transition-colors"
           >
             Log in
           </Link>
