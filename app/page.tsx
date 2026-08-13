@@ -31,7 +31,7 @@ export default async function Home() {
   const listingCount = await getListingCount();
 
   return (
-    <main className="bg-[#050b11] text-[#071018] overflow-hidden">
+    <main className="bg-[#1a242c] text-[#071018] overflow-hidden">
       <MarketingNav transparent compact />
 
       <HomeHero />
@@ -73,7 +73,7 @@ export default async function Home() {
       </section>
 
       {/* Product acceptance moment */}
-      <section className="relative overflow-hidden bg-[#071018]">
+      <section className="relative overflow-hidden bg-[#1a242c]">
         <div className="max-w-[1280px] mx-auto px-6 py-16 sm:py-24 grid lg:grid-cols-2 gap-12 items-center">
           <div>
             <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-3">
@@ -116,8 +116,8 @@ export default async function Home() {
             quality={90}
             className="object-cover object-[center_35%]"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#071018] via-[#071018]/80 to-[#071018]/35" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#071018]/80 via-transparent to-[#071018]/30" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#1a242c] via-[#1a242c]/80 to-[#1a242c]/35" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#1a242c]/80 via-transparent to-[#1a242c]/30" />
         </div>
         <div className="relative z-10 w-full max-w-[1280px] mx-auto px-6 py-16 sm:py-20">
           <div className="max-w-[520px]">
@@ -189,7 +189,7 @@ export default async function Home() {
       </section>
 
       {/* Close */}
-      <section className="bg-[#071018]">
+      <section className="bg-[#1a242c]">
         <div className="max-w-[1280px] mx-auto px-6 py-16 sm:py-24">
           <p className="font-display text-[clamp(2rem,5vw,3.5rem)] leading-[0.9] tracking-wide text-white mb-4">
             SwiftScope

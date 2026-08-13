@@ -424,7 +424,7 @@ export default function QuoteTapDemo() {
       <div className="max-w-[440px] w-full mx-auto lg:sticky lg:top-24">
         <div className="rounded-[28px] bg-[#0a121a] p-2.5 shadow-[0_28px_60px_rgba(7,16,24,0.28)] border border-black/40">
           <div className="rounded-[22px] overflow-hidden bg-[#f2f4f6]">
-            <div className="bg-[#071018] px-4 pt-3 pb-2.5">
+            <div className="bg-[#1a242c] px-4 pt-3 pb-2.5">
               <div className="flex items-center justify-between mb-2">
                 <span className="font-display text-[13px] tracking-wide text-white">SWIFTSCOPE</span>
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[#ffb400]">

@@ -109,7 +109,7 @@ export default function HomeHero() {
 
   return (
     <section
-      className="relative bg-[#050b11] pt-24 sm:pt-28 overflow-hidden"
+      className="relative bg-[#1a242c] pt-24 sm:pt-28 overflow-hidden"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
@@ -229,7 +229,7 @@ export default function HomeHero() {
               key={`result-${scene.key}`}
               className="absolute left-3 bottom-3 sm:left-5 sm:bottom-5 z-10 max-w-[min(72%,280px)] home-result-in"
             >
-              <div className="rounded-2xl bg-[#071018]/88 border border-white/15 backdrop-blur-md px-3.5 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.4)]">
+              <div className="rounded-2xl bg-[#1a242c]/88 border border-white/15 backdrop-blur-md px-3.5 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.35)]">
                 <p className="font-sans text-[10px] font-bold uppercase tracking-[0.14em] text-[#ffb400] mb-1">
                   {scene.result.kicker}
                 </p>

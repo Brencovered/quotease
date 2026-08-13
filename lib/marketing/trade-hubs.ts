@@ -3,6 +3,8 @@
  * URLs use plural SEO slugs: /for/electricians, /for/air-conditioning, etc.
  */
 
+import { existsSync } from "fs";
+import path from "path";
 import { ALL_TRADES } from "@/lib/genericTrades";
 import { tradeToSlug } from "@/lib/seo/meta";
 
@@ -27,6 +29,10 @@ export type TradeHub = {
   heroImage: string;
   heroAlt: string;
   heroPos: string;
+  /** Always different from heroImage so the page never repeats the same photo. */
+  supportImage: string;
+  supportAlt: string;
+  supportPos: string;
   phoneImage: string;
   phoneAlt: string;
 };
@@ -35,100 +41,151 @@ type TradeVisual = {
   heroImage: string;
   heroAlt: string;
   heroPos: string;
+  supportImage: string;
+  supportAlt: string;
+  supportPos: string;
   phoneImage: string;
   phoneAlt: string;
 };
 
-/** Best-fit lifestyle + product shots from the current marketing set. */
+/**
+ * Prefer trade-specific uploads when present under public/trades/.
+ * Fallback keeps every page on unique hero + support pairs (never the same photo twice).
+ */
+function pickTradeImage(preferred: string, fallback: string): string {
+  const abs = path.join(process.cwd(), "public", preferred.replace(/^\//, ""));
+  return existsSync(abs) ? preferred : fallback;
+}
+
+/** Best-fit lifestyle + product shots. Support shot is never the same file as hero. */
 const VISUALS: Record<string, TradeVisual> = {
   electrician: {
-    heroImage: "/trades/new-electrician.png",
+    heroImage: pickTradeImage("/trades/new-electrician.png", "/trades/new-electrician.png"),
     heroAlt: "Electrician on a residential site scoping the job",
     heroPos: "object-[30%_center]",
+    supportImage: "/trades/new-electrician-2.png",
+    supportAlt: "Electrician reviewing the install on site",
+    supportPos: "object-center",
     phoneImage: "/marketing/v2/phone-plan-drawing.png",
     phoneAlt: "Floor plan markup pricing electrical work in Swiftscope",
   },
   plumber: {
-    heroImage: "/trades/new-scaffold.png",
-    heroAlt: "Tradie on a residential site scoping plumbing work",
+    heroImage: pickTradeImage("/trades/new-plumber.png", "/trades/new-scaffold.png"),
+    heroAlt: "Plumber working on a residential job",
     heroPos: "object-[25%_center]",
+    supportImage: "/trades/new-internal-site.png",
+    supportAlt: "Residential interior ready for plumbing fit-off",
+    supportPos: "object-center",
     phoneImage: "/marketing/v2/phone-quote.png",
     phoneAlt: "On-site plumbing quote building in Swiftscope",
   },
   carpenter: {
-    heroImage: "/trades/new-carpenter.png",
+    heroImage: pickTradeImage("/trades/new-carpenter.png", "/trades/new-carpenter.png"),
     heroAlt: "Carpenter framing on a residential interior site",
     heroPos: "object-[center_40%]",
+    supportImage: "/trades/new-site.png",
+    supportAlt: "Residential framing site after the quote is won",
+    supportPos: "object-[70%_center]",
     phoneImage: "/marketing/v2/phone-quote-send.png",
     phoneAlt: "Carpentry quote ready to send from Swiftscope",
   },
   roofer: {
-    heroImage: "/trades/new-roofer.png",
+    heroImage: pickTradeImage("/trades/new-roofer.png", "/trades/new-roofer.png"),
     heroAlt: "Roofer working on a residential roof",
     heroPos: "object-left",
+    supportImage: "/trades/new-external.png",
+    supportAlt: "Residential exterior roof line",
+    supportPos: "object-center",
     phoneImage: "/marketing/v2/phone-quote-send.png",
     phoneAlt: "Roofing quote ready to send from Swiftscope",
   },
   painter: {
-    heroImage: "/trades/new-plasterer.png",
-    heroAlt: "Finishing work on a residential interior",
+    heroImage: pickTradeImage("/trades/new-painter.png", "/trades/new-plasterer.png"),
+    heroAlt: "Painter finishing a residential interior",
     heroPos: "object-center",
+    supportImage: "/trades/new-internal-site.png",
+    supportAlt: "Interior walls ready for paint",
+    supportPos: "object-[center_30%]",
     phoneImage: "/marketing/v2/phone-quote.png",
     phoneAlt: "Painting quote scoped in Swiftscope",
   },
   tiler: {
-    heroImage: "/trades/new-internal-site.png",
-    heroAlt: "Residential interior site ready for fit-out work",
+    heroImage: pickTradeImage("/trades/new-tiler.png", "/trades/new-grinder.png"),
+    heroAlt: "Tiler setting floor tiles on site",
     heroPos: "object-center",
+    supportImage: "/trades/new-plasterer.png",
+    supportAlt: "Interior surface ready for tiling",
+    supportPos: "object-center",
     phoneImage: "/marketing/v2/phone-plan-drawing.png",
     phoneAlt: "Plan markup for tiling scope in Swiftscope",
   },
   landscaper: {
-    heroImage: "/trades/new-external.png",
-    heroAlt: "Residential exterior site for landscaping work",
+    heroImage: pickTradeImage("/trades/new-landscaper.png", "/trades/new-external.png"),
+    heroAlt: "Landscaper pruning on a residential lawn",
     heroPos: "object-center",
+    supportImage: "/trades/new-scaffold.png",
+    supportAlt: "Outdoor residential site work",
+    supportPos: "object-[30%_center]",
     phoneImage: "/marketing/v2/phone-job-details.png",
     phoneAlt: "Landscaping job details in Swiftscope",
   },
   arborist: {
-    heroImage: "/trades/new-external.png",
-    heroAlt: "Outdoor residential site for tree work",
-    heroPos: "object-[70%_center]",
+    heroImage: pickTradeImage("/trades/new-arborist.png", "/trades/new-external.png"),
+    heroAlt: "Arborist cutting a tree on site",
+    heroPos: "object-center",
+    supportImage: "/trades/new-roofer.png",
+    supportAlt: "Height work on a residential site",
+    supportPos: "object-left",
     phoneImage: "/marketing/v2/phone-job-management.png",
     phoneAlt: "Tree work job on the board in Swiftscope",
   },
   concreter: {
-    heroImage: "/trades/new-grinder.png",
-    heroAlt: "Tradie on a hardscape residential site",
-    heroPos: "object-center",
+    heroImage: pickTradeImage("/trades/new-concreter.png", "/trades/new-grinder.png"),
+    heroAlt: "Concreter on a residential masonry site",
+    heroPos: "object-[20%_center]",
+    supportImage: "/trades/new-scaffold.png",
+    supportAlt: "Residential build site for slab and paths",
+    supportPos: "object-[40%_center]",
     phoneImage: "/marketing/v2/phone-quote.png",
     phoneAlt: "Concrete quote building in Swiftscope",
   },
   fencer: {
-    heroImage: "/trades/new-site.png",
-    heroAlt: "Residential boundary site for fencing work",
-    heroPos: "object-[70%_center]",
+    heroImage: pickTradeImage("/trades/new-fencer.png", "/trades/new-site.png"),
+    heroAlt: "Fencer installing a residential boundary fence",
+    heroPos: "object-[25%_center]",
+    supportImage: "/trades/new-external.png",
+    supportAlt: "Residential outdoor boundary line",
+    supportPos: "object-[70%_center]",
     phoneImage: "/marketing/v2/phone-quote-send.png",
     phoneAlt: "Fencing quote ready to send from Swiftscope",
   },
   aircon: {
-    heroImage: "/trades/new-electrician-2.png",
-    heroAlt: "Technician on a residential install visit",
+    heroImage: pickTradeImage("/trades/new-aircon.png", "/trades/new-electrician-2.png"),
+    heroAlt: "Air conditioning technician on an install",
     heroPos: "object-center",
+    supportImage: "/trades/new-electrician.png",
+    supportAlt: "Technician scoping a residential install",
+    supportPos: "object-[30%_center]",
     phoneImage: "/marketing/v2/phone-job-details.png",
     phoneAlt: "Air conditioning install job in Swiftscope",
   },
   surveyor: {
-    heroImage: "/trades/new-scaffold.png",
-    heroAlt: "Residential site ready for survey and set-out",
-    heroPos: "object-[40%_center]",
+    heroImage: pickTradeImage("/trades/new-surveyor.png", "/trades/new-scaffold.png"),
+    heroAlt: "Survey gear set up on a residential site",
+    heroPos: "object-[20%_center]",
+    supportImage: "/trades/new-site.png",
+    supportAlt: "Residential site ready for set-out",
+    supportPos: "object-center",
     phoneImage: "/marketing/v2/phone-job-management.png",
     phoneAlt: "Survey job managed in Swiftscope",
   },
   custom: {
-    heroImage: "/trades/new-site.png",
-    heroAlt: "Tradie on a residential job site",
+    heroImage: pickTradeImage("/trades/new-custom.png", "/trades/new-carpenter.png"),
+    heroAlt: "Tradie on a residential specialist job",
     heroPos: "object-center",
+    supportImage: "/trades/new-grinder.png",
+    supportAlt: "Specialist trade work on a residential site",
+    supportPos: "object-center",
     phoneImage: "/marketing/v2/phone-quote.png",
     phoneAlt: "Specialist trade quote in Swiftscope",
   },
@@ -156,7 +213,19 @@ const HUB_SLUG_OVERRIDE: Record<string, string> = {
 
 type HubCopy = Omit<
   TradeHub,
-  "key" | "slug" | "label" | "plural" | "dedicated" | "heroImage" | "heroAlt" | "heroPos" | "phoneImage" | "phoneAlt"
+  | "key"
+  | "slug"
+  | "label"
+  | "plural"
+  | "dedicated"
+  | "heroImage"
+  | "heroAlt"
+  | "heroPos"
+  | "supportImage"
+  | "supportAlt"
+  | "supportPos"
+  | "phoneImage"
+  | "phoneAlt"
 >;
 
 const COPY: Record<string, HubCopy> = {

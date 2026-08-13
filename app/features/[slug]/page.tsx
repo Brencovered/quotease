@@ -47,7 +47,7 @@ export default async function FeatureDetailPage({ params }: { params: Promise<{ 
       <MarketingNav />
 
       {/* HERO */}
-      <div className="bg-[#0a1722] border-b border-white/10">
+      <div className="bg-[#1a242c] border-b border-white/10">
         <div className="max-w-7xl mx-auto px-6 pt-8 pb-14">
           <Link href="/features" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#8aa4b4] hover:text-white transition-colors mb-6">
             <ArrowLeft size={14} /> All features

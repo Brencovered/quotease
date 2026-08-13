@@ -22,7 +22,7 @@ export default function MarketingNav({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className={transparent ? "absolute top-0 left-0 right-0 z-30" : "relative z-30 bg-[#0a1722]"}>
+    <div className={transparent ? "absolute top-0 left-0 right-0 z-30" : "relative z-30 bg-[#1a242c]"}>
       <div className="max-w-[1280px] mx-auto px-6 py-5 flex items-center justify-between">
         <Link href="/" className="font-display text-xl tracking-wide text-white drop-shadow-lg shrink-0">
           SwiftScope
@@ -73,7 +73,7 @@ export default function MarketingNav({
 
       {/* Mobile menu */}
       {open && (
-        <div className="lg:hidden bg-[#0a1722] border-t border-white/10 px-6 py-5 flex flex-col gap-1">
+        <div className="lg:hidden bg-[#1a242c] border-t border-white/10 px-6 py-5 flex flex-col gap-1">
           <Link href="/features" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Features</Link>
           <Link href="/for" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">For trades</Link>
           <Link href="/tools" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Tools</Link>

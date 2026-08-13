@@ -44,7 +44,6 @@ export default async function TradeHubPage({ params }: PageProps) {
       <MarketingNav transparent />
       <FaqSchema faqs={hub.faqs} />
 
-      {/* Full-bleed hero: brand + one headline + one line + CTAs + dominant site image */}
       <section className="relative min-h-[100svh] overflow-hidden">
         <Image
           src={hub.heroImage}
@@ -60,7 +59,7 @@ export default async function TradeHubPage({ params }: PageProps) {
           className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(105deg, rgba(26,36,44,0.92) 0%, rgba(26,36,44,0.78) 42%, rgba(26,36,44,0.35) 68%, rgba(26,36,44,0.55) 100%)",
+              "linear-gradient(105deg, rgba(26,36,44,0.88) 0%, rgba(26,36,44,0.72) 42%, rgba(26,36,44,0.28) 70%, rgba(26,36,44,0.45) 100%)",
           }}
         />
         <div className="relative z-10 max-w-[1280px] mx-auto px-6 pt-28 pb-16 lg:pt-36 lg:pb-24 min-h-[100svh] flex flex-col justify-end lg:justify-center">
@@ -101,7 +100,7 @@ export default async function TradeHubPage({ params }: PageProps) {
                   alt={hub.phoneAlt}
                   width={325}
                   height={658}
-                  className="w-full h-auto drop-shadow-[0_28px_50px_rgba(0,0,0,0.45)]"
+                  className="w-full h-auto drop-shadow-[0_28px_50px_rgba(0,0,0,0.4)]"
                   sizes="280px"
                   priority
                 />
@@ -111,9 +110,10 @@ export default async function TradeHubPage({ params }: PageProps) {
         </div>
       </section>
 
+      {/* Support photo is always a different image from the hero */}
       <section className="border-b border-white/10">
         <div className="max-w-[1280px] mx-auto px-6 py-14 lg:py-20 grid lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-          <div className="lg:col-span-5">
+          <div className="lg:col-span-5 order-2 lg:order-1">
             <h2 className="font-display text-[clamp(1.6rem,3vw,2.2rem)] tracking-wide leading-[1.08] text-white mb-4 max-w-[18ch]">
               The on-site problem
             </h2>
@@ -129,18 +129,18 @@ export default async function TradeHubPage({ params }: PageProps) {
               ))}
             </ul>
           </div>
-          <div className="lg:col-span-7">
+          <div className="lg:col-span-7 order-1 lg:order-2">
             <div className="relative aspect-[4/5] sm:aspect-[16/11] overflow-hidden rounded-2xl">
               <Image
-                src={hub.heroImage}
-                alt={hub.heroAlt}
+                src={hub.supportImage}
+                alt={hub.supportAlt}
                 fill
                 sizes="(max-width: 1024px) 100vw, 640px"
                 quality={90}
-                className={`object-cover ${hub.heroPos}`}
+                className={`object-cover ${hub.supportPos}`}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#1a242c]/55 via-transparent to-transparent" />
-              <div className="absolute bottom-5 right-5 sm:bottom-7 sm:right-8 w-[38%] max-w-[190px]">
+              <div className="absolute inset-0 bg-gradient-to-t from-[#1a242c]/50 via-transparent to-transparent" />
+              <div className="absolute bottom-5 right-5 sm:bottom-7 sm:right-8 w-[38%] max-w-[190px] lg:hidden">
                 <Image
                   src={hub.phoneImage}
                   alt={hub.phoneAlt}
@@ -155,7 +155,7 @@ export default async function TradeHubPage({ params }: PageProps) {
         </div>
       </section>
 
-      <section className="border-b border-white/10 bg-[#162028]">
+      <section className="border-b border-white/10 bg-[#22303a]">
         <div className="max-w-[1280px] mx-auto px-6 py-14 lg:py-16 grid md:grid-cols-2 gap-12">
           <div>
             <p className="font-sans text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-3">
@@ -214,19 +214,8 @@ export default async function TradeHubPage({ params }: PageProps) {
         </div>
       </section>
 
-      <section className="relative overflow-hidden border-b border-white/10">
-        <div className="absolute inset-0">
-          <Image
-            src={hub.heroImage}
-            alt=""
-            fill
-            sizes="100vw"
-            className={`object-cover ${hub.heroPos} opacity-35`}
-            aria-hidden
-          />
-          <div className="absolute inset-0 bg-[#1a242c]/80" />
-        </div>
-        <div className="relative max-w-[1280px] mx-auto px-6 py-16 text-center">
+      <section className="border-b border-white/10 bg-[#22303a]">
+        <div className="max-w-[1280px] mx-auto px-6 py-16 text-center">
           <h2 className="font-display text-[clamp(1.8rem,3.5vw,2.6rem)] tracking-wide leading-[1.05] text-white mb-4">
             Ready to quote like a {hub.label.toLowerCase()} who sends first?
           </h2>

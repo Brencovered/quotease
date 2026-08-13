@@ -17,7 +17,7 @@ export default function FeaturesPage() {
       <MarketingNav />
 
       {/* HEADER */}
-      <div className="bg-[#0a1722] border-b border-white/10">
+      <div className="bg-[#1a242c] border-b border-white/10">
         <div className="max-w-7xl mx-auto px-6 pt-10 pb-16">
           <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Features</p>
           <h1 className="font-display uppercase text-[2.6rem] sm:text-[3.4rem] leading-[0.93] text-white max-w-2xl">
@@ -72,7 +72,7 @@ export default function FeaturesPage() {
           </div>
 
           {/* Cost comparison */}
-          <div className="bg-[#0a1722] rounded-3xl p-8 md:p-10">
+          <div className="bg-[#1a242c] rounded-3xl p-8 md:p-10">
             <div className="grid md:grid-cols-2 gap-8 items-center">
               <div>
                 <h3 className="font-display text-[2rem] text-white mb-2">What you might be paying now</h3>
@@ -295,7 +295,7 @@ export default function FeaturesPage() {
       </div>
 
       {/* FOOTER CTA */}
-      <div className="bg-[#0a1722]">
+      <div className="bg-[#1a242c]">
         <div className="max-w-7xl mx-auto px-6 py-16 text-center">
           <h3 className="font-display text-[1.8rem] sm:text-[2.2rem] text-white mb-3">Ready to see it on your own jobs?</h3>
           <Link href="/signup" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-8 py-4 rounded-xl hover:opacity-90">

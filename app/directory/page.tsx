@@ -424,7 +424,7 @@ export default async function DirectoryPage({
       {/* ═══════════════════════════════════════════
           HERO SECTION
       ═══════════════════════════════════════════ */}
-      <section className="relative overflow-hidden bg-[#0a1722]">
+      <section className="relative overflow-hidden bg-[#1a242c]">
         <div
           className="absolute w-[600px] h-[600px] rounded-full pointer-events-none"
           style={{

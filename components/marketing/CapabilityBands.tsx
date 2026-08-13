@@ -68,7 +68,7 @@ export default function CapabilityBands() {
   return (
     <div>
       {BANDS.map((band) => (
-        <section key={band.kicker} className="relative overflow-hidden bg-[#050b11]">
+        <section key={band.kicker} className="relative overflow-hidden bg-[#1a242c]">
           <div className="relative max-w-[1280px] mx-auto px-6 py-16 lg:py-20">
             <div
               className={[
