@@ -25,7 +25,7 @@ export default function MarketingNav({
     <div className={transparent ? "absolute top-0 left-0 right-0 z-30" : "relative z-30 bg-[#0a1722]"}>
       <div className="max-w-[1280px] mx-auto px-6 py-5 flex items-center justify-between">
         <Link href="/" className="font-display text-xl tracking-wide text-white drop-shadow-lg shrink-0">
-          SWIFTSCOPE
+          SwiftScope
         </Link>
 
         {/* Desktop */}
