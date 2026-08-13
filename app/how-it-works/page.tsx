@@ -3,6 +3,8 @@ import {
   FileText, Users, Star, Zap, Briefcase, RefreshCw, ArrowRight,
 } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
+import PhoneShot from "@/components/marketing/PhoneShot";
+import { SHOTS } from "@/lib/marketing/screenshots";
 import SavingsCalculator from "@/components/SavingsCalculator";
 
 export const metadata = {
@@ -70,19 +72,26 @@ export default function HowItWorksPage() {
               From quote to<br />paid invoice
             </h2>
           </div>
+          {/* The screenshot lives inside its own step rather than in a strip
+              below the row, so there is no ambiguity about which screen
+              belongs to which stage. Narrow and left-aligned to the card's
+              text column: this is evidence under a claim, not a gallery. */}
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { n:"01", icon:Zap, title:"Quote on site", body:"Trade-specific fields calculate live as you fill them in. Send a professional quote from your phone before you've left the driveway." },
-              { n:"02", icon:Briefcase, title:"Win it, run it", body:"The client accepts online. It moves straight to your job list - scheduling, materials checklist, variations, all in one place." },
-              { n:"03", icon:RefreshCw, title:"Get paid", body:"Mark the job complete and it pushes straight to Xero as an invoice. No CSV export, no re-typing line items." },
+              { n:"01", icon:Zap, title:"Quote on site", body:"Trade-specific fields calculate live as you fill them in. Send a professional quote from your phone before you've left the driveway.", shot: SHOTS.quoteSend },
+              { n:"02", icon:Briefcase, title:"Win it, run it", body:"The client accepts online. It moves straight to your job list - scheduling, materials checklist, variations, all in one place.", shot: SHOTS.jobDetail },
+              { n:"03", icon:RefreshCw, title:"Get paid", body:"Mark the job complete and it pushes straight to Xero as an invoice. No CSV export, no re-typing line items.", shot: SHOTS.xeroExport },
             ].map(s => (
-              <div key={s.n} className="bg-white rounded-2xl p-7 border border-[#e8ecef]">
+              <div key={s.n} className="bg-white rounded-2xl p-7 border border-[#e8ecef] flex flex-col">
                 <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
                   <s.icon size={20} className="text-[#ffb400]" />
                 </div>
                 <p className="text-[11px] font-bold tracking-[.15em] uppercase text-[#ffb400] mb-1">{s.n}</p>
                 <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">{s.title}</h3>
-                <p className="text-[14px] text-[#5a6a78] leading-relaxed">{s.body}</p>
+                <p className="text-[14px] text-[#5a6a78] leading-relaxed flex-1">{s.body}</p>
+                <div className="mt-6 w-[210px]">
+                  <PhoneShot shot={s.shot} tone="light" showCaption={false} sizes="(max-width: 768px) 55vw, 210px" />
+                </div>
               </div>
             ))}
           </div>
