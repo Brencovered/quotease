@@ -285,7 +285,7 @@ input[type="radio"] {
   animation: home-kenburns 12s ease-out both;
 }
 @keyframes home-kenburns {
-  from { transform: scale(1.05); }
+  from { transform: scale(1.06); }
   to   { transform: scale(1); }
 }
 
@@ -303,6 +303,35 @@ input[type="radio"] {
 }
 .home-mic-pulse { animation: home-mic-pulse 1.6s ease-out infinite; }
 
+@keyframes home-phone-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+.home-phone-float {
+  animation: home-phone-float 4.5s ease-in-out infinite;
+}
+
+@keyframes home-dot-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.55; transform: scale(0.85); }
+}
+.home-dot-pulse {
+  animation: home-dot-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes home-icon-pop {
+  0%   { transform: scale(0.88); }
+  60%  { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+.home-icon-pop {
+  animation: home-icon-pop 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.home-media-stage {
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+}
+
 .home-glass {
   background: rgba(10, 23, 34, 0.72);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -316,7 +345,10 @@ input[type="radio"] {
   .home-line-in,
   .home-hero-kenburns,
   .home-tab-progress,
-  .home-mic-pulse {
+  .home-mic-pulse,
+  .home-phone-float,
+  .home-dot-pulse,
+  .home-icon-pop {
     animation: none !important;
   }
 }
