@@ -149,11 +149,14 @@ function MobileTeaser() {
 function SignupForm() {
   const searchParams = useSearchParams();
   const next = searchParams.get("next");
+  const tradeFromUrl = searchParams.get("trade");
+  const initialTrade =
+    tradeFromUrl && TRADES.some((t) => t.key === tradeFromUrl) ? tradeFromUrl : "";
 
   const [businessName, setBusinessName] = useState("");
   const [email, setEmail] = useState("");
   const [suburb, setSuburb] = useState("");
-  const [trade, setTrade] = useState("");
+  const [trade, setTrade] = useState(initialTrade);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
