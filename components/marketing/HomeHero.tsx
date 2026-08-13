@@ -93,15 +93,18 @@ export default function HomeHero() {
         <div className="grid lg:grid-cols-12 gap-6 lg:gap-10 mb-10 lg:mb-12 home-hero-copy">
           <div className="lg:col-span-7">
             <p className="font-display text-[clamp(2.6rem,7vw,4.8rem)] leading-[0.88] tracking-wide text-white mb-5">
-              SWIFTSCOPE
+              SwiftScope
             </p>
-            <h1 className="text-[clamp(1.55rem,2.8vw,2.15rem)] font-extrabold leading-[1.2] tracking-[-0.02em] text-white max-w-[24ch]">
-              Quote on site. Win the job. Manage the crew.
+            <h1 className="font-display text-[clamp(1.7rem,3.4vw,2.55rem)] leading-[1.05] tracking-wide text-white max-w-[18ch]">
+              <span className="text-[#ffb400]">Scope</span> it.{" "}
+              <span className="text-[#ffb400]">Quote</span> it.
+              <br />
+              <span className="text-[#ffb400]">Win</span> it on site.
             </h1>
           </div>
           <div className="lg:col-span-5 flex flex-col justify-end">
-            <p className="text-[15.5px] sm:text-[16px] leading-[1.65] text-[#9eb0bf] mb-7 max-w-[38ch]">
-              Built for solo tradies and small teams up to about 15. Scope it on the tools, send it before you leave, run the job from one board.
+            <p className="font-sans text-[15.5px] sm:text-[16px] leading-[1.65] text-[#9eb0bf] mb-7 max-w-[42ch]">
+              Swiftscope is built site-first - every tool is designed to be used standing in the job, not back at a desk. Mark it up, talk it through, or scope it live on screen, and send a priced quote before you&apos;ve left the driveway.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link
@@ -210,7 +213,7 @@ export default function HomeHero() {
                         </span>
                         <span
                           className={[
-                            "text-[15px] font-extrabold tracking-tight",
+                            "font-display text-[16px] tracking-wide",
                             selected ? "text-white" : "text-white/55",
                           ].join(" ")}
                         >
@@ -219,7 +222,7 @@ export default function HomeHero() {
                       </div>
                       <p
                         className={[
-                          "text-[13px] leading-snug",
+                          "font-sans text-[13px] leading-snug",
                           selected ? "text-[#c5d4e0]" : "text-white/40",
                         ].join(" ")}
                       >

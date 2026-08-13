@@ -44,7 +44,7 @@
 body {
   background: var(--app-bg);
   color: var(--ink);
-  font-family: var(--font-archivo), sans-serif;
+  font-family: var(--font-inter), sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -52,6 +52,10 @@ body {
   font-family: var(--font-anton), sans-serif;
   font-weight: 400;
   letter-spacing: 0.01em;
+}
+
+.font-sans {
+  font-family: var(--font-inter), sans-serif;
 }
 
 .tabular { font-variant-numeric: tabular-nums; }
@@ -75,7 +79,7 @@ input[type="radio"] {
   border-radius: var(--radius-sm);
   padding: 12px 14px;
   font-size: 15px;
-  font-family: var(--font-archivo), sans-serif;
+  font-family: var(--font-inter), sans-serif;
   transition: border-color 0.12s, box-shadow 0.12s;
   -webkit-appearance: none;
 }

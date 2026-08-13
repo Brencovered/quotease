@@ -76,10 +76,10 @@ export default function CapabilityBands() {
                 <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-3">
                   {band.kicker}
                 </p>
-                <h2 className="text-[clamp(1.9rem,4vw,3rem)] font-extrabold tracking-[-0.025em] leading-[1.08] text-white mb-4 max-w-[16ch]">
+                <h2 className="font-display text-[clamp(1.9rem,4vw,3rem)] tracking-wide leading-[1.05] text-white mb-4 max-w-[16ch]">
                   {band.title}
                 </h2>
-                <p className="text-[16px] leading-[1.65] text-[#c5d4e0] max-w-[42ch] mb-7">
+                <p className="font-sans text-[16px] leading-[1.65] text-[#c5d4e0] max-w-[42ch] mb-7">
                   {band.body}
                 </p>
                 <Link

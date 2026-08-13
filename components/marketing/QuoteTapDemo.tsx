@@ -3,7 +3,6 @@
 import {
   useEffect,
   useMemo,
-  useRef,
   useState,
   startTransition,
   type PointerEvent as ReactPointerEvent,
@@ -142,7 +141,6 @@ export default function QuoteTapDemo() {
   const [marginId, setMarginId] = useState<(typeof MARGIN_TIERS)[number]["id"]>("residential");
   const [sizeId, setSizeId] = useState<(typeof JOB_SIZES)[number]["id"]>("medium");
   const [sent, setSent] = useState(false);
-  const planRef = useRef<HTMLDivElement>(null);
 
   const trade = TRADES.find((t) => t.key === tradeKey) ?? TRADES[0];
   const tool = trade.tools.find((t) => t.id === toolId) ?? trade.tools[0];
@@ -260,12 +258,12 @@ export default function QuoteTapDemo() {
         <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-3">
           Feel it
         </p>
-        <h2 className="text-[clamp(1.9rem,3.6vw,2.8rem)] font-extrabold tracking-[-0.025em] leading-[1.08] text-[#071018] mb-4">
+        <h2 className="font-display text-[clamp(1.9rem,3.6vw,2.8rem)] tracking-wide leading-[1.05] text-[#071018] mb-4">
           Pick your trade.
           <br />
           Draw it. Margin it. Send it.
         </h2>
-        <p className="text-[15.5px] text-[#4a5560] leading-[1.65] max-w-[44ch] mb-5">
+        <p className="font-sans text-[15.5px] text-[#4a5560] leading-[1.65] max-w-[44ch] mb-5">
           Choose a trade tool, tap fittings onto the plan or drag a run for cable, pipe, skirting or gutter. Set job type and margins the same way you would on a real quote.
         </p>
 
@@ -487,7 +485,6 @@ export default function QuoteTapDemo() {
             </p>
 
             <div
-              ref={planRef}
               className={[
                 "relative mx-3 mt-2 mb-3 aspect-[16/11] rounded-xl overflow-hidden border border-[#d5dbe0] bg-white touch-none",
                 sent ? "cursor-default" : tool.mode === "run" ? "cursor-crosshair" : "cursor-cell",

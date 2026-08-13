@@ -53,10 +53,10 @@ export default async function Home() {
               },
             ].map((s) => (
               <div key={s.d}>
-                <p className="text-[clamp(1.8rem,3.5vw,2.6rem)] font-extrabold tracking-[-0.03em] text-[#071018] leading-none mb-2">
+                <p className="font-display text-[clamp(1.8rem,3.5vw,2.6rem)] tracking-wide text-[#071018] leading-none mb-2">
                   {s.n}
                 </p>
-                <p className="text-[13.5px] text-[#5a6a78] leading-snug">{s.d}</p>
+                <p className="font-sans text-[13.5px] text-[#5a6a78] leading-snug">{s.d}</p>
               </div>
             ))}
           </div>
@@ -79,10 +79,10 @@ export default async function Home() {
             <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-3">
               After you send
             </p>
-            <h2 className="text-[clamp(1.9rem,3.8vw,3rem)] font-extrabold tracking-[-0.025em] leading-[1.08] text-white mb-4 max-w-[16ch]">
+            <h2 className="font-display text-[clamp(1.9rem,3.8vw,3rem)] tracking-wide leading-[1.05] text-white mb-4 max-w-[16ch]">
               They accept on their phone. You keep moving.
             </h2>
-            <p className="text-[16px] leading-[1.65] text-[#b7c7d4] max-w-[42ch] mb-8">
+            <p className="font-sans text-[16px] leading-[1.65] text-[#b7c7d4] max-w-[42ch] mb-8">
               Clean client portal, one-tap accept, job lands in your board. No chasing PDFs. No &ldquo;did you get my email?&rdquo;
             </p>
             <Link
@@ -124,10 +124,10 @@ export default async function Home() {
             <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-3">
               Need a tradie?
             </p>
-            <h2 className="text-[clamp(1.9rem,3.8vw,3rem)] font-extrabold tracking-[-0.025em] leading-[1.08] text-white mb-4">
+            <h2 className="font-display text-[clamp(1.9rem,3.8vw,3rem)] tracking-wide leading-[1.05] text-white mb-4">
               Find someone local. Free, always.
             </h2>
-            <p className="text-[16px] leading-[1.65] text-[#c8d8e4] mb-8">
+            <p className="font-sans text-[16px] leading-[1.65] text-[#c8d8e4] mb-8">
               Browse by trade and suburb
               {listingCount !== null
                 ? ` (${listingCount.toLocaleString("en-AU")} listings)`
@@ -149,10 +149,10 @@ export default async function Home() {
         <div className="max-w-[1280px] mx-auto px-6 py-16 sm:py-20">
           <div className="max-w-2xl">
             <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-3">Pricing</p>
-            <h2 className="text-[clamp(2rem,4vw,3.2rem)] font-extrabold tracking-[-0.03em] leading-[1.05] text-[#071018] mb-3">
+            <h2 className="font-display text-[clamp(2rem,4vw,3.2rem)] tracking-wide leading-[1.05] text-[#071018] mb-3">
               Flat $45 a month.
             </h2>
-            <p className="text-[16px] text-[#5a6a78] leading-relaxed mb-8 max-w-[42ch]">
+            <p className="font-sans text-[16px] text-[#5a6a78] leading-relaxed mb-8 max-w-[42ch]">
               7-day free trial. Unlimited quotes, jobs, and team members. Directory listing included. No per-lead fees.
             </p>
             <ul className="grid sm:grid-cols-2 gap-x-8 gap-y-3 mb-10">
@@ -192,12 +192,12 @@ export default async function Home() {
       <section className="bg-[#071018]">
         <div className="max-w-[1280px] mx-auto px-6 py-16 sm:py-24">
           <p className="font-display text-[clamp(2rem,5vw,3.5rem)] leading-[0.9] tracking-wide text-white mb-4">
-            SWIFTSCOPE
+            SwiftScope
           </p>
-          <h2 className="text-[clamp(1.7rem,3.2vw,2.4rem)] font-extrabold tracking-[-0.02em] text-white mb-3 max-w-[18ch]">
+          <h2 className="font-display text-[clamp(1.7rem,3.2vw,2.4rem)] tracking-wide text-white mb-3 max-w-[18ch]">
             The other tradie just sent their quote.
           </h2>
-          <p className="text-[16px] text-[#8aa4b4] mb-8">How long does yours take?</p>
+          <p className="font-sans text-[16px] text-[#8aa4b4] mb-8">How long does yours take?</p>
           <Link
             href="/signup"
             className="inline-flex items-center gap-2 bg-[#ffb400] text-[#071018] font-extrabold text-[15px] px-8 py-4 rounded-lg hover:bg-[#e89e00] transition-colors"
@@ -208,7 +208,7 @@ export default async function Home() {
 
         <div className="border-t border-white/[0.08]">
           <div className="max-w-[1280px] mx-auto px-6 py-5 flex flex-wrap items-center justify-between gap-4">
-            <span className="font-display text-lg text-white">SWIFTSCOPE</span>
+            <span className="font-display text-lg tracking-wide text-white">SwiftScope</span>
             <div className="flex flex-wrap gap-x-6 gap-y-2 text-[12.5px] font-semibold text-white/40">
               <Link href="/features" className="hover:text-white transition-colors">Features</Link>
               <Link href="/how-it-works" className="hover:text-white transition-colors">How it works</Link>
