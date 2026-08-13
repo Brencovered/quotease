@@ -97,7 +97,7 @@ export default function CapabilityBands() {
                   band.reverse ? "lg:[direction:ltr]" : "",
                 ].join(" ")}
               >
-                <div className="relative aspect-[16/11] overflow-hidden rounded-2xl sm:rounded-3xl">
+                <div className="relative aspect-[4/5] sm:aspect-[16/11] overflow-hidden rounded-2xl sm:rounded-3xl">
                   <Image
                     src={band.photo}
                     alt={band.photoAlt}
@@ -106,11 +106,11 @@ export default function CapabilityBands() {
                     quality={90}
                     className={`object-cover ${band.photoPos ?? "object-center"}`}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10" />
                   <div
                     className={[
-                      "absolute bottom-4 w-[42%] max-w-[220px]",
-                      band.reverse ? "left-4" : "right-4",
+                      "absolute bottom-3 w-[40%] max-w-[150px] sm:bottom-4 sm:w-[42%] sm:max-w-[220px]",
+                      band.reverse ? "left-3 sm:left-4" : "right-3 sm:right-4",
                     ].join(" ")}
                   >
                     <div className="drop-shadow-[0_24px_50px_rgba(0,0,0,0.55)]">
@@ -119,8 +119,8 @@ export default function CapabilityBands() {
                         alt={band.shotAlt}
                         width={band.shotW}
                         height={band.shotH}
-                        sizes="220px"
-                        className="rounded-[18px]"
+                        sizes="(max-width: 640px) 150px, 220px"
+                        className="rounded-[14px] sm:rounded-[18px]"
                       />
                     </div>
                   </div>

@@ -108,7 +108,7 @@ export default function HomeHero() {
         </div>
 
         <div className="relative">
-          <div className="relative aspect-[16/10] sm:aspect-[16/9] lg:aspect-[2.2/1] overflow-hidden rounded-2xl sm:rounded-3xl bg-[#0e2030]">
+          <div className="relative aspect-[4/5] sm:aspect-[16/10] lg:aspect-[2.2/1] overflow-hidden rounded-2xl sm:rounded-3xl bg-[#0e2030]">
             {SCENES.map((s, i) => (
               <div
                 key={s.key}
@@ -133,9 +133,12 @@ export default function HomeHero() {
                 />
               </div>
             ))}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/15" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/15" />
 
-            <div className="absolute inset-x-4 bottom-4 sm:inset-auto sm:right-5 sm:bottom-5 sm:left-auto w-auto sm:w-[250px] home-overlay-in" key={scene.key}>
+            <div
+              className="absolute right-3 bottom-3 w-[46%] max-w-[168px] sm:right-5 sm:bottom-5 sm:w-[250px] sm:max-w-none home-overlay-in"
+              key={scene.key}
+            >
               <ProductOverlay kind={scene.overlay} />
             </div>
           </div>
@@ -176,8 +179,8 @@ export default function HomeHero() {
 function ProductOverlay({ kind }: { kind: Scene["overlay"] }) {
   if (kind === "quote") {
     return (
-      <div className="home-glass rounded-2xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
-        <div className="flex items-center gap-2 mb-2.5 px-1">
+      <div className="home-glass rounded-xl sm:rounded-2xl p-1.5 sm:p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
+        <div className="hidden sm:flex items-center gap-2 mb-2.5 px-1">
           <span className="w-7 h-7 rounded-md bg-[#ffb400] flex items-center justify-center">
             <Crosshair size={14} className="text-[#050b11]" aria-hidden />
           </span>
@@ -192,10 +195,10 @@ function ProductOverlay({ kind }: { kind: Scene["overlay"] }) {
           width={718}
           height={1100}
           fit="cover-top"
-          sizes="250px"
-          className="rounded-[12px]"
+          sizes="(max-width: 640px) 168px, 250px"
+          className="rounded-[10px] sm:rounded-[12px]"
         />
-        <div className="space-y-1.5 mt-2.5 px-0.5">
+        <div className="hidden sm:block space-y-1.5 mt-2.5 px-0.5">
           {[
             { label: "Downlights x 8", price: "$940" },
             { label: "Cable run, 12m", price: "$186" },
@@ -212,8 +215,8 @@ function ProductOverlay({ kind }: { kind: Scene["overlay"] }) {
 
   if (kind === "win") {
     return (
-      <div className="home-glass rounded-2xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
-        <div className="flex items-center gap-2 mb-2.5 px-1">
+      <div className="home-glass rounded-xl sm:rounded-2xl p-1.5 sm:p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
+        <div className="hidden sm:flex items-center gap-2 mb-2.5 px-1">
           <span className="w-7 h-7 rounded-md bg-[#16a34a] flex items-center justify-center">
             <Trophy size={13} className="text-white" aria-hidden />
           </span>
@@ -228,10 +231,10 @@ function ProductOverlay({ kind }: { kind: Scene["overlay"] }) {
           width={714}
           height={1100}
           fit="cover-top"
-          sizes="250px"
-          className="rounded-[12px]"
+          sizes="(max-width: 640px) 168px, 250px"
+          className="rounded-[10px] sm:rounded-[12px]"
         />
-        <div className="rounded-xl bg-[#e8f5ec] px-3.5 py-2.5 flex items-center gap-2 mt-2.5">
+        <div className="hidden sm:flex rounded-xl bg-[#e8f5ec] px-3.5 py-2.5 items-center gap-2 mt-2.5">
           <Check size={15} className="text-[#16a34a]" aria-hidden />
           <p className="text-[12.5px] font-extrabold text-[#1c7a3a]">Accepted, job booked</p>
         </div>
@@ -240,8 +243,8 @@ function ProductOverlay({ kind }: { kind: Scene["overlay"] }) {
   }
 
   return (
-    <div className="home-glass rounded-2xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
-      <div className="flex items-center gap-2 mb-2.5 px-1">
+    <div className="home-glass rounded-xl sm:rounded-2xl p-1.5 sm:p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
+      <div className="hidden sm:flex items-center gap-2 mb-2.5 px-1">
         <span className="w-7 h-7 rounded-md bg-[#ffb400] flex items-center justify-center">
           <Briefcase size={13} className="text-[#050b11]" aria-hidden />
         </span>
@@ -256,10 +259,10 @@ function ProductOverlay({ kind }: { kind: Scene["overlay"] }) {
         width={856}
         height={1400}
         fit="cover-top"
-        sizes="250px"
-        className="rounded-[12px]"
+        sizes="(max-width: 640px) 168px, 250px"
+        className="rounded-[10px] sm:rounded-[12px]"
       />
-      <div className="space-y-1.5 mt-2.5 px-0.5">
+      <div className="hidden sm:block space-y-1.5 mt-2.5 px-0.5">
         {[
           { label: "Living room lights", status: "Today" },
           { label: "Switchboard upgrade", status: "Thu" },
