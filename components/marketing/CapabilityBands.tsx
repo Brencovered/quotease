@@ -13,13 +13,14 @@ type Band = {
   shotAlt: string;
   shotW: number;
   shotH: number;
+  learnMoreHref: string;
   reverse?: boolean;
 };
 
 const BANDS: Band[] = [
   {
     kicker: "Quote",
-    title: "Price it on the tools.",
+    title: "Price it on site.",
     body: "Open the camera, tap the zone, draw the run. Materials and labour load from your book while you are still on site, not from memory at the desk later.",
     photo: "/trades/new-scaffold.png",
     photoAlt: "Tradie on site scoping a residential job",
@@ -28,10 +29,11 @@ const BANDS: Band[] = [
     shotAlt: "Floor plan markup pricing downlights in Swiftscope",
     shotW: 325,
     shotH: 658,
+    learnMoreHref: "/features/mobile-quoting",
   },
   {
     kicker: "Win",
-    title: "Send it. They accept.",
+    title: "Send it before you leave site.",
     body: "Client opens a clean portal on their phone, taps accept, and the job lands on your board. No PDF chase. No 'did you get my email?'",
     photo: "/trades/new-site.png",
     photoAlt: "Tradie on a residential framing site after winning the job",
@@ -40,11 +42,12 @@ const BANDS: Band[] = [
     shotAlt: "Priced quote ready to send to the client",
     shotW: 325,
     shotH: 658,
+    learnMoreHref: "/features/drawing-markup",
     reverse: true,
   },
   {
     kicker: "Manage",
-    title: "Run the job from one board.",
+    title: "Run the job from your palm.",
     body: "Accepted work becomes a job with schedule, materials, and progress in one place. Built for solo operators and crews up to about 15, not a site office for 200.",
     photo: "/trades/new-carpenter.png",
     photoAlt: "Carpenter framing on a residential interior site",
@@ -53,6 +56,7 @@ const BANDS: Band[] = [
     shotAlt: "Job details with scope, cost, and progress",
     shotW: 325,
     shotH: 658,
+    learnMoreHref: "/features/job-management",
   },
 ];
 
@@ -64,7 +68,7 @@ export default function CapabilityBands() {
   return (
     <div>
       {BANDS.map((band) => (
-        <section key={band.title} className="relative overflow-hidden bg-[#050b11]">
+        <section key={band.kicker} className="relative overflow-hidden bg-[#050b11]">
           <div className="relative max-w-[1280px] mx-auto px-6 py-16 lg:py-20">
             <div
               className={[
@@ -73,21 +77,29 @@ export default function CapabilityBands() {
               ].join(" ")}
             >
               <div className={["lg:col-span-5", band.reverse ? "lg:[direction:ltr]" : ""].join(" ")}>
-                <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-3">
+                <p className="font-sans text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-3">
                   {band.kicker}
                 </p>
-                <h2 className="font-display text-[clamp(1.9rem,4vw,3rem)] tracking-wide leading-[1.05] text-white mb-4 max-w-[16ch]">
+                <h2 className="font-display text-[clamp(1.9rem,4vw,3rem)] tracking-wide leading-[1.05] text-white mb-4 max-w-[18ch]">
                   {band.title}
                 </h2>
                 <p className="font-sans text-[16px] leading-[1.65] text-[#c5d4e0] max-w-[42ch] mb-7">
                   {band.body}
                 </p>
-                <Link
-                  href="/signup"
-                  className="inline-flex items-center gap-2 text-[14px] font-bold text-white hover:text-[#ffb400] transition-colors"
-                >
-                  Try it free <ArrowRight size={14} aria-hidden />
-                </Link>
+                <div className="flex flex-col items-start gap-3">
+                  <Link
+                    href="/signup"
+                    className="inline-flex items-center gap-2 text-[14px] font-bold text-white hover:text-[#ffb400] transition-colors"
+                  >
+                    Try it free <ArrowRight size={14} aria-hidden />
+                  </Link>
+                  <Link
+                    href={band.learnMoreHref}
+                    className="inline-flex items-center gap-2 text-[13.5px] font-semibold text-white/55 hover:text-white transition-colors"
+                  >
+                    Find out more <ArrowRight size={13} aria-hidden />
+                  </Link>
+                </div>
               </div>
 
               <div
