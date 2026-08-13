@@ -176,11 +176,14 @@ export default function HomeHero() {
   );
 }
 
+const PHONE_W = 325;
+const PHONE_H = 658;
+
 function ProductOverlay({ kind }: { kind: Scene["overlay"] }) {
   if (kind === "quote") {
     return (
-      <div className="home-glass rounded-xl sm:rounded-2xl p-1.5 sm:p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
-        <div className="hidden sm:flex items-center gap-2 mb-2.5 px-1">
+      <div className="drop-shadow-[0_20px_50px_rgba(0,0,0,0.55)]">
+        <div className="hidden sm:flex items-center gap-2 mb-2.5 px-1 home-glass rounded-xl p-2">
           <span className="w-7 h-7 rounded-md bg-[#ffb400] flex items-center justify-center">
             <Crosshair size={14} className="text-[#050b11]" aria-hidden />
           </span>
@@ -190,15 +193,13 @@ function ProductOverlay({ kind }: { kind: Scene["overlay"] }) {
           </div>
         </div>
         <ProductShot
-          src="/product/quote-capture.webp"
-          alt="Four ways into a quote including live camera markup"
-          width={718}
-          height={1100}
-          fit="cover-top"
+          src="/marketing/v2/phone-quote.png"
+          alt="Quote capture with live site markup in Swiftscope"
+          width={PHONE_W}
+          height={PHONE_H}
           sizes="(max-width: 640px) 168px, 250px"
-          className="rounded-[10px] sm:rounded-[12px]"
         />
-        <div className="hidden sm:block space-y-1.5 mt-2.5 px-0.5">
+        <div className="hidden sm:block space-y-1.5 mt-2.5 home-glass rounded-xl p-2">
           {[
             { label: "Downlights x 8", price: "$940" },
             { label: "Cable run, 12m", price: "$186" },
@@ -215,54 +216,50 @@ function ProductOverlay({ kind }: { kind: Scene["overlay"] }) {
 
   if (kind === "win") {
     return (
-      <div className="home-glass rounded-xl sm:rounded-2xl p-1.5 sm:p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
-        <div className="hidden sm:flex items-center gap-2 mb-2.5 px-1">
+      <div className="drop-shadow-[0_20px_50px_rgba(0,0,0,0.55)]">
+        <div className="hidden sm:flex items-center gap-2 mb-2.5 px-1 home-glass rounded-xl p-2">
           <span className="w-7 h-7 rounded-md bg-[#16a34a] flex items-center justify-center">
             <Trophy size={13} className="text-white" aria-hidden />
           </span>
           <div>
-            <p className="text-[12px] font-bold text-white leading-tight">Win on their phone</p>
-            <p className="text-[11px] text-white/50">Client accepted in 47s</p>
+            <p className="text-[12px] font-bold text-white leading-tight">Send and win</p>
+            <p className="text-[11px] text-white/50">Quote ready for the client</p>
           </div>
         </div>
         <ProductShot
-          src="/product/quote-send.webp"
+          src="/marketing/v2/phone-quote-send.png"
           alt="Priced quote ready to send to the client"
-          width={714}
-          height={1100}
-          fit="cover-top"
+          width={PHONE_W}
+          height={PHONE_H}
           sizes="(max-width: 640px) 168px, 250px"
-          className="rounded-[10px] sm:rounded-[12px]"
         />
         <div className="hidden sm:flex rounded-xl bg-[#e8f5ec] px-3.5 py-2.5 items-center gap-2 mt-2.5">
           <Check size={15} className="text-[#16a34a]" aria-hidden />
-          <p className="text-[12.5px] font-extrabold text-[#1c7a3a]">Accepted, job booked</p>
+          <p className="text-[12.5px] font-extrabold text-[#1c7a3a]">Send quote to client</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="home-glass rounded-xl sm:rounded-2xl p-1.5 sm:p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
-      <div className="hidden sm:flex items-center gap-2 mb-2.5 px-1">
+    <div className="drop-shadow-[0_20px_50px_rgba(0,0,0,0.55)]">
+      <div className="hidden sm:flex items-center gap-2 mb-2.5 px-1 home-glass rounded-xl p-2">
         <span className="w-7 h-7 rounded-md bg-[#ffb400] flex items-center justify-center">
           <Briefcase size={13} className="text-[#050b11]" aria-hidden />
         </span>
         <div>
           <p className="text-[12px] font-bold text-white leading-tight">Manage the job</p>
-          <p className="text-[11px] text-white/50">Board, schedule, progress</p>
+          <p className="text-[11px] text-white/50">Progress, tasks, timeline</p>
         </div>
       </div>
       <ProductShot
-        src="/marketing/v2/job-management-phone.png"
-        alt="Job board with accepted work ready to schedule"
-        width={856}
-        height={1400}
-        fit="cover-top"
+        src="/marketing/v2/phone-job-management.png"
+        alt="Job management with progress and timeline"
+        width={PHONE_W}
+        height={PHONE_H}
         sizes="(max-width: 640px) 168px, 250px"
-        className="rounded-[10px] sm:rounded-[12px]"
       />
-      <div className="hidden sm:block space-y-1.5 mt-2.5 px-0.5">
+      <div className="hidden sm:block space-y-1.5 mt-2.5 home-glass rounded-xl p-2">
         {[
           { label: "Living room lights", status: "Today" },
           { label: "Switchboard upgrade", status: "Thu" },
