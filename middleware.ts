@@ -287,12 +287,26 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
   //     regardless of which path it takes afterward -- a 308 canonical
   //     redirect, an admin 403, a normal page load, all logged the same.
   //
+  //     Excludes /admin/* and /api/admin/* entirely. Two real bugs found
+  //     by checking the actual numbers after a "why do I have so much
+  //     traffic" question: the admin activity page itself polls
+  //     /api/admin/activity every 4 seconds, and that self-polling was
+  //     counted as public site traffic -- 687 of a reported 2,698
+  //     "human" hits in 24h, from 4 IPs, was the dashboard watching
+  //     itself. The rest of /admin/* (directory, tradies, outreach, seo,
+  //     scraper, roadmap, emails -- everywhere the actual admin was
+  //     browsing) added another ~130 hits from 3 IPs on top of that.
+  //     Neither is a visitor. Excluding both at the source, not filtering
+  //     them out at display time, since counting them at all was the bug.
+  //
   //     Fire-and-forget: logTraffic() never throws and is never awaited
   //     inline, so a Supabase hiccup or a slow insert can never delay or
   //     break the actual response. request.body is not read here, so
   //     this cannot interfere with anything downstream reading it.
   // ------------------------------------------------------------------
-  logTraffic(request, pathname, event);
+  if (!pathname.startsWith("/admin") && !pathname.startsWith("/api/admin")) {
+    logTraffic(request, pathname, event);
+  }
 
   // ------------------------------------------------------------------
   // -0.5. IP blocklist. After logging (a blocked attempt is itself worth
