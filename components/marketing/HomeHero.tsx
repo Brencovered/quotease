@@ -3,10 +3,10 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Briefcase, Crosshair, Trophy } from "lucide-react";
+import { ArrowRight, Check, Send, Target } from "lucide-react";
 
 type Scene = {
-  key: string;
+  key: "scope" | "quote" | "win";
   image: string;
   alt: string;
   label: string;
@@ -16,54 +16,75 @@ type Scene = {
   icon: ReactNode;
   phone: string;
   phoneAlt: string;
+  /** Concrete payoff that makes the step feel real */
+  result: {
+    kicker: string;
+    title: string;
+    meta: string;
+  };
 };
 
 const SCENES: Scene[] = [
   {
-    key: "quote",
+    key: "scope",
     image: "/trades/new-electrician.png",
     alt: "Tradie on a residential site scoping the job",
-    label: "Quote",
-    blurb: "Mark it up on the tools",
+    label: "Scope",
+    blurb: "Mark it up standing in the room",
     chip: "Live site markup",
     objectPos: "object-left",
-    icon: <Crosshair size={18} aria-hidden />,
+    icon: <Target size={18} aria-hidden />,
     phone: "/marketing/v2/phone-quote.png",
-    phoneAlt: "Quote capture with live site markup in Swiftscope",
+    phoneAlt: "Scope capture with live site markup in Swiftscope",
+    result: {
+      kicker: "On site",
+      title: "12 items marked up",
+      meta: "Kitchen + living · still in the driveway",
+    },
+  },
+  {
+    key: "quote",
+    image: "/trades/new-roofer.png",
+    alt: "Tradie pricing a residential job from site",
+    label: "Quote",
+    blurb: "Price loads. Send before you leave.",
+    chip: "Priced and ready",
+    objectPos: "object-left",
+    icon: <Send size={18} aria-hidden />,
+    phone: "/marketing/v2/phone-quote-send.png",
+    phoneAlt: "Priced quote ready to send to the client",
+    result: {
+      kicker: "Total",
+      title: "$1,181 ready to send",
+      meta: "Labour 6h · Materials $521 · 3m 42s",
+    },
   },
   {
     key: "win",
-    image: "/trades/new-roofer.png",
-    alt: "Tradie on a residential build after winning the job",
-    label: "Win",
-    blurb: "Send it. Get the yes.",
-    chip: "Quote ready to send",
-    objectPos: "object-left",
-    icon: <Trophy size={18} aria-hidden />,
-    phone: "/marketing/v2/phone-quote-send.png",
-    phoneAlt: "Priced quote ready to send to the client",
-  },
-  {
-    key: "manage",
     image: "/trades/new-internal-site.png",
-    alt: "Residential interior construction site with a worker on the tools",
-    label: "Manage",
-    blurb: "Run the job from one board",
-    chip: "Job board live",
+    alt: "Residential job won and moving into delivery",
+    label: "Win",
+    blurb: "They accept. Job hits your board.",
+    chip: "Client accepted",
     objectPos: "object-center",
-    icon: <Briefcase size={18} aria-hidden />,
-    phone: "/marketing/v2/phone-job-management.png",
-    phoneAlt: "Job management with progress and timeline",
+    icon: <Check size={18} aria-hidden />,
+    phone: "/marketing/v2/phone-job-details.png",
+    phoneAlt: "Won job on the board with scope and progress",
+    result: {
+      kicker: "Accepted",
+      title: "Job booked · Thu 23 July",
+      meta: "Rory Broad · 8 Century Ave",
+    },
   },
 ];
 
-const CYCLE_MS = 5200;
+const CYCLE_MS = 5600;
 const PHONE_W = 325;
 const PHONE_H = 658;
 
 /**
- * Mitti-style hero: dark canvas, editorial copy, media stage with floating
- * product UI, and an animated Quote → Win → Manage cycle.
+ * Brand-first hero: SwiftScope + Scope/Quote/Win story, synced across
+ * headline highlights, media stage, phone, and payoff card.
  */
 export default function HomeHero() {
   const [active, setActive] = useState(0);
@@ -92,13 +113,12 @@ export default function HomeHero() {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      {/* Soft atmospheric wash — not a glow stack */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[70vh] opacity-70"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[70vh] opacity-80"
         style={{
           background:
-            "radial-gradient(ellipse 80% 55% at 85% 10%, rgba(255,180,0,0.10), transparent 55%), radial-gradient(ellipse 60% 40% at 10% 30%, rgba(14,32,48,0.9), transparent 60%)",
+            "radial-gradient(ellipse 70% 50% at 90% 0%, rgba(255,180,0,0.12), transparent 55%), radial-gradient(ellipse 50% 40% at 0% 20%, rgba(14,32,48,0.95), transparent 60%)",
         }}
       />
 
@@ -109,10 +129,19 @@ export default function HomeHero() {
               SwiftScope
             </p>
             <h1 className="font-display text-[clamp(1.55rem,4.2vw,2.55rem)] leading-[1.05] tracking-wide text-white max-w-[18ch]">
-              <span className="text-[#ffb400]">Scope</span> it.{" "}
-              <span className="text-[#ffb400]">Quote</span> it.
+              <HeadlineWord active={scene.key === "scope"} reduceMotion={reduceMotion}>
+                Scope
+              </HeadlineWord>{" "}
+              it.{" "}
+              <HeadlineWord active={scene.key === "quote"} reduceMotion={reduceMotion}>
+                Quote
+              </HeadlineWord>{" "}
+              it.
               <br />
-              <span className="text-[#ffb400]">Win</span> it on site.
+              <HeadlineWord active={scene.key === "win"} reduceMotion={reduceMotion}>
+                Win
+              </HeadlineWord>{" "}
+              it on site.
             </h1>
           </div>
           <div className="lg:col-span-5 flex flex-col justify-end">
@@ -124,7 +153,7 @@ export default function HomeHero() {
                 Swiftscope is built site-first - every tool is designed to be used standing in the job, not back at a desk. Mark it up, talk it through, or scope it live on screen, and send a priced quote before you&apos;ve left the driveway.
               </span>
             </p>
-            <div className="flex flex-wrap gap-2.5 sm:gap-3">
+            <div className="flex flex-wrap gap-2.5 sm:gap-3 mb-4">
               <Link
                 href="/signup"
                 className="inline-flex items-center justify-center bg-[#ffb400] text-[#050b11] font-extrabold text-[14px] sm:text-[15px] px-5 sm:px-6 py-3 sm:py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors"
@@ -138,6 +167,9 @@ export default function HomeHero() {
                 Find a tradie <ArrowRight size={15} aria-hidden />
               </Link>
             </div>
+            <p className="font-sans text-[12.5px] text-white/40">
+              Solo tradies and crews up to about 15 · Flat $45/mo · No per-lead fees
+            </p>
           </div>
         </div>
 
@@ -167,24 +199,22 @@ export default function HomeHero() {
                 />
               </div>
             ))}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/25" />
-            <div className="absolute inset-0 bg-gradient-to-l from-black/45 via-black/10 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/25" />
+            <div className="absolute inset-0 bg-gradient-to-l from-black/50 via-black/10 to-transparent" />
 
-            {/* Giant step index — editorial energy */}
             <p
               key={`n-${scene.key}`}
               aria-hidden
-              className="pointer-events-none absolute left-3 sm:left-6 bottom-2 sm:bottom-4 font-display text-[clamp(4.5rem,18vw,9rem)] leading-none tracking-wide text-white/[0.08] home-overlay-in"
+              className="pointer-events-none absolute left-3 sm:left-6 bottom-2 sm:bottom-3 font-display text-[clamp(4.5rem,18vw,9rem)] leading-none tracking-wide text-white/[0.07] home-overlay-in"
             >
               0{active + 1}
             </p>
 
-            {/* Scene chip */}
             <div
               key={`chip-${scene.key}`}
               className="absolute left-3 top-3 sm:left-5 sm:top-5 home-overlay-in"
             >
-              <div className="inline-flex items-center gap-2 rounded-full bg-black/45 border border-white/15 backdrop-blur-md px-3 py-1.5">
+              <div className="inline-flex items-center gap-2 rounded-full bg-black/50 border border-white/15 backdrop-blur-md px-3 py-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#ffb400] home-dot-pulse" />
                 <span className="font-sans text-[11px] sm:text-[12px] font-bold text-white">
                   <span className="text-[#ffb400]">{scene.label}</span>
@@ -194,22 +224,40 @@ export default function HomeHero() {
               </div>
             </div>
 
-            {/* Phone — smaller on mobile so the photo can breathe */}
+            {/* The missing payoff: concrete result for this step */}
             <div
-              key={scene.key}
-              className={[
-                "absolute right-2.5 top-1/2 -translate-y-1/2 home-overlay-in",
-                "h-[68%] sm:h-[84%] sm:right-5 lg:right-8",
-                !reduceMotion ? "home-phone-float" : "",
-              ].join(" ")}
+              key={`result-${scene.key}`}
+              className="absolute left-3 bottom-3 sm:left-5 sm:bottom-5 z-10 max-w-[min(72%,280px)] home-result-in"
+            >
+              <div className="rounded-2xl bg-[#071018]/88 border border-white/15 backdrop-blur-md px-3.5 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.4)]">
+                <p className="font-sans text-[10px] font-bold uppercase tracking-[0.14em] text-[#ffb400] mb-1">
+                  {scene.result.kicker}
+                </p>
+                <p className="font-display text-[1.15rem] sm:text-[1.35rem] tracking-wide text-white leading-none mb-1.5">
+                  {scene.result.title}
+                </p>
+                <p className="font-sans text-[12px] text-white/55 leading-snug">
+                  {scene.result.meta}
+                </p>
+              </div>
+            </div>
+
+            <div
+              key={`phone-${scene.key}`}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 h-[62%] sm:h-[80%] sm:right-5 lg:right-8 home-overlay-in"
               style={{ aspectRatio: `${PHONE_W} / ${PHONE_H}` }}
             >
-              <div className="relative h-full w-full drop-shadow-[0_24px_55px_rgba(0,0,0,0.6)]">
+              <div
+                className={[
+                  "relative h-full w-full drop-shadow-[0_24px_55px_rgba(0,0,0,0.6)]",
+                  !reduceMotion ? "home-phone-float" : "",
+                ].join(" ")}
+              >
                 <Image
                   src={scene.phone}
                   alt={scene.phoneAlt}
                   fill
-                  sizes="(max-width: 640px) 140px, 210px"
+                  sizes="(max-width: 640px) 130px, 200px"
                   quality={90}
                   className="object-contain"
                 />
@@ -217,11 +265,10 @@ export default function HomeHero() {
             </div>
           </div>
 
-          {/* Mobile: compact horizontal steps. Desktop: richer cards. */}
           <div
             className="mt-4 sm:mt-5 grid grid-cols-3 gap-2 sm:gap-3"
             role="tablist"
-            aria-label="How Swiftscope works"
+            aria-label="Scope, quote, win"
           >
             {SCENES.map((s, i) => {
               const selected = i === active;
@@ -296,5 +343,27 @@ export default function HomeHero() {
 
       <div className="h-8 sm:h-14" />
     </section>
+  );
+}
+
+function HeadlineWord({
+  children,
+  active,
+  reduceMotion,
+}: {
+  children: string;
+  active: boolean;
+  reduceMotion: boolean;
+}) {
+  return (
+    <span
+      className={[
+        "transition-colors duration-500",
+        active ? "text-[#ffb400]" : "text-white/35",
+        active && !reduceMotion ? "home-word-active" : "",
+      ].join(" ")}
+    >
+      {children}
+    </span>
   );
 }
