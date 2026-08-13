@@ -29,7 +29,7 @@ const BANDS: Band[] = [
     shotAlt: "Floor plan markup pricing downlights in Swiftscope",
     shotW: 325,
     shotH: 658,
-    learnMoreHref: "/features/mobile-quoting",
+    learnMoreHref: "/features/drawing-markup",
   },
   {
     kicker: "Win",
@@ -42,7 +42,7 @@ const BANDS: Band[] = [
     shotAlt: "Priced quote ready to send to the client",
     shotW: 325,
     shotH: 658,
-    learnMoreHref: "/features/drawing-markup",
+    learnMoreHref: "/features/mobile-quoting",
     reverse: true,
   },
   {
