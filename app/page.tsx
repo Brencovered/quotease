@@ -94,10 +94,10 @@ export default async function Home() {
           </div>
           <div className="max-w-[280px] mx-auto w-full">
             <Image
-              src="/marketing/v2/quoting-customer-accepts.png"
-              alt="Client accepting a quote on their phone"
-              width={856}
-              height={1720}
+              src="/marketing/v2/phone-job-management.png"
+              alt="Job board after the quote is accepted"
+              width={325}
+              height={658}
               quality={95}
               className="w-full h-auto drop-shadow-[0_24px_50px_rgba(0,0,0,0.45)]"
             />
