@@ -31,7 +31,7 @@
  */
 
 import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest, type NextFetchEvent } from "next/server";
 import { getActiveBusinessId } from "@/lib/team";
 
 /* ------------------------------------------------------------------ */
@@ -138,11 +138,199 @@ function isAdminEmail(email: string | undefined): boolean {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Main middleware                                                    */
+/*  IP blocklist, checked on every request                             */
 /* ------------------------------------------------------------------ */
 
-export async function middleware(request: NextRequest) {
+// Why this exists here, not only in the two app routes that already call
+// lib/ipBlocklist.ts: distinctplumbing4@gmail.com signed up via Google
+// OAuth and ended up with a fully populated profile (business_name
+// "plumber", trade, suburb, a 7-day trial) despite 103.78.46.30 being
+// blocked. Root cause: OAuth account creation happens on Supabase's own
+// infrastructure, and handle_new_user() -- a Postgres trigger -- fires
+// synchronously on that insert and populates the profile directly from
+// signup metadata. None of that ever touches my application code, so the
+// checks in app/api/directory/claim and app/api/onboarding/welcome never
+// got a chance to run; those routes protect specific actions, not account
+// creation itself, which Supabase's own infra handles before my app is
+// involved at all.
+//
+// What IS reachable: every request that lands back on swiftscope.com.au
+// after the OAuth redirect passes through this middleware first, before
+// any session is established or any page renders. Checking here cannot
+// undo the auth.users row Supabase already created, but it can stop a
+// blocked IP from doing anything further with it -- no working session,
+// no onboarding, no listing.
+//
+// Deliberately NOT a database round trip on every request. The comment
+// in lib/ipBlocklist.ts already explains why: that would add real
+// latency to every page view on the site for a list that currently holds
+// one row. Cached instead -- refetched at most once a minute, module
+// scope, which Vercel's Edge runtime persists across invocations within
+// the same isolate. Worst case, a newly blocked IP takes up to 60s to
+// start being enforced here; the two route-level checks remain instant
+// regardless, since they call the uncached lib/ipBlocklist.ts directly.
+let blockedIpCache: { ips: Set<string>; fetchedAt: number } | null = null;
+const BLOCKLIST_TTL_MS = 60_000;
+
+async function getBlockedIps(): Promise<Set<string>> {
+  if (blockedIpCache && Date.now() - blockedIpCache.fetchedAt < BLOCKLIST_TTL_MS) {
+    return blockedIpCache.ips;
+  }
+  try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) return blockedIpCache?.ips ?? new Set();
+
+    const res = await fetch(`${url}/rest/v1/ip_blocklist?select=ip_address`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+    });
+    if (!res.ok) return blockedIpCache?.ips ?? new Set();
+
+    const rows = (await res.json()) as { ip_address: string }[];
+    blockedIpCache = { ips: new Set(rows.map((r) => r.ip_address)), fetchedAt: Date.now() };
+    return blockedIpCache.ips;
+  } catch {
+    // Fail open on the cached value if we have one, otherwise fail open
+    // entirely -- same reasoning as lib/ipBlocklist.ts: a lookup failure
+    // blocking real traffic sitewide is worse than a known-bad IP getting
+    // through occasionally. This is a targeted response to specific
+    // abuse, never the primary defence.
+    return blockedIpCache?.ips ?? new Set();
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Traffic logging, for /admin/activity                               */
+/* ------------------------------------------------------------------ */
+
+
+// Same list as lib/adminActivity's classification, kept here too since
+// middleware runs on the Edge runtime and cannot import from a route
+// that pulls in the full Supabase server client. Duplicated deliberately
+// rather than sharing a module with heavier dependencies.
+const BOT_PATTERNS: { pattern: RegExp; label: string }[] = [
+  { pattern: /googlebot-image/i, label: "Googlebot (images)" },
+  { pattern: /googlebot/i, label: "Googlebot" },
+  { pattern: /google-inspectiontool/i, label: "Google Search Console" },
+  { pattern: /googleother/i, label: "GoogleOther" },
+  { pattern: /bingbot/i, label: "Bingbot" },
+  { pattern: /duckduckbot/i, label: "DuckDuckBot" },
+  { pattern: /ahrefsbot/i, label: "AhrefsBot" },
+  { pattern: /semrushbot/i, label: "SemrushBot" },
+  { pattern: /facebookexternalhit/i, label: "Facebook link preview" },
+  { pattern: /slackbot/i, label: "Slack link preview" },
+  { pattern: /vercel-screenshot/i, label: "Vercel (internal)" },
+];
+
+/**
+ * Fire-and-forget insert into public.traffic_log via the REST API
+ * directly (plain fetch, no supabase-js client) -- this file runs on the
+ * Edge runtime, and a full client import here is unnecessary weight for
+ * one insert. Never awaited by the caller and never throws: a failure
+ * here must never be able to affect the response middleware returns.
+ */
+function logTraffic(request: NextRequest, pathname: string, event: NextFetchEvent) {
+  try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) return; // never block a request for a missing log config
+
+    const userAgent = request.headers.get("user-agent");
+    const bot = userAgent ? BOT_PATTERNS.find((b) => b.pattern.test(userAgent)) : undefined;
+
+    // Real client IP, left-most x-forwarded-for entry -- see lib/clientIp.ts
+    // for why the left-most (not last) entry is the one that is actually
+    // the visitor rather than a Vercel edge hop.
+    const forwardedFor = request.headers.get("x-forwarded-for");
+    const ip = forwardedFor?.split(",")[0]?.trim() ?? request.headers.get("x-real-ip") ?? null;
+
+    const body = JSON.stringify({
+      path: pathname,
+      method: request.method,
+      ip_address: ip,
+      user_agent: userAgent,
+      is_bot: !!bot,
+      bot_label: bot?.label ?? null,
+    });
+
+    const promise = fetch(`${url}/rest/v1/traffic_log`, {
+      method: "POST",
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body,
+    }).catch(() => {
+      // Logging is best-effort. A dropped row here is a gap in the
+      // activity feed, never a broken page for a real visitor.
+    });
+
+    // NextFetchEvent.waitUntil keeps this fetch alive past the point
+    // middleware returns its response, which is required on the Edge
+    // runtime -- without it, the function can tear down and cancel the
+    // in-flight insert before it completes, silently dropping the row.
+    event.waitUntil(promise);
+  } catch {
+    // Never let a logging bug affect the request it was trying to log.
+  }
+}
+
+export async function middleware(request: NextRequest, event: NextFetchEvent) {
   const { pathname } = request.nextUrl;
+
+  // ------------------------------------------------------------------
+  // -1. Traffic log, for the real-time admin activity view. Deliberately
+  //     the very first thing in this function, before any redirect or
+  //     auth branch, so every request middleware sees is captured
+  //     regardless of which path it takes afterward -- a 308 canonical
+  //     redirect, an admin 403, a normal page load, all logged the same.
+  //
+  //     Excludes /admin/* and /api/admin/* entirely. Two real bugs found
+  //     by checking the actual numbers after a "why do I have so much
+  //     traffic" question: the admin activity page itself polls
+  //     /api/admin/activity every 4 seconds, and that self-polling was
+  //     counted as public site traffic -- 687 of a reported 2,698
+  //     "human" hits in 24h, from 4 IPs, was the dashboard watching
+  //     itself. The rest of /admin/* (directory, tradies, outreach, seo,
+  //     scraper, roadmap, emails -- everywhere the actual admin was
+  //     browsing) added another ~130 hits from 3 IPs on top of that.
+  //     Neither is a visitor. Excluding both at the source, not filtering
+  //     them out at display time, since counting them at all was the bug.
+  //
+  //     Fire-and-forget: logTraffic() never throws and is never awaited
+  //     inline, so a Supabase hiccup or a slow insert can never delay or
+  //     break the actual response. request.body is not read here, so
+  //     this cannot interfere with anything downstream reading it.
+  // ------------------------------------------------------------------
+  if (!pathname.startsWith("/admin") && !pathname.startsWith("/api/admin")) {
+    logTraffic(request, pathname, event);
+  }
+
+  // ------------------------------------------------------------------
+  // -0.5. IP blocklist. After logging (a blocked attempt is itself worth
+  //       having in the activity feed) but before every other branch --
+  //       host canonicalisation, auth, admin checks all come after this,
+  //       so a blocked IP is refused before any of that logic runs, not
+  //       just before the routes that used to be the only enforcement
+  //       point. See the "IP blocklist, checked on every request"
+  //       comment block above for why this exists in middleware at all.
+  // ------------------------------------------------------------------
+  {
+    const xff = request.headers.get("x-forwarded-for");
+    const realIp = xff?.split(",")[0]?.trim() ?? request.headers.get("x-real-ip");
+    if (realIp) {
+      const blocked = await getBlockedIps();
+      if (blocked.has(realIp)) {
+        // 404, not 403. A 403 confirms "you have been specifically
+        // detected and blocked," which is exactly the signal that tells
+        // someone to switch IPs immediately. A 404 looks like the route
+        // does not exist and gives away nothing about why.
+        return new NextResponse("Not found", { status: 404 });
+      }
+    }
+  }
 
   // ------------------------------------------------------------------
   // 0. Canonicalise host: redirect every non-canonical production host
