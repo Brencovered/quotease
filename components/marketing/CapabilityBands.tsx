@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import ProductShot from "@/components/marketing/ProductShot";
 
 type Band = {
   kicker: string;
@@ -109,18 +108,19 @@ export default function CapabilityBands() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10" />
                   <div
                     className={[
-                      "absolute bottom-3 w-[40%] max-w-[150px] sm:bottom-4 sm:w-[42%] sm:max-w-[220px]",
-                      band.reverse ? "left-3 sm:left-4" : "right-3 sm:right-4",
+                      "absolute top-[7%] bottom-[7%] w-auto",
+                      band.reverse ? "left-3 sm:left-5" : "right-3 sm:right-5",
                     ].join(" ")}
+                    style={{ aspectRatio: `${band.shotW} / ${band.shotH}` }}
                   >
-                    <div className="drop-shadow-[0_24px_50px_rgba(0,0,0,0.55)]">
-                      <ProductShot
+                    <div className="relative h-full w-full drop-shadow-[0_24px_50px_rgba(0,0,0,0.55)]">
+                      <Image
                         src={band.shot}
                         alt={band.shotAlt}
-                        width={band.shotW}
-                        height={band.shotH}
-                        sizes="(max-width: 640px) 150px, 220px"
-                        className="rounded-[14px] sm:rounded-[18px]"
+                        fill
+                        sizes="(max-width: 640px) 150px, 200px"
+                        quality={90}
+                        className="object-contain object-bottom"
                       />
                     </div>
                   </div>
