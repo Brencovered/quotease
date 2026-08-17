@@ -132,7 +132,7 @@ export default async function TradeHubPage({ params }: PageProps) {
                   <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#ffb400]/20">
                     <Check size={14} className="text-[#b88400]" aria-hidden />
                   </span>
-                  <span className="font-semibold">{item}</span>
+                  <span className="font-medium text-[#1a242c]">{item}</span>
                 </li>
               ))}
             </ul>
