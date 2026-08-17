@@ -5,15 +5,9 @@ import { memo } from "react";
 import { Loader2 } from "lucide-react";
 import { normalizeTradeValue } from "@/lib/genericTrades";
 
-/* Lazy-load the heavy quote builders so the page shell renders instantly
-   while the builder chunks download in the background. `ssr:false` means
-   these render nothing on the server - without a `loading` fallback,
-   nothing paints at all client-side either until the whole builder chunk
-   has downloaded, parsed, and executed. That's a very plausible driver of
-   this route's real-world FCP (7.23s per Speed Insights): the page shell
-   is blank until a genuinely large bundle finishes loading. A lightweight
-   spinner here counts as a paint the moment the page shell mounts,
-   instead of the browser having nothing to show for several seconds. */
+/* One raise-quote surface for every trade. Dedicated calc engines live as
+   an optional Estimate assistant inside GenericQuoteBuilder that dumps
+   into the same siteItems scope as packages, drawings, and materials. */
 function BuilderLoading() {
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-24">
@@ -23,11 +17,10 @@ function BuilderLoading() {
   );
 }
 
-const QuoteBuilder        = dynamic(() => import("./QuoteBuilder"),        { ssr: false, loading: BuilderLoading });
-const PlumberQuoteBuilder = dynamic(() => import("./PlumberQuoteBuilder"), { ssr: false, loading: BuilderLoading });
-const CarpenterQuoteBuilder = dynamic(() => import("./CarpenterQuoteBuilder"), { ssr: false, loading: BuilderLoading });
-const RooferQuoteBuilder  = dynamic(() => import("./RooferQuoteBuilder"),   { ssr: false, loading: BuilderLoading });
-const GenericQuoteBuilder = dynamic(() => import("./GenericQuoteBuilder"),  { ssr: false, loading: BuilderLoading });
+const GenericQuoteBuilder = dynamic(() => import("./GenericQuoteBuilder"), {
+  ssr: false,
+  loading: BuilderLoading,
+});
 
 interface BuilderProps {
   tradeKey: string;
@@ -43,16 +36,7 @@ interface BuilderProps {
 }
 
 function TradeBuilderInner({ tradeKey, profile, ...rest }: BuilderProps) {
-  // Roofer's own prop type is stricter (trades?: string[], no null) than
-  // the others - normalize here rather than loosening every builder's
-  // type to match Supabase's nullable array column.
-  const normalizedProfile = { ...profile, trades: profile.trades ?? undefined };
-  // Map signup orphans (builder/handyman/plasterer) onto the product list.
   const key = normalizeTradeValue(tradeKey) ?? tradeKey;
-  if (key === "electrician") return <QuoteBuilder profile={profile} {...rest} />;
-  if (key === "plumber")     return <PlumberQuoteBuilder profile={profile} {...rest} />;
-  if (key === "carpenter")   return <CarpenterQuoteBuilder profile={profile} {...rest} />;
-  if (key === "roofer")      return <RooferQuoteBuilder profile={normalizedProfile} {...rest} />;
   return <GenericQuoteBuilder tradeKey={key} profile={profile} {...rest} />;
 }
 

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PAYMENT_TERM_PRESETS } from "@/lib/paymentTerms";
 import { ChevronRight, ChevronLeft, Check, Plus, Trash2, Paperclip, X, Sparkles } from "lucide-react";
-import { calcGenericQuote, GENERIC_TRADE_TEMPLATES, type GenericLineItem, type GenericIntake } from "@/lib/genericTrades";
+import { calcGenericQuote, GENERIC_TRADE_TEMPLATES, ALL_TRADES, type GenericLineItem, type GenericIntake } from "@/lib/genericTrades";
 import StepCustomer from "./StepCustomer";
 import PackagePicker from "@/components/PackagePicker";
 import VoiceNoteRecorder from "./VoiceNoteRecorder";
@@ -23,9 +23,10 @@ import PreferredStartDateField from "@/components/PreferredStartDateField";
 import { splitGst } from "@/lib/gst";
 import { persistAnnotationFrames } from "@/lib/siteAnnotations";
 import JobDescriptionField from "@/components/JobDescriptionField";
-import { MaterialSearchAdd, ScopeItemsList } from "@/components/ScopeOfWorkStep";
+import { MaterialSearchAdd, ScopeItemsList, type ScopeItem } from "@/components/ScopeOfWorkStep";
 import PeripheralsPanel from "@/components/PeripheralsPanel";
 import type { SiteConditionTemplateRow } from "@/lib/peripherals";
+import TradeEstimateAssistant, { DEDICATED_ESTIMATE_TRADES, type DedicatedTradeKey } from "@/components/TradeEstimateAssistant";
 
 const STEPS = [
   { id: "customer", label: "Customer" },
@@ -34,6 +35,14 @@ const STEPS = [
   { id: "items",   label: "Items" },
   { id: "send",    label: "Send" },
 ];
+
+/** Job types for dedicated trades now sharing this shell. */
+const DEDICATED_JOB_TYPES: Record<string, string[]> = {
+  electrician: ["Renovation / alteration", "New build", "Fault find / repair", "Compliance / inspection", "EV charger", "Switchboard upgrade"],
+  plumber: ["Renovation", "New build", "Fault find", "Gasfitting", "Drainage", "Compliance"],
+  carpenter: ["Renovation", "New build", "Deck", "Framing", "Fit-out", "Repair"],
+  roofer: ["Re-roof", "Repair", "New roof", "Gutters & fascia", "Inspection"],
+};
 
 let nextId = 1;
 function uid() { return `item_${nextId++}`; }
@@ -84,6 +93,9 @@ export default function GenericQuoteBuilder({
   // uploaded price book rather than a pre-filtered slice).
   const [pickingItemId, setPickingItemId] = useState<string | null>(null);
   const template = GENERIC_TRADE_TEMPLATES[tradeKey] ?? GENERIC_TRADE_TEMPLATES.custom;
+  const tradeLabel = ALL_TRADES.find((t) => t.key === tradeKey)?.label ?? template.label;
+  const jobTypes = DEDICATED_JOB_TYPES[tradeKey] ?? template.jobTypes;
+  const showEstimateAssistant = DEDICATED_ESTIMATE_TRADES.has(tradeKey);
   const [margin, setMargin] = useState(profile.materials_margin_pct ?? 20);
 
   const [selectedPricingTierId, setSelectedPricingTierId] = useState<string | null>(null);
@@ -104,7 +116,7 @@ export default function GenericQuoteBuilder({
   }, [selectedPricingTier, selectedJobSizeTier, profile.materials_margin_pct]);
 
   const [step,        setStep]        = useState(0);
-  const [jobType,     setJobType]     = useState(template.jobTypes[0]);
+  const [jobType,     setJobType]     = useState(jobTypes[0] ?? "Custom job");
   const [description, setDescription] = useState("");
   const [siteAccess,  setSiteAccess]  = useState<GenericIntake["siteAccess"]>("na");
   const [siteAccessNote, setSiteAccessNote] = useState("");
@@ -132,7 +144,7 @@ export default function GenericQuoteBuilder({
   const [analysisSource, setAnalysisSource] = useState<"drawing" | "voice">("drawing");
   const [usageLimitReached, setUsageLimitReached] = useState(false);
   const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">("full_on_completion");
-  const [siteItems,     setSiteItems]     = useState<{id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]>(
+  const [siteItems,     setSiteItems]     = useState<ScopeItem[]>(
     () => markupMaterialsToScopeItems(preMarkupMaterials, preMarkupSource ?? "plan markup")
   );
   const [annotationMeta, setAnnotationMeta] = useState<{id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string;roomName?:string}[]>([]);
@@ -203,7 +215,7 @@ export default function GenericQuoteBuilder({
       const { ok, body, parseError } = await analyzeDrawingFile(
         fileForAnalysis,
         tradeKey ?? "default",
-        `This is a ${template.label.toLowerCase()} job. Focus on what a ${template.label.toLowerCase()} would need to quote from this.`
+        `This is a ${tradeLabel.toLowerCase()} job. Focus on what a ${tradeLabel.toLowerCase()} would need to quote from this.`
       );
       if (parseError) { setAnalysisError(parseError); return; }
       if (!ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
@@ -221,7 +233,7 @@ export default function GenericQuoteBuilder({
       const res = await fetch("/api/quotes/analyze-voice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript, trade: tradeKey ?? "generic", instructions: `This is a ${template.label.toLowerCase()} job. Focus on what a ${template.label.toLowerCase()} would need to quote from this.` }),
+        body: JSON.stringify({ transcript, trade: tradeKey ?? "generic", instructions: `This is a ${tradeLabel.toLowerCase()} job. Focus on what a ${tradeLabel.toLowerCase()} would need to quote from this.` }),
       });
       const { ok, body, parseError } = await safeParseApiResponse(res);
       if (parseError) { setAnalysisError(parseError); return; }
@@ -322,6 +334,12 @@ export default function GenericQuoteBuilder({
 
   return (
     <div className="page-wrap-narrow">
+      <div className="mb-3">
+        <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--amber-deep)]">{tradeLabel} quote</p>
+        <p className="text-[13px] text-[var(--ink-faint)]">
+          Same flow for every trade: customer → capture → job → items from your book → send.
+        </p>
+      </div>
       {/* Live total */}
       <div className="sticky top-12 sm:top-0 z-30 mb-4 -mx-4 sm:mx-0 px-4 sm:px-0">
         <div className="bg-[var(--navy)] rounded-none sm:rounded-2xl px-5 py-3 flex items-center justify-between"
@@ -486,7 +504,7 @@ export default function GenericQuoteBuilder({
             <div className="space-y-3">
               <Field label="Job type">
                 <select value={jobType} onChange={(e) => setJobType(e.target.value)} className="app-field">
-                  {template.jobTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+                  {jobTypes.map((t) => <option key={t} value={t}>{t}</option>)}
                   <option value="Other">Other</option>
                 </select>
               </Field>
@@ -596,6 +614,20 @@ export default function GenericQuoteBuilder({
       {/* Step: Items */}
       {stepId === "items" && (
         <div className="space-y-4">
+          {showEstimateAssistant && (
+            <TradeEstimateAssistant
+              tradeKey={tradeKey as DedicatedTradeKey}
+              hourlyRate={profile.hourly_rate ?? 85}
+              materials={lib}
+              onApply={(rows) => setSiteItems((prev) => [...prev, ...rows])}
+              onReplace={(rows) =>
+                setSiteItems((prev) => [
+                  ...prev.filter((i) => i.source !== "estimate"),
+                  ...rows,
+                ])
+              }
+            />
+          )}
           <div className="card">
             <div className="flex items-center justify-between mb-3">
               <p className="section-tag">Line items</p>
