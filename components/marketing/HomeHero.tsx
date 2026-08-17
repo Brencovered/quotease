@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Check, Send, Target } from "lucide-react";
+import TrialRiskReversal from "@/components/marketing/TrialRiskReversal";
 
 type Scene = {
   key: "scope" | "quote" | "win";
@@ -153,7 +154,7 @@ export default function HomeHero() {
                 Built to be used standing in the job, not back at a desk. Mark it up, price it from your book, and send before you leave the driveway.
               </span>
             </p>
-            <div className="flex flex-wrap gap-2.5 sm:gap-3 mb-4">
+            <div className="flex flex-wrap gap-2.5 sm:gap-3 mb-3">
               <Link
                 href="/signup"
                 className="inline-flex items-center justify-center bg-[#ffb400] text-[#050b11] font-extrabold text-[14px] sm:text-[15px] px-5 sm:px-6 py-3 sm:py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors"
@@ -167,6 +168,7 @@ export default function HomeHero() {
                 Find a tradie <ArrowRight size={15} aria-hidden />
               </Link>
             </div>
+            <TrialRiskReversal tone="light" className="mb-3" />
             <p className="font-sans text-[12.5px] text-white/40">
               Solo tradies and crews up to about 15 · Flat $45/mo · No per-lead fees
             </p>

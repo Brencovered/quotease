@@ -6,6 +6,8 @@ import MarketingNav from "@/components/MarketingNav";
 import HomeHero from "@/components/marketing/HomeHero";
 import CapabilityBands from "@/components/marketing/CapabilityBands";
 import QuoteTapDemo from "@/components/marketing/QuoteTapDemo";
+import AccountingLogos from "@/components/marketing/AccountingLogos";
+import TrialRiskReversal from "@/components/marketing/TrialRiskReversal";
 import FaqSchema, { SWIFTSCOPE_FAQS } from "@/components/seo/FaqSchema";
 import { homepageMeta } from "@/lib/seo/meta";
 import { LEADS_ENABLED } from "@/lib/featureFlags";
@@ -60,6 +62,7 @@ export default async function Home() {
               </div>
             ))}
           </div>
+          <AccountingLogos tone="light" className="mt-10 pt-8 border-t border-[#e8ecef]" />
         </div>
       </section>
 
@@ -72,7 +75,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Product acceptance moment */}
+      {/* Product acceptance moment — tradie send + client quote */}
       <section className="relative overflow-hidden bg-[#1a242c]">
         <div className="max-w-[1280px] mx-auto px-6 py-16 sm:py-24 grid lg:grid-cols-2 gap-12 items-center">
           <div>
@@ -83,24 +86,45 @@ export default async function Home() {
               They accept on their phone. You keep moving.
             </h2>
             <p className="font-sans text-[16px] leading-[1.65] text-[#b7c7d4] max-w-[42ch] mb-8">
-              They open a clean portal, tap accept, and the job hits your board. No chasing PDFs. No did you get my email.
+              They open a clean portal, see a professional quote, tap accept, and the job hits your board. No chasing PDFs. No did you get my email.
             </p>
-            <Link
-              href="/signup"
-              className="inline-flex items-center justify-center bg-[#ffb400] text-[#071018] font-sans font-extrabold text-[15px] px-7 py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors"
-            >
-              Start quoting free
-            </Link>
+            <div className="flex flex-col items-start gap-2">
+              <Link
+                href="/signup"
+                className="inline-flex items-center justify-center bg-[#ffb400] text-[#071018] font-sans font-extrabold text-[15px] px-7 py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors"
+              >
+                Start quoting free
+              </Link>
+              <TrialRiskReversal tone="light" />
+            </div>
           </div>
-          <div className="max-w-[280px] mx-auto w-full">
-            <Image
-              src="/marketing/v2/phone-job-management.png"
-              alt="Job board after the quote is accepted"
-              width={325}
-              height={658}
-              quality={95}
-              className="w-full h-auto drop-shadow-[0_24px_50px_rgba(0,0,0,0.45)]"
-            />
+          <div className="flex items-end justify-center gap-3 sm:gap-5">
+            <div className="w-[42%] max-w-[200px]">
+              <p className="font-sans text-[10px] font-bold tracking-[0.14em] uppercase text-white/50 mb-2 text-center">
+                Your send screen
+              </p>
+              <Image
+                src="/marketing/v2/phone-quote-send.png"
+                alt="Quote ready to send from the tradie phone"
+                width={325}
+                height={658}
+                quality={95}
+                className="w-full h-auto drop-shadow-[0_24px_50px_rgba(0,0,0,0.45)]"
+              />
+            </div>
+            <div className="w-[52%] max-w-[240px]">
+              <p className="font-sans text-[10px] font-bold tracking-[0.14em] uppercase text-[#ffb400] mb-2 text-center">
+                What the client sees
+              </p>
+              <Image
+                src="/marketing/v2/quoting-customer-accepts.png"
+                alt="Clean professional quote the homeowner receives and accepts"
+                width={325}
+                height={658}
+                quality={95}
+                className="w-full h-auto drop-shadow-[0_24px_50px_rgba(0,0,0,0.45)]"
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -170,19 +194,22 @@ export default async function Home() {
                 </li>
               ))}
             </ul>
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href="/signup"
-                className="inline-flex items-center bg-[#ffb400] text-[#071018] font-sans font-extrabold text-[15px] px-7 py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors"
-              >
-                Start free trial
-              </Link>
-              <Link
-                href="/features"
-                className="inline-flex items-center gap-2 text-[#071018] font-sans font-bold text-[15px] px-6 py-3.5 rounded-lg border border-[#d5dbe0] hover:border-[#071018] transition-colors"
-              >
-                See features <ArrowRight size={14} aria-hidden />
-              </Link>
+            <div className="flex flex-col items-start gap-2">
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href="/signup"
+                  className="inline-flex items-center bg-[#ffb400] text-[#071018] font-sans font-extrabold text-[15px] px-7 py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors"
+                >
+                  Start free trial
+                </Link>
+                <Link
+                  href="/features"
+                  className="inline-flex items-center gap-2 text-[#071018] font-sans font-bold text-[15px] px-6 py-3.5 rounded-lg border border-[#d5dbe0] hover:border-[#071018] transition-colors"
+                >
+                  See features <ArrowRight size={14} aria-hidden />
+                </Link>
+              </div>
+              <TrialRiskReversal tone="dark" />
             </div>
           </div>
         </div>
@@ -204,6 +231,7 @@ export default async function Home() {
           >
             Start quoting today <ArrowRight size={15} aria-hidden />
           </Link>
+          <TrialRiskReversal tone="light" className="mt-3" />
         </div>
 
         <div className="border-t border-white/[0.08]">
