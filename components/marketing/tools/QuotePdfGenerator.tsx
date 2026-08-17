@@ -210,7 +210,7 @@ export default function QuotePdfGenerator() {
             type="button"
             disabled={busy}
             onClick={downloadPdf}
-            className="inline-flex w-full items-center justify-center gap-2 bg-[#ffb400] text-[#1a242c] font-extrabold text-[15px] px-5 py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors disabled:opacity-60"
+            className="inline-flex w-full items-center justify-center gap-2 bg-[#ffb400] text-[#1a242c] font-sans font-extrabold text-[15px] px-5 py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors disabled:opacity-60"
           >
             {busy ? "Building PDF…" : "Download quote PDF"} <ArrowRight size={15} aria-hidden />
           </button>

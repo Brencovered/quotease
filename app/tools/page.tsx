@@ -104,7 +104,7 @@ export default function ToolsIndexPage() {
           </div>
           <Link
             href="/signup"
-            className="inline-flex items-center gap-2 bg-[#ffb400] text-[#1a242c] font-extrabold text-[15px] px-6 py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors"
+            className="inline-flex items-center gap-2 bg-[#ffb400] text-[#1a242c] font-sans font-extrabold text-[15px] px-6 py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors"
           >
             Start free trial <ArrowRight size={15} aria-hidden />
           </Link>

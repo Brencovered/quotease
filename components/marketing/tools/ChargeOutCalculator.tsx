@@ -69,7 +69,8 @@ export default function ChargeOutCalculator() {
             <NumberField label="Other overhead" value={otherOverhead} onChange={setOtherOverhead} prefix="$" min={0} step={100} />
           </div>
           <p className="font-sans text-[13px] text-[#5a6a78] mt-2">
-            Total overhead modelled: <strong className="text-[#071018]">{moneyAud(result.overhead)}</strong> /yr
+            Total overhead modelled:{" "}
+            <strong className="font-sans font-bold text-[#071018]">{moneyAud(result.overhead)}</strong> /yr
           </p>
         </ToolPanel>
 

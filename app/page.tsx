@@ -87,7 +87,7 @@ export default async function Home() {
             </p>
             <Link
               href="/signup"
-              className="inline-flex items-center justify-center bg-[#ffb400] text-[#071018] font-extrabold text-[15px] px-7 py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors"
+              className="inline-flex items-center justify-center bg-[#ffb400] text-[#071018] font-sans font-extrabold text-[15px] px-7 py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors"
             >
               Start quoting free
             </Link>
@@ -136,7 +136,7 @@ export default async function Home() {
             </p>
             <Link
               href="/directory"
-              className="inline-flex items-center gap-2 bg-white text-[#071018] font-extrabold text-[15px] px-7 py-3.5 rounded-lg hover:bg-[#f0f3f5] transition-colors"
+              className="inline-flex items-center gap-2 bg-white text-[#071018] font-sans font-extrabold text-[15px] px-7 py-3.5 rounded-lg hover:bg-[#f0f3f5] transition-colors"
             >
               Browse the directory <ArrowRight size={15} aria-hidden />
             </Link>
@@ -173,13 +173,13 @@ export default async function Home() {
             <div className="flex flex-wrap gap-3">
               <Link
                 href="/signup"
-                className="inline-flex items-center bg-[#ffb400] text-[#071018] font-extrabold text-[15px] px-7 py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors"
+                className="inline-flex items-center bg-[#ffb400] text-[#071018] font-sans font-extrabold text-[15px] px-7 py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors"
               >
                 Start free trial
               </Link>
               <Link
                 href="/features"
-                className="inline-flex items-center gap-2 text-[#071018] font-bold text-[15px] px-6 py-3.5 rounded-lg border border-[#d5dbe0] hover:border-[#071018] transition-colors"
+                className="inline-flex items-center gap-2 text-[#071018] font-sans font-bold text-[15px] px-6 py-3.5 rounded-lg border border-[#d5dbe0] hover:border-[#071018] transition-colors"
               >
                 See features <ArrowRight size={14} aria-hidden />
               </Link>
@@ -200,7 +200,7 @@ export default async function Home() {
           <p className="font-sans text-[16px] text-[#8aa4b4] mb-8">How long does yours take?</p>
           <Link
             href="/signup"
-            className="inline-flex items-center gap-2 bg-[#ffb400] text-[#071018] font-extrabold text-[15px] px-8 py-4 rounded-lg hover:bg-[#e89e00] transition-colors"
+            className="inline-flex items-center gap-2 bg-[#ffb400] text-[#071018] font-sans font-extrabold text-[15px] px-8 py-4 rounded-lg hover:bg-[#e89e00] transition-colors"
           >
             Start quoting today <ArrowRight size={15} aria-hidden />
           </Link>
@@ -230,14 +230,14 @@ export default async function Home() {
 
       <section className="bg-[#f4f6f8]">
         <div className="max-w-3xl mx-auto px-6 py-14 sm:py-16">
-          <h2 className="text-[1.8rem] font-extrabold tracking-[-0.02em] text-[#071018] mb-8">
+          <h2 className="font-display text-[clamp(1.7rem,3vw,2.2rem)] tracking-wide text-[#071018] mb-8">
             Common questions
           </h2>
           <div className="space-y-5">
             {SWIFTSCOPE_FAQS.map((faq) => (
               <div key={faq.question} className="border-b border-[#e2e5ea] pb-5">
-                <p className="font-bold text-[15px] text-[#071018] mb-2">{faq.question}</p>
-                <p className="text-[14px] text-[#5a6a78] leading-relaxed">{faq.answer}</p>
+                <p className="font-display text-[1.15rem] tracking-wide text-[#071018] mb-2">{faq.question}</p>
+                <p className="font-sans text-[14px] text-[#5a6a78] leading-relaxed">{faq.answer}</p>
               </div>
             ))}
           </div>

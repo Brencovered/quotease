@@ -60,7 +60,7 @@ export default function MarketingNav({
           >
             Log in
           </Link>
-          <Link href="/signup" className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[13.5px] px-5 py-2.5 rounded-lg hover:bg-[#e89e00] transition-colors">
+          <Link href="/signup" className="bg-[#ffb400] text-[#0a1722] font-sans font-extrabold text-[13.5px] px-5 py-2.5 rounded-lg hover:bg-[#e89e00] transition-colors">
             Sign up free
           </Link>
         </div>
@@ -87,7 +87,7 @@ export default function MarketingNav({
             <Link href="/get-quotes" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Get a quote</Link>
           )}
           <Link href="/login" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Log in</Link>
-          <Link href="/signup" onClick={() => setOpen(false)} className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-5 py-3 rounded-xl text-center mt-2">
+          <Link href="/signup" onClick={() => setOpen(false)} className="bg-[#ffb400] text-[#0a1722] font-sans font-extrabold text-[15px] px-5 py-3 rounded-xl text-center mt-2">
             Sign up free
           </Link>
         </div>

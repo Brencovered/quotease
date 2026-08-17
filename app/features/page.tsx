@@ -19,11 +19,11 @@ export default function FeaturesPage() {
       {/* HEADER */}
       <div className="bg-[#1a242c] border-b border-white/10">
         <div className="max-w-7xl mx-auto px-6 pt-10 pb-16">
-          <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Features</p>
+          <p className="font-sans text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Features</p>
           <h1 className="font-display uppercase text-[2.6rem] sm:text-[3.4rem] leading-[0.93] text-white max-w-2xl">
             Everything a tradie actually needs
           </h1>
-          <p className="text-[16px] text-[#8aa4b4] mt-4 max-w-xl">
+          <p className="font-sans text-[16px] text-[#8aa4b4] mt-4 max-w-xl">
             Most crews juggle three or four apps. Swiftscope pulls quoting, jobs, and markup into one phone-first workflow, and connects cleanly to Xero for the books.
           </p>
         </div>
@@ -61,8 +61,8 @@ export default function FeaturesPage() {
                       {r.type === "integrate" ? `Integrates with ${r.replaces}` : `Replaces ${r.replaces}`}
                     </span>
                   </div>
-                  <p className="font-bold text-[15px] text-[#0a1722] mb-1 group-hover:underline">{r.label}</p>
-                  <p className="text-[13px] text-[#5a6a78] leading-relaxed mb-3">{r.note}</p>
+                  <p className="font-display text-[1.2rem] tracking-wide text-[#0a1722] mb-1 group-hover:underline">{r.label}</p>
+                  <p className="font-sans text-[13px] text-[#5a6a78] leading-relaxed mb-3">{r.note}</p>
                   <span className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-[#e89e00]">
                     Learn more <ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" />
                   </span>
@@ -132,8 +132,8 @@ export default function FeaturesPage() {
                 <div className="w-10 h-10 bg-[#0a1722] rounded-xl flex items-center justify-center mb-3">
                   <f.icon size={18} className="text-[#ffb400]" />
                 </div>
-                <h3 className="font-bold text-[15px] text-[#0a1722] mb-1.5">{f.title}</h3>
-                <p className="text-[13px] text-[#5a6a78] leading-relaxed">{f.body}</p>
+                <h3 className="font-display text-[1.15rem] tracking-wide text-[#0a1722] mb-1.5">{f.title}</h3>
+                <p className="font-sans text-[13px] text-[#5a6a78] leading-relaxed">{f.body}</p>
               </div>
             ))}
           </div>

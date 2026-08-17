@@ -71,7 +71,7 @@ export default function HireChecklist() {
                   )}
                 </span>
                 <span>
-                  <span className="block font-sans font-bold text-[16px] text-[#071018] mb-1.5">
+                  <span className="block font-display text-[1.25rem] tracking-wide text-[#071018] mb-1.5">
                     {item.title}
                   </span>
                   <span className="block font-sans text-[14.5px] leading-[1.65] text-[#3d4a55]">

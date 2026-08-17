@@ -49,12 +49,14 @@ body {
 }
 
 .font-display {
+  /* Marketing headings only — Anton. Never pair with font-bold (single weight). */
   font-family: var(--font-anton), sans-serif;
   font-weight: 400;
   letter-spacing: 0.01em;
 }
 
 .font-sans {
+  /* Marketing body, labels, buttons — Inter */
   font-family: var(--font-inter), sans-serif;
 }
 

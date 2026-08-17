@@ -62,7 +62,7 @@ export function ToolHook({ tool }: { tool: ToolMeta }) {
         </div>
         <Link
           href={tool.hookHref}
-          className="inline-flex items-center justify-center gap-2 bg-[#ffb400] text-[#1a242c] font-extrabold text-[15px] px-7 py-4 rounded-lg hover:bg-[#e89e00] transition-colors shrink-0"
+          className="inline-flex items-center justify-center gap-2 bg-[#ffb400] text-[#1a242c] font-sans font-extrabold text-[15px] px-7 py-4 rounded-lg hover:bg-[#e89e00] transition-colors shrink-0"
         >
           {tool.hookCta} <ArrowRight size={15} aria-hidden />
         </Link>
