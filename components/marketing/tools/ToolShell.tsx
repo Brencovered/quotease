@@ -1,7 +1,12 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ExternalLink } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
-import type { ToolMeta } from "@/lib/marketing/tools";
+import {
+  TOOL_DISCLAIMER,
+  sourcesForTool,
+  type ToolMeta,
+  type ToolSource,
+} from "@/lib/marketing/tools";
 
 export function moneyAud(n: number, digits = 0) {
   if (!Number.isFinite(n)) return "$0";
@@ -22,6 +27,8 @@ export function ToolShell({
   children: React.ReactNode;
   seoFaqs?: { q: string; a: string }[];
 }) {
+  const sources = sourcesForTool(tool.slug);
+
   return (
     <main className="bg-[#f4f6f8] text-[#071018] min-h-screen">
       <MarketingNav />
@@ -40,18 +47,77 @@ export function ToolShell({
           <h1 className="font-display text-[clamp(2rem,4.5vw,3.2rem)] tracking-wide leading-[1.02] text-white max-w-[18ch] mb-4">
             {tool.title}
           </h1>
-          <p className="font-sans text-[16px] leading-[1.65] text-[#c5d4e0] max-w-[52ch]">
+          <p className="font-sans text-[16px] leading-[1.65] text-[#c5d4e0] max-w-[52ch] mb-5">
             {tool.description}
+          </p>
+          <p className="font-sans text-[13px] leading-[1.6] text-white/55 max-w-[56ch] border-l-2 border-[#ffb400]/70 pl-4">
+            Guideline only. Not financial, tax, or legal advice.
           </p>
         </div>
       </section>
 
-      <section className="max-w-[1280px] mx-auto px-5 sm:px-6 py-10 lg:py-14">{children}</section>
+      <section className="max-w-[1280px] mx-auto px-5 sm:px-6 pt-8">
+        <ToolDisclaimer />
+      </section>
+
+      <section className="max-w-[1280px] mx-auto px-5 sm:px-6 py-8 lg:py-12">{children}</section>
 
       {seoFaqs?.length ? <ToolSeoBlock title="Common questions" items={seoFaqs} /> : null}
 
+      {sources.length ? <ToolSources sources={sources} /> : null}
+
       <ToolHook tool={tool} />
     </main>
+  );
+}
+
+export function ToolDisclaimer({ compact = false }: { compact?: boolean }) {
+  return (
+    <aside
+      className={[
+        "border border-[#e4e8ec] bg-white",
+        compact ? "p-4" : "p-5 sm:p-6",
+      ].join(" ")}
+      role="note"
+    >
+      <p className="font-sans text-[12px] font-bold tracking-[0.16em] uppercase text-[#b88400] mb-2">
+        Important
+      </p>
+      <p className="font-sans text-[14px] leading-[1.65] text-[#3d4a55] max-w-[70ch]">
+        {TOOL_DISCLAIMER}
+      </p>
+    </aside>
+  );
+}
+
+export function ToolSources({ sources }: { sources: ToolSource[] }) {
+  return (
+    <section className="max-w-[1280px] mx-auto px-5 sm:px-6 pb-14 lg:pb-16">
+      <h2 className="font-display text-[clamp(1.5rem,3vw,2rem)] tracking-wide text-[#071018] mb-3">
+        Official guides and further reading
+      </h2>
+      <p className="font-sans text-[14.5px] leading-[1.65] text-[#5a6a78] max-w-[54ch] mb-6">
+        Use these sources to check current rates and definitions. Swiftscope does not endorse third-party advice beyond linking the reference.
+      </p>
+      <ul className="space-y-4 max-w-3xl">
+        {sources.map((source) => (
+          <li key={source.href} className="border-b border-[#e4e8ec] pb-4">
+            <a
+              href={source.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group inline-flex items-center gap-2 font-sans text-[15px] font-bold text-[#071018] hover:text-[#b88400] transition-colors"
+            >
+              {source.label}
+              <ExternalLink size={14} className="opacity-50 group-hover:opacity-100" aria-hidden />
+            </a>
+            <p className="font-sans text-[13.5px] leading-[1.6] text-[#5a6a78] mt-1.5 max-w-[54ch]">
+              {source.note}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

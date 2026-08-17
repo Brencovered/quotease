@@ -2,12 +2,13 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
+import { ToolDisclaimer } from "@/components/marketing/tools/ToolShell";
 import { toolsByAudience } from "@/lib/marketing/tools";
 
 export const metadata: Metadata = {
   title: "Free tradie calculators and homeowner tools - Swiftscope",
   description:
-    "Free Australian tradie tools: true charge-out rate with super and unbillable time, margin vs markup converter, quote PDF generator, and vehicle cost calculator. Plus homeowner ballpark and DIY tools.",
+    "Free Australian tradie tools: true charge-out rate with super and unbillable time, margin vs markup converter, quote PDF generator, and vehicle cost calculator. Plus homeowner ballpark and DIY tools. Guidelines only, not financial advice.",
 };
 
 export default function ToolsIndexPage() {
@@ -26,13 +27,20 @@ export default function ToolsIndexPage() {
           <h1 className="font-display text-[clamp(2.2rem,5vw,3.4rem)] tracking-wide leading-[1.02] text-white max-w-[14ch] mb-4">
             Useful before you sign up.
           </h1>
-          <p className="font-sans text-[16px] leading-[1.65] text-[#c5d4e0] max-w-[48ch]">
+          <p className="font-sans text-[16px] leading-[1.65] text-[#c5d4e0] max-w-[48ch] mb-5">
             Calculators and checklists for tradies who price work, and homeowners who plan jobs. No login required.
+          </p>
+          <p className="font-sans text-[13px] leading-[1.6] text-white/55 max-w-[52ch] border-l-2 border-[#ffb400]/70 pl-4">
+            Planning guidelines only. Not financial, tax, or legal advice.
           </p>
         </div>
       </section>
 
-      <section className="max-w-[1280px] mx-auto px-5 sm:px-6 py-12 lg:py-16">
+      <section className="max-w-[1280px] mx-auto px-5 sm:px-6 pt-8">
+        <ToolDisclaimer />
+      </section>
+
+      <section className="max-w-[1280px] mx-auto px-5 sm:px-6 py-10 lg:py-14">
         <div className="mb-8">
           <p className="font-sans text-[12px] font-bold tracking-[0.16em] uppercase text-[#b88400] mb-2">
             For tradies
@@ -41,7 +49,7 @@ export default function ToolsIndexPage() {
             Solve the pricing headaches
           </h2>
           <p className="font-sans text-[15px] text-[#5a6a78] mt-2 max-w-[48ch]">
-            Built around Australian costs: super, unbillable time, GST, and ATO vehicle rates.
+            Built around Australian costs: super, unbillable time, GST, and ATO vehicle rates. Always verify with official sources.
           </p>
         </div>
         <ul className="grid md:grid-cols-2 gap-4 mb-16">

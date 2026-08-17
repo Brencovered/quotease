@@ -16,6 +16,88 @@ export type ToolMeta = {
   hookHref: string;
 };
 
+export const TOOL_DISCLAIMER =
+  "These free tools are planning guidelines only. They are not financial, tax, accounting, or legal advice. Rates and rules change. Confirm figures with your accountant or the ATO before you set prices, claim deductions, or make super payments.";
+
+export type ToolSource = { label: string; href: string; note: string };
+
+export const CHARGE_OUT_SOURCES: ToolSource[] = [
+  {
+    label: "ATO Super Guarantee rates",
+    href: "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/super-guarantee",
+    note: "Official Superannuation Guarantee percentage (currently 12% of ordinary time earnings / qualifying earnings).",
+  },
+  {
+    label: "ATO Super Guarantee rate increase notice",
+    href: "https://www.ato.gov.au/businesses-and-organisations/small-business-newsroom/the-final-sg-rate-increase-is-coming-on-1-july",
+    note: "ATO notice on the move to 12% SG.",
+  },
+  {
+    label: "Digit Super Guarantee employer guide",
+    href: "https://digit.business/insights/people-payroll/super-guarantee-rate-2025-26-australia",
+    note: "Employer-focused summary of SG rate, due dates, and Payday Super changes.",
+  },
+  {
+    label: "Finder hourly rate calculator guide",
+    href: "https://www.finder.com.au/business-insurance/hourly-rate-calculator",
+    note: "Australian benchmarks for building a charge-out from costs and realistic billable hours.",
+  },
+  {
+    label: "FigsFlow Australian charge-out rate breakdown",
+    href: "https://figsflow.com/calculators/charge-out-rate-calculator-au/",
+    note: "Breakdown of salaries, super, overheads, and non-billable time in charge-out math.",
+  },
+];
+
+export const MARGIN_SOURCES: ToolSource[] = [
+  {
+    label: "Xero AU Margin vs Markup guide",
+    href: "https://www.xero.com/au/glossary/margin-vs-markup/",
+    note: "Clear definitions: margin is profit on revenue; markup is profit on cost.",
+  },
+  {
+    label: "Xero margin calculator",
+    href: "https://www.xero.com/calculators/margin-calculator/",
+    note: "Shows why a 20% margin needs a 25% markup.",
+  },
+];
+
+export const VEHICLE_SOURCES: ToolSource[] = [
+  {
+    label: "ATO cents-per-kilometre method",
+    href: "https://www.ato.gov.au/individuals-and-families/income-deductions-offsets-and-records/deductions-you-can-claim/work-related-deductions/cars-transport-and-travel/motor-vehicle-and-car-expenses/expenses-for-a-car-you-own-or-lease/cents-per-kilometre-method",
+    note: "Official cents-per-km rates (88c for 2024–25 and 2025–26; check the year you are claiming).",
+  },
+  {
+    label: "ATO motor vehicle expenses (business)",
+    href: "https://www.ato.gov.au/businesses-and-organisations/income-deductions-and-concessions/income-and-deductions-for-business/deductions/deductions-for-motor-vehicle-expenses/cents-per-kilometre-method",
+    note: "Sole trader / partnership guidance on claiming car expenses.",
+  },
+];
+
+export const QUOTE_PDF_SOURCES: ToolSource[] = [
+  {
+    label: "Xero AU Margin vs Markup guide",
+    href: "https://www.xero.com/au/glossary/margin-vs-markup/",
+    note: "Useful when setting material margins on quote line items.",
+  },
+];
+
+export function sourcesForTool(slug: string): ToolSource[] {
+  switch (slug) {
+    case "charge-out-rate":
+      return CHARGE_OUT_SOURCES;
+    case "margin-markup":
+      return MARGIN_SOURCES;
+    case "vehicle-cost":
+      return VEHICLE_SOURCES;
+    case "quote-pdf":
+      return QUOTE_PDF_SOURCES;
+    default:
+      return [];
+  }
+}
+
 export const TOOLS: ToolMeta[] = [
   {
     slug: "charge-out-rate",
@@ -110,18 +192,18 @@ export const CHARGE_OUT_FAQS = [
   },
   {
     q: "Does this include the 12% superannuation guarantee?",
-    a: "Yes. The calculator defaults to 12% super on your net-plus-tax base so statutory contributions are part of the rate you need to charge.",
+    a: "Yes. The calculator defaults to 12% super on your net-plus-tax base as a planning input. Confirm employer SG obligations with the ATO. This tool is a guideline, not financial advice.",
   },
   {
     q: "Should I use break-even or the buffered charge-out?",
-    a: "Break-even covers costs. The buffered rate adds a profit margin so one quiet week or a materials surprise does not wipe you out. Most crews quote off the buffered number.",
+    a: "Break-even covers costs. The buffered rate adds a profit margin so one quiet week or a materials surprise does not wipe you out. Most crews quote off the buffered number. Check with your accountant before locking prices.",
   },
 ];
 
 export const MARGIN_FAQS = [
   {
     q: "What is the difference between margin and markup?",
-    a: "Markup is profit as a percent of cost. Margin is profit as a percent of sell price. A 20% markup on $1,000 is $1,200, which is only a 16.7% margin.",
+    a: "Markup is profit as a percent of cost. Margin is profit as a percent of sell price. A 20% markup on $1,000 is $1,200, which is only a 16.7% margin. See the Xero AU guide linked below.",
   },
   {
     q: "Should GST be inside my margin target?",
@@ -136,18 +218,18 @@ export const QUOTE_PDF_FAQS = [
   },
   {
     q: "Can I add payment terms and a signature line?",
-    a: "Yes. Choose 7-day payment, deposit, or a variation clause, and optionally include a client signature block on the PDF.",
+    a: "Yes. Choose 7-day payment, deposit, or a variation clause, and optionally include a client signature block on the PDF. Terms here are templates only. Get legal advice for your contracts.",
   },
 ];
 
 export const VEHICLE_FAQS = [
   {
     q: "What is the ATO cents-per-kilometre rate?",
-    a: "The ATO cents-per-km method is currently 88 cents per business kilometre for planning. If your true cost is higher, load a trip fee or higher charge-out so travel is not free work.",
+    a: "The ATO cents-per-km method is 88 cents per kilometre for the 2024–25 and 2025–26 income years (rates change. Always check the ATO page for the year you are claiming). This tool compares your estimated running cost to that rate for planning only.",
   },
   {
     q: "Why include a tool replacement pool?",
-    a: "Grinders, batteries, blades, and consumables wear out on site and rarely get line-itemed. Folding an annual tool pool into daily overhead stops that quiet leak.",
+    a: "Grinders, batteries, blades, and consumables wear out on site and rarely get line-itemed. Folding an annual tool pool into daily overhead stops that quiet leak. Not a tax deduction calculator.",
   },
 ];
 

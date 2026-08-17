@@ -83,7 +83,15 @@ export default function MarginMarkupCalculator() {
             ]}
           />
           <p className="font-sans text-[13.5px] leading-[1.6] text-[#5a6a78]">
-            A 20% markup on $1,000 is $1,200, but that is only a 16.7% margin. Mixing them up leaks profit on every job.
+            A 20% markup on $1,000 is $1,200, but that is only a 16.7% margin. Mixing them up leaks profit on every job.{" "}
+            <a
+              href="https://www.xero.com/au/glossary/margin-vs-markup/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-[#071018] underline underline-offset-2 hover:text-[#b88400]"
+            >
+              Xero AU Margin vs Markup guide
+            </a>
           </p>
         </ToolPanel>
 

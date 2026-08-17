@@ -115,7 +115,7 @@ export default function ChargeOutCalculator() {
 
         <ToolPanel title="Super, cover, and fixed overheads">
           <RangeField
-            label="Superannuation rate"
+            label="Superannuation rate (SG)"
             value={superPct}
             min={0}
             max={15}
@@ -123,6 +123,26 @@ export default function ChargeOutCalculator() {
             onChange={setSuperPct}
             display={`${superPct}% ≈ ${moneyAud(result.superAmount)}`}
           />
+          <p className="font-sans text-[13px] leading-[1.6] text-[#5a6a78] mb-4">
+            Australian Super Guarantee is currently 12% of ordinary time earnings. This slider is a planning input only.{" "}
+            <a
+              href="https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/super-guarantee"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-[#071018] underline underline-offset-2 hover:text-[#b88400]"
+            >
+              ATO Super Guarantee rates
+            </a>
+            {" · "}
+            <a
+              href="https://digit.business/insights/people-payroll/super-guarantee-rate-2025-26-australia"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-[#071018] underline underline-offset-2 hover:text-[#b88400]"
+            >
+              Digit employer guide
+            </a>
+          </p>
           <div className="grid sm:grid-cols-2 gap-x-5">
             <NumberField label="Workers compensation" value={workersComp} onChange={setWorkersComp} prefix="$" min={0} step={50} />
             <NumberField label="Rego" value={rego} onChange={setRego} prefix="$" min={0} step={50} />
