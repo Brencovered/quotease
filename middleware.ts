@@ -220,6 +220,14 @@ const BOT_PATTERNS: { pattern: RegExp; label: string }[] = [
   { pattern: /facebookexternalhit/i, label: "Facebook link preview" },
   { pattern: /slackbot/i, label: "Slack link preview" },
   { pattern: /vercel-screenshot/i, label: "Vercel (internal)" },
+  // Added after a 48h spike: 508 hits to /signup from 508 distinct IPs, a
+  // rotating proxy pool, self-identifying honestly in its own UA string.
+  // Lightpanda is a real, publicly available headless browser built for
+  // fast automated scraping/AI-agent use, not a disguised attack -- it
+  // just was not on this list yet, so it was being counted as human.
+  { pattern: /lightpanda/i, label: "Lightpanda (headless scraper)" },
+  { pattern: /oai-searchbot/i, label: "OpenAI SearchBot" },
+  { pattern: /meta-externalagent/i, label: "Meta (Facebook) link crawler" },
 ];
 
 /**
