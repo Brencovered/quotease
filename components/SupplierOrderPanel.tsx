@@ -556,7 +556,7 @@ export default function SupplierOrderPanel({
                     </label>
                     <p className="text-[11.5px] text-[var(--ink-faint)]">
                       Business name, trading name, and person ordering come from{" "}
-                      <a href="/settings" className="underline font-semibold text-[var(--ink-soft)]">Settings</a>.
+                      <Link href="/settings" className="underline font-semibold text-[var(--ink-soft)]">Settings</Link>.
                     </p>
                     <button
                       type="button"
