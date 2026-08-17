@@ -1,4 +1,6 @@
 -- Supplier contacts + order send log for job materials ordering
+-- Safe first-run SQL (no DROP). If re-running after a partial apply, skip
+-- any CREATE POLICY that already exists.
 
 create table if not exists public.supplier_contacts (
   id           uuid primary key default gen_random_uuid(),
@@ -17,11 +19,20 @@ create index if not exists supplier_contacts_profile_idx
 
 alter table public.supplier_contacts enable row level security;
 
-drop policy if exists "Business supplier contacts" on public.supplier_contacts;
-create policy "Business supplier contacts" on public.supplier_contacts
-  for all
-  using (profile_id in (select accessible_business_ids(auth.uid())))
-  with check (profile_id in (select accessible_business_ids(auth.uid())));
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename = 'supplier_contacts'
+      and policyname = 'Business supplier contacts'
+  ) then
+    create policy "Business supplier contacts" on public.supplier_contacts
+      for all
+      using (profile_id in (select accessible_business_ids(auth.uid())))
+      with check (profile_id in (select accessible_business_ids(auth.uid())));
+  end if;
+end $$;
 
 create table if not exists public.supplier_order_sends (
   id              uuid primary key default gen_random_uuid(),
@@ -51,8 +62,17 @@ create index if not exists supplier_order_sends_profile_idx
 
 alter table public.supplier_order_sends enable row level security;
 
-drop policy if exists "Business supplier order sends" on public.supplier_order_sends;
-create policy "Business supplier order sends" on public.supplier_order_sends
-  for all
-  using (profile_id in (select accessible_business_ids(auth.uid())))
-  with check (profile_id in (select accessible_business_ids(auth.uid())));
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename = 'supplier_order_sends'
+      and policyname = 'Business supplier order sends'
+  ) then
+    create policy "Business supplier order sends" on public.supplier_order_sends
+      for all
+      using (profile_id in (select accessible_business_ids(auth.uid())))
+      with check (profile_id in (select accessible_business_ids(auth.uid())));
+  end if;
+end $$;
