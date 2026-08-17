@@ -37,6 +37,12 @@ export async function POST(request: Request) {
   if (completeJob) {
     update.status = "complete";
     update.completed_at = new Date().toISOString();
+    if (job.quote_id) {
+      await supabase
+        .from("quotes")
+        .update({ completed_at: new Date().toISOString() })
+        .eq("id", job.quote_id);
+    }
   }
 
   if (typeof paymentAmount === "number" && paymentAmount > 0) {
@@ -48,7 +54,25 @@ export async function POST(request: Request) {
     } else {
       update.status = "partially_paid";
     }
-    await supabase.from("payments").insert({ job_id: jobId, profile_id: job.profile_id, amount: paymentAmount });
+    await supabase.from("payments").insert({
+      job_id: jobId,
+      quote_id: job.quote_id ?? null,
+      profile_id: job.profile_id,
+      amount: paymentAmount,
+    });
+
+    // Mirror onto the linked quote so quote-centric actions/lists stay aligned.
+    if (job.quote_id) {
+      await supabase
+        .from("quotes")
+        .update({
+          amount_paid: newAmountPaid,
+          ...(newAmountPaid >= (job.total_cost ?? 0)
+            ? { status: "paid", paid_at: new Date().toISOString() }
+            : {}),
+        })
+        .eq("id", job.quote_id);
+    }
 
     const { sendPushToBusiness } = await import("@/lib/push");
     await sendPushToBusiness(createAdminClient(), job.profile_id, {

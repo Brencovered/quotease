@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PAYMENT_TERM_PRESETS } from "@/lib/paymentTerms";
 import { ChevronRight, ChevronLeft, Check, Plus, Trash2, Paperclip, X, Sparkles } from "lucide-react";
-import { calcGenericQuote, GENERIC_TRADE_TEMPLATES, type GenericLineItem, type GenericIntake } from "@/lib/genericTrades";
+import { calcGenericQuote, GENERIC_TRADE_TEMPLATES, ALL_TRADES, type GenericLineItem, type GenericIntake } from "@/lib/genericTrades";
 import StepCustomer from "./StepCustomer";
 import PackagePicker from "@/components/PackagePicker";
 import VoiceNoteRecorder from "./VoiceNoteRecorder";
@@ -19,11 +19,14 @@ import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import CategoryMaterialPicker, { type PickerItem } from "@/components/CategoryMaterialPicker";
 import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
+import PreferredStartDateField from "@/components/PreferredStartDateField";
+import { splitGst } from "@/lib/gst";
 import { persistAnnotationFrames } from "@/lib/siteAnnotations";
 import JobDescriptionField from "@/components/JobDescriptionField";
-import { MaterialSearchAdd, ScopeItemsList } from "@/components/ScopeOfWorkStep";
+import { MaterialSearchAdd, ScopeItemsList, type ScopeItem } from "@/components/ScopeOfWorkStep";
 import PeripheralsPanel from "@/components/PeripheralsPanel";
 import type { SiteConditionTemplateRow } from "@/lib/peripherals";
+import TradeEstimateAssistant, { DEDICATED_ESTIMATE_TRADES, type DedicatedTradeKey } from "@/components/TradeEstimateAssistant";
 
 const STEPS = [
   { id: "customer", label: "Customer" },
@@ -32,6 +35,14 @@ const STEPS = [
   { id: "items",   label: "Items" },
   { id: "send",    label: "Send" },
 ];
+
+/** Job types for dedicated trades now sharing this shell. */
+const DEDICATED_JOB_TYPES: Record<string, string[]> = {
+  electrician: ["Renovation / alteration", "New build", "Fault find / repair", "Compliance / inspection", "EV charger", "Switchboard upgrade"],
+  plumber: ["Renovation", "New build", "Fault find", "Gasfitting", "Drainage", "Compliance"],
+  carpenter: ["Renovation", "New build", "Deck", "Framing", "Fit-out", "Repair"],
+  roofer: ["Re-roof", "Repair", "New roof", "Gutters & fascia", "Inspection"],
+};
 
 let nextId = 1;
 function uid() { return `item_${nextId++}`; }
@@ -82,6 +93,9 @@ export default function GenericQuoteBuilder({
   // uploaded price book rather than a pre-filtered slice).
   const [pickingItemId, setPickingItemId] = useState<string | null>(null);
   const template = GENERIC_TRADE_TEMPLATES[tradeKey] ?? GENERIC_TRADE_TEMPLATES.custom;
+  const tradeLabel = ALL_TRADES.find((t) => t.key === tradeKey)?.label ?? template.label;
+  const jobTypes = DEDICATED_JOB_TYPES[tradeKey] ?? template.jobTypes;
+  const showEstimateAssistant = DEDICATED_ESTIMATE_TRADES.has(tradeKey);
   const [margin, setMargin] = useState(profile.materials_margin_pct ?? 20);
 
   const [selectedPricingTierId, setSelectedPricingTierId] = useState<string | null>(null);
@@ -102,7 +116,7 @@ export default function GenericQuoteBuilder({
   }, [selectedPricingTier, selectedJobSizeTier, profile.materials_margin_pct]);
 
   const [step,        setStep]        = useState(0);
-  const [jobType,     setJobType]     = useState(template.jobTypes[0]);
+  const [jobType,     setJobType]     = useState(jobTypes[0] ?? "Custom job");
   const [description, setDescription] = useState("");
   const [siteAccess,  setSiteAccess]  = useState<GenericIntake["siteAccess"]>("na");
   const [siteAccessNote, setSiteAccessNote] = useState("");
@@ -121,6 +135,7 @@ export default function GenericQuoteBuilder({
   const [siteAddress, setSiteAddress] = useState("");
   const [clientId, setClientId] = useState<string | null>(preClientId ?? null);
   const [plannedCrew, setPlannedCrew] = useState<string[]>([]);
+  const [scheduledDate, setScheduledDate] = useState("");
   const [drawingFiles, setDrawingFiles] = useState<File[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
@@ -129,7 +144,7 @@ export default function GenericQuoteBuilder({
   const [analysisSource, setAnalysisSource] = useState<"drawing" | "voice">("drawing");
   const [usageLimitReached, setUsageLimitReached] = useState(false);
   const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">("full_on_completion");
-  const [siteItems,     setSiteItems]     = useState<{id:string;label:string;qty:number;unit:string;note:string;materialsCost:number;labourHrs:number}[]>(
+  const [siteItems,     setSiteItems]     = useState<ScopeItem[]>(
     () => markupMaterialsToScopeItems(preMarkupMaterials, preMarkupSource ?? "plan markup")
   );
   const [annotationMeta, setAnnotationMeta] = useState<{id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string;roomName?:string}[]>([]);
@@ -162,6 +177,7 @@ export default function GenericQuoteBuilder({
   const displayLabourDollar = Math.round(baseLabourDollar) + extraTotalsForDisplay.labour;
   const displayMaterialsDollar = Math.round(result.materialsCost + extraTotalsForDisplay.materials);
   const displayGrandTotal = result.totalCost + siteTotal + extraTotalsForDisplay.total;
+  const displayGst = splitGst(displayGrandTotal);
 
   // Sticky header only: no room there for a separate "on-site items" chip
   // (that breakdown appears further down), so its Labour/Materials figures
@@ -199,7 +215,7 @@ export default function GenericQuoteBuilder({
       const { ok, body, parseError } = await analyzeDrawingFile(
         fileForAnalysis,
         tradeKey ?? "default",
-        `This is a ${template.label.toLowerCase()} job. Focus on what a ${template.label.toLowerCase()} would need to quote from this.`
+        `This is a ${tradeLabel.toLowerCase()} job. Focus on what a ${tradeLabel.toLowerCase()} would need to quote from this.`
       );
       if (parseError) { setAnalysisError(parseError); return; }
       if (!ok) { setAnalysisError(body.error ?? "Analysis failed"); if (body.usageLimitReached) setUsageLimitReached(true); return; }
@@ -217,7 +233,7 @@ export default function GenericQuoteBuilder({
       const res = await fetch("/api/quotes/analyze-voice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript, trade: tradeKey ?? "generic", instructions: `This is a ${template.label.toLowerCase()} job. Focus on what a ${template.label.toLowerCase()} would need to quote from this.` }),
+        body: JSON.stringify({ transcript, trade: tradeKey ?? "generic", instructions: `This is a ${tradeLabel.toLowerCase()} job. Focus on what a ${tradeLabel.toLowerCase()} would need to quote from this.` }),
       });
       const { ok, body, parseError } = await safeParseApiResponse(res);
       if (parseError) { setAnalysisError(parseError); return; }
@@ -261,6 +277,7 @@ export default function GenericQuoteBuilder({
       trade:         tradeKey,
       job_type:      jobType,
       planned_crew_member_ids: plannedCrew,
+      scheduled_date: scheduledDate || null,
       intake_data:   { ...intakeData, site_items: siteItems, annotation_meta: persistedAnnotations },
       labour_hours:  result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0) + siteLabourSave,
       materials_cost: result.materialsCost + extraTotals.materials + siteMatlsSave,
@@ -276,6 +293,22 @@ export default function GenericQuoteBuilder({
     }).select().single();
 
     if (error) { setSaveMessage(error.message); setSaving(false); return; }
+
+    for (const file of drawingFiles) {
+      const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+      const path = `${businessId}/${quote.id}/${Date.now()}-${safeName}`;
+      const { error: uploadError } = await supabase.storage.from("job-files").upload(path, file);
+      if (!uploadError) {
+        await supabase.from("job_attachments").insert({
+          quote_id: quote.id,
+          profile_id: businessId,
+          file_name: file.name,
+          storage_path: path,
+          file_type: file.type,
+          file_size: file.size,
+        });
+      }
+    }
 
     if (sendEmail) {
       const res = await fetch("/api/quotes/send", {
@@ -316,7 +349,7 @@ export default function GenericQuoteBuilder({
             </div>
           </div>
           <div className="text-right">
-            <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Total</p>
+            <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Total ex GST</p>
             <p className="font-display text-[24px] text-[var(--amber)] leading-tight">${displayGrandTotal.toLocaleString()}</p>
           </div>
         </div>
@@ -465,7 +498,7 @@ export default function GenericQuoteBuilder({
             <div className="space-y-3">
               <Field label="Job type">
                 <select value={jobType} onChange={(e) => setJobType(e.target.value)} className="app-field">
-                  {template.jobTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+                  {jobTypes.map((t) => <option key={t} value={t}>{t}</option>)}
                   <option value="Other">Other</option>
                 </select>
               </Field>
@@ -568,12 +601,27 @@ export default function GenericQuoteBuilder({
               </select>
             </div>
           )}
+          <PreferredStartDateField value={scheduledDate} onChange={setScheduledDate} />
         </div>
       )}
 
       {/* Step: Items */}
       {stepId === "items" && (
         <div className="space-y-4">
+          {showEstimateAssistant && (
+            <TradeEstimateAssistant
+              tradeKey={tradeKey as DedicatedTradeKey}
+              hourlyRate={profile.hourly_rate ?? 85}
+              materials={lib}
+              onApply={(rows) => setSiteItems((prev) => [...prev, ...rows])}
+              onReplace={(rows) =>
+                setSiteItems((prev) => [
+                  ...prev.filter((i) => i.source !== "estimate"),
+                  ...rows,
+                ])
+              }
+            />
+          )}
           <div className="card">
             <div className="flex items-center justify-between mb-3">
               <p className="section-tag">Line items</p>
@@ -691,9 +739,17 @@ export default function GenericQuoteBuilder({
                 <span className="text-[var(--steel-2)]">Materials</span>
                 <span className="text-white font-semibold tabular">${headerMaterialsDollar.toLocaleString()}</span>
               </div>
+              <div className="border-t border-white/10 pt-2 flex justify-between text-[14px]">
+                <span className="text-[var(--steel-2)]">Subtotal (ex GST)</span>
+                <span className="text-white font-semibold tabular">${displayGst.ex.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-[14px]">
+                <span className="text-[var(--steel-2)]">GST (10%)</span>
+                <span className="text-white font-semibold tabular">${displayGst.gst.toLocaleString()}</span>
+              </div>
               <div className="border-t border-white/10 pt-2 flex justify-between">
-                <span className="text-white font-bold text-[15px]">Total</span>
-                <span className="font-display text-[24px] text-[var(--amber)] tabular">${displayGrandTotal.toLocaleString()}</span>
+                <span className="text-white font-bold text-[15px]">Total inc GST</span>
+                <span className="font-display text-[24px] text-[var(--amber)] tabular">${displayGst.inc.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -724,7 +780,7 @@ export default function GenericQuoteBuilder({
                 {paymentTerms.map((t, i) => (
                   <div key={i} className="flex justify-between text-[13.5px]">
                     <span className="text-[var(--ink-soft)]">{t.label}</span>
-                    <span className="font-bold tabular">{t.percent}% - ${Math.round(displayGrandTotal * t.percent / 100).toLocaleString()}</span>
+                    <span className="font-bold tabular">{t.percent}% - ${Math.round(displayGst.inc * t.percent / 100).toLocaleString()}</span>
                   </div>
                 ))}
               </div>

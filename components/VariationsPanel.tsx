@@ -37,6 +37,7 @@ export default function VariationsPanel({ quoteId, jobId, hourlyRate, margin, va
   const [error, setError] = useState<string | null>(null);
   const [catalogQuery, setCatalogQuery] = useState("");
   const [catalogOpen, setCatalogOpen] = useState(false);
+  const [linkMsg, setLinkMsg] = useState<string | null>(null);
 
   const labourHours = Number(form.labour_hours) || 0;
   const materialsRaw = Number(form.materials_cost) || 0;
@@ -98,6 +99,24 @@ export default function VariationsPanel({ quoteId, jobId, hourlyRate, margin, va
     setVariations((prev) => prev.map((v) => v.id === id ? { ...v, ...patch } : v));
   }
 
+  function clientLink(v: Variation) {
+    if (!v.public_token) return null;
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    return `${origin}/v/${v.public_token}`;
+  }
+
+  async function copyClientLink(v: Variation) {
+    const url = clientLink(v);
+    if (!url) { setLinkMsg("Link not ready yet — refresh and try again"); return; }
+    try {
+      await navigator.clipboard.writeText(url);
+      setLinkMsg("Client link copied");
+      setTimeout(() => setLinkMsg(null), 2000);
+    } catch {
+      setLinkMsg(url);
+    }
+  }
+
   return (
     <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-4 sm:p-5">
       <div className="flex items-center justify-between mb-1">
@@ -113,6 +132,7 @@ export default function VariationsPanel({ quoteId, jobId, hourlyRate, margin, va
           Approved variations add ${approvedTotal.toLocaleString()} - revised job total: ${(quoteTotalCost + approvedTotal).toLocaleString()}
         </div>
       )}
+      {linkMsg && <p className="text-[12.5px] text-[var(--ink-faint)] mb-2">{linkMsg}</p>}
 
       {showForm && (
         <div className="bg-[var(--app-bg)] rounded-xl p-3 mb-4 space-y-2">
@@ -209,12 +229,18 @@ export default function VariationsPanel({ quoteId, jobId, hourlyRate, margin, va
                 </span>
               </div>
               {v.status === "pending" && (
-                <div className="flex gap-2 mt-2">
-                  <button onClick={() => updateStatus(v.id, "approved")} className="text-[12.5px] font-semibold bg-green-600 text-white rounded-lg px-3 py-1">Client approved</button>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <button onClick={() => copyClientLink(v)} className="text-[12.5px] font-semibold bg-[var(--navy)] text-white rounded-lg px-3 py-1">Copy client link</button>
+                  <button onClick={() => updateStatus(v.id, "approved")} className="text-[12.5px] font-semibold bg-green-600 text-white rounded-lg px-3 py-1">Mark approved</button>
                   <button onClick={() => updateStatus(v.id, "declined")} className="text-[12.5px] font-semibold text-red-600 border-2 border-[var(--line)] rounded-lg px-3 py-1">Declined</button>
                 </div>
               )}
-              {v.client_approved_at && <p className="text-[11px] text-[var(--ink-faint)] mt-1">Approved {new Date(v.client_approved_at).toLocaleDateString("en-AU")}</p>}
+              {v.client_approved_at && (
+                <p className="text-[11px] text-[var(--ink-faint)] mt-1">
+                  Approved {new Date(v.client_approved_at).toLocaleDateString("en-AU")}
+                  {v.client_signer_name ? ` by ${v.client_signer_name}` : ""}
+                </p>
+              )}
             </div>
           );
         })}

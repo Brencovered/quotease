@@ -13,7 +13,7 @@ import JobFilesPanel from "@/components/JobFilesPanel";
 import JobCrewPanel from "@/components/JobCrewPanel";
 import JobBriefPanel from "@/components/JobBriefPanel";
 import JobTasksPanel from "@/components/JobTasksPanel";
-import MaterialsChecklistPanel from "@/components/MaterialsChecklistPanel";
+import SupplierOrderPanel from "@/components/SupplierOrderPanel";
 import JobTimeline from "@/components/JobTimeline";
 import JobPlansPanel from "@/components/JobPlansPanel";
 import SiteAnnotationReport from "@/components/SiteAnnotationReport";
@@ -21,6 +21,7 @@ import { resolveAnnotationFrameUrls, type AnnotationMetaPersisted } from "@/lib/
 import JobActionsBar from "@/components/JobActionsBar";
 import QuickJobActionsBar from "@/components/QuickJobActionsBar";
 import JobProgressStepper from "@/components/JobProgressStepper";
+import JobLineItemsPanel from "@/components/JobLineItemsPanel";
 import TimesheetsPanel from "@/components/TimesheetsPanel";
 import JobTabs from "@/components/JobTabs";
 import { humanizeIntake, summarizeConditions } from "@/lib/scopeOfWorks";
@@ -77,6 +78,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     { data: crewRows },
     resolvedAnnotations,
     jobPlans,
+    { data: lineItemRows },
   ] = await Promise.all([
     (async (): Promise<Array<{ item_key: string; label: string; unit_cost: number }>> => {
       const pbItems = await getCachedPriceBook(businessId, jobTrade);
@@ -108,9 +110,11 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
       const urlByPath = new Map((signedBatch ?? []).map((s) => [s.path, s.signedUrl]));
       return plans.map((p) => ({ ...p, signedUrl: urlByPath.get(p.storage_path) }));
     })(),
+    supabase.from("job_line_items").select("*").eq("job_id", job.id).order("sort_order"),
   ]);
   const teamMembers: Array<{ id: string; name: string | null; email: string }> = teamRows ?? [];
   const jobCrew: Array<{ id: string; team_member_id: string }> = crewRows ?? [];
+  const lineItems = lineItemRows ?? [];
   const assignedMember = teamMembers.find((m) => m.id === job.assigned_to_member_id);
 
   // Approved variations and drawing-markup materials add to what's owed on
@@ -120,7 +124,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     .filter((v: { status: string; total_cost: number }) => v.status === "approved")
     .reduce((sum: number, v: { total_cost: number }) => sum + (v.total_cost ?? 0), 0);
   const effectiveTotal = (job.total_cost ?? 0) + approvedVariationsTotal + markupMaterials;
-  const amountPaid = quote ? (quote.amount_paid ?? 0) : (job.amount_paid ?? 0);
+  const amountPaid = Math.max(quote?.amount_paid ?? 0, job.amount_paid ?? 0);
 
   const ARCHIVE_STATUSES = ["archived", "cancelled"];
   const stepperColumns = (boardColumns ?? []).filter((c) => !c.statuses.every((s: string) => ARCHIVE_STATUSES.includes(s)));
@@ -248,11 +252,13 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               {quote ? (
                 <JobActionsBar
                   quoteId={quote.id}
+                  jobId={job.id}
                   status={quote.status}
+                  jobStatus={job.status}
                   totalCost={effectiveTotal}
                   amountPaid={amountPaid}
                   hasClientEmail={!!quote.client_email}
-                  completedAt={quote.completed_at}
+                  completedAt={job.completed_at ?? quote.completed_at}
                 />
               ) : (
                 <QuickJobActionsBar
@@ -265,6 +271,30 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               )}
 
               <JobTasksPanel quoteId={quote?.id ?? null} jobId={job.id} profileId={businessId} initialTasks={taskRows ?? []} teamMembers={teamMembers} />
+
+              <JobLineItemsPanel
+                jobId={job.id}
+                initialItems={lineItems as never}
+                scopeLines={scopeLines}
+              />
+
+              <SupplierOrderPanel
+                jobId={job.id}
+                quoteId={quote?.id ?? null}
+                jobNumber={job.job_number}
+                clientName={job.client_name}
+                siteAddress={job.site_address}
+                scopeLines={scopeLines}
+                jobLineItems={(lineItems as Array<{ id: string; label: string; quantity: number; unit: string; status: string }>).map((l) => ({
+                  id: l.id,
+                  label: l.label,
+                  quantity: l.quantity,
+                  unit: l.unit,
+                  status: l.status,
+                }))}
+                tradeMaterials={tradeMaterials}
+                trade={jobTrade}
+              />
 
               <DocketsPanel
                 jobId={job.id}
@@ -295,9 +325,6 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               ) : (
                 <p className="text-[13px] text-[var(--ink-faint)]">Plan markup needs a linked quote - this job was created without one.</p>
               )}
-              {quote && (
-                <MaterialsChecklistPanel quoteId={quote.id} initialChecklist={quote.materials_checklist ?? []} scopeLines={scopeLines} clientName={job.client_name} />
-              )}
               {/* Only renders anything if this job's quote actually went
                   through live site markup - no camera use, no report. */}
               <SiteAnnotationReport annotations={resolvedAnnotations} />
@@ -305,19 +332,17 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           }
           schedule={
             <>
-              {quote ? (
-                <JobBriefPanel
-                  quoteId={quote.id}
-                  siteNotes={quote.site_notes}
-                  scheduledStart={quote.scheduled_start}
-                  estimatedDays={quote.estimated_days}
-                  assignedTo={quote.assigned_to}
-                  assignedToMemberId={quote.assigned_to_member_id}
+              <JobBriefPanel
+                  jobId={job.id}
+                  quoteId={quote?.id ?? null}
+                  siteNotes={job.site_notes ?? quote?.site_notes ?? null}
+                  scheduledStart={job.scheduled_start ?? quote?.scheduled_start ?? null}
+                  estimatedDays={job.estimated_days ?? quote?.estimated_days ?? null}
+                  assignedTo={quote?.assigned_to ?? null}
+                  assignedToMemberId={job.assigned_to_member_id ?? quote?.assigned_to_member_id ?? null}
                   teamMembers={teamMembers}
+                  crewMemberIds={jobCrew.map((c: { team_member_id: string }) => c.team_member_id)}
                 />
-              ) : (
-                <p className="text-[13px] text-[var(--ink-faint)]">Scheduling needs a linked quote - this job was created without one.</p>
-              )}
               <JobCrewPanel jobId={job.id} initialCrew={jobCrew} teamMembers={teamMembers} />
               {isAdmin && (
                 <TimesheetsPanel jobId={job.id} entries={timesheetEntries as never} teamMembers={teamMembers} ownerName={userData.user.email ?? "Owner"} />

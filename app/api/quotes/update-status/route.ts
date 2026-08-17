@@ -80,6 +80,27 @@ export async function POST(request: Request) {
       const paymentJob = await getOrCreateJobForQuote(supabase, quoteId);
       await supabase.from("payments").insert({ quote_id: quoteId, job_id: paymentJob?.id ?? null, profile_id: businessId, amount: paymentAmount });
 
+      // Keep jobs.amount_paid / status in lockstep with the quote so the
+      // board and job detail don't drift after a payment is recorded here.
+      if (paymentJob) {
+        const jobStatus =
+          newAmountPaid >= effectiveTotal
+            ? "invoiced"
+            : newAmountPaid > 0
+              ? "partially_paid"
+              : paymentJob.status;
+        await supabase
+          .from("jobs")
+          .update({
+            amount_paid: newAmountPaid,
+            status: jobStatus,
+            ...(newAmountPaid >= effectiveTotal
+              ? { invoiced_at: new Date().toISOString(), paid_at: new Date().toISOString() }
+              : {}),
+          })
+          .eq("id", paymentJob.id);
+      }
+
       const { sendPushToBusiness } = await import("@/lib/push");
       await sendPushToBusiness(createAdminClient(), businessId, {
         title: "Payment received 💰",

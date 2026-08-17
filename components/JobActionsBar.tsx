@@ -4,16 +4,27 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import WinCelebration from "./WinCelebration";
 
+/**
+ * Actions for quote-sourced jobs. When `jobId` is present (job detail),
+ * complete/payment go through the jobs API so board status and amount_paid
+ * stay aligned. Pre-accept quote actions still use the quotes API.
+ */
 export default function JobActionsBar({
   quoteId,
+  jobId,
   status,
+  jobStatus,
   totalCost,
   amountPaid,
   hasClientEmail,
   completedAt,
 }: {
   quoteId: string;
+  jobId?: string | null;
+  /** Quote lifecycle status (draft/sent/accepted/paid). */
   status: string;
+  /** Board/job status when on a job detail page. */
+  jobStatus?: string | null;
   totalCost: number;
   amountPaid: number;
   hasClientEmail: boolean;
@@ -27,14 +38,29 @@ export default function JobActionsBar({
   const [payVal, setPayVal] = useState("");
 
   const owing = Math.max(totalCost - amountPaid, 0);
+  const showJobOps = Boolean(jobId) && (status === "accepted" || status === "paid" || Boolean(jobStatus));
 
-  async function updateStatus(body: Record<string, unknown>) {
+  async function updateQuoteStatus(body: Record<string, unknown>) {
     setBusy(true);
     setMessage(null);
     const res = await fetch("/api/quotes/update-status", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ quoteId, ...body }),
+    });
+    setBusy(false);
+    if (res.ok) router.refresh();
+    else setMessage("Something went wrong - try again.");
+  }
+
+  async function updateJobStatus(body: Record<string, unknown>) {
+    if (!jobId) return updateQuoteStatus(body);
+    setBusy(true);
+    setMessage(null);
+    const res = await fetch("/api/jobs/update-status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jobId, ...body }),
     });
     setBusy(false);
     if (res.ok) router.refresh();
@@ -61,7 +87,7 @@ export default function JobActionsBar({
 
   function acceptWithCelebration() {
     setCelebrating(true);
-    setTimeout(() => updateStatus({ status: "accepted" }), 1100);
+    setTimeout(() => updateQuoteStatus({ status: "accepted" }), 1100);
   }
 
   return (
@@ -86,54 +112,77 @@ export default function JobActionsBar({
             <button onClick={acceptWithCelebration} disabled={busy} className="btn-primary text-[13px] py-2 px-4">
               Mark accepted
             </button>
-            <button onClick={() => updateStatus({ status: "declined" })} disabled={busy} className="text-[13px] font-semibold text-[var(--red)] border-2 border-[var(--line)] rounded-lg py-2 px-4">
+            <button onClick={() => updateQuoteStatus({ status: "declined" })} disabled={busy} className="text-[13px] font-semibold text-[var(--red)] border-2 border-[var(--line)] rounded-lg py-2 px-4">
               Mark declined
             </button>
           </>
         )}
 
-        {status === "accepted" && (
+        {showJobOps && (
           <>
-            {!completedAt && (
-              <button onClick={() => updateStatus({ completeJob: true })} disabled={busy} className="btn-secondary text-[13px] py-2 px-4">
+            {!completedAt && jobStatus !== "complete" && (
+              <button onClick={() => updateJobStatus({ completeJob: true })} disabled={busy} className="btn-secondary text-[13px] py-2 px-4">
                 Mark job complete
               </button>
             )}
             {owing > 0 && (
-              payOpen ? (
-                <span className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    autoFocus
-                    value={payVal}
-                    onChange={(e) => setPayVal(e.target.value)}
-                    placeholder={`up to ${owing}`}
-                    className="app-field text-[13px] py-2 w-28"
-                  />
-                  <button
-                    onClick={async () => {
-                      await updateStatus({ paymentAmount: Math.min(Number(payVal) || 0, owing) });
-                      setPayOpen(false);
-                      setPayVal("");
-                    }}
-                    disabled={busy}
-                    className="btn-primary text-[13px] py-2 px-4"
-                  >
-                    Save
-                  </button>
-                </span>
-              ) : (
-                <button onClick={() => { setPayOpen(true); setPayVal(String(owing)); }} className="btn-secondary text-[13px] py-2 px-4">
-                  Record payment (${owing.toLocaleString()} owing)
-                </button>
-              )
+              <button onClick={() => setPayOpen((o) => !o)} disabled={busy} className="btn-primary text-[13px] py-2 px-4">
+                Record payment
+              </button>
+            )}
+            {owing <= 0 && amountPaid > 0 && (
+              <span className="text-[13px] font-semibold text-[var(--green)] self-center">Paid in full</span>
             )}
           </>
         )}
 
-        {status === "paid" && <span className="text-[13px] text-[var(--green)] font-semibold">Paid in full</span>}
+        {status === "accepted" && !jobId && (
+          <>
+            {!completedAt && (
+              <button onClick={() => updateQuoteStatus({ completeJob: true })} disabled={busy} className="btn-secondary text-[13px] py-2 px-4">
+                Mark job complete
+              </button>
+            )}
+            {owing > 0 && (
+              <button onClick={() => setPayOpen((o) => !o)} disabled={busy} className="btn-primary text-[13px] py-2 px-4">
+                Record payment
+              </button>
+            )}
+          </>
+        )}
       </div>
-      {message && <p className="text-[12.5px] text-[var(--ink-faint)] mt-2">{message}</p>}
+
+      {payOpen && (
+        <div className="mt-3 flex flex-wrap items-end gap-2">
+          <label className="block">
+            <span className="block text-[12px] text-[var(--ink-faint)] mb-1">Amount (owing ${owing.toLocaleString()})</span>
+            <input
+              type="number"
+              min={0}
+              value={payVal}
+              onChange={(e) => setPayVal(e.target.value)}
+              className="app-field w-36"
+              placeholder={String(owing)}
+            />
+          </label>
+          <button
+            disabled={busy || !(Number(payVal) > 0)}
+            onClick={() => {
+              const amount = Number(payVal);
+              if (!(amount > 0)) return;
+              if (jobId) updateJobStatus({ paymentAmount: amount });
+              else updateQuoteStatus({ paymentAmount: amount });
+              setPayOpen(false);
+              setPayVal("");
+            }}
+            className="btn-primary text-[13px] py-2 px-4"
+          >
+            Save payment
+          </button>
+        </div>
+      )}
+
+      {message && <p className="text-[13px] text-[var(--ink-faint)] mt-2">{message}</p>}
     </div>
   );
 }

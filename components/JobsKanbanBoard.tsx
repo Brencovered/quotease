@@ -175,6 +175,14 @@ export default function JobsKanbanBoard({ jobs: initialJobs, columns: initialCol
                         <Link href={`/jobs/${j.id}`} className="min-w-0 flex-1">
                           <p className="text-[13px] font-bold text-[var(--ink)] truncate">{j.client_name || "Unnamed client"}</p>
                           <p className="text-[11px] text-[var(--ink-faint)]">Job #{j.job_number}</p>
+                          {(j.scheduled_start || j.scheduled_date) && (
+                            <p className="text-[11px] text-[var(--ink-faint)] mt-0.5">
+                              {new Date(j.scheduled_start ?? j.scheduled_date!).toLocaleDateString("en-AU", {
+                                day: "numeric",
+                                month: "short",
+                              })}
+                            </p>
+                          )}
                         </Link>
                         <div className="relative shrink-0">
                           <button onClick={() => setMenuId(menuId === j.id ? null : j.id)} className="text-[var(--ink-faint)] hover:text-[var(--ink)] p-0.5">

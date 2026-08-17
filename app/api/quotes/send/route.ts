@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveBusinessId } from "@/lib/team";
+import { incGst } from "@/lib/gst";
 
 // Requires a RESEND_API_KEY env var (https://resend.com) and a verified sending domain.
 export async function POST(request: Request) {
@@ -58,6 +59,8 @@ export async function POST(request: Request) {
   }
 
   const business = quote.profiles?.business_name ?? "Your tradie";
+  // Quotes store ex-GST; email shows the client-facing GST-inclusive total.
+  const displayTotal = incGst(quote.total_cost ?? 0);
 
   const logoHtml = quote.profiles?.logo_url
     ? `<img src="${quote.profiles.logo_url}" alt="${business}" style="max-height:52px;max-width:200px;display:block;margin-bottom:4px;" />`
@@ -105,7 +108,7 @@ export async function POST(request: Request) {
   <tr><td style="background:#ffb400;padding:12px 32px;">
     <table width="100%" cellpadding="0" cellspacing="0"><tr>
       <td style="font-family:Arial Black,Arial,sans-serif;font-size:13px;font-weight:900;letter-spacing:2px;color:#0a1722;">QUOTE</td>
-      <td align="right" style="font-family:Arial Black,Arial,sans-serif;font-size:22px;font-weight:900;color:#0a1722;">$${(quote.total_cost ?? 0).toLocaleString()}</td>
+      <td align="right" style="font-family:Arial Black,Arial,sans-serif;font-size:22px;font-weight:900;color:#0a1722;">$${displayTotal.toLocaleString()} <span style="font-size:11px;font-weight:700;">inc GST</span></td>
     </tr></table>
   </td></tr>
 
@@ -134,8 +137,8 @@ export async function POST(request: Request) {
     <!-- Quote summary strip -->
     <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:24px;">
       <tr style="background:#0a1722;">
-        <td style="padding:12px 14px;font-size:14px;font-weight:800;color:#ffffff;">Total</td>
-        <td style="padding:12px 14px;font-size:20px;font-weight:900;color:#ffb400;text-align:right;">$${(quote.total_cost ?? 0).toLocaleString()}</td>
+        <td style="padding:12px 14px;font-size:14px;font-weight:800;color:#ffffff;">Total inc GST</td>
+        <td style="padding:12px 14px;font-size:20px;font-weight:900;color:#ffb400;text-align:right;">$${displayTotal.toLocaleString()}</td>
       </tr>
     </table>
 
@@ -179,7 +182,7 @@ export async function POST(request: Request) {
       // tradie, not Swiftscope's own inbox - hence reply_to.
       ...(quote.profiles?.contact_email ? { reply_to: quote.profiles.contact_email } : {}),
       to: quote.client_email,
-      subject: `Quote from ${business} - $${(quote.total_cost ?? 0).toLocaleString()}`,
+      subject: `Quote from ${business} - $${displayTotal.toLocaleString()} inc GST`,
       html,
     }),
   });

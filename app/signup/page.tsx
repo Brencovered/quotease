@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
+import { PRODUCT_TRADES } from "@/lib/genericTrades";
 import {
   Timer, DollarSign, Search, Shield, X, Check, Mail,
   ArrowRight, Sparkles, Users, MapPin, Briefcase,
@@ -14,23 +15,7 @@ const SUPABASE_CONFIGURED =
   !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
   !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder");
 
-const TRADES = [
-  { key: "electrician", label: "Electrician" },
-  { key: "plumber",     label: "Plumber" },
-  { key: "carpenter",   label: "Carpenter" },
-  { key: "roofer",      label: "Roofer" },
-  { key: "painter",     label: "Painter" },
-  { key: "tiler",       label: "Tiler" },
-  { key: "landscaper",  label: "Landscaper" },
-  { key: "builder",     label: "Builder" },
-  { key: "fencer",      label: "Fencer" },
-  { key: "concreter",   label: "Concreter" },
-  { key: "aircon",      label: "Air Conditioning" },
-  { key: "handyman",    label: "Handyman" },
-  { key: "surveyor",    label: "Surveyor" },
-  { key: "arborist",    label: "Arborist" },
-  { key: "plasterer",   label: "Plasterer" },
-];
+const TRADES = PRODUCT_TRADES;
 
 function getPasswordStrength(password: string): { score: number; label: string; color: string } {
   let score = 0;

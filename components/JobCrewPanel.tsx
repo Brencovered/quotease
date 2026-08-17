@@ -34,6 +34,7 @@ export default function JobCrewPanel({
   const [adding, setAdding] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [clashWarning, setClashWarning] = useState<string | null>(null);
 
   const onJob = new Set(crew.map((c) => c.team_member_id));
   const available = teamMembers.filter((m) => !onJob.has(m.id));
@@ -42,7 +43,41 @@ export default function JobCrewPanel({
     if (!adding) return;
     setSaving(true);
     setError(null);
+    setClashWarning(null);
     try {
+      const supabase = createClient();
+      const { data: thisJob } = await supabase
+        .from("jobs")
+        .select("scheduled_start, scheduled_date")
+        .eq("id", jobId)
+        .single();
+      const day = (thisJob?.scheduled_start ?? thisJob?.scheduled_date ?? "").slice(0, 10);
+      if (day) {
+        const { data: otherCrew } = await supabase
+          .from("job_crew")
+          .select("job_id, jobs!inner(id, job_number, client_name, scheduled_start, scheduled_date, status)")
+          .eq("team_member_id", adding)
+          .neq("job_id", jobId);
+        const hits = (otherCrew ?? []).filter((row) => {
+          const j = row.jobs as unknown as {
+            scheduled_start?: string | null;
+            scheduled_date?: string | null;
+            status?: string;
+            job_number?: number;
+            client_name?: string | null;
+          };
+          if (!j || ["cancelled", "archived", "complete"].includes(j.status ?? "")) return false;
+          const d = (j.scheduled_start ?? j.scheduled_date ?? "").slice(0, 10);
+          return d === day;
+        });
+        if (hits.length) {
+          const j = hits[0].jobs as unknown as { job_number?: number; client_name?: string | null };
+          setClashWarning(
+            `Already on Job #${j.job_number ?? "?"}${j.client_name ? ` (${j.client_name})` : ""} that day.`
+          );
+        }
+      }
+
       const res = await fetch(`/api/jobs/${jobId}/crew`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -92,6 +127,11 @@ export default function JobCrewPanel({
       </p>
 
       {error && <p className="text-[13px] text-red-600 mb-2">{error}</p>}
+      {clashWarning && (
+        <p className="text-[12.5px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-2">
+          {clashWarning}
+        </p>
+      )}
 
       {crew.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-3">

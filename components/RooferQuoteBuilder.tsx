@@ -11,6 +11,7 @@ import { normalizeForAnalysis } from "@/lib/imageNormalize";
 import { safeParseApiResponse } from "@/lib/safeParseApiResponse";
 import { analyzeDrawingFile } from "@/lib/analyzeDrawingClient";
 import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
+import PreferredStartDateField from "@/components/PreferredStartDateField";
 import { persistAnnotationFrames } from "@/lib/siteAnnotations";
 import JobDescriptionField from "@/components/JobDescriptionField";
 import StepCustomer from "./StepCustomer";
@@ -160,6 +161,7 @@ export default function RooferQuoteBuilder({
   const [siteAddress, setSiteAddress] = useState("");
   const [clientId, setClientId] = useState<string | null>(preClientId ?? null);
   const [plannedCrew, setPlannedCrew] = useState<string[]>([]);
+  const [scheduledDate, setScheduledDate] = useState("");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">("full_on_completion");
@@ -490,6 +492,7 @@ export default function RooferQuoteBuilder({
       trade: "roofer",
       job_type: `${MATERIALS[material].label} re-roof`,
       planned_crew_member_ids: plannedCrew,
+      scheduled_date: scheduledDate || null,
       intake_data: {
         jobs: jobs.map((j, i) => ({
           index: i + 1, area: j.area, pitch: j.pitchType, style: j.roofStyle,
@@ -502,7 +505,7 @@ export default function RooferQuoteBuilder({
       },
       labour_hours: formulaLabourHrs + siteLabourSave + manualLabourHrs,
       materials_cost: Math.round(summary.matCost + summary.extrasTotal + summary.colorSurcharge + siteMatlsSave),
-      total_cost: Math.round(summary.total + siteTotalSave + manualLabourHrs * rate),
+      total_cost: Math.round(summary.subtotal + siteTotalSave + manualLabourHrs * rate),
       payment_terms: paymentTerms,
       pricing_tier_id: selectedPricingTierId,
       job_size_tier_id: selectedJobSizeTierId,
@@ -572,7 +575,9 @@ export default function RooferQuoteBuilder({
         </div>
         {summary && (
           <div className="text-right">
-            <p className="font-display text-[2rem] text-[var(--amber-deep)]">${Math.round(summary.total + siteTotal).toLocaleString()}</p>
+            <p className="font-display text-[2rem] text-[var(--amber-deep)]">
+              ${Math.round((summary.subtotal + siteTotal) * 1.1).toLocaleString()}
+            </p>
             <p className="text-[11px] text-[var(--ink-faint)] font-semibold">inc. GST - {summary.totalArea} m&sup2; total</p>
           </div>
         )}
@@ -1014,16 +1019,16 @@ export default function RooferQuoteBuilder({
               </div>
             )}
             <div className="border-t border-[var(--line)] pt-2 flex justify-between">
-              <span className="text-[var(--ink-soft)]">Subtotal</span>
-              <span className="font-bold">${Math.round(summary.subtotal).toLocaleString()}</span>
+              <span className="text-[var(--ink-soft)]">Subtotal (ex GST)</span>
+              <span className="font-bold">${Math.round(summary.subtotal + siteTotal).toLocaleString()}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-[var(--ink-soft)]">GST (10%)</span>
-              <span className="font-semibold">${Math.round(summary.gst).toLocaleString()}</span>
+              <span className="font-semibold">${Math.round((summary.subtotal + siteTotal) * 0.1).toLocaleString()}</span>
             </div>
             <div className="border-t-2 border-[var(--navy)] pt-2 flex justify-between">
               <span className="font-bold text-[var(--ink)]">Total inc. GST</span>
-              <span className="font-display text-[1.4rem] text-[var(--amber-deep)]">${Math.round(summary.total + siteTotal).toLocaleString()}</span>
+              <span className="font-display text-[1.4rem] text-[var(--amber-deep)]">${Math.round((summary.subtotal + siteTotal) * 1.1).toLocaleString()}</span>
             </div>
           </div>
 
@@ -1032,6 +1037,8 @@ export default function RooferQuoteBuilder({
           </p>
         </div>
       )}
+
+      <PreferredStartDateField value={scheduledDate} onChange={setScheduledDate} />
 
       <div className="card">
         <p className="section-tag mb-3">Payment terms</p>
@@ -1047,7 +1054,7 @@ export default function RooferQuoteBuilder({
             {paymentTerms.map((t, i) => (
               <div key={i} className="flex justify-between text-[13.5px]">
                 <span className="text-[var(--ink-soft)]">{t.label}</span>
-                <span className="font-bold tabular">{t.percent}% - ${summary ? Math.round((summary.total + siteTotal) * t.percent / 100).toLocaleString() : 0}</span>
+                <span className="font-bold tabular">{t.percent}% - ${summary ? Math.round((summary.subtotal + siteTotal) * 1.1 * t.percent / 100).toLocaleString() : 0}</span>
               </div>
             ))}
           </div>

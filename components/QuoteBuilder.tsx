@@ -23,6 +23,7 @@ import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import SiteAnnotationReport from "@/components/SiteAnnotationReport";
 import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
+import PreferredStartDateField from "@/components/PreferredStartDateField";
 import { persistAnnotationFrames } from "@/lib/siteAnnotations";
 import JobDescriptionField from "@/components/JobDescriptionField";
 import { MaterialSearchAdd, ScopeItemsList, type ScopeItem } from "@/components/ScopeOfWorkStep";
@@ -133,6 +134,7 @@ export default function QuoteBuilder({
   const [siteAddress, setSiteAddress] = useState("");
   const [clientId, setClientId] = useState<string | null>(preClientId ?? null);
   const [plannedCrew, setPlannedCrew] = useState<string[]>([]);
+  const [scheduledDate, setScheduledDate] = useState("");
 
   const initialDeposit = profile.default_deposit_pct;
   const [termsPreset, setTermsPreset] = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">(
@@ -406,6 +408,7 @@ export default function QuoteBuilder({
       // still check it, but there's nothing left to duplicate into it.
       markup_materials: [],
       planned_crew_member_ids: plannedCrew,
+      scheduled_date: scheduledDate || null,
     };
 
     // Opt-in: only send tier IDs to DB if user explicitly selected them
@@ -590,6 +593,8 @@ export default function QuoteBuilder({
           teamMembers={teamMembers}
           plannedCrew={plannedCrew}
           setPlannedCrew={setPlannedCrew}
+          scheduledDate={scheduledDate}
+          setScheduledDate={setScheduledDate}
         />
       )}
 
@@ -769,6 +774,7 @@ function StepJob({
   selectedJobSizeTierId, setSelectedJobSizeTierId,
   selectedPricingTier, selectedJobSizeTier,
   profile, teamMembers, plannedCrew, setPlannedCrew,
+  scheduledDate, setScheduledDate,
 }: {
   intake: ElectricianIntake; rate: number; margin: number; effectiveMargin: number;
   set: <K extends keyof ElectricianIntake>(k: K, v: ElectricianIntake[K]) => void;
@@ -783,6 +789,8 @@ function StepJob({
   teamMembers?: Array<{ id: string; name: string | null; email: string }>;
   plannedCrew: string[];
   setPlannedCrew: React.Dispatch<React.SetStateAction<string[]>>;
+  scheduledDate: string;
+  setScheduledDate: (v: string) => void;
 }) {
   return (
     <div className="space-y-4">
@@ -850,6 +858,7 @@ function StepJob({
           </select>
         </div>
       )}
+      <PreferredStartDateField value={scheduledDate} onChange={setScheduledDate} />
       <div className="card">
         <p className="section-tag mb-3">Customer &amp; job pricing</p>
         {pricingTiers && pricingTiers.length > 0 && (

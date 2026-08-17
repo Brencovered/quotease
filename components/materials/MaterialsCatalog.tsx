@@ -226,7 +226,7 @@ export default function MaterialsCatalog({
               </thead>
               <tbody>
                 {materials.map((m, i) => {
-                  const tradeColor = TRADE_COLORS[m.trade] ?? TRADE_COLORS.handyman;
+                  const tradeColor = TRADE_COLORS[m.trade] ?? TRADE_COLORS.custom;
                   return (
                     <tr
                       key={m.id}
@@ -304,7 +304,7 @@ export default function MaterialsCatalog({
           {/* Mobile card layout */}
           <div className="sm:hidden space-y-3">
             {materials.map((m, i) => {
-              const tradeColor = TRADE_COLORS[m.trade] ?? TRADE_COLORS.handyman;
+              const tradeColor = TRADE_COLORS[m.trade] ?? TRADE_COLORS.custom;
               return (
                 <div
                   key={m.id}

@@ -6,6 +6,7 @@ import SiteAnnotationReport from "@/components/SiteAnnotationReport";
 import SafeLogoImage from "@/components/SafeLogoImage";
 import { resolveAnnotationFrameUrls, type AnnotationMetaPersisted } from "@/lib/siteAnnotations";
 import { humanizeIntakePublic } from "@/lib/humanizeIntake";
+import { splitGst } from "@/lib/gst";
 
 export default async function PublicQuotePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -43,6 +44,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
   const scopeLines = humanizeIntakePublic(quote.intake_data as Record<string, unknown> | null, quote.trade ?? "electrician");
   const savedAnnotations = (quote.intake_data as { annotation_meta?: AnnotationMetaPersisted[] } | null)?.annotation_meta;
   const resolvedAnnotations = await resolveAnnotationFrameUrls(supabase, savedAnnotations);
+  const totals = splitGst(quote.total_cost ?? 0);
 
   return (
     <main className="min-h-screen bg-[var(--app-bg)] py-10 px-4">
@@ -66,7 +68,10 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
                 <p className="text-[12px] text-[var(--ink-faint)]">Quote for {quote.client_name}</p>
                 <p className="text-[13px] text-[var(--ink-faint)]">{quote.site_address}</p>
               </div>
-              <p className="font-display text-3xl text-[var(--ink)]">${(quote.total_cost ?? 0).toLocaleString()}</p>
+              <div className="text-right">
+                <p className="font-display text-3xl text-[var(--ink)]">${totals.inc.toLocaleString()}</p>
+                <p className="text-[11px] text-[var(--ink-faint)]">inc. GST</p>
+              </div>
             </div>
 
             {scopeLines.length > 0 && (
@@ -106,9 +111,17 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
 
             <div className="mb-5">
               <p className="text-[11px] tracking-[.1em] uppercase text-[var(--amber-deep)] font-bold mb-2">Quote summary</p>
-              <div className="flex justify-between text-[15px] py-2">
-                <span className="font-bold text-[var(--ink)]">Total</span>
-                <span className="font-display text-lg text-[var(--ink)]">${(quote.total_cost ?? 0).toLocaleString()}</span>
+              <div className="flex justify-between text-[13.5px] py-1">
+                <span className="text-[var(--ink-soft)]">Subtotal (ex GST)</span>
+                <span className="font-semibold text-[var(--ink)]">${totals.ex.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-[13.5px] py-1">
+                <span className="text-[var(--ink-soft)]">GST (10%)</span>
+                <span className="font-semibold text-[var(--ink)]">${totals.gst.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-[15px] py-2 border-t border-[var(--line-subtle)] mt-1">
+                <span className="font-bold text-[var(--ink)]">Total (inc GST)</span>
+                <span className="font-display text-lg text-[var(--ink)]">${totals.inc.toLocaleString()}</span>
               </div>
             </div>
 
@@ -117,7 +130,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
               {terms.map((t, i) => (
                 <div key={i} className="flex justify-between text-[13.5px] py-0.5">
                   <span className="text-[var(--ink-soft)]">{t.label} ({t.percent}%)</span>
-                  <span className="font-semibold text-[var(--ink)]">${termAmount(t, quote.total_cost ?? 0).toLocaleString()}</span>
+                  <span className="font-semibold text-[var(--ink)]">${termAmount(t, totals.inc).toLocaleString()}</span>
                 </div>
               ))}
             </div>
@@ -153,7 +166,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
             <QuoteResponseButtons
               token={token}
               status={quote.status}
-              totalCost={quote.total_cost ?? 0}
+              totalCost={totals.inc}
               paymentTerms={terms}
               hasBankDetails={hasBankDetails}
               bankName={profile.bank_account_name}

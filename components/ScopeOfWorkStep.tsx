@@ -5,12 +5,12 @@ import { Search, Plus, Trash2 } from "lucide-react";
 
 export type ScopeItemSource =
   | "manual" | "annotation" | "drawing" | "voice"
-  | "package" | "plan_markup" | "material_bundle" | "extra";
+  | "package" | "plan_markup" | "material_bundle" | "extra" | "estimate";
 
 const SOURCE_LABELS: Record<ScopeItemSource, string> = {
   manual: "Manual", annotation: "Site markup", drawing: "Drawing takeoff",
   voice: "Voice note", package: "Package", plan_markup: "Plan markup",
-  material_bundle: "Material bundle", extra: "Extra",
+  material_bundle: "Material bundle", extra: "Extra", estimate: "Estimate assistant",
 };
 
 export type ScopeItem = {

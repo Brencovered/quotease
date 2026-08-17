@@ -417,8 +417,8 @@ const COPY: Record<string, HubCopy> = {
       "Room by room scope, materials, and labour from your book. Send a clean quote while the walkthrough is still fresh.",
     pain: "Painting quotes stall when room counts and prep notes sit in a notebook until tonight. Clients move on.",
     outcomes: [
-      "Scope rooms, walls, and prep levels on site",
-      "Price paint and labour from your book",
+      "Load packages and materials from your book",
+      "Price paint and labour with live markup",
       "Send before you drive off",
       "Keep won jobs on one board",
     ],
@@ -430,12 +430,12 @@ const COPY: Record<string, HubCopy> = {
       "Feature walls",
       "Prep and plaster repairs",
     ],
-    quoteFields: ["Rooms", "Prep level", "Coat count", "Materials", "Labour hours", "Margin"],
+    quoteFields: ["Packages", "Materials", "Labour hours", "Customer tier", "Job size", "Drawings"],
     faqs: [
       {
         question: "Can I quote room by room?",
         answer:
-          "Yes. Break the job into clear lines so the client sees what they are paying for, and you keep margin control.",
+          "Yes. Use packages and line items from your book so the client sees clear scope, and you keep margin control.",
       },
       {
         question: "What about prep that changes on the day?",
@@ -457,8 +457,8 @@ const COPY: Record<string, HubCopy> = {
       "Square metres, materials, and labour from your book. Waterproofing and extras stay on the quote, not in your head.",
     pain: "Tile quotes often wait on an evening spreadsheet. That lag loses bathrooms to whoever sent first.",
     outcomes: [
-      "Price floors and walls by area from your book",
-      "Include waterproofing, trim, and labour clearly",
+      "Price floors and walls from packages in your book",
+      "Include waterproofing, trim, and labour as clear lines",
       "Send from site the same visit",
       "Run accepted jobs from your phone",
     ],
@@ -470,7 +470,7 @@ const COPY: Record<string, HubCopy> = {
       "New builds",
       "Repairs and replacements",
     ],
-    quoteFields: ["Area m2", "Tile supply", "Waterproofing", "Trim", "Labour hours", "Margin"],
+    quoteFields: ["Packages", "Materials", "Labour hours", "Customer tier", "Job size", "Drawings"],
     faqs: [
       {
         question: "Can I separate supply and lay?",
@@ -497,7 +497,7 @@ const COPY: Record<string, HubCopy> = {
       "Softscape, hardscape, materials, and labour from your book. No rewriting the job at the kitchen table tonight.",
     pain: "Landscape quotes sprawl across photos, sketches, and supplier lists. The delay is where clients ghost.",
     outcomes: [
-      "Break softscape and hardscape into clear lines",
+      "Break softscape and hardscape into package lines",
       "Price materials and labour from your book",
       "Send a client-ready quote on site",
       "Schedule won work from one board",
@@ -510,7 +510,7 @@ const COPY: Record<string, HubCopy> = {
       "Irrigation",
       "Maintenance packages",
     ],
-    quoteFields: ["Softscape", "Hardscape", "Materials", "Machine hire", "Labour days", "Margin"],
+    quoteFields: ["Packages", "Materials", "Labour hours", "Customer tier", "Job size", "Drawings"],
     faqs: [
       {
         question: "Can I quote mixed softscape and hardscape jobs?",
@@ -550,7 +550,7 @@ const COPY: Record<string, HubCopy> = {
       "Storm damage",
       "Council and permit work",
     ],
-    quoteFields: ["Tree count", "Access", "Crew size", "Disposal", "Stump work", "Margin"],
+    quoteFields: ["Packages", "Materials", "Labour hours", "Customer tier", "Job size", "Drawings"],
     faqs: [
       {
         question: "Can I price by tree and access?",
@@ -591,7 +591,7 @@ const COPY: Record<string, HubCopy> = {
       "Exposed aggregate",
       "Repairs and saw cuts",
     ],
-    quoteFields: ["Area m2", "Thickness", "Steel", "Pump hire", "Labour", "Margin"],
+    quoteFields: ["Packages", "Materials", "Labour hours", "Customer tier", "Job size", "Drawings"],
     faqs: [
       {
         question: "Can I quote driveways and slabs quickly?",
@@ -632,7 +632,7 @@ const COPY: Record<string, HubCopy> = {
       "Boundary replacements",
       "Repairs",
     ],
-    quoteFields: ["Length m", "Post count", "Panels", "Gates", "Removal", "Margin"],
+    quoteFields: ["Packages", "Materials", "Labour hours", "Customer tier", "Job size", "Drawings"],
     faqs: [
       {
         question: "Can I quote Colorbond and timber the same way?",
@@ -673,7 +673,7 @@ const COPY: Record<string, HubCopy> = {
       "Servicing packages",
       "Light commercial installs",
     ],
-    quoteFields: ["System type", "Heads", "Mounts", "Electrical", "Labour", "Margin"],
+    quoteFields: ["Packages", "Materials", "Labour hours", "Customer tier", "Job size", "Drawings"],
     faqs: [
       {
         question: "Can I quote splits and ducted in one tool?",
@@ -714,12 +714,12 @@ const COPY: Record<string, HubCopy> = {
       "Identification surveys",
       "Construction checks",
     ],
-    quoteFields: ["Site visit", "Deliverable", "Drafting", "Travel", "Rush fee", "Margin"],
+    quoteFields: ["Packages", "Materials", "Labour hours", "Customer tier", "Job size", "Drawings"],
     faqs: [
       {
         question: "Is this only for building trades?",
         answer:
-          "No. Surveyors use the same quote, accept, and job flow with fields that match how you price work.",
+          "No. Surveyors use the same book, quote, accept, and job flow — load your packages and rates, then send from site.",
       },
       {
         question: "Can clients accept fees on their phone?",
@@ -755,7 +755,7 @@ const COPY: Record<string, HubCopy> = {
       "Site measures",
       "Repeat residential work",
     ],
-    quoteFields: ["Labour", "Materials", "Call-out", "Travel", "Notes", "Margin"],
+    quoteFields: ["Packages", "Materials", "Labour hours", "Customer tier", "Job size", "Drawings"],
     faqs: [
       {
         question: "What if my trade is not in the main list?",

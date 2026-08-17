@@ -187,6 +187,17 @@ export function humanizeIntakePublic(intake: Record<string, unknown> | null | un
     lines.push(unit !== undefined ? `${label}: ${value}${unit}` : `${label}: ${value}`);
   }
 
+  // Generic trade line items (labour + materials scoped on the quote)
+  const lineItems = intake.lineItems as { label?: string; qty?: number; unit?: string; is_labour?: boolean }[] | undefined;
+  if (Array.isArray(lineItems)) {
+    for (const item of lineItems) {
+      if (item?.label && (item.qty ?? 0) > 0) {
+        const kind = item.is_labour ? "Labour" : "Materials";
+        lines.push(`${kind}: ${item.label} — ${item.qty} ${item.unit ?? "ea"}`);
+      }
+    }
+  }
+
   // Site annotation items
   const siteItems = intake.site_items as {label:string;qty:number;unit:string;note:string}[] | undefined;
   if (Array.isArray(siteItems)) {

@@ -72,26 +72,34 @@ export const GENERIC_TRADE_TEMPLATES: Record<string, {
   },
   tiler: {
     label: "Tiler",
-    jobTypes: ["Bathroom floor & wall", "Kitchen splashback", "Laundry", "Outdoor paving", "Pool surrounds", "Feature wall"],
+    jobTypes: ["Bathroom floor & wall", "Kitchen splashback", "Laundry", "Outdoor paving", "Pool surrounds", "Feature wall", "Ensuite refresh"],
     defaultItems: [
-      { label: "Labour", qty: 8, unit: "hr", unit_cost: 80, is_labour: true },
+      { label: "Labour — set & grout", qty: 10, unit: "hr", unit_cost: 85, is_labour: true },
       { label: "Floor tiles (per sqm)", qty: 10, unit: "sqm", unit_cost: 45, is_labour: false },
       { label: "Wall tiles (per sqm)", qty: 8, unit: "sqm", unit_cost: 50, is_labour: false },
+      { label: "Waterproofing membrane", qty: 1, unit: "item", unit_cost: 380, is_labour: false },
       { label: "Tile adhesive (20kg bag)", qty: 2, unit: "ea", unit_cost: 35, is_labour: false },
       { label: "Grout (per bag)", qty: 2, unit: "ea", unit_cost: 18, is_labour: false },
+      { label: "Schluter / tile trim (per LM)", qty: 8, unit: "lm", unit_cost: 12, is_labour: false },
       { label: "Tile spacers & accessories", qty: 1, unit: "item", unit_cost: 15, is_labour: false },
+      { label: "Silicone & sealants", qty: 1, unit: "item", unit_cost: 35, is_labour: false },
     ],
   },
   landscaper: {
     label: "Landscaper",
-    jobTypes: ["Garden design & install", "Retaining wall", "Paving", "Turf laying", "Irrigation", "Drainage", "Mulching"],
+    jobTypes: ["Garden design & install", "Retaining wall", "Paving", "Turf laying", "Irrigation", "Drainage", "Mulching", "Garden makeover"],
     defaultItems: [
-      { label: "Labour", qty: 8, unit: "hr", unit_cost: 75, is_labour: true },
+      { label: "Labour — softscape", qty: 8, unit: "hr", unit_cost: 75, is_labour: true },
+      { label: "Labour — hardscape", qty: 4, unit: "hr", unit_cost: 85, is_labour: true },
       { label: "Turf (per sqm)", qty: 20, unit: "sqm", unit_cost: 18, is_labour: false },
       { label: "Topsoil (per m3)", qty: 1, unit: "ea", unit_cost: 85, is_labour: false },
       { label: "Mulch (per m3)", qty: 1, unit: "ea", unit_cost: 75, is_labour: false },
       { label: "Plants / shrubs (allowance)", qty: 1, unit: "item", unit_cost: 150, is_labour: false },
       { label: "Irrigation fittings (allowance)", qty: 1, unit: "item", unit_cost: 80, is_labour: false },
+      { label: "Paver supply (per sqm)", qty: 10, unit: "sqm", unit_cost: 45, is_labour: false },
+      { label: "Bedding sand / base (allowance)", qty: 1, unit: "item", unit_cost: 120, is_labour: false },
+      { label: "Machine hire (mini excavator)", qty: 1, unit: "day", unit_cost: 350, is_labour: false },
+      { label: "Tip fees / disposal", qty: 1, unit: "ea", unit_cost: 150, is_labour: false },
     ],
   },
   arborist: {
@@ -175,8 +183,11 @@ export const ALL_TRADES = [
   { key: "fencer",      label: "Fencer",            dedicated: false },
   { key: "aircon",      label: "Air conditioning",  dedicated: false },
   { key: "surveyor",    label: "Surveyor",          dedicated: false },
-  { key: "custom",      label: "Custom",            dedicated: false },
+  { key: "custom",      label: "Other / custom",    dedicated: false },
 ];
+
+/** Signup / onboarding / materials UI — same list, no orphans. */
+export const PRODUCT_TRADES = ALL_TRADES.map(({ key, label }) => ({ key, label }));
 
 /**
  * lib/genericTrades.ts -- normalizeTradeValue()
@@ -208,6 +219,10 @@ const TRADE_SYNONYMS: Record<string, string> = {
   fencing: "fencer", fencers: "fencer",
   "air conditioning": "aircon", "air-conditioning": "aircon", hvac: "aircon",
   surveying: "surveyor", surveyors: "surveyor",
+  // Signup orphans map onto the shared product list
+  builder: "carpenter", builders: "carpenter",
+  handyman: "custom", handyyman: "custom",
+  plasterer: "painter", plastering: "painter",
 };
 
 export function normalizeTradeValue(raw: string | null | undefined): string | null {
