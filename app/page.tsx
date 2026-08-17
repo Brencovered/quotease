@@ -75,42 +75,6 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Product acceptance moment */}
-      <section className="relative overflow-hidden bg-[#1a242c]">
-        <div className="max-w-[1280px] mx-auto px-6 py-16 sm:py-24 grid lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-3">
-              After you send
-            </p>
-            <h2 className="font-display text-[clamp(1.9rem,3.8vw,3rem)] tracking-wide leading-[1.05] text-white mb-4 max-w-[16ch]">
-              They accept on their phone. You keep moving.
-            </h2>
-            <p className="font-sans text-[16px] leading-[1.65] text-[#b7c7d4] max-w-[42ch] mb-8">
-              They open a clean portal, see a professional quote, tap accept, and the job hits your board. No chasing PDFs. No did you get my email.
-            </p>
-            <div className="flex flex-col items-start gap-2">
-              <Link
-                href="/signup"
-                className="inline-flex items-center justify-center bg-[#ffb400] text-[#071018] font-sans font-extrabold text-[15px] px-7 py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors"
-              >
-                Start quoting free
-              </Link>
-              <TrialRiskReversal tone="light" />
-            </div>
-          </div>
-          <div className="mx-auto w-full max-w-[280px]">
-            <Image
-              src="/marketing/v2/phone-quote-send.png"
-              alt="Quote ready to send from the tradie phone"
-              width={325}
-              height={658}
-              quality={95}
-              className="w-full h-auto drop-shadow-[0_24px_50px_rgba(0,0,0,0.45)]"
-            />
-          </div>
-        </div>
-      </section>
-
       {/* Homeowners: one job */}
       <section className="relative min-h-[60vh] flex items-end overflow-hidden">
         <div className="absolute inset-0">
