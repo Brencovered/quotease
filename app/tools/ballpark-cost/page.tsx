@@ -1,20 +1,20 @@
 import type { Metadata } from "next";
 import { ToolShell } from "@/components/marketing/tools/ToolShell";
-import ChargeOutCalculator from "@/components/marketing/tools/ChargeOutCalculator";
+import BallparkEstimator from "@/components/marketing/tools/BallparkEstimator";
 import { getToolBySlug } from "@/lib/marketing/tools";
 
-const tool = getToolBySlug("charge-out-rate")!;
+const tool = getToolBySlug("ballpark-cost")!;
 
 export const metadata: Metadata = {
   title: `${tool.title} - Swiftscope`,
   description: tool.description,
-  alternates: { canonical: "https://swiftscope.com.au/tools/charge-out-rate" },
+  alternates: { canonical: "https://swiftscope.com.au/tools/ballpark-cost" },
 };
 
-export default function ChargeOutRatePage() {
+export default function BallparkCostPage() {
   return (
     <ToolShell tool={tool}>
-      <ChargeOutCalculator />
+      <BallparkEstimator />
     </ToolShell>
   );
 }

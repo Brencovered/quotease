@@ -1,20 +1,20 @@
 import type { Metadata } from "next";
 import { ToolShell } from "@/components/marketing/tools/ToolShell";
-import ChargeOutCalculator from "@/components/marketing/tools/ChargeOutCalculator";
+import MarginMarkupCalculator from "@/components/marketing/tools/MarginMarkupCalculator";
 import { getToolBySlug } from "@/lib/marketing/tools";
 
-const tool = getToolBySlug("charge-out-rate")!;
+const tool = getToolBySlug("margin-markup")!;
 
 export const metadata: Metadata = {
   title: `${tool.title} - Swiftscope`,
   description: tool.description,
-  alternates: { canonical: "https://swiftscope.com.au/tools/charge-out-rate" },
+  alternates: { canonical: "https://swiftscope.com.au/tools/margin-markup" },
 };
 
-export default function ChargeOutRatePage() {
+export default function MarginMarkupPage() {
   return (
     <ToolShell tool={tool}>
-      <ChargeOutCalculator />
+      <MarginMarkupCalculator />
     </ToolShell>
   );
 }
