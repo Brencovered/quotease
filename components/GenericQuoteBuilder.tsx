@@ -334,12 +334,6 @@ export default function GenericQuoteBuilder({
 
   return (
     <div className="page-wrap-narrow">
-      <div className="mb-3">
-        <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--amber-deep)]">{tradeLabel} quote</p>
-        <p className="text-[13px] text-[var(--ink-faint)]">
-          Same flow for every trade: customer → capture → job → items from your book → send.
-        </p>
-      </div>
       {/* Live total */}
       <div className="sticky top-12 sm:top-0 z-30 mb-4 -mx-4 sm:mx-0 px-4 sm:px-0">
         <div className="bg-[var(--navy)] rounded-none sm:rounded-2xl px-5 py-3 flex items-center justify-between"
