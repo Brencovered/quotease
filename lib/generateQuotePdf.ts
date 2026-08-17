@@ -268,7 +268,7 @@ export async function generateQuotePdf(
 
   // ── PAYMENT TERMS (amounts on the GST-inclusive total) ────────────
   sectionLabel("Payment terms");
-  const terms: PaymentTerm[] = quote.payment_terms?.length ? quote.payment_terms : [{ label: "Payment due", percent: 100, timing: "completion", days: 14 }];
+  const terms: PaymentTerm[] = quote.payment_terms?.length ? quote.payment_terms : [{ label: "Payment due", percent: 100, trigger: "completion", days: 14 }];
   for (const t of terms) drawRow(`${t.label} (${t.percent}%)`, `$${termAmount(t, gstTotals.inc).toLocaleString()}`);
   y -= 8;
 
