@@ -27,11 +27,12 @@ export const metadata: Metadata = {
   description: "Quote the job before you've left the driveway.",
   icons: {
     icon: [
-      { url: "/favicon.svg", type: "image/svg+xml", sizes: "any" },
       { url: "/favicon.ico", sizes: "48x48" },
+      { url: "/favicon.svg", type: "image/svg+xml", sizes: "any" },
+      { url: "/icon.png", type: "image/png", sizes: "512x512" },
     ],
     apple: [
-      { url: "/api/favicon?size=180", sizes: "180x180" },
+      { url: "/apple-touch-icon.png", sizes: "180x180" },
     ],
     other: [
       { rel: "manifest", url: "/site.webmanifest" },
@@ -51,7 +52,7 @@ export const metadata: Metadata = {
 // several hundred lines of build log from one line of source, which is
 // exactly the kind of noise that hides a real failure.
 export const viewport: Viewport = {
-  themeColor: "#1c252d",
+  themeColor: "#1a242c",
 };
 
 const GA_ID = "G-GVM9GY952S";
@@ -64,8 +65,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={`h-full antialiased ${inter.variable} ${anton.variable}`}>
       <head>
-        <link rel="mask-icon" href="/favicon.svg" color="#1c252d" />
-        <meta name="msapplication-TileColor" content="#1c252d" />
+        <link rel="mask-icon" href="/favicon.svg" color="#1a242c" />
+        <meta name="msapplication-TileColor" content="#1a242c" />
         <meta name="msapplication-config" content="/browserconfig.xml" />
         <OrganizationSchema />
       </head>

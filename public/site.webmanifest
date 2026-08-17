@@ -4,8 +4,8 @@
   "description": "Quote it, send it, win the job",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1c252d",
-  "theme_color": "#1c252d",
+  "background_color": "#1a242c",
+  "theme_color": "#1a242c",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",

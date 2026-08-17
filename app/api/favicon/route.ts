@@ -2,8 +2,8 @@ import { NextRequest } from "next/server";
 import sharp from "sharp";
 
 const SVG_FAVICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect width="100" height="100" fill="#1c252d" rx="12"/>
-  <text x="50" y="62" font-family="Arial Black, Impact, sans-serif" font-size="32" font-weight="900" fill="white" text-anchor="middle" letter-spacing="-1">S</text>
+  <rect width="100" height="100" fill="#1a242c" rx="22"/>
+  <text x="50" y="54" font-family="Inter, Arial Black, Arial, sans-serif" font-size="58" font-weight="700" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">S</text>
 </svg>`;
 
 export async function GET(req: NextRequest) {
