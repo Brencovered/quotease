@@ -7,6 +7,12 @@ import { existsSync } from "fs";
 import path from "path";
 import { ALL_TRADES } from "@/lib/genericTrades";
 import { tradeToSlug } from "@/lib/seo/meta";
+import {
+  TRADE_ENGAGEMENT,
+  type TradeCompliance,
+  type TradeDemoJob,
+  type TradeQuoteField,
+} from "@/lib/marketing/trade-hub-engagement";
 
 export type TradeHubFaq = { question: string; answer: string };
 
@@ -15,6 +21,8 @@ export type TradeHub = {
   slug: string;
   label: string;
   plural: string;
+  /** AU slang for eyebrow e.g. sparkies, chippies */
+  slang: string;
   dedicated: boolean;
   /** Short SEO title fragment */
   metaTitle: string;
@@ -24,7 +32,11 @@ export type TradeHub = {
   pain: string;
   outcomes: string[];
   jobTypes: string[];
+  /** @deprecated prefer quoteFieldDetails — kept for simple lists */
   quoteFields: string[];
+  quoteFieldDetails: TradeQuoteField[];
+  demoJobs: TradeDemoJob[];
+  compliance: TradeCompliance;
   faqs: TradeHubFaq[];
   heroImage: string;
   heroAlt: string;
@@ -61,40 +73,40 @@ function pickTradeImage(preferred: string, fallback: string): string {
 const VISUALS: Record<string, TradeVisual> = {
   electrician: {
     heroImage: pickTradeImage("/trades/new-electrician.png", "/trades/new-electrician.png"),
-    heroAlt: "Electrician on a residential site scoping the job",
+    heroAlt: "Sparky at a residential switchboard scoping circuits",
     heroPos: "object-[30%_center]",
     supportImage: "/trades/new-electrician-2.png",
-    supportAlt: "Electrician reviewing the install on site",
+    supportAlt: "Electrician on site checking the install before quoting",
     supportPos: "object-center",
     phoneImage: "/marketing/v2/phone-plan-drawing.png",
     phoneAlt: "Floor plan markup pricing electrical work in Swiftscope",
   },
   plumber: {
     heroImage: pickTradeImage("/trades/new-plumber.png", "/trades/new-scaffold.png"),
-    heroAlt: "Plumber working on a residential job",
+    heroAlt: "Plumber on a residential wet-area rough-in",
     heroPos: "object-[25%_center]",
     supportImage: "/trades/new-internal-site.png",
-    supportAlt: "Residential interior ready for plumbing fit-off",
+    supportAlt: "Bathroom ready for plumbing fit-off after the measure",
     supportPos: "object-center",
     phoneImage: "/marketing/v2/phone-quote.png",
     phoneAlt: "On-site plumbing quote building in Swiftscope",
   },
   carpenter: {
     heroImage: pickTradeImage("/trades/new-carpenter.png", "/trades/new-carpenter.png"),
-    heroAlt: "Carpenter framing on a residential interior site",
+    heroAlt: "Chippie framing a residential interior fit-out",
     heroPos: "object-[center_40%]",
     supportImage: "/trades/new-site.png",
-    supportAlt: "Residential framing site after the quote is won",
+    supportAlt: "Residential framing site after the measure and quote",
     supportPos: "object-[70%_center]",
     phoneImage: "/marketing/v2/phone-quote-send.png",
     phoneAlt: "Carpentry quote ready to send from Swiftscope",
   },
   roofer: {
     heroImage: pickTradeImage("/trades/new-roofer.png", "/trades/new-roofer.png"),
-    heroAlt: "Roofer working on a residential roof",
+    heroAlt: "Roofer on tin scoping a residential re-roof",
     heroPos: "object-left",
     supportImage: "/trades/new-external.png",
-    supportAlt: "Residential exterior roof line",
+    supportAlt: "Residential roof line ready for sheet and flashing measure",
     supportPos: "object-center",
     phoneImage: "/marketing/v2/phone-quote-send.png",
     phoneAlt: "Roofing quote ready to send from Swiftscope",
@@ -217,7 +229,11 @@ type HubCopy = Omit<
   | "slug"
   | "label"
   | "plural"
+  | "slang"
   | "dedicated"
+  | "quoteFieldDetails"
+  | "demoJobs"
+  | "compliance"
   | "heroImage"
   | "heroAlt"
   | "heroPos"
@@ -233,9 +249,9 @@ const COPY: Record<string, HubCopy> = {
     metaTitle: "Quoting software for electricians",
     metaDescription:
       "Build and send electrical quotes on site. Downlights, circuits, switchboards, and cable runs priced from your book before you leave the driveway.",
-    headline: "Quote the electrical job before you leave site.",
+    headline: "Quote the rough-in before you leave site.",
     subhead:
-      "Tap fixtures on a plan, draw the run, load materials and labour from your book, and send from your phone.",
+      "Tap fixtures on a plan, draw the cable run, load materials and labour from your book, and send from your phone — built for sparkies who price standing up.",
     pain: "Most sparkies still scribble counts on the plan, retype them at the desk, then chase the PDF. By then the client has already taken another call.",
     outcomes: [
       "Count downlights, GPOs, and switches on the plan",
@@ -274,10 +290,10 @@ const COPY: Record<string, HubCopy> = {
     metaTitle: "Quoting software for plumbers",
     metaDescription:
       "Price plumbing jobs on site. Fixtures, pipe runs, and labour from your book, sent before you leave the driveway.",
-    headline: "Price the plumbing job while you are still on site.",
+    headline: "Price the rough-in and fit-off while you are still on site.",
     subhead:
-      "Fixture counts, pipe runs, and labour load from your book. Send from your phone, not from memory at the desk later.",
-    pain: "Bathroom and rough-in quotes die in the gap between the site visit and the PDF. Swiftscope closes that gap.",
+      "Fixtures, drainage runs, and labour load from your book. Send from your phone, not from memory at the desk later.",
+    pain: "Bathroom and rough-in quotes die in the gap between the site visit and the PDF. Swiftscope closes that gap for plumbers who hate desk rewrites.",
     outcomes: [
       "Mark fixtures and pipe routes on plans or photos",
       "Pull fittings and labour from your price book",
@@ -315,9 +331,9 @@ const COPY: Record<string, HubCopy> = {
     metaTitle: "Quoting software for carpenters",
     metaDescription:
       "Quote carpentry and joinery on site. Framing, doors, timber runs, and labour priced from your book and sent the same visit.",
-    headline: "Scope framing and joinery without the desk rewrite.",
+    headline: "Scope framing and fit-outs without the shed rewrite.",
     subhead:
-      "Measure once on site, price timber and labour from your book, and send the quote before you pack the ute.",
+      "Measure once on site, price timber and labour from your book, and send the quote before you pack the ute — built for chippies.",
     pain: "Carpentry quotes often wait until you are back at the shed. That delay is where jobs leak to the next caller.",
     outcomes: [
       "Build quotes around framing, doors, and timber runs",
@@ -762,11 +778,15 @@ const COPY: Record<string, HubCopy> = {
 function buildHub(trade: (typeof ALL_TRADES)[number]): TradeHub {
   const copy = COPY[trade.key];
   const visual = VISUALS[trade.key];
+  const engagement = TRADE_ENGAGEMENT[trade.key];
   if (!copy) {
     throw new Error(`[trade-hubs] Missing copy for trade key: ${trade.key}`);
   }
   if (!visual) {
     throw new Error(`[trade-hubs] Missing visuals for trade key: ${trade.key}`);
+  }
+  if (!engagement) {
+    throw new Error(`[trade-hubs] Missing engagement for trade key: ${trade.key}`);
   }
   const slug = HUB_SLUG_OVERRIDE[trade.key] ?? tradeToSlug(trade.key);
   return {
@@ -776,7 +796,14 @@ function buildHub(trade: (typeof ALL_TRADES)[number]): TradeHub {
     plural: PLURAL_LABEL[trade.key] ?? `${trade.label.toLowerCase()}s`,
     dedicated: trade.dedicated,
     ...copy,
+    slang: engagement.slang,
+    quoteFields: engagement.quoteFields.map((f) => f.label),
+    quoteFieldDetails: engagement.quoteFields,
+    demoJobs: engagement.demoJobs,
+    compliance: engagement.compliance,
     ...visual,
+    heroAlt: engagement.heroAlt || visual.heroAlt,
+    supportAlt: engagement.supportAlt || visual.supportAlt,
   };
 }
 

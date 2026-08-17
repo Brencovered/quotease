@@ -50,7 +50,7 @@ export default function MarketingNav({
               Features
             </Link>
             <Link href="/for" className="text-white/75 hover:text-white font-semibold text-sm transition-colors">
-              For trades
+              For Tradies
             </Link>
             <Link href="/tools" className="text-white/75 hover:text-white font-semibold text-sm transition-colors">
               Tools
@@ -116,7 +116,7 @@ export default function MarketingNav({
               Features
             </Link>
             <Link href="/for" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">
-              For trades
+              For Tradies
             </Link>
             <Link href="/tools" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">
               Tools

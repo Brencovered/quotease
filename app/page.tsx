@@ -221,7 +221,7 @@ export default async function Home() {
             <span className="font-display text-lg tracking-wide text-white">SwiftScope</span>
             <div className="flex flex-wrap gap-x-6 gap-y-2 text-[12.5px] font-semibold text-white/40">
               <Link href="/features" className="hover:text-white transition-colors">Features</Link>
-              <Link href="/for" className="hover:text-white transition-colors">For trades</Link>
+              <Link href="/for" className="hover:text-white transition-colors">For Tradies</Link>
               <Link href="/tools" className="hover:text-white transition-colors">Tools</Link>
               <Link href="/how-it-works" className="hover:text-white transition-colors">How it works</Link>
               <Link href="/directory" className="hover:text-white transition-colors">Directory</Link>
