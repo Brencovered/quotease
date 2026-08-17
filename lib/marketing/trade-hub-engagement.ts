@@ -439,8 +439,8 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
 
   landscaper: {
     slang: "landscapers",
-    heroAlt: "Landscaper working a residential outdoor makeover",
-    supportAlt: "Outdoor residential site ready for softscape and hardscape",
+    heroAlt: "Lawn care and landscaping work on a residential yard",
+    supportAlt: "Fresh turf and outdoor landscaping finish",
     compliance: {
       badge: "Scope",
       title: "Clear inclusions before the dig",
@@ -504,8 +504,8 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
 
   arborist: {
     slang: "arborists",
-    heroAlt: "Arborist on height work at a residential tree job",
-    supportAlt: "Residential height work and canopy management on site",
+    heroAlt: "Arborist in the canopy with harness and chainsaw",
+    supportAlt: "Arborist pruning at height on a residential property",
     compliance: {
       badge: "SWMS",
       title: "SWMS / JSA for height and chipper work",
