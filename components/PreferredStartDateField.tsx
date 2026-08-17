@@ -13,7 +13,7 @@ export default function PreferredStartDateField({
     <div className="card">
       <p className="section-tag mb-1">Preferred start date</p>
       <p className="text-[13px] text-[var(--ink-faint)] mb-3">
-        Optional. Carries onto the job board when the client accepts so you can schedule from there.
+        Optional. Carries onto the job when the client accepts.
       </p>
       <input
         type="date"
