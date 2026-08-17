@@ -40,11 +40,12 @@ export default async function TradeHubPage({ params }: PageProps) {
   const signupHref = `/signup?trade=${encodeURIComponent(hub.key)}`;
 
   return (
-    <main className="bg-[#1a242c] text-white min-h-screen">
+    <main className="bg-[#f4f6f8] text-[#071018] min-h-screen">
       <MarketingNav transparent />
       <FaqSchema faqs={hub.faqs} />
 
-      <section className="relative min-h-[100svh] overflow-hidden">
+      {/* Hero: brand + one promise + full-bleed site photo */}
+      <section className="relative min-h-[88svh] lg:min-h-[100svh] overflow-hidden bg-[#1a242c]">
         <Image
           src={hub.heroImage}
           alt={hub.heroAlt}
@@ -59,49 +60,51 @@ export default async function TradeHubPage({ params }: PageProps) {
           className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(105deg, rgba(26,36,44,0.88) 0%, rgba(26,36,44,0.72) 42%, rgba(26,36,44,0.28) 70%, rgba(26,36,44,0.45) 100%)",
+              "linear-gradient(105deg, rgba(26,36,44,0.94) 0%, rgba(26,36,44,0.82) 38%, rgba(26,36,44,0.45) 68%, rgba(26,36,44,0.55) 100%)",
           }}
         />
-        <div className="relative z-10 max-w-[1280px] mx-auto px-6 pt-28 pb-16 lg:pt-36 lg:pb-24 min-h-[100svh] flex flex-col justify-end lg:justify-center">
+        <div className="absolute inset-y-0 left-0 w-full max-w-[720px] bg-gradient-to-r from-[#1a242c] via-[#1a242c]/75 to-transparent pointer-events-none" />
+
+        <div className="relative z-10 max-w-[1280px] mx-auto px-5 sm:px-6 pt-28 pb-14 lg:pt-36 lg:pb-20 min-h-[88svh] lg:min-h-[100svh] flex flex-col justify-end lg:justify-center">
           <div className="grid lg:grid-cols-12 gap-10 lg:gap-8 items-end lg:items-center">
-            <div className="lg:col-span-6 xl:col-span-5">
-              <p className="font-display text-[clamp(1.8rem,4vw,2.6rem)] tracking-wide text-white mb-3">
+            <div className="lg:col-span-6 xl:col-span-5 home-hero-copy">
+              <p className="font-display text-[clamp(2rem,5vw,2.8rem)] tracking-wide text-white mb-2">
                 SwiftScope
               </p>
-              <p className="font-sans text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-4">
+              <p className="font-sans text-[12px] font-bold tracking-[0.16em] uppercase text-[#ffb400] mb-5">
                 For {hub.plural}
               </p>
-              <h1 className="font-display text-[clamp(2rem,4.6vw,3.3rem)] tracking-wide leading-[1.02] text-white max-w-[16ch] mb-4">
+              <h1 className="font-display text-[clamp(2.1rem,4.8vw,3.4rem)] tracking-wide leading-[1.02] text-white max-w-[15ch] mb-5">
                 {hub.headline}
               </h1>
-              <p className="font-sans text-[16px] leading-[1.65] text-[#d5e0e8] max-w-[40ch] mb-8">
+              <p className="font-sans text-[17px] leading-[1.65] text-[#e8eef2] max-w-[38ch] mb-8">
                 {hub.subhead}
               </p>
-              <div className="flex flex-wrap items-center gap-4">
+              <div className="flex flex-wrap items-center gap-3">
                 <Link
                   href={signupHref}
-                  className="inline-flex items-center gap-2 bg-[#ffb400] text-[#1a242c] font-extrabold text-[14.5px] px-6 py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors"
+                  className="inline-flex items-center gap-2 bg-[#ffb400] text-[#1a242c] font-extrabold text-[15px] px-6 py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors"
                 >
                   Try it free <ArrowRight size={15} aria-hidden />
                 </Link>
                 <Link
                   href="/tools/charge-out-rate"
-                  className="inline-flex items-center gap-2 font-sans text-[14px] font-semibold text-white/75 hover:text-white transition-colors"
+                  className="inline-flex items-center gap-2 font-sans text-[14.5px] font-semibold text-white/80 hover:text-white transition-colors px-2 py-3"
                 >
-                  Free charge-out calculator <ArrowRight size={14} aria-hidden />
+                  Charge-out calculator <ArrowRight size={14} aria-hidden />
                 </Link>
               </div>
             </div>
 
             <div className="hidden lg:flex lg:col-span-6 xl:col-span-7 justify-end">
-              <div className="relative w-[min(280px,28vw)] home-phone-float">
+              <div className="relative w-[min(260px,26vw)] home-phone-float">
                 <Image
                   src={hub.phoneImage}
                   alt={hub.phoneAlt}
                   width={325}
                   height={658}
-                  className="w-full h-auto drop-shadow-[0_28px_50px_rgba(0,0,0,0.4)]"
-                  sizes="280px"
+                  className="w-full h-auto drop-shadow-[0_28px_50px_rgba(0,0,0,0.45)]"
+                  sizes="260px"
                   priority
                 />
               </div>
@@ -110,27 +113,33 @@ export default async function TradeHubPage({ params }: PageProps) {
         </div>
       </section>
 
-      {/* Support photo is always a different image from the hero */}
-      <section className="border-b border-white/10">
-        <div className="max-w-[1280px] mx-auto px-6 py-14 lg:py-20 grid lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-          <div className="lg:col-span-5 order-2 lg:order-1">
-            <h2 className="font-display text-[clamp(1.6rem,3vw,2.2rem)] tracking-wide leading-[1.08] text-white mb-4 max-w-[18ch]">
+      {/* Pain + outcomes on light paper for reading */}
+      <section className="bg-[#f4f6f8]">
+        <div className="max-w-[1280px] mx-auto px-5 sm:px-6 py-16 lg:py-24 grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+          <div className="lg:col-span-5">
+            <p className="font-sans text-[12px] font-bold tracking-[0.16em] uppercase text-[#b88400] mb-3">
+              The problem
+            </p>
+            <h2 className="font-display text-[clamp(1.75rem,3.2vw,2.45rem)] tracking-wide leading-[1.08] text-[#071018] mb-5 max-w-[16ch]">
               Why quotes stall
             </h2>
-            <p className="font-sans text-[15.5px] leading-[1.7] text-[#c5d4e0] max-w-[42ch] mb-7">
+            <p className="font-sans text-[17px] leading-[1.7] text-[#3d4a55] max-w-[40ch] mb-8">
               {hub.pain}
             </p>
-            <ul className="space-y-3.5">
+            <ul className="space-y-4">
               {hub.outcomes.map((item) => (
-                <li key={item} className="flex items-start gap-3 font-sans text-[15px] text-white/85">
-                  <Check size={16} className="mt-1 shrink-0 text-[#ffb400]" aria-hidden />
-                  <span>{item}</span>
+                <li key={item} className="flex items-start gap-3.5 font-sans text-[16px] leading-[1.5] text-[#071018]">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#ffb400]/20">
+                    <Check size={14} className="text-[#b88400]" aria-hidden />
+                  </span>
+                  <span className="font-semibold">{item}</span>
                 </li>
               ))}
             </ul>
           </div>
-          <div className="lg:col-span-7 order-1 lg:order-2">
-            <div className="relative aspect-[4/5] sm:aspect-[16/11] overflow-hidden rounded-2xl">
+
+          <div className="lg:col-span-7">
+            <div className="relative aspect-[4/5] sm:aspect-[16/11] overflow-hidden">
               <Image
                 src={hub.supportImage}
                 alt={hub.supportAlt}
@@ -139,87 +148,118 @@ export default async function TradeHubPage({ params }: PageProps) {
                 quality={90}
                 className={`object-cover ${hub.supportPos}`}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#1a242c]/50 via-transparent to-transparent" />
-              <div className="absolute bottom-5 right-5 sm:bottom-7 sm:right-8 w-[38%] max-w-[190px] lg:hidden">
-                <Image
-                  src={hub.phoneImage}
-                  alt={hub.phoneAlt}
-                  width={325}
-                  height={658}
-                  className="w-full h-auto drop-shadow-[0_18px_30px_rgba(0,0,0,0.4)]"
-                  sizes="190px"
-                />
-              </div>
+            </div>
+            <div className="mt-5 lg:hidden max-w-[180px]">
+              <Image
+                src={hub.phoneImage}
+                alt={hub.phoneAlt}
+                width={325}
+                height={658}
+                className="w-full h-auto drop-shadow-[0_16px_28px_rgba(0,0,0,0.25)]"
+                sizes="180px"
+              />
             </div>
           </div>
         </div>
       </section>
 
-      <section className="border-b border-white/10 bg-[#22303a]">
-        <div className="max-w-[1280px] mx-auto px-6 py-14 lg:py-16 grid md:grid-cols-2 gap-12">
-          <div>
-            <p className="font-sans text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-3">
+      {/* Jobs: one clear list */}
+      <section className="bg-white border-y border-[#e4e8ec]">
+        <div className="max-w-[1280px] mx-auto px-5 sm:px-6 py-16 lg:py-20">
+          <div className="max-w-2xl mb-10">
+            <p className="font-sans text-[12px] font-bold tracking-[0.16em] uppercase text-[#b88400] mb-3">
               Common jobs
             </p>
-            <h2 className="font-display text-[clamp(1.6rem,3vw,2.2rem)] tracking-wide leading-[1.08] text-white mb-6">
+            <h2 className="font-display text-[clamp(1.75rem,3.2vw,2.45rem)] tracking-wide leading-[1.08] text-[#071018] mb-3">
               What {hub.plural} quote in Swiftscope
             </h2>
-            <ul className="space-y-2.5">
-              {hub.jobTypes.map((job) => (
-                <li key={job} className="font-sans text-[15px] text-[#c5d4e0] border-b border-white/[0.08] py-2.5">
-                  {job}
-                </li>
-              ))}
-            </ul>
+            <p className="font-sans text-[16px] leading-[1.65] text-[#5a6a78] max-w-[44ch]">
+              Typical work this trade prices on site, then sends before leaving the driveway.
+            </p>
           </div>
-          <div>
-            <p className="font-sans text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-3">
+          <ul className="grid sm:grid-cols-2 gap-x-12 gap-y-0 max-w-4xl">
+            {hub.jobTypes.map((job, i) => (
+              <li
+                key={job}
+                className="flex items-baseline gap-4 border-b border-[#e8ecef] py-4 font-sans"
+              >
+                <span className="font-display text-[1.1rem] tracking-wide text-[#ffb400] tabular-nums w-7 shrink-0">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="text-[16.5px] font-semibold text-[#071018]">{job}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* Quote fields: stacked rows, not pill cluster */}
+      <section className="bg-[#f4f6f8]">
+        <div className="max-w-[1280px] mx-auto px-5 sm:px-6 py-16 lg:py-20 grid lg:grid-cols-12 gap-12 lg:gap-16">
+          <div className="lg:col-span-5">
+            <p className="font-sans text-[12px] font-bold tracking-[0.16em] uppercase text-[#b88400] mb-3">
               Quote fields
             </p>
-            <h2 className="font-display text-[clamp(1.6rem,3vw,2.2rem)] tracking-wide leading-[1.08] text-white mb-6">
+            <h2 className="font-display text-[clamp(1.75rem,3.2vw,2.45rem)] tracking-wide leading-[1.08] text-[#071018] mb-4 max-w-[14ch]">
               Built around how you price
             </h2>
-            <div className="flex flex-wrap gap-2.5">
-              {hub.quoteFields.map((field) => (
-                <span
-                  key={field}
-                  className="font-sans text-[13px] font-semibold text-white/80 border border-white/15 px-3.5 py-2 rounded-md"
-                >
-                  {field}
-                </span>
-              ))}
-            </div>
-            <p className="font-sans text-[14px] leading-[1.65] text-white/45 mt-6 max-w-[40ch]">
+            <p className="font-sans text-[16px] leading-[1.7] text-[#3d4a55] max-w-[38ch]">
               {hub.dedicated
                 ? "Dedicated quote flow for this trade, with your materials and labour book underneath."
                 : "Uses your price book and line items so the quote still matches the way you sell the work."}
             </p>
           </div>
+          <div className="lg:col-span-7">
+            <ul className="bg-white border border-[#e4e8ec] divide-y divide-[#e8ecef]">
+              {hub.quoteFields.map((field, i) => (
+                <li
+                  key={field}
+                  className="flex items-center justify-between gap-6 px-5 sm:px-6 py-4"
+                >
+                  <span className="font-sans text-[12px] font-bold tracking-[0.14em] uppercase text-[#8b96a1]">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <span className="flex-1 font-sans text-[16.5px] font-semibold text-[#071018]">
+                    {field}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </section>
 
-      <section className="border-b border-white/10">
-        <div className="max-w-[1280px] mx-auto px-6 py-14 lg:py-16">
-          <h2 className="font-display text-[clamp(1.6rem,3vw,2.2rem)] tracking-wide leading-[1.08] text-white mb-8">
+      {/* FAQs: light, airy, easy scan */}
+      <section className="bg-white border-t border-[#e4e8ec]">
+        <div className="max-w-[1280px] mx-auto px-5 sm:px-6 py-16 lg:py-20">
+          <h2 className="font-display text-[clamp(1.75rem,3.2vw,2.45rem)] tracking-wide leading-[1.08] text-[#071018] mb-10 max-w-[18ch]">
             Questions from {hub.plural}
           </h2>
-          <div className="max-w-3xl space-y-6">
+          <div className="max-w-3xl space-y-0">
             {hub.faqs.map((faq) => (
-              <div key={faq.question} className="border-b border-white/10 pb-6">
-                <p className="font-sans font-bold text-[15.5px] text-white mb-2">{faq.question}</p>
-                <p className="font-sans text-[14.5px] leading-[1.65] text-[#c5d4e0]">{faq.answer}</p>
+              <div key={faq.question} className="border-b border-[#e4e8ec] py-7 first:pt-0">
+                <h3 className="font-sans font-bold text-[17px] leading-[1.35] text-[#071018] mb-2.5">
+                  {faq.question}
+                </h3>
+                <p className="font-sans text-[16px] leading-[1.7] text-[#3d4a55] max-w-[54ch]">
+                  {faq.answer}
+                </p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="border-b border-white/10 bg-[#22303a]">
-        <div className="max-w-[1280px] mx-auto px-6 py-16 text-center">
-          <h2 className="font-display text-[clamp(1.8rem,3.5vw,2.6rem)] tracking-wide leading-[1.05] text-white mb-4">
+      {/* Close CTA */}
+      <section className="bg-[#1a242c]">
+        <div className="max-w-[1280px] mx-auto px-5 sm:px-6 py-16 lg:py-20">
+          <p className="font-display text-[clamp(1.6rem,3vw,2.2rem)] tracking-wide text-white mb-3">
+            SwiftScope
+          </p>
+          <h2 className="font-display text-[clamp(1.9rem,3.6vw,2.8rem)] tracking-wide leading-[1.05] text-white mb-4 max-w-[16ch]">
             Send your next quote before you leave site.
           </h2>
-          <p className="font-sans text-[15.5px] text-[#c5d4e0] mb-8 max-w-[42ch] mx-auto">
+          <p className="font-sans text-[16px] leading-[1.65] text-[#b7c7d4] mb-8 max-w-[40ch]">
             7-day free trial. Unlimited quotes and jobs. Directory listing included.
           </p>
           <Link
@@ -231,35 +271,53 @@ export default async function TradeHubPage({ params }: PageProps) {
         </div>
       </section>
 
-      <section className="max-w-[1280px] mx-auto px-6 py-12">
-        <div className="flex items-end justify-between gap-4 mb-6">
-          <p className="font-sans text-[11px] font-bold tracking-[0.18em] uppercase text-white/40">
-            Other trades
-          </p>
-          <Link href="/for" className="font-sans text-[13px] font-semibold text-white/50 hover:text-white transition-colors">
-            View all
-          </Link>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          {others.slice(0, 8).map((h) => (
+      {/* Other trades: text-first for readability */}
+      <section className="bg-[#f4f6f8] border-t border-[#e4e8ec]">
+        <div className="max-w-[1280px] mx-auto px-5 sm:px-6 py-14 lg:py-16">
+          <div className="flex items-end justify-between gap-4 mb-8">
+            <div>
+              <p className="font-sans text-[12px] font-bold tracking-[0.16em] uppercase text-[#b88400] mb-2">
+                Other trades
+              </p>
+              <h2 className="font-display text-[1.6rem] tracking-wide text-[#071018]">
+                Built the same way
+              </h2>
+            </div>
             <Link
-              key={h.key}
-              href={`/for/${h.slug}`}
-              className="group relative aspect-[5/4] overflow-hidden rounded-xl"
+              href="/for"
+              className="font-sans text-[14px] font-bold text-[#071018] hover:text-[#b88400] transition-colors inline-flex items-center gap-1.5"
             >
-              <Image
-                src={h.heroImage}
-                alt=""
-                fill
-                sizes="(max-width: 640px) 50vw, 25vw"
-                className={`object-cover transition-transform duration-500 group-hover:scale-[1.04] ${h.heroPos}`}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#1a242c]/90 via-[#1a242c]/25 to-transparent" />
-              <span className="absolute bottom-3 left-3 right-3 font-display text-[1.05rem] tracking-wide text-white">
-                {h.label}
-              </span>
+              View all <ArrowRight size={14} aria-hidden />
             </Link>
-          ))}
+          </div>
+          <ul className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {others.slice(0, 8).map((h) => (
+              <li key={h.key}>
+                <Link
+                  href={`/for/${h.slug}`}
+                  className="group flex items-center gap-3 bg-white border border-[#e4e8ec] px-3 py-3 hover:border-[#071018] transition-colors"
+                >
+                  <span className="relative h-12 w-12 shrink-0 overflow-hidden">
+                    <Image
+                      src={h.heroImage}
+                      alt=""
+                      fill
+                      sizes="48px"
+                      className={`object-cover ${h.heroPos}`}
+                    />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block font-display text-[1.05rem] tracking-wide text-[#071018] group-hover:text-[#b88400] transition-colors truncate">
+                      {h.label}
+                    </span>
+                    <span className="block font-sans text-[12.5px] text-[#5a6a78] truncate">
+                      Quotes from site
+                    </span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
     </main>
