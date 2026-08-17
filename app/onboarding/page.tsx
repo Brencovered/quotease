@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { seedDefaultMaterials } from "@/lib/tradeMaterialSeed";
+import { seedTradeBook } from "@/lib/tradeMaterialSeed";
+import { PRODUCT_TRADES } from "@/lib/genericTrades";
 import {
   Upload, Download, SkipForward, ArrowRight, ArrowLeft,
   Check, Package, Monitor, Smartphone, ClipboardList,
@@ -13,27 +14,10 @@ import {
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
-/*  Trades (same list as app/signup/page.tsx) -- shown as a mandatory  */
-/*  picker if an account somehow reaches onboarding with none set      */
+/*  Trades — same canonical list as signup / materials / quoting      */
 /* ------------------------------------------------------------------ */
 
-const TRADES = [
-  { key: "electrician", label: "Electrician" },
-  { key: "plumber",     label: "Plumber" },
-  { key: "carpenter",   label: "Carpenter" },
-  { key: "roofer",      label: "Roofer" },
-  { key: "painter",     label: "Painter" },
-  { key: "tiler",       label: "Tiler" },
-  { key: "landscaper",  label: "Landscaper" },
-  { key: "builder",     label: "Builder" },
-  { key: "fencer",      label: "Fencer" },
-  { key: "concreter",   label: "Concreter" },
-  { key: "aircon",      label: "Air Conditioning" },
-  { key: "handyman",    label: "Handyman" },
-  { key: "surveyor",    label: "Surveyor" },
-  { key: "arborist",    label: "Arborist" },
-  { key: "plasterer",   label: "Plasterer" },
-];
+const TRADES = PRODUCT_TRADES;
 
 /* ------------------------------------------------------------------ */
 /*  Digital tools list                                                 */
@@ -345,8 +329,9 @@ export default function OnboardingPage() {
       // used to run from Settings whenever a trade was toggled on, but
       // trade is now fixed at onboarding, so this is the one reliable
       // place it happens for every account.
-      if (trades[0]) {
-        await seedDefaultMaterials(supabase, user.id, trades[0]);
+      // Seed starter materials + package for every selected trade.
+      for (const trade of trades) {
+        await seedTradeBook(supabase, user.id, trade);
       }
 
       hasRedirected.current = true;

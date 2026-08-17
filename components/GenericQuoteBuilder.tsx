@@ -19,6 +19,8 @@ import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import CategoryMaterialPicker, { type PickerItem } from "@/components/CategoryMaterialPicker";
 import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
+import PreferredStartDateField from "@/components/PreferredStartDateField";
+import { splitGst } from "@/lib/gst";
 import { persistAnnotationFrames } from "@/lib/siteAnnotations";
 import JobDescriptionField from "@/components/JobDescriptionField";
 import { MaterialSearchAdd, ScopeItemsList } from "@/components/ScopeOfWorkStep";
@@ -121,6 +123,7 @@ export default function GenericQuoteBuilder({
   const [siteAddress, setSiteAddress] = useState("");
   const [clientId, setClientId] = useState<string | null>(preClientId ?? null);
   const [plannedCrew, setPlannedCrew] = useState<string[]>([]);
+  const [scheduledDate, setScheduledDate] = useState("");
   const [drawingFiles, setDrawingFiles] = useState<File[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
@@ -162,6 +165,7 @@ export default function GenericQuoteBuilder({
   const displayLabourDollar = Math.round(baseLabourDollar) + extraTotalsForDisplay.labour;
   const displayMaterialsDollar = Math.round(result.materialsCost + extraTotalsForDisplay.materials);
   const displayGrandTotal = result.totalCost + siteTotal + extraTotalsForDisplay.total;
+  const displayGst = splitGst(displayGrandTotal);
 
   // Sticky header only: no room there for a separate "on-site items" chip
   // (that breakdown appears further down), so its Labour/Materials figures
@@ -261,6 +265,7 @@ export default function GenericQuoteBuilder({
       trade:         tradeKey,
       job_type:      jobType,
       planned_crew_member_ids: plannedCrew,
+      scheduled_date: scheduledDate || null,
       intake_data:   { ...intakeData, site_items: siteItems, annotation_meta: persistedAnnotations },
       labour_hours:  result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0) + siteLabourSave,
       materials_cost: result.materialsCost + extraTotals.materials + siteMatlsSave,
@@ -276,6 +281,22 @@ export default function GenericQuoteBuilder({
     }).select().single();
 
     if (error) { setSaveMessage(error.message); setSaving(false); return; }
+
+    for (const file of drawingFiles) {
+      const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+      const path = `${businessId}/${quote.id}/${Date.now()}-${safeName}`;
+      const { error: uploadError } = await supabase.storage.from("job-files").upload(path, file);
+      if (!uploadError) {
+        await supabase.from("job_attachments").insert({
+          quote_id: quote.id,
+          profile_id: businessId,
+          file_name: file.name,
+          storage_path: path,
+          file_type: file.type,
+          file_size: file.size,
+        });
+      }
+    }
 
     if (sendEmail) {
       const res = await fetch("/api/quotes/send", {
@@ -316,7 +337,7 @@ export default function GenericQuoteBuilder({
             </div>
           </div>
           <div className="text-right">
-            <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Total</p>
+            <p className="text-[10px] text-[var(--steel-3)] font-bold uppercase tracking-wide">Total ex GST</p>
             <p className="font-display text-[24px] text-[var(--amber)] leading-tight">${displayGrandTotal.toLocaleString()}</p>
           </div>
         </div>
@@ -568,6 +589,7 @@ export default function GenericQuoteBuilder({
               </select>
             </div>
           )}
+          <PreferredStartDateField value={scheduledDate} onChange={setScheduledDate} />
         </div>
       )}
 
@@ -691,9 +713,17 @@ export default function GenericQuoteBuilder({
                 <span className="text-[var(--steel-2)]">Materials</span>
                 <span className="text-white font-semibold tabular">${headerMaterialsDollar.toLocaleString()}</span>
               </div>
+              <div className="border-t border-white/10 pt-2 flex justify-between text-[14px]">
+                <span className="text-[var(--steel-2)]">Subtotal (ex GST)</span>
+                <span className="text-white font-semibold tabular">${displayGst.ex.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-[14px]">
+                <span className="text-[var(--steel-2)]">GST (10%)</span>
+                <span className="text-white font-semibold tabular">${displayGst.gst.toLocaleString()}</span>
+              </div>
               <div className="border-t border-white/10 pt-2 flex justify-between">
-                <span className="text-white font-bold text-[15px]">Total</span>
-                <span className="font-display text-[24px] text-[var(--amber)] tabular">${displayGrandTotal.toLocaleString()}</span>
+                <span className="text-white font-bold text-[15px]">Total inc GST</span>
+                <span className="font-display text-[24px] text-[var(--amber)] tabular">${displayGst.inc.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -724,7 +754,7 @@ export default function GenericQuoteBuilder({
                 {paymentTerms.map((t, i) => (
                   <div key={i} className="flex justify-between text-[13.5px]">
                     <span className="text-[var(--ink-soft)]">{t.label}</span>
-                    <span className="font-bold tabular">{t.percent}% - ${Math.round(displayGrandTotal * t.percent / 100).toLocaleString()}</span>
+                    <span className="font-bold tabular">{t.percent}% - ${Math.round(displayGst.inc * t.percent / 100).toLocaleString()}</span>
                   </div>
                 ))}
               </div>

@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { memo } from "react";
 import { Loader2 } from "lucide-react";
+import { normalizeTradeValue } from "@/lib/genericTrades";
 
 /* Lazy-load the heavy quote builders so the page shell renders instantly
    while the builder chunks download in the background. `ssr:false` means
@@ -46,11 +47,13 @@ function TradeBuilderInner({ tradeKey, profile, ...rest }: BuilderProps) {
   // the others - normalize here rather than loosening every builder's
   // type to match Supabase's nullable array column.
   const normalizedProfile = { ...profile, trades: profile.trades ?? undefined };
-  if (tradeKey === "electrician") return <QuoteBuilder profile={profile} {...rest} />;
-  if (tradeKey === "plumber")     return <PlumberQuoteBuilder profile={profile} {...rest} />;
-  if (tradeKey === "carpenter")   return <CarpenterQuoteBuilder profile={profile} {...rest} />;
-  if (tradeKey === "roofer")      return <RooferQuoteBuilder profile={normalizedProfile} {...rest} />;
-  return <GenericQuoteBuilder tradeKey={tradeKey} profile={profile} {...rest} />;
+  // Map signup orphans (builder/handyman/plasterer) onto the product list.
+  const key = normalizeTradeValue(tradeKey) ?? tradeKey;
+  if (key === "electrician") return <QuoteBuilder profile={profile} {...rest} />;
+  if (key === "plumber")     return <PlumberQuoteBuilder profile={profile} {...rest} />;
+  if (key === "carpenter")   return <CarpenterQuoteBuilder profile={profile} {...rest} />;
+  if (key === "roofer")      return <RooferQuoteBuilder profile={normalizedProfile} {...rest} />;
+  return <GenericQuoteBuilder tradeKey={key} profile={profile} {...rest} />;
 }
 
 export default memo(TradeBuilderInner);

@@ -387,7 +387,7 @@ export default function PackagesView({
             const itemCount = items.length;
             const labourHours = pkg.labour_hours ?? 0;
             const estimatedTotal = calcPackageTotal(items, labourHours, hourlyRate);
-            const tradeColor = TRADE_COLORS[pkg.trade] ?? TRADE_COLORS.handyman;
+            const tradeColor = TRADE_COLORS[pkg.trade] ?? TRADE_COLORS.custom;
 
             return (
               <div

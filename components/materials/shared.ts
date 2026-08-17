@@ -2,6 +2,8 @@
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
+import { PRODUCT_TRADES } from "@/lib/genericTrades";
+
 export interface Material {
   id: string;
   description: string;
@@ -105,25 +107,16 @@ export const TRADE_COLORS: Record<string, string> = {
   painter: "#a855f7",
   tiler: "#06b6d4",
   landscaper: "#16a34a",
+  arborist: "#15803d",
   concreter: "#71717a",
   fencer: "#854d0e",
-  plasterer: "#ec4899",
-  handyman: "#0a1722",
+  aircon: "#0ea5e9",
+  surveyor: "#64748b",
+  custom: "#0a1722",
 };
 
-export const TRADES = [
-  { key: "electrician", label: "Electrician" },
-  { key: "plumber", label: "Plumber" },
-  { key: "carpenter", label: "Carpenter" },
-  { key: "roofer", label: "Roofer" },
-  { key: "painter", label: "Painter" },
-  { key: "tiler", label: "Tiler" },
-  { key: "landscaper", label: "Landscaper" },
-  { key: "concreter", label: "Concreter" },
-  { key: "fencer", label: "Fencer" },
-  { key: "plasterer", label: "Plasterer" },
-  { key: "handyman", label: "Handyman" },
-];
+/** Canonical product trades — keep materials UI in sync with quoting. */
+export const TRADES = PRODUCT_TRADES;
 
 export const UNITS = ["ea", "m", "m2", "m3", "hr", "kg", "each", "box", "roll", "set", "pair", "lot"];
 

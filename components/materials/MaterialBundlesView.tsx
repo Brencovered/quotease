@@ -284,7 +284,7 @@ export default function MaterialBundlesView({
             const items = bundle.items;
             const itemCount = items.length;
             const estimatedTotal = calcBundleTotal(items);
-            const tradeColor = TRADE_COLORS[bundle.trade] ?? TRADE_COLORS.handyman;
+            const tradeColor = TRADE_COLORS[bundle.trade] ?? TRADE_COLORS.custom;
 
             return (
               <div

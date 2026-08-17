@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { termAmount, type PaymentTerm } from "./paymentTerms";
 import { humanizeIntakePublic } from "./humanizeIntake";
 import type { AnnotationMetaPersisted } from "./siteAnnotations";
+import { splitGst } from "./gst";
 
 const humanizeIntake = humanizeIntakePublic;
 
@@ -257,15 +258,18 @@ export async function generateQuotePdf(
     y -= 4; rule();
   }
 
-  // ── SUMMARY ──────────────────────────────────────────────────────
+  // ── SUMMARY (stored total is ex-GST; show GST breakdown for the client) ──
+  const gstTotals = splitGst(quote.total_cost ?? 0);
   sectionLabel("Quote summary");
-  drawRow("Total", `$${(quote.total_cost ?? 0).toLocaleString()}`, { bold: true, size: 14, color: NAVY });
+  drawRow("Subtotal (ex GST)", `$${gstTotals.ex.toLocaleString()}`);
+  drawRow("GST (10%)", `$${gstTotals.gst.toLocaleString()}`);
+  drawRow("Total (inc GST)", `$${gstTotals.inc.toLocaleString()}`, { bold: true, size: 14, color: NAVY });
   y -= 8; rule();
 
-  // ── PAYMENT TERMS ────────────────────────────────────────────────
+  // ── PAYMENT TERMS (amounts on the GST-inclusive total) ────────────
   sectionLabel("Payment terms");
-  const terms: PaymentTerm[] = quote.payment_terms?.length ? quote.payment_terms : [{ label: "Payment due", percent: 100, trigger: "completion", days: 14 }];
-  for (const t of terms) drawRow(`${t.label} (${t.percent}%)`, `$${termAmount(t, quote.total_cost ?? 0).toLocaleString()}`);
+  const terms: PaymentTerm[] = quote.payment_terms?.length ? quote.payment_terms : [{ label: "Payment due", percent: 100, timing: "completion", days: 14 }];
+  for (const t of terms) drawRow(`${t.label} (${t.percent}%)`, `$${termAmount(t, gstTotals.inc).toLocaleString()}`);
   y -= 8;
 
   // ── ACCEPT CALLOUT ────────────────────────────────────────────────

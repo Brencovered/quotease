@@ -102,6 +102,14 @@ export default function MaterialsPanel() {
         setHourlyRate(profile.hourly_rate);
       }
 
+      // Backfill starter materials/packages for trades that onboarded before
+      // generic trade seeding existed (safe no-op when the book already has data).
+      try {
+        await fetch("/api/materials/seed-book", { method: "POST" });
+      } catch {
+        // Non-blocking — materials page still works without seed.
+      }
+
       await loadPackages(resolvedBusinessId);
       setPackagesLoading(false);
 

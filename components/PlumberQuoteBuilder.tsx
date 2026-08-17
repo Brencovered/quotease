@@ -19,6 +19,7 @@ import { getActiveBusinessId } from "@/lib/team";
 import LiveSiteAnnotation from "@/components/LiveSiteAnnotation";
 import DrawingAnalysisReviewTable, { type DetectedItem, type ReviewLineItem } from "@/components/DrawingAnalysisReviewTable";
 import { siteItemsLabourTotal, siteItemsMaterialsTotal, siteItemsLabourHours, markupMaterialsToScopeItems } from "@/lib/quotePricing";
+import PreferredStartDateField from "@/components/PreferredStartDateField";
 import { persistAnnotationFrames } from "@/lib/siteAnnotations";
 import JobDescriptionField from "@/components/JobDescriptionField";
 import { MaterialSearchAdd, ScopeItemsList, type ScopeItem } from "@/components/ScopeOfWorkStep";
@@ -113,6 +114,7 @@ export default function PlumberQuoteBuilder({
   const [siteAddress,   setSiteAddress]   = useState("");
   const [clientId, setClientId] = useState<string | null>(preClientId ?? null);
   const [plannedCrew, setPlannedCrew] = useState<string[]>([]);
+  const [scheduledDate, setScheduledDate] = useState("");
   const [termsPreset,   setTermsPreset]   = useState<keyof typeof PAYMENT_TERM_PRESETS | "custom">("full_on_completion");
   const [customTerms,   setCustomTerms]   = useState<PaymentTerm[]>([
     { label: "Deposit", percent: 50, trigger: "acceptance", days: 0 },
@@ -281,6 +283,7 @@ export default function PlumberQuoteBuilder({
       trade: "plumber",
       job_type: intake.jobType,
       planned_crew_member_ids: plannedCrew,
+      scheduled_date: scheduledDate || null,
       intake_data: { ...intake, site_items: siteItems, manual_labour_hours: manualLabourHrs, annotation_meta: persistedAnnotations },
       labour_hours: result.labourHours + extraLines.reduce((s,l) => s + l.hours, 0) + siteLabourSave + manualLabourHrs,
       materials_cost: result.materialsCost + extraTotals.materials + siteMatlsSave,
@@ -531,6 +534,7 @@ export default function PlumberQuoteBuilder({
               </select>
             </div>
           )}
+          <PreferredStartDateField value={scheduledDate} onChange={setScheduledDate} />
           <div className="card">
             <p className="section-tag mb-3">Hot water</p>
             <Chk checked={intake.hwuReplacement} onChange={(v) => set("hwuReplacement", v)} label="Hot water unit replacement" />
