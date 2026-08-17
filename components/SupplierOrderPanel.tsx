@@ -29,6 +29,7 @@ type SupplierContact = {
   supplier_name: string;
   email: string;
   phone: string | null;
+  account_number: string | null;
 };
 
 type SendLog = {
@@ -131,6 +132,7 @@ export default function SupplierOrderPanel({
   const [deliveryNotes, setDeliveryNotes] = useState("");
   const [activeSupplier, setActiveSupplier] = useState<string | null>(null);
   const [emailBySupplier, setEmailBySupplier] = useState<Record<string, string>>({});
+  const [accountBySupplier, setAccountBySupplier] = useState<Record<string, string>>({});
   const [saveContact, setSaveContact] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -199,12 +201,19 @@ export default function SupplierOrderPanel({
     setSeeded(true);
   }, [book, tradeMaterials, jobLineItems, scopeLines, seeded, metaReady]);
 
-  // Prefill emails from saved contacts when suppliers change
+  // Prefill emails + account numbers from saved contacts when suppliers change
   useEffect(() => {
     setEmailBySupplier((prev) => {
       const next = { ...prev };
       for (const c of contacts) {
         if (!next[c.supplier_name]) next[c.supplier_name] = c.email;
+      }
+      return next;
+    });
+    setAccountBySupplier((prev) => {
+      const next = { ...prev };
+      for (const c of contacts) {
+        if (c.account_number && !next[c.supplier_name]) next[c.supplier_name] = c.account_number;
       }
       return next;
     });
@@ -286,6 +295,7 @@ export default function SupplierOrderPanel({
           fulfillment,
           neededBy: neededBy || null,
           deliveryNotes: deliveryNotes || null,
+          accountNumber: (accountBySupplier[supplier] ?? "").trim() || null,
           saveContact,
           markOrdered: true,
           preferMailto: false,
@@ -510,14 +520,18 @@ export default function SupplierOrderPanel({
                         value=""
                         onChange={(e) => {
                           if (!e.target.value) return;
+                          const chosen = contactOpts.find((c) => c.email === e.target.value);
                           setEmailBySupplier((prev) => ({ ...prev, [supplier]: e.target.value }));
+                          if (chosen?.account_number) {
+                            setAccountBySupplier((prev) => ({ ...prev, [supplier]: chosen.account_number! }));
+                          }
                         }}
                         className="app-field text-[13px]"
                       >
                         <option value="">Saved contacts…</option>
                         {contactOpts.map((c) => (
                           <option key={c.id} value={c.email}>
-                            {c.email}
+                            {c.email}{c.account_number ? ` · #${c.account_number}` : ""}
                           </option>
                         ))}
                       </select>
@@ -529,10 +543,20 @@ export default function SupplierOrderPanel({
                       placeholder="supplier@email.com"
                       className="app-field text-[13px]"
                     />
+                    <input
+                      value={accountBySupplier[supplier] ?? ""}
+                      onChange={(e) => setAccountBySupplier((prev) => ({ ...prev, [supplier]: e.target.value }))}
+                      placeholder="Your customer / account # with this supplier"
+                      className="app-field text-[13px]"
+                    />
                     <label className="flex items-center gap-2 text-[12.5px] text-[var(--ink-soft)]">
                       <input type="checkbox" checked={saveContact} onChange={(e) => setSaveContact(e.target.checked)} />
-                      Save this email for {supplier}
+                      Save email &amp; account # for {supplier}
                     </label>
+                    <p className="text-[11.5px] text-[var(--ink-faint)]">
+                      Business name, trading name, and person ordering come from{" "}
+                      <a href="/settings" className="underline font-semibold text-[var(--ink-soft)]">Settings</a>.
+                    </p>
                     <button
                       type="button"
                       disabled={busy || !(emailBySupplier[supplier] ?? "").trim()}

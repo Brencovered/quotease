@@ -8,6 +8,7 @@ import AppHeader from "@/components/AppHeader";
 import PushNotificationToggle from "@/components/PushNotificationToggle";
 import SettingsSkeleton from "@/components/SettingsSkeleton";
 import SiteConditionsSettingsPanel from "@/components/SiteConditionsSettingsPanel";
+import SupplierContactsSettingsPanel from "@/components/SupplierContactsSettingsPanel";
 import { getPeripheralsForBusiness, type SiteConditionTemplateRow } from "@/lib/peripherals";
 import Link from "next/link";
 import { BookOpen, Users } from "lucide-react";
@@ -57,7 +58,7 @@ async function SettingsData() {
     if (userData.user) {
       const userId = userData.user.id;
       const PROFILE_COLUMNS =
-        "id, business_name, contact_email, contact_phone, trades, hourly_rate, materials_margin_pct, default_deposit_pct, default_expiry_days, logo_url, abn, license_number, business_address, bank_account_name, bank_bsb, bank_account_number, accepts_cash, xero_tenant_id, xero_connected_at, xero_account_code, xero_tax_type, ai_free_analyses_used, ai_addon_status, ai_addon_period, ai_addon_analyses_used, directory_enabled, directory_suburb, directory_postcode, directory_bio, directory_website, directory_phone, directory_email, subscription_status, stripe_subscription_id, cancel_at_period_end, current_period_end, comp_access";
+        "id, business_name, trading_name, ordering_contact_name, contact_email, contact_phone, trades, hourly_rate, materials_margin_pct, default_deposit_pct, default_expiry_days, logo_url, abn, license_number, business_address, bank_account_name, bank_bsb, bank_account_number, accepts_cash, xero_tenant_id, xero_connected_at, xero_account_code, xero_tax_type, ai_free_analyses_used, ai_addon_status, ai_addon_period, ai_addon_analyses_used, directory_enabled, directory_suburb, directory_postcode, directory_bio, directory_website, directory_phone, directory_email, subscription_status, stripe_subscription_id, cancel_at_period_end, current_period_end, comp_access";
 
       // Previously: getActiveBusinessId() (one round trip) then the profile
       // fetch (a second round trip), fully sequential even though only the
@@ -132,6 +133,8 @@ async function SettingsData() {
 
       {/* Supplier price book */}
       <div className="page-wrap-narrow pb-0 pt-0">
+        <SupplierContactsSettingsPanel />
+
         <div className="card mt-0 mb-4">
           <p className="section-tag mb-1">Supplier price books</p>
           <p className="font-semibold text-[var(--ink)] mb-1">Auto-fill material prices when quoting</p>

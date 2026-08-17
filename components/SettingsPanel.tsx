@@ -25,7 +25,8 @@ const TRADES = [
 ];
 
 type Profile = {
-  business_name?: string; contact_email?: string; xero_connected?: boolean;
+  business_name?: string; trading_name?: string | null; ordering_contact_name?: string | null;
+  contact_email?: string; xero_connected?: boolean;
   trades?: string[]; logo_url?: string | null; abn?: string | null;
   license_number?: string | null; business_address?: string | null;
   terms_and_conditions?: string | null; ai_free_analyses_used?: number;
@@ -66,6 +67,9 @@ function RateSaveButton() {
 export default function SettingsPanel({ profile }: { profile: Profile }) {
   const trades = profile?.trades ?? [];
 
+  const [businessName,   setBusinessName]   = useState(profile?.business_name ?? "");
+  const [tradingName,    setTradingName]    = useState(profile?.trading_name ?? "");
+  const [orderingContactName, setOrderingContactName] = useState(profile?.ordering_contact_name ?? "");
   const [abn,            setAbn]            = useState(profile?.abn ?? "");
   const [licenceNumber,  setLicenceNumber]  = useState(profile?.license_number ?? "");
   const [businessAddress,setBusinessAddress] = useState(profile?.business_address ?? "");
@@ -167,6 +171,9 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
     }
 
     const { error } = await supabase.from("profiles").update({
+      business_name: businessName.trim() || null,
+      trading_name: tradingName.trim() || null,
+      ordering_contact_name: orderingContactName.trim() || null,
       abn: abn || null, license_number: licenceNumber || null,
       business_address: businessAddress || null, contact_phone: contactPhone || null, terms_and_conditions: terms,
       bank_account_name: bankAccountName || null, bank_bsb: bankBsb || null,
@@ -193,7 +200,7 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
           {(profile?.business_name ?? profile?.contact_email ?? "?")[0]?.toUpperCase()}
         </div>
         <div className="min-w-0">
-          <p className="font-bold text-[var(--ink)] text-[15px] truncate">{profile?.business_name ?? "Your business"}</p>
+          <p className="font-bold text-[var(--ink)] text-[15px] truncate">{businessName || profile?.business_name || "Your business"}</p>
           <p className="text-[13px] text-[var(--ink-faint)] truncate">{profile?.contact_email ?? ""}</p>
         </div>
       </div>
@@ -214,7 +221,9 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
       <div className="card mb-4">
         <p className="section-tag mb-1">Branding</p>
         <p className="font-semibold text-[var(--ink)] mb-1">Company details</p>
-        <p className="text-[13px] text-[var(--ink-faint)] mb-4">Appears on every quote you send to clients.</p>
+        <p className="text-[13px] text-[var(--ink-faint)] mb-4">
+          Appears on quotes and on supplier material orders.
+        </p>
 
         <div className="space-y-3">
           {/* Logo */}
@@ -236,6 +245,28 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
             </div>
           </div>
 
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Business name</label>
+              <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} className="app-field" placeholder="Legal / registered name" />
+            </div>
+            <div>
+              <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Trading name</label>
+              <input value={tradingName} onChange={(e) => setTradingName(e.target.value)} className="app-field" placeholder="If different from business name" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Person ordering materials</label>
+            <input
+              value={orderingContactName}
+              onChange={(e) => setOrderingContactName(e.target.value)}
+              className="app-field"
+              placeholder="Name that appears on supplier orders"
+            />
+            <p className="text-[11.5px] text-[var(--ink-faint)] mt-1">Signed on every materials order email (e.g. site supervisor or office).</p>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">ABN</label>
@@ -254,7 +285,7 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
           <div>
             <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Contact phone</label>
             <input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className="app-field" placeholder="0400 000 000" />
-            <p className="text-[11.5px] text-[var(--ink-faint)] mt-1">Shown on quotes and the PDF header</p>
+            <p className="text-[11.5px] text-[var(--ink-faint)] mt-1">Shown on quotes, PDFs, and supplier orders</p>
           </div>
 
           <div>

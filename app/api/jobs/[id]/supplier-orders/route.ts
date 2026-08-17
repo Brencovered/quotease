@@ -13,7 +13,12 @@ export type SupplierOrderLine = {
 
 function buildBody(opts: {
   businessName: string;
+  tradingName: string | null;
+  orderingContactName: string | null;
   contactPhone: string | null;
+  contactEmail: string | null;
+  abn: string | null;
+  accountNumber: string | null;
   jobNumber: number;
   clientName: string | null;
   siteAddress: string | null;
@@ -28,6 +33,11 @@ function buildBody(opts: {
     return `- ${l.qty} ${l.unit} × ${l.label}${sku}${cost}`;
   });
 
+  const displayName =
+    opts.tradingName && opts.tradingName !== opts.businessName
+      ? `${opts.businessName} trading as ${opts.tradingName}`
+      : opts.tradingName || opts.businessName;
+
   return [
     `Hi,`,
     ``,
@@ -40,9 +50,16 @@ function buildBody(opts: {
     opts.siteAddress ? `Site: ${opts.siteAddress}` : null,
     opts.deliveryNotes ? `Notes: ${opts.deliveryNotes}` : null,
     ``,
+    `Account / customer #: ${opts.accountNumber || "—"}`,
+    `Business: ${displayName}`,
+    opts.abn ? `ABN: ${opts.abn}` : null,
+    opts.orderingContactName ? `Ordered by: ${opts.orderingContactName}` : null,
+    opts.contactPhone ? `Phone: ${opts.contactPhone}` : null,
+    opts.contactEmail ? `Email: ${opts.contactEmail}` : null,
+    ``,
     `Thanks,`,
-    opts.businessName,
-    opts.contactPhone,
+    opts.orderingContactName || displayName,
+    opts.orderingContactName ? displayName : null,
   ]
     .filter((l) => l != null && l !== "")
     .join("\n");
@@ -88,6 +105,7 @@ export async function POST(
   const deliveryNotes = body.deliveryNotes ? String(body.deliveryNotes).trim() : null;
   const saveContact = Boolean(body.saveContact);
   const markOrdered = body.markOrdered !== false;
+  const accountNumberOverride = body.accountNumber != null ? String(body.accountNumber).trim() : null;
   const lines = Array.isArray(body.lines) ? (body.lines as SupplierOrderLine[]) : [];
   const preferMailto = Boolean(body.preferMailto);
 
@@ -95,7 +113,7 @@ export async function POST(
     return NextResponse.json({ error: "Supplier, email, and at least one line are required" }, { status: 400 });
   }
 
-  const [{ data: job }, { data: profile }] = await Promise.all([
+  const [{ data: job }, { data: profile }, { data: existingContact }] = await Promise.all([
     supabase
       .from("jobs")
       .select("id, quote_id, job_number, client_name, site_address, profile_id")
@@ -104,18 +122,37 @@ export async function POST(
       .single(),
     supabase
       .from("profiles")
-      .select("business_name, contact_phone, contact_email")
+      .select("business_name, trading_name, ordering_contact_name, contact_phone, contact_email, abn")
       .eq("id", businessId)
       .single(),
+    supabase
+      .from("supplier_contacts")
+      .select("id, account_number")
+      .eq("profile_id", businessId)
+      .eq("supplier_name", supplierName)
+      .eq("email", recipientEmail)
+      .maybeSingle(),
   ]);
 
   if (!job) return NextResponse.json({ error: "Job not found" }, { status: 404 });
 
   const businessName = profile?.business_name ?? "Your tradie";
-  const subject = `Materials order — Job #${job.job_number}${job.client_name ? ` — ${job.client_name}` : ""}`;
+  const tradingName = profile?.trading_name ?? null;
+  const orderingContactName = profile?.ordering_contact_name ?? null;
+  const accountNumber =
+    accountNumberOverride ||
+    existingContact?.account_number ||
+    null;
+
+  const subject = `Materials order — Job #${job.job_number}${job.client_name ? ` — ${job.client_name}` : ""} — ${businessName}`;
   const bodyText = buildBody({
     businessName,
+    tradingName,
+    orderingContactName,
     contactPhone: profile?.contact_phone ?? null,
+    contactEmail: profile?.contact_email ?? null,
+    abn: profile?.abn ?? null,
+    accountNumber,
     jobNumber: job.job_number,
     clientName: job.client_name,
     siteAddress: job.site_address,
@@ -182,6 +219,7 @@ export async function POST(
         profile_id: businessId,
         supplier_name: supplierName,
         email: recipientEmail,
+        account_number: accountNumber,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "profile_id,supplier_name,email" }
