@@ -13,7 +13,7 @@ import JobFilesPanel from "@/components/JobFilesPanel";
 import JobCrewPanel from "@/components/JobCrewPanel";
 import JobBriefPanel from "@/components/JobBriefPanel";
 import JobTasksPanel from "@/components/JobTasksPanel";
-import MaterialsChecklistPanel from "@/components/MaterialsChecklistPanel";
+import SupplierOrderPanel from "@/components/SupplierOrderPanel";
 import JobTimeline from "@/components/JobTimeline";
 import JobPlansPanel from "@/components/JobPlansPanel";
 import SiteAnnotationReport from "@/components/SiteAnnotationReport";
@@ -278,6 +278,24 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                 scopeLines={scopeLines}
               />
 
+              <SupplierOrderPanel
+                jobId={job.id}
+                quoteId={quote?.id ?? null}
+                jobNumber={job.job_number}
+                clientName={job.client_name}
+                siteAddress={job.site_address}
+                scopeLines={scopeLines}
+                jobLineItems={(lineItems as Array<{ id: string; label: string; quantity: number; unit: string; status: string }>).map((l) => ({
+                  id: l.id,
+                  label: l.label,
+                  quantity: l.quantity,
+                  unit: l.unit,
+                  status: l.status,
+                }))}
+                tradeMaterials={tradeMaterials}
+                trade={jobTrade}
+              />
+
               <DocketsPanel
                 jobId={job.id}
                 dockets={dockets as never}
@@ -306,9 +324,6 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                 <JobPlansPanel quoteId={quote.id} clientId={quote.client_id} plans={jobPlans as never} materials={tradeMaterials} marginPct={marginPct} trade={job.trade ?? "electrician"} />
               ) : (
                 <p className="text-[13px] text-[var(--ink-faint)]">Plan markup needs a linked quote - this job was created without one.</p>
-              )}
-              {quote && (
-                <MaterialsChecklistPanel quoteId={quote.id} initialChecklist={quote.materials_checklist ?? []} scopeLines={scopeLines} clientName={job.client_name} />
               )}
               {/* Only renders anything if this job's quote actually went
                   through live site markup - no camera use, no report. */}

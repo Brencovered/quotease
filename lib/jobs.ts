@@ -222,6 +222,8 @@ export async function generateNextOccurrence(supabase: SupabaseClient, templateJ
   const freq = rule.freq ?? "monthly";
   const interval = rule.interval ?? 1;
   const baseDate = template.next_occurrence_date ? new Date(template.next_occurrence_date) : new Date();
+  const dateStr = baseDate.toISOString().slice(0, 10);
+  const start = resolveScheduledStart(null, dateStr);
 
   const { data: occurrence, error } = await supabase
     .from("jobs")
@@ -240,7 +242,9 @@ export async function generateNextOccurrence(supabase: SupabaseClient, templateJ
       labour_hours: template.labour_hours,
       materials_cost: template.materials_cost,
       total_cost: template.total_cost,
-      scheduled_date: baseDate.toISOString().slice(0, 10),
+      scheduled_date: dateStr,
+      scheduled_start: start,
+      scheduled_end: start,
       assigned_to_member_id: template.assigned_to_member_id,
       parent_job_id: template.id,
     })
