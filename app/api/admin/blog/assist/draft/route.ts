@@ -14,6 +14,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/admin";
 import { generateWithFallback, MODELS } from "@/lib/ai/gateway";
+import { formatAiGatewayError } from "@/lib/ai/formatAiGatewayError";
 import { checkRateLimit, rateLimitResponseInit } from "@/lib/rateLimit";
 
 const FORMAT_NOTES = `CONTENT FORMAT this section must follow (plain markdown, no HTML):
@@ -74,7 +75,7 @@ Include at least one internal link. No preamble, no sign-off, no explanation of 
 
   try {
     const result = await generateWithFallback({
-      primaryModel:  MODELS.SONNET,
+      primaryModel:  MODELS.TEXT_PRIMARY,
       fallbackModel: MODELS.HAIKU,
       system:        `You write SEO blog posts for Swiftscope, Australian trade business software.\n\n${FORMAT_NOTES}`,
       prompt,
@@ -85,7 +86,7 @@ Include at least one internal link. No preamble, no sign-off, no explanation of 
   } catch (err) {
     console.error("[blog-assist/draft] Error:", err);
     return NextResponse.json(
-      { error: "Drafting failed. Please try again." },
+      { error: formatAiGatewayError(err) },
       { status: 500 }
     );
   }
