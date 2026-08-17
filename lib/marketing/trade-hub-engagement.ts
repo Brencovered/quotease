@@ -1,5 +1,5 @@
 /**
- * Trade-page engagement layer: demos, testimonials, compliance, field mockups.
+ * Trade-page engagement layer: demos, compliance, field mockups.
  * Merged into TradeHub via trade-hubs.ts
  */
 
@@ -14,12 +14,6 @@ export type TradeDemoJob = {
   label: string;
   labourHours: number;
   lines: TradeDemoLine[];
-};
-
-export type TradeTestimonial = {
-  quote: string;
-  name: string;
-  meta: string;
 };
 
 export type TradeCompliance = {
@@ -43,7 +37,6 @@ export type TradeEngagement = {
   /** Trade-matched hero alt override when photo is best-fit */
   heroAlt: string;
   supportAlt: string;
-  testimonial: TradeTestimonial;
   compliance: TradeCompliance;
   demoJobs: TradeDemoJob[];
   quoteFields: TradeQuoteField[];
@@ -58,12 +51,6 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
     slang: "sparkies",
     heroAlt: "Sparky at a residential switchboard scoping circuits",
     supportAlt: "Electrician on site checking the install before quoting",
-    testimonial: {
-      quote:
-        "I used to spend two hours every night pricing switchboard upgrades and downlight counts. Now I tap the plan on site and send before I hit the freeway.",
-      name: "Mitch R.",
-      meta: "Licensed electrician · Melbourne",
-    },
     compliance: {
       badge: "COES",
       title: "COES and compliance on the quote",
@@ -129,12 +116,6 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
     slang: "plumbers",
     heroAlt: "Plumber working a residential wet-area rough-in",
     supportAlt: "Bathroom ready for fit-off after the plumbing measure",
-    testimonial: {
-      quote:
-        "Hot water changeovers used to mean a messy quote at the van, then a rewrite that night. Now I build the assembly on site — tank, valves, labour — and send it before I wash up.",
-      name: "Sarah K.",
-      meta: "Licensed plumber · Brisbane",
-    },
     compliance: {
       badge: "WWC",
       title: "Waterproofing certs stay with the job",
@@ -200,12 +181,6 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
     slang: "chippies",
     heroAlt: "Chippie framing a residential interior fit-out",
     supportAlt: "Residential framing site after the measure and quote",
-    testimonial: {
-      quote:
-        "Decking quotes used to mean scribbling lengths on a scrap, then rebuilding the take-off at the shed. Now I price timber, fixings, and labour on site and send before the client walks back inside.",
-      name: "Tom H.",
-      meta: "Carpenter · Adelaide",
-    },
     compliance: {
       badge: "Take-off",
       title: "Timber take-offs that match the quote",
@@ -271,12 +246,6 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
     slang: "roofers",
     heroAlt: "Roofer on tin scoping a residential re-roof",
     supportAlt: "Residential roof line ready for sheet and flashing measure",
-    testimonial: {
-      quote:
-        "Re-roofs used to wait on square metres and a desk rebuild. Now I scope sheet, flashings, and scaffold on the driveway and send while the client is still looking up at the roof.",
-      name: "Nick P.",
-      meta: "Roof plumber · Perth",
-    },
     compliance: {
       badge: "SWMS",
       title: "Height work SWMS / JSA with the job",
@@ -342,12 +311,6 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
     slang: "painters",
     heroAlt: "Painter cutting in on a residential interior repaint",
     supportAlt: "Interior walls prepped and ready for coats",
-    testimonial: {
-      quote:
-        "I used to lose evenings rebuilding room counts and prep notes. Now I walk the house once, price rooms and coats from my book, and send before I load the ladders.",
-      name: "Jess L.",
-      meta: "Painter · Sydney",
-    },
     compliance: {
       badge: "Prep",
       title: "Prep notes that protect the margin",
@@ -413,12 +376,6 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
     slang: "tilers",
     heroAlt: "Tiler setting floor tiles on a residential wet area",
     supportAlt: "Interior surface ready for tile layout and waterproofing",
-    testimonial: {
-      quote:
-        "Bathroom tile quotes died in the spreadsheet every night. Now I price area, waterproofing, and trim on site and send while the demo dust is still settling.",
-      name: "Chris A.",
-      meta: "Tiler · Gold Coast",
-    },
     compliance: {
       badge: "WWC",
       title: "Waterproofing certificates upfront",
@@ -484,12 +441,6 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
     slang: "landscapers",
     heroAlt: "Landscaper working a residential outdoor makeover",
     supportAlt: "Outdoor residential site ready for softscape and hardscape",
-    testimonial: {
-      quote:
-        "Garden makeovers used to mean a sketch and a late-night price. Now I build softscape, hardscape, and machine hire on site and send before I leave the nature strip.",
-      name: "Amy B.",
-      meta: "Landscaper · Canberra",
-    },
     compliance: {
       badge: "Scope",
       title: "Clear inclusions before the dig",
@@ -555,12 +506,6 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
     slang: "arborists",
     heroAlt: "Arborist on height work at a residential tree job",
     supportAlt: "Residential height work and canopy management on site",
-    testimonial: {
-      quote:
-        "Tree jobs are crew, access, and disposal — not a single day rate. Swiftscope lets me price the lot on the nature strip and send before the chipper leaves.",
-      name: "Luke D.",
-      meta: "Arborist · Hobart",
-    },
     compliance: {
       badge: "SWMS",
       title: "SWMS / JSA for height and chipper work",
@@ -626,12 +571,6 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
     slang: "concreters",
     heroAlt: "Concreter on a residential slab and path pour",
     supportAlt: "Residential site set for formwork and pour",
-    testimonial: {
-      quote:
-        "Paths and slabs used to mean mental maths on the form boards. Now I tap area, thickness, mesh, and pump, and the client has a number before the truck is booked.",
-      name: "Ben W.",
-      meta: "Concreter · Newcastle",
-    },
     compliance: {
       badge: "Pour",
       title: "Pour specs on the quote",
@@ -697,12 +636,6 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
     slang: "fencers",
     heroAlt: "Fencer installing a residential ColorBond boundary fence",
     supportAlt: "Residential boundary line ready for posts and panels",
-    testimonial: {
-      quote:
-        "Boundary jobs are metres, posts, and gates — easy to underquote from memory. I price the run on site now and send before the neighbour finishes their coffee.",
-      name: "Ryan S.",
-      meta: "Fencer · Geelong",
-    },
     compliance: {
       badge: "Boundary",
       title: "Boundary & neighbour notes on the quote",
@@ -768,12 +701,6 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
     slang: "AC techs",
     heroAlt: "Air conditioning tech installing a residential split system",
     supportAlt: "Technician scoping a wall-mounted split install",
-    testimonial: {
-      quote:
-        "Split installs are unit, mounts, pipe runs, and electrical — easy to forget a line at the desk. I build the package on site now and send before I coil the copper.",
-      name: "Priya N.",
-      meta: "ARC-tick tech · Melbourne",
-    },
     compliance: {
       badge: "ARC",
       title: "Electrical & refrigerant notes on scope",
@@ -839,12 +766,6 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
     slang: "surveyors",
     heroAlt: "Survey gear set out on a residential building site",
     supportAlt: "Residential site ready for set-out and identification survey",
-    testimonial: {
-      quote:
-        "Identification surveys and set-outs should not wait on an office rewrite. I price the deliverable on site and send while the builder is still walking the block.",
-      name: "Helen F.",
-      meta: "Licensed surveyor · Melbourne",
-    },
     compliance: {
       badge: "Plan",
       title: "Deliverables named on the quote",
@@ -910,12 +831,6 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
     slang: "specialist trades",
     heroAlt: "Specialist tradie on a residential job scoping the work",
     supportAlt: "Specialist trade work measured and ready to price",
-    testimonial: {
-      quote:
-        "My work does not fit a generic template. I load my own book, price on site, and send a clean quote that still looks like my business.",
-      name: "Alex J.",
-      meta: "Specialist trade · Regional VIC",
-    },
     compliance: {
       badge: "Notes",
       title: "Your compliance notes, on the quote",

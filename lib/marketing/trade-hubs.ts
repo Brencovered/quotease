@@ -12,7 +12,6 @@ import {
   type TradeCompliance,
   type TradeDemoJob,
   type TradeQuoteField,
-  type TradeTestimonial,
 } from "@/lib/marketing/trade-hub-engagement";
 
 export type TradeHubFaq = { question: string; answer: string };
@@ -37,7 +36,6 @@ export type TradeHub = {
   quoteFields: string[];
   quoteFieldDetails: TradeQuoteField[];
   demoJobs: TradeDemoJob[];
-  testimonial: TradeTestimonial;
   compliance: TradeCompliance;
   faqs: TradeHubFaq[];
   heroImage: string;
@@ -235,7 +233,6 @@ type HubCopy = Omit<
   | "dedicated"
   | "quoteFieldDetails"
   | "demoJobs"
-  | "testimonial"
   | "compliance"
   | "heroImage"
   | "heroAlt"
@@ -803,7 +800,6 @@ function buildHub(trade: (typeof ALL_TRADES)[number]): TradeHub {
     quoteFields: engagement.quoteFields.map((f) => f.label),
     quoteFieldDetails: engagement.quoteFields,
     demoJobs: engagement.demoJobs,
-    testimonial: engagement.testimonial,
     compliance: engagement.compliance,
     ...visual,
     heroAlt: engagement.heroAlt || visual.heroAlt,

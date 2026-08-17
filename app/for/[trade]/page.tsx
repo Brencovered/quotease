@@ -157,27 +157,8 @@ export default async function TradeHubPage({ params }: PageProps) {
         </div>
       </section>
 
-      {/* Peer-matched social proof */}
-      <section className="bg-white border-y border-[#e4e8ec]">
-        <div className="max-w-[1280px] mx-auto px-5 sm:px-6 py-14 lg:py-16">
-          <p className="font-sans text-[12px] font-bold tracking-[0.16em] uppercase text-[#b88400] mb-4">
-            From {hub.slang}
-          </p>
-          <blockquote className="max-w-3xl">
-            <p className="font-display text-[clamp(1.45rem,3vw,2.1rem)] tracking-wide leading-[1.2] text-[#071018] mb-6">
-              “{hub.testimonial.quote}”
-            </p>
-            <footer className="font-sans text-[15px] text-[#5a6a78]">
-              <span className="font-bold text-[#071018]">{hub.testimonial.name}</span>
-              <span className="text-[#c5ced6]"> · </span>
-              {hub.testimonial.meta}
-            </footer>
-          </blockquote>
-        </div>
-      </section>
-
       {/* Interactive common jobs */}
-      <section className="bg-[#f4f6f8]">
+      <section className="bg-white border-y border-[#e4e8ec]">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-6 py-16 lg:py-20">
           <TradeJobDemo tradeLabel={hub.label} jobs={hub.demoJobs} />
         </div>
