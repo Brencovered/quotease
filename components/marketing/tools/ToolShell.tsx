@@ -16,9 +16,11 @@ export function moneyAud(n: number, digits = 0) {
 export function ToolShell({
   tool,
   children,
+  seoFaqs,
 }: {
   tool: ToolMeta;
   children: React.ReactNode;
+  seoFaqs?: { q: string; a: string }[];
 }) {
   return (
     <main className="bg-[#f4f6f8] text-[#071018] min-h-screen">
@@ -45,6 +47,8 @@ export function ToolShell({
       </section>
 
       <section className="max-w-[1280px] mx-auto px-5 sm:px-6 py-10 lg:py-14">{children}</section>
+
+      {seoFaqs?.length ? <ToolSeoBlock title="Common questions" items={seoFaqs} /> : null}
 
       <ToolHook tool={tool} />
     </main>
@@ -89,6 +93,63 @@ export function ToolPanel({
       ) : null}
       {children}
     </div>
+  );
+}
+
+export function ToolToggle({
+  options,
+  value,
+  onChange,
+}: {
+  options: { id: string; label: string }[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2 mb-5">
+      {options.map((opt) => {
+        const on = opt.id === value;
+        return (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => onChange(opt.id)}
+            className={[
+              "px-4 py-2.5 font-sans text-[13.5px] font-bold border transition-colors",
+              on
+                ? "bg-[#071018] text-white border-[#071018]"
+                : "bg-white text-[#071018] border-[#e4e8ec] hover:border-[#071018]",
+            ].join(" ")}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function ToolSeoBlock({
+  title,
+  items,
+}: {
+  title: string;
+  items: { q: string; a: string }[];
+}) {
+  return (
+    <section className="max-w-[1280px] mx-auto px-5 sm:px-6 pb-14 lg:pb-16">
+      <h2 className="font-display text-[clamp(1.5rem,3vw,2rem)] tracking-wide text-[#071018] mb-6">
+        {title}
+      </h2>
+      <div className="max-w-3xl space-y-0">
+        {items.map((item) => (
+          <div key={item.q} className="border-b border-[#e4e8ec] py-5 first:pt-0">
+            <h3 className="font-display text-[1.1rem] tracking-wide text-[#071018] mb-2">{item.q}</h3>
+            <p className="font-sans text-[15px] leading-[1.7] text-[#3d4a55] max-w-[54ch]">{item.a}</p>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

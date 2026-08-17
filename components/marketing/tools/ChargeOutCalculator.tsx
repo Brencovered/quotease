@@ -9,121 +9,223 @@ import {
   ToolResultRow,
 } from "@/components/marketing/tools/ToolShell";
 
+/**
+ * True charge-out:
+ * (Net + Tax + Super + Workers comp + Overheads) ÷ actual annual billable hours
+ *
+ * Unbillable time, leave, and public holidays reduce the denominator so the
+ * rate reflects real on-tools hours, not a fantasy 2,000-hour year.
+ */
 export default function ChargeOutCalculator() {
-  const [takeHome, setTakeHome] = useState(120000);
-  const [vehicle, setVehicle] = useState(12000);
-  const [insurance, setInsurance] = useState(4500);
-  const [tools, setTools] = useState(3000);
-  const [superannuation, setSuperannuation] = useState(12000);
-  const [swiftscope, setSwiftscope] = useState(540);
-  const [otherOverhead, setOtherOverhead] = useState(5000);
-  const [billableWeeks, setBillableWeeks] = useState(46);
-  const [hoursPerWeek, setHoursPerWeek] = useState(32);
-  const [profitMargin, setProfitMargin] = useState(20);
+  const [netPay, setNetPay] = useState(100000);
+  const [effectiveTaxPct, setEffectiveTaxPct] = useState(28);
+  const [superPct, setSuperPct] = useState(12);
+  const [workersComp, setWorkersComp] = useState(2500);
+  const [rego, setRego] = useState(900);
+  const [insurance, setInsurance] = useState(3500);
+  const [software, setSoftware] = useState(540);
+  const [tools, setTools] = useState(2500);
+  const [otherOverhead, setOtherOverhead] = useState(4000);
+
+  const [hoursPerWeek, setHoursPerWeek] = useState(45);
+  const [unbillablePerWeek, setUnbillablePerWeek] = useState(14);
+  const [leaveWeeks, setLeaveWeeks] = useState(4);
+  const [publicHolidays, setPublicHolidays] = useState(11);
+  const [profitBuffer, setProfitBuffer] = useState(15);
 
   const result = useMemo(() => {
-    const overhead =
-      vehicle + insurance + tools + superannuation + swiftscope + otherOverhead;
-    const annualCost = takeHome + overhead;
-    const billableHours = Math.max(billableWeeks, 1) * Math.max(hoursPerWeek, 1);
-    const breakEvenHourly = annualCost / billableHours;
-    const chargeHourly =
-      breakEvenHourly / (1 - Math.min(Math.max(profitMargin, 0), 90) / 100);
-    const chargeDay = chargeHourly * (hoursPerWeek / 5);
-    return { overhead, billableHours, breakEvenHourly, chargeHourly, chargeDay };
+    const tax = netPay * (Math.min(Math.max(effectiveTaxPct, 0), 55) / 100);
+    const grossLike = netPay + tax;
+    const superAmount = grossLike * (Math.min(Math.max(superPct, 0), 20) / 100);
+    const fixedOverhead = rego + insurance + software + tools + otherOverhead;
+    const totalToRecover = netPay + tax + superAmount + workersComp + fixedOverhead;
+
+    const holidayWeeks = Math.max(publicHolidays, 0) / 5;
+    const workingWeeks = Math.max(52 - leaveWeeks - holidayWeeks, 1);
+    const billablePerWeek = Math.max(hoursPerWeek - unbillablePerWeek, 0);
+    const annualBillable = workingWeeks * billablePerWeek;
+
+    const breakEven = annualBillable > 0 ? totalToRecover / annualBillable : 0;
+    const chargeOut =
+      breakEven / (1 - Math.min(Math.max(profitBuffer, 0), 80) / 100);
+    const dayRate = chargeOut * Math.min(billablePerWeek, 8);
+
+    const naiveRate = netPay / 2000;
+    const unbillableShare =
+      hoursPerWeek > 0 ? (unbillablePerWeek / hoursPerWeek) * 100 : 0;
+
+    return {
+      tax,
+      superAmount,
+      fixedOverhead,
+      totalToRecover,
+      workingWeeks,
+      billablePerWeek,
+      annualBillable,
+      breakEven,
+      chargeOut,
+      dayRate,
+      naiveRate,
+      unbillableShare,
+      gapVsNaive: chargeOut - naiveRate,
+    };
   }, [
-    takeHome,
-    vehicle,
+    netPay,
+    effectiveTaxPct,
+    superPct,
+    workersComp,
+    rego,
     insurance,
+    software,
     tools,
-    superannuation,
-    swiftscope,
     otherOverhead,
-    billableWeeks,
     hoursPerWeek,
-    profitMargin,
+    unbillablePerWeek,
+    leaveWeeks,
+    publicHolidays,
+    profitBuffer,
   ]);
 
   return (
     <div className="grid lg:grid-cols-12 gap-6 lg:gap-8 items-start">
       <div className="lg:col-span-7 space-y-6">
-        <ToolPanel title="Income target">
+        <ToolPanel title="What you need to take home">
           <RangeField
-            label="Desired take-home pay"
-            value={takeHome}
+            label="Desired annual net pay"
+            value={netPay}
             min={40000}
-            max={300000}
+            max={250000}
             step={1000}
-            onChange={setTakeHome}
-            display={`${moneyAud(takeHome)} /yr`}
+            onChange={setNetPay}
+            display={`${moneyAud(netPay)} /yr`}
           />
-        </ToolPanel>
-
-        <ToolPanel title="Hidden costs (per year)">
-          <div className="grid sm:grid-cols-2 gap-x-5">
-            <NumberField label="Vehicle / fuel / lease" value={vehicle} onChange={setVehicle} prefix="$" min={0} step={100} />
-            <NumberField label="Insurance" value={insurance} onChange={setInsurance} prefix="$" min={0} step={100} />
-            <NumberField label="Tools and consumables" value={tools} onChange={setTools} prefix="$" min={0} step={100} />
-            <NumberField label="Superannuation" value={superannuation} onChange={setSuperannuation} prefix="$" min={0} step={100} />
-            <NumberField label="Swiftscope subscription" value={swiftscope} onChange={setSwiftscope} prefix="$" min={0} step={45} />
-            <NumberField label="Other overhead" value={otherOverhead} onChange={setOtherOverhead} prefix="$" min={0} step={100} />
-          </div>
-          <p className="font-sans text-[13px] text-[#5a6a78] mt-2">
-            Total overhead modelled:{" "}
-            <strong className="font-sans font-bold text-[#071018]">{moneyAud(result.overhead)}</strong> /yr
+          <RangeField
+            label="Estimated tax + Medicare (effective)"
+            value={effectiveTaxPct}
+            min={0}
+            max={45}
+            step={1}
+            onChange={setEffectiveTaxPct}
+            display={`${effectiveTaxPct}% ≈ ${moneyAud(result.tax)}`}
+          />
+          <p className="font-sans text-[13px] leading-[1.6] text-[#5a6a78]">
+            Rough planning rate only. Your accountant will refine the tax figure. Default assumes a typical sole-trader effective rate.
           </p>
         </ToolPanel>
 
-        <ToolPanel title="Billable time">
+        <ToolPanel title="Super, cover, and fixed overheads">
           <RangeField
-            label="Billable weeks per year"
-            value={billableWeeks}
-            min={30}
-            max={50}
-            step={1}
-            onChange={setBillableWeeks}
-            display={`${billableWeeks} weeks`}
+            label="Superannuation rate"
+            value={superPct}
+            min={0}
+            max={15}
+            step={0.5}
+            onChange={setSuperPct}
+            display={`${superPct}% ≈ ${moneyAud(result.superAmount)}`}
           />
+          <div className="grid sm:grid-cols-2 gap-x-5">
+            <NumberField label="Workers compensation" value={workersComp} onChange={setWorkersComp} prefix="$" min={0} step={50} />
+            <NumberField label="Rego" value={rego} onChange={setRego} prefix="$" min={0} step={50} />
+            <NumberField label="Insurance" value={insurance} onChange={setInsurance} prefix="$" min={0} step={50} />
+            <NumberField label="Software (incl. Swiftscope)" value={software} onChange={setSoftware} prefix="$" min={0} step={45} />
+            <NumberField label="Tools / consumables" value={tools} onChange={setTools} prefix="$" min={0} step={50} />
+            <NumberField label="Other overhead" value={otherOverhead} onChange={setOtherOverhead} prefix="$" min={0} step={100} />
+          </div>
+          <p className="font-sans text-[13px] text-[#5a6a78] mt-1">
+            Fixed overheads total{" "}
+            <strong className="font-sans font-bold text-[#071018]">{moneyAud(result.fixedOverhead)}</strong> /yr
+          </p>
+        </ToolPanel>
+
+        <ToolPanel title="Real billable time">
           <RangeField
-            label="Billable hours per week"
+            label="Hours worked per week"
             value={hoursPerWeek}
-            min={10}
-            max={50}
+            min={30}
+            max={60}
             step={1}
             onChange={setHoursPerWeek}
             display={`${hoursPerWeek} hrs`}
           />
           <RangeField
-            label="Profit margin on top of costs"
-            value={profitMargin}
+            label="Unbillable hours (admin, drive, quote, chase)"
+            value={unbillablePerWeek}
             min={0}
-            max={50}
+            max={30}
             step={1}
-            onChange={setProfitMargin}
-            display={`${profitMargin}%`}
+            onChange={setUnbillablePerWeek}
+            display={`${unbillablePerWeek} hrs · ${result.unbillableShare.toFixed(0)}% of week`}
+          />
+          <RangeField
+            label="Annual leave"
+            value={leaveWeeks}
+            min={0}
+            max={8}
+            step={0.5}
+            onChange={setLeaveWeeks}
+            display={`${leaveWeeks} weeks`}
+          />
+          <RangeField
+            label="Public holidays"
+            value={publicHolidays}
+            min={0}
+            max={15}
+            step={1}
+            onChange={setPublicHolidays}
+            display={`${publicHolidays} days`}
+          />
+          <RangeField
+            label="Profit buffer on top of break-even"
+            value={profitBuffer}
+            min={0}
+            max={40}
+            step={1}
+            onChange={setProfitBuffer}
+            display={`${profitBuffer}%`}
           />
         </ToolPanel>
       </div>
 
-      <div className="lg:col-span-5 lg:sticky lg:top-6">
+      <div className="lg:col-span-5 lg:sticky lg:top-6 space-y-6">
         <ToolPanel title="Your true charge-out">
           <dl>
-            <ToolResultRow label="Break-even hourly" value={moneyAud(result.breakEvenHourly)} />
-            <ToolResultRow label="Charge-out hourly" value={moneyAud(result.chargeHourly)} highlight />
             <ToolResultRow
-              label="Approx day rate"
-              value={moneyAud(result.chargeDay)}
+              label="True charge-out hourly"
+              value={moneyAud(result.chargeOut)}
               highlight
-              hint="Assumes a 5-day week from your weekly hours."
+            />
+            <ToolResultRow label="Break-even hourly" value={moneyAud(result.breakEven)} />
+            <ToolResultRow
+              label="Day rate (up to 8 billable hrs)"
+              value={moneyAud(result.dayRate)}
+              highlight
             />
             <ToolResultRow
-              label="Billable hours modelled"
-              value={`${Math.round(result.billableHours).toLocaleString("en-AU")} hrs/yr`}
+              label="Actual billable hours / year"
+              value={`${Math.round(result.annualBillable).toLocaleString("en-AU")} hrs`}
+              hint={`${result.workingWeeks.toFixed(1)} working weeks × ${result.billablePerWeek} billable hrs`}
+            />
+            <ToolResultRow
+              label="Total to recover per year"
+              value={moneyAud(result.totalToRecover)}
             />
           </dl>
-          <p className="font-sans text-[13.5px] leading-[1.6] text-[#5a6a78] mt-5">
-            Planning number only. Load your real labour rate into Swiftscope and price every job from your book on site.
-          </p>
+        </ToolPanel>
+
+        <ToolPanel title="Why the naive rate fails">
+          <dl>
+            <ToolResultRow
+              label="Net ÷ 2,000 hours"
+              value={moneyAud(result.naiveRate)}
+              hint="Ignores tax, super, overheads, leave, and unbillable time."
+            />
+            <ToolResultRow
+              label="You would undercharge by"
+              value={moneyAud(Math.max(result.gapVsNaive, 0))}
+              highlight
+              hint="Per hour, before you even open the quote."
+            />
+          </dl>
         </ToolPanel>
       </div>
     </div>

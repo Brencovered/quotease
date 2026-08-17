@@ -8,16 +8,51 @@ import {
   NumberField,
   TextField,
   ToolPanel,
+  ToolToggle,
 } from "@/components/marketing/tools/ToolShell";
 
-type Line = { id: string; description: string; qty: number; unitPrice: number };
+type Line = {
+  id: string;
+  kind: "labour" | "materials" | "other";
+  description: string;
+  qty: number;
+  unitPrice: number;
+};
 
-function newLine(): Line {
+type BrandKey = "amber" | "navy" | "steel" | "forest";
+
+const BRANDS: Record<BrandKey, { label: string; hex: string; rgb: [number, number, number] }> = {
+  amber: { label: "Amber", hex: "#ffb400", rgb: [1, 0.706, 0] },
+  navy: { label: "Navy", hex: "#1a242c", rgb: [0.1, 0.14, 0.17] },
+  steel: { label: "Steel blue", hex: "#3b6ea5", rgb: [0.23, 0.43, 0.65] },
+  forest: { label: "Forest", hex: "#2f6b4f", rgb: [0.18, 0.42, 0.31] },
+};
+
+const TERMS = [
+  {
+    id: "7day",
+    label: "7-day payment",
+    text: "Payment due within 7 days of acceptance. Work may pause if payment terms are not met.",
+  },
+  {
+    id: "deposit",
+    label: "30% deposit",
+    text: "30% deposit on acceptance. Balance due on completion. Materials ordered after deposit clears.",
+  },
+  {
+    id: "variation",
+    label: "Variation clause",
+    text: "Payment due within 14 days. Variations to scope require written approval before extra work starts.",
+  },
+] as const;
+
+function newLine(kind: Line["kind"] = "labour"): Line {
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    kind,
     description: "",
     qty: 1,
-    unitPrice: 0,
+    unitPrice: kind === "labour" ? 110 : 0,
   };
 }
 
@@ -29,9 +64,12 @@ export default function QuotePdfGenerator() {
   const [clientName, setClientName] = useState("");
   const [siteAddress, setSiteAddress] = useState("");
   const [jobTitle, setJobTitle] = useState("");
+  const [brand, setBrand] = useState<BrandKey>("amber");
+  const [termsId, setTermsId] = useState<(typeof TERMS)[number]["id"]>("7day");
+  const [includeSignature, setIncludeSignature] = useState(true);
   const [lines, setLines] = useState<Line[]>([
-    { id: "1", description: "Labour", qty: 4, unitPrice: 110 },
-    { id: "2", description: "Materials", qty: 1, unitPrice: 240 },
+    { id: "1", kind: "labour", description: "Labour - site install", qty: 4, unitPrice: 110 },
+    { id: "2", kind: "materials", description: "Materials", qty: 1, unitPrice: 240 },
   ]);
   const [logoBytes, setLogoBytes] = useState<Uint8Array | null>(null);
   const [busy, setBusy] = useState(false);
@@ -42,6 +80,8 @@ export default function QuotePdfGenerator() {
     [lines]
   );
 
+  const terms = TERMS.find((t) => t.id === termsId) ?? TERMS[0];
+
   function updateLine(id: string, patch: Partial<Line>) {
     setLines((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
   }
@@ -51,18 +91,21 @@ export default function QuotePdfGenerator() {
       setLogoBytes(null);
       return;
     }
-    const buf = new Uint8Array(await file.arrayBuffer());
-    setLogoBytes(buf);
+    setLogoBytes(new Uint8Array(await file.arrayBuffer()));
   }
 
   async function downloadPdf() {
     setError(null);
-    if (!businessName.trim() || !email.trim() || !clientName.trim()) {
-      setError("Business name, your email, and client name are required.");
+    if (!businessName.trim() || !email.trim() || !phone.trim() || !clientName.trim()) {
+      setError("Business name, email, phone, and client name are required to download.");
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setError("Enter a valid email so we can send your PDF tips later.");
+      setError("Enter a valid email to unlock the download.");
+      return;
+    }
+    if (phone.trim().replace(/\D/g, "").length < 8) {
+      setError("Enter a valid phone number to unlock the download.");
       return;
     }
     if (lines.every((l) => !l.description.trim())) {
@@ -77,9 +120,9 @@ export default function QuotePdfGenerator() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: email.trim(),
+          phone: phone.trim(),
           tool: "quote-pdf",
           businessName: businessName.trim(),
-          phone: phone.trim() || undefined,
         }),
       }).catch(() => null);
 
@@ -93,6 +136,9 @@ export default function QuotePdfGenerator() {
         jobTitle: jobTitle.trim() || "Quote",
         lines,
         logoBytes,
+        accent: BRANDS[brand].rgb,
+        termsText: terms.text,
+        includeSignature,
       });
 
       const blob = new Blob([Uint8Array.from(bytes)], { type: "application/pdf" });
@@ -103,7 +149,7 @@ export default function QuotePdfGenerator() {
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      setError("Could not build the PDF. Try again without a logo, or use a PNG/JPG logo.");
+      setError("Could not build the PDF. Try a PNG/JPG logo, or remove the logo and retry.");
     } finally {
       setBusy(false);
     }
@@ -115,9 +161,9 @@ export default function QuotePdfGenerator() {
         <ToolPanel title="Your business">
           <div className="grid sm:grid-cols-2 gap-x-5">
             <TextField label="Business name" value={businessName} onChange={setBusinessName} required placeholder="Acme Electrical" />
-            <TextField label="Your email" value={email} onChange={setEmail} type="email" required placeholder="you@business.com.au" />
-            <TextField label="Phone" value={phone} onChange={setPhone} placeholder="04xx xxx xxx" />
             <TextField label="ABN" value={abn} onChange={setAbn} placeholder="12 345 678 901" />
+            <TextField label="Email" value={email} onChange={setEmail} type="email" required placeholder="you@business.com.au" />
+            <TextField label="Phone" value={phone} onChange={setPhone} required placeholder="04xx xxx xxx" />
           </div>
           <label className="block mt-2">
             <span className="block font-sans text-[13.5px] font-semibold text-[#071018] mb-1.5">Logo (optional PNG/JPG)</span>
@@ -128,6 +174,14 @@ export default function QuotePdfGenerator() {
               className="block w-full font-sans text-[13.5px] text-[#5a6a78]"
             />
           </label>
+          <p className="font-sans text-[12px] font-bold tracking-[0.14em] uppercase text-[#8b96a1] mt-5 mb-2">
+            Brand colour
+          </p>
+          <ToolToggle
+            value={brand}
+            onChange={(id) => setBrand(id as BrandKey)}
+            options={Object.entries(BRANDS).map(([id, b]) => ({ id, label: b.label }))}
+          />
         </ToolPanel>
 
         <ToolPanel title="Client and job">
@@ -138,74 +192,102 @@ export default function QuotePdfGenerator() {
           <TextField label="Site address" value={siteAddress} onChange={setSiteAddress} placeholder="8 Century Ave, Seaford VIC" />
         </ToolPanel>
 
-        <ToolPanel title="Line items">
+        <ToolPanel title="Labour and materials">
           <ul className="space-y-4">
             {lines.map((line) => (
-              <li key={line.id} className="grid sm:grid-cols-12 gap-3 items-end border-b border-[#eef0f3] pb-4">
-                <div className="sm:col-span-6">
-                  <TextField
-                    label="Description"
-                    value={line.description}
-                    onChange={(v) => updateLine(line.id, { description: v })}
-                    placeholder="Downlights supply and install"
-                  />
+              <li key={line.id} className="border-b border-[#eef0f3] pb-4">
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {(["labour", "materials", "other"] as const).map((kind) => (
+                    <button
+                      key={kind}
+                      type="button"
+                      onClick={() => updateLine(line.id, { kind })}
+                      className={[
+                        "px-2.5 py-1 font-sans text-[12px] font-bold border capitalize",
+                        line.kind === kind
+                          ? "bg-[#071018] text-white border-[#071018]"
+                          : "border-[#e4e8ec] text-[#5a6a78]",
+                      ].join(" ")}
+                    >
+                      {kind}
+                    </button>
+                  ))}
                 </div>
-                <div className="sm:col-span-2">
-                  <NumberField
-                    label="Qty"
-                    value={line.qty}
-                    onChange={(n) => updateLine(line.id, { qty: n })}
-                    min={0}
-                    step={0.5}
-                  />
-                </div>
-                <div className="sm:col-span-3">
-                  <NumberField
-                    label="Unit $"
-                    value={line.unitPrice}
-                    onChange={(n) => updateLine(line.id, { unitPrice: n })}
-                    prefix="$"
-                    min={0}
-                    step={1}
-                  />
-                </div>
-                <div className="sm:col-span-1 pb-3">
-                  <button
-                    type="button"
-                    aria-label="Remove line"
-                    onClick={() => setLines((prev) => (prev.length > 1 ? prev.filter((l) => l.id !== line.id) : prev))}
-                    className="text-[#8b96a1] hover:text-[#071018] p-2"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                <div className="grid sm:grid-cols-12 gap-3 items-end">
+                  <div className="sm:col-span-6">
+                    <TextField
+                      label="Description"
+                      value={line.description}
+                      onChange={(v) => updateLine(line.id, { description: v })}
+                      placeholder="Downlights supply and install"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <NumberField label="Qty" value={line.qty} onChange={(n) => updateLine(line.id, { qty: n })} min={0} step={0.5} />
+                  </div>
+                  <div className="sm:col-span-3">
+                    <NumberField label="Unit $" value={line.unitPrice} onChange={(n) => updateLine(line.id, { unitPrice: n })} prefix="$" min={0} step={1} />
+                  </div>
+                  <div className="sm:col-span-1 pb-3">
+                    <button
+                      type="button"
+                      aria-label="Remove line"
+                      onClick={() => setLines((prev) => (prev.length > 1 ? prev.filter((l) => l.id !== line.id) : prev))}
+                      className="text-[#8b96a1] hover:text-[#071018] p-2"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               </li>
             ))}
           </ul>
-          <button
-            type="button"
-            onClick={() => setLines((prev) => [...prev, newLine()])}
-            className="inline-flex items-center gap-2 font-sans text-[14px] font-bold text-[#071018] hover:text-[#b88400] mt-2"
-          >
-            <Plus size={15} aria-hidden /> Add line
-          </button>
+          <div className="flex flex-wrap gap-4 mt-2">
+            <button
+              type="button"
+              onClick={() => setLines((prev) => [...prev, newLine("labour")])}
+              className="inline-flex items-center gap-2 font-sans text-[14px] font-bold text-[#071018] hover:text-[#b88400]"
+            >
+              <Plus size={15} aria-hidden /> Labour line
+            </button>
+            <button
+              type="button"
+              onClick={() => setLines((prev) => [...prev, newLine("materials")])}
+              className="inline-flex items-center gap-2 font-sans text-[14px] font-bold text-[#071018] hover:text-[#b88400]"
+            >
+              <Plus size={15} aria-hidden /> Materials line
+            </button>
+          </div>
+        </ToolPanel>
+
+        <ToolPanel title="Payment terms">
+          <ToolToggle
+            value={termsId}
+            onChange={(id) => setTermsId(id as (typeof TERMS)[number]["id"])}
+            options={TERMS.map((t) => ({ id: t.id, label: t.label }))}
+          />
+          <p className="font-sans text-[13.5px] leading-[1.65] text-[#3d4a55] mb-4">{terms.text}</p>
+          <ToolToggle
+            value={includeSignature ? "yes" : "no"}
+            onChange={(id) => setIncludeSignature(id === "yes")}
+            options={[
+              { id: "yes", label: "Include signature line" },
+              { id: "no", label: "No signature line" },
+            ]}
+          />
         </ToolPanel>
       </div>
 
       <div className="lg:col-span-5 lg:sticky lg:top-6">
-        <ToolPanel title="Download">
-          <p className="font-sans text-[13.5px] text-[#5a6a78] mb-4">
-            Total
-          </p>
-          <p className="font-display text-[2.4rem] tracking-wide text-[#b88400] mb-6">
+        <ToolPanel title="Download quote PDF">
+          <p className="font-sans text-[13.5px] text-[#5a6a78] mb-2">Quote total</p>
+          <p className="font-display text-[2.4rem] tracking-wide text-[#b88400] mb-5">
             {moneyAud(total, 2)}
           </p>
           <p className="font-sans text-[13px] leading-[1.6] text-[#5a6a78] mb-5">
-            We use your email to follow up with quoting tips. No spam. The PDF downloads straight to your device.
+            Preview builds instantly. Email and phone unlock the download so we can follow up with quoting tips. No account required.
           </p>
-          {error ? (
-            <p className="font-sans text-[13.5px] text-[#b42318] mb-4">{error}</p>
-          ) : null}
+          {error ? <p className="font-sans text-[13.5px] text-[#b42318] mb-4">{error}</p> : null}
           <button
             type="button"
             disabled={busy}
@@ -230,15 +312,18 @@ async function buildPdf(input: {
   jobTitle: string;
   lines: Line[];
   logoBytes: Uint8Array | null;
+  accent: [number, number, number];
+  termsText: string;
+  includeSignature: boolean;
 }) {
   const pdf = await PDFDocument.create();
   const page = pdf.addPage([595.28, 841.89]);
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const navy = rgb(0.1, 0.14, 0.17);
-  const amber = rgb(1, 0.706, 0);
+  const accent = rgb(...input.accent);
   const soft = rgb(0.35, 0.4, 0.45);
-  const line = rgb(0.89, 0.9, 0.92);
+  const lineCol = rgb(0.89, 0.9, 0.92);
 
   let y = 790;
 
@@ -248,85 +333,105 @@ async function buildPdf(input: {
         input.logoBytes[0] === 0x89
           ? await pdf.embedPng(input.logoBytes)
           : await pdf.embedJpg(input.logoBytes);
-      const scale = Math.min(120 / img.width, 48 / img.height);
+      const scale = Math.min(110 / img.width, 44 / img.height);
       page.drawImage(img, {
         x: 48,
-        y: y - img.height * scale + 12,
+        y: y - img.height * scale + 10,
         width: img.width * scale,
         height: img.height * scale,
       });
     } catch {
-      // Logo optional — continue without it
+      // optional
     }
   }
 
-  page.drawText("QUOTE", {
-    x: 420,
-    y: y,
-    size: 22,
-    font: bold,
-    color: amber,
-  });
+  page.drawText("QUOTE", { x: 420, y, size: 22, font: bold, color: accent });
   y -= 36;
-
   page.drawText(input.businessName, { x: 48, y, size: 16, font: bold, color: navy });
-  y -= 18;
-  page.drawText(input.email, { x: 48, y, size: 10, font, color: soft });
+  y -= 16;
+  page.drawText(`${input.email}  ·  ${input.phone}`, { x: 48, y, size: 10, font, color: soft });
   y -= 14;
-  if (input.phone) {
-    page.drawText(input.phone, { x: 48, y, size: 10, font, color: soft });
-    y -= 14;
-  }
   if (input.abn) {
     page.drawText(`ABN ${input.abn}`, { x: 48, y, size: 10, font, color: soft });
     y -= 14;
   }
 
+  y -= 12;
+  page.drawRectangle({ x: 48, y: y + 6, width: 499, height: 2, color: accent });
   y -= 16;
-  page.drawRectangle({ x: 48, y: y + 8, width: 499, height: 1, color: line });
-  y -= 10;
 
   page.drawText(`Prepared for: ${input.clientName}`, { x: 48, y, size: 11, font: bold, color: navy });
-  y -= 16;
+  y -= 15;
   if (input.siteAddress) {
     page.drawText(`Site: ${input.siteAddress}`, { x: 48, y, size: 10, font, color: soft });
-    y -= 16;
+    y -= 15;
   }
   page.drawText(input.jobTitle, { x: 48, y, size: 13, font: bold, color: navy });
-  y -= 28;
+  y -= 26;
 
-  page.drawText("Description", { x: 48, y, size: 9, font: bold, color: soft });
+  page.drawText("Type", { x: 48, y, size: 9, font: bold, color: soft });
+  page.drawText("Description", { x: 100, y, size: 9, font: bold, color: soft });
   page.drawText("Qty", { x: 340, y, size: 9, font: bold, color: soft });
   page.drawText("Unit", { x: 400, y, size: 9, font: bold, color: soft });
   page.drawText("Total", { x: 480, y, size: 9, font: bold, color: soft });
   y -= 8;
-  page.drawRectangle({ x: 48, y, width: 499, height: 1, color: line });
-  y -= 18;
+  page.drawRectangle({ x: 48, y, width: 499, height: 1, color: lineCol });
+  y -= 16;
 
   let grand = 0;
   for (const item of input.lines) {
     if (!item.description.trim()) continue;
     const rowTotal = Math.max(item.qty, 0) * Math.max(item.unitPrice, 0);
     grand += rowTotal;
-    const desc = item.description.slice(0, 48);
-    page.drawText(desc, { x: 48, y, size: 10, font, color: navy });
+    page.drawText(item.kind.slice(0, 3).toUpperCase(), { x: 48, y, size: 9, font: bold, color: accent });
+    page.drawText(item.description.slice(0, 40), { x: 100, y, size: 10, font, color: navy });
     page.drawText(String(item.qty), { x: 340, y, size: 10, font, color: navy });
     page.drawText(`$${item.unitPrice.toFixed(2)}`, { x: 400, y, size: 10, font, color: navy });
     page.drawText(`$${rowTotal.toFixed(2)}`, { x: 470, y, size: 10, font: bold, color: navy });
-    y -= 18;
-    if (y < 100) break;
+    y -= 17;
+    if (y < 220) break;
   }
 
-  y -= 10;
-  page.drawRectangle({ x: 48, y, width: 499, height: 1, color: line });
-  y -= 24;
+  y -= 8;
+  page.drawRectangle({ x: 48, y, width: 499, height: 1, color: lineCol });
+  y -= 22;
   page.drawText("Total", { x: 400, y, size: 12, font: bold, color: navy });
-  page.drawText(`$${grand.toFixed(2)}`, { x: 460, y, size: 14, font: bold, color: navy });
+  page.drawText(`$${grand.toFixed(2)}`, { x: 455, y, size: 14, font: bold, color: navy });
 
-  y = 70;
-  page.drawText("Created free with Swiftscope tools. Quote on site in seconds at swiftscope.com.au", {
+  y -= 28;
+  page.drawText("Payment terms", { x: 48, y, size: 11, font: bold, color: navy });
+  y -= 14;
+  const words = input.termsText.split(" ");
+  let row = "";
+  for (const w of words) {
+    const next = row ? `${row} ${w}` : w;
+    if (font.widthOfTextAtSize(next, 9) > 490) {
+      page.drawText(row, { x: 48, y, size: 9, font, color: soft });
+      y -= 12;
+      row = w;
+    } else {
+      row = next;
+    }
+  }
+  if (row) {
+    page.drawText(row, { x: 48, y, size: 9, font, color: soft });
+    y -= 18;
+  }
+
+  if (input.includeSignature) {
+    y -= 10;
+    page.drawText("Client acceptance", { x: 48, y, size: 11, font: bold, color: navy });
+    y -= 28;
+    page.drawText("Name: ____________________________", { x: 48, y, size: 10, font, color: soft });
+    y -= 22;
+    page.drawText("Signature: ________________________", { x: 48, y, size: 10, font, color: soft });
+    y -= 22;
+    page.drawText("Date: ____________________", { x: 48, y, size: 10, font, color: soft });
+  }
+
+  page.drawText("Created free with Swiftscope tools · Quote from site in seconds at swiftscope.com.au", {
     x: 48,
-    y,
+    y: 48,
     size: 8,
     font,
     color: soft,

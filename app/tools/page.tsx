@@ -5,9 +5,9 @@ import MarketingNav from "@/components/MarketingNav";
 import { toolsByAudience } from "@/lib/marketing/tools";
 
 export const metadata: Metadata = {
-  title: "Free tools for tradies and homeowners - Swiftscope",
+  title: "Free tradie calculators and homeowner tools - Swiftscope",
   description:
-    "Free charge-out, margin, quote PDF, vehicle cost, ballpark job cost, DIY material calculators, and a hire checklist. Built for Australian tradies and homeowners.",
+    "Free Australian tradie tools: true charge-out rate with super and unbillable time, margin vs markup converter, quote PDF generator, and vehicle cost calculator. Plus homeowner ballpark and DIY tools.",
 };
 
 export default function ToolsIndexPage() {
@@ -38,8 +38,11 @@ export default function ToolsIndexPage() {
             For tradies
           </p>
           <h2 className="font-display text-[clamp(1.6rem,3vw,2.2rem)] tracking-wide text-[#071018]">
-            Price the work properly
+            Solve the pricing headaches
           </h2>
+          <p className="font-sans text-[15px] text-[#5a6a78] mt-2 max-w-[48ch]">
+            Built around Australian costs: super, unbillable time, GST, and ATO vehicle rates.
+          </p>
         </div>
         <ul className="grid md:grid-cols-2 gap-4 mb-16">
           {tradieTools.map((tool) => (

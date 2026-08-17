@@ -7,29 +7,77 @@ import {
   RangeField,
   ToolPanel,
   ToolResultRow,
+  ToolToggle,
 } from "@/components/marketing/tools/ToolShell";
 
+/** ATO cents-per-km rate for 2024–25 / 2025–26 planning (88c). */
+const ATO_CENTS_PER_KM = 0.88;
+
+type VehicleType = "ute" | "van" | "truck";
+
+const VEHICLE_DEFAULTS: Record<
+  VehicleType,
+  { label: string; litresPer100: number; depreciation: number; servicing: number }
+> = {
+  ute: { label: "Ute", litresPer100: 11, depreciation: 4500, servicing: 1400 },
+  van: { label: "Van", litresPer100: 12, depreciation: 5000, servicing: 1600 },
+  truck: { label: "Truck", litresPer100: 18, depreciation: 8000, servicing: 2800 },
+};
+
 export default function VehicleCostCalculator() {
+  const [vehicleType, setVehicleType] = useState<VehicleType>("ute");
   const [kmPerYear, setKmPerYear] = useState(25000);
-  const [fuelPerLitre, setFuelPerLitre] = useState(1.95);
-  const [litresPer100, setLitresPer100] = useState(11);
+  const [workDays, setWorkDays] = useState(220);
+  const [fuelSpend, setFuelSpend] = useState(6500);
   const [rego, setRego] = useState(900);
   const [insurance, setInsurance] = useState(1800);
-  const [servicing, setServicing] = useState(1200);
-  const [depreciation, setDepreciation] = useState(4500);
+  const [servicing, setServicing] = useState(VEHICLE_DEFAULTS.ute.servicing);
+  const [tyres, setTyres] = useState(800);
+  const [depreciation, setDepreciation] = useState(VEHICLE_DEFAULTS.ute.depreciation);
+  const [toolPool, setToolPool] = useState(2000);
+
+  function selectType(id: string) {
+    const next = id as VehicleType;
+    setVehicleType(next);
+    setServicing(VEHICLE_DEFAULTS[next].servicing);
+    setDepreciation(VEHICLE_DEFAULTS[next].depreciation);
+  }
 
   const result = useMemo(() => {
-    const fuelYear = (kmPerYear / 100) * litresPer100 * fuelPerLitre;
-    const fixed = rego + insurance + servicing + depreciation;
-    const total = fuelYear + fixed;
+    const fixed =
+      rego + insurance + servicing + tyres + depreciation + toolPool;
+    const total = fuelSpend + fixed;
     const perKm = kmPerYear > 0 ? total / kmPerYear : 0;
-    return { fuelYear, fixed, total, perKm };
-  }, [kmPerYear, fuelPerLitre, litresPer100, rego, insurance, servicing, depreciation]);
+    const dailyKm = workDays > 0 ? kmPerYear / workDays : 0;
+    const dailyRolling = workDays > 0 ? total / workDays : 0;
+    const atoPerKm = ATO_CENTS_PER_KM;
+    const vsAto = perKm - atoPerKm;
+    return { fixed, total, perKm, dailyKm, dailyRolling, atoPerKm, vsAto };
+  }, [
+    kmPerYear,
+    workDays,
+    fuelSpend,
+    rego,
+    insurance,
+    servicing,
+    tyres,
+    depreciation,
+    toolPool,
+  ]);
 
   return (
     <div className="grid lg:grid-cols-12 gap-6 lg:gap-8 items-start">
       <div className="lg:col-span-7 space-y-6">
-        <ToolPanel title="Distance and fuel">
+        <ToolPanel title="Vehicle and use">
+          <ToolToggle
+            value={vehicleType}
+            onChange={selectType}
+            options={[
+              { id: "ute", label: "Ute" },
+              { id: "van", label: "Van" },
+              { id: "truck", label: "Truck" },
+            ]}
+          />
           <RangeField
             label="Kilometres per year"
             value={kmPerYear}
@@ -39,32 +87,82 @@ export default function VehicleCostCalculator() {
             onChange={setKmPerYear}
             display={`${kmPerYear.toLocaleString("en-AU")} km`}
           />
-          <div className="grid sm:grid-cols-2 gap-x-5">
-            <NumberField label="Fuel price" value={fuelPerLitre} onChange={setFuelPerLitre} prefix="$" min={0} step={0.01} />
-            <NumberField label="Litres / 100 km" value={litresPer100} onChange={setLitresPer100} min={4} step={0.1} />
-          </div>
+          <RangeField
+            label="Work days on the road per year"
+            value={workDays}
+            min={120}
+            max={280}
+            step={1}
+            onChange={setWorkDays}
+            display={`${workDays} days`}
+          />
+          <NumberField
+            label="Annual fuel spend"
+            value={fuelSpend}
+            onChange={setFuelSpend}
+            prefix="$"
+            min={0}
+            step={100}
+          />
         </ToolPanel>
 
-        <ToolPanel title="Fixed costs (per year)">
+        <ToolPanel title="Wear, cover, and tool replacement">
           <div className="grid sm:grid-cols-2 gap-x-5">
             <NumberField label="Rego" value={rego} onChange={setRego} prefix="$" min={0} step={50} />
             <NumberField label="Insurance" value={insurance} onChange={setInsurance} prefix="$" min={0} step={50} />
-            <NumberField label="Servicing and tyres" value={servicing} onChange={setServicing} prefix="$" min={0} step={50} />
+            <NumberField label="Servicing" value={servicing} onChange={setServicing} prefix="$" min={0} step={50} />
+            <NumberField label="Tyres" value={tyres} onChange={setTyres} prefix="$" min={0} step={50} />
             <NumberField label="Depreciation" value={depreciation} onChange={setDepreciation} prefix="$" min={0} step={100} />
+            <NumberField
+              label="Annual tool replacement pool"
+              value={toolPool}
+              onChange={setToolPool}
+              prefix="$"
+              min={0}
+              step={50}
+            />
           </div>
+          <p className="font-sans text-[13px] leading-[1.6] text-[#5a6a78]">
+            Tool pool covers grinders, batteries, blades, and the gear that dies on site and never gets charged back.
+          </p>
         </ToolPanel>
       </div>
 
-      <div className="lg:col-span-5 lg:sticky lg:top-6">
-        <ToolPanel title="True vehicle cost">
+      <div className="lg:col-span-5 lg:sticky lg:top-6 space-y-6">
+        <ToolPanel title="True running cost">
           <dl>
-            <ToolResultRow label="Cost per kilometre" value={moneyAud(result.perKm, 2)} highlight />
-            <ToolResultRow label="Fuel per year" value={moneyAud(result.fuelYear)} />
-            <ToolResultRow label="Fixed costs per year" value={moneyAud(result.fixed)} />
+            <ToolResultRow
+              label="Cost per kilometre"
+              value={moneyAud(result.perKm, 2)}
+              highlight
+            />
+            <ToolResultRow
+              label="Daily rolling overhead"
+              value={moneyAud(result.dailyRolling)}
+              highlight
+              hint={`About ${result.dailyKm.toFixed(0)} km/day averaged across work days.`}
+            />
             <ToolResultRow label="Total per year" value={moneyAud(result.total)} />
+            <ToolResultRow label="Fuel per year" value={moneyAud(fuelSpend)} />
+            <ToolResultRow label="Fixed + tools per year" value={moneyAud(result.fixed)} />
           </dl>
-          <p className="font-sans text-[13.5px] leading-[1.6] text-[#5a6a78] mt-5">
-            Add this into your charge-out overhead so site travel is not free work in disguise.
+        </ToolPanel>
+
+        <ToolPanel title="ATO cents-per-km check">
+          <dl>
+            <ToolResultRow
+              label="ATO rate (88c/km)"
+              value={moneyAud(result.atoPerKm, 2)}
+              hint="Standard ATO cents-per-kilometre rate for planning."
+            />
+            <ToolResultRow
+              label={result.vsAto >= 0 ? "Your cost above ATO" : "Your cost below ATO"}
+              value={moneyAud(Math.abs(result.vsAto), 2)}
+              highlight
+            />
+          </dl>
+          <p className="font-sans text-[13px] leading-[1.6] text-[#5a6a78] mt-4">
+            If your true rate is above 88c, a flat trip fee or loaded charge-out protects you better than guessing.
           </p>
         </ToolPanel>
       </div>
