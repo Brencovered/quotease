@@ -75,7 +75,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Product acceptance moment — tradie send + client quote */}
+      {/* Product acceptance moment */}
       <section className="relative overflow-hidden bg-[#1a242c]">
         <div className="max-w-[1280px] mx-auto px-6 py-16 sm:py-24 grid lg:grid-cols-2 gap-12 items-center">
           <div>
@@ -98,33 +98,15 @@ export default async function Home() {
               <TrialRiskReversal tone="light" />
             </div>
           </div>
-          <div className="flex items-end justify-center gap-3 sm:gap-5">
-            <div className="w-[42%] max-w-[200px]">
-              <p className="font-sans text-[10px] font-bold tracking-[0.14em] uppercase text-white/50 mb-2 text-center">
-                Your send screen
-              </p>
-              <Image
-                src="/marketing/v2/phone-quote-send.png"
-                alt="Quote ready to send from the tradie phone"
-                width={325}
-                height={658}
-                quality={95}
-                className="w-full h-auto drop-shadow-[0_24px_50px_rgba(0,0,0,0.45)]"
-              />
-            </div>
-            <div className="w-[52%] max-w-[240px]">
-              <p className="font-sans text-[10px] font-bold tracking-[0.14em] uppercase text-[#ffb400] mb-2 text-center">
-                What the client sees
-              </p>
-              <Image
-                src="/marketing/v2/quoting-customer-accepts.png"
-                alt="Clean professional quote the homeowner receives and accepts"
-                width={325}
-                height={658}
-                quality={95}
-                className="w-full h-auto drop-shadow-[0_24px_50px_rgba(0,0,0,0.45)]"
-              />
-            </div>
+          <div className="mx-auto w-full max-w-[280px]">
+            <Image
+              src="/marketing/v2/phone-quote-send.png"
+              alt="Quote ready to send from the tradie phone"
+              width={325}
+              height={658}
+              quality={95}
+              className="w-full h-auto drop-shadow-[0_24px_50px_rgba(0,0,0,0.45)]"
+            />
           </div>
         </div>
       </section>
