@@ -148,10 +148,10 @@ export default function HomeHero() {
           <div className="lg:col-span-5 flex flex-col justify-end">
             <p className="font-sans text-[14.5px] sm:text-[16px] leading-[1.6] text-[#9eb0bf] mb-5 sm:mb-7 max-w-[42ch]">
               <span className="sm:hidden">
-                Mark it up on site, price it from your book, send it before you leave the driveway.
+                A complete online quoting and pricing solution for trade businesses — mark it up on site, price it from your book, send it before you leave the driveway.
               </span>
               <span className="hidden sm:inline">
-                Built to be used standing in the job, not back at a desk. Mark it up, price it from your book, and send before you leave the driveway.
+                A complete online quoting and pricing solution for trade businesses. Built to be used standing in the job — mark it up, price it from your book, and send before you leave the driveway.
               </span>
             </p>
             <div className="flex flex-wrap gap-2.5 sm:gap-3 mb-3">
