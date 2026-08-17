@@ -165,29 +165,29 @@ export default async function TradeHubPage({ params }: PageProps) {
       </section>
 
       {/* Compliance callout */}
-      <section className="bg-[#1a242c]">
+      <section className="bg-[#f4f6f8] border-y border-[#e4e8ec]">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-6 py-14 lg:py-16 grid lg:grid-cols-12 gap-10 items-center">
           <div className="lg:col-span-7">
-            <p className="font-sans text-[12px] font-bold tracking-[0.16em] uppercase text-[#ffb400] mb-3">
+            <p className="font-sans text-[12px] font-bold tracking-[0.16em] uppercase text-[#b88400] mb-3">
               Compliance & paperwork
             </p>
-            <h2 className="font-display text-[clamp(1.75rem,3.2vw,2.45rem)] tracking-wide leading-[1.08] text-white mb-4 max-w-[18ch]">
+            <h2 className="font-display text-[clamp(1.75rem,3.2vw,2.45rem)] tracking-wide leading-[1.08] text-[#071018] mb-4 max-w-[18ch]">
               {hub.compliance.title}
             </h2>
-            <p className="font-sans text-[16px] leading-[1.7] text-[#c5d4e0] max-w-[48ch]">
+            <p className="font-sans text-[16px] leading-[1.7] text-[#3d4a55] max-w-[48ch]">
               {hub.compliance.body}
             </p>
           </div>
           <div className="lg:col-span-5">
-            <div className="border border-white/15 bg-white/[0.04] px-6 py-7 flex items-start gap-4">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#ffb400]/15">
-                <ShieldCheck size={22} className="text-[#ffb400]" aria-hidden />
+            <div className="border border-[#e4e8ec] bg-white px-6 py-7 flex items-start gap-4">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#ffb400]/20">
+                <ShieldCheck size={22} className="text-[#b88400]" aria-hidden />
               </span>
               <div>
-                <p className="font-sans text-[11px] font-bold tracking-[0.16em] uppercase text-[#ffb400] mb-1">
+                <p className="font-sans text-[11px] font-bold tracking-[0.16em] uppercase text-[#b88400] mb-1">
                   {hub.compliance.badge}
                 </p>
-                <p className="font-sans text-[15px] leading-[1.55] text-white/80">
+                <p className="font-sans text-[15px] leading-[1.55] text-[#3d4a55]">
                   Kept with the quote and the job — not lost in a text thread or a folder in the ute.
                 </p>
               </div>
@@ -223,15 +223,15 @@ export default async function TradeHubPage({ params }: PageProps) {
         </div>
       </section>
 
-      <section className="bg-[#1a242c]">
+      <section className="bg-white border-y border-[#e4e8ec]">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-6 py-16 lg:py-20">
-          <p className="font-display text-[clamp(1.6rem,3vw,2.2rem)] tracking-wide text-white mb-3">
+          <p className="font-display text-[clamp(1.6rem,3vw,2.2rem)] tracking-wide text-[#071018] mb-3">
             SwiftScope
           </p>
-          <h2 className="font-display text-[clamp(1.9rem,3.6vw,2.8rem)] tracking-wide leading-[1.05] text-white mb-4 max-w-[16ch]">
+          <h2 className="font-display text-[clamp(1.9rem,3.6vw,2.8rem)] tracking-wide leading-[1.05] text-[#071018] mb-4 max-w-[16ch]">
             Send your next quote before you leave site.
           </h2>
-          <p className="font-sans text-[16px] leading-[1.65] text-[#b7c7d4] mb-8 max-w-[40ch]">
+          <p className="font-sans text-[16px] leading-[1.65] text-[#3d4a55] mb-8 max-w-[40ch]">
             7-day free trial. Unlimited quotes and jobs. Directory listing included.
           </p>
           <div className="flex flex-col items-start gap-2">
@@ -241,7 +241,7 @@ export default async function TradeHubPage({ params }: PageProps) {
             >
               Start free trial <ArrowRight size={15} aria-hidden />
             </Link>
-            <TrialRiskReversal tone="light" />
+            <TrialRiskReversal />
           </div>
         </div>
       </section>
