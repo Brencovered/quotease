@@ -45,24 +45,29 @@ export default function FaqSchema({ faqs }: { faqs: FaqItem[] }) {
  */
 export const SWIFTSCOPE_FAQS: FaqItem[] = [
   {
-    question: "Is Swiftscope free for homeowners?",
-    answer: "Yes. Posting a job and receiving quotes from local tradies is completely free for homeowners. You only contact the tradie you want to hire.",
+    question: "Who is Swiftscope for?",
+    answer:
+      "Solo tradies and small crews up to about 15. Residential and light commercial. Not a site office system for 200.",
   },
   {
-    question: "How many quotes will I receive?",
-    answer: "Up to 3 local tradies matched to your job will be able to respond with a quote. You compare them and choose who to hire.",
+    question: "Can I quote on site from my phone?",
+    answer:
+      "Yes. Mark up a plan or photo, load materials and labour from your price book, and send a priced quote before you leave the driveway.",
   },
   {
-    question: "How are tradies selected?",
-    answer: "Every listing on Swiftscope is curated. We display real Google ratings and review counts so you can compare businesses before making contact.",
+    question: "How does the client accept a quote?",
+    answer:
+      "They open a clean portal on their phone and tap accept. The job lands on your board. No PDF chase, no did you get my email.",
   },
   {
-    question: "How quickly will I hear back?",
-    answer: "Most homeowners receive their first quote within a few hours. Response times depend on the trade and your suburb.",
+    question: "What does it cost?",
+    answer:
+      "Flat $45 a month after a 7-day free trial. Unlimited quotes, jobs, and seats. No per-lead fees. Directory listing included.",
   },
   {
-    question: "What trades can I find on Swiftscope?",
-    answer: "Electricians, plumbers, builders, roofers, painters, carpenters, tilers, landscapers, concreters, fencers, arborists, air conditioning installers, and surveyors.",
+    question: "Can homeowners browse tradies for free?",
+    answer:
+      "Yes. Browse by trade and suburb with real Google ratings. No signup required to look. Contact tradies direct from the listing.",
   },
 ];
 
@@ -86,7 +91,7 @@ export function generateTradeSuburbFaqs(
   return [
     {
       question: `How much does a ${tradeSingular.toLowerCase()} cost in ${suburb}?`,
-      answer: `${tradeSingular} costs in ${suburb} vary by job complexity. Most ${suburb} residents use Swiftscope to get up to 3 free quotes and compare pricing before deciding.`,
+      answer: `${tradeSingular} costs in ${suburb} vary by job size and complexity. Browse local listings on Swiftscope, compare Google ratings, then contact a few ${tradePlural.toLowerCase()} directly to compare quotes.`,
     },
     {
       question: `How many ${tradePlural.toLowerCase()} are available in ${suburb}?`,
@@ -94,7 +99,7 @@ export function generateTradeSuburbFaqs(
     },
     {
       question: `How do I find a reliable ${tradeSingular.toLowerCase()} in ${suburb}, ${state}?`,
-      answer: `Browse the ${suburb} ${tradePlural.toLowerCase()} listed on Swiftscope, it's free. Compare Google ratings, reviews, licences and photos, then contact your chosen ${tradeSingular.toLowerCase()} directly by phone, website, or quote request.`,
+      answer: `Browse the ${suburb} ${tradePlural.toLowerCase()} listed on Swiftscope for free. Compare Google ratings, reviews, licences, and photos, then contact your chosen ${tradeSingular.toLowerCase()} directly by phone, website, or quote request.`,
     },
     {
       question: `Do ${suburb} ${tradePlural.toLowerCase()} on Swiftscope have insurance?`,

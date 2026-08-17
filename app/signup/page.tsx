@@ -75,7 +75,7 @@ function TrustBadge({ icon: Icon, text }: { icon: React.ElementType; text: strin
 
 function SignupRightPanel() {
   return (
-    <div className="relative hidden lg:flex lg:w-1/2 flex-col justify-center overflow-hidden bg-[#0a1722] px-12 xl:px-20">
+    <div className="relative hidden lg:flex lg:w-1/2 flex-col justify-center overflow-hidden bg-[#1a242c] px-12 xl:px-20">
       <style>{`
         @keyframes orb-float-1 { 0%,100%{transform:translate(0,0)scale(1)}33%{transform:translate(30px,-20px)scale(1.05)}66%{transform:translate(-20px,15px)scale(0.95)} }
         @keyframes orb-float-2 { 0%,100%{transform:translate(0,0)scale(1)}33%{transform:translate(-25px,20px)scale(0.95)}66%{transform:translate(20px,-15px)scale(1.05)} }
@@ -128,7 +128,7 @@ function SignupRightPanel() {
 
 function MobileTeaser() {
   return (
-    <div className="lg:hidden bg-[#0a1722] px-6 pt-10 pb-8 relative overflow-hidden">
+    <div className="lg:hidden bg-[#1a242c] px-6 pt-10 pb-8 relative overflow-hidden">
       <div className="absolute w-[300px] h-[300px] rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(255,180,0,0.18) 0%, transparent 65%)", top: "-30%", right: "-10%" }} />
       <div className="relative z-10 text-center">
         <span className="text-[10px] font-bold tracking-[.2em] uppercase text-[var(--amber)]">Swiftscope for Tradies</span>
@@ -149,11 +149,14 @@ function MobileTeaser() {
 function SignupForm() {
   const searchParams = useSearchParams();
   const next = searchParams.get("next");
+  const tradeFromUrl = searchParams.get("trade");
+  const initialTrade =
+    tradeFromUrl && TRADES.some((t) => t.key === tradeFromUrl) ? tradeFromUrl : "";
 
   const [businessName, setBusinessName] = useState("");
   const [email, setEmail] = useState("");
   const [suburb, setSuburb] = useState("");
-  const [trade, setTrade] = useState("");
+  const [trade, setTrade] = useState(initialTrade);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);

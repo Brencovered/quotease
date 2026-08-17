@@ -2,24 +2,18 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { Archivo, Anton } from "next/font/google";
+import { Inter, Anton } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import OrganizationSchema from "@/components/seo/OrganizationSchema";
 
-// Previously loaded via @fontsource imports (5 separate self-hosted font
-// files pulled in as global CSS) - Lighthouse's network dependency tree
-// showed these chained one after another on the critical path, reaching
-// 453-612ms before text could render in its final font. next/font/google
-// self-hosts the same files (still no runtime Google Fonts request) but
-// generates its own preload links and font-display: swap automatically,
-// which is the documented fix for exactly this render-blocking-font-chain
-// pattern rather than something to hand-roll with manual preload tags.
-const archivo = Archivo({
+// next/font/google self-hosts files (no runtime Google Fonts request) and
+// generates preload + font-display: swap automatically.
+const inter = Inter({
   subsets: ["latin"],
-  weight: ["400", "600", "700", "800"],
+  weight: ["400", "500", "600", "700", "800"],
   display: "swap",
-  variable: "--font-archivo",
+  variable: "--font-inter",
 });
 const anton = Anton({
   subsets: ["latin"],
@@ -68,7 +62,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`h-full antialiased ${archivo.variable} ${anton.variable}`}>
+    <html lang="en" className={`h-full antialiased ${inter.variable} ${anton.variable}`}>
       <head>
         <link rel="mask-icon" href="/favicon.svg" color="#1c252d" />
         <meta name="msapplication-TileColor" content="#1c252d" />

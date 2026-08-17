@@ -1,334 +1,231 @@
 import Link from "next/link";
-import SavingsCalculator from "@/components/SavingsCalculator";
 import Image from "next/image";
 import type { Metadata } from "next";
-import {
-  Home as HomeIcon, Briefcase, CheckCircle, ArrowRight,
-  Crosshair, Mic, PenTool, FileSearch, ListChecks, TrendingUp,
-  CalendarClock, FileText, Users2, RefreshCw,
-} from "lucide-react";
+import { ArrowRight, CheckCircle } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
+import HomeHero from "@/components/marketing/HomeHero";
+import CapabilityBands from "@/components/marketing/CapabilityBands";
+import QuoteTapDemo from "@/components/marketing/QuoteTapDemo";
+import AccountingLogos from "@/components/marketing/AccountingLogos";
+import TrialRiskReversal from "@/components/marketing/TrialRiskReversal";
 import FaqSchema, { SWIFTSCOPE_FAQS } from "@/components/seo/FaqSchema";
 import { homepageMeta } from "@/lib/seo/meta";
 import { LEADS_ENABLED } from "@/lib/featureFlags";
+import { createPublicClient } from "@/lib/supabase/public";
 
+export const revalidate = 86400;
 export const metadata: Metadata = homepageMeta();
 
-const HERO_IMG = "https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=1800&q=85&auto=format&fit=crop";
+async function getListingCount(): Promise<number | null> {
+  try {
+    const { count, error } = await createPublicClient()
+      .from("directory_listing")
+      .select("id", { count: "exact", head: true });
+    if (error) throw error;
+    return count ?? null;
+  } catch (err) {
+    console.error("[homepage] listing count failed:", err);
+    return null;
+  }
+}
 
-export default function Home() {
+export default async function Home() {
+  const listingCount = await getListingCount();
+
   return (
-    <main className="bg-white text-[#0a1722] overflow-hidden">
+    <main className="bg-[#1a242c] text-[#071018] overflow-hidden">
+      <MarketingNav transparent compact />
 
-      {/* HERO */}
-      <div className="relative h-screen min-h-[700px] max-h-[960px] flex items-end bg-[#0a1722]">
-        <MarketingNav transparent />
-        <div className="absolute inset-0 z-0">
-          <Image src={HERO_IMG} alt="Tradie on site" fill sizes="100vw" className="object-cover object-center" priority />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0a1722] via-[#0a1722]/50 to-[#0a1722]/20" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0a1722]/70 to-transparent" />
+      <HomeHero />
+
+      {/* Proof strip */}
+      <section className="bg-white border-b border-[#e8ecef]">
+        <div className="max-w-[1280px] mx-auto px-6 py-14 sm:py-16">
+          <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-8">
+            Built for solo tradies and small crews
+          </p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-6">
+            {[
+              { n: "7 days", d: "free trial, no card" },
+              { n: "$45", d: "flat per month, unlimited seats" },
+              { n: "< 4 min", d: "typical on-site quote" },
+              {
+                n: listingCount !== null ? listingCount.toLocaleString("en-AU") : "Local",
+                d: listingCount !== null ? "tradies in the directory" : "tradie directory, free to browse",
+              },
+            ].map((s) => (
+              <div key={s.d}>
+                <p className="font-display text-[clamp(1.8rem,3.5vw,2.6rem)] tracking-wide text-[#071018] leading-none mb-2">
+                  {s.n}
+                </p>
+                <p className="font-sans text-[13.5px] text-[#5a6a78] leading-snug">{s.d}</p>
+              </div>
+            ))}
+          </div>
+          <AccountingLogos tone="light" className="mt-10 pt-8 border-t border-[#e8ecef]" />
         </div>
-        <div className="relative z-10 max-w-7xl mx-auto px-6 pb-24 w-full">
-          <div className="max-w-[720px]">
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/15 rounded-full px-4 py-2 mb-8">
-              <span className="w-2 h-2 rounded-full bg-[#ffb400]" />
-              <span className="text-[12px] font-bold text-white/80 uppercase tracking-widest">Built by tradies, for tradies - teams of 1 to 10</span>
-            </div>
-            <h1 className="font-display uppercase leading-[0.88] mb-6">
-              <span className="block text-[3.2rem] sm:text-[5rem] lg:text-[5.5rem] text-white">Scope it. Quote it.</span>
-              <span className="block text-[3.2rem] sm:text-[5rem] lg:text-[5.5rem] text-[#ffb400]">Win it on site.</span>
-            </h1>
-            <p className="text-[17px] sm:text-[18px] leading-[1.65] text-[#c8d8e4] max-w-[560px] mb-10">
-              Swiftscope is built site-first - every tool is designed to be used standing in the job,
-              not back at a desk. Mark it up, talk it through, or scope it live on screen, and send a
-              priced quote before you&apos;ve left the driveway.
+      </section>
+
+      <CapabilityBands />
+
+      {/* Interactive feel */}
+      <section className="bg-[#f4f6f8]">
+        <div className="max-w-[1280px] mx-auto px-6 py-16 sm:py-20">
+          <QuoteTapDemo />
+        </div>
+      </section>
+
+      {/* Product acceptance moment */}
+      <section className="relative overflow-hidden bg-[#1a242c]">
+        <div className="max-w-[1280px] mx-auto px-6 py-16 sm:py-24 grid lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-3">
+              After you send
             </p>
-            <div className="flex flex-wrap gap-3 mb-10">
-              <Link href="/signup" className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[16px] px-8 py-4 rounded-xl hover:bg-[#e89e00] transition-colors" style={{ boxShadow:"0 12px 32px rgba(255,180,0,.3)" }}>
-                I&apos;m a tradie - start free
-              </Link>
-              <Link href="/directory" className="text-white font-bold text-[16px] px-6 py-4 rounded-xl border border-white/25 hover:border-white/50 transition-colors flex items-center gap-2">
-                I need a tradie <ArrowRight size={16} />
-              </Link>
-            </div>
-            <div className="flex flex-wrap gap-6 text-[13px] font-semibold text-[#8aa4b4]">
-              <span>7-day free trial - then $45/month</span>
-              <span className="text-[#2a3a47]">|</span>
-              <span>Unlimited users</span>
-              <span className="text-[#2a3a47]">|</span>
-              <span>196 curated tradie listings</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* DIFFERENTIATORS - the core "built site-first" pitch */}
-      <div className="bg-white border-b border-[#e8ecef]">
-        <div className="max-w-7xl mx-auto px-6 py-20">
-          <div className="text-center mb-14">
-            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Why tradies switch</p>
-            <h2 className="font-display uppercase text-[2.6rem] sm:text-[3.2rem] leading-[0.93] text-[#0a1722] mb-4">
-              Everything below happens<br />on site. Nothing waits for the desk.
+            <h2 className="font-display text-[clamp(1.9rem,3.8vw,3rem)] tracking-wide leading-[1.05] text-white mb-4 max-w-[16ch]">
+              They accept on their phone. You keep moving.
             </h2>
-            <p className="text-[15px] text-[#5a6a78] max-w-xl mx-auto">
-              Four ways to turn what you see on site into a sent, priced quote - pick whichever fits how you work.
+            <p className="font-sans text-[16px] leading-[1.65] text-[#b7c7d4] max-w-[42ch] mb-8">
+              They open a clean portal, see a professional quote, tap accept, and the job hits your board. No chasing PDFs. No did you get my email.
             </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-5">
-            <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
-              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
-                <Crosshair size={20} className="text-[#ffb400]" />
-              </div>
-              <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">Live on-screen quoting</h3>
-              <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
-                Open Swiftscope and mark straight onto your screen what material, work, or zone needs capturing.
-                Press done - the materials and labour autoload into a quote with your pre-configured pricing.
-                Press send. That&apos;s it.
-              </p>
-              <p className="text-[13px] font-bold text-[#0a1722]">Customers can accept in 30 seconds from send.</p>
-            </div>
-
-            <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
-              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
-                <Mic size={20} className="text-[#ffb400]" />
-              </div>
-              <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">AI voice quote generator</h3>
-              <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
-                Walk the job and talk to Swiftscope - describe the work and materials needed. Save, and a quote
-                generates automatically using your own pricing and materials. Not your thing on site? Record it
-                on the drive home instead - same result either way.
-              </p>
-              <p className="text-[13px] font-bold text-[#0a1722]">Customers can accept in 30 seconds from end of recording.</p>
-            </div>
-
-            <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
-              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
-                <PenTool size={20} className="text-[#ffb400]" />
-              </div>
-              <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">Plan &amp; drawing markup</h3>
-              <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
-                Upload a plan or drawing. Drop markers configured to your materials, draw lines for cable or pipe
-                runs, or block out work zones. Press save - every markup syncs straight into a quote, quantities
-                and costs already calculated.
-              </p>
-            </div>
-
-            <div className="bg-[#f8f9fa] rounded-3xl p-7 border border-[#e8ecef]">
-              <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
-                <FileSearch size={20} className="text-[#ffb400]" />
-              </div>
-              <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">AI plan reading</h3>
-              <p className="text-[14.5px] text-[#5a6a78] leading-relaxed mb-3">
-                Plans can be exhaustive and time-consuming to read properly. Upload the plan, direct what needs
-                reading and calculating for the job, and save straight to a quote.
-              </p>
-              <p className="text-[12.5px] text-[#8a9ba8] italic">* AI output should always be checked by a qualified person before sending.</p>
-            </div>
-          </div>
-
-          {/* Everything else */}
-          <div className="mt-14 bg-[#0a1722] rounded-3xl p-8 md:p-10">
-            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-2 text-center">Plus everything else you&apos;d expect</p>
-            <h3 className="font-display text-[1.8rem] text-white text-center mb-8">Running the rest of the business</h3>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-5">
-              {[
-                { icon: Briefcase,     label: "Job & site management" },
-                { icon: ListChecks,    label: "Tasks for your team" },
-                { icon: TrendingUp,    label: "Margin & profit tracking" },
-                { icon: CalendarClock, label: "Schedule & quote expiry tracking" },
-                { icon: FileText,      label: "Standard quote builder" },
-                { icon: Users2,        label: "Client list & job history" },
-                { icon: RefreshCw,     label: "Xero live sync" },
-              ].map((f) => (
-                <div key={f.label} className="flex items-center gap-3">
-                  <f.icon size={17} className="text-[#ffb400] shrink-0" />
-                  <span className="text-[14px] font-semibold text-white">{f.label}</span>
-                </div>
-              ))}
-            </div>
-            <div className="text-center mt-8">
-              <Link href="/features" className="inline-flex items-center gap-1.5 text-[13.5px] font-bold text-[#ffb400] hover:underline">
-                See the full feature list <ArrowRight size={13} />
+            <div className="flex flex-col items-start gap-2">
+              <Link
+                href="/signup"
+                className="inline-flex items-center justify-center bg-[#ffb400] text-[#071018] font-sans font-extrabold text-[15px] px-7 py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors"
+              >
+                Start quoting free
               </Link>
+              <TrialRiskReversal tone="light" />
             </div>
+          </div>
+          <div className="mx-auto w-full max-w-[280px]">
+            <Image
+              src="/marketing/v2/phone-quote-send.png"
+              alt="Quote ready to send from the tradie phone"
+              width={325}
+              height={658}
+              quality={95}
+              className="w-full h-auto drop-shadow-[0_24px_50px_rgba(0,0,0,0.45)]"
+            />
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* TWO AUDIENCES */}
-      <div className="bg-white border-b border-[#e8ecef]">
-        <div className="max-w-7xl mx-auto px-6 py-20">
-          <div className="text-center mb-14">
-            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Who it&apos;s for</p>
-            <h2 className="font-display uppercase text-[2.8rem] sm:text-[3.5rem] leading-[0.93] text-[#0a1722]">
-              Built for both sides<br />of every job
+      {/* Homeowners: one job */}
+      <section className="relative min-h-[60vh] flex items-end overflow-hidden">
+        <div className="absolute inset-0">
+          <Image
+            src="/trades/new-external.png"
+            alt=""
+            fill
+            sizes="100vw"
+            quality={90}
+            className="object-cover object-[center_35%]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#1a242c] via-[#1a242c]/80 to-[#1a242c]/35" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#1a242c]/80 via-transparent to-[#1a242c]/30" />
+        </div>
+        <div className="relative z-10 w-full max-w-[1280px] mx-auto px-6 py-16 sm:py-20">
+          <div className="max-w-[520px]">
+            <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-3">
+              Need a tradie?
+            </p>
+            <h2 className="font-display text-[clamp(1.9rem,3.8vw,3rem)] tracking-wide leading-[1.05] text-white mb-4">
+              Find someone local. Free, always.
             </h2>
-          </div>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-[#f8f9fa] rounded-3xl p-8 border border-[#e8ecef]">
-              <div className="w-12 h-12 bg-[#0a1722] rounded-2xl flex items-center justify-center mb-5">
-                <HomeIcon size={22} className="text-[#ffb400]" />
-              </div>
-              <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-2">Homeowners &amp; Builders</p>
-              <h3 className="font-display text-[1.8rem] text-[#0a1722] mb-3">Find and hire the right tradie</h3>
-              <p className="text-[15px] text-[#5a6a78] leading-relaxed mb-6">
-                Browse curated tradie profiles by trade and suburb. Real Google ratings on
-                every listing, no lead auction, no dodgy reviews - just tradies who run
-                their business here.
-              </p>
-              <div className="space-y-3 mb-8">
-                {[
-                  "Search by trade and suburb",
-                  "Real Google ratings on every listing",
-                  "Contact tradies directly - call, email or visit their site",
-                  "Free for homeowners, always",
-                ].map(f => (
-                  <div key={f} className="flex items-center gap-3 text-[14px] font-semibold text-[#0a1722]">
-                    <CheckCircle size={16} className="text-[#ffb400] shrink-0" /> {f}
-                  </div>
-                ))}
-              </div>
-              <Link href="/directory" className="flex items-center justify-center gap-2 bg-[#0a1722] text-white font-extrabold text-[15px] py-4 rounded-xl hover:opacity-90 transition-opacity">
-                Browse the directory <ArrowRight size={15} />
-              </Link>
-            </div>
-
-            <div className="bg-[#0a1722] rounded-3xl p-8">
-              <div className="w-12 h-12 bg-[#ffb400] rounded-2xl flex items-center justify-center mb-5">
-                <Briefcase size={22} className="text-[#0a1722]" />
-              </div>
-              <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-2">Tradies &amp; Trade Businesses</p>
-              <h3 className="font-display text-[1.8rem] text-white mb-3">Run your whole business</h3>
-              <p className="text-[15px] text-[#8aa4b4] leading-relaxed mb-6">
-                Quote, win, manage, and invoice jobs from your phone. Get homeowner leads
-                in your area included with your plan - no auction, no per-lead cost.
-              </p>
-              <div className="space-y-3 mb-8">
-                {[
-                  "Quote from your phone in 4 minutes on site",
-                  "Homeowner leads included in your plan",
-                  "Job management, scheduling, drawing markup",
-                  "Xero live sync - no double entry",
-                ].map(f => (
-                  <div key={f} className="flex items-center gap-3 text-[14px] font-semibold text-white">
-                    <CheckCircle size={16} className="text-[#ffb400] shrink-0" /> {f}
-                  </div>
-                ))}
-              </div>
-              <Link href="/signup" className="flex items-center justify-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] py-4 rounded-xl hover:opacity-90 transition-opacity">
-                Start free trial - 7 days, no card <ArrowRight size={15} />
-              </Link>
-            </div>
-          </div>
-          <div className="text-center mt-10">
-            <Link href="/features" className="text-[14px] font-bold text-[#0a1722] hover:text-[#e89e00] underline">
-              See the full feature list →
+            <p className="font-sans text-[16px] leading-[1.65] text-[#c8d8e4] mb-8">
+              Browse by trade and suburb
+              {listingCount !== null
+                ? ` (${listingCount.toLocaleString("en-AU")} listings)`
+                : ""}
+              . Real Google ratings. No lead auction.
+            </p>
+            <Link
+              href="/directory"
+              className="inline-flex items-center gap-2 bg-white text-[#071018] font-sans font-extrabold text-[15px] px-7 py-3.5 rounded-lg hover:bg-[#f0f3f5] transition-colors"
+            >
+              Browse the directory <ArrowRight size={15} aria-hidden />
             </Link>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* PRICING */}
-      <div className="bg-white border-b border-[#e8ecef]">
-        <div className="max-w-7xl mx-auto px-6 py-20">
-          <div className="text-center mb-12">
-            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Pricing</p>
-            <h2 className="font-display uppercase text-[2.4rem] sm:text-[3rem] leading-[0.93] text-[#0a1722]">Simple. Flat. No surprises.</h2>
-          </div>
-          <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-            <div className="bg-[#0a1722] rounded-3xl overflow-hidden">
-              <div className="h-3" style={{ background:"repeating-linear-gradient(135deg,#FFB400 0 14px,#E89E00 14px 28px)" }} />
-              <div className="p-8">
-                <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-2">For tradies</p>
-                <div className="flex items-end gap-2 mb-1">
-                  <span className="font-display text-[4rem] leading-none text-[#ffb400]">$45</span>
-                  <span className="text-[#7e94a2] text-[16px] font-bold mb-2">/month</span>
-                </div>
-                <p className="text-[#7e94a2] text-[13px] mb-6">7-day free trial. No card needed.</p>
-                <div className="space-y-2.5 mb-8">
-                  {["Unlimited quotes and jobs","Unlimited team members","Job management and scheduling","Drawing markup","Xero live sync","Client portal and online acceptance"].map(f => (
-                    <div key={f} className="flex items-center gap-2.5 text-[13.5px] text-white">
-                      <CheckCircle size={14} className="text-[#ffb400] shrink-0" /> {f}
-                    </div>
-                  ))}
-                </div>
-                <Link href="/signup" className="block text-center bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] py-3.5 rounded-xl hover:opacity-90">
+      {/* Pricing: one offer */}
+      <section className="bg-white">
+        <div className="max-w-[1280px] mx-auto px-6 py-16 sm:py-20">
+          <div className="max-w-2xl">
+            <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-3">Pricing</p>
+            <h2 className="font-display text-[clamp(2rem,4vw,3.2rem)] tracking-wide leading-[1.05] text-[#071018] mb-3">
+              Flat $45 a month.
+            </h2>
+            <p className="font-sans text-[16px] text-[#5a6a78] leading-relaxed mb-8 max-w-[42ch]">
+              7-day free trial. Unlimited quotes, jobs, and seats. Directory listing included. No per-lead fees, ever.
+            </p>
+            <ul className="grid sm:grid-cols-2 gap-x-8 gap-y-3 mb-10">
+              {[
+                "On-site markup and voice quoting",
+                "Plan markup with AI assist",
+                "Jobs, schedule, and variations",
+                "Xero live sync",
+                "Unlimited seats",
+                "Client accept on their phone",
+              ].map((f) => (
+                <li key={f} className="flex items-center gap-2.5 text-[14.5px] font-semibold text-[#071018]">
+                  <CheckCircle size={16} className="text-[#ffb400] shrink-0" aria-hidden />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-col items-start gap-2">
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href="/signup"
+                  className="inline-flex items-center bg-[#ffb400] text-[#071018] font-sans font-extrabold text-[15px] px-7 py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors"
+                >
                   Start free trial
                 </Link>
+                <Link
+                  href="/features"
+                  className="inline-flex items-center gap-2 text-[#071018] font-sans font-bold text-[15px] px-6 py-3.5 rounded-lg border border-[#d5dbe0] hover:border-[#071018] transition-colors"
+                >
+                  See features <ArrowRight size={14} aria-hidden />
+                </Link>
               </div>
-            </div>
-
-            <div className="bg-[#f8f9fa] rounded-3xl border border-[#e8ecef] p-8 flex flex-col">
-              <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-2">Directory included</p>
-              <div className="flex items-end gap-2 mb-1">
-                <span className="font-display text-[2.5rem] leading-none text-[#0a1722]">Included</span>
-              </div>
-              <p className="text-[#8a9ba8] text-[13px] mb-6">With every Swiftscope plan.</p>
-              <div className="space-y-2.5 mb-8 flex-1">
-                {["Listed in the public tradie directory","Homeowner quote requests in your area","Set your service suburbs and radius","No per-lead costs. Ever."].map(f => (
-                  <div key={f} className="flex items-center gap-2.5 text-[13.5px] text-[#0a1722]">
-                    <CheckCircle size={14} className="text-[#ffb400] shrink-0" /> {f}
-                  </div>
-                ))}
-              </div>
-              <Link href="/signup" className="block text-center bg-[#0a1722] text-white font-extrabold text-[15px] py-3.5 rounded-xl hover:opacity-90">
-                Get listed
-              </Link>
-              <p className="text-[12px] text-[#8a9ba8] text-center mt-3">Free for homeowners - always</p>
+              <TrialRiskReversal tone="dark" />
             </div>
           </div>
-          <p className="text-center text-[13px] text-[#8a9ba8] mt-8">
-            Curious how we stack up against Fergus, ServiceM8, and the rest?{" "}
-            <Link href="/features" className="font-bold text-[#0a1722] underline">See the comparison</Link>
+        </div>
+      </section>
+
+      {/* Close */}
+      <section className="bg-[#1a242c]">
+        <div className="max-w-[1280px] mx-auto px-6 py-16 sm:py-24">
+          <p className="font-display text-[clamp(2rem,5vw,3.5rem)] leading-[0.9] tracking-wide text-white mb-4">
+            SwiftScope
           </p>
+          <h2 className="font-display text-[clamp(1.7rem,3.2vw,2.4rem)] tracking-wide text-white mb-3 max-w-[18ch]">
+            The other tradie just sent their quote.
+          </h2>
+          <p className="font-sans text-[16px] text-[#8aa4b4] mb-8">How long does yours take?</p>
+          <Link
+            href="/signup"
+            className="inline-flex items-center gap-2 bg-[#ffb400] text-[#071018] font-sans font-extrabold text-[15px] px-8 py-4 rounded-lg hover:bg-[#e89e00] transition-colors"
+          >
+            Start quoting today <ArrowRight size={15} aria-hidden />
+          </Link>
+          <TrialRiskReversal tone="light" className="mt-3" />
         </div>
-      </div>
 
-      {/* SAVINGS CALCULATOR */}
-      <div className="bg-white border-b border-[#e8ecef]">
-        <div className="max-w-7xl mx-auto px-6 py-20">
-          <div className="text-center mb-12">
-            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Savings calculator</p>
-            <h2 className="font-display uppercase text-[2.4rem] sm:text-[3rem] leading-[0.93] text-[#0a1722] mb-4">
-              See what you&apos;d save switching to Swiftscope
-            </h2>
-            <p className="text-[15px] text-[#5a6a78] max-w-xl mx-auto">
-              Select the platforms you&apos;re currently paying for, adjust seat count and pricing, then calculate.
-            </p>
-          </div>
-          <SavingsCalculator />
-        </div>
-      </div>
-
-      {/* FOOTER CTA */}
-      <div className="bg-[#0a1722]">
-        <div className="max-w-7xl mx-auto px-6 py-20 grid sm:grid-cols-2 gap-6">
-          <div className="bg-white/[0.04] rounded-2xl p-8 border border-white/10">
-            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Tradies</p>
-            <h3 className="font-display text-[1.8rem] text-white mb-2">The other tradie just sent their quote.</h3>
-            <p className="text-[#8aa4b4] text-[14px] mb-6">How long does yours take?</p>
-            <Link href="/signup" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-8 py-4 rounded-xl hover:opacity-90">
-              Start quoting today <ArrowRight size={15} />
-            </Link>
-          </div>
-          <div className="bg-white/[0.04] rounded-2xl p-8 border border-white/10">
-            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Homeowners</p>
-            <h3 className="font-display text-[1.8rem] text-white mb-2">Need something done?</h3>
-            <p className="text-[#8aa4b4] text-[14px] mb-6">Browse curated tradie profiles in your suburb, free, always.</p>
-            <Link href="/directory" className="inline-flex items-center gap-2 bg-white text-[#0a1722] font-extrabold text-[15px] px-8 py-4 rounded-xl hover:opacity-90">
-              Find a tradie <ArrowRight size={15} />
-            </Link>
-          </div>
-        </div>
         <div className="border-t border-white/[0.08]">
-          <div className="max-w-7xl mx-auto px-6 py-5 flex flex-wrap items-center justify-between gap-4">
-            <span className="font-display text-lg text-white">SWIFTSCOPE</span>
-            <div className="flex gap-6 text-[12.5px] font-semibold text-white/40">
+          <div className="max-w-[1280px] mx-auto px-6 py-5 flex flex-wrap items-center justify-between gap-4">
+            <span className="font-display text-lg tracking-wide text-white">SwiftScope</span>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-[12.5px] font-semibold text-white/40">
               <Link href="/features" className="hover:text-white transition-colors">Features</Link>
+              <Link href="/for" className="hover:text-white transition-colors">For trades</Link>
+              <Link href="/tools" className="hover:text-white transition-colors">Tools</Link>
               <Link href="/how-it-works" className="hover:text-white transition-colors">How it works</Link>
               <Link href="/directory" className="hover:text-white transition-colors">Directory</Link>
-              <Link href="/areas" className="hover:text-white transition-colors">Areas we cover</Link>
+              <Link href="/areas" className="hover:text-white transition-colors">Areas</Link>
               {LEADS_ENABLED && (
                 <Link href="/get-quotes" className="hover:text-white transition-colors">Get quotes</Link>
               )}
@@ -339,22 +236,23 @@ export default function Home() {
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* FAQ section - visible to users and indexed by Google as FAQPage rich result */}
-      <div className="bg-[#f8f9fa] border-t border-[#e8ecef]">
-        <div className="max-w-3xl mx-auto px-6 py-16">
-          <h2 className="font-display uppercase text-[2rem] text-[#0a1722] mb-8">Common questions</h2>
+      <section className="bg-[#f4f6f8]">
+        <div className="max-w-3xl mx-auto px-6 py-14 sm:py-16">
+          <h2 className="font-display text-[clamp(1.7rem,3vw,2.2rem)] tracking-wide text-[#071018] mb-8">
+            Common questions
+          </h2>
           <div className="space-y-5">
             {SWIFTSCOPE_FAQS.map((faq) => (
-              <div key={faq.question} className="border-b border-[#e8ecef] pb-5">
-                <p className="font-bold text-[15px] text-[#0a1722] mb-2">{faq.question}</p>
-                <p className="text-[14px] text-[#5a6a78] leading-relaxed">{faq.answer}</p>
+              <div key={faq.question} className="border-b border-[#e2e5ea] pb-5">
+                <p className="font-display text-[1.15rem] tracking-wide text-[#071018] mb-2">{faq.question}</p>
+                <p className="font-sans text-[14px] text-[#5a6a78] leading-relaxed">{faq.answer}</p>
               </div>
             ))}
           </div>
         </div>
-      </div>
+      </section>
 
       <FaqSchema faqs={SWIFTSCOPE_FAQS} />
     </main>

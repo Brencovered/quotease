@@ -16,14 +16,14 @@ export default function HowItWorksPage() {
       <MarketingNav />
 
       {/* HEADER */}
-      <div className="bg-[#0a1722] border-b border-white/10">
+      <div className="bg-[#1a242c] border-b border-white/10">
         <div className="max-w-7xl mx-auto px-6 pt-10 pb-16">
-          <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">How it works</p>
+          <p className="font-sans text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">How it works</p>
           <h1 className="font-display uppercase text-[2.6rem] sm:text-[3.4rem] leading-[0.93] text-white max-w-2xl">
-            Two sides. One platform.
+            Find a tradie. Or win the job.
           </h1>
           <p className="text-[16px] text-[#8aa4b4] mt-4 max-w-xl">
-            Whether you&apos;re hiring a tradie or running a trade business, here&apos;s exactly what happens.
+            Homeowners browse the directory for free. Tradies quote on site, win the job, and run it from one phone-first board.
           </p>
         </div>
       </div>
@@ -32,29 +32,29 @@ export default function HowItWorksPage() {
       <div className="bg-white border-b border-[#e8ecef]">
         <div className="max-w-7xl mx-auto px-6 py-20">
           <div className="text-center mb-14">
-            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">For homeowners</p>
+            <p className="font-sans text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">For homeowners</p>
             <h2 className="font-display uppercase text-[2.4rem] sm:text-[3rem] leading-[0.93] text-[#0a1722]">
               Three steps to a<br />trusted tradie
             </h2>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { n:"01", icon:FileText, title:"Search your suburb", body:"Filter by trade and suburb to see every curated listing in your area. Takes seconds." },
-              { n:"02", icon:Users, title:"Compare ratings", body:"Real Google ratings on every listing, right there in the directory. No dodgy reviews, no bidding war." },
-              { n:"03", icon:Star, title:"Contact them directly", body:"Call, email, or visit their website - straight from their profile. No middleman, no waiting on a match." },
+              { n:"01", icon:FileText, title:"Search your suburb", body:"Filter by trade and suburb to see curated listings near you. Takes seconds." },
+              { n:"02", icon:Users, title:"Compare ratings", body:"Real Google ratings on every listing. No fake review farm. No bidding war to talk to someone." },
+              { n:"03", icon:Star, title:"Contact them directly", body:"Call, email, or visit their website from the profile. No middleman. No waiting on a match." },
             ].map(s => (
               <div key={s.n} className="bg-[#f8f9fa] rounded-2xl p-7 border border-[#e8ecef]">
                 <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
                   <s.icon size={20} className="text-[#ffb400]" />
                 </div>
-                <p className="text-[11px] font-bold tracking-[.15em] uppercase text-[#ffb400] mb-1">{s.n}</p>
+                <p className="font-sans text-[11px] font-bold tracking-[.15em] uppercase text-[#ffb400] mb-1">{s.n}</p>
                 <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">{s.title}</h3>
-                <p className="text-[14px] text-[#5a6a78] leading-relaxed">{s.body}</p>
+                <p className="font-sans text-[14px] text-[#5a6a78] leading-relaxed">{s.body}</p>
               </div>
             ))}
           </div>
           <div className="text-center mt-10">
-            <Link href="/directory" className="inline-flex items-center gap-2 bg-[#0a1722] text-white font-extrabold text-[15px] px-10 py-4 rounded-xl hover:opacity-90">
+            <Link href="/directory" className="inline-flex items-center gap-2 bg-[#0a1722] text-white font-sans font-extrabold text-[15px] px-10 py-4 rounded-xl hover:opacity-90">
               Browse the directory <ArrowRight size={15} />
             </Link>
           </div>
@@ -65,29 +65,29 @@ export default function HowItWorksPage() {
       <div className="bg-[#f8f9fa] border-b border-[#e8ecef]">
         <div className="max-w-7xl mx-auto px-6 py-20">
           <div className="text-center mb-14">
-            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">For tradies</p>
+            <p className="font-sans text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">For tradies</p>
             <h2 className="font-display uppercase text-[2.4rem] sm:text-[3rem] leading-[0.93] text-[#0a1722]">
               From quote to<br />paid invoice
             </h2>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { n:"01", icon:Zap, title:"Quote on site", body:"Trade-specific fields calculate live as you fill them in. Send a professional quote from your phone before you've left the driveway." },
-              { n:"02", icon:Briefcase, title:"Win it, run it", body:"The client accepts online. It moves straight to your job list - scheduling, materials checklist, variations, all in one place." },
-              { n:"03", icon:RefreshCw, title:"Get paid", body:"Mark the job complete and it pushes straight to Xero as an invoice. No CSV export, no re-typing line items." },
+              { n:"01", icon:Zap, title:"Quote on site", body:"Trade-specific fields calculate live as you fill them in. Send a professional quote from your phone before you leave the driveway." },
+              { n:"02", icon:Briefcase, title:"Win it, run it", body:"The client accepts on their phone. The job lands on your board with schedule, materials, and variations in one place." },
+              { n:"03", icon:RefreshCw, title:"Get paid", body:"Mark the job complete and it pushes to Xero as an invoice. No CSV export. No retyping line items." },
             ].map(s => (
               <div key={s.n} className="bg-white rounded-2xl p-7 border border-[#e8ecef]">
                 <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
                   <s.icon size={20} className="text-[#ffb400]" />
                 </div>
-                <p className="text-[11px] font-bold tracking-[.15em] uppercase text-[#ffb400] mb-1">{s.n}</p>
+                <p className="font-sans text-[11px] font-bold tracking-[.15em] uppercase text-[#ffb400] mb-1">{s.n}</p>
                 <h3 className="font-display text-[1.4rem] text-[#0a1722] mb-2">{s.title}</h3>
-                <p className="text-[14px] text-[#5a6a78] leading-relaxed">{s.body}</p>
+                <p className="font-sans text-[14px] text-[#5a6a78] leading-relaxed">{s.body}</p>
               </div>
             ))}
           </div>
           <div className="text-center mt-10">
-            <Link href="/signup" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-10 py-4 rounded-xl hover:opacity-90">
+            <Link href="/signup" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-sans font-extrabold text-[15px] px-10 py-4 rounded-xl hover:opacity-90">
               Start free trial <ArrowRight size={15} />
             </Link>
           </div>
@@ -98,7 +98,7 @@ export default function HowItWorksPage() {
       <div className="bg-white border-b border-[#e8ecef]">
         <div className="max-w-7xl mx-auto px-6 py-20">
           <div className="text-center mb-12">
-            <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Savings calculator</p>
+            <p className="font-sans text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Savings calculator</p>
             <h2 className="font-display uppercase text-[2.4rem] sm:text-[3rem] leading-[0.93] text-[#0a1722] mb-4">
               See what you&apos;d save<br />switching to Swiftscope
             </h2>
@@ -111,10 +111,10 @@ export default function HowItWorksPage() {
       </div>
 
       {/* FOOTER */}
-      <div className="bg-[#0a1722]">
+      <div className="bg-[#1a242c]">
         <div className="max-w-7xl mx-auto px-6 py-16 text-center">
           <h3 className="font-display text-[1.8rem] sm:text-[2.2rem] text-white mb-3">Want the full feature list?</h3>
-          <Link href="/features" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-8 py-4 rounded-xl hover:opacity-90">
+          <Link href="/features" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-sans font-extrabold text-[15px] px-8 py-4 rounded-xl hover:opacity-90">
             See all features <ArrowRight size={15} />
           </Link>
         </div>

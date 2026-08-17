@@ -182,7 +182,7 @@ function ResetPasswordModal({
 /* ------------------------------------------------------------------ */
 function LoginRightPanel() {
   return (
-    <div className="relative hidden lg:flex lg:w-1/2 flex-col justify-center overflow-hidden bg-[#0a1722] px-12 xl:px-20">
+    <div className="relative hidden lg:flex lg:w-1/2 flex-col justify-center overflow-hidden bg-[#1a242c] px-12 xl:px-20">
       {/* Gradient orbs */}
       <style>{`\n        @keyframes orb-float-1 {\n          0%, 100% { transform: translate(0, 0) scale(1); }\n          33% { transform: translate(30px, -20px) scale(1.05); }\n          66% { transform: translate(-20px, 15px) scale(0.95); }\n        }\n        @keyframes orb-float-2 {\n          0%, 100% { transform: translate(0, 0) scale(1); }\n          33% { transform: translate(-25px, 20px) scale(0.95); }\n          66% { transform: translate(20px, -15px) scale(1.05); }\n        }\n      `}</style>
       <div
@@ -269,7 +269,7 @@ function LoginRightPanel() {
 /* ------------------------------------------------------------------ */
 function MobileTeaser() {
   return (
-    <div className="lg:hidden bg-[#0a1722] px-6 pt-10 pb-8 relative overflow-hidden">
+    <div className="lg:hidden bg-[#1a242c] px-6 pt-10 pb-8 relative overflow-hidden">
       <div
         className="absolute w-[250px] h-[250px] rounded-full pointer-events-none"
         style={{

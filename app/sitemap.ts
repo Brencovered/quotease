@@ -31,6 +31,7 @@ import { MetadataRoute } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { tradeToSlug, buildDirectorySlug } from "@/lib/seo/meta";
 import { LEADS_ENABLED } from "@/lib/featureFlags";
+import { TRADE_HUBS } from "@/lib/marketing/trade-hubs";
 
 // The site's canonical host is the bare apex -- www 308s to it, enforced
 // in both middleware.ts (NON_CANONICAL_HOSTS) and the Vercel domain
@@ -62,6 +63,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...(LEADS_ENABLED ? [{ url: `${BASE_URL}/get-quotes`, changeFrequency: "monthly" as const, priority: 0.8 }] : []),
     { url: `${BASE_URL}/blog`,             changeFrequency: "weekly",  priority: 0.7 },
     { url: `${BASE_URL}/features`,         changeFrequency: "monthly", priority: 0.7 },
+    { url: `${BASE_URL}/for`,              changeFrequency: "monthly", priority: 0.8 },
+    ...TRADE_HUBS.map((hub) => ({
+      url: `${BASE_URL}/for/${hub.slug}`,
+      changeFrequency: "monthly" as const,
+      priority: 0.75,
+    })),
+    { url: `${BASE_URL}/tools`,            changeFrequency: "monthly", priority: 0.7 },
+    ...[
+      "charge-out-rate",
+      "margin-markup",
+      "quote-pdf",
+      "vehicle-cost",
+      "ballpark-cost",
+      "diy-materials",
+    ].map((slug) => ({
+      url: `${BASE_URL}/tools/${slug}`,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),
     { url: `${BASE_URL}/how-it-works`,     changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE_URL}/signup`,           changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE_URL}/login`,            changeFrequency: "monthly", priority: 0.4 },

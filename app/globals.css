@@ -2,9 +2,9 @@
 
 :root {
   --sidebar-width: 232px;
-  --navy: #0a1722;
-  --navy-mid: #0e2030;
-  --card: #0e2233;
+  --navy: #1a242c;
+  --navy-mid: #22303a;
+  --card: #24313b;
   --amber: #ffb400;
   --amber-deep: #e89e00;
   --amber-light: #fff3cc;
@@ -44,14 +44,20 @@
 body {
   background: var(--app-bg);
   color: var(--ink);
-  font-family: var(--font-archivo), sans-serif;
+  font-family: var(--font-inter), sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
 .font-display {
+  /* Marketing headings only — Anton. Never pair with font-bold (single weight). */
   font-family: var(--font-anton), sans-serif;
   font-weight: 400;
   letter-spacing: 0.01em;
+}
+
+.font-sans {
+  /* Marketing body, labels, buttons — Inter */
+  font-family: var(--font-inter), sans-serif;
 }
 
 .tabular { font-variant-numeric: tabular-nums; }
@@ -75,7 +81,7 @@ input[type="radio"] {
   border-radius: var(--radius-sm);
   padding: 12px 14px;
   font-size: 15px;
-  font-family: var(--font-archivo), sans-serif;
+  font-family: var(--font-inter), sans-serif;
   transition: border-color 0.12s, box-shadow 0.12s;
   -webkit-appearance: none;
 }
@@ -250,6 +256,122 @@ input[type="radio"] {
 
 @media (prefers-reduced-motion: reduce) {
   .reveal, .stamp-wobble, .shimmer::after { animation: none; }
+}
+
+/* Homepage marketing motion (mitti-inspired product-on-photo) */
+@keyframes home-hero-in {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.home-hero-copy > * {
+  animation: home-hero-in 0.65s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.home-hero-copy > *:nth-child(1) { animation-delay: 0.04s; }
+.home-hero-copy > *:nth-child(2) { animation-delay: 0.14s; }
+.home-hero-copy > *:nth-child(3) { animation-delay: 0.24s; }
+.home-hero-copy > *:nth-child(4) { animation-delay: 0.34s; }
+
+@keyframes home-overlay-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.home-overlay-in { animation: home-overlay-in 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+@keyframes home-line-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.home-line-in { animation: home-line-in 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+.home-hero-kenburns {
+  animation: home-kenburns 12s ease-out both;
+}
+@keyframes home-kenburns {
+  from { transform: scale(1.06); }
+  to   { transform: scale(1); }
+}
+
+@keyframes home-tab-progress {
+  from { width: 0%; }
+  to   { width: 100%; }
+}
+.home-tab-progress {
+  animation: home-tab-progress 5.6s linear both;
+}
+
+@keyframes home-result-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.home-result-in {
+  animation: home-result-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes home-word-active {
+  0%   { text-shadow: 0 0 0 rgba(255,180,0,0); }
+  40%  { text-shadow: 0 0 24px rgba(255,180,0,0.35); }
+  100% { text-shadow: 0 0 0 rgba(255,180,0,0); }
+}
+.home-word-active {
+  animation: home-word-active 0.7s ease-out both;
+}
+
+@keyframes home-mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 180, 0, 0.45); }
+  50%      { box-shadow: 0 0 0 10px rgba(255, 180, 0, 0); }
+}
+.home-mic-pulse { animation: home-mic-pulse 1.6s ease-out infinite; }
+
+@keyframes home-phone-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+.home-phone-float {
+  animation: home-phone-float 4.5s ease-in-out infinite;
+}
+
+@keyframes home-dot-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.55; transform: scale(0.85); }
+}
+.home-dot-pulse {
+  animation: home-dot-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes home-icon-pop {
+  0%   { transform: scale(0.88); }
+  60%  { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+.home-icon-pop {
+  animation: home-icon-pop 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.home-media-stage {
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+}
+
+.home-glass {
+  background: rgba(10, 23, 34, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-hero-copy > *,
+  .home-overlay-in,
+  .home-line-in,
+  .home-hero-kenburns,
+  .home-tab-progress,
+  .home-mic-pulse,
+  .home-phone-float,
+  .home-dot-pulse,
+  .home-icon-pop,
+  .home-result-in,
+  .home-word-active {
+    animation: none !important;
+  }
 }
 
 }
