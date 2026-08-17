@@ -153,10 +153,10 @@ export const TOOLS: ToolMeta[] = [
     title: "Ballpark renovation and job cost estimator",
     shortTitle: "Ballpark costs",
     description:
-      "Pick a common job and size to see a rough Australian price range before you call a tradie.",
+      "Estimate Australian job costs by project type, finish quality, and footprint — plus common hidden extras like asbestos or structural repairs.",
     audience: "homeowner",
-    hook: "This is only a ballpark. Want a real number from someone local? Browse vetted tradies near you.",
-    hookCta: "Find a local tradie",
+    hook: "This estimate reflects local Australian trade averages. Want an exact price tailored to your space? Browse local, verified tradies.",
+    hookCta: "Find local tradies",
     hookHref: "/directory",
   },
   {
@@ -165,22 +165,10 @@ export const TOOLS: ToolMeta[] = [
     title: "DIY material calculators",
     shortTitle: "DIY materials",
     description:
-      "Concrete volume, tile boxes, and paint litres. Plan the materials before you decide to DIY or hire.",
+      "Concrete volume with bag counts and weight, paint coverage with primer and two topcoats, plus tile boxes and grout kilograms — with wastage buffers built in.",
     audience: "homeowner",
-    hook: "Realised this job is bigger than you thought? Find a local tradie to do it for you.",
+    hook: "Realised the heavy lifting is bigger than you thought? Pass the job to a local tradie.",
     hookCta: "Browse the directory",
-    hookHref: "/directory",
-  },
-  {
-    slug: "hire-checklist",
-    href: "/tools/hire-checklist",
-    title: "Hire a tradie safety checklist",
-    shortTitle: "Hire checklist",
-    description:
-      "The five checks every homeowner should make before hiring: licence, insurance, references, clear quote, and timeline.",
-    audience: "homeowner",
-    hook: "Don't want the hassle of vetting everyone yourself? Search Google-reviewed tradies on Swiftscope.",
-    hookCta: "Search your suburb",
     hookHref: "/directory",
   },
 ];

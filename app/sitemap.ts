@@ -77,7 +77,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       "vehicle-cost",
       "ballpark-cost",
       "diy-materials",
-      "hire-checklist",
     ].map((slug) => ({
       url: `${BASE_URL}/tools/${slug}`,
       changeFrequency: "monthly" as const,

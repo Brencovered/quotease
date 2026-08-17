@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import {
   NumberField,
   ToolPanel,
@@ -8,6 +10,18 @@ import {
 } from "@/components/marketing/tools/ToolShell";
 
 type Tab = "concrete" | "tiles" | "paint";
+
+/** Typical AU bagged premix yield (~20 kg bag ≈ 0.01 m³). */
+const PREMIX_BAG_M3 = 0.01;
+const PREMIX_BAG_KG = 20;
+/** Wet concrete density used for DIY effort messaging. */
+const CONCRETE_KG_PER_M3 = 2400;
+/** Default paint coverage mid of 14–16 m²/L per coat. */
+const DEFAULT_COVERAGE = 15;
+const DOOR_M2 = 2;
+const WINDOW_M2 = 1.5;
+/** Cementitious grout bulk density (kg/m³). */
+const GROUT_DENSITY = 1600;
 
 export default function DiyCalculators() {
   const [tab, setTab] = useState<Tab>("concrete");
@@ -18,8 +32,8 @@ export default function DiyCalculators() {
         {(
           [
             ["concrete", "Concrete volume"],
-            ["tiles", "Tile boxes"],
-            ["paint", "Paint litres"],
+            ["paint", "Paint coverage"],
+            ["tiles", "Tile & grout"],
           ] as const
         ).map(([key, label]) => {
           const on = tab === key;
@@ -42,9 +56,31 @@ export default function DiyCalculators() {
       </div>
 
       {tab === "concrete" ? <ConcreteCalc /> : null}
-      {tab === "tiles" ? <TileCalc /> : null}
       {tab === "paint" ? <PaintCalc /> : null}
+      {tab === "tiles" ? <TileCalc /> : null}
     </div>
+  );
+}
+
+function EffortHook({
+  effort,
+  cta,
+  href,
+}: {
+  effort: string;
+  cta: string;
+  href: string;
+}) {
+  return (
+    <aside className="mt-5 border-l-2 border-[#ffb400] pl-4">
+      <p className="font-sans text-[14px] leading-[1.65] text-[#3d4a55] mb-3">{effort}</p>
+      <Link
+        href={href}
+        className="inline-flex items-center gap-2 font-sans text-[13.5px] font-extrabold text-[#071018] hover:text-[#b88400] transition-colors"
+      >
+        {cta} <ArrowRight size={14} aria-hidden />
+      </Link>
+    </aside>
   );
 }
 
@@ -53,10 +89,17 @@ function ConcreteCalc() {
   const [width, setWidth] = useState(3);
   const [depthMm, setDepthMm] = useState(100);
 
-  const m3 = useMemo(() => {
+  const result = useMemo(() => {
     const depthM = Math.max(depthMm, 0) / 1000;
-    return Math.max(length, 0) * Math.max(width, 0) * depthM;
+    const volume = Math.max(length, 0) * Math.max(width, 0) * depthM;
+    const withWaste = volume * 1.1;
+    const bags = withWaste > 0 ? Math.ceil(withWaste / PREMIX_BAG_M3) : 0;
+    const weightKg = withWaste * CONCRETE_KG_PER_M3;
+    const bagWeightKg = bags * PREMIX_BAG_KG;
+    return { volume, withWaste, bags, weightKg, bagWeightKg };
   }, [length, width, depthMm]);
+
+  const heavy = result.weightKg >= 200;
 
   return (
     <div className="grid lg:grid-cols-12 gap-6">
@@ -67,58 +110,43 @@ function ConcreteCalc() {
             <NumberField label="Width" value={width} onChange={setWidth} suffix="m" min={0} step={0.1} />
             <NumberField label="Depth" value={depthMm} onChange={setDepthMm} suffix="mm" min={0} step={5} />
           </div>
+          <p className="font-sans text-[13px] leading-[1.6] text-[#5a6a78]">
+            Includes an automatic 10% wastage buffer for edges, falls, and site variation.
+          </p>
         </ToolPanel>
       </div>
       <div className="lg:col-span-6">
         <ToolPanel title="Concrete needed">
           <dl>
-            <ToolResultRow label="Volume" value={`${m3.toFixed(2)} m³`} highlight />
+            <ToolResultRow label="Net volume" value={`${result.volume.toFixed(2)} m³`} />
             <ToolResultRow
               label="Order with 10% waste"
-              value={`${(m3 * 1.1).toFixed(2)} m³`}
+              value={`${result.withWaste.toFixed(2)} m³`}
+              highlight
+            />
+            <ToolResultRow
+              label="20 kg premix bags"
+              value={`${result.bags}`}
+              hint="Approx. 0.01 m³ yield per 20 kg bag"
+            />
+            <ToolResultRow
+              label="Estimated wet weight"
+              value={`${Math.round(result.weightKg).toLocaleString("en-AU")} kg`}
             />
           </dl>
-        </ToolPanel>
-      </div>
-    </div>
-  );
-}
-
-function TileCalc() {
-  const [roomL, setRoomL] = useState(3.2);
-  const [roomW, setRoomW] = useState(2.4);
-  const [tileMm, setTileMm] = useState(300);
-  const [boxCoverage, setBoxCoverage] = useState(1.44);
-
-  const result = useMemo(() => {
-    const area = Math.max(roomL, 0) * Math.max(roomW, 0);
-    const withWaste = area * 1.1;
-    const tileM = Math.max(tileMm, 1) / 1000;
-    const tilesNeeded = tileM > 0 ? withWaste / (tileM * tileM) : 0;
-    const boxes = boxCoverage > 0 ? withWaste / boxCoverage : 0;
-    return { area, withWaste, tilesNeeded, boxes };
-  }, [roomL, roomW, tileMm, boxCoverage]);
-
-  return (
-    <div className="grid lg:grid-cols-12 gap-6">
-      <div className="lg:col-span-6">
-        <ToolPanel title="Floor and tile">
-          <div className="grid sm:grid-cols-2 gap-x-4">
-            <NumberField label="Room length" value={roomL} onChange={setRoomL} suffix="m" min={0} step={0.1} />
-            <NumberField label="Room width" value={roomW} onChange={setRoomW} suffix="m" min={0} step={0.1} />
-            <NumberField label="Tile size" value={tileMm} onChange={setTileMm} suffix="mm" min={50} step={10} />
-            <NumberField label="Coverage per box" value={boxCoverage} onChange={setBoxCoverage} suffix="m²" min={0.1} step={0.01} />
-          </div>
-        </ToolPanel>
-      </div>
-      <div className="lg:col-span-6">
-        <ToolPanel title="Tiles to buy">
-          <dl>
-            <ToolResultRow label="Floor area" value={`${result.area.toFixed(2)} m²`} />
-            <ToolResultRow label="With 10% wastage" value={`${result.withWaste.toFixed(2)} m²`} />
-            <ToolResultRow label="Approx tiles" value={`${Math.ceil(result.tilesNeeded)}`} />
-            <ToolResultRow label="Boxes to buy" value={`${Math.ceil(result.boxes)}`} highlight />
-          </dl>
+          {heavy ? (
+            <EffortHook
+              effort={`This project needs about ${Math.round(result.weightKg).toLocaleString("en-AU")} kg of concrete (roughly ${result.bags} × 20 kg bags). Prefer to pass on the heavy lifting?`}
+              cta="Find a local concreter in your suburb"
+              href="/directory?trade=Concreter"
+            />
+          ) : (
+            <EffortHook
+              effort="Small pours are DIY-friendly. Larger slabs, mesh, and falls are usually faster with a concreter."
+              cta="Browse concreters near you"
+              href="/directory?trade=Concreter"
+            />
+          )}
         </ToolPanel>
       </div>
     </div>
@@ -126,38 +154,203 @@ function TileCalc() {
 }
 
 function PaintCalc() {
-  const [wallH, setWallH] = useState(2.7);
   const [wallL, setWallL] = useState(14);
-  const [coats, setCoats] = useState(2);
-  const [coverage, setCoverage] = useState(14);
+  const [wallH, setWallH] = useState(2.7);
+  const [doors, setDoors] = useState(2);
+  const [windows, setWindows] = useState(3);
+  const [coverage, setCoverage] = useState(DEFAULT_COVERAGE);
 
   const result = useMemo(() => {
-    const area = Math.max(wallH, 0) * Math.max(wallL, 0) * Math.max(coats, 1);
-    const litres = coverage > 0 ? area / coverage : 0;
-    return { area, litres };
-  }, [wallH, wallL, coats, coverage]);
+    const gross = Math.max(wallL, 0) * Math.max(wallH, 0);
+    const openings =
+      Math.max(doors, 0) * DOOR_M2 + Math.max(windows, 0) * WINDOW_M2;
+    const wallArea = Math.max(gross - openings, 0);
+    const cov = Math.min(Math.max(coverage, 10), 18);
+    const primerL = wallArea / cov;
+    const topcoatL = (wallArea * 2) / cov;
+    const totalL = primerL + topcoatL;
+    return { wallArea, primerL, topcoatL, totalL, cov };
+  }, [wallL, wallH, doors, windows, coverage]);
+
+  const bigJob = result.totalL >= 20;
 
   return (
     <div className="grid lg:grid-cols-12 gap-6">
       <div className="lg:col-span-6">
-        <ToolPanel title="Walls">
+        <ToolPanel title="Walls and openings">
           <div className="grid sm:grid-cols-2 gap-x-4">
-            <NumberField label="Wall height" value={wallH} onChange={setWallH} suffix="m" min={0} step={0.1} />
-            <NumberField label="Total wall length" value={wallL} onChange={setWallL} suffix="m" min={0} step={0.1} />
-            <NumberField label="Coats" value={coats} onChange={setCoats} min={1} step={1} />
-            <NumberField label="Coverage" value={coverage} onChange={setCoverage} suffix="m²/L" min={1} step={0.5} />
+            <NumberField
+              label="Total wall length"
+              value={wallL}
+              onChange={setWallL}
+              suffix="m"
+              min={0}
+              step={0.1}
+            />
+            <NumberField
+              label="Ceiling height"
+              value={wallH}
+              onChange={setWallH}
+              suffix="m"
+              min={0}
+              step={0.1}
+            />
+            <NumberField label="Doors" value={doors} onChange={setDoors} min={0} step={1} />
+            <NumberField label="Windows" value={windows} onChange={setWindows} min={0} step={1} />
+            <NumberField
+              label="Coverage rate"
+              value={coverage}
+              onChange={setCoverage}
+              suffix="m²/L"
+              min={10}
+              step={0.5}
+            />
           </div>
-          <p className="font-sans text-[13px] text-[#5a6a78]">
-            Add up the length of every wall you are painting. Doors and windows usually offset a bit of waste.
+          <p className="font-sans text-[13px] leading-[1.6] text-[#5a6a78]">
+            Standard coverage is about 14–16 m² per litre per coat. Doors count as ~{DOOR_M2} m² and
+            windows ~{WINDOW_M2} m² each. Primer plus two topcoats is assumed.
           </p>
         </ToolPanel>
       </div>
       <div className="lg:col-span-6">
         <ToolPanel title="Paint needed">
           <dl>
-            <ToolResultRow label="Paintable area (all coats)" value={`${result.area.toFixed(1)} m²`} />
-            <ToolResultRow label="Litres to buy" value={`${Math.ceil(result.litres)} L`} highlight />
+            <ToolResultRow label="Paintable wall area" value={`${result.wallArea.toFixed(1)} m²`} />
+            <ToolResultRow label="Primer" value={`${Math.ceil(result.primerL)} L`} />
+            <ToolResultRow
+              label="Topcoat (2 coats)"
+              value={`${Math.ceil(result.topcoatL)} L`}
+            />
+            <ToolResultRow
+              label="Total to buy"
+              value={`${Math.ceil(result.totalL)} L`}
+              highlight
+              hint={`At ${result.cov} m²/L coverage`}
+            />
           </dl>
+          {bigJob ? (
+            <EffortHook
+              effort={`You are looking at roughly ${Math.ceil(result.totalL)} litres of paint across primer and two topcoats — plus masking, cutting-in, and ladder time. Prefer a pro finish?`}
+              cta="Find a local painter in your suburb"
+              href="/directory?trade=Painter"
+            />
+          ) : (
+            <EffortHook
+              effort="Manageable DIY volume. Ceilings, feature walls, and high prep jobs still eat a weekend fast."
+              cta="Browse painters near you"
+              href="/directory?trade=Painter"
+            />
+          )}
+        </ToolPanel>
+      </div>
+    </div>
+  );
+}
+
+function TileCalc() {
+  const [area, setArea] = useState(7.7);
+  const [tileL, setTileL] = useState(300);
+  const [tileW, setTileW] = useState(300);
+  const [jointMm, setJointMm] = useState(3);
+  const [boxCoverage, setBoxCoverage] = useState(1.44);
+  const [groutDepthMm, setGroutDepthMm] = useState(8);
+
+  const result = useMemo(() => {
+    const surface = Math.max(area, 0);
+    const withWaste = surface * 1.15;
+    const boxes = boxCoverage > 0 ? withWaste / boxCoverage : 0;
+
+    const tL = Math.max(tileL, 1) / 1000;
+    const tW = Math.max(tileW, 1) / 1000;
+    const joint = Math.max(jointMm, 0) / 1000;
+    const depth = Math.max(groutDepthMm, 1) / 1000;
+    const tileArea = tL * tW;
+    const moduleArea = (tL + joint) * (tW + joint);
+    const groutFraction = moduleArea > 0 ? Math.max(moduleArea - tileArea, 0) / moduleArea : 0;
+    const groutVolumeM3 = withWaste * groutFraction * depth;
+    const groutKg = groutVolumeM3 * GROUT_DENSITY;
+    const tilesApprox = tileArea > 0 ? withWaste / tileArea : 0;
+
+    return { surface, withWaste, boxes, groutKg, tilesApprox };
+  }, [area, tileL, tileW, jointMm, boxCoverage, groutDepthMm]);
+
+  const bigJob = result.surface >= 8;
+
+  return (
+    <div className="grid lg:grid-cols-12 gap-6">
+      <div className="lg:col-span-6">
+        <ToolPanel title="Surface and tile">
+          <div className="grid sm:grid-cols-2 gap-x-4">
+            <NumberField
+              label="Floor / wall area"
+              value={area}
+              onChange={setArea}
+              suffix="m²"
+              min={0}
+              step={0.1}
+            />
+            <NumberField
+              label="Coverage per box"
+              value={boxCoverage}
+              onChange={setBoxCoverage}
+              suffix="m²"
+              min={0.1}
+              step={0.01}
+            />
+            <NumberField label="Tile length" value={tileL} onChange={setTileL} suffix="mm" min={50} step={10} />
+            <NumberField label="Tile width" value={tileW} onChange={setTileW} suffix="mm" min={50} step={10} />
+            <NumberField
+              label="Joint width"
+              value={jointMm}
+              onChange={setJointMm}
+              suffix="mm"
+              min={1}
+              step={0.5}
+            />
+            <NumberField
+              label="Grout depth"
+              value={groutDepthMm}
+              onChange={setGroutDepthMm}
+              suffix="mm"
+              min={2}
+              step={1}
+            />
+          </div>
+          <p className="font-sans text-[13px] leading-[1.6] text-[#5a6a78]">
+            Box count includes a 15% allowance for cuts and breakage. Grout weight is an estimate from
+            tile size, joint width, and depth.
+          </p>
+        </ToolPanel>
+      </div>
+      <div className="lg:col-span-6">
+        <ToolPanel title="Tiles and grout">
+          <dl>
+            <ToolResultRow label="Surface area" value={`${result.surface.toFixed(2)} m²`} />
+            <ToolResultRow label="With 15% allowance" value={`${result.withWaste.toFixed(2)} m²`} />
+            <ToolResultRow label="Approx tiles" value={`${Math.ceil(result.tilesApprox)}`} />
+            <ToolResultRow
+              label="Boxes to buy"
+              value={`${Math.ceil(result.boxes)}`}
+              highlight
+            />
+            <ToolResultRow
+              label="Grout required"
+              value={`${Math.max(result.groutKg, 0).toFixed(1)} kg`}
+            />
+          </dl>
+          {bigJob ? (
+            <EffortHook
+              effort={`About ${Math.ceil(result.boxes)} boxes plus ~${result.groutKg.toFixed(1)} kg of grout — and a lot of cutting, levelling, and curing time. Prefer to hand it over?`}
+              cta="Find a local tiler in your suburb"
+              href="/directory?trade=Tiler"
+            />
+          ) : (
+            <EffortHook
+              effort="Small areas are DIY-friendly. Wet-area falls and waterproofing are where most weekends go wrong."
+              cta="Browse tilers near you"
+              href="/directory?trade=Tiler"
+            />
+          )}
         </ToolPanel>
       </div>
     </div>

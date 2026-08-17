@@ -80,8 +80,11 @@ export default function ToolsIndexPage() {
           <h2 className="font-display text-[clamp(1.6rem,3vw,2.2rem)] tracking-wide text-[#071018]">
             Plan the job. Then find a tradie.
           </h2>
+          <p className="font-sans text-[15px] text-[#5a6a78] mt-2 max-w-[48ch]">
+            Ballpark Australian job costs, or work out concrete, paint, and tile quantities before you DIY.
+          </p>
         </div>
-        <ul className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <ul className="grid md:grid-cols-2 gap-4">
           {homeownerTools.map((tool) => (
             <li key={tool.slug}>
               <Link

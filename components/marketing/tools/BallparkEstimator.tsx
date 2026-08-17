@@ -1,11 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
+import { LEADS_ENABLED } from "@/lib/featureFlags";
 import {
   moneyAud,
   RangeField,
   ToolPanel,
   ToolResultRow,
+  ToolToggle,
 } from "@/components/marketing/tools/ToolShell";
 
 type JobKey =
@@ -18,123 +22,228 @@ type JobKey =
   | "paint-interior"
   | "deck";
 
+type Finish = "budget" | "mid" | "luxury";
+
+type ExtraKey =
+  | "asbestos"
+  | "structural"
+  | "plumbing-relocate"
+  | "waterproofing"
+  | "switchboard"
+  | "skip";
+
+type ExtraDef = {
+  key: ExtraKey;
+  label: string;
+  hint: string;
+  low: number;
+  high: number;
+  jobs: JobKey[] | "all";
+};
+
+const FINISHES: { id: Finish; label: string; mult: number; note: string }[] = [
+  { id: "budget", label: "Budget", mult: 0.78, note: "Basic fittings, standard labour" },
+  { id: "mid", label: "Mid-range", mult: 1, note: "Typical Australian residential finish" },
+  { id: "luxury", label: "Luxury", mult: 1.48, note: "Premium fixtures and finishes" },
+];
+
+const EXTRAS: ExtraDef[] = [
+  {
+    key: "asbestos",
+    label: "Asbestos removal",
+    hint: "Common in older wet areas and eaves",
+    low: 2500,
+    high: 5500,
+    jobs: ["bathroom", "kitchen", "roof", "paint-interior", "rewire"],
+  },
+  {
+    key: "structural",
+    label: "Structural timber repairs",
+    hint: "Rot, termite, or framing surprises",
+    low: 3000,
+    high: 8000,
+    jobs: ["bathroom", "kitchen", "deck", "roof", "fence"],
+  },
+  {
+    key: "plumbing-relocate",
+    label: "Plumbing relocation",
+    hint: "Moving toilet, vanity, or shower rough-in",
+    low: 2000,
+    high: 4500,
+    jobs: ["bathroom", "kitchen"],
+  },
+  {
+    key: "waterproofing",
+    label: "Full waterproofing redo",
+    hint: "Membrane failure or non-compliant wet area",
+    low: 1800,
+    high: 4200,
+    jobs: ["bathroom"],
+  },
+  {
+    key: "switchboard",
+    label: "Switchboard upgrade",
+    hint: "Often needed with rewires and large AC installs",
+    low: 1500,
+    high: 3500,
+    jobs: ["rewire", "split-ac", "kitchen"],
+  },
+  {
+    key: "skip",
+    label: "Skip / rubbish removal",
+    hint: "Demo waste and site clean-up",
+    low: 450,
+    high: 1200,
+    jobs: "all",
+  },
+];
+
 const JOBS: {
   key: JobKey;
   label: string;
+  sizeLabel: string;
   unit: string;
   minSize: number;
   maxSize: number;
   step: number;
   defaultSize: number;
-  /** Rough AUD low/high per unit at mid complexity */
+  /** Mid-range AUD per size unit */
   lowPer: number;
   highPer: number;
+  /** Mid-range base for a typical job before size scaling */
   baseLow: number;
   baseHigh: number;
+  blurb: string;
+  directoryTrade: string;
 }[] = [
   {
     key: "bathroom",
-    label: "Bathroom renovation",
+    label: "Bathroom overhaul",
+    sizeLabel: "Room footprint",
     unit: "m²",
     minSize: 3,
     maxSize: 12,
     step: 0.5,
     defaultSize: 6,
-    lowPer: 1800,
-    highPer: 3200,
-    baseLow: 8000,
-    baseHigh: 12000,
+    lowPer: 1600,
+    highPer: 2800,
+    baseLow: 9000,
+    baseHigh: 14000,
+    blurb:
+      "Mid-range bathroom renovations in Australia often land around $15,000–$25,000 once size, fixtures, and plumbing moves are factored in.",
+    directoryTrade: "Bathroom Renovation",
   },
   {
     key: "kitchen",
     label: "Kitchen renovation",
+    sizeLabel: "Room footprint",
     unit: "m²",
     minSize: 6,
     maxSize: 25,
     step: 1,
     defaultSize: 12,
-    lowPer: 1200,
-    highPer: 2200,
-    baseLow: 10000,
-    baseHigh: 18000,
+    lowPer: 1100,
+    highPer: 2100,
+    baseLow: 12000,
+    baseHigh: 20000,
+    blurb: "Cabinetry quality and appliance package drive most of the spread.",
+    directoryTrade: "Kitchen Renovation",
   },
   {
     key: "split-ac",
-    label: "Install split system AC",
-    unit: "kW capacity",
+    label: "Split system AC",
+    sizeLabel: "Unit capacity",
+    unit: "kW",
     minSize: 2.5,
     maxSize: 8,
     step: 0.5,
     defaultSize: 3.5,
-    lowPer: 450,
-    highPer: 750,
+    lowPer: 420,
+    highPer: 720,
     baseLow: 1800,
     baseHigh: 2800,
+    blurb: "Includes typical wall-mounted split supply and install; multi-head and ducted sit higher.",
+    directoryTrade: "Air Conditioning",
   },
   {
     key: "rewire",
-    label: "House rewire",
-    unit: "rooms",
-    minSize: 4,
-    maxSize: 16,
-    step: 1,
-    defaultSize: 8,
-    lowPer: 900,
-    highPer: 1600,
-    baseLow: 4000,
-    baseHigh: 7000,
+    label: "Full rewire",
+    sizeLabel: "House footprint",
+    unit: "m²",
+    minSize: 80,
+    maxSize: 320,
+    step: 10,
+    defaultSize: 160,
+    lowPer: 45,
+    highPer: 85,
+    baseLow: 6000,
+    baseHigh: 10000,
+    blurb: "Partial circuit upgrades cost less; full house rewires scale with floor area and switchboard work.",
+    directoryTrade: "Electrician",
   },
   {
     key: "fence",
     label: "Boundary fence",
-    unit: "metres",
+    sizeLabel: "Fence length",
+    unit: "m",
     minSize: 10,
     maxSize: 60,
     step: 1,
     defaultSize: 25,
-    lowPer: 90,
-    highPer: 180,
-    baseLow: 800,
-    baseHigh: 1500,
+    lowPer: 85,
+    highPer: 175,
+    baseLow: 700,
+    baseHigh: 1400,
+    blurb: "Colorbond vs timber and shared-boundary agreements change the price quickly.",
+    directoryTrade: "Fencing",
   },
   {
     key: "roof",
     label: "Re-roof (metal)",
+    sizeLabel: "Roof area",
     unit: "m²",
     minSize: 80,
     maxSize: 280,
     step: 5,
     defaultSize: 150,
-    lowPer: 70,
-    highPer: 130,
-    baseLow: 2000,
-    baseHigh: 4500,
+    lowPer: 65,
+    highPer: 125,
+    baseLow: 2500,
+    baseHigh: 5000,
+    blurb: "Pitch, access, insulation, and fascia/gutter replacement sit on top of sheet supply.",
+    directoryTrade: "Roofing",
   },
   {
     key: "paint-interior",
     label: "Interior house paint",
-    unit: "rooms",
-    minSize: 2,
-    maxSize: 12,
-    step: 1,
-    defaultSize: 5,
-    lowPer: 450,
-    highPer: 900,
-    baseLow: 600,
-    baseHigh: 1200,
+    sizeLabel: "Floor footprint",
+    unit: "m²",
+    minSize: 40,
+    maxSize: 280,
+    step: 10,
+    defaultSize: 120,
+    lowPer: 18,
+    highPer: 38,
+    baseLow: 800,
+    baseHigh: 1600,
+    blurb: "Prep quality (filling, sanding, ceiling inclusion) moves DIY vs pro numbers a lot.",
+    directoryTrade: "Painter",
   },
   {
     key: "deck",
     label: "Timber deck",
+    sizeLabel: "Deck footprint",
     unit: "m²",
     minSize: 8,
     maxSize: 50,
     step: 1,
     defaultSize: 20,
-    lowPer: 280,
-    highPer: 520,
-    baseLow: 1500,
-    baseHigh: 3000,
+    lowPer: 260,
+    highPer: 500,
+    baseLow: 1800,
+    baseHigh: 3500,
+    blurb: "Hardwood vs treated pine, handrails, and stairs are the main cost levers.",
+    directoryTrade: "Carpenter",
   },
 ];
 
@@ -142,23 +251,53 @@ export default function BallparkEstimator() {
   const [jobKey, setJobKey] = useState<JobKey>("bathroom");
   const activeJob = JOBS.find((j) => j.key === jobKey) ?? JOBS[0];
   const [size, setSize] = useState(activeJob.defaultSize);
+  const [finish, setFinish] = useState<Finish>("mid");
+  const [extras, setExtras] = useState<Partial<Record<ExtraKey, boolean>>>({});
+
+  const finishMeta = FINISHES.find((f) => f.id === finish) ?? FINISHES[1];
+  const availableExtras = EXTRAS.filter(
+    (e) => e.jobs === "all" || e.jobs.includes(jobKey),
+  );
 
   const range = useMemo(() => {
-    const low = activeJob.baseLow + activeJob.lowPer * size;
-    const high = activeJob.baseHigh + activeJob.highPer * size;
+    const mult = finishMeta.mult;
+    let low = (activeJob.baseLow + activeJob.lowPer * size) * mult;
+    let high = (activeJob.baseHigh + activeJob.highPer * size) * mult;
+
+    for (const extra of EXTRAS) {
+      if (!(extra.jobs === "all" || extra.jobs.includes(activeJob.key))) continue;
+      if (!extras[extra.key]) continue;
+      low += extra.low;
+      high += extra.high;
+    }
+
     return { low, high, mid: (low + high) / 2 };
-  }, [activeJob, size]);
+  }, [activeJob, size, finishMeta.mult, extras]);
 
   function selectJob(key: JobKey) {
     const next = JOBS.find((j) => j.key === key) ?? JOBS[0];
     setJobKey(key);
     setSize(next.defaultSize);
+    setExtras({});
   }
+
+  function toggleExtra(key: ExtraKey) {
+    setExtras((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  const directoryHref = `/directory?trade=${encodeURIComponent(activeJob.directoryTrade)}`;
+  const conversionHref = LEADS_ENABLED ? "/get-quotes" : directoryHref;
+  const conversionCta = LEADS_ENABLED
+    ? "Request quotes from local tradies"
+    : "Find local tradies near you";
+  const conversionCopy = LEADS_ENABLED
+    ? "This estimate reflects local Australian trade averages. Want an exact price tailored to your space? Request quotes from up to 3 local, verified tradies."
+    : "This estimate reflects local Australian trade averages. Want an exact price tailored to your space? Browse local, verified tradies and contact them direct.";
 
   return (
     <div className="grid lg:grid-cols-12 gap-6 lg:gap-8 items-start">
       <div className="lg:col-span-7 space-y-6">
-        <ToolPanel title="Job type">
+        <ToolPanel title="Project type">
           <div className="grid sm:grid-cols-2 gap-2">
             {JOBS.map((j) => {
               const on = j.key === jobKey;
@@ -179,9 +318,23 @@ export default function BallparkEstimator() {
               );
             })}
           </div>
+          <p className="font-sans text-[13.5px] leading-[1.6] text-[#5a6a78] mt-4">
+            {activeJob.blurb}
+          </p>
         </ToolPanel>
 
-        <ToolPanel title="Size">
+        <ToolPanel title="Finish quality">
+          <ToolToggle
+            options={FINISHES.map((f) => ({ id: f.id, label: f.label }))}
+            value={finish}
+            onChange={(id) => setFinish(id as Finish)}
+          />
+          <p className="font-sans text-[13.5px] leading-[1.6] text-[#5a6a78]">
+            {finishMeta.note}. Mid-range is the default Australian residential baseline.
+          </p>
+        </ToolPanel>
+
+        <ToolPanel title={activeJob.sizeLabel}>
           <RangeField
             label={activeJob.unit}
             value={size}
@@ -192,14 +345,52 @@ export default function BallparkEstimator() {
             display={`${size} ${activeJob.unit}`}
           />
           <p className="font-sans text-[13.5px] leading-[1.6] text-[#5a6a78]">
-            Rough Australian residential ranges only. Finish level, access, and site conditions move the number a lot.
+            Guideline ranges only. Access, council requirements, and brand of fittings move real quotes.
           </p>
+        </ToolPanel>
+
+        <ToolPanel title="Common hidden extras">
+          <p className="font-sans text-[13.5px] leading-[1.6] text-[#5a6a78] mb-4">
+            Optional add-ons that often appear after demolition or a site inspection.
+          </p>
+          <ul className="space-y-3">
+            {availableExtras.map((extra) => {
+              const on = Boolean(extras[extra.key]);
+              return (
+                <li key={extra.key}>
+                  <label
+                    className={[
+                      "flex items-start gap-3 border px-4 py-3 cursor-pointer transition-colors",
+                      on ? "border-[#071018] bg-[#f7f8f9]" : "border-[#e4e8ec] bg-white hover:border-[#071018]/50",
+                    ].join(" ")}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      onChange={() => toggleExtra(extra.key)}
+                      className="mt-1 accent-[#ffb400] shrink-0"
+                    />
+                    <span className="min-w-0">
+                      <span className="block font-sans text-[14px] font-semibold text-[#071018]">
+                        {extra.label}
+                      </span>
+                      <span className="block font-sans text-[13px] text-[#5a6a78] mt-0.5">
+                        {extra.hint} · typically {moneyAud(extra.low)}–{moneyAud(extra.high)}
+                      </span>
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
         </ToolPanel>
       </div>
 
-      <div className="lg:col-span-5 lg:sticky lg:top-6">
+      <div className="lg:col-span-5 lg:sticky lg:top-6 space-y-4">
         <ToolPanel title="Ballpark range">
-          <p className="font-sans text-[14px] text-[#5a6a78] mb-2">{activeJob.label}</p>
+          <p className="font-sans text-[14px] text-[#5a6a78] mb-1">
+            {activeJob.label} · {finishMeta.label} · {size} {activeJob.unit}
+          </p>
           <p className="font-display text-[clamp(1.8rem,3vw,2.4rem)] tracking-wide text-[#b88400] mb-6">
             {moneyAud(range.low)} – {moneyAud(range.high)}
           </p>
@@ -209,9 +400,21 @@ export default function BallparkEstimator() {
             <ToolResultRow label="High end" value={moneyAud(range.high)} />
           </dl>
           <p className="font-sans text-[13px] leading-[1.6] text-[#5a6a78] mt-5">
-            Not a quote. For a firm price, talk to a local tradie who has seen the job.
+            Not a quote. Based on current Australian residential trade averages for planning only.
           </p>
         </ToolPanel>
+
+        <aside className="border border-[#e4e8ec] bg-white p-5 sm:p-6">
+          <p className="font-sans text-[14.5px] leading-[1.65] text-[#3d4a55] mb-4">
+            {conversionCopy}
+          </p>
+          <Link
+            href={conversionHref}
+            className="inline-flex items-center gap-2 font-sans text-[14px] font-extrabold text-[#071018] hover:text-[#b88400] transition-colors"
+          >
+            {conversionCta} <ArrowRight size={14} aria-hidden />
+          </Link>
+        </aside>
       </div>
     </div>
   );
