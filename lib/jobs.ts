@@ -18,6 +18,8 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { resolveScheduledStart } from "@/lib/scheduleNormalize";
+import { humanizeIntakePublic } from "@/lib/humanizeIntake";
 
 export interface JobRow {
   id: string;
@@ -92,9 +94,10 @@ export async function getOrCreateJobForQuote(supabase: SupabaseClient, quoteId: 
       materials_cost: quote.materials_cost,
       total_cost: quote.total_cost,
       scheduled_date: quote.scheduled_date,
-      scheduled_start: quote.scheduled_start,
-      scheduled_end: quote.scheduled_end,
+      scheduled_start: resolveScheduledStart(quote.scheduled_start, quote.scheduled_date),
+      scheduled_end: quote.scheduled_end ?? resolveScheduledStart(quote.scheduled_start, quote.scheduled_date),
       assigned_to_member_id: quote.assigned_to_member_id,
+      amount_paid: quote.amount_paid ?? 0,
     })
     .select("*")
     .single();
@@ -131,6 +134,27 @@ export async function getOrCreateJobForQuote(supabase: SupabaseClient, quoteId: 
     );
   }
 
+  // Seed install-progress lines from the quote scope so the board badges
+  // and job detail progress panel have something to work with immediately.
+  try {
+    const scopeLines = humanizeIntakePublic(quote.intake_data as Record<string, unknown> | null, quote.trade ?? "electrician");
+    if (scopeLines.length) {
+      await supabase.from("job_line_items").insert(
+        scopeLines.slice(0, 40).map((label, i) => ({
+          job_id: created.id,
+          profile_id: quote.profile_id,
+          label,
+          quantity: 1,
+          unit: "ea",
+          status: "not_started",
+          sort_order: i,
+        }))
+      );
+    }
+  } catch (e) {
+    console.error("getOrCreateJobForQuote: line item seed failed", e);
+  }
+
   return created as JobRow;
 }
 
@@ -152,6 +176,7 @@ export type QuickJobInput = {
 /** Create a job directly, bypassing the quote/quote-builder entirely. */
 export async function createQuickJob(supabase: SupabaseClient, input: QuickJobInput): Promise<JobRow | null> {
   const totalCost = input.labourHours * input.hourlyRate + (input.materialsCost ?? 0);
+  const start = resolveScheduledStart(null, input.scheduledDate ?? null);
 
   const { data: created, error } = await supabase
     .from("jobs")
@@ -170,6 +195,8 @@ export async function createQuickJob(supabase: SupabaseClient, input: QuickJobIn
       materials_cost: input.materialsCost ?? 0,
       total_cost: totalCost,
       scheduled_date: input.scheduledDate ?? null,
+      scheduled_start: start,
+      scheduled_end: start,
       assigned_to_member_id: input.assignedToMemberId ?? null,
     })
     .select("*")

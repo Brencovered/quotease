@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { CalendarDays, Check } from "lucide-react";
+import { endFromStartAndDays } from "@/lib/scheduleNormalize";
 
 interface TeamMemberOption {
   id: string;
@@ -11,11 +12,10 @@ interface TeamMemberOption {
   email: string;
 }
 
-// Writes to scheduled_start/estimated_days - the same columns the Schedule
-// calendar reads from. An earlier version of this panel wrote to a
-// separate scheduled_date column that the calendar never looked at, so
-// setting a date here silently never appeared anywhere else.
+/** Schedule brief writes to jobs (source of truth). Optionally mirrors
+ *  onto the linked quote so older quote-centric reads stay in sync. */
 export default function JobBriefPanel({
+  jobId,
   quoteId,
   siteNotes: initialNotes,
   scheduledStart: initialStart,
@@ -23,14 +23,18 @@ export default function JobBriefPanel({
   assignedTo: initialAssigned,
   assignedToMemberId: initialAssignedMemberId,
   teamMembers,
+  crewMemberIds = [],
 }: {
-  quoteId: string;
+  jobId: string;
+  quoteId?: string | null;
   siteNotes: string | null;
   scheduledStart: string | null;
   estimatedDays: number | null;
   assignedTo: string | null;
   assignedToMemberId?: string | null;
   teamMembers?: TeamMemberOption[];
+  /** Other crew already on the job — used for clash hints after save. */
+  crewMemberIds?: string[];
 }) {
   const [siteNotes, setSiteNotes] = useState(initialNotes ?? "");
   const [scheduledStart, setScheduledStart] = useState(initialStart ? initialStart.slice(0, 10) : "");
@@ -38,28 +42,70 @@ export default function JobBriefPanel({
   const [assignedToMemberId, setAssignedToMemberId] = useState(initialAssignedMemberId ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [clashWarning, setClashWarning] = useState<string | null>(null);
 
   const hasTeam = (teamMembers?.length ?? 0) > 0;
 
   async function save() {
     setSaving(true);
     setSaved(false);
+    setClashWarning(null);
     const supabase = createClient();
     const days = estimatedDays ? Number(estimatedDays) : null;
     const start = scheduledStart ? new Date(scheduledStart).toISOString() : null;
-    const end = start && days && days > 1 ? new Date(new Date(start).getTime() + (days - 1) * 86400000).toISOString() : start;
+    const end = start ? endFromStartAndDays(start, days) : null;
     const assignedMember = teamMembers?.find((m) => m.id === assignedToMemberId);
+
     await supabase
-      .from("quotes")
+      .from("jobs")
       .update({
         site_notes: siteNotes || null,
+        scheduled_date: scheduledStart || null,
         scheduled_start: start,
         scheduled_end: end,
         estimated_days: days,
         assigned_to_member_id: assignedToMemberId || null,
-        assigned_to: assignedMember ? (assignedMember.name || assignedMember.email) : null,
       })
-      .eq("id", quoteId);
+      .eq("id", jobId);
+
+    if (quoteId) {
+      await supabase
+        .from("quotes")
+        .update({
+          site_notes: siteNotes || null,
+          scheduled_date: scheduledStart || null,
+          scheduled_start: start,
+          scheduled_end: end,
+          estimated_days: days,
+          assigned_to_member_id: assignedToMemberId || null,
+          assigned_to: assignedMember ? (assignedMember.name || assignedMember.email) : null,
+        })
+        .eq("id", quoteId);
+    }
+
+    // Simple clash check: same assignee already on another job that day.
+    if (start && assignedToMemberId) {
+      const day = scheduledStart;
+      const { data: clashes } = await supabase
+        .from("jobs")
+        .select("id, client_name, job_number, scheduled_start, scheduled_date")
+        .eq("assigned_to_member_id", assignedToMemberId)
+        .neq("id", jobId)
+        .not("status", "in", '("cancelled","archived","complete")');
+      const hits = (clashes ?? []).filter((j) => {
+        const d = (j.scheduled_start ?? j.scheduled_date ?? "").slice(0, 10);
+        return d === day;
+      });
+      if (hits.length) {
+        const labels = hits
+          .slice(0, 2)
+          .map((j) => `Job #${j.job_number}${j.client_name ? ` (${j.client_name})` : ""}`)
+          .join(", ");
+        setClashWarning(`${assignedMember?.name || "Assignee"} is also on ${labels} that day.`);
+      }
+    }
+
+    void crewMemberIds; // reserved for expanded crew clash checks
     setSaving(false);
     setSaved(true);
   }
@@ -108,6 +154,11 @@ export default function JobBriefPanel({
         </p>
       )}
       <p className="text-[11px] text-[var(--ink-faint)] mb-3">This appears on your Schedule calendar automatically.</p>
+      {clashWarning && (
+        <p className="text-[12.5px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+          {clashWarning}
+        </p>
+      )}
 
       <label className="block mb-3">
         <span className="block text-[12px] font-medium text-[var(--ink-soft)] mb-1.5">Site access notes</span>

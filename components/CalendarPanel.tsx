@@ -6,22 +6,44 @@ import { getActiveBusinessId } from "@/lib/team";
 import { CalendarDays, MapPin, ChevronLeft, ChevronRight, Plus, Bell, Send, Trash2, Pencil } from "lucide-react";
 
 type ScheduledJob = {
-  id: string; client_name: string | null; site_address: string | null;
-  total_cost: number | null; job_type: string | null; status: string;
-  scheduled_start: string | null; scheduled_end: string | null; estimated_days: number | null;
-  follow_up_at?: string | null; quote_expires_at?: string | null; sent_at?: string | null;
-  jobs?: { job_number: number | null } | { job_number: number | null }[] | null;
+  id: string;
+  quote_id?: string | null;
+  client_name: string | null;
+  site_address: string | null;
+  total_cost: number | null;
+  job_type: string | null;
+  status: string;
+  job_number?: number | null;
+  scheduled_start: string | null;
+  scheduled_end: string | null;
+  estimated_days: number | null;
+  assigned_to_member_id?: string | null;
+  crew_member_ids?: string[];
 };
 
-/** The embedded `jobs` relation comes back as an object or a single-item
- * array depending on how PostgREST resolves the to-one FK - normalize
- * either shape to just the number, or null if this quote has no job yet
- * (not accepted, so getOrCreateJobForQuote hasn't run for it). */
+type QuoteFollowUp = {
+  id: string;
+  client_name: string | null;
+  site_address: string | null;
+  status: string;
+  follow_up_at?: string | null;
+  quote_expires_at?: string | null;
+  sent_at?: string | null;
+};
+
+type TeamMember = { id: string; name: string | null; email: string };
+
 function jobNumberOf(j: ScheduledJob): number | null {
-  const rel = j.jobs;
-  if (!rel) return null;
-  const row = Array.isArray(rel) ? rel[0] : rel;
-  return row?.job_number ?? null;
+  return j.job_number ?? null;
+}
+
+function mondayOf(d: Date) {
+  const x = new Date(d);
+  const day = x.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  x.setDate(x.getDate() + diff);
+  x.setHours(0, 0, 0, 0);
+  return x;
 }
 
 type ManualEvent = {
@@ -47,12 +69,21 @@ function toDateStr(d: Date) { return d.toISOString().slice(0,10); }
 function getDaysInMonth(y: number, m: number) { return new Date(y, m+1, 0).getDate(); }
 function getFirstDay(y: number, m: number)    { return new Date(y, m, 1).getDay(); }
 
-export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJob[] }) {
+export default function CalendarPanel({
+  jobs: initialJobs,
+  followUps = [],
+  teamMembers = [],
+}: {
+  jobs: ScheduledJob[];
+  followUps?: QuoteFollowUp[];
+  teamMembers?: TeamMember[];
+}) {
   const today = new Date();
   const [year,  setYear]  = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
+  const [weekAnchor, setWeekAnchor] = useState(() => mondayOf(today));
   const [jobs,  setJobs]  = useState(initialJobs);
-  const [view,  setView]  = useState<"month"|"list">("month");
+  const [view,  setView]  = useState<"month"|"list"|"week">("month");
   const [selectedEvents, setSelectedEvents] = useState<CalEvent[] | null>(null);
   const [scheduling, setScheduling] = useState<ScheduledJob | null>(null);
   const [schedForm, setSchedForm]   = useState({ start: "", end: "", days: "" });
@@ -100,9 +131,11 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
         events.push({ id: `job-${j.id}-${toDateStr(cur)}`, date: toDateStr(cur), type: "job", label: jobLabel, sub: j.site_address ?? undefined, jobId: j.id });
       }
     }
-    if (j.follow_up_at && j.status === "sent") events.push({ id: `fu-${j.id}`, date: j.follow_up_at.slice(0,10), type: "followup", label: `Follow up: ${j.client_name ?? ""}`, sub: "Quote follow-up due", jobId: j.id });
-    if (j.quote_expires_at && j.status === "sent") events.push({ id: `exp-${j.id}`, date: j.quote_expires_at.slice(0,10), type: "expiry", label: `Expires: ${j.client_name ?? ""}`, sub: "Quote expires today", jobId: j.id });
-    if (j.sent_at && j.status === "sent") events.push({ id: `sent-${j.id}`, date: j.sent_at.slice(0,10), type: "sent", label: `Sent: ${j.client_name ?? ""}`, sub: "Quote sent", jobId: j.id });
+  }
+  for (const q of followUps) {
+    if (q.follow_up_at) events.push({ id: `fu-${q.id}`, date: q.follow_up_at.slice(0,10), type: "followup", label: `Follow up: ${q.client_name ?? ""}`, sub: "Quote follow-up due", jobId: q.id });
+    if (q.quote_expires_at) events.push({ id: `exp-${q.id}`, date: q.quote_expires_at.slice(0,10), type: "expiry", label: `Expires: ${q.client_name ?? ""}`, sub: "Quote expires today", jobId: q.id });
+    if (q.sent_at) events.push({ id: `sent-${q.id}`, date: q.sent_at.slice(0,10), type: "sent", label: `Sent: ${q.client_name ?? ""}`, sub: "Quote sent", jobId: q.id });
   }
 
   for (const me of manualEvents) {
@@ -115,10 +148,10 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
   const [dragJob, setDragJob] = useState<{ jobId: string; fromDate: string } | null>(null);
   const [rescheduling, setRescheduling] = useState(false);
 
-  async function rescheduleJob(jobId: string, fromDateStr: string, toDateStr: string) {
+  async function rescheduleJob(jobId: string, fromDateStr: string, toDate: string) {
     const job = jobs.find((j) => j.id === jobId);
     if (!job || !job.scheduled_start) return;
-    const deltaMs = new Date(toDateStr).getTime() - new Date(fromDateStr).getTime();
+    const deltaMs = new Date(toDate).getTime() - new Date(fromDateStr).getTime();
     if (deltaMs === 0) return;
     const newStart = new Date(new Date(job.scheduled_start).getTime() + deltaMs);
     const newEnd = job.scheduled_end ? new Date(new Date(job.scheduled_end).getTime() + deltaMs) : null;
@@ -126,10 +159,19 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
     setJobs((prev) => prev.map((j) => j.id === jobId
       ? { ...j, scheduled_start: newStart.toISOString(), scheduled_end: newEnd ? newEnd.toISOString() : null }
       : j));
-    await supabase.from("quotes").update({
+    await supabase.from("jobs").update({
       scheduled_start: newStart.toISOString(),
       scheduled_end: newEnd ? newEnd.toISOString() : null,
+      scheduled_date: toDateStr(newStart),
     }).eq("id", jobId);
+    const qid = job.quote_id;
+    if (qid) {
+      await supabase.from("quotes").update({
+        scheduled_start: newStart.toISOString(),
+        scheduled_end: newEnd ? newEnd.toISOString() : null,
+        scheduled_date: toDateStr(newStart),
+      }).eq("id", qid);
+    }
     setRescheduling(false);
   }
 
@@ -186,7 +228,7 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
     return events.filter((e) => e.date === dateStr);
   }
 
-  const unscheduled = jobs.filter((j) => !j.scheduled_start && (j.status === "accepted" || j.status === "paid"));
+  const unscheduled = jobs.filter((j) => !j.scheduled_start && !["complete", "invoiced", "cancelled", "archived"].includes(j.status));
 
   async function saveSchedule() {
     if (!scheduling || !schedForm.start) return;
@@ -194,8 +236,13 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
     const patch: Record<string, unknown> = { scheduled_start: new Date(schedForm.start).toISOString() };
     if (schedForm.end) patch.scheduled_end = new Date(schedForm.end).toISOString();
     if (schedForm.days) patch.estimated_days = Number(schedForm.days);
-    const { error } = await supabase.from("quotes").update(patch).eq("id", scheduling.id);
-    if (!error) setJobs((prev) => prev.map((j) => j.id === scheduling.id ? { ...j, scheduled_start: schedForm.start, scheduled_end: schedForm.end || null, estimated_days: schedForm.days ? Number(schedForm.days) : null } : j));
+    const startIso = new Date(schedForm.start).toISOString();
+    patch.scheduled_date = schedForm.start.slice(0, 10);
+    const { error } = await supabase.from("jobs").update(patch).eq("id", scheduling.id);
+    if (!error) {
+      if (scheduling.quote_id) await supabase.from("quotes").update(patch).eq("id", scheduling.quote_id);
+      setJobs((prev) => prev.map((j) => j.id === scheduling.id ? { ...j, scheduled_start: startIso, scheduled_end: schedForm.end ? new Date(schedForm.end).toISOString() : startIso, estimated_days: schedForm.days ? Number(schedForm.days) : null } : j));
+    }
     setSaving(false);
     setScheduling(null);
   }
@@ -233,6 +280,7 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
             <Plus size={14} strokeWidth={3} /> Add event
           </button>
           <button onClick={() => setView("month")} className={`px-3 py-1.5 rounded-lg text-[12.5px] font-bold border-2 ${view==="month" ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] text-[var(--ink-soft)]"}`}>Month</button>
+          <button onClick={() => setView("week")} className={`px-3 py-1.5 rounded-lg text-[12.5px] font-bold border-2 ${view==="week" ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] text-[var(--ink-soft)]"}`}>Crew week</button>
           <button onClick={() => setView("list")}  className={`px-3 py-1.5 rounded-lg text-[12.5px] font-bold border-2 ${view==="list"  ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] text-[var(--ink-soft)]"}`}>List</button>
         </div>
       </div>
@@ -337,7 +385,7 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
                 return (
                   <div key={ev.id}>
                     {ev.jobId ? (
-                      <a href={`/quotes/${ev.jobId}`} className={`flex items-start gap-3 rounded-xl p-3 ${EVENT_STYLE[ev.type] ?? EVENT_STYLE.general}`}>
+                      <a href={ev.type === "job" ? `/jobs/${ev.jobId}` : `/quotes/${ev.jobId}`} className={`flex items-start gap-3 rounded-xl p-3 ${EVENT_STYLE[ev.type] ?? EVENT_STYLE.general}`}>
                         <Icon size={15} className="mt-0.5 shrink-0" />
                         <div>
                           <p className="font-semibold text-[13.5px]">{ev.label}</p>
@@ -373,7 +421,65 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
         </div>
       )}
 
-      {view === "month" ? (
+      
+      {view === "week" && (
+        <div className="card overflow-x-auto mb-5">
+          <div className="flex items-center justify-between mb-3">
+            <button onClick={() => setWeekAnchor((d) => { const n = new Date(d); n.setDate(n.getDate() - 7); return n; })} className="p-1.5 rounded-lg hover:bg-[var(--app-bg)]"><ChevronLeft size={16} /></button>
+            <p className="font-bold text-[var(--ink)] text-[14px]">
+              Week of {weekAnchor.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}
+            </p>
+            <button onClick={() => setWeekAnchor((d) => { const n = new Date(d); n.setDate(n.getDate() + 7); return n; })} className="p-1.5 rounded-lg hover:bg-[var(--app-bg)]"><ChevronRight size={16} /></button>
+          </div>
+          {teamMembers.length === 0 ? (
+            <p className="text-[13px] text-[var(--ink-faint)]">Add team members to see a crew week view. Jobs still show on Month and List.</p>
+          ) : (
+            <table className="w-full text-[12px] min-w-[640px]">
+              <thead>
+                <tr>
+                  <th className="text-left p-2 text-[var(--ink-faint)] font-semibold">Crew</th>
+                  {Array.from({ length: 7 }).map((_, i) => {
+                    const d = new Date(weekAnchor); d.setDate(d.getDate() + i);
+                    return <th key={i} className="text-left p-2 text-[var(--ink-faint)] font-semibold">{d.toLocaleDateString("en-AU", { weekday: "short", day: "numeric" })}</th>;
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {teamMembers.map((m) => (
+                  <tr key={m.id} className="border-t border-[var(--line-subtle)]">
+                    <td className="p-2 font-semibold text-[var(--ink)] align-top whitespace-nowrap">{m.name || m.email}</td>
+                    {Array.from({ length: 7 }).map((_, i) => {
+                      const d = new Date(weekAnchor); d.setDate(d.getDate() + i);
+                      const ds = toDateStr(d);
+                      const dayJobs = jobs.filter((j) => {
+                        if (!j.scheduled_start) return false;
+                        const onCrew = (j.crew_member_ids ?? []).includes(m.id) || j.assigned_to_member_id === m.id;
+                        if (!onCrew) return false;
+                        const start = j.scheduled_start.slice(0, 10);
+                        const end = (j.scheduled_end ?? j.scheduled_start).slice(0, 10);
+                        return ds >= start && ds <= end;
+                      });
+                      const clashes = dayJobs.length > 1;
+                      return (
+                        <td key={i} className={`p-1.5 align-top ${clashes ? "bg-amber-50" : ""}`}>
+                          {dayJobs.map((j) => (
+                            <a key={j.id} href={`/jobs/${j.id}`} className={`block rounded px-1.5 py-1 mb-1 font-bold truncate ${clashes ? "bg-amber-100 text-amber-900" : "bg-[var(--amber)]/25 text-[var(--navy)]"}`}>
+                              #{j.job_number} {j.client_name}
+                            </a>
+                          ))}
+                          {clashes && <p className="text-[10px] text-amber-800 font-semibold">Clash</p>}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+{view === "month" && (
         <>
           <div className="card mb-4 overflow-hidden p-0">
             <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--line)]">
@@ -436,7 +542,9 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
             </div>
           )}
         </>
-      ) : (
+      )}
+
+      {view === "list" && (
         <div className="space-y-3">
           {listJobs.length === 0 && listManualEvents.length === 0 && (
             <div className="card text-center py-12">
@@ -445,7 +553,7 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
             </div>
           )}
           {listJobs.map((j) => (
-            <a key={j.id} href={`/quotes/${j.id}`} className="card block hover:border-[var(--amber)] transition-colors">
+            <a key={j.id} href={`/jobs/${j.id}`} className="card block hover:border-[var(--amber)] transition-colors">
               <div className="flex justify-between items-start gap-3">
                 <div>
                   <p className="font-bold text-[15px] text-[var(--ink)]">{j.client_name}</p>
@@ -467,10 +575,8 @@ export default function CalendarPanel({ jobs: initialJobs }: { jobs: ScheduledJo
                     className="text-[12px] font-bold text-[var(--navy)] border-2 border-[var(--line)] rounded-lg px-2.5 py-1">Schedule</button>
                 </div>
               )}
-              {j.follow_up_at && j.status==="sent" && (
-                <p className="text-[12px] text-[var(--blue)] font-semibold mt-1.5 flex items-center gap-1">
-                  <Bell size={11}/> Follow-up: {new Date(j.follow_up_at).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}
-                </p>
+              {j.job_number != null && (
+                <p className="text-[12px] text-[var(--ink-faint)] mt-1.5">Job #{j.job_number}</p>
               )}
             </a>
           ))}
