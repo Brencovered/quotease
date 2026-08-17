@@ -161,7 +161,23 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Close */}
+      <section className="bg-[#f4f6f8]">
+        <div className="max-w-3xl mx-auto px-6 py-14 sm:py-16">
+          <h2 className="font-display text-[clamp(1.7rem,3vw,2.2rem)] tracking-wide text-[#071018] mb-8">
+            Common questions
+          </h2>
+          <div className="space-y-5">
+            {SWIFTSCOPE_FAQS.map((faq) => (
+              <div key={faq.question} className="border-b border-[#e2e5ea] pb-5">
+                <p className="font-display text-[1.15rem] tracking-wide text-[#071018] mb-2">{faq.question}</p>
+                <p className="font-sans text-[14px] text-[#5a6a78] leading-relaxed">{faq.answer}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Close + footer */}
       <section className="bg-[#1a242c]">
         <div className="max-w-[1280px] mx-auto px-6 py-16 sm:py-24">
           <p className="font-display text-[clamp(2rem,5vw,3.5rem)] leading-[0.9] tracking-wide text-white mb-4">
@@ -198,22 +214,6 @@ export default async function Home() {
               <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
               <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
             </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-[#f4f6f8]">
-        <div className="max-w-3xl mx-auto px-6 py-14 sm:py-16">
-          <h2 className="font-display text-[clamp(1.7rem,3vw,2.2rem)] tracking-wide text-[#071018] mb-8">
-            Common questions
-          </h2>
-          <div className="space-y-5">
-            {SWIFTSCOPE_FAQS.map((faq) => (
-              <div key={faq.question} className="border-b border-[#e2e5ea] pb-5">
-                <p className="font-display text-[1.15rem] tracking-wide text-[#071018] mb-2">{faq.question}</p>
-                <p className="font-sans text-[14px] text-[#5a6a78] leading-relaxed">{faq.answer}</p>
-              </div>
-            ))}
           </div>
         </div>
       </section>
