@@ -1,80 +1,167 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { LEADS_ENABLED, CLAIMED_DIRECTORY_PAGES_ENABLED } from "@/lib/featureFlags";
 
 /**
  * Shared top nav for the marketing site (home, /features, /how-it-works).
- * `transparent` is for the homepage hero, where the nav floats over a dark
- * image with no background of its own. Every other page passes false and
- * gets a solid navy bar instead.
+ * Stays fixed on scroll so Sign up free remains visible.
+ * `transparent` starts clear over the homepage hero, then solidifies on scroll.
  */
-export default function MarketingNav({ transparent = false }: { transparent?: boolean }) {
+export default function MarketingNav({
+  transparent = false,
+  compact = false,
+}: {
+  transparent?: boolean;
+  /** Homepage: hide secondary mid-nav Directory link; keep Find a tradie / Manage listing. */
+  compact?: boolean;
+}) {
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 12);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const solid = !transparent || scrolled || open;
 
   return (
-    <div className={transparent ? "absolute top-0 left-0 right-0 z-30" : "relative z-30 bg-[#0a1722]"}>
-      <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
-        <Link href="/" className="font-display text-xl tracking-wide text-white drop-shadow-lg shrink-0">
-          SWIFTSCOPE
-        </Link>
+    <>
+      <div
+        className={[
+          "fixed top-0 left-0 right-0 z-50 transition-[background-color,backdrop-filter,border-color] duration-200",
+          solid
+            ? "bg-[#1a242c]/95 backdrop-blur-md border-b border-white/10"
+            : "bg-transparent border-b border-transparent",
+        ].join(" ")}
+      >
+        <div className="max-w-[1280px] mx-auto px-6 py-5 flex items-center justify-between">
+          <Link href="/" className="font-display text-xl tracking-wide text-white drop-shadow-lg shrink-0">
+            SwiftScope
+          </Link>
 
-        {/* Desktop */}
-        <div className="hidden lg:flex items-center gap-7">
-          <Link href="/features" className="text-white/75 hover:text-white font-semibold text-sm transition-colors">Features</Link>
-          <Link href="/how-it-works" className="text-white/75 hover:text-white font-semibold text-sm transition-colors">How it works</Link>
-          <Link href="/blog" className="text-white/75 hover:text-white font-semibold text-sm transition-colors">Blog</Link>
+          <div className="hidden lg:flex items-center gap-7">
+            <Link href="/features" className="text-white/75 hover:text-white font-semibold text-sm transition-colors">
+              Features
+            </Link>
+            <Link href="/for" className="text-white/75 hover:text-white font-semibold text-sm transition-colors">
+              For Tradies
+            </Link>
+            <Link href="/tools" className="text-white/75 hover:text-white font-semibold text-sm transition-colors">
+              Tools
+            </Link>
+            <Link href="/how-it-works" className="text-white/75 hover:text-white font-semibold text-sm transition-colors">
+              How it works
+            </Link>
+            <Link href="/blog" className="text-white/75 hover:text-white font-semibold text-sm transition-colors">
+              Blog
+            </Link>
+            {!compact && (
+              <Link href="/directory" className="text-white/75 hover:text-white font-semibold text-sm transition-colors">
+                Directory
+              </Link>
+            )}
+          </div>
+
+          <div className="hidden lg:flex items-center gap-2.5">
+            <Link
+              href="/directory"
+              className="text-white/85 hover:text-white font-semibold text-[13.5px] px-4 py-2 rounded-lg border border-white/20 hover:border-white/40 transition-colors"
+            >
+              Find a tradie
+            </Link>
+            {CLAIMED_DIRECTORY_PAGES_ENABLED && (
+              <Link
+                href="/directory/claim"
+                className="text-white/85 hover:text-white font-semibold text-[13.5px] px-4 py-2 rounded-lg border border-white/20 hover:border-white/40 transition-colors"
+              >
+                Manage your listing
+              </Link>
+            )}
+            {!compact && LEADS_ENABLED && (
+              <Link
+                href="/get-quotes"
+                className="text-white/85 hover:text-white font-semibold text-[13.5px] px-4 py-2 rounded-lg border border-white/20 hover:border-white/40 transition-colors"
+              >
+                Get a quote
+              </Link>
+            )}
+            <Link
+              href="/login"
+              className="text-white/75 hover:text-white font-semibold text-[13.5px] px-3 py-2 transition-colors"
+            >
+              Log in
+            </Link>
+            <Link
+              href="/signup"
+              className="bg-[#ffb400] text-[#0a1722] font-sans font-extrabold text-[13.5px] px-5 py-2.5 rounded-lg hover:bg-[#e89e00] transition-colors"
+            >
+              Sign up free
+            </Link>
+          </div>
+
+          <button onClick={() => setOpen((v) => !v)} className="lg:hidden text-white p-1" aria-label="Menu">
+            {open ? <X size={22} /> : <Menu size={22} />}
+          </button>
         </div>
 
-        <div className="hidden lg:flex items-center gap-2.5">
-          <Link href="/directory" className="text-white/85 hover:text-white font-semibold text-[13.5px] px-4 py-2 rounded-lg border border-white/20 hover:border-white/40 transition-colors">
-            Find a tradie
-          </Link>
-          {CLAIMED_DIRECTORY_PAGES_ENABLED && (
-            <Link href="/directory/claim" className="text-white/85 hover:text-white font-semibold text-[13.5px] px-4 py-2 rounded-lg border border-white/20 hover:border-white/40 transition-colors">
-              Manage your listing
+        {open && (
+          <div className="lg:hidden bg-[#1a242c] border-t border-white/10 px-6 py-5 flex flex-col gap-1">
+            <Link href="/features" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">
+              Features
             </Link>
-          )}
-          {LEADS_ENABLED && (
-            <Link href="/get-quotes" className="text-white/85 hover:text-white font-semibold text-[13.5px] px-4 py-2 rounded-lg border border-white/20 hover:border-white/40 transition-colors">
-              Get a quote
+            <Link href="/for" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">
+              For Tradies
             </Link>
-          )}
-          <Link href="/login" className="text-white/75 hover:text-white font-semibold text-[13.5px] px-3 py-2 transition-colors">
-            Log in
-          </Link>
-          <Link href="/signup" className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[13.5px] px-5 py-2.5 rounded-xl hover:bg-[#e89e00] transition-colors">
-            Sign up free
-          </Link>
-        </div>
-
-        {/* Mobile toggle */}
-        <button onClick={() => setOpen((v) => !v)} className="lg:hidden text-white p-1" aria-label="Menu">
-          {open ? <X size={22} /> : <Menu size={22} />}
-        </button>
+            <Link href="/tools" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">
+              Tools
+            </Link>
+            <Link href="/how-it-works" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">
+              How it works
+            </Link>
+            <Link href="/blog" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">
+              Blog
+            </Link>
+            <Link href="/directory" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">
+              Find a tradie
+            </Link>
+            {CLAIMED_DIRECTORY_PAGES_ENABLED && (
+              <Link
+                href="/directory/claim"
+                onClick={() => setOpen(false)}
+                className="text-white/85 font-semibold text-[15px] py-2.5"
+              >
+                Manage your listing
+              </Link>
+            )}
+            {LEADS_ENABLED && (
+              <Link href="/get-quotes" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">
+                Get a quote
+              </Link>
+            )}
+            <Link href="/login" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">
+              Log in
+            </Link>
+            <Link
+              href="/signup"
+              onClick={() => setOpen(false)}
+              className="bg-[#ffb400] text-[#0a1722] font-sans font-extrabold text-[15px] px-5 py-3 rounded-xl text-center mt-2"
+            >
+              Sign up free
+            </Link>
+            <p className="font-sans text-[12px] text-white/45 text-center mt-2">
+              No credit card required · Setup takes 60 seconds
+            </p>
+          </div>
+        )}
       </div>
-
-      {/* Mobile menu */}
-      {open && (
-        <div className="lg:hidden bg-[#0a1722] border-t border-white/10 px-6 py-5 flex flex-col gap-1">
-          <Link href="/features" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Features</Link>
-          <Link href="/how-it-works" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">How it works</Link>
-          <Link href="/blog" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Blog</Link>
-          <Link href="/directory" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Find a tradie</Link>
-          {CLAIMED_DIRECTORY_PAGES_ENABLED && (
-            <Link href="/directory/claim" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Manage your listing</Link>
-          )}
-          {LEADS_ENABLED && (
-            <Link href="/get-quotes" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Get a quote</Link>
-          )}
-          <Link href="/login" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">Log in</Link>
-          <Link href="/signup" onClick={() => setOpen(false)} className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-5 py-3 rounded-xl text-center mt-2">
-            Sign up free
-          </Link>
-        </div>
-      )}
-    </div>
+      {/* Reserve space when nav is not overlaid on a hero */}
+      {!transparent ? <div className="h-[72px]" aria-hidden /> : null}
+    </>
   );
 }

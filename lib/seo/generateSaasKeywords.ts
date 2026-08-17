@@ -21,13 +21,11 @@
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { TRADE_HUBS } from "@/lib/marketing/trade-hubs";
 
-const TRADES = ["electrician", "plumber", "carpenter", "roofer", "tradie"];
+const TRADES = [...TRADE_HUBS.map((h) => h.key), "tradie"];
 const TRADES_PLURAL: Record<string, string> = {
-  electrician: "electricians",
-  plumber: "plumbers",
-  carpenter: "carpenters",
-  roofer: "roofers",
+  ...Object.fromEntries(TRADE_HUBS.map((h) => [h.key, h.plural])),
   tradie: "tradies",
 };
 
