@@ -33,7 +33,7 @@ const BANDS: Band[] = [
   },
   {
     kicker: "Win",
-    title: "Send it before you leave.",
+    title: "They accept. You keep moving.",
     body: "Client opens a clean portal on their phone, taps accept, and the job lands on your board. No PDF chase. No did you get my email.",
     photo: "/trades/new-site.png",
     photoAlt: "Tradie on a residential framing site after winning the job",

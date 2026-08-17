@@ -264,7 +264,7 @@ export default function QuoteTapDemo() {
           Mark it up. Price it. Send it.
         </h2>
         <p className="font-sans text-[15.5px] text-[#4a5560] leading-[1.65] max-w-[44ch] mb-5">
-          Tap fittings onto the plan or drag a run for cable, pipe, skirting, or gutter. Set job type and margin the same way you would on a real quote.
+          Tap fittings on the plan or drag a run for cable, pipe, skirting, or gutter. Set job type and margin the same way you would on a real quote.
         </p>
 
         <div className="flex flex-wrap gap-2 mb-5" role="tablist" aria-label="Choose a trade">

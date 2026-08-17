@@ -83,7 +83,7 @@ export default async function Home() {
               They accept on their phone. You keep moving.
             </h2>
             <p className="font-sans text-[16px] leading-[1.65] text-[#b7c7d4] max-w-[42ch] mb-8">
-              Clean portal, one tap to accept, job on your board. No chasing PDFs. No did you get my email.
+              They open a clean portal, tap accept, and the job hits your board. No chasing PDFs. No did you get my email.
             </p>
             <Link
               href="/signup"
@@ -153,16 +153,16 @@ export default async function Home() {
               Flat $45 a month.
             </h2>
             <p className="font-sans text-[16px] text-[#5a6a78] leading-relaxed mb-8 max-w-[42ch]">
-              7-day free trial. Unlimited quotes, jobs, and seats. Directory listing included. No per-lead fees.
+              7-day free trial. Unlimited quotes, jobs, and seats. Directory listing included. No per-lead fees, ever.
             </p>
             <ul className="grid sm:grid-cols-2 gap-x-8 gap-y-3 mb-10">
               {[
                 "On-site markup and voice quoting",
                 "Plan markup with AI assist",
-                "Job management and scheduling",
+                "Jobs, schedule, and variations",
                 "Xero live sync",
                 "Unlimited seats",
-                "Client accept on phone",
+                "Client accept on their phone",
               ].map((f) => (
                 <li key={f} className="flex items-center gap-2.5 text-[14.5px] font-semibold text-[#071018]">
                   <CheckCircle size={16} className="text-[#ffb400] shrink-0" aria-hidden />

@@ -13,7 +13,7 @@ const TOOLS = [
   {
     href: "/tools/charge-out-rate",
     title: "Charge-out rate calculator",
-    body: "Work out an hourly and day rate from take-home pay, overhead, and real billable days.",
+    body: "Work out an hourly and day rate from the take-home you need, real overhead, and the days you actually bill.",
   },
 ];
 
@@ -29,7 +29,7 @@ export default function ToolsIndexPage() {
             Useful before you sign up.
           </h1>
           <p className="font-sans text-[16px] leading-[1.65] text-[#c5d4e0] max-w-[44ch] mb-12">
-            Free planning tools for solo tradies and small crews. No login required.
+            Free planning tools for solo tradies and small crews. No login. Then load the numbers into your Swiftscope book and quote from site.
           </p>
         <ul className="max-w-2xl space-y-1">
           {TOOLS.map((tool) => (

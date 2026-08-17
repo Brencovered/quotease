@@ -45,7 +45,7 @@ export default function ForTradesIndexPage() {
             Your trade. Quotes from site.
           </h1>
           <p className="font-sans text-[16px] leading-[1.65] text-[#d5e0e8] max-w-[44ch] mb-8">
-            Pick your trade. See how on-site quoting, client accept, and job management fit the way you actually price work.
+            Pick your trade. See how on-site quoting, phone accept, and a simple job board fit the way you actually price work.
           </p>
           <Link
             href="/signup"

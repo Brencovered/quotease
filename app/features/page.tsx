@@ -24,7 +24,7 @@ export default function FeaturesPage() {
             Everything a tradie actually needs
           </h1>
           <p className="text-[16px] text-[#8aa4b4] mt-4 max-w-xl">
-            Most tradies run 3-4 separate tools. Swiftscope consolidates what makes sense - and connects cleanly to tools like Xero that you should keep.
+            Most crews juggle three or four apps. Swiftscope pulls quoting, jobs, and markup into one phone-first workflow, and connects cleanly to Xero for the books.
           </p>
         </div>
       </div>
@@ -98,7 +98,7 @@ export default function FeaturesPage() {
                 <p className="text-[12px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Swiftscope</p>
                 <div className="font-display text-[5rem] leading-none text-[#ffb400] mb-1">$45</div>
                 <p className="text-[#8aa4b4] text-[16px] mb-1">/month</p>
-                <p className="text-[13px] text-[#4a6070] mb-6">Everything included. Unlimited seats.<br/>Xero integration included.</p>
+                <p className="text-[13px] text-[#4a6070] mb-6">Quoting, jobs, markup, and Xero. Unlimited seats.<br/>Directory listing included.</p>
                 <Link href="/signup" className="block bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] py-3.5 rounded-xl hover:opacity-90">
                   Start free trial
                 </Link>
@@ -119,14 +119,14 @@ export default function FeaturesPage() {
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
-              { icon:Zap,       title:"Quote in 4 minutes",   body:"Trade-specific fields. Numbers calculate live as you fill them in. Send a professional quote from your phone before you leave the driveway." },
-              { icon:MapPin,    title:"Win local leads",      body:"Homeowners in your area post jobs. You claim them at no extra cost. No auction. No credits. No per-lead cost." },
-              { icon:PenTool,   title:"Mark up drawings",     body:"Upload site plans. Draw cable runs, pipe routes, or areas. Count items directly on the plan. All costs feed into your quote automatically." },
-              { icon:DollarSign,title:"Know your margin",     body:"Job costing tracks actual hours and materials against what you quoted. See exactly where you made or lost money on every single job." },
-              { icon:FileText,  title:"Variations in writing",body:"Scope creep kills margins. Raise a variation order in one tap. It gets signed off before you touch a single extra item." },
-              { icon:RefreshCw, title:"Xero live sync",       body:"Swiftscope integrates directly with Xero. Accepted quotes push as invoices automatically. No CSV export. No manual re-entry." },
-              { icon:Calendar,  title:"Schedule and track",   body:"Calendar view for all jobs. Drag to reschedule. Materials checklist seeded from the quote scope. Everything in one place." },
-              { icon:Users,     title:"Team management",      body:"Invite team members to log in and work on your jobs. Assign jobs and tasks. No per-user fees." },
+              { icon:Zap,       title:"Quote in minutes",     body:"Trade-specific fields. Numbers calculate live as you fill them in. Send a professional quote from your phone before you leave the driveway." },
+              { icon:MapPin,    title:"Get found locally",    body:"Claim your free directory listing with real Google ratings. Homeowners browse by trade and suburb, then contact you direct. No lead auction." },
+              { icon:PenTool,   title:"Mark up drawings",     body:"Upload site plans. Draw cable runs, pipe routes, or areas. Count items on the plan. Costs feed straight into your quote." },
+              { icon:DollarSign,title:"Know your margin",     body:"Job costing tracks actual hours and materials against what you quoted. See where you made or lost money on every job." },
+              { icon:FileText,  title:"Variations in writing",body:"Scope creep kills margins. Raise a variation in one tap and get it signed off before you touch a single extra item." },
+              { icon:RefreshCw, title:"Xero live sync",       body:"Accepted quotes push to Xero as invoices. No CSV export. No retyping line items." },
+              { icon:Calendar,  title:"Schedule and track",   body:"Calendar for every job. Drag to reschedule. Materials checklist seeded from the quote. One board, not five apps." },
+              { icon:Users,     title:"Team on the same jobs",body:"Invite the crew to log in, assign work, and keep notes in one place. Unlimited seats. No per-user fees." },
             ].map(f => (
               <div key={f.title} className="bg-white rounded-2xl p-6 border border-[#e8ecef]">
                 <div className="w-10 h-10 bg-[#0a1722] rounded-xl flex items-center justify-center mb-3">
@@ -189,8 +189,8 @@ export default function FeaturesPage() {
               <tbody>
                 {[
                   {
-                    feature:"Lead generation",
-                    detail:"Swiftscope connects homeowners directly to tradies via the directory and quote request system. Included with your plan - no auction, no credits, no per-lead cost. HiPages charges $30-150 per lead depending on trade and urgency.",
+                    feature:"Directory / local discovery",
+                    detail:"Swiftscope includes a free directory listing with Google ratings so homeowners can find and contact you direct. No auction, no credits, no per-lead fee. HiPages charges $30-150 per lead depending on trade and urgency.",
                     us:"Included",    c1:"$30-150/lead",    c2:"Not included",    c3:"Not included",  c4:"Not included",  c5:"Not included", usBest:true,
                   },
                   {

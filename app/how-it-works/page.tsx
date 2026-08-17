@@ -20,10 +20,10 @@ export default function HowItWorksPage() {
         <div className="max-w-7xl mx-auto px-6 pt-10 pb-16">
           <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">How it works</p>
           <h1 className="font-display uppercase text-[2.6rem] sm:text-[3.4rem] leading-[0.93] text-white max-w-2xl">
-            Two sides. One platform.
+            Find a tradie. Or win the job.
           </h1>
           <p className="text-[16px] text-[#8aa4b4] mt-4 max-w-xl">
-            Whether you&apos;re hiring a tradie or running a trade business, here&apos;s exactly what happens.
+            Homeowners browse the directory for free. Tradies quote on site, win the job, and run it from one phone-first board.
           </p>
         </div>
       </div>
@@ -39,9 +39,9 @@ export default function HowItWorksPage() {
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { n:"01", icon:FileText, title:"Search your suburb", body:"Filter by trade and suburb to see every curated listing in your area. Takes seconds." },
-              { n:"02", icon:Users, title:"Compare ratings", body:"Real Google ratings on every listing, right there in the directory. No dodgy reviews, no bidding war." },
-              { n:"03", icon:Star, title:"Contact them directly", body:"Call, email, or visit their website - straight from their profile. No middleman, no waiting on a match." },
+              { n:"01", icon:FileText, title:"Search your suburb", body:"Filter by trade and suburb to see curated listings near you. Takes seconds." },
+              { n:"02", icon:Users, title:"Compare ratings", body:"Real Google ratings on every listing. No fake review farm. No bidding war to talk to someone." },
+              { n:"03", icon:Star, title:"Contact them directly", body:"Call, email, or visit their website from the profile. No middleman. No waiting on a match." },
             ].map(s => (
               <div key={s.n} className="bg-[#f8f9fa] rounded-2xl p-7 border border-[#e8ecef]">
                 <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">
@@ -72,9 +72,9 @@ export default function HowItWorksPage() {
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { n:"01", icon:Zap, title:"Quote on site", body:"Trade-specific fields calculate live as you fill them in. Send a professional quote from your phone before you've left the driveway." },
-              { n:"02", icon:Briefcase, title:"Win it, run it", body:"The client accepts online. It moves straight to your job list - scheduling, materials checklist, variations, all in one place." },
-              { n:"03", icon:RefreshCw, title:"Get paid", body:"Mark the job complete and it pushes straight to Xero as an invoice. No CSV export, no re-typing line items." },
+              { n:"01", icon:Zap, title:"Quote on site", body:"Trade-specific fields calculate live as you fill them in. Send a professional quote from your phone before you leave the driveway." },
+              { n:"02", icon:Briefcase, title:"Win it, run it", body:"The client accepts on their phone. The job lands on your board with schedule, materials, and variations in one place." },
+              { n:"03", icon:RefreshCw, title:"Get paid", body:"Mark the job complete and it pushes to Xero as an invoice. No CSV export. No retyping line items." },
             ].map(s => (
               <div key={s.n} className="bg-white rounded-2xl p-7 border border-[#e8ecef]">
                 <div className="w-11 h-11 bg-[#0a1722] rounded-xl flex items-center justify-center mb-4">

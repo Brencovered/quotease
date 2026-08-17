@@ -47,7 +47,7 @@ export const SWIFTSCOPE_FAQS: FaqItem[] = [
   {
     question: "Who is Swiftscope for?",
     answer:
-      "Solo tradies and small crews up to about 15. Residential and small commercial work. Not a site office system for 200.",
+      "Solo tradies and small crews up to about 15. Residential and light commercial. Not a site office system for 200.",
   },
   {
     question: "Can I quote on site from my phone?",
@@ -67,7 +67,7 @@ export const SWIFTSCOPE_FAQS: FaqItem[] = [
   {
     question: "Can homeowners browse tradies for free?",
     answer:
-      "Yes. The directory is free to browse by trade and suburb, with real Google ratings on listings. No signup required to look.",
+      "Yes. Browse by trade and suburb with real Google ratings. No signup required to look. Contact tradies direct from the listing.",
   },
 ];
 
@@ -91,7 +91,7 @@ export function generateTradeSuburbFaqs(
   return [
     {
       question: `How much does a ${tradeSingular.toLowerCase()} cost in ${suburb}?`,
-      answer: `${tradeSingular} costs in ${suburb} vary by job complexity. Most ${suburb} residents use Swiftscope to get up to 3 free quotes and compare pricing before deciding.`,
+      answer: `${tradeSingular} costs in ${suburb} vary by job size and complexity. Browse local listings on Swiftscope, compare Google ratings, then contact a few ${tradePlural.toLowerCase()} directly to compare quotes.`,
     },
     {
       question: `How many ${tradePlural.toLowerCase()} are available in ${suburb}?`,
@@ -99,7 +99,7 @@ export function generateTradeSuburbFaqs(
     },
     {
       question: `How do I find a reliable ${tradeSingular.toLowerCase()} in ${suburb}, ${state}?`,
-      answer: `Browse the ${suburb} ${tradePlural.toLowerCase()} listed on Swiftscope, it's free. Compare Google ratings, reviews, licences and photos, then contact your chosen ${tradeSingular.toLowerCase()} directly by phone, website, or quote request.`,
+      answer: `Browse the ${suburb} ${tradePlural.toLowerCase()} listed on Swiftscope for free. Compare Google ratings, reviews, licences, and photos, then contact your chosen ${tradeSingular.toLowerCase()} directly by phone, website, or quote request.`,
     },
     {
       question: `Do ${suburb} ${tradePlural.toLowerCase()} on Swiftscope have insurance?`,
