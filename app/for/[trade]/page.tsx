@@ -2,8 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight, Check, ShieldCheck } from "lucide-react";
 import MarketingNav from "@/components/MarketingNav";
+import TradeJobDemo from "@/components/marketing/TradeJobDemo";
+import TradeQuoteFieldsInteractive from "@/components/marketing/TradeQuoteFieldsInteractive";
+import TrialRiskReversal from "@/components/marketing/TrialRiskReversal";
 import FaqSchema from "@/components/seo/FaqSchema";
 import { TRADE_HUBS, getTradeHubBySlug } from "@/lib/marketing/trade-hubs";
 
@@ -44,7 +47,6 @@ export default async function TradeHubPage({ params }: PageProps) {
       <MarketingNav transparent />
       <FaqSchema faqs={hub.faqs} />
 
-      {/* Hero: brand + one promise + full-bleed site photo */}
       <section className="relative min-h-[88svh] lg:min-h-[100svh] overflow-hidden bg-[#1a242c]">
         <Image
           src={hub.heroImage}
@@ -72,7 +74,7 @@ export default async function TradeHubPage({ params }: PageProps) {
                 SwiftScope
               </p>
               <p className="font-sans text-[12px] font-bold tracking-[0.16em] uppercase text-[#ffb400] mb-5">
-                For {hub.plural}
+                For {hub.slang}
               </p>
               <h1 className="font-display text-[clamp(2.1rem,4.8vw,3.4rem)] tracking-wide leading-[1.02] text-white max-w-[15ch] mb-5">
                 {hub.headline}
@@ -80,19 +82,22 @@ export default async function TradeHubPage({ params }: PageProps) {
               <p className="font-sans text-[17px] leading-[1.65] text-[#e8eef2] max-w-[38ch] mb-8">
                 {hub.subhead}
               </p>
-              <div className="flex flex-wrap items-center gap-3">
-                <Link
-                  href={signupHref}
-                  className="inline-flex items-center gap-2 bg-[#ffb400] text-[#1a242c] font-extrabold text-[15px] px-6 py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors"
-                >
-                  Try it free <ArrowRight size={15} aria-hidden />
-                </Link>
-                <Link
-                  href="/tools/charge-out-rate"
-                  className="inline-flex items-center gap-2 font-sans text-[14.5px] font-semibold text-white/80 hover:text-white transition-colors px-2 py-3"
-                >
-                  Charge-out calculator <ArrowRight size={14} aria-hidden />
-                </Link>
+              <div className="flex flex-col items-start gap-2">
+                <div className="flex flex-wrap items-center gap-3">
+                  <Link
+                    href={signupHref}
+                    className="inline-flex items-center gap-2 bg-[#ffb400] text-[#1a242c] font-extrabold text-[15px] px-6 py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors"
+                  >
+                    Try it free <ArrowRight size={15} aria-hidden />
+                  </Link>
+                  <Link
+                    href="/tools/charge-out-rate"
+                    className="inline-flex items-center gap-2 font-sans text-[14.5px] font-semibold text-white/80 hover:text-white transition-colors px-2 py-3"
+                  >
+                    Charge-out calculator <ArrowRight size={14} aria-hidden />
+                  </Link>
+                </div>
+                <TrialRiskReversal tone="light" />
               </div>
             </div>
 
@@ -113,7 +118,6 @@ export default async function TradeHubPage({ params }: PageProps) {
         </div>
       </section>
 
-      {/* Pain + outcomes on light paper for reading */}
       <section className="bg-[#f4f6f8]">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-6 py-16 lg:py-24 grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
           <div className="lg:col-span-5">
@@ -149,88 +153,76 @@ export default async function TradeHubPage({ params }: PageProps) {
                 className={`object-cover ${hub.supportPos}`}
               />
             </div>
-            <div className="mt-5 lg:hidden max-w-[180px]">
-              <Image
-                src={hub.phoneImage}
-                alt={hub.phoneAlt}
-                width={325}
-                height={658}
-                className="w-full h-auto drop-shadow-[0_16px_28px_rgba(0,0,0,0.25)]"
-                sizes="180px"
-              />
+          </div>
+        </div>
+      </section>
+
+      {/* Peer-matched social proof */}
+      <section className="bg-white border-y border-[#e4e8ec]">
+        <div className="max-w-[1280px] mx-auto px-5 sm:px-6 py-14 lg:py-16">
+          <p className="font-sans text-[12px] font-bold tracking-[0.16em] uppercase text-[#b88400] mb-4">
+            From {hub.slang}
+          </p>
+          <blockquote className="max-w-3xl">
+            <p className="font-display text-[clamp(1.45rem,3vw,2.1rem)] tracking-wide leading-[1.2] text-[#071018] mb-6">
+              “{hub.testimonial.quote}”
+            </p>
+            <footer className="font-sans text-[15px] text-[#5a6a78]">
+              <span className="font-bold text-[#071018]">{hub.testimonial.name}</span>
+              <span className="text-[#c5ced6]"> · </span>
+              {hub.testimonial.meta}
+            </footer>
+          </blockquote>
+        </div>
+      </section>
+
+      {/* Interactive common jobs */}
+      <section className="bg-[#f4f6f8]">
+        <div className="max-w-[1280px] mx-auto px-5 sm:px-6 py-16 lg:py-20">
+          <TradeJobDemo tradeLabel={hub.label} jobs={hub.demoJobs} />
+        </div>
+      </section>
+
+      {/* Compliance callout */}
+      <section className="bg-[#1a242c]">
+        <div className="max-w-[1280px] mx-auto px-5 sm:px-6 py-14 lg:py-16 grid lg:grid-cols-12 gap-10 items-center">
+          <div className="lg:col-span-7">
+            <p className="font-sans text-[12px] font-bold tracking-[0.16em] uppercase text-[#ffb400] mb-3">
+              Compliance & paperwork
+            </p>
+            <h2 className="font-display text-[clamp(1.75rem,3.2vw,2.45rem)] tracking-wide leading-[1.08] text-white mb-4 max-w-[18ch]">
+              {hub.compliance.title}
+            </h2>
+            <p className="font-sans text-[16px] leading-[1.7] text-[#c5d4e0] max-w-[48ch]">
+              {hub.compliance.body}
+            </p>
+          </div>
+          <div className="lg:col-span-5">
+            <div className="border border-white/15 bg-white/[0.04] px-6 py-7 flex items-start gap-4">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#ffb400]/15">
+                <ShieldCheck size={22} className="text-[#ffb400]" aria-hidden />
+              </span>
+              <div>
+                <p className="font-sans text-[11px] font-bold tracking-[0.16em] uppercase text-[#ffb400] mb-1">
+                  {hub.compliance.badge}
+                </p>
+                <p className="font-sans text-[15px] leading-[1.55] text-white/80">
+                  Kept with the quote and the job — not lost in a text thread or a folder in the ute.
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Jobs: one clear list */}
-      <section className="bg-white border-y border-[#e4e8ec]">
+      {/* Interactive quote fields */}
+      <section className="bg-white border-b border-[#e4e8ec]">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-6 py-16 lg:py-20">
-          <div className="max-w-2xl mb-10">
-            <p className="font-sans text-[12px] font-bold tracking-[0.16em] uppercase text-[#b88400] mb-3">
-              Common jobs
-            </p>
-            <h2 className="font-display text-[clamp(1.75rem,3.2vw,2.45rem)] tracking-wide leading-[1.08] text-[#071018] mb-3">
-              What {hub.plural} quote in Swiftscope
-            </h2>
-            <p className="font-sans text-[16px] leading-[1.65] text-[#5a6a78] max-w-[44ch]">
-              Typical work this trade prices on site, then sends before leaving the driveway.
-            </p>
-          </div>
-          <ul className="grid sm:grid-cols-2 gap-x-12 gap-y-0 max-w-4xl">
-            {hub.jobTypes.map((job, i) => (
-              <li
-                key={job}
-                className="flex items-baseline gap-4 border-b border-[#e8ecef] py-4 font-sans"
-              >
-                <span className="font-display text-[1.1rem] tracking-wide text-[#ffb400] tabular-nums w-7 shrink-0">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <span className="text-[16.5px] font-semibold text-[#071018]">{job}</span>
-              </li>
-            ))}
-          </ul>
+          <TradeQuoteFieldsInteractive fields={hub.quoteFieldDetails} dedicated={hub.dedicated} />
         </div>
       </section>
 
-      {/* Quote fields: stacked rows, not pill cluster */}
       <section className="bg-[#f4f6f8]">
-        <div className="max-w-[1280px] mx-auto px-5 sm:px-6 py-16 lg:py-20 grid lg:grid-cols-12 gap-12 lg:gap-16">
-          <div className="lg:col-span-5">
-            <p className="font-sans text-[12px] font-bold tracking-[0.16em] uppercase text-[#b88400] mb-3">
-              Quote fields
-            </p>
-            <h2 className="font-display text-[clamp(1.75rem,3.2vw,2.45rem)] tracking-wide leading-[1.08] text-[#071018] mb-4 max-w-[14ch]">
-              Built around how you price
-            </h2>
-            <p className="font-sans text-[16px] leading-[1.7] text-[#3d4a55] max-w-[38ch]">
-              {hub.dedicated
-                ? "Dedicated quote flow for this trade, with your materials and labour book underneath."
-                : "Uses your price book and line items so the quote still matches the way you sell the work."}
-            </p>
-          </div>
-          <div className="lg:col-span-7">
-            <ul className="bg-white border border-[#e4e8ec] divide-y divide-[#e8ecef]">
-              {hub.quoteFields.map((field, i) => (
-                <li
-                  key={field}
-                  className="flex items-center justify-between gap-6 px-5 sm:px-6 py-4"
-                >
-                  <span className="font-sans text-[12px] font-bold tracking-[0.14em] uppercase text-[#8b96a1]">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <span className="flex-1 font-sans text-[16.5px] font-semibold text-[#071018]">
-                    {field}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQs: light, airy, easy scan */}
-      <section className="bg-white border-t border-[#e4e8ec]">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-6 py-16 lg:py-20">
           <h2 className="font-display text-[clamp(1.75rem,3.2vw,2.45rem)] tracking-wide leading-[1.08] text-[#071018] mb-10 max-w-[18ch]">
             Questions from {hub.plural}
@@ -238,7 +230,7 @@ export default async function TradeHubPage({ params }: PageProps) {
           <div className="max-w-3xl space-y-0">
             {hub.faqs.map((faq) => (
               <div key={faq.question} className="border-b border-[#e4e8ec] py-7 first:pt-0">
-                <h3 className="font-sans font-bold text-[17px] leading-[1.35] text-[#071018] mb-2.5">
+                <h3 className="font-display text-[1.15rem] tracking-wide text-[#071018] mb-2.5">
                   {faq.question}
                 </h3>
                 <p className="font-sans text-[16px] leading-[1.7] text-[#3d4a55] max-w-[54ch]">
@@ -250,7 +242,6 @@ export default async function TradeHubPage({ params }: PageProps) {
         </div>
       </section>
 
-      {/* Close CTA */}
       <section className="bg-[#1a242c]">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-6 py-16 lg:py-20">
           <p className="font-display text-[clamp(1.6rem,3vw,2.2rem)] tracking-wide text-white mb-3">
@@ -262,16 +253,18 @@ export default async function TradeHubPage({ params }: PageProps) {
           <p className="font-sans text-[16px] leading-[1.65] text-[#b7c7d4] mb-8 max-w-[40ch]">
             7-day free trial. Unlimited quotes and jobs. Directory listing included.
           </p>
-          <Link
-            href={signupHref}
-            className="inline-flex items-center gap-2 bg-[#ffb400] text-[#1a242c] font-extrabold text-[15px] px-8 py-4 rounded-lg hover:bg-[#e89e00] transition-colors"
-          >
-            Start free trial <ArrowRight size={15} aria-hidden />
-          </Link>
+          <div className="flex flex-col items-start gap-2">
+            <Link
+              href={signupHref}
+              className="inline-flex items-center gap-2 bg-[#ffb400] text-[#1a242c] font-extrabold text-[15px] px-8 py-4 rounded-lg hover:bg-[#e89e00] transition-colors"
+            >
+              Start free trial <ArrowRight size={15} aria-hidden />
+            </Link>
+            <TrialRiskReversal tone="light" />
+          </div>
         </div>
       </section>
 
-      {/* Other trades: text-first for readability */}
       <section className="bg-[#f4f6f8] border-t border-[#e4e8ec]">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-6 py-14 lg:py-16">
           <div className="flex items-end justify-between gap-4 mb-8">
@@ -311,7 +304,7 @@ export default async function TradeHubPage({ params }: PageProps) {
                       {h.label}
                     </span>
                     <span className="block font-sans text-[12.5px] text-[#5a6a78] truncate">
-                      Quotes from site
+                      For {h.slang}
                     </span>
                   </span>
                 </Link>
