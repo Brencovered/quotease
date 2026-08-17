@@ -17,7 +17,7 @@ export type ToolMeta = {
 };
 
 export const TOOL_DISCLAIMER =
-  "These free tools are planning guidelines only. They are not financial, tax, accounting, or legal advice. Rates and rules change. Confirm figures with your accountant or the ATO before you set prices, claim deductions, or make super payments.";
+  "These free tools are planning guidelines only. They are not financial, tax, accounting, legal, or professional renovation advice. Benchmarks, product yields, and trade rates change. Confirm figures with local tradies, product data sheets, your accountant, or official sources before you budget, buy materials, set prices, or hire.";
 
 export type ToolSource = { label: string; href: string; note: string };
 
@@ -83,6 +83,52 @@ export const QUOTE_PDF_SOURCES: ToolSource[] = [
   },
 ];
 
+export const BALLPARK_SOURCES: ToolSource[] = [
+  {
+    label: "hipages Bathroom Renovation Cost Guide",
+    href: "https://hipages.com.au/article/how_much_does_bathroom_renovation_cost",
+    note: "Industry benchmark ranges: budget updates about $8,000–$15,000 (without shifting plumbing), mid-range overhauls about $15,000–$25,000+, and high-end / ensuite work $25,000–$35,000+.",
+  },
+  {
+    label: "hipages Home Renovation Cost Guide",
+    href: "https://hipages.com.au/article/renovation_guide_how_much_does_it_cost_to_renovate",
+    note: "Whole-home scoping baselines across plumbing, electrical, kitchen, bathroom, and structural-style renovations.",
+  },
+];
+
+export const DIY_SOURCES: ToolSource[] = [
+  {
+    label: "Built Simple Concrete Bag Calculator",
+    href: "https://builtsimple.com.au/calculator/concrete-bags/",
+    note: "Formulas and 10% wastage buffer. Standard 20 kg pre-mix yield is about 0.009 m³ (~108 bags per m³).",
+  },
+  {
+    label: "Dulux Wash&Wear coverage guide",
+    href: "https://www.dulux.com.au/paint/wash-and-wear/",
+    note: "Australian interior acrylic spread rates commonly guide around 14–16 m²/L per coat (product can lists the exact rate).",
+  },
+  {
+    label: "Dulux paint calculator",
+    href: "https://www.dulux.com.au/services/paint-calculator/",
+    note: "Coat calculation guidance for walls, primer, and topcoats.",
+  },
+  {
+    label: "Built Simple Paint Calculator",
+    href: "https://builtsimple.com.au/calculator/paint/",
+    note: "Wall area, coats, and coverage formulas with Australian interior rates.",
+  },
+  {
+    label: "Beaumont Tiles measuring guide",
+    href: "https://www.beaumont-tiles.com.au/blogs/how-to-measure-your-floor-for-tiling",
+    note: "Measurement standards and recommended waste allowance for cuts and breakages.",
+  },
+  {
+    label: "Showtile Tile Calculator Guide",
+    href: "https://showtile.com.au/tile-calculator/",
+    note: "Industry practice of adding a 10%–15% buffer on net wall/floor area for edge cuts and breakage.",
+  },
+];
+
 export function sourcesForTool(slug: string): ToolSource[] {
   switch (slug) {
     case "charge-out-rate":
@@ -93,6 +139,10 @@ export function sourcesForTool(slug: string): ToolSource[] {
       return VEHICLE_SOURCES;
     case "quote-pdf":
       return QUOTE_PDF_SOURCES;
+    case "ballpark-cost":
+      return BALLPARK_SOURCES;
+    case "diy-materials":
+      return DIY_SOURCES;
     default:
       return [];
   }

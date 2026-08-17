@@ -5,14 +5,15 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import {
   NumberField,
+  SourceInline,
   ToolPanel,
   ToolResultRow,
 } from "@/components/marketing/tools/ToolShell";
 
 type Tab = "concrete" | "tiles" | "paint";
 
-/** Typical AU bagged premix yield (~20 kg bag ≈ 0.01 m³). */
-const PREMIX_BAG_M3 = 0.01;
+/** Standard AU 20 kg pre-mix yield (~0.009 m³ ≈ 108 bags per m³). */
+const PREMIX_BAG_M3 = 0.009;
 const PREMIX_BAG_KG = 20;
 /** Wet concrete density used for DIY effort messaging. */
 const CONCRETE_KG_PER_M3 = 2400;
@@ -22,6 +23,8 @@ const DOOR_M2 = 2;
 const WINDOW_M2 = 1.5;
 /** Cementitious grout bulk density (kg/m³). */
 const GROUT_DENSITY = 1600;
+/** Industry tile waste buffer (10%–15%; default mid-high). */
+const TILE_WASTE = 1.15;
 
 export default function DiyCalculators() {
   const [tab, setTab] = useState<Tab>("concrete");
@@ -111,7 +114,11 @@ function ConcreteCalc() {
             <NumberField label="Depth" value={depthMm} onChange={setDepthMm} suffix="mm" min={0} step={5} />
           </div>
           <p className="font-sans text-[13px] leading-[1.6] text-[#5a6a78]">
-            Includes an automatic 10% wastage buffer for edges, falls, and site variation.
+            Guideline only. Includes an automatic 10% wastage buffer. Formulas follow the{" "}
+            <SourceInline href="https://builtsimple.com.au/calculator/concrete-bags/">
+              Built Simple Concrete Bag Calculator
+            </SourceInline>{" "}
+            (20 kg bag ≈ 0.009 m³, ~108 bags per m³).
           </p>
         </ToolPanel>
       </div>
@@ -127,7 +134,7 @@ function ConcreteCalc() {
             <ToolResultRow
               label="20 kg premix bags"
               value={`${result.bags}`}
-              hint="Approx. 0.01 m³ yield per 20 kg bag"
+              hint="≈ 0.009 m³ yield per bag (~108 bags / m³)"
             />
             <ToolResultRow
               label="Estimated wet weight"
@@ -207,8 +214,16 @@ function PaintCalc() {
             />
           </div>
           <p className="font-sans text-[13px] leading-[1.6] text-[#5a6a78]">
-            Standard coverage is about 14–16 m² per litre per coat. Doors count as ~{DOOR_M2} m² and
-            windows ~{WINDOW_M2} m² each. Primer plus two topcoats is assumed.
+            Guideline only. Australian interior acrylics often cover about 14–16 m²/L per coat — see the{" "}
+            <SourceInline href="https://www.dulux.com.au/paint/wash-and-wear/">
+              Dulux Wash&Wear coverage guide
+            </SourceInline>{" "}
+            and{" "}
+            <SourceInline href="https://builtsimple.com.au/calculator/paint/">
+              Built Simple Paint Calculator
+            </SourceInline>
+            . Doors count as ~{DOOR_M2} m² and windows ~{WINDOW_M2} m² each. Primer plus two topcoats is
+            assumed.
           </p>
         </ToolPanel>
       </div>
@@ -257,7 +272,7 @@ function TileCalc() {
 
   const result = useMemo(() => {
     const surface = Math.max(area, 0);
-    const withWaste = surface * 1.15;
+    const withWaste = surface * TILE_WASTE;
     const boxes = boxCoverage > 0 ? withWaste / boxCoverage : 0;
 
     const tL = Math.max(tileL, 1) / 1000;
@@ -317,8 +332,16 @@ function TileCalc() {
             />
           </div>
           <p className="font-sans text-[13px] leading-[1.6] text-[#5a6a78]">
-            Box count includes a 15% allowance for cuts and breakage. Grout weight is an estimate from
-            tile size, joint width, and depth.
+            Guideline only. Box count includes a 15% allowance (industry practice is typically 10%–15%
+            for cuts and breakage) — see the{" "}
+            <SourceInline href="https://www.beaumont-tiles.com.au/blogs/how-to-measure-your-floor-for-tiling">
+              Beaumont Tiles measuring guide
+            </SourceInline>{" "}
+            and{" "}
+            <SourceInline href="https://showtile.com.au/tile-calculator/">
+              Showtile Tile Calculator Guide
+            </SourceInline>
+            . Grout weight is an estimate from tile size, joint width, and depth.
           </p>
         </ToolPanel>
       </div>
@@ -326,7 +349,7 @@ function TileCalc() {
         <ToolPanel title="Tiles and grout">
           <dl>
             <ToolResultRow label="Surface area" value={`${result.surface.toFixed(2)} m²`} />
-            <ToolResultRow label="With 15% allowance" value={`${result.withWaste.toFixed(2)} m²`} />
+            <ToolResultRow label="With 15% allowance" value={`${result.withWaste.toFixed(2)} m²`} hint="10%–15% buffer is typical" />
             <ToolResultRow label="Approx tiles" value={`${Math.ceil(result.tilesApprox)}`} />
             <ToolResultRow
               label="Boxes to buy"

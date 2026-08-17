@@ -94,10 +94,10 @@ export function ToolSources({ sources }: { sources: ToolSource[] }) {
   return (
     <section className="max-w-[1280px] mx-auto px-5 sm:px-6 pb-14 lg:pb-16">
       <h2 className="font-display text-[clamp(1.5rem,3vw,2rem)] tracking-wide text-[#071018] mb-3">
-        Official guides and further reading
+        Guides and further reading
       </h2>
       <p className="font-sans text-[14.5px] leading-[1.65] text-[#5a6a78] max-w-[54ch] mb-6">
-        Use these sources to check current rates and definitions. Swiftscope does not endorse third-party advice beyond linking the reference.
+        Use these sources to check current benchmarks and formulas. Our tools are guidelines only — not quotes or professional advice. Swiftscope does not endorse third-party advice beyond linking the reference.
       </p>
       <ul className="space-y-4 max-w-3xl">
         {sources.map((source) => (
@@ -321,6 +321,25 @@ export function NumberField({
         ) : null}
       </div>
     </label>
+  );
+}
+
+export function SourceInline({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="font-semibold text-[#071018] underline underline-offset-2 hover:text-[#b88400]"
+    >
+      {children}
+    </a>
   );
 }
 

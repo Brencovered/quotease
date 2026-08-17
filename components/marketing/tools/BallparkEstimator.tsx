@@ -7,6 +7,7 @@ import { LEADS_ENABLED } from "@/lib/featureFlags";
 import {
   moneyAud,
   RangeField,
+  SourceInline,
   ToolPanel,
   ToolResultRow,
   ToolToggle,
@@ -42,9 +43,24 @@ type ExtraDef = {
 };
 
 const FINISHES: { id: Finish; label: string; mult: number; note: string }[] = [
-  { id: "budget", label: "Budget", mult: 0.78, note: "Basic fittings, standard labour" },
-  { id: "mid", label: "Mid-range", mult: 1, note: "Typical Australian residential finish" },
-  { id: "luxury", label: "Luxury", mult: 1.48, note: "Premium fixtures and finishes" },
+  {
+    id: "budget",
+    label: "Budget",
+    mult: 0.65,
+    note: "Guideline: cosmetic / budget bathroom updates often sit around $8,000–$15,000 when plumbing stays put",
+  },
+  {
+    id: "mid",
+    label: "Mid-range",
+    mult: 1,
+    note: "Guideline: mid-range overhauls commonly land around $15,000–$25,000 depending on size and plumbing moves",
+  },
+  {
+    id: "luxury",
+    label: "Luxury",
+    mult: 1.45,
+    note: "Guideline: high-end finishes and ensuite-style work often push $25,000–$35,000+",
+  },
 ];
 
 const EXTRAS: ExtraDef[] = [
@@ -125,12 +141,12 @@ const JOBS: {
     maxSize: 12,
     step: 0.5,
     defaultSize: 6,
-    lowPer: 1600,
-    highPer: 2800,
-    baseLow: 9000,
-    baseHigh: 14000,
+    lowPer: 1500,
+    highPer: 2500,
+    baseLow: 6000,
+    baseHigh: 10000,
     blurb:
-      "Mid-range bathroom renovations in Australia often land around $15,000–$25,000 once size, fixtures, and plumbing moves are factored in.",
+      "Guideline only. hipages bathroom benchmarks often cite budget updates around $8,000–$15,000 (no plumbing moves), mid-range overhauls around $15,000–$25,000, and high-end / ensuite work $25,000–$35,000+.",
     directoryTrade: "Bathroom Renovation",
   },
   {
@@ -319,7 +335,24 @@ export default function BallparkEstimator() {
             })}
           </div>
           <p className="font-sans text-[13.5px] leading-[1.6] text-[#5a6a78] mt-4">
-            {activeJob.blurb}
+            {activeJob.blurb}{" "}
+            {jobKey === "bathroom" ? (
+              <>
+                See the{" "}
+                <SourceInline href="https://hipages.com.au/article/how_much_does_bathroom_renovation_cost">
+                  hipages Bathroom Renovation Cost Guide
+                </SourceInline>
+                .
+              </>
+            ) : (
+              <>
+                Cross-check whole-home trade baselines in the{" "}
+                <SourceInline href="https://hipages.com.au/article/renovation_guide_how_much_does_it_cost_to_renovate">
+                  hipages Home Renovation Cost Guide
+                </SourceInline>
+                .
+              </>
+            )}
           </p>
         </ToolPanel>
 
@@ -330,7 +363,7 @@ export default function BallparkEstimator() {
             onChange={(id) => setFinish(id as Finish)}
           />
           <p className="font-sans text-[13.5px] leading-[1.6] text-[#5a6a78]">
-            {finishMeta.note}. Mid-range is the default Australian residential baseline.
+            {finishMeta.note}. This is a planning guideline, not a quote.
           </p>
         </ToolPanel>
 
@@ -400,7 +433,9 @@ export default function BallparkEstimator() {
             <ToolResultRow label="High end" value={moneyAud(range.high)} />
           </dl>
           <p className="font-sans text-[13px] leading-[1.6] text-[#5a6a78] mt-5">
-            Not a quote. Based on current Australian residential trade averages for planning only.
+            Guideline only — not a quote or renovation advice. Ranges reflect Australian residential
+            averages and move with suburb, access, and site conditions. Verify with local tradies and
+            the linked cost guides below.
           </p>
         </ToolPanel>
 
