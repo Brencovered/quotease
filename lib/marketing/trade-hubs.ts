@@ -235,8 +235,8 @@ const COPY: Record<string, HubCopy> = {
       "Build and send electrical quotes on site. Downlights, circuits, switchboards, and cable runs priced from your book before you leave the driveway.",
     headline: "Quote the electrical job before you leave site.",
     subhead:
-      "Tap fixtures on a plan, draw the run, load materials and labour from your price book, and send a clean quote from your phone.",
-    pain: "Most electricians still scribble counts on the plan, retype them at the desk, then chase the PDF. By then the client has already taken another call.",
+      "Tap fixtures on a plan, draw the run, load materials and labour from your book, and send from your phone.",
+    pain: "Most sparkies still scribble counts on the plan, retype them at the desk, then chase the PDF. By then the client has already taken another call.",
     outcomes: [
       "Count downlights, GPOs, and switches on the plan",
       "Price cable runs and switchboard work from your book",
@@ -256,12 +256,12 @@ const COPY: Record<string, HubCopy> = {
       {
         question: "Can I quote from a floor plan on my phone?",
         answer:
-          "Yes. Upload the plan, tap points for fixtures, draw cable runs, and costs flow into the quote from your price book.",
+          "Yes. Upload the plan, tap fixtures, draw cable runs, and costs flow into the quote from your price book.",
       },
       {
         question: "Does it handle COES and compliance notes?",
         answer:
-          "You can attach notes and line items for compliance work on the quote. Keep your own COES process; Swiftscope keeps the priced scope with the job.",
+          "Add notes and line items for compliance work on the quote. You keep your COES process. Swiftscope keeps the priced scope with the job.",
       },
       {
         question: "Is it built for solo sparkies or crews?",
@@ -276,13 +276,13 @@ const COPY: Record<string, HubCopy> = {
       "Price plumbing jobs on site. Fixtures, pipe runs, and labour from your book, sent before you leave the driveway.",
     headline: "Price the plumbing job while you are still on site.",
     subhead:
-      "Fixture counts, pipe runs, and labour load from your book. Send the quote from your phone, not from memory at the desk later.",
+      "Fixture counts, pipe runs, and labour load from your book. Send from your phone, not from memory at the desk later.",
     pain: "Bathroom and rough-in quotes die in the gap between the site visit and the PDF. Swiftscope closes that gap.",
     outcomes: [
       "Mark fixtures and pipe routes on plans or photos",
       "Pull fittings and labour from your price book",
       "Send a client-ready quote the same visit",
-      "Win accepted jobs straight onto your board",
+      "Accepted jobs land straight on your board",
     ],
     jobTypes: [
       "Bathroom renovations",
@@ -348,7 +348,7 @@ const COPY: Record<string, HubCopy> = {
       {
         question: "Is this only for residential?",
         answer:
-          "It is built for residential and small commercial crews, not large estimating offices.",
+          "Built for residential and small commercial crews, not large estimating offices.",
       },
     ],
   },
@@ -358,7 +358,7 @@ const COPY: Record<string, HubCopy> = {
       "Quote roofing jobs on site. Areas, materials, labour, and extras from your book, sent before you leave the driveway.",
     headline: "Quote the roof while you can still see it.",
     subhead:
-      "Capture the scope on site, price materials and labour from your book, and send before the client has called someone else.",
+      "Capture the scope on site, price materials and labour from your book, and send before the client calls someone else.",
     pain: "Roof quotes often wait on photos, square metres, and a desk rebuild. By then you are quoting cold.",
     outcomes: [
       "Scope metal, tile, or membrane work on site",
@@ -388,8 +388,7 @@ const COPY: Record<string, HubCopy> = {
       },
       {
         question: "Will it work for a small roofing crew?",
-        answer:
-          "Yes. Built for solo operators and crews up to about 15.",
+        answer: "Yes. Built for solo operators and crews up to about 15.",
       },
     ],
   },
@@ -429,8 +428,7 @@ const COPY: Record<string, HubCopy> = {
       },
       {
         question: "Do I need a laptop?",
-        answer:
-          "No. The quote builder is built for phone use on site.",
+        answer: "No. The quote builder is built for phone use on site.",
       },
     ],
   },
@@ -441,7 +439,7 @@ const COPY: Record<string, HubCopy> = {
     headline: "Turn a tile measure into a sent quote on site.",
     subhead:
       "Square metres, materials, and labour from your book. Waterproofing and extras stay on the quote, not in your head.",
-    pain: "Tile quotes often wait on a evening spreadsheet. That lag loses bathrooms to whoever sent first.",
+    pain: "Tile quotes often wait on an evening spreadsheet. That lag loses bathrooms to whoever sent first.",
     outcomes: [
       "Price floors and walls by area from your book",
       "Include waterproofing, trim, and labour clearly",
@@ -470,8 +468,7 @@ const COPY: Record<string, HubCopy> = {
       },
       {
         question: "Is it useful for small tiling crews?",
-        answer:
-          "Yes. Solo tilers and small crews are the sweet spot.",
+        answer: "Yes. Solo tilers and small crews are the sweet spot.",
       },
     ],
   },
@@ -511,8 +508,7 @@ const COPY: Record<string, HubCopy> = {
       },
       {
         question: "Will clients accept on mobile?",
-        answer:
-          "Yes. They open a clean portal on their phone and tap accept.",
+        answer: "Yes. They open a clean portal on their phone and tap accept.",
       },
     ],
   },
@@ -522,7 +518,7 @@ const COPY: Record<string, HubCopy> = {
       "Quote tree work on site. Removals, pruning, stump grinding, and labour from your book, sent the same visit.",
     headline: "Price tree work before you leave the property.",
     subhead:
-      "Removals, pruning, and stump work from your book. Send the quote while the client is still looking at the tree.",
+      "Removals, pruning, and stump work from your book. Send while the client is still looking at the tree.",
     pain: "Arborist quotes often wait until you are back in the truck with a notepad full of tree notes. That lag loses urgent jobs.",
     outcomes: [
       "Scope removals, pruning, and stump grinding clearly",
@@ -553,7 +549,7 @@ const COPY: Record<string, HubCopy> = {
       {
         question: "Is this for climbing crews or ground crews?",
         answer:
-          "Either. Keep your own method; Swiftscope holds the priced scope and the won job.",
+          "Either. Keep your own method. Swiftscope holds the priced scope and the won job.",
       },
     ],
   },
@@ -564,7 +560,7 @@ const COPY: Record<string, HubCopy> = {
     headline: "Turn a site measure into a concrete quote on the spot.",
     subhead:
       "Areas, thickness, steel, and labour from your book. Send before the pour window moves on without you.",
-    pain: "Concrete quotes die when m2, steel, and pump hire sit in a notebook until tonight.",
+    pain: "Concrete quotes die when square metres, steel, and pump hire sit in a notebook until tonight.",
     outcomes: [
       "Price slabs and paths by area and thickness",
       "Include steel, pump, and labour from your book",
@@ -659,7 +655,7 @@ const COPY: Record<string, HubCopy> = {
       "Ducted upgrades",
       "Replacements",
       "Servicing packages",
-      "Commercial light commercial",
+      "Light commercial installs",
     ],
     quoteFields: ["System type", "Heads", "Mounts", "Electrical", "Labour", "Margin"],
     faqs: [
@@ -717,7 +713,7 @@ const COPY: Record<string, HubCopy> = {
       {
         question: "Does it replace my CAD tools?",
         answer:
-          "No. It sits around the commercial side: quote, win, schedule, and track the job.",
+          "No. It covers the commercial side: quote, win, schedule, and track the job.",
       },
     ],
   },
@@ -752,8 +748,7 @@ const COPY: Record<string, HubCopy> = {
       },
       {
         question: "Can I still quote on my phone?",
-        answer:
-          "Yes. The product is built for on-site quoting first.",
+        answer: "Yes. The product is built for on-site quoting first.",
       },
       {
         question: "Is it suitable for a one-person business?",

@@ -115,7 +115,7 @@ export default async function TradeHubPage({ params }: PageProps) {
         <div className="max-w-[1280px] mx-auto px-6 py-14 lg:py-20 grid lg:grid-cols-12 gap-10 lg:gap-14 items-center">
           <div className="lg:col-span-5 order-2 lg:order-1">
             <h2 className="font-display text-[clamp(1.6rem,3vw,2.2rem)] tracking-wide leading-[1.08] text-white mb-4 max-w-[18ch]">
-              The on-site problem
+              Why quotes stall
             </h2>
             <p className="font-sans text-[15.5px] leading-[1.7] text-[#c5d4e0] max-w-[42ch] mb-7">
               {hub.pain}
@@ -217,7 +217,7 @@ export default async function TradeHubPage({ params }: PageProps) {
       <section className="border-b border-white/10 bg-[#22303a]">
         <div className="max-w-[1280px] mx-auto px-6 py-16 text-center">
           <h2 className="font-display text-[clamp(1.8rem,3.5vw,2.6rem)] tracking-wide leading-[1.05] text-white mb-4">
-            Ready to quote like a {hub.label.toLowerCase()} who sends first?
+            Send your next quote before you leave site.
           </h2>
           <p className="font-sans text-[15.5px] text-[#c5d4e0] mb-8 max-w-[42ch] mx-auto">
             7-day free trial. Unlimited quotes and jobs. Directory listing included.

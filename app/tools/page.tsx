@@ -25,12 +25,12 @@ export default function ToolsIndexPage() {
         <p className="font-sans text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-3">
           Free tools
         </p>
-        <h1 className="font-display text-[clamp(2.2rem,5vw,3.4rem)] tracking-wide leading-[1.02] text-white max-w-[14ch] mb-4">
-          Useful before you even sign up.
-        </h1>
-        <p className="font-sans text-[16px] leading-[1.65] text-[#c5d4e0] max-w-[44ch] mb-12">
-          Practical tools for solo operators and small crews. No login required.
-        </p>
+          <h1 className="font-display text-[clamp(2.2rem,5vw,3.4rem)] tracking-wide leading-[1.02] text-white max-w-[14ch] mb-4">
+            Useful before you sign up.
+          </h1>
+          <p className="font-sans text-[16px] leading-[1.65] text-[#c5d4e0] max-w-[44ch] mb-12">
+            Free planning tools for solo tradies and small crews. No login required.
+          </p>
         <ul className="max-w-2xl space-y-1">
           {TOOLS.map((tool) => (
             <li key={tool.href} className="border-b border-white/10">

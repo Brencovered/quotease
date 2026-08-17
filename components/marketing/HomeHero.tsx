@@ -30,7 +30,7 @@ const SCENES: Scene[] = [
     image: "/trades/new-electrician.png",
     alt: "Tradie on a residential site scoping the job",
     label: "Scope",
-    blurb: "Mark it up standing in the room",
+    blurb: "Mark it up in the room",
     chip: "Live site markup",
     objectPos: "object-left",
     icon: <Target size={18} aria-hidden />,
@@ -48,7 +48,7 @@ const SCENES: Scene[] = [
     alt: "Tradie pricing a residential job from site",
     label: "Quote",
     blurb: "Price loads. Send before you leave.",
-    chip: "Priced and ready",
+    chip: "Ready to send",
     objectPos: "object-left",
     icon: <Send size={18} aria-hidden />,
     phone: "/marketing/v2/phone-quote-send.png",
@@ -65,7 +65,7 @@ const SCENES: Scene[] = [
     alt: "Residential job won and moving into delivery",
     label: "Win",
     blurb: "They accept. Job hits your board.",
-    chip: "Client accepted",
+    chip: "Accepted",
     objectPos: "object-center",
     icon: <Check size={18} aria-hidden />,
     phone: "/marketing/v2/phone-job-details.png",
@@ -147,10 +147,10 @@ export default function HomeHero() {
           <div className="lg:col-span-5 flex flex-col justify-end">
             <p className="font-sans text-[14.5px] sm:text-[16px] leading-[1.6] text-[#9eb0bf] mb-5 sm:mb-7 max-w-[42ch]">
               <span className="sm:hidden">
-                Built site-first. Mark it up, talk it through, or scope it live, then send a priced quote before you leave the driveway.
+                Mark it up on site, price it from your book, send it before you leave the driveway.
               </span>
               <span className="hidden sm:inline">
-                Swiftscope is built site-first - every tool is designed to be used standing in the job, not back at a desk. Mark it up, talk it through, or scope it live on screen, and send a priced quote before you&apos;ve left the driveway.
+                Built to be used standing in the job, not back at a desk. Mark it up, price it from your book, and send before you leave the driveway.
               </span>
             </p>
             <div className="flex flex-wrap gap-2.5 sm:gap-3 mb-4">

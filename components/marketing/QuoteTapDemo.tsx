@@ -256,15 +256,15 @@ export default function QuoteTapDemo() {
     <div className="grid lg:grid-cols-2 gap-10 lg:gap-14 items-start">
       <div>
         <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-3">
-          Feel it
+          Try it
         </p>
         <h2 className="font-display text-[clamp(1.9rem,3.6vw,2.8rem)] tracking-wide leading-[1.05] text-[#071018] mb-4">
           Pick your trade.
           <br />
-          Draw it. Margin it. Send it.
+          Mark it up. Price it. Send it.
         </h2>
         <p className="font-sans text-[15.5px] text-[#4a5560] leading-[1.65] max-w-[44ch] mb-5">
-          Choose a trade tool, tap fittings onto the plan or drag a run for cable, pipe, skirting or gutter. Set job type and margins the same way you would on a real quote.
+          Tap fittings onto the plan or drag a run for cable, pipe, skirting, or gutter. Set job type and margin the same way you would on a real quote.
         </p>
 
         <div className="flex flex-wrap gap-2 mb-5" role="tablist" aria-label="Choose a trade">

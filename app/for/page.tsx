@@ -8,7 +8,7 @@ import { TRADE_HUBS } from "@/lib/marketing/trade-hubs";
 export const metadata: Metadata = {
   title: "Quoting software by trade - Swiftscope",
   description:
-    "Trade-specific quoting and job software for electricians, plumbers, carpenters, roofers, and every trade Swiftscope supports.",
+    "On-site quoting and job software for electricians, plumbers, carpenters, roofers, and every trade Swiftscope supports.",
 };
 
 export default function ForTradesIndexPage() {
@@ -42,10 +42,10 @@ export default function ForTradesIndexPage() {
             For your trade
           </p>
           <h1 className="font-display text-[clamp(2.2rem,5vw,3.5rem)] tracking-wide leading-[1.02] text-white max-w-[14ch] mb-4">
-            Built the way your trade prices work.
+            Your trade. Quotes from site.
           </h1>
           <p className="font-sans text-[16px] leading-[1.65] text-[#d5e0e8] max-w-[44ch] mb-8">
-            Pick your trade. See how on-site quoting, client accept, and job management fit the way you actually work.
+            Pick your trade. See how on-site quoting, client accept, and job management fit the way you actually price work.
           </p>
           <Link
             href="/signup"

@@ -21,7 +21,7 @@ const BANDS: Band[] = [
   {
     kicker: "Quote",
     title: "Price it on site.",
-    body: "Open the camera, tap the zone, draw the run. Materials and labour load from your book while you are still on site, not from memory at the desk later.",
+    body: "Open the camera, tap the zone, draw the run. Materials and labour load from your book while you are still there, not from memory at the desk later.",
     photo: "/trades/new-scaffold.png",
     photoAlt: "Tradie on site scoping a residential job",
     photoPos: "object-[25%_center]",
@@ -33,8 +33,8 @@ const BANDS: Band[] = [
   },
   {
     kicker: "Win",
-    title: "Send it before you leave site.",
-    body: "Client opens a clean portal on their phone, taps accept, and the job lands on your board. No PDF chase. No 'did you get my email?'",
+    title: "Send it before you leave.",
+    body: "Client opens a clean portal on their phone, taps accept, and the job lands on your board. No PDF chase. No did you get my email.",
     photo: "/trades/new-site.png",
     photoAlt: "Tradie on a residential framing site after winning the job",
     photoPos: "object-[70%_center]",
@@ -47,7 +47,7 @@ const BANDS: Band[] = [
   },
   {
     kicker: "Manage",
-    title: "Run the job from your palm.",
+    title: "Run the job from your phone.",
     body: "Accepted work becomes a job with schedule, materials, and progress in one place. Built for solo operators and crews up to about 15, not a site office for 200.",
     photo: "/trades/new-carpenter.png",
     photoAlt: "Carpenter framing on a residential interior site",

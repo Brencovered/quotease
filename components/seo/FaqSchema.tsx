@@ -45,24 +45,29 @@ export default function FaqSchema({ faqs }: { faqs: FaqItem[] }) {
  */
 export const SWIFTSCOPE_FAQS: FaqItem[] = [
   {
-    question: "Is Swiftscope free for homeowners?",
-    answer: "Yes. Posting a job and receiving quotes from local tradies is completely free for homeowners. You only contact the tradie you want to hire.",
+    question: "Who is Swiftscope for?",
+    answer:
+      "Solo tradies and small crews up to about 15. Residential and small commercial work. Not a site office system for 200.",
   },
   {
-    question: "How many quotes will I receive?",
-    answer: "Up to 3 local tradies matched to your job will be able to respond with a quote. You compare them and choose who to hire.",
+    question: "Can I quote on site from my phone?",
+    answer:
+      "Yes. Mark up a plan or photo, load materials and labour from your price book, and send a priced quote before you leave the driveway.",
   },
   {
-    question: "How are tradies selected?",
-    answer: "Every listing on Swiftscope is curated. We display real Google ratings and review counts so you can compare businesses before making contact.",
+    question: "How does the client accept a quote?",
+    answer:
+      "They open a clean portal on their phone and tap accept. The job lands on your board. No PDF chase, no did you get my email.",
   },
   {
-    question: "How quickly will I hear back?",
-    answer: "Most homeowners receive their first quote within a few hours. Response times depend on the trade and your suburb.",
+    question: "What does it cost?",
+    answer:
+      "Flat $45 a month after a 7-day free trial. Unlimited quotes, jobs, and seats. No per-lead fees. Directory listing included.",
   },
   {
-    question: "What trades can I find on Swiftscope?",
-    answer: "Electricians, plumbers, builders, roofers, painters, carpenters, tilers, landscapers, concreters, fencers, arborists, air conditioning installers, and surveyors.",
+    question: "Can homeowners browse tradies for free?",
+    answer:
+      "Yes. The directory is free to browse by trade and suburb, with real Google ratings on listings. No signup required to look.",
   },
 ];
 

@@ -39,7 +39,7 @@ export default function ChargeOutRatePage() {
             What should you charge out at?
           </h1>
           <p className="font-sans text-[16px] leading-[1.65] text-[#c5d4e0] max-w-[48ch]">
-            Work backwards from the take-home you need, your real overhead, and how many hours you actually bill. Then put those rates into your Swiftscope price book.
+            Work backwards from the take-home you need, your real overhead, and the hours you actually bill. Then load those rates into your Swiftscope price book.
           </p>
         </div>
       </section>
