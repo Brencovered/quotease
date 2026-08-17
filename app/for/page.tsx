@@ -42,7 +42,7 @@ export default function ForTradesIndexPage() {
               SwiftScope
             </p>
             <p className="font-sans text-[12px] font-bold tracking-[0.16em] uppercase text-[#ffb400] mb-5">
-              For your trade
+              For Tradies
             </p>
             <h1 className="font-display text-[clamp(2.2rem,5vw,3.5rem)] tracking-wide leading-[1.02] text-white max-w-[14ch] mb-5">
               Your trade. Quotes from site.
