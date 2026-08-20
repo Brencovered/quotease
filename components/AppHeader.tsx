@@ -22,16 +22,26 @@ import {
   Package,
   UsersRound,
   ChevronDown,
+  Sun,
 } from "lucide-react";
 
-const NAV = [
+const DESKTOP_NAV = [
+  { href: "/today",     icon: Sun,             label: "My day" },
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/materials", icon: Package,          label: "Materials" },
-  { href: "/jobs",      icon: Briefcase,        label: "Jobs" },
-  { href: "/quote",           icon: Plus,             label: "Quote",   fab: true },
-  { href: "/quotes",    icon: FileText,         label: "Quotes" },
-  { href: "/schedule",  icon: CalendarDays,     label: "Schedule" },
-  { href: "/margins",   icon: TrendingUp,       label: "Profit" },
+  { href: "/materials", icon: Package,         label: "Materials" },
+  { href: "/jobs",      icon: Briefcase,       label: "Jobs" },
+  { href: "/quotes",    icon: FileText,        label: "Quotes" },
+  { href: "/schedule",  icon: CalendarDays,    label: "Schedule" },
+  { href: "/margins",   icon: TrendingUp,      label: "Profit" },
+];
+
+/** Keep mobile bottom bar to five slots + centre Quote FAB. */
+const MOBILE_NAV = [
+  { href: "/today",    icon: Sun,          label: "My day" },
+  { href: "/jobs",     icon: Briefcase,    label: "Jobs" },
+  { href: "/quote",    icon: Plus,         label: "Quote", fab: true as const },
+  { href: "/quotes",   icon: FileText,     label: "Quotes" },
+  { href: "/schedule", icon: CalendarDays, label: "Schedule" },
 ];
 
 export default function AppHeader() {
@@ -65,6 +75,7 @@ export default function AppHeader() {
 
   function isActive(href: string) {
     if (href === "/quote") return pathname === "/quote";
+    if (href === "/today") return pathname === "/today" || pathname.startsWith("/today/");
     return pathname.startsWith(href);
   }
 
@@ -95,8 +106,7 @@ export default function AppHeader() {
         </div>
 
         <nav className="flex-1 flex flex-col gap-0.5 px-3 overflow-y-auto">
-          {/* Primary nav */}
-          {NAV.filter((n) => !n.fab).map((n) => {
+          {DESKTOP_NAV.map((n) => {
             const active = isActive(n.href);
             return (
               <Link prefetch={false}
@@ -119,56 +129,45 @@ export default function AppHeader() {
 
           {LEADS_ENABLED && (
             <Link prefetch={false} href="/leads" className={navLinkClasses("/leads")}>
-              <Zap size={17} strokeWidth={isActive("/leads") ? 2.2 : 1.8} />
-              Leads
+              <Zap size={17} /> Leads
             </Link>
           )}
+
           <Link prefetch={false} href="/clients" className={navLinkClasses("/clients")}>
-            <Users size={17} strokeWidth={isActive("/clients") ? 2.2 : 1.8} />
-            Clients
+            <Users size={17} /> Clients
           </Link>
+
           <Link prefetch={false} href="/team" className={navLinkClasses("/team")}>
-            <UsersRound size={17} strokeWidth={isActive("/team") ? 2.2 : 1.8} />
-            Team
+            <UsersRound size={17} /> Team
           </Link>
 
-          {/* More (collapsible) */}
           <button
+            type="button"
             onClick={() => setMoreExpanded((v) => !v)}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors text-left w-full ${
-              moreExpanded ? "text-white" : "text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white"
-            }`}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold text-[var(--steel-1)] hover:bg-white/[0.06] hover:text-white transition-colors"
           >
-            <Menu size={17} strokeWidth={1.8} />
-            <span className="flex-1">More</span>
-            <ChevronDown
-              size={14}
-              className={`transition-transform text-[var(--steel-2)] ${moreExpanded ? "rotate-180" : ""}`}
-            />
+            <ChevronDown size={17} className={moreExpanded ? "rotate-180 transition-transform" : "transition-transform"} />
+            More
           </button>
-
           {moreExpanded && (
-            <div className="flex flex-col gap-0.5 pl-2">
+            <>
               <Link prefetch={false} href="/export" className={navLinkClasses("/export")}>
-                <Download size={17} strokeWidth={isActive("/export") ? 2.2 : 1.8} />
-                Export
+                <Download size={17} /> Export
               </Link>
               <Link prefetch={false} href="/map" className={navLinkClasses("/map")}>
-                <MapPin size={17} strokeWidth={isActive("/map") ? 2.2 : 1.8} />
-                Map
+                <MapPin size={17} /> Map
               </Link>
-            </div>
+            </>
           )}
         </nav>
 
-        <div className="px-3 pb-4 pt-2 border-t border-white/[0.06] flex flex-col gap-0.5">
+        <div className="px-3 pb-4 space-y-0.5">
           <Link prefetch={false} href="/settings" className={navLinkClasses("/settings")}>
-            <Settings size={17} strokeWidth={isActive("/settings") ? 2.2 : 1.8} />
-            Settings
+            <Settings size={17} /> Settings
           </Link>
           <button
             onClick={logOut}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold text-[var(--steel-3)] hover:bg-white/[0.06] hover:text-white transition-colors text-left"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-semibold text-[var(--steel-3)] hover:bg-white/[0.06] hover:text-white transition-colors text-left w-full"
           >
             Log out
           </button>
@@ -177,7 +176,7 @@ export default function AppHeader() {
 
       {/* -- Mobile top bar -- */}
       <header className="sm:hidden bg-[var(--navy)] sticky top-0 z-40 h-12 flex items-center justify-between px-4 relative">
-        <Link prefetch={false} href="/dashboard" className="font-display text-[14px] tracking-widest text-white">
+        <Link prefetch={false} href="/today" className="font-display text-[14px] tracking-widest text-white">
           SWIFTSCOPE
         </Link>
         <button onClick={() => setMoreOpen((v) => !v)} className="text-[var(--steel-2)] p-1" aria-label="More">
@@ -187,11 +186,20 @@ export default function AppHeader() {
         {moreOpen && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
-            <div className="absolute top-12 right-4 z-50 bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-lg overflow-hidden w-48">
+            <div className="absolute top-12 right-4 z-50 bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-lg overflow-hidden w-52">
+              <Link prefetch={false} href="/dashboard" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
+                <LayoutDashboard size={15} className="text-[var(--ink-faint)]" /> Dashboard
+              </Link>
+              <Link prefetch={false} href="/materials" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
+                <Package size={15} className="text-[var(--ink-faint)]" /> Materials
+              </Link>
+              <Link prefetch={false} href="/margins" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
+                <TrendingUp size={15} className="text-[var(--ink-faint)]" /> Profit
+              </Link>
               <Link prefetch={false} href="/clients" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <Users size={15} className="text-[var(--ink-faint)]" /> Clients
               </Link>
-              <Link prefetch={false} href="/team" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(ink)] border-b border-[var(--line)]">
+              <Link prefetch={false} href="/team" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <UsersRound size={15} className="text-[var(--ink-faint)]" /> Team
               </Link>
               {LEADS_ENABLED && (
@@ -219,9 +227,9 @@ export default function AppHeader() {
       {/* -- Mobile bottom nav -- */}
       <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-[var(--surface)] border-t border-[var(--line)] flex items-center safe-bottom"
            style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
-        {NAV.map((n) => {
+        {MOBILE_NAV.map((n) => {
           const active = isActive(n.href);
-          if (n.fab) {
+          if ("fab" in n && n.fab) {
             return (
               <Link prefetch={false} key={n.href} href={n.href}
                 className="flex-1 flex flex-col items-center justify-center py-1 relative"
@@ -238,7 +246,7 @@ export default function AppHeader() {
               className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors ${active ? "text-[var(--amber-deep)]" : "text-[var(--ink-faint)]"}`}
             >
               <n.icon size={20} strokeWidth={active ? 2.2 : 1.8} />
-              <span className={`text-[10px] font-bold`}>{n.label}</span>
+              <span className="text-[10px] font-bold">{n.label}</span>
             </Link>
           );
         })}
