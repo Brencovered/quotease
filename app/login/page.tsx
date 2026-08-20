@@ -4,7 +4,7 @@ import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { getActiveBusinessId } from "@/lib/team";
+import { getActiveBusinessId, getTeamContext, isFieldWorker } from "@/lib/team";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
 import {
   Timer,
@@ -335,15 +335,27 @@ function LoginForm() {
       } = await supabase.auth.getUser();
       let target = next && next.startsWith("/") ? next : "/dashboard";
       if (user) {
-        const businessId = await getActiveBusinessId(supabase, user.id);
-        const isTeamMember = businessId !== user.id;
-        if (!isTeamMember) {
+        const ctx = await getTeamContext(supabase, user.id);
+        if (isFieldWorker(ctx)) {
+          target = next && next.startsWith("/") ? next : "/today";
+        } else if (ctx.isOwner) {
           const { data: profile } = await supabase
             .from("profiles")
             .select("onboarded_at")
-            .eq("id", businessId)
+            .eq("id", ctx.businessId)
             .maybeSingle();
           if (!profile?.onboarded_at) target = "/onboarding";
+        } else {
+          // Managers/admins land on dashboard unless next is set
+          const businessId = await getActiveBusinessId(supabase, user.id);
+          if (businessId === user.id) {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("onboarded_at")
+              .eq("id", businessId)
+              .maybeSingle();
+            if (!profile?.onboarded_at) target = "/onboarding";
+          }
         }
       }
       // A full navigation (not router.push) guarantees the browser sends

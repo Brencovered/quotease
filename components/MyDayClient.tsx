@@ -10,8 +10,6 @@ import {
   CheckCircle2,
   MapPin,
   Briefcase,
-  MessageSquare,
-  X,
   UsersRound,
   Square,
   CheckSquare,
@@ -48,13 +46,6 @@ const STATUS_LABEL: Record<string, string> = {
   awaiting_sign_off: "Sign-off",
 };
 
-const CLIENT_TEMPLATES = [
-  { key: "on_way", label: "On our way" },
-  { key: "running_late", label: "Running late" },
-  { key: "there_tomorrow", label: "There tomorrow" },
-  { key: "done_today", label: "Done for today" },
-] as const;
-
 function formatTime(iso: string | null): string | null {
   if (!iso) return null;
   if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
@@ -78,13 +69,11 @@ function JobTile({
   job,
   busy,
   onStatus,
-  onMessage,
   forceNoStartLabel,
 }: {
   job: MyDayJob;
   busy: boolean;
   onStatus: (jobId: string, status: string) => void;
-  onMessage: (job: MyDayJob) => void;
   forceNoStartLabel?: boolean;
 }) {
   const time = formatTime(job.scheduled_start);
@@ -92,7 +81,6 @@ function JobTile({
   const canStart = job.status === "scheduled" || job.status === "on_hold";
   const canComplete = job.status === "in_progress" || job.status === "awaiting_sign_off";
   const onSite = job.status === "in_progress";
-  const canMessage = Boolean(job.client_phone || job.client_email);
 
   function stop(e: MouseEvent) {
     e.preventDefault();
@@ -165,19 +153,6 @@ function JobTile({
             <Navigation size={15} />
           </a>
         ) : null}
-        {canMessage && (
-          <button
-            type="button"
-            onClick={(e) => {
-              stop(e);
-              onMessage(job);
-            }}
-            className="flex-1 flex items-center justify-center py-2.5 text-[var(--ink-soft)] hover:bg-[var(--app-bg)] border-l border-[var(--line-subtle)]"
-            aria-label="Message client"
-          >
-            <MessageSquare size={15} />
-          </button>
-        )}
         {canStart && (
           <button
             type="button"
@@ -223,13 +198,11 @@ function TileGrid({
   jobs,
   busyId,
   onStatus,
-  onMessage,
   forceNoStartLabel,
 }: {
   jobs: MyDayJob[];
   busyId: string | null;
   onStatus: (jobId: string, status: string) => void;
-  onMessage: (job: MyDayJob) => void;
   forceNoStartLabel?: boolean;
 }) {
   return (
@@ -240,7 +213,6 @@ function TileGrid({
           job={job}
           busy={busyId === job.id}
           onStatus={onStatus}
-          onMessage={onMessage}
           forceNoStartLabel={forceNoStartLabel}
         />
       ))}
@@ -270,8 +242,6 @@ export default function MyDayClient({
   const [tasks, setTasks] = useState(initialTasks);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const [messageJob, setMessageJob] = useState<MyDayJob | null>(null);
-  const [msgBusy, setMsgBusy] = useState(false);
 
   async function toggleTask(task: MyDayTask) {
     const next = task.status === "done" ? "todo" : "done";
@@ -325,41 +295,6 @@ export default function MyDayClient({
       setError(err instanceof Error ? err.message : "Couldn’t update job");
     } finally {
       setBusyId(null);
-    }
-  }
-
-  async function sendClientUpdate(template: string) {
-    if (!messageJob) return;
-    setMsgBusy(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/jobs/${messageJob.id}/client-update`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ template }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Couldn’t send update");
-
-      if (data.smsHref && messageJob.client_phone) {
-        window.location.href = data.smsHref;
-      } else if (!data.emailed && data.mailtoHref) {
-        window.location.href = data.mailtoHref;
-      }
-
-      setToast(
-        data.emailed
-          ? "Update emailed to client"
-          : data.smsHref
-            ? "Opening SMS…"
-            : data.warning || "Update logged"
-      );
-      setTimeout(() => setToast(null), 3500);
-      setMessageJob(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn’t send update");
-    } finally {
-      setMsgBusy(false);
     }
   }
 
@@ -478,7 +413,6 @@ export default function MyDayClient({
                 jobs={todayJobs}
                 busyId={busyId}
                 onStatus={setStatus}
-                onMessage={setMessageJob}
               />
             )}
           </section>
@@ -495,7 +429,6 @@ export default function MyDayClient({
                 jobs={undatedJobs}
                 busyId={busyId}
                 onStatus={setStatus}
-                onMessage={setMessageJob}
                 forceNoStartLabel
               />
             </section>
@@ -512,48 +445,6 @@ export default function MyDayClient({
           Schedule
         </Link>
       </div>
-
-      {messageJob && (
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/40"
-            aria-label="Close"
-            onClick={() => setMessageJob(null)}
-          />
-          <div className="relative w-full sm:max-w-md bg-[var(--surface)] rounded-t-2xl sm:rounded-2xl border border-[var(--line)] p-4 pb-6 shadow-xl">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-faint)]">
-                  Update client
-                </p>
-                <p className="font-semibold text-[var(--ink)]">
-                  {messageJob.client_name || `Job #${messageJob.job_number}`}
-                </p>
-              </div>
-              <button type="button" onClick={() => setMessageJob(null)} className="p-1.5 text-[var(--ink-faint)]">
-                <X size={18} />
-              </button>
-            </div>
-            <p className="text-[12.5px] text-[var(--ink-faint)] mb-3">
-              Opens SMS on your phone{messageJob.client_email ? " (and emails if set up)" : ""}.
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {CLIENT_TEMPLATES.map((t) => (
-                <button
-                  key={t.key}
-                  type="button"
-                  disabled={msgBusy}
-                  onClick={() => sendClientUpdate(t.key)}
-                  className="btn-secondary text-[13px] py-2.5 px-3 disabled:opacity-50"
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   );
 }

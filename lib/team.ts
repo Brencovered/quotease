@@ -65,6 +65,11 @@ export function canSeePricing(ctx: Pick<TeamContext, "isOwner" | "role">): boole
   return ctx.isOwner || ctx.role === "admin" || ctx.role === "manager";
 }
 
+/** Site members only work assigned jobs — hide owner tooling (dashboard, quoting, etc.). */
+export function isFieldWorker(ctx: Pick<TeamContext, "isOwner" | "role">): boolean {
+  return !ctx.isOwner && ctx.role === "site_member";
+}
+
 export async function getActiveBusinessId(supabase: SupabaseClient, userId: string): Promise<string> {
   const { data: membership } = await supabase
     .from("team_members")

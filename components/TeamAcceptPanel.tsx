@@ -47,7 +47,7 @@ export default function TeamAcceptPanel({
         setError(body.error ?? "Couldn't accept this invite.");
         return;
       }
-      router.push("/dashboard");
+      router.push("/today");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not reach the server.");
@@ -96,7 +96,7 @@ export default function TeamAcceptPanel({
         return;
       }
 
-      router.push("/dashboard");
+      router.push("/today");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not reach the server.");
@@ -125,10 +125,10 @@ export default function TeamAcceptPanel({
               You&apos;re already on this team.
             </p>
             <Link
-              href="/dashboard"
+              href="/today"
               className="btn-primary inline-flex justify-center"
             >
-              Go to dashboard →
+              Go to My day →
             </Link>
           </>
         ) : currentUserEmail && !emailMatches ? (
