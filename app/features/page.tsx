@@ -152,7 +152,7 @@ export default function FeaturesPage() {
         </div>
       </div>
 
-      {/* COMPETITOR TABLE -- expandable rows */}
+      {/* COMPETITOR TABLE - expandable rows */}
       <div className="bg-[#f8f9fa] border-b border-[#e8ecef]">
         <div className="max-w-7xl mx-auto px-6 py-20">
           <div className="text-center mb-12">

@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdminEmail } from "@/lib/admin";
 
-// This reflects live scrape/refresh actions the admin just ran -- it must
+// This reflects live scrape/refresh actions the admin just ran - it must
 // never be cached, by Next.js, Vercel's edge, or the browser. Explicit
 // rather than relying on cookies() usage elsewhere in the file to opt
 // this route out of caching implicitly.
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 // Approximate official Australia Post postcode ranges. Good enough for a
-// heuristic state grouping on an admin dashboard -- not meant to be exact
+// heuristic state grouping on an admin dashboard - not meant to be exact
 // for edge-case PO box ranges.
 function postcodeToState(pc: string): string {
   const n = parseInt(pc, 10);
@@ -28,7 +28,7 @@ function postcodeToState(pc: string): string {
 }
 
 /**
- * Postcode x trade coverage matrix for the admin dashboard -- "which areas
+ * Postcode x trade coverage matrix for the admin dashboard - "which areas
  * and trades are thin" rather than a literal map (an embedded Google Maps
  * view would need its own Maps JavaScript API key/billing for comparatively
  * little extra insight over a sortable, colour-coded table grouped by
@@ -37,7 +37,7 @@ function postcodeToState(pc: string): string {
  * Important limitation: this only ever shows postcodes that already have
  * at least one listing. It can't surface postcodes with zero coverage at
  * all, since there's no canonical "every Australian postcode" reference
- * table in this schema to diff against -- it highlights weak spots within
+ * table in this schema to diff against - it highlights weak spots within
  * existing data, not blind spots outside it.
  */
 export async function GET() {
@@ -49,7 +49,7 @@ export async function GET() {
 
   const admin = createAdminClient();
 
-  // PostgREST silently caps an unpaginated select at 1,000 rows -- with
+  // PostgREST silently caps an unpaginated select at 1,000 rows - with
   // 5,000+ listings in directory_listing, a plain .select() here was
   // quietly aggregating against roughly the first fifth of the table,
   // which is exactly why counts on this page didn't match the real data
@@ -102,7 +102,7 @@ export async function GET() {
   }
 
   const postcodes = Array.from(buckets.values()).map((b) => {
-    // Most common suburb name recorded for this postcode -- postcodes can
+    // Most common suburb name recorded for this postcode - postcodes can
     // span multiple suburbs, this just labels the row with the dominant one.
     const suburb = Object.entries(b.suburbCounts).sort((a, z) => z[1] - a[1])[0]?.[0] ?? "";
     return {

@@ -5,12 +5,12 @@
  * ---------
  * Sits directly under a quote-wizard field (a counter, a checkbox) and shows
  * *right there* what real product(s) it's priced from and what that line
- * will cost -- instead of the tradie having to trust an abstract number and
+ * will cost - instead of the tradie having to trust an abstract number and
  * find out at the very end (or in a separate Materials tab) whether it
  * means anything. A line can be backed by more than one real product (e.g.
- * "Power point" = a GPO + a cover plate) -- their costs are summed.
+ * "Power point" = a GPO + a cover plate) - their costs are summed.
  *
- * Only rendered once a real price book exists for the trade -- before that,
+ * Only rendered once a real price book exists for the trade - before that,
  * the built-in default price *is* the number, so there's nothing to show.
  */
 
@@ -78,7 +78,7 @@ export default function PriceHint({
             ))
           ) : (
             <span className="inline-flex items-center gap-1 bg-[var(--amber-light)] text-[var(--amber-deep)] text-[11px] font-bold px-2 py-1 rounded-full">
-              Default estimate — not from your price list
+              Default estimate - not from your price list
             </span>
           )}
           <button

@@ -28,7 +28,7 @@ export async function isIpBlocked(ip: string | null): Promise<boolean> {
     .maybeSingle();
   if (error) {
     // Fail open. A lookup failure blocking real signups is worse than an
-    // already-known-bad IP getting through occasionally -- this list is a
+    // already-known-bad IP getting through occasionally - this list is a
     // targeted response to specific abuse, not the primary defence.
     console.error("[ipBlocklist] lookup failed:", error.message);
     return false;

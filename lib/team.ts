@@ -7,7 +7,7 @@
  *
  * This is an app-level convenience on top of the real security boundary,
  * which is the accessible_business_ids() Postgres function used in RLS
- * (see supabase/migrations.sql) -- even if a route forgets to call this and
+ * (see supabase/migrations.sql) - even if a route forgets to call this and
  * queries by the user's own id directly, RLS still only returns rows for
  * businesses they're actually allowed to see. This helper just makes sure
  * team members land on the right business's data instead of their own
@@ -20,7 +20,7 @@ export interface TeamContext {
   businessId: string;
   isOwner: boolean;
   role: "owner" | "admin" | "manager" | "site_member";
-  // Only meaningful when role is "manager" -- whether they see every job for
+  // Only meaningful when role is "manager" - whether they see every job for
   // the business or only ones they're assigned to via job_crew. Null for
   // every other role: site_member is always job-scoped regardless, admin
   // and owner are always unrestricted regardless.
@@ -59,13 +59,13 @@ export async function getTeamContext(supabase: SupabaseClient, userId: string): 
 
 /** Owner and admin always see pricing; manager sees it too (that's the point
  *  of the tier); site_member never does. This is the one function that
- *  should decide $-visibility everywhere -- don't reimplement the check
+ *  should decide $-visibility everywhere - don't reimplement the check
  *  inline, since "manager" was missed for exactly that reason before. */
 export function canSeePricing(ctx: Pick<TeamContext, "isOwner" | "role">): boolean {
   return ctx.isOwner || ctx.role === "admin" || ctx.role === "manager";
 }
 
-/** Site members only work assigned jobs — hide owner tooling (dashboard, quoting, etc.). */
+/** Site members only work assigned jobs - hide owner tooling (dashboard, quoting, etc.). */
 export function isFieldWorker(ctx: Pick<TeamContext, "isOwner" | "role">): boolean {
   return !ctx.isOwner && ctx.role === "site_member";
 }

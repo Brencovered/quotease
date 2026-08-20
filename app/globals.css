@@ -35,7 +35,7 @@
   --radius: 12px;
   --radius-lg: 16px;
 
-  /* Bottom nav height — used to pad page content */
+  /* Bottom nav height - used to pad page content */
   --bottom-nav: 64px;
 }
 
@@ -49,14 +49,14 @@ body {
 }
 
 .font-display {
-  /* Marketing headings only — Anton. Never pair with font-bold (single weight). */
+  /* Marketing headings only - Anton. Never pair with font-bold (single weight). */
   font-family: var(--font-anton), sans-serif;
   font-weight: 400;
   letter-spacing: 0.01em;
 }
 
 .font-sans {
-  /* Marketing body, labels, buttons — Inter */
+  /* Marketing body, labels, buttons - Inter */
   font-family: var(--font-inter), sans-serif;
 }
 
@@ -169,7 +169,7 @@ input[type="radio"] {
   color: var(--amber-deep);
 }
 
-/* Block label — used in the modular blog editor for each block type */
+/* Block label - used in the modular blog editor for each block type */
 .block-tag {
   font-size: 10px;
   font-weight: 800;
@@ -182,7 +182,7 @@ input[type="radio"] {
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Page wrapper — full-width with comfortable padding, no max-width cap */
+/* Page wrapper - full-width with comfortable padding, no max-width cap */
 .page-wrap {
   width: 100%;
   padding: 16px 16px calc(var(--bottom-nav) + 24px);

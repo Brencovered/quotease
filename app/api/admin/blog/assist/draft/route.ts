@@ -3,7 +3,7 @@
  * -----------------------------------
  * Admin-only. Drafts the prose for ONE section of a post that was already
  * outlined by assist/plan. Deliberately scoped to a single section rather
- * than the whole post -- the composer UI lets the author draft only the
+ * than the whole post - the composer UI lets the author draft only the
  * sections they want help with and leave the rest to write themselves.
  *
  * Input:  { postTitle, keyword, heading, brief, otherHeadings[] }
@@ -20,17 +20,17 @@ const FORMAT_NOTES = `CONTENT FORMAT this section must follow (plain markdown, n
 - "## " for this section's own H2 heading (include it, as the first line)
 - "### " for any sub-headings
 - "- " for bullet lists. For a labelled bullet like "Area calculations: notes on that",
-  write the label in plain text followed by a colon -- do NOT wrap the label in "**" as
+  write the label in plain text followed by a colon - do NOT wrap the label in "**" as
   well. The renderer already bolds everything before the first colon in a list item
   automatically, so adding "**" around it too just leaves literal asterisks/duplicate
   markup in the output.
 - pipe tables: | Col 1 | Col 2 |
 - "> " for a pull quote
-- inline links as [text](/path) -- only real Swiftscope paths: /features /how-it-works
+- inline links as [text](/path) - only real Swiftscope paths: /features /how-it-works
   /directory /areas /signup /blog/...
 
 STYLE: never use em or en dashes. Punchy, direct, Australian spelling, no filler, no moralising.
-Never invent competitor pricing or statistics -- if something needs checking, write
+Never invent competitor pricing or statistics - if something needs checking, write
 "[VERIFY: what to check]" instead of making it up.`;
 
 export async function POST(req: NextRequest) {

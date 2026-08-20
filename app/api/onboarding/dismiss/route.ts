@@ -2,7 +2,7 @@
  * POST /api/onboarding/dismiss
  * -----------------------------
  * Lets a business permanently hide the trial onboarding checklist widget.
- * Body: { dismissed?: boolean }  -- defaults to true; pass false to
+ * Body: { dismissed?: boolean }  - defaults to true; pass false to
  * bring the widget back (not currently exposed in the UI, but keeps the
  * endpoint symmetric rather than write-only).
  */
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     if (typeof body?.dismissed === "boolean") dismissed = body.dismissed;
   } catch {
-    // no body -- default to dismissing
+    // no body - default to dismissing
   }
 
   const { error } = await supabase

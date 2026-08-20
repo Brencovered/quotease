@@ -123,7 +123,7 @@ export default function JobTasksPanel({
       <p className="section-tag mb-1">Tasks</p>
       <p className="font-semibold text-[var(--ink)] mb-1">Break the job down into steps</p>
       <p className="text-[12.5px] text-[var(--ink-faint)] mb-3">
-        Assign to crew — they also see these on My day. For tasks with no job, use{" "}
+        Assign to crew - they also see these on My day. For tasks with no job, use{" "}
         <Link href="/crew" className="underline font-semibold text-[var(--navy)]">
           Crew → Add a task
         </Link>

@@ -74,7 +74,7 @@ export const GENERIC_TRADE_TEMPLATES: Record<string, {
     label: "Tiler",
     jobTypes: ["Bathroom floor & wall", "Kitchen splashback", "Laundry", "Outdoor paving", "Pool surrounds", "Feature wall", "Ensuite refresh"],
     defaultItems: [
-      { label: "Labour — set & grout", qty: 10, unit: "hr", unit_cost: 85, is_labour: true },
+      { label: "Labour - set & grout", qty: 10, unit: "hr", unit_cost: 85, is_labour: true },
       { label: "Floor tiles (per sqm)", qty: 10, unit: "sqm", unit_cost: 45, is_labour: false },
       { label: "Wall tiles (per sqm)", qty: 8, unit: "sqm", unit_cost: 50, is_labour: false },
       { label: "Waterproofing membrane", qty: 1, unit: "item", unit_cost: 380, is_labour: false },
@@ -89,8 +89,8 @@ export const GENERIC_TRADE_TEMPLATES: Record<string, {
     label: "Landscaper",
     jobTypes: ["Garden design & install", "Retaining wall", "Paving", "Turf laying", "Irrigation", "Drainage", "Mulching", "Garden makeover"],
     defaultItems: [
-      { label: "Labour — softscape", qty: 8, unit: "hr", unit_cost: 75, is_labour: true },
-      { label: "Labour — hardscape", qty: 4, unit: "hr", unit_cost: 85, is_labour: true },
+      { label: "Labour - softscape", qty: 8, unit: "hr", unit_cost: 75, is_labour: true },
+      { label: "Labour - hardscape", qty: 4, unit: "hr", unit_cost: 85, is_labour: true },
       { label: "Turf (per sqm)", qty: 20, unit: "sqm", unit_cost: 18, is_labour: false },
       { label: "Topsoil (per m3)", qty: 1, unit: "ea", unit_cost: 85, is_labour: false },
       { label: "Mulch (per m3)", qty: 1, unit: "ea", unit_cost: 75, is_labour: false },
@@ -186,11 +186,11 @@ export const ALL_TRADES = [
   { key: "custom",      label: "Other / custom",    dedicated: false },
 ];
 
-/** Signup / onboarding / materials UI — same list, no orphans. */
+/** Signup / onboarding / materials UI - same list, no orphans. */
 export const PRODUCT_TRADES = ALL_TRADES.map(({ key, label }) => ({ key, label }));
 
 /**
- * lib/genericTrades.ts -- normalizeTradeValue()
+ * lib/genericTrades.ts - normalizeTradeValue()
  * ----------------------------------------------
  * Validates a raw string against the real, canonical trade keys above
  * (plus a few common synonyms/variants), returning null if it doesn't
@@ -200,7 +200,7 @@ export const PRODUCT_TRADES = ALL_TRADES.map(({ key, label }) => ({ key, label }
  * quote builder hard-filters materials on (.eq("trade", tradeKey)), but
  * CSV import treated any column named "category"/"type"/"discipline" as
  * an interchangeable synonym for "trade" and wrote the raw value straight
- * through -- so a supplier's own product category ("Timber - Posts",
+ * through - so a supplier's own product category ("Timber - Posts",
  * "Decking", "Pipe & Fittings") silently became the trade tag, and those
  * materials could then never be found via .eq("trade", "carpenter"),
  * despite obviously being carpenter-relevant. Anything writing to or

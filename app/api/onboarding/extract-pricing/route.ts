@@ -6,7 +6,7 @@
  * combined result into price_book_items so the new account starts with
  * real pricing instead of empty defaults.
  *
- * Deliberately additive, not a full-replace like the CSV importer --
+ * Deliberately additive, not a full-replace like the CSV importer -
  * these are supplementary items the tradie is adding on top of whatever
  * else they set up (manual entry, CSV, Xero), tagged with their own
  * supplier label so they're visually distinguishable in the price book.
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Process files sequentially -- these are vision-model calls, and running
+  // Process files sequentially - these are vision-model calls, and running
   // 5 of them in parallel against the same per-user rate limit budget adds
   // nothing but risk of hitting provider-side concurrency limits.
   const allItems: Array<{ description: string; unit: string; unit_cost: number }> = [];

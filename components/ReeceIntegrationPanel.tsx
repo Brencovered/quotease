@@ -83,7 +83,7 @@ export default function ReeceIntegrationPanel() {
           <div>
             <p className="font-display text-[var(--ink)]">Reece maX</p>
             <p className="text-[12px] text-[var(--ink-faint)]">
-              Supplier integration — product search, pricing &amp; ordering
+              Supplier integration - product search, pricing &amp; ordering
             </p>
           </div>
           {testResult && (
@@ -288,7 +288,7 @@ export default function ReeceIntegrationPanel() {
           ServiceM8, Fergus, AroFlo and others are registered Reece Technology
           Partners with a standardised OAuth flow. When Reece approves
           Swiftscope, users will click{" "}
-          <strong>&quot;Connect to Reece&quot;</strong> and authorise via a popup — no
+          <strong>&quot;Connect to Reece&quot;</strong> and authorise via a popup - no
           manual cookie copying.
         </p>
 
@@ -299,11 +299,11 @@ export default function ReeceIntegrationPanel() {
           <p>
             To: <strong className="text-[var(--blue)]">maxsupport@reece.com.au</strong>
           </p>
-          <p>Subject: Technology Partner Application — SwiftScope</p>
+          <p>Subject: Technology Partner Application - SwiftScope</p>
           <p className="text-[11.5px] pt-1">
             Reference: ServiceM8 uses{" "}
             <code className="bg-black/5 px-1 rounded">/link-application/account-select/service-mate/</code>{" "}
-            — we need{" "}
+            - we need{" "}
             <code className="bg-black/5 px-1 rounded">/link-application/account-select/swiftscope/</code>{" "}
             registered.
           </p>

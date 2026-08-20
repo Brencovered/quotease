@@ -11,7 +11,7 @@
  * profiles.archetype_defaults["<trade>:calc:<key>"] (stored as a JSON array
  * of item_keys so more than one product can back a single line).
  *
- * Only rendered once a real price book has been detected for the trade --
+ * Only rendered once a real price book has been detected for the trade -
  * before that, the built-in default prices (editable via the existing
  * Materials tab) are the only sensible source of truth.
  */
@@ -91,7 +91,7 @@ export default function CalcKeyPricingPanel({
               <div className="flex items-center gap-1.5 flex-wrap">
                 {products.length === 0 && (
                   <span className="inline-flex items-center gap-1 bg-[var(--amber-light)] text-[var(--amber-deep)] text-[11px] font-bold px-2 py-1 rounded-full">
-                    Default estimate — not from your price list
+                    Default estimate - not from your price list
                   </span>
                 )}
                 {products.map((p) => (

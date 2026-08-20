@@ -39,7 +39,7 @@ export default function AdminSeoRefreshPanel() {
       <p className="text-[12.5px] text-[var(--ink-soft)] mb-4">
         Recomputes trade_suburb_pages (used by /areas, /tradies-in-..., and the trade+suburb pages) from live
         directory data, including each listing&apos;s real state derived from postcode. Runs automatically every
-        Monday -- this runs it right now instead of waiting.
+        Monday - this runs it right now instead of waiting.
       </p>
       <div className="flex items-center gap-3 flex-wrap">
         <button

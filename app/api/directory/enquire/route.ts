@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
   // client: this insert is server-validated above and comes from anonymous
   // homeowners with no session, so there's no meaningful RLS role to grant
   // here. Previously this used the regular client, which failed on every
-  // submission -- Supabase's insert().select() requires a SELECT policy for
+  // submission - Supabase's insert().select() requires a SELECT policy for
   // the RETURNING clause too, not just an INSERT policy, and anon had none.
   const admin = createAdminClient();
   let enquiryId: string | null = null;

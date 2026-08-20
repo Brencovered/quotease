@@ -75,7 +75,7 @@ export default function AppHeader() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [moreExpanded, setMoreExpanded] = useState(false);
   const [quoteCount, setQuoteCount] = useState(0);
-  // Start unknown — never paint owner tools until role is confirmed.
+  // Start unknown - never paint owner tools until role is confirmed.
   // Cache restores instantly on remount (nav clicks remount this component).
   const [isFieldWorker, setIsFieldWorker] = useState(false);
   const [roleReady, setRoleReady] = useState(false);
@@ -102,7 +102,7 @@ export default function AppHeader() {
         setRoleReady(true);
       } catch {
         // If we have a cache, keep it. Otherwise don't unlock owner tools
-        // by mistake — stay field-safe until we know.
+        // by mistake - stay field-safe until we know.
         if (!cancelled && getCachedIsFieldWorker() === null) {
           setIsFieldWorker(true);
           setRoleReady(true);
@@ -153,7 +153,7 @@ export default function AppHeader() {
     }`;
   }
 
-  // Until role is known, show field nav only — never flash owner tools.
+  // Until role is known, show field nav only - never flash owner tools.
   const showFieldNav = !roleReady || isFieldWorker;
   const homeHref = showFieldNav ? "/today" : "/dashboard";
   const desktopNav = showFieldNav ? FIELD_DESKTOP_NAV : OWNER_DESKTOP_NAV;

@@ -4,7 +4,7 @@
  * Structured-intake calculators (calcPlumberQuote, calcCarpenterQuote) price
  * jobs off a fixed set of generic keys (e.g. "basin_tap", "framing_lm").
  * Those keys only exist by default in the trade's built-in DEFAULT_MATERIALS
- * array -- they do NOT exist in a real supplier price book, which is keyed
+ * array - they do NOT exist in a real supplier price book, which is keyed
  * by product id/SKU with real descriptions.
  *
  * This resolver bridges the two: for each generic calc key, it checks
@@ -56,7 +56,7 @@ export function resolveCalcCosts(
 
   // 2. Legacy path: a tradie who has directly edited a same-keyed row in
   //    Settings > Materials (material_items, no real price book uploaded
-  //    yet) -- their edited value should win over the built-in default.
+  //    yet) - their edited value should win over the built-in default.
   for (const r of lib) {
     if (r.item_key in costs) {
       const v = Number(r.unit_cost);

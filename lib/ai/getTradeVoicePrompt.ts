@@ -4,7 +4,7 @@
  * DETECTED_ITEMS_SCHEMA, so both flow through the same review table).
  *
  * Electrician has its own dedicated fixed-field flow in analyze-voice/route.ts
- * (autofills the intake form directly) and does not use this file -- kept
+ * (autofills the intake form directly) and does not use this file - kept
  * that way deliberately so the existing, working electrician flow is
  * untouched. This file covers every other trade, which previously had no
  * real voice support at all (the route always used the electrician prompt
@@ -14,7 +14,7 @@
 
 function framing(tradeLabel: string, focusPoints: string): string {
   return `You are helping a ${tradeLabel} turn a voice note recorded on site into a structured list of quote line items.
-They walked around the job describing it out loud -- it will be informal, may go off on tangents, use imprecise
+They walked around the job describing it out loud - it will be informal, may go off on tangents, use imprecise
 terminology, and mention things out of order. Extract every distinct item and its quantity that you can
 confidently infer from what they said.
 

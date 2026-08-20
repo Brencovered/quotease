@@ -38,10 +38,10 @@ export default function FaqSchema({ faqs }: { faqs: FaqItem[] }) {
   );
 }
 
-// -- Reusable FAQ sets ------------------------------------------------------------
+// - Reusable FAQ sets ------------------------------------------------------------
 
 /**
- * Generic FAQs about Swiftscope itself -- used on the homepage.
+ * Generic FAQs about Swiftscope itself - used on the homepage.
  */
 export const SWIFTSCOPE_FAQS: FaqItem[] = [
   {

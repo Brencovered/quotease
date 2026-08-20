@@ -20,7 +20,7 @@ export interface CachePhotosBatchResult {
  *
  * Why: PhotoGallery.tsx and DirectoryCard.tsx call /api/places/photo on
  * every single page view for any photo_reference that isn't already a
- * full URL -- that's a live, paid Google Places Photo API call per view,
+ * full URL - that's a live, paid Google Places Photo API call per view,
  * forever, for as long as the listing exists. Since photos don't change
  * meaningfully often (per Brendan: claimed listings get tradie-uploaded
  * photos instead anyway via /directory/manage, and unclaimed ones just
@@ -28,13 +28,13 @@ export interface CachePhotosBatchResult {
  * ~6 months is far cheaper than paying per view indefinitely.
  *
  * Selects listings by photos_cached_at (never cached, or cached more than
- * REFRESH_INTERVAL_DAYS ago) rather than a plain offset -- this is what
+ * REFRESH_INTERVAL_DAYS ago) rather than a plain offset - this is what
  * lets a modest, frequent cron give every listing an effective ~6-month
  * cadence without needing to sweep the entire directory in a single run,
  * which wouldn't fit in any reasonable function duration at this catalog
  * size (5,000+ listings).
  *
- * Skips claimed listings entirely -- once claimed, photos are the
+ * Skips claimed listings entirely - once claimed, photos are the
  * tradie's own via /directory/manage, not Google's.
  */
 export async function runCachePhotosBatch(): Promise<CachePhotosBatchResult> {
@@ -105,7 +105,7 @@ export async function runCachePhotosBatch(): Promise<CachePhotosBatchResult> {
       results.cached++;
     } else {
       // Stamp it anyway so a listing whose photos all failed doesn't get
-      // retried every single run -- it'll simply come up again in
+      // retried every single run - it'll simply come up again in
       // another ~6 months, same as a successful one.
       await admin.from("directory_listing").update({ photos_cached_at: new Date().toISOString() }).eq("id", row.id);
     }

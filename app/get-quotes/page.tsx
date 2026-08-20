@@ -254,7 +254,7 @@ function BottomCTA() {
 /* ------------------------------------------------------------------ */
 
 export default async function GetQuotesPage() {
-  // Leads flow is off for now (see lib/featureFlags.ts) -- redirect to the
+  // Leads flow is off for now (see lib/featureFlags.ts) - redirect to the
   // directory rather than 404ing or leaving a dead-end page live for
   // anyone with an old link, a bookmark, or an indexed search result.
   // Nothing below this line was touched; flip LEADS_ENABLED back to true

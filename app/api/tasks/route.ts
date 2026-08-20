@@ -1,6 +1,6 @@
 /**
- * GET  /api/tasks — list open (or all) tasks for the business
- * POST /api/tasks — create a job-linked or standalone task
+ * GET  /api/tasks - list open (or all) tasks for the business
+ * POST /api/tasks - create a job-linked or standalone task
  *
  * Body (POST): {
  *   title: string

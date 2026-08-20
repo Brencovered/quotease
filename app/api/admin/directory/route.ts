@@ -66,7 +66,7 @@ const CSV_COLUMNS = [
 const APP_URL = "https://swiftscope.com.au";
 
 /** Values for the computed columns above. Empty string when the row lacks
- *  the parts needed to build a URL that would actually resolve -- a dead
+ *  the parts needed to build a URL that would actually resolve - a dead
  *  link in a cold email is worse than a blank cell. */
 function computedColumn(column: string, row: Record<string, unknown>): string {
   const id = typeof row.id === "string" ? row.id : "";
@@ -108,7 +108,7 @@ export async function GET(req: NextRequest) {
   const admin = createAdminClient();
 
   if (format === "csv") {
-    // Export mode: same filters, but no 200-row UI cap -- the tradie picks
+    // Export mode: same filters, but no 200-row UI cap - the tradie picks
     // how many rows they want (up to a safety ceiling), and we page through
     // Supabase's own 1000-row-per-request limit internally to get there.
     const EXPORT_CEILING = 10000;

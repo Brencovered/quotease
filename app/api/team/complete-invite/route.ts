@@ -17,7 +17,7 @@ type Body = {
  * 2. Activates the team_members row (member_user_id + joined_at)
  * 3. Returns email so the client can signInWithPassword → /dashboard
  *
- * Does NOT send them through /signup — they join the inviting company.
+ * Does NOT send them through /signup - they join the inviting company.
  */
 export async function POST(request: NextRequest) {
   let body: Body;

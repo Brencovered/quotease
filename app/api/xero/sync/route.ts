@@ -186,7 +186,7 @@ export async function POST(req: NextRequest) {
       const clientEmail = quote.client_email?.trim() || `noemail+${quote.id}@swiftscope.com.au`;
       const clientName  = quote.client_name?.trim()  || "Unknown Client";
 
-      // Get or create the Xero contact -- never duplicates
+      // Get or create the Xero contact - never duplicates
       let xeroContactId = await getOrCreateXeroContact(
         accessToken, tenantId, businessId,
         clientEmail, clientName, supabase
@@ -225,14 +225,14 @@ export async function POST(req: NextRequest) {
           body: JSON.stringify({ Invoices: [xeroInvoice] }),
         });
 
-        // Xero sometimes returns HTML error pages -- handle gracefully
+        // Xero sometimes returns HTML error pages - handle gracefully
         const rawText = await res.text();
         let data: Record<string, unknown> = {};
         try {
           data = JSON.parse(rawText);
         } catch {
           console.error("Xero non-JSON response:", res.status, rawText.slice(0, 300));
-          return { ok: false, errMsg: `Xero error ${res.status} -- check your connection in Settings and try again` };
+          return { ok: false, errMsg: `Xero error ${res.status} - check your connection in Settings and try again` };
         }
 
         const inv = (data?.Invoices as {InvoiceID?: string; InvoiceNumber?: string}[])?.[0];

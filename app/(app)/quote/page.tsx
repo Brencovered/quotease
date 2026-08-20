@@ -180,7 +180,7 @@ async function loadPlanMarkup(
       label: s.material_label || s.label,
       quantity: s.qty,
       unit: s.unit,
-      // Raw cost only -- no per-shape margin baked in here. The quote's
+      // Raw cost only - no per-shape margin baked in here. The quote's
       // effective margin gets applied once, uniformly, when these are
       // merged into the wizard's siteItems list. Baking margin in here
       // AND applying the wizard's margin on top double-charged the
@@ -222,7 +222,7 @@ export default async function NewQuotePage({
   const dbProfile = await getCachedProfile(businessId);
 
   if (!dbProfile) {
-    // extreme fallback — shouldn't happen for a logged-in user
+    // extreme fallback - shouldn't happen for a logged-in user
     return (
       <>
         <AppHeader />
@@ -330,7 +330,7 @@ export default async function NewQuotePage({
     preMarkupSource = "material bundle";
   }
 
-  /* ── 6. Load materials (cached, single query — no loop) ── */
+  /* ── 6. Load materials (cached, single query - no loop) ── */
   // Reuse the eagerly-fetched materials whenever the trade wasn't
   // overridden by a package/bundle; only re-fetch for the rare case where
   // effectiveTrade actually changed after the eager fetch was kicked off.

@@ -28,7 +28,7 @@ interface ContentBlock {
 /**
  * Splits a "| a | b | c |" row into ["a", "b", "c"]. A naive line.split("|")
  * produces a leading AND trailing empty string for a row with outer pipes
- * (the standard markdown table format) -- stripping exactly one leading and
+ * (the standard markdown table format) - stripping exactly one leading and
  * one trailing pipe character before splitting, rather than filtering empty
  * strings out of the split result, is what keeps a genuinely blank interior
  * cell (e.g. an intentionally empty price) intact instead of collapsing it
@@ -231,7 +231,7 @@ function parseContent(md: string): ContentBlock[] {
  * Escape HTML special characters in raw text before any markdown-to-HTML
  * transformation runs. Blog content is admin-authored (via BlogEditor),
  * not public-submitted, but it still renders to every visitor via
- * dangerouslySetInnerHTML below -- if a post ever contains literal HTML
+ * dangerouslySetInnerHTML below - if a post ever contains literal HTML
  * (pasted from somewhere, or an AI-assisted draft that wasn't reviewed
  * closely), it would otherwise pass straight through unescaped. None of
  * the markdown syntax below (*, `, [, ], (, )) is affected by escaping,
@@ -247,11 +247,11 @@ function escapeHtml(text: string): string {
 }
 
 /**
- * Only allow URL schemes that can't execute script when clicked --
+ * Only allow URL schemes that can't execute script when clicked -
  * http(s), mailto, in-page anchors, and relative paths. Escaping HTML
  * characters alone doesn't stop a `javascript:` URI from being written
  * into an href/src, since that's a URL-scheme problem, not a markup
- * problem -- this closes that gap for both <a href> and <img src>.
+ * problem - this closes that gap for both <a href> and <img src>.
  */
 function sanitizeUrl(url: string): string {
   const trimmed = url.trim();
@@ -312,7 +312,7 @@ function StatHighlight({ content }: { content: string }) {
   const stat = statMatch ? statMatch[1] : numberMatch ? numberMatch[1] : null;
 
   if (stat) {
-    const rest = content.replace(stat, "").trim().replace(/^[–-]\s*/, "").replace(/^:\s*/, "");
+    const rest = content.replace(stat, "").trim().replace(/^[--]\s*/, "").replace(/^:\s*/, "");
     return (
       <div className="my-8 flex items-start gap-5 p-6 bg-gradient-to-r from-[#0a1722] to-[#1a2d3d] rounded-2xl text-white">
         <div className="flex-shrink-0">
@@ -745,7 +745,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 case "image":
                   return (
                     <figure key={i} className="my-8">
-                      {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary admin-pasted URL, not a whitelistable domain like cover_url */}
+                      {/* eslint-disable-next-line @next/next/no-img-element - arbitrary admin-pasted URL, not a whitelistable domain like cover_url */}
                       <img src={block.src} alt={block.alt} className="w-full rounded-2xl" />
                       {block.alt && <figcaption className="text-center text-[12px] text-[#8aa4b4] mt-2">{block.alt}</figcaption>}
                     </figure>

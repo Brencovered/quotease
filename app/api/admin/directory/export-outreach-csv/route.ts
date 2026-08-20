@@ -9,7 +9,7 @@ const PAGE = 1000;
 
 function csvField(value: string | number | null | undefined): string {
   const str = value === null || value === undefined ? "" : String(value);
-  // Quote every field and escape embedded quotes -- simplest way to be
+  // Quote every field and escape embedded quotes - simplest way to be
   // safe against commas, newlines, and quotes in scraped business names.
   return `"${str.replace(/"/g, '""')}"`;
 }
@@ -32,7 +32,7 @@ function csvField(value: string | number | null | undefined): string {
  *
  * Marks outreach_contacted_at on every exported row (unless
  * ?includeContacted=true is passed) so re-running this later only pulls
- * listings that haven't been exported before -- avoids double-emailing the
+ * listings that haven't been exported before - avoids double-emailing the
  * same business across separate HubSpot campaigns.
  */
 export async function GET(req: NextRequest) {
@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
     from += PAGE;
   }
 
-  // Dedupe by email -- a handful of listings share a scraped email
+  // Dedupe by email - a handful of listings share a scraped email
   const seen = new Set<string>();
   const deduped = rows.filter((r) => {
     const email = (r.private_email ?? r.scraped_contact_email ?? "").toLowerCase().trim();
@@ -129,7 +129,7 @@ export async function GET(req: NextRequest) {
 
   const csv = [header.join(","), ...csvRows].join("\n");
 
-  // Mark as contacted so a repeat export later doesn't re-include these --
+  // Mark as contacted so a repeat export later doesn't re-include these -
   // matches "export = about to send" intent. Skipped when previewing with
   // includeContacted=true.
   if (!includeContacted && deduped.length > 0) {

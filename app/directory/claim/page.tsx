@@ -56,7 +56,7 @@ function ClaimDirectoryListingInner() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [step, setStep] = useState<Step>("auth");
 
-  // Auth step -- deliberately separate from the main app's /login and
+  // Auth step - deliberately separate from the main app's /login and
   // /signup: this is the free claimed directory page's own entry point, not the
   // $45 plan's onboarding wizard, and shouldn't look or feel like it. A new
   // account created here should never be routed through /onboarding.
@@ -88,7 +88,7 @@ function ClaimDirectoryListingInner() {
   const [resultVerified, setResultVerified] = useState(false);
 
   // Returning tradie who already claimed a listing shouldn't have to search
-  // for their business again just to log back in -- send them straight to
+  // for their business again just to log back in - send them straight to
   // the management screen instead. Returns true if it redirected.
   async function redirectIfAlreadyClaimed(): Promise<boolean> {
     try {
@@ -98,14 +98,14 @@ function ClaimDirectoryListingInner() {
         return true;
       }
     } catch {
-      // fall through -- if this check fails, just proceed to the normal
+      // fall through - if this check fails, just proceed to the normal
       // search flow rather than blocking the user entirely
     }
     return false;
   }
 
   // Already signed in (e.g. an existing $45 tradie extending into a
-  // directory page) -- skip straight past the auth step. If they already
+  // directory page) - skip straight past the auth step. If they already
   // have a claimed listing, skip straight to managing it instead of
   // searching for a business all over again.
   useEffect(() => {
@@ -121,7 +121,7 @@ function ClaimDirectoryListingInner() {
   }, []);
 
   // Claim links (outreach emails, HubSpot export, admin-triggered invites)
-  // carry a claim_token that resolves straight to one exact listing --
+  // carry a claim_token that resolves straight to one exact listing -
   // skips the fuzzy search-and-pick step entirely. Falls back to the
   // normal search step if there's no token, or if it doesn't resolve.
   async function resolveEntryStep() {
@@ -143,7 +143,7 @@ function ClaimDirectoryListingInner() {
       }
       if (data.isClaimed) {
         // Already claimed by someone else by the time they clicked through
-        // -- fall back to search rather than dead-ending them.
+        // - fall back to search rather than dead-ending them.
         setStep("search");
         return;
       }
@@ -173,7 +173,7 @@ function ClaimDirectoryListingInner() {
           email: email.trim(),
           password,
           options: {
-            // Explicitly back to /directory/claim -- never the $45 plan's
+            // Explicitly back to /directory/claim - never the $45 plan's
             // /onboarding default that a bare signUp() would otherwise send
             // an email-confirmation link to. Preserve the query string so
             // a claim_token (or pre-filled name/trade/suburb) survives the
@@ -184,7 +184,7 @@ function ClaimDirectoryListingInner() {
             // platform trial. Without this, every directory-only signup got
             // trial_ends_at = now() + 7 days like a real platform signup,
             // and middleware's trialStillValid check does not look at
-            // subscription_status, only trial_ends_at -- so a listing-only
+            // subscription_status, only trial_ends_at - so a listing-only
             // account got full access to quoting, jobs, materials etc for
             // a week with no card and no intent to use any of it. Found via
             // team+demosu@swiftscope.com.au, created purely to test this
@@ -408,7 +408,7 @@ function ClaimDirectoryListingInner() {
                 </button>
 
                 <p className="text-[12px] text-[#8a97a1] text-center">
-                  This is just for your directory page -- not the full Swiftscope job management sign up. Already claimed a listing? Log in above to manage it.
+                  This is just for your directory page - not the full Swiftscope job management sign up. Already claimed a listing? Log in above to manage it.
                 </p>
               </form>
             )}
@@ -519,7 +519,7 @@ function ClaimDirectoryListingInner() {
                   onClick={() => { setSelectedListingId("new"); setStep("abn"); }}
                   className="btn-secondary w-full mt-4"
                 >
-                  None of these -- create a new listing
+                  None of these - create a new listing
                 </button>
               </div>
             ) : (
@@ -595,7 +595,7 @@ function ClaimDirectoryListingInner() {
             {abn && (
               <p className={`text-[13px] mb-6 ${resultVerified ? "text-emerald-600" : "text-[#8a97a1]"}`}>
                 {resultVerified
-                  ? "Your ABN was verified -- the Verified Business badge is now showing on your page."
+                  ? "Your ABN was verified - the Verified Business badge is now showing on your page."
                   : "We couldn't verify that ABN right now. You can add it again later from Manage your page."}
               </p>
             )}

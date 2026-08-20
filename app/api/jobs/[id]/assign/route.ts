@@ -45,7 +45,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     member = data;
   }
 
-  // Optional start date (YYYY-MM-DD) — assign + schedule in one action so My day fills.
+  // Optional start date (YYYY-MM-DD) - assign + schedule in one action so My day fills.
   const scheduledStartRaw =
     typeof body.scheduledStart === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.scheduledStart)
       ? body.scheduledStart

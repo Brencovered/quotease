@@ -10,7 +10,7 @@ import {
   ToolToggle,
 } from "@/components/marketing/tools/ToolShell";
 
-/** ATO cents-per-km rate for 2024–25 / 2025–26 planning (88c). */
+/** ATO cents-per-km rate for 2024-25 / 2025-26 planning (88c). */
 const ATO_CENTS_PER_KM = 0.88;
 
 type VehicleType = "ute" | "van" | "truck";
@@ -162,7 +162,7 @@ export default function VehicleCostCalculator() {
             />
           </dl>
           <p className="font-sans text-[13px] leading-[1.6] text-[#5a6a78] mt-4">
-            Benchmark only. The ATO cents-per-km rate is 88c for 2024–25 and 2025–26 (rates change by year).{" "}
+            Benchmark only. The ATO cents-per-km rate is 88c for 2024-25 and 2025-26 (rates change by year).{" "}
             <a
               href="https://www.ato.gov.au/individuals-and-families/income-deductions-offsets-and-records/deductions-you-can-claim/work-related-deductions/cars-transport-and-travel/motor-vehicle-and-car-expenses/expenses-for-a-car-you-own-or-lease/cents-per-kilometre-method"
               target="_blank"

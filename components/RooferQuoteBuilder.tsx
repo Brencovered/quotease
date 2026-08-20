@@ -154,7 +154,7 @@ export default function RooferQuoteBuilder({
   // or the calculated hours just being wrong for this job.
   const [manualLabourHrs, setManualLabourHrs] = useState(0);
 
-  // ── Customer & site (was missing entirely -- save/send had no way to
+  // ── Customer & site (was missing entirely - save/send had no way to
   //    know who the quote was for) ──────────────────────────────────
   const [clientName,  setClientName]  = useState("");
   const [clientEmail, setClientEmail] = useState("");
@@ -450,7 +450,7 @@ export default function RooferQuoteBuilder({
   // ── Build + send quote ─────────────────────────────────────────
   // Previously this was a stub: profile_id was hardcoded to "TODO", there
   // was no client name/email/address capture at all (hardcoded to ""), and
-  // handleSend just did console.log -- nothing was ever actually saved
+  // handleSend just did console.log - nothing was ever actually saved
   // against a real account or sent to a client. Rebuilt to match the same
   // pattern the other 4 trades use.
   async function saveAndSend(sendEmail: boolean) {
@@ -535,7 +535,7 @@ export default function RooferQuoteBuilder({
 
     if (sendEmail) {
       const res = await fetch("/api/quotes/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quoteId: quote.id }) });
-      if (!res.ok) { const b = await res.json().catch(() => ({})); await supabase.from("quotes").update({ status: "draft", sent_at: null }).eq("id", quote.id); setSaveMessage(`Saved -- sending failed: ${b.error ?? res.statusText}`); setSaving(false); return; }
+      if (!res.ok) { const b = await res.json().catch(() => ({})); await supabase.from("quotes").update({ status: "draft", sent_at: null }).eq("id", quote.id); setSaveMessage(`Saved - sending failed: ${b.error ?? res.statusText}`); setSaving(false); return; }
       setSaveMessage(`Sent to ${clientEmail}`);
     } else {
       setSaveMessage("Saved as draft");
@@ -583,7 +583,7 @@ export default function RooferQuoteBuilder({
         )}
       </div>
 
-      {/* Customer & site -- previously missing entirely */}
+      {/* Customer & site - previously missing entirely */}
       <StepCustomer
         clientName={clientName} setClientName={setClientName}
         clientEmail={clientEmail} setClientEmail={setClientEmail}

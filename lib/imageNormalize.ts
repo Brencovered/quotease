@@ -4,7 +4,7 @@
 // modern phone camera easily produces 4000px+ images, multiple MB even as
 // JPEG) so uploads stay comfortably under the platform's request body size
 // limit. Full camera resolution is never needed for AI analysis or a PDF
-// logo -- Claude's vision API itself downsamples large images internally.
+// logo - Claude's vision API itself downsamples large images internally.
 async function rasterize(file: File, maxDimension?: number): Promise<HTMLCanvasElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();

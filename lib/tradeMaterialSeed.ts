@@ -3,7 +3,7 @@
  * -------------------------
  * Default starter material_items for every product trade. Dedicated trades
  * use their calc-engine defaults; generic trades use GENERIC_TRADE_TEMPLATES
- * materials (labour lines are skipped — those come from packages / quote).
+ * materials (labour lines are skipped - those come from packages / quote).
  *
  * Seeded once at onboarding via seedDefaultMaterials(). Also seeds a
  * starter package per trade so the first quote isn't an empty book.
@@ -54,7 +54,7 @@ export const TRADE_MATERIAL_SEED: Record<string, readonly { item_key: string; la
 
 /**
  * Seeds default material_items for a trade, if defaults exist for it.
- * Safe to call more than once -- upserts on (profile_id, item_key).
+ * Safe to call more than once - upserts on (profile_id, item_key).
  */
 export async function seedDefaultMaterials(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -97,7 +97,7 @@ export async function seedDefaultPackage(
   if ((count ?? 0) > 0) return;
 
   const tpl = GENERIC_TRADE_TEMPLATES[trade];
-  const title = tpl ? `${tpl.label} — starter package` : "Starter package";
+  const title = tpl ? `${tpl.label} - starter package` : "Starter package";
   const description = tpl
     ? `Starter scope for ${tpl.jobTypes[0] ?? "typical jobs"}. Edit quantities to match the site.`
     : "Edit this package or build your own from the materials book.";

@@ -257,7 +257,7 @@ export default function AdminScraperPage() {
   };
 
   // Re-extracts logo_url for listings created in the last N hours, in
-  // bounded batches (no Google Places API calls -- just re-fetches each
+  // bounded batches (no Google Places API calls - just re-fetches each
   // business's own website with the corrected logo-detection priority).
   const runRefreshLogos = useCallback(async () => {
     setRefreshRunning(true);
@@ -295,7 +295,7 @@ export default function AdminScraperPage() {
   }, [refreshHours]);
 
   // Downloads and permanently caches Google photos for listings due for a
-  // refresh (never cached, or cached 6+ months ago) -- loops in bounded
+  // refresh (never cached, or cached 6+ months ago) - loops in bounded
   // batches until nothing is due right now. Ongoing maintenance also runs
   // automatically via the weekly cron (app/api/cron/cache-photos); this is
   // just for running the initial backfill (or a top-up) on demand.
@@ -336,7 +336,7 @@ export default function AdminScraperPage() {
         </p>
       </div>
 
-      {/* Refresh logos -- fixes bad logos (e.g. og:image hero photos) on
+      {/* Refresh logos - fixes bad logos (e.g. og:image hero photos) on
           already-scraped listings without re-spending Google Places API
           credits. Just re-fetches each business's own website. */}
       <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-6 mb-6">
@@ -345,7 +345,7 @@ export default function AdminScraperPage() {
         </h2>
         <p className="text-[12.5px] text-[var(--ink-soft)] mb-4">
           Re-checks each listing&apos;s own website for a real logo (fixes the og:image-as-logo bug for listings
-          scraped before that fix). No Google Places API cost -- just re-fetches their website.
+          scraped before that fix). No Google Places API cost - just re-fetches their website.
         </p>
         <div className="flex items-center gap-3 flex-wrap">
           <label className="text-[13px] text-[var(--ink-soft)] flex items-center gap-2">
@@ -370,14 +370,14 @@ export default function AdminScraperPage() {
           </button>
           {refreshProgress && (
             <span className="text-[12.5px] text-[var(--ink-soft)]">
-              Checked {refreshProgress.checked}{refreshProgress.total ? ` of ${refreshProgress.total}` : ""} -- {refreshProgress.updated} logo{refreshProgress.updated !== 1 ? "s" : ""} updated
+              Checked {refreshProgress.checked}{refreshProgress.total ? ` of ${refreshProgress.total}` : ""} - {refreshProgress.updated} logo{refreshProgress.updated !== 1 ? "s" : ""} updated
             </span>
           )}
           {refreshError && <span className="text-[12.5px] text-red-600 font-semibold">{refreshError}</span>}
         </div>
       </div>
 
-      {/* Cache photos -- downloads Google photos once and stores them
+      {/* Cache photos - downloads Google photos once and stores them
           permanently, so viewing a listing no longer calls Google's paid
           Photo API on every single page view. Runs automatically every
           week for whatever's due (6+ months since last cached); this
@@ -389,7 +389,7 @@ export default function AdminScraperPage() {
         <p className="text-[12.5px] text-[var(--ink-soft)] mb-4">
           Downloads each unclaimed listing&apos;s Google photos once and stores them permanently, instead of calling
           Google&apos;s paid Photo API on every page view. Runs automatically every week for anything due (6+ months
-          since last cached) -- this button runs it right now instead of waiting.
+          since last cached) - this button runs it right now instead of waiting.
         </p>
         <div className="flex items-center gap-3 flex-wrap">
           <button
@@ -402,7 +402,7 @@ export default function AdminScraperPage() {
           </button>
           {cachePhotosProgress && (
             <span className="text-[12.5px] text-[var(--ink-soft)]">
-              Checked {cachePhotosProgress.checked}{cachePhotosProgress.totalDue ? ` of ${cachePhotosProgress.totalDue} due` : ""} -- {cachePhotosProgress.cached} listing{cachePhotosProgress.cached !== 1 ? "s" : ""} cached
+              Checked {cachePhotosProgress.checked}{cachePhotosProgress.totalDue ? ` of ${cachePhotosProgress.totalDue} due` : ""} - {cachePhotosProgress.cached} listing{cachePhotosProgress.cached !== 1 ? "s" : ""} cached
             </span>
           )}
           {cachePhotosError && <span className="text-[12.5px] text-red-600 font-semibold">{cachePhotosError}</span>}

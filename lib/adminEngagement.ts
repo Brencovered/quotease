@@ -5,11 +5,11 @@
  * tradie account, used as the progress bar on the admin dashboard.
  *
  * Milestones are weighted by how deep into actually using the product they
- * represent -- signing up is worth less than a client accepting a quote.
+ * represent - signing up is worth less than a client accepting a quote.
  */
 
 export interface TradieEngagementInputs {
-  onboarded: boolean;       // picked their trade(s) -- profiles.onboarded_at
+  onboarded: boolean;       // picked their trade(s) - profiles.onboarded_at
   hasMaterials: boolean;    // set up at least one material/price item
   quotesCreated: number;
   quotesSent: number;

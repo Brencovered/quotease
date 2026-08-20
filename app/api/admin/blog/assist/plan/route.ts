@@ -4,7 +4,7 @@
  * Admin-only. Takes a target SEO keyword plus a post type and turns it
  * into a structured outline (title, slug, excerpt, category, tags, key
  * takeaways, section headings) that the composer UI hands to the writer.
- * This never writes prose for the body -- see assist/draft for that --
+ * This never writes prose for the body - see assist/draft for that -
  * it only plans structure, so the "words stay yours" framing in the UI
  * stays true even when a section is drafted afterward.
  *
@@ -34,11 +34,11 @@ const PlanSchema = z.object({
 
 type Plan = z.infer<typeof PlanSchema>;
 
-const PRODUCT_CONTEXT = `PRODUCT FACTS (use only these, never invent competitor pricing or specifics -- if
+const PRODUCT_CONTEXT = `PRODUCT FACTS (use only these, never invent competitor pricing or specifics - if
 something else is needed, phrase the brief as a placeholder to verify, not a fabricated claim):
 Swiftscope: $45/month flat, unlimited users, unlimited jobs, 7 day trial, no per-user or
 per-job fees, directory listing with no per-lead cost, drawing markup built in, Xero integration.
-ServiceM8 (for comparison posts): charges by job volume -- Free $0 (1 user, 30 jobs), Starter $29
+ServiceM8 (for comparison posts): charges by job volume - Free $0 (1 user, 30 jobs), Starter $29
 (50 jobs), Growing $79 (150 jobs), Premium $149 (500 jobs), Premium Plus $349 (1500+ jobs),
 unlimited users on paid plans.
 
@@ -51,7 +51,7 @@ Australian trade businesses (electricians, plumbers, carpenters, roofers, and ot
 
 ${PRODUCT_CONTEXT}
 
-You are planning STRUCTURE only -- headings and one-sentence briefs -- not writing the post.
+You are planning STRUCTURE only - headings and one-sentence briefs - not writing the post.
 The author writes every word themselves; your job is to give them a strong, well-researched
 starting skeleton so they aren't facing a blank page.`;
 }
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
 
   const prompt = `Target keyword: "${keyword}"
 Post type: ${POST_TYPE_BRIEFS[postType] ?? postType}
-Author's angle (real information or a story only they know, use it if given): ${notes || "(none given -- plan around the keyword and product facts alone)"}
+Author's angle (real information or a story only they know, use it if given): ${notes || "(none given - plan around the keyword and product facts alone)"}
 
 Plan 4 to 6 sections.`;
 

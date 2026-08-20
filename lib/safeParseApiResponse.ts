@@ -3,9 +3,9 @@
  * ---------------------------
  * Every AI analysis call (drawing/voice) across all five trade builders did
  * `const body = await res.json()` unconditionally. If the response isn't
- * JSON -- most commonly a plain-text 413 "Request Entity Too Large" from
+ * JSON - most commonly a plain-text 413 "Request Entity Too Large" from
  * the platform when an uploaded photo/PDF is too large, returned before our
- * own route handler even runs -- res.json() throws a raw
+ * own route handler even runs - res.json() throws a raw
  * "Unexpected token 'R', "Request En"... is not valid JSON" SyntaxError,
  * which then surfaces to the tradie as that exact confusing text instead of
  * a useful message.

@@ -3,7 +3,7 @@
  * ------------------------
  * All real page-level traffic (not just signups/claims), for a genuinely
  * live view. Reads public.traffic_log, written by middleware.ts on every
- * page request it sees -- deliberately unfiltered, since the ask was
+ * page request it sees - deliberately unfiltered, since the ask was
  * specifically to see bot traffic (Googlebot, crawlers, prefetches)
  * alongside real visitors, not a curated feed with the bots removed.
  *

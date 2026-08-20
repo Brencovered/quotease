@@ -18,7 +18,7 @@ import type { Metadata } from "next";
 const BASE_URL = "https://swiftscope.com.au";
 const DEFAULT_OG = `${BASE_URL}/og-default-image`; // generated on request, see app/og-default-image/route.tsx
 
-// -- Canonical helpers ----------------------------------------------------
+// - Canonical helpers ----------------------------------------------------
 
 // Single source of truth for trade -> URL slug. Two different raw trade
 // strings can legitimately map to the same slug ("aircon" and "air
@@ -84,7 +84,7 @@ export function buildDirectorySlug(row: { id: string; business_name: string; sub
   return sub ? `${name}-${sub}-${uid}` : `${name}-${uid}`;
 }
 
-// -- Trade display names --------------------------------------------------
+// - Trade display names --------------------------------------------------
 
 const TRADE_DISPLAY: Record<string, { singular: string; plural: string }> = {
   electrician:     { singular: "Electrician",     plural: "Electricians" },
@@ -106,7 +106,7 @@ export function getTradeDisplay(trade: string) {
   return TRADE_DISPLAY[trade.toLowerCase()] ?? { singular: trade, plural: `${trade}s` };
 }
 
-// -- Page-level Metadata generators ---------------------------------------
+// - Page-level Metadata generators ---------------------------------------
 
 export function homepageMeta(): Metadata {
   const title       = "Swiftscope - Scope, Quote & Win Jobs On Site | Built for Tradies";
@@ -170,7 +170,7 @@ export function tradieListingMeta(listing: {
   google_rating?: number | null;
   google_reviews_count?: number | null;
   logo_url?: string | null;
-  slug: string; // NOTE: assumes a stable slug exists on the listing -- add this column if needed
+  slug: string; // NOTE: assumes a stable slug exists on the listing - add this column if needed
 }): Metadata {
   const trade     = listing.trades[0] ?? "tradie";
   const { singular } = getTradeDisplay(trade);
@@ -222,11 +222,11 @@ export function directoryMeta(): Metadata {
   };
 }
 
-// -- Export helpers for use in generateStaticParams etc. -----------------
+// - Export helpers for use in generateStaticParams etc. -----------------
 
 export { tradeToSlug, suburbToSlug };
 
-// -- Reverse lookup: plural trade slug -> internal trade key -------------
+// - Reverse lookup: plural trade slug -> internal trade key -------------
 // Built from TRADE_DISPLAY plus the irregular plurals in tradeToSlug().
 const SLUG_TO_TRADE: Record<string, string> = {
   electricians: "electrician",
@@ -249,19 +249,19 @@ const VALID_STATE_SLUGS = ["vic", "nsw", "qld", "wa", "sa", "tas", "act", "nt"];
 /**
  * Derives an Australian state from a postcode, returning the same lowercase
  * slug format used throughout this file's URL scheme (VALID_STATE_SLUGS
- * above) -- e.g. "vic", "nsw". Approximate official Australia Post
+ * above) - e.g. "vic", "nsw". Approximate official Australia Post
  * postcode ranges; good enough for URL/SEO grouping, not meant to resolve
  * every edge-case PO box range.
  *
  * Exists because state was hardcoded to "vic" everywhere that needed it
  * (app/api/cron/refresh-seo, app/[tradeSuburb]/page.tsx's
- * generateStaticParams) -- directory_listing.postcode is already
+ * generateStaticParams) - directory_listing.postcode is already
  * populated for real listings, so there was never actually a need to wait
  * for a dedicated state column, just to derive it here consistently.
  */
 export function postcodeToState(postcode: string | null | undefined): string {
   const n = parseInt(postcode ?? "", 10);
-  if (isNaN(n)) return "vic"; // unresolvable -- fall back rather than produce an invalid/missing state segment
+  if (isNaN(n)) return "vic"; // unresolvable - fall back rather than produce an invalid/missing state segment
   if (n >= 800 && n <= 899) return "nt";
   if ((n >= 2600 && n <= 2618) || (n >= 2900 && n <= 2920)) return "act";
   if ((n >= 1000 && n <= 2599) || (n >= 2619 && n <= 2899) || (n >= 2921 && n <= 2999)) return "nsw";
@@ -308,7 +308,7 @@ export function getTradeVariants(trade: string): string[] {
  * peeling a known trade slug off the front and a known state slug off the
  * back, treating whatever's left in the middle as the suburb.
  *
- * Returns null if the segment doesn't match a known trade or state -- the
+ * Returns null if the segment doesn't match a known trade or state - the
  * page component should call notFound() in that case.
  */
 export function parseTradeSuburbSlug(segment: string): { trade: string; suburbSlug: string; state: string } | null {

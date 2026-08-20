@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { TradeQuoteField } from "@/lib/marketing/trade-hub-engagement";
 
 function moneyAud(n: number) {
-  if (!n) return "—";
+  if (!n) return "-";
   return n.toLocaleString("en-AU", {
     style: "currency",
     currency: "AUD",
@@ -116,7 +116,7 @@ export default function TradeQuoteFieldsInteractive({
 
               <div className="px-4 py-3 border-t border-[#e8ecef] bg-[#f7f8f9]">
                 <p className="font-sans text-[12.5px] text-[#5a6a78] leading-snug">
-                  Highlighted: <span className="font-semibold text-[#071018]">{active.label}</span> —
+                  Highlighted: <span className="font-semibold text-[#071018]">{active.label}</span> -
                   how that field shows inside Swiftscope.
                 </p>
               </div>

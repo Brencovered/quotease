@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { CLAIMED_DIRECTORY_PAGES_ENABLED } from "@/lib/featureFlags";
 
 /**
- * Resolves a claim_token straight to its exact directory_listing row -- no
+ * Resolves a claim_token straight to its exact directory_listing row - no
  * fuzzy name/trade/suburb search needed. Used by outreach links (HubSpot
  * export, admin claim-invite) so clicking through lands the tradie on a
  * single confirmed match instead of having to search for their own
@@ -12,7 +12,7 @@ import { CLAIMED_DIRECTORY_PAGES_ENABLED } from "@/lib/featureFlags";
  *
  * Uses the admin client for the actual read since directory_listing has no
  * end-user RLS policy (admin-managed, public-read only via the page routes,
- * not via this API) -- but still requires a session, consistent with
+ * not via this API) - but still requires a session, consistent with
  * lookup/route.ts, since this only makes sense mid-claim-flow (after the
  * auth step) not as a public unauthenticated endpoint.
  */

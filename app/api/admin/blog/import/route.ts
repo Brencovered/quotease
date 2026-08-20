@@ -33,7 +33,7 @@
  * Auth matches the rest of /api/admin: session user must be in
  * ADMIN_EMAILS. The write itself goes through the service-role client, so
  * it does not depend on profiles.subscription_status = 'admin' the way
- * the blog_posts RLS policy does -- two independent admin mechanisms
+ * the blog_posts RLS policy does - two independent admin mechanisms
  * already caused one silent failure, and this route shouldn't add a third
  * dependency on the fragile one.
  */

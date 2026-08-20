@@ -79,7 +79,7 @@ export default function EmailTemplatesViewer({ templates }: { templates: Templat
             <div className="p-5">
               <div className="mb-3 flex items-center gap-2 text-[12px] text-[var(--ink-faint)] bg-[var(--line-subtle)] rounded-lg px-3 py-2">
                 <Mail size={13} />
-                Rendered with sample data — real sends use the actual business name, job details, etc.
+                Rendered with sample data - real sends use the actual business name, job details, etc.
               </div>
 
               {view === "preview" ? (

@@ -5,7 +5,7 @@
  * Lookup API (https://abr.business.gov.au). Requires a free GUID, register
  * at https://abr.business.gov.au/Tools/WebServices and set ABN_LOOKUP_GUID.
  *
- * Not configured yet -- verifyAbn() returns { valid: false, configured: false }
+ * Not configured yet - verifyAbn() returns { valid: false, configured: false }
  * until ABN_LOOKUP_GUID is set, so the claim flow degrades to "unverified"
  * rather than throwing when this env var is missing (same pattern as the
  * Google Service Account Key gap noted elsewhere in the roadmap).
@@ -39,7 +39,7 @@ export async function verifyAbn(abn: string): Promise<AbnVerificationResult> {
     }
 
     // The endpoint returns JSONP-ish text (callback(...)) rather than pure
-    // JSON by default -- strip a wrapping function call if present.
+    // JSON by default - strip a wrapping function call if present.
     const text = await res.text();
     const jsonText = text.replace(/^[^(]*\(/, "").replace(/\)\s*;?\s*$/, "");
     const data = JSON.parse(jsonText);

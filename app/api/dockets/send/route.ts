@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ok: true,
       docketUrl,
-      warning: "Docket marked sent but email was not delivered — RESEND_API_KEY is not configured.",
+      warning: "Docket marked sent but email was not delivered - RESEND_API_KEY is not configured.",
     });
   }
 

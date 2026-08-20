@@ -135,7 +135,7 @@ export default function DirectoryLeadsPanel({
         </div>
       </div>
 
-      {/* Compact report strip — not a dashboard wall */}
+      {/* Compact report strip - not a dashboard wall */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
         {(["hot", "warm", "cold"] as LeadPriority[]).map((p) => {
           const { Icon, color } = TEMP_ICON[p];
@@ -201,7 +201,7 @@ export default function DirectoryLeadsPanel({
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
                       <span className="font-mono text-[12px] font-bold text-[var(--ink-faint)]">
-                        {r.lead_code ?? "—"}
+                        {r.lead_code ?? "-"}
                       </span>
                       {p && Icon && (
                         <span className={`inline-flex items-center gap-1 text-[11px] font-bold ${temp.color}`}>

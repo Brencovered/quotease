@@ -3,7 +3,7 @@
  * -----------------------
  * Makes the "Name or service" search box tolerant of how people actually
  * type, e.g. "urgent plumber", "roofer asap", "need an electrician
- * Brighton" -- rather than one literal substring match against the whole
+ * Brighton" - rather than one literal substring match against the whole
  * phrase (which almost never exists verbatim in a business's own text).
  *
  * parseSearchQuery():
@@ -12,7 +12,7 @@
  *     (directory_listing.trades contains X) instead of a fuzzy text match.
  *  2. Strips urgency/filler words ("urgent", "asap", "emergency", "now",
  *     "immediately", "need", "needed", "please", "a", "an") that don't
- *     correspond to anything filterable yet -- there's no live
+ *     correspond to anything filterable yet - there's no live
  *     availability/response-time signal to act on them with, so they're
  *     dropped rather than silently breaking the match.
  *  3. Whatever's left is returned as individual significant words, meant
@@ -44,12 +44,12 @@ const NOISE_WORDS = new Set([
 
 export interface ParsedSearchQuery {
   detectedTrade: string | null;
-  /** Non-noise words with any detected trade keyword removed -- meant to
+  /** Non-noise words with any detected trade keyword removed - meant to
    * be ANDed together as a text search, used when the query is NOT
    * confidently just "trade + noise" (see significantWords vs
    * nonNoiseWords below). */
   significantWords: string[];
-  /** Every non-noise word, trade keyword included -- use this instead of
+  /** Every non-noise word, trade keyword included - use this instead of
    * significantWords whenever there's anything left besides the detected
    * trade, since a word that happens to match a trade keyword might just
    * be part of a business name ("Spark Ease Electrical") rather than an

@@ -2,20 +2,20 @@
  * Rate limiting for cost-exposed API routes.
  * ------------------------------------------
  * Several routes trigger direct paid AI/vision API calls per request
- * (drawing analysis, voice transcription, chat). Someone flooding these --
- * even accidentally, e.g. a buggy retry loop on the client -- can run up
+ * (drawing analysis, voice transcription, chat). Someone flooding these -
+ * even accidentally, e.g. a buggy retry loop on the client - can run up
  * a real bill fast, since margin per customer is thin and per-call cost
  * is real, not free.
  *
  * Backed by Upstash Redis (sliding-window, cross-instance) when
  * UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN are set. If those env
- * vars are absent -- e.g. Upstash hasn't been provisioned yet -- this
+ * vars are absent - e.g. Upstash hasn't been provisioned yet - this
  * falls back to the original in-memory limiter so nothing breaks, but
  * enforcement is then per-instance only (a single warm Vercel instance's
  * counters, not a global limit across concurrent cold starts).
  *
  * Keyed by authenticated user id (not IP), since every route this is
- * applied to already requires a logged-in user -- far more meaningful
+ * applied to already requires a logged-in user - far more meaningful
  * than IP-based limiting, which punishes shared networks and does
  * nothing against a single attacker with multiple accounts/IPs anyway.
  */
@@ -125,7 +125,7 @@ function checkRateLimitInMemory(key: string, limit: number, windowMs: number): R
 // ── Public API ───────────────────────────────────────────────────────────────
 
 /**
- * Rate limit check. Call once per request; does not throw -- the caller
+ * Rate limit check. Call once per request; does not throw - the caller
  * decides what to do with `allowed: false` (return a 429).
  *
  * Uses Upstash Redis when configured (true cross-instance enforcement),
@@ -146,7 +146,7 @@ export async function checkRateLimit(
     try {
       return await checkRateLimitUpstash(key, limit, windowMs);
     } catch (err) {
-      // Upstash unreachable -- fail open to in-memory rather than blocking
+      // Upstash unreachable - fail open to in-memory rather than blocking
       // every request or throwing 500s on a rate-limiter outage.
       console.error("Upstash rate limit check failed, falling back to in-memory:", err);
       return checkRateLimitInMemory(key, limit, windowMs);

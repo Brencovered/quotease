@@ -146,7 +146,7 @@ export default function MaterialsEditor({
 
       {saveError && <p className="text-[12px] text-[var(--red)] mb-2">{saveError}</p>}
 
-      {/* Price book search -- searches supplier imports, falls back to manual */}
+      {/* Price book search - searches supplier imports, falls back to manual */}
       <div className="bg-[var(--app-bg)] rounded-xl p-2 space-y-2">
         <PriceBookSearch
           trade={trade}

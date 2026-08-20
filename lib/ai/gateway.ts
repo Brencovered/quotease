@@ -4,18 +4,18 @@
  * All AI requests route through Vercel AI Gateway.
  *
  * Auth:
- *   - Production: Vercel injects OIDC token automatically -- no config needed
+ *   - Production: Vercel injects OIDC token automatically - no config needed
  *   - Local dev:  Set AI_GATEWAY_API_KEY in .env.local (from Vercel dashboard
  *                 under AI Gateway > API Keys)
  *
- * NO direct OpenAI or Anthropic keys -- everything goes through the gateway.
+ * NO direct OpenAI or Anthropic keys - everything goes through the gateway.
  * Model strings like "openai/gpt-4o-mini" are resolved by the gateway.
  */
 
 import { generateText, generateObject, streamText } from "ai";
 import { type ZodSchema } from "zod";
 
-// Only used for local dev -- Vercel injects auth automatically in production
+// Only used for local dev - Vercel injects auth automatically in production
 if (process.env.AI_GATEWAY_API_KEY) {
   process.env.AI_GATEWAY_API_KEY = process.env.AI_GATEWAY_API_KEY;
 }
@@ -25,7 +25,7 @@ export const MODELS = {
   TEXT_FALLBACK:   "anthropic/claude-3-haiku",
   VISION_PRIMARY:  "openai/gpt-4o",
   VISION_FALLBACK: "anthropic/claude-3-5-sonnet",
-  // Used by the chat, business-assistant, and analyze-voice routes below --
+  // Used by the chat, business-assistant, and analyze-voice routes below -
   // named separately from the pair above since those were already in use
   // by drawing-analysis/voice-quote and this keeps their behaviour
   // untouched while migrating the remaining direct-fetch routes.

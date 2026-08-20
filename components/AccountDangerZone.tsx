@@ -97,7 +97,7 @@ function CancelSubscriptionRow({
       <div>
         <p className="font-semibold text-[var(--ink)] mb-1">Subscription</p>
         <p className="text-[13px] text-[var(--ink-faint)]">
-          {subscriptionStatus === "trialing" ? "You're on a free trial -- no active subscription to cancel yet." : "No active subscription found."}
+          {subscriptionStatus === "trialing" ? "You're on a free trial - no active subscription to cancel yet." : "No active subscription found."}
         </p>
       </div>
     );
@@ -170,8 +170,8 @@ function DeleteAccountRow({ businessName }: { businessName: string }) {
       {!open ? (
         <>
           <p className="text-[13px] text-[var(--ink-faint)] mb-2">
-            Cancels any active subscription immediately and schedules your account -- quotes, clients, price
-            book, job files -- for deletion in 30 days. You can log back in and restore it any time before then.
+            Cancels any active subscription immediately and schedules your account - quotes, clients, price
+            book, job files - for deletion in 30 days. You can log back in and restore it any time before then.
           </p>
           <button
             onClick={() => setOpen(true)}
@@ -187,7 +187,7 @@ function DeleteAccountRow({ businessName }: { businessName: string }) {
           </p>
           <p className="text-[12.5px] text-red-700 mb-3">
             Any active subscription is canceled immediately. Your quotes, clients, price book items, and job
-            files stay untouched for 30 days -- log back in any time before then to restore. After 30 days
+            files stay untouched for 30 days - log back in any time before then to restore. After 30 days
             it&apos;s permanent.
           </p>
           <p className="text-[12px] text-red-700 mb-2">

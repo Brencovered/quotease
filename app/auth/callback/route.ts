@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     if (user) {
       // A team member's own row never gets onboarded_at set (only the
       // business owner's does), so this has to check the business they
-      // belong to, not their own id -- same fix already applied to the
+      // belong to, not their own id - same fix already applied to the
       // password-login flow, which had the identical gap.
       const businessId = await getActiveBusinessId(supabase, user.id);
       const isTeamMember = businessId !== user.id;

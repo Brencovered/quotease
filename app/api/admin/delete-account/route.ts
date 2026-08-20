@@ -2,7 +2,7 @@
  * POST /api/admin/delete-account
  * --------------------------------
  * Admin-only. Default action is a 30-day soft delete (cancels billing,
- * sets deleted_at) -- same recoverable flow as the tradie's own delete
+ * sets deleted_at) - same recoverable flow as the tradie's own delete
  * button, but admin-triggered. Pass action: "purge_now" to skip the
  * waiting period and permanently delete immediately (irreversible).
  *

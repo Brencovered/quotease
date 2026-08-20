@@ -133,7 +133,7 @@ export default async function TodayPage() {
         };
       });
 
-      // Open pool for claimers — before filtering to "mine only"
+      // Open pool for claimers - before filtering to "mine only"
       if (canClaimOpenJobs && myMemberId) {
         openJobs = mapped
           .filter((j) => j.is_open)
@@ -153,7 +153,7 @@ export default async function TodayPage() {
         })
         .map(({ assigned_to_me: _a, on_day: _o, is_open: _i, ...job }) => job);
 
-      // Undated stays a count for owners (set a date) — not a tile dump on My day.
+      // Undated stays a count for owners (set a date) - not a tile dump on My day.
       undatedJobs = mine
         .filter((j) => !j.has_start_date && j.status !== "in_progress")
         .sort((a, b) => a.job_number - b.job_number)

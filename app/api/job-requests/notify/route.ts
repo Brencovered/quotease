@@ -29,9 +29,9 @@ async function sendEmail(to: string, subject: string, html: string) {
 
 export async function POST(req: NextRequest) {
   // Same gap as /api/job-requests: the public form and page already stop
-  // people submitting new leads while this flow is off, but this route --
+  // people submitting new leads while this flow is off, but this route -
   // the one that actually sends every email, including the internal
-  // "no tradies matched" one -- never checked the flag itself. Guarding
+  // "no tradies matched" one - never checked the flag itself. Guarding
   // here means nothing gets emailed regardless of how this gets called
   // (direct hit, a stray old request, or the escalate-leads cron).
   if (!LEADS_ENABLED) {
@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!profileIds.length) {
-    // No tradies matched — notify team so they can manually route or follow up
+    // No tradies matched - notify team so they can manually route or follow up
     const noMatch = buildNoMatchLeadEmail({
       trade: request.trade,
       suburb: request.suburb,
@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
     const emailSent = await sendEmail(profile.contact_email, subject, html);
 
     // Log the notification
-    // (lead_matching_log has RLS enabled with no policies -- it's a purely
+    // (lead_matching_log has RLS enabled with no policies - it's a purely
     // internal audit trail with no per-tenant read access needed, so the
     // admin client is used here rather than adding a public policy. The
     // regular client's insert was silently failing before this fix, since

@@ -30,7 +30,7 @@ export default function JobActionsBar({
   amountPaid: number;
   hasClientEmail: boolean;
   completedAt: string | null;
-  /** When true, Start/Done lives on JobFieldStrip — don’t duplicate Complete. */
+  /** When true, Start/Done lives on JobFieldStrip - don’t duplicate Complete. */
   hideComplete?: boolean;
 }) {
   const router = useRouter();

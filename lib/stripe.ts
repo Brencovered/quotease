@@ -17,7 +17,7 @@ export function getStripe(): Stripe {
 }
 
 // $45 AUD/month flat, unlimited users. Annual gets roughly 2 months free
-// ($450/year vs $540 if paid monthly) as the loyalty incentive -- update the
+// ($450/year vs $540 if paid monthly) as the loyalty incentive - update the
 // actual Price object in Stripe to match before setting STRIPE_PRICE_ANNUAL.
 // Create these two Prices in the Stripe dashboard (or via the Stripe CLI)
 // and put their IDs in env vars - never hardcode price IDs, since they

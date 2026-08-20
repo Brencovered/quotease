@@ -13,9 +13,9 @@
  *   3. That service account's email address added as a (at least)
  *      "Restricted" user on the swiftscope.com.au property inside
  *      Google Search Console itself (Settings -> Users and permissions
- *      -> Add user). This step can't be automated -- it's a manual
+ *      -> Add user). This step can't be automated - it's a manual
  *      one-time action in the Search Console UI.
- *   4. The `googleapis` npm package is NOT used here on purpose --
+ *   4. The `googleapis` npm package is NOT used here on purpose -
  *      not currently a project dependency, so these functions sign a
  *      JWT manually and call the REST API directly with fetch, to avoid
  *      adding the dependency before it's actually needed.
@@ -35,7 +35,7 @@ function getServiceAccount(): ServiceAccountKey {
   if (!raw) {
     throw new Error(
       "[searchConsole] GOOGLE_SERVICE_ACCOUNT_KEY is not set. This integration is scaffolded but not " +
-      "configured -- see the comment block at the top of lib/seo/searchConsole.ts for the setup steps " +
+      "configured - see the comment block at the top of lib/seo/searchConsole.ts for the setup steps " +
       "(Google Cloud project, service account, Search Console property access, env var)."
     );
   }
@@ -49,7 +49,7 @@ function getServiceAccount(): ServiceAccountKey {
 /**
  * Mints a short-lived OAuth2 access token for the service account using
  * the JWT bearer flow, without pulling in the `googleapis` package.
- * Scope is read/write Search Console -- sufficient for sitemap submission
+ * Scope is read/write Search Console - sufficient for sitemap submission
  * and the (limited) Search Analytics query API.
  */
 async function getAccessToken(): Promise<string> {
@@ -96,7 +96,7 @@ async function getAccessToken(): Promise<string> {
 // Domain property, not a URL-prefix one: covers www / non-www / http / https
 // in one property, so it doesn't matter which host variant actually served a
 // given request. (An earlier version of this pointed at the bare non-www
-// URL-prefix property, https://swiftscope.com.au/ -- which is a 301 redirect
+// URL-prefix property, https://swiftscope.com.au/ - which is a 301 redirect
 // to the real www host, so Search Console only ever had one page to report
 // on for it: the redirect itself.)
 const SITE_URL = "sc-domain:swiftscope.com.au";
@@ -104,7 +104,7 @@ const SC_API = "https://www.googleapis.com/webmasters/v3/sites";
 
 /**
  * Submits (or re-submits) the sitemap to Search Console. This is the
- * correct modern replacement for the deprecated sitemap-ping endpoint --
+ * correct modern replacement for the deprecated sitemap-ping endpoint -
  * Google will recrawl the sitemap on its own schedule after this, same as
  * if you'd clicked "Submit" in the Search Console UI.
  */
@@ -154,10 +154,10 @@ export async function getSearchAnalytics(opts: {
 /**
  * NOTE ON THE INDEXING API: Google's separate "Indexing API"
  * (indexing.googleapis.com) only works for pages marked up as JobPosting
- * or BroadcastEvent structured data -- using it for ordinary pages like
+ * or BroadcastEvent structured data - using it for ordinary pages like
  * these trade x suburb landing pages violates Google's terms and won't
  * get them crawled any faster anyway (Google has been explicit about
  * this publicly). Deliberately NOT scaffolding a requestIndexing()
- * function here -- submitSitemap() + normal organic crawling is the
+ * function here - submitSitemap() + normal organic crawling is the
  * correct and only legitimate path for this content type.
  */

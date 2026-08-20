@@ -7,7 +7,7 @@ export default async function AdminOutreachPage() {
   const admin = createAdminClient();
   const PAGE = 1000;
 
-  // Fetch all directory listings -- paginate past the 1000 row default limit
+  // Fetch all directory listings - paginate past the 1000 row default limit
   const listings: {
     id: string;
     business_name: string | null;
@@ -47,7 +47,7 @@ export default async function AdminOutreachPage() {
       });
     }
 
-    console.log(`[outreach] fetched rows ${from}–${from + data.length - 1}, total so far: ${listings.length}`);
+    console.log(`[outreach] fetched rows ${from}-${from + data.length - 1}, total so far: ${listings.length}`);
     if (data.length < PAGE) break;
     from += PAGE;
   }

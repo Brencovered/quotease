@@ -10,7 +10,7 @@ import DrawingAnalysisReviewTable, {
 
 /**
  * Starting labour-hour estimate per annotation tag, used ONLY to pre-fill
- * the review table's editable "Hrs" column -- the same role the AI's
+ * the review table's editable "Hrs" column - the same role the AI's
  * labour_hours estimate plays for drawing takeoff and voice quoting.
  *
  * Pricing must NEVER come from this map. It used to (via a direct
@@ -83,7 +83,7 @@ export default function LiveSiteAnnotation({
         }[];
 
         // Hand off to the same review-and-price step drawing takeoff and
-        // voice quoting use -- counts come from the camera markup, prices
+        // voice quoting use - counts come from the camera markup, prices
         // come from the real price book, never from a hardcoded guess.
         // Freeform notes (itemKey "__note__") are deliberately excluded
         // here - they're not tied to a material or cost, only to the
@@ -187,7 +187,7 @@ export default function LiveSiteAnnotation({
         <DrawingAnalysisReviewTable
           detectedItems={pendingItems}
           confidence="high"
-          notes="Counts from your camera markup -- prices from your price book."
+          notes="Counts from your camera markup - prices from your price book."
           lib={lib ?? []}
           trade={trade}
           archetypeDefaults={archetypeDefaults}

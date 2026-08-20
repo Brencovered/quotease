@@ -5,7 +5,7 @@
  *
  * Design: milestones are derived live from real tables wherever a clean
  * signal exists (a quote was actually sent, a job actually exists) rather
- * than manually toggled -- a business that jumps straight to Day 5 stuff
+ * than manually toggled - a business that jumps straight to Day 5 stuff
  * on Day 1 should see Day 1-4 already ticked off, not be nagged about
  * steps they've effectively completed. The only two milestones with no
  * queryable signal (AI assistant usage, viewing the productivity report)
@@ -14,7 +14,7 @@
  * app/reports/page.tsx).
  *
  * Trial day is computed from profiles.created_at, not login count or
- * wall-clock "days since first visit" -- someone who signs up and comes
+ * wall-clock "days since first visit" - someone who signs up and comes
  * back after a week away is still on Day 7, not Day 1.
  */
 

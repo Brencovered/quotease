@@ -46,12 +46,12 @@ export const INTAKE_VALUE_LABELS: Record<string, Record<string, string>> = {
   ceilingType:    { standard_plasterboard: "Standard plasterboard", concrete_slab: "Concrete slab", heritage_timber: "Heritage / period timber", skillion: "Skillion / cathedral", unknown: "Unknown - assess on site" },
   roofAccess:     { "1": "N/A", "1.3": "Easy access", "1.7": "Tight crawl", "2.3": "Extreme" },
   // Electrician uses numeric multipliers here; plumber uses a string enum
-  // for the same field name -- both live in the same map since the keys
+  // for the same field name - both live in the same map since the keys
   // don't collide.
   subfloorAccess: { "1": "N/A", "1.3": "Easy crawl", "1.8": "Tight crawl", "2.4": "Wet / very low", none: "N/A", easy: "Easy crawl", tight: "Tight crawl", wet: "Wet / very low clearance" },
   siteAccess:     { na: "N/A", easy: "Easy", moderate: "Moderate", difficult: "Difficult", custom: "Custom" },
   // jobType's value set differs per trade builder (electrician, plumber,
-  // carpenter, roofer, generic) -- all merged here since none of the keys
+  // carpenter, roofer, generic) - all merged here since none of the keys
   // collide across trades.
   jobType:        {
     na: "N/A", reno: "Renovation", newbuild: "New build", fault: "Fault find / repair", compliance: "Compliance / certification",
@@ -63,7 +63,7 @@ export const INTAKE_VALUE_LABELS: Record<string, Record<string, string>> = {
   downlightSupply: { supply_and_fit: "Supply & fit", wire_and_fit: "Wire & fit (client supply)", provisional: "Provisional sum" },
   switchboardRcboMode: { full_board: "Full RCBO board", per_pole: "RCBO per pole" },
   roofType:       { colorbond: "Colorbond / metal", terracotta: "Terracotta tile", concrete_tile: "Concrete tile", mixed: "Mixed" },
-  roofPitch:      { low: "Low pitch (<15°)", standard: "Standard (15–30°)", steep: "Steep (>30°)" },
+  roofPitch:      { low: "Low pitch (<15°)", standard: "Standard (15-30°)", steep: "Steep (>30°)" },
   hwuType:        { electric: "Electric", gas: "Gas", heatpump: "Heat pump" },
 };
 
@@ -87,7 +87,7 @@ const DEPENDENT_FIELDS: Record<string, { parent: string; nonZero?: boolean }> = 
 // Values that mean "nothing selected / default" and should be suppressed
 export const SUPPRESS_VALUES: Record<string, Set<string>> = {
   roofAccess:     new Set(["1"]),   // "N/A"
-  subfloorAccess: new Set(["1", "none"]),   // "N/A" -- "1" (electrician) and "none" (plumber)
+  subfloorAccess: new Set(["1", "none"]),   // "N/A" - "1" (electrician) and "none" (plumber)
   siteAccess:     new Set(["na"]),  // "N/A" is the default, only show if a real condition is set
   ceilingType:    new Set(["unknown"]),
   jobType:        new Set(["na"]),
@@ -193,7 +193,7 @@ export function humanizeIntakePublic(intake: Record<string, unknown> | null | un
     for (const item of lineItems) {
       if (item?.label && (item.qty ?? 0) > 0) {
         const kind = item.is_labour ? "Labour" : "Materials";
-        lines.push(`${kind}: ${item.label} — ${item.qty} ${item.unit ?? "ea"}`);
+        lines.push(`${kind}: ${item.label} - ${item.qty} ${item.unit ?? "ea"}`);
       }
     }
   }
@@ -209,7 +209,7 @@ export function humanizeIntakePublic(intake: Record<string, unknown> | null | un
   }
 
   // Certificate of Electrical Safety is an electrical-work-specific
-  // compliance document -- was previously pushed unconditionally for
+  // compliance document - was previously pushed unconditionally for
   // every trade's quote (a carpenter or plumber quote would show it too,
   // which makes no sense and could look like a fabricated compliance
   // claim). Only relevant for electrician quotes.

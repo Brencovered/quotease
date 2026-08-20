@@ -1,14 +1,14 @@
 /**
  * app/areas/page.tsx
  * -------------------
- * "Areas we cover" -- the top of the hub-and-spoke SEO structure:
+ * "Areas we cover" - the top of the hub-and-spoke SEO structure:
  * /areas (this page) -> /tradies-in/{suburb}-{state} -> /{trade}-{suburb}-{state}
  *
  * Lists every suburb with real, indexed coverage (trade_suburb_pages.is_indexed),
  * grouped by state, each linking to that suburb's "Tradies in {suburb}" hub
  * page. Exists so Google (and real visitors) have an actual crawlable path
  * to every trade x suburb page, rather than relying only on the sitemap
- * file -- internal links carry real weight that a sitemap entry alone
+ * file - internal links carry real weight that a sitemap entry alone
  * doesn't.
  */
 

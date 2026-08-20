@@ -40,7 +40,7 @@ export default function TradeJobDemo({
         </h2>
         <p className="font-sans text-[16px] leading-[1.65] text-[#5a6a78] max-w-[40ch] mb-8">
           Tap a typical {tradeLabel.toLowerCase()} job. See materials, labour hours, and a
-          total assemble in the phone — the speed you get on site.
+          total assemble in the phone - the speed you get on site.
         </p>
         <div className="flex flex-col gap-2">
           {jobs.map((job) => {
@@ -106,7 +106,7 @@ export default function TradeJobDemo({
                         <p className="font-sans text-[12px] text-[#8b96a1] mt-0.5">{line.qty}</p>
                       </div>
                       <p className="font-sans text-[13.5px] font-bold text-[#071018] tabular-nums shrink-0">
-                        {line.amount > 0 ? moneyAud(line.amount) : "—"}
+                        {line.amount > 0 ? moneyAud(line.amount) : "-"}
                       </p>
                     </div>
                   </li>
@@ -123,7 +123,7 @@ export default function TradeJobDemo({
                   </p>
                 </div>
                 <p className="font-sans text-[12px] text-[#5a6a78] leading-snug">
-                  Guideline assembly only — your book and margins set the real number in seconds on
+                  Guideline assembly only - your book and margins set the real number in seconds on
                   site.
                 </p>
               </div>

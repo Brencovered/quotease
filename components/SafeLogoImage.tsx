@@ -4,12 +4,12 @@ import { useState } from "react";
 
 /**
  * A plain <img> with a broken src just shows the browser's native
- * broken-image glyph next to the raw alt text -- this hides itself
+ * broken-image glyph next to the raw alt text - this hides itself
  * entirely on error instead. Use anywhere a logo_url might be stale
  * (scraped from a site that's since changed, or any user-uploaded image
  * URL that could 404).
  *
- * http:// URLs are treated as invalid up front, never even attempted --
+ * http:// URLs are treated as invalid up front, never even attempted -
  * mixed content on an https:// page doesn't reliably trigger onError the
  * way a normal failed load does, so these were showing up as permanently
  * broken rather than falling back cleanly.

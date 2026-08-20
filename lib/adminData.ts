@@ -3,7 +3,7 @@
  * -----------------
  * Server-only data fetching for the /admin dashboard. Always uses the
  * service-role admin client since this needs to see every tradie account,
- * not just the caller's own row -- never import this into client components.
+ * not just the caller's own row - never import this into client components.
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -35,7 +35,7 @@ async function listAllAuthUsers(): Promise<Map<string, { last_sign_in_at: string
   let page = 1;
   const perPage = 200;
 
-  // Capped at 5 pages (1000 users) -- plenty of headroom for current scale.
+  // Capped at 5 pages (1000 users) - plenty of headroom for current scale.
   for (let i = 0; i < 5; i++) {
     const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
     if (error || !data) break;

@@ -138,9 +138,9 @@ export default function QuoteForm({ listing }: { listing: Listing }) {
           </p>
           <div className="space-y-1.5">
             {[
-              { id: "asap", label: "Ready to start soon — I have a budget" },
-              { id: "checking", label: "Have an idea — just checking prices" },
-              { id: "later", label: "Planning 6+ months ahead — want a sense of cost" },
+              { id: "asap", label: "Ready to start soon - I have a budget" },
+              { id: "checking", label: "Have an idea - just checking prices" },
+              { id: "later", label: "Planning 6+ months ahead - want a sense of cost" },
             ].map((o) => (
               <button
                 key={o.id}

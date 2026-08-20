@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdminEmail } from "@/lib/admin";
 import { getRandomUserAgent } from "@/lib/websiteScraper";
 
-const DELAY_MS = 1500; // be polite -- don't hammer their servers
+const DELAY_MS = 1500; // be polite - don't hammer their servers
 const RESULTS_PER_PAGE = 20;
 
 interface YPListing {
@@ -49,7 +49,7 @@ async function fetchHtml(url: string): Promise<string | null> {
 function parseYPListings(html: string, trade: string): YPListing[] {
   const listings: YPListing[] = [];
 
-  // YP listing cards -- each has class "listing-item" or similar
+  // YP listing cards - each has class "listing-item" or similar
   // Extract JSON-LD structured data first (most reliable)
   const jsonLdBlocks = html.matchAll(/<script[^>]+type=[\"']application\/ld\+json[\"'][^>]*>([\s\S]+?)<\/script>/gi);
   for (const block of jsonLdBlocks) {

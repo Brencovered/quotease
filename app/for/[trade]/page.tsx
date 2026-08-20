@@ -188,7 +188,7 @@ export default async function TradeHubPage({ params }: PageProps) {
                   {hub.compliance.badge}
                 </p>
                 <p className="font-sans text-[15px] leading-[1.55] text-[#3d4a55]">
-                  Kept with the quote and the job — not lost in a text thread or a folder in the ute.
+                  Kept with the quote and the job - not lost in a text thread or a folder in the ute.
                 </p>
               </div>
             </div>

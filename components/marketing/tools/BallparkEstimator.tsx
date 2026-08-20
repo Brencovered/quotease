@@ -47,19 +47,19 @@ const FINISHES: { id: Finish; label: string; mult: number; note: string }[] = [
     id: "budget",
     label: "Budget",
     mult: 0.65,
-    note: "Guideline: cosmetic / budget bathroom updates often sit around $8,000–$15,000 when plumbing stays put",
+    note: "Guideline: cosmetic / budget bathroom updates often sit around $8,000-$15,000 when plumbing stays put",
   },
   {
     id: "mid",
     label: "Mid-range",
     mult: 1,
-    note: "Guideline: mid-range overhauls commonly land around $15,000–$25,000 depending on size and plumbing moves",
+    note: "Guideline: mid-range overhauls commonly land around $15,000-$25,000 depending on size and plumbing moves",
   },
   {
     id: "luxury",
     label: "Luxury",
     mult: 1.45,
-    note: "Guideline: high-end finishes and ensuite-style work often push $25,000–$35,000+",
+    note: "Guideline: high-end finishes and ensuite-style work often push $25,000-$35,000+",
   },
 ];
 
@@ -146,7 +146,7 @@ const JOBS: {
     baseLow: 6000,
     baseHigh: 10000,
     blurb:
-      "Guideline only. hipages bathroom benchmarks often cite budget updates around $8,000–$15,000 (no plumbing moves), mid-range overhauls around $15,000–$25,000, and high-end / ensuite work $25,000–$35,000+.",
+      "Guideline only. hipages bathroom benchmarks often cite budget updates around $8,000-$15,000 (no plumbing moves), mid-range overhauls around $15,000-$25,000, and high-end / ensuite work $25,000-$35,000+.",
     directoryTrade: "Bathroom Renovation",
   },
   {
@@ -408,7 +408,7 @@ export default function BallparkEstimator() {
                         {extra.label}
                       </span>
                       <span className="block font-sans text-[13px] text-[#5a6a78] mt-0.5">
-                        {extra.hint} · typically {moneyAud(extra.low)}–{moneyAud(extra.high)}
+                        {extra.hint} · typically {moneyAud(extra.low)}-{moneyAud(extra.high)}
                       </span>
                     </span>
                   </label>
@@ -425,7 +425,7 @@ export default function BallparkEstimator() {
             {activeJob.label} · {finishMeta.label} · {size} {activeJob.unit}
           </p>
           <p className="font-display text-[clamp(1.8rem,3vw,2.4rem)] tracking-wide text-[#b88400] mb-6">
-            {moneyAud(range.low)} – {moneyAud(range.high)}
+            {moneyAud(range.low)} - {moneyAud(range.high)}
           </p>
           <dl>
             <ToolResultRow label="Low end" value={moneyAud(range.low)} />
@@ -433,7 +433,7 @@ export default function BallparkEstimator() {
             <ToolResultRow label="High end" value={moneyAud(range.high)} />
           </dl>
           <p className="font-sans text-[13px] leading-[1.6] text-[#5a6a78] mt-5">
-            Guideline only — not a quote or renovation advice. Ranges reflect Australian residential
+            Guideline only - not a quote or renovation advice. Ranges reflect Australian residential
             averages and move with suburb, access, and site conditions. Verify with local tradies and
             the linked cost guides below.
           </p>

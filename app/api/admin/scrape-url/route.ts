@@ -15,11 +15,11 @@ function extractBusinessName(html: string, url: string): string | null {
     ?? html.match(/<meta[^>]+content=[\"']([^\"']{2,80})[\"'][^>]+property=[\"']og:site_name[\"']/i);
   if (og) return og[1].trim();
 
-  // <title> tag -- trim common suffixes
+  // <title> tag - trim common suffixes
   const title = html.match(/<title[^>]*>([^<]{2,100})<\/title>/i);
   if (title) {
     return title[1]
-      .replace(/\s*[\|\-–]\s*.{0,60}$/, "") // strip "| Home" etc
+      .replace(/\s*[\|\--]\s*.{0,60}$/, "") // strip "| Home" etc
       .replace(/\s*(home|welcome|official site)\s*$/i, "")
       .trim();
   }
@@ -69,7 +69,7 @@ function extractAddress(html: string): { suburb: string | null; postcode: string
 }
 
 function extractTrades(html: string, _url: string): string[] {
-  // Score each trade by keyword frequency -- avoids false positives from
+  // Score each trade by keyword frequency - avoids false positives from
   // generic words like "building" on an electrician's site
   const TRADE_KEYWORDS: Record<string, { words: string[]; weight: number }[]> = {
     electrician: [
@@ -139,7 +139,7 @@ function extractTrades(html: string, _url: string): string[] {
     let score = 0;
     for (const tier of tiers) {
       for (const word of tier.words) {
-        // Count occurrences -- repeated mentions = stronger signal
+        // Count occurrences - repeated mentions = stronger signal
         const count = (visibleText.match(new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi")) ?? []).length;
         if (count > 0) score += tier.weight * Math.min(count, 3);
       }
@@ -211,9 +211,9 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient();
 
   // ------------------------------------------------------------------
-  // Mode 1: confirm -- the admin has reviewed (and possibly edited) a
+  // Mode 1: confirm - the admin has reviewed (and possibly edited) a
   // previous preview, and is now committing it. Nothing gets re-scraped
-  // here -- every field comes from what was actually reviewed and
+  // here - every field comes from what was actually reviewed and
   // approved, which is the whole point of this step existing at all.
   // ------------------------------------------------------------------
   if (body.mode === "confirm") {
@@ -234,7 +234,7 @@ export async function POST(req: NextRequest) {
     const existingListing = existing?.[0];
     const listingId = existingListing?.id ?? crypto.randomUUID();
 
-    // Download and store photos now -- only at confirm time, using
+    // Download and store photos now - only at confirm time, using
     // whichever photo URLs the admin actually approved in the preview
     // (they may have removed some).
     const storedPhotos: string[] = [];
@@ -348,7 +348,7 @@ export async function POST(req: NextRequest) {
   }
 
   // ------------------------------------------------------------------
-  // Mode 2 (default): preview -- extract everything for review, but
+  // Mode 2 (default): preview - extract everything for review, but
   // don't touch the database or download/store any photos yet. This is
   // the actual fix: previously this single request scraped AND saved in
   // one shot, with no chance to check or correct what got extracted

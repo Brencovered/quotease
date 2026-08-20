@@ -19,7 +19,7 @@ export interface DrawingAnalysisResult {
  * Sends a file for AI drawing analysis. Files under the direct-upload
  * limit go straight to the analyze-drawing route as multipart form data,
  * same as before. Larger files (a full-resolution phone photo, a real
- * architectural PDF plan -- both routine for an actual tradie, not edge
+ * architectural PDF plan - both routine for an actual tradie, not edge
  * cases) upload directly to Supabase Storage from the browser first,
  * bypassing the Vercel function's body limit entirely, then send just the
  * storage path to the route, which downloads the file server-side.

@@ -17,22 +17,22 @@ const VALID_TRADES = [
  * Resolves the business lookup step: either claims an existing unclaimed
  * directory_listing row, or creates a brand new one when no match exists.
  * Both paths are logged to directory_claim_attempts for /admin dispute
- * resolution. First successful claim locks the listing -- enforced by
+ * resolution. First successful claim locks the listing - enforced by
  * a is_claimed check-then-set here, backstopped by the fact that a second
  * concurrent claim attempt will simply find is_claimed already true.
  *
  * The session client is used only to establish identity (auth.getUser() +
  * getActiveBusinessId, which correctly resolves team members to their
  * owner's business id). All actual reads/writes to directory_listing and
- * directory_claim_attempts go through the admin client -- directory_listing
+ * directory_claim_attempts go through the admin client - directory_listing
  * has no owner-scoped RLS policy (it's admin-managed, public-read only),
  * and directory_claim_attempts intentionally has no end-user policies at
- * all (audit log, admin-readable only) -- so the session client would
+ * all (audit log, admin-readable only) - so the session client would
  * silently fail (0 rows affected under RLS, no thrown error) on every
  * write here.
  *
  * An optional ABN is stored on the profile if provided, but is NOT verified
- * here -- ABN Lookup verification (and setting directory_badge_verified)
+ * here - ABN Lookup verification (and setting directory_badge_verified)
  * is a separate step, not yet built.
  */
 export async function POST(req: NextRequest) {
@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unrecognised trade" }, { status: 400 });
   }
 
-  // One claimed listing per business in v1 -- a business wanting to add a
+  // One claimed listing per business in v1 - a business wanting to add a
   // second trade/suburb combination extends their existing listing rather
   // than claiming a second one.
   const { data: existingClaim } = await admin
@@ -177,9 +177,9 @@ export async function POST(req: NextRequest) {
     // The test is whether the signed-in address matches the contact address
     // already on the listing, which came from the business's own public
     // Google entry. Matching means they demonstrably control the address the
-    // business publishes. Not matching does not block the claim -- plenty of
+    // business publishes. Not matching does not block the claim - plenty of
     // tradies genuinely run a Gmail while their website shows info@ on their
-    // domain -- but it is recorded as unverified so a dispute can be settled
+    // domain - but it is recorded as unverified so a dispute can be settled
     // on evidence rather than argument.
     const knownContact = (listing.scraped_contact_email || listing.private_email || "").toLowerCase().trim();
     const claimantEmail = (user.email ?? "").toLowerCase().trim();
@@ -191,7 +191,7 @@ export async function POST(req: NextRequest) {
         is_claimed: true,
         profile_id: businessId,
         // Only fill in a logo if the scraped listing doesn't already have
-        // one -- never overwrite an existing (e.g. Google-sourced) logo
+        // one - never overwrite an existing (e.g. Google-sourced) logo
         // with nothing just because the tradie skipped this step.
         ...(logoUrl && !listing.logo_url ? { logo_url: logoUrl } : {}),
       })
@@ -239,7 +239,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // No match -- create a brand new listing, owned and verified from day one.
+  // No match - create a brand new listing, owned and verified from day one.
   const { data: created, error: createErr } = await admin
     .from("directory_listing")
     .insert({

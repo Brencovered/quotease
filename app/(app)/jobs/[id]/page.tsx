@@ -157,7 +157,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     <>
       <AppHeader />
       <main className="page-wrap-narrow pb-28">
-        {/* One job identity strip — not duplicated status banners + finance card */}
+        {/* One job identity strip - not duplicated status banners + finance card */}
         <div className="mb-4">
           <p className="text-[12px] text-[var(--ink-faint)] mb-1">
             <Link href="/jobs" className="hover:underline">Jobs</Link>
@@ -315,7 +315,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                 />
               ) : (
                 <p className="text-[13px] text-[var(--ink-faint)]">
-                  Plan markup needs a linked quote — this job was created without one.
+                  Plan markup needs a linked quote - this job was created without one.
                 </p>
               )}
               <SiteAnnotationReport annotations={resolvedAnnotations} />

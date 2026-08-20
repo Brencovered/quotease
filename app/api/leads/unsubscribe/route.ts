@@ -8,8 +8,8 @@ import { getActiveBusinessId } from "@/lib/team";
  * Opt a tradie OUT of lead notifications.
  * 
  * Body options:
- *   { trade, suburb } — opt out of a specific trade+suburb combo
- *   {} (empty) — opt out of ALL lead notifications
+ *   { trade, suburb } - opt out of a specific trade+suburb combo
+ *   {} (empty) - opt out of ALL lead notifications
  */
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, trade, suburb, is_active: false });
   }
 
-  // No specific trade/suburb — deactivate ALL subscriptions
+  // No specific trade/suburb - deactivate ALL subscriptions
   const { error } = await supabase
     .from("lead_subscriptions")
     .update({ is_active: false })

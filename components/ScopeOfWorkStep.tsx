@@ -216,7 +216,7 @@ function ScopeItemRow({ item, update, remove }: {
         {(item.source || item.overridden) && (
           <p className="text-[10.5px] text-[var(--ink-faint)] leading-tight">
             {item.source && item.source !== "manual" ? SOURCE_LABELS[item.source] : null}
-            {item.source && item.source !== "manual" && item.overridden ? " — " : null}
+            {item.source && item.source !== "manual" && item.overridden ? " - " : null}
             {item.overridden ? "edited" : null}
           </p>
         )}

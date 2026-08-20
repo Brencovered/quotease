@@ -32,7 +32,7 @@ export type TradeHub = {
   pain: string;
   outcomes: string[];
   jobTypes: string[];
-  /** @deprecated prefer quoteFieldDetails — kept for simple lists */
+  /** @deprecated prefer quoteFieldDetails - kept for simple lists */
   quoteFields: string[];
   quoteFieldDetails: TradeQuoteField[];
   demoJobs: TradeDemoJob[];
@@ -251,7 +251,7 @@ const COPY: Record<string, HubCopy> = {
       "Build and send electrical quotes on site. Downlights, circuits, switchboards, and cable runs priced from your book before you leave the driveway.",
     headline: "Quote the rough-in before you leave site.",
     subhead:
-      "Tap fixtures on a plan, draw the cable run, load materials and labour from your book, and send from your phone — built for sparkies who price standing up.",
+      "Tap fixtures on a plan, draw the cable run, load materials and labour from your book, and send from your phone - built for sparkies who price standing up.",
     pain: "Most sparkies still scribble counts on the plan, retype them at the desk, then chase the PDF. By then the client has already taken another call.",
     outcomes: [
       "Count downlights, GPOs, and switches on the plan",
@@ -333,7 +333,7 @@ const COPY: Record<string, HubCopy> = {
       "Quote carpentry and joinery on site. Framing, doors, timber runs, and labour priced from your book and sent the same visit.",
     headline: "Scope framing and fit-outs without the shed rewrite.",
     subhead:
-      "Measure once on site, price timber and labour from your book, and send the quote before you pack the ute — built for chippies.",
+      "Measure once on site, price timber and labour from your book, and send the quote before you pack the ute - built for chippies.",
     pain: "Carpentry quotes often wait until you are back at the shed. That delay is where jobs leak to the next caller.",
     outcomes: [
       "Build quotes around framing, doors, and timber runs",
@@ -719,7 +719,7 @@ const COPY: Record<string, HubCopy> = {
       {
         question: "Is this only for building trades?",
         answer:
-          "No. Surveyors use the same book, quote, accept, and job flow — load your packages and rates, then send from site.",
+          "No. Surveyors use the same book, quote, accept, and job flow - load your packages and rates, then send from site.",
       },
       {
         question: "Can clients accept fees on their phone?",

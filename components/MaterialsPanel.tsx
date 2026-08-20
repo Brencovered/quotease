@@ -107,7 +107,7 @@ export default function MaterialsPanel() {
       try {
         await fetch("/api/materials/seed-book", { method: "POST" });
       } catch {
-        // Non-blocking — materials page still works without seed.
+        // Non-blocking - materials page still works without seed.
       }
 
       await loadPackages(resolvedBusinessId);

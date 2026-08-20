@@ -77,7 +77,7 @@ function quoteLabel(q: QuoteForAttention): string {
   return q.site_address ? `${q.site_address} - ${client}` : client;
 }
 
-// Jobs have a persistent, human-assigned job number -- lead with that.
+// Jobs have a persistent, human-assigned job number - lead with that.
 function jobLabel(j: JobForAttention): string {
   const client = j.client_name || "client";
   return j.job_number ? `Job #${j.job_number} - ${client}` : client;

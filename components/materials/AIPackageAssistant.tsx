@@ -36,7 +36,7 @@ function lookupRealPrice(
   // Exact label match first
   const exact = priceBook.find(r => r.label.toLowerCase() === needle);
   if (exact) return exact.unit_cost;
-  // Partial word match -- all words in the item label must appear in the price book label
+  // Partial word match - all words in the item label must appear in the price book label
   const words = needle.split(/\s+/).filter(w => w.length > 3);
   if (words.length === 0) return null;
   const match = priceBook.find(r => {
@@ -90,9 +90,9 @@ export default function AIPackageAssistant({
   function buildSystem(userInput: string) {
     const candidates = findCandidateItems(userInput);
     const candidateBlock = candidates.length > 0
-      ? `\n- The tradie's ACTUAL price book contains these relevant items -- use these EXACT labels and EXACT costs whenever one fits, instead of inventing a similar-sounding item:\n${candidates.map(c => `  - "${c.label}" — $${c.unit_cost}`).join("\n")}\n- Only invent a new item name (and mark it as an estimate in your note) if nothing above genuinely covers it.`
+      ? `\n- The tradie's ACTUAL price book contains these relevant items - use these EXACT labels and EXACT costs whenever one fits, instead of inventing a similar-sounding item:\n${candidates.map(c => `  - "${c.label}" - $${c.unit_cost}`).join("\n")}\n- Only invent a new item name (and mark it as an estimate in your note) if nothing above genuinely covers it.`
       : priceBook.length > 0
-        ? `\n- The tradie has ${priceBook.length} items in their price book but none matched keywords from this request -- use realistic Australian trade prices and say in your note that these are estimates, not price book items.`
+        ? `\n- The tradie has ${priceBook.length} items in their price book but none matched keywords from this request - use realistic Australian trade prices and say in your note that these are estimates, not price book items.`
         : "\n- No price book connected yet, use realistic Australian trade prices and say in your note that these are estimates.";
 
     return `You are an expert Australian trade business assistant helping a ${trade} build reusable job packages in Swiftscope.
@@ -122,7 +122,7 @@ Rules:
 - 3 to 8 line items per package
 - Labour hours realistic for job size
 - Tradie hourly rate is $${hourlyRate}/hr
-- If asked for multiple packages in one request, keep each package concise (fewer items, shorter descriptions) so the full response fits -- a complete simple answer beats a detailed one that gets cut off${candidateBlock}
+- If asked for multiple packages in one request, keep each package concise (fewer items, shorter descriptions) so the full response fits - a complete simple answer beats a detailed one that gets cut off${candidateBlock}
 - After the JSON add a short note about what to customise`;
   }
 
@@ -162,7 +162,7 @@ Rules:
           parseFailed = true;
         }
       } else if (text.includes("```json")) {
-        // Opening fence present but no closing fence -- response was cut off
+        // Opening fence present but no closing fence - response was cut off
         // mid-JSON. Never show this half-formed data as if it were real.
         parseFailed = true;
       }
@@ -170,7 +170,7 @@ Rules:
       if (parseFailed || (match && packages.length === 0)) {
         setMessages(prev => [...prev, {
           role: "assistant",
-          content: "That response got cut off before I could finish the package details, so I'm not showing it -- I don't want to display incomplete pricing. Try asking for fewer packages at once (e.g. one or two at a time) and I'll get you a complete, checked result.",
+          content: "That response got cut off before I could finish the package details, so I'm not showing it - I don't want to display incomplete pricing. Try asking for fewer packages at once (e.g. one or two at a time) and I'll get you a complete, checked result.",
         }]);
         setLoading(false);
         return;
@@ -283,7 +283,7 @@ Rules:
                               <div className="flex items-center gap-1.5 mb-2 px-2 py-1 rounded-lg bg-amber-50 border border-amber-200">
                                 <AlertTriangle size={11} className="text-[var(--amber-deep)] shrink-0" />
                                 <p className="text-[10.5px] font-semibold text-[var(--amber-deep)]">
-                                  {matchedCount} of {pkg.items.length} items priced from your price book — the rest are estimates, check before sending
+                                  {matchedCount} of {pkg.items.length} items priced from your price book - the rest are estimates, check before sending
                                 </p>
                               </div>
                             ) : (
@@ -350,7 +350,7 @@ Rules:
             <div ref={bottomRef} />
           </div>
 
-          {/* Input -- fixed at bottom */}
+          {/* Input - fixed at bottom */}
           <div className="shrink-0 border-t border-[var(--line-subtle)] bg-[var(--surface)] px-3 py-3">
             <div className="flex items-center gap-2">
               <input

@@ -42,7 +42,7 @@ function fmtDate(d: string | null) {
 }
 
 export async function POST(request: Request) {
-  // Instantiated here, not at module scope -- module-scope instantiation
+  // Instantiated here, not at module scope - module-scope instantiation
   // throws at build time (during Next's "Collecting page data" static
   // analysis pass, which imports every route module) in any environment
   // where RESEND_API_KEY isn't set, which fails the whole build rather
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     if (typeof body.weekOffset === "number") weekOffset = body.weekOffset;
   } catch {
-    // no body — default to this week
+    // no body - default to this week
   }
 
   const { monday, sunday, mondayStr, sundayStr } = getWeekRange(weekOffset);
@@ -127,7 +127,7 @@ export async function POST(request: Request) {
       title: job.title,
       status: job.status,
       dateRange: job.scheduled_end
-        ? `${fmtDate(job.scheduled_start)} — ${fmtDate(job.scheduled_end)}`
+        ? `${fmtDate(job.scheduled_start)} - ${fmtDate(job.scheduled_end)}`
         : fmtDate(job.scheduled_start),
     }));
 

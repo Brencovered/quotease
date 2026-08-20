@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
-/*  Trades — same canonical list as signup / materials / quoting      */
+/*  Trades - same canonical list as signup / materials / quoting      */
 /* ------------------------------------------------------------------ */
 
 const TRADES = PRODUCT_TRADES;
@@ -71,7 +71,7 @@ export default function OnboardingPage() {
   const [hasUploaded, setHasUploaded] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  // Step 4: Pricing setup -- which path the user picked, plus AI quote upload state
+  // Step 4: Pricing setup - which path the user picked, plus AI quote upload state
   const [pricingTab, setPricingTab] = useState<"quotes" | "csv" | "xero" | "later">("quotes");
   const [quoteFiles, setQuoteFiles] = useState<File[]>([]);
   const [extracting, setExtracting] = useState(false);
@@ -93,12 +93,12 @@ export default function OnboardingPage() {
   // Prevent redirect loops
   const hasRedirected = useRef(false);
 
-  // Mandatory trade gate -- quoting is trade-specific, so an account with
+  // Mandatory trade gate - quoting is trade-specific, so an account with
   // no trade set can't meaningfully use any part of the app. Client-side
   // signup validation exists but isn't airtight on its own (confirmed:
   // real accounts have ended up here with an empty trades array anyway),
   // and middleware.ts now redirects any such account straight to
-  // /onboarding regardless of onboarded_at -- this is what actually lets
+  // /onboarding regardless of onboarded_at - this is what actually lets
   // them fix it, blocking the rest of onboarding until a real trade is
   // saved.
   const [needsTrade, setNeedsTrade] = useState(false);
@@ -119,7 +119,7 @@ export default function OnboardingPage() {
     setNeedsTrade(false);
   }
 
-  // Mandatory business-name gate -- same idea as the trade gate above, for
+  // Mandatory business-name gate - same idea as the trade gate above, for
   // the same reason: the email/password signup form always required a
   // business name, so onboarding never needed to collect it itself. A
   // Google sign-in/sign-up skips that form entirely, so an account can
@@ -210,7 +210,7 @@ export default function OnboardingPage() {
         setExtractMessage(data.error || "Extraction failed. Please try again, or skip this step.");
         setExtractedCount(0);
       } else if (data.imported === 0) {
-        setExtractMessage(data.message || "No priced items found in those quotes -- you can still add pricing manually later.");
+        setExtractMessage(data.message || "No priced items found in those quotes - you can still add pricing manually later.");
         setExtractedCount(0);
       } else {
         setExtractMessage(`Added ${data.imported} priced item${data.imported !== 1 ? "s" : ""} to your price book from ${quoteFiles.length} quote${quoteFiles.length !== 1 ? "s" : ""}.`);
@@ -321,11 +321,11 @@ export default function OnboardingPage() {
           suburb: suburb.trim(),
           is_active: true,
         }));
-        // Upsert subscriptions — ignore conflicts
+        // Upsert subscriptions - ignore conflicts
         await supabase.from("lead_subscriptions").upsert(subs, { onConflict: "profile_id,trade,suburb", ignoreDuplicates: false });
       }
 
-      // Seed starter price-book defaults for the account's trade -- this
+      // Seed starter price-book defaults for the account's trade - this
       // used to run from Settings whenever a trade was toggled on, but
       // trade is now fixed at onboarding, so this is the one reliable
       // place it happens for every account.
@@ -476,7 +476,7 @@ export default function OnboardingPage() {
         <span className="text-[12px] text-[var(--steel-3)] font-semibold">Step {step} of {STEPS.length}</span>
         {error && (
           <div className="flex items-center gap-1.5 text-red-400 text-[12px] font-bold">
-            <AlertCircle size={12} /> Error — see below
+            <AlertCircle size={12} /> Error - see below
           </div>
         )}
       </div>
@@ -536,7 +536,7 @@ export default function OnboardingPage() {
               </div>
 
               <TipBox icon={Sparkles}>
-                Lead matching is automatic — every tradie receives leads for their trade and suburb by default. You can opt out anytime in settings.
+                Lead matching is automatic - every tradie receives leads for their trade and suburb by default. You can opt out anytime in settings.
               </TipBox>
             </div>
           )}
@@ -555,7 +555,7 @@ export default function OnboardingPage() {
               </div>
 
               <p className="text-[14px] text-[var(--ink-soft)] leading-relaxed mb-6">
-                Including yourself. This just helps us understand who&apos;s using Swiftscope -- you can invite your team anytime later from Settings.
+                Including yourself. This just helps us understand who&apos;s using Swiftscope - you can invite your team anytime later from Settings.
               </p>
 
               <div className="flex items-center justify-center gap-6 mb-6">
@@ -580,7 +580,7 @@ export default function OnboardingPage() {
               </div>
 
               <TipBox icon={Sparkles}>
-                Swiftscope is $45/month flat, unlimited users -- no per-seat pricing whether it&apos;s just you or a crew of ten.
+                Swiftscope is $45/month flat, unlimited users - no per-seat pricing whether it&apos;s just you or a crew of ten.
               </TipBox>
             </div>
           )}
@@ -640,7 +640,7 @@ export default function OnboardingPage() {
                 </div>
                 <div>
                   <h1 className="font-display text-[26px] text-[var(--ink)]">Get your pricing set up</h1>
-                  <p className="text-[13px] text-[var(--ink-faint)]">Pick whichever&apos;s fastest for you -- all optional</p>
+                  <p className="text-[13px] text-[var(--ink-faint)]">Pick whichever&apos;s fastest for you - all optional</p>
                 </div>
               </div>
 
@@ -672,13 +672,13 @@ export default function OnboardingPage() {
               {pricingTab === "quotes" && (
                 <>
                   <p className="text-[14px] text-[var(--ink-soft)] leading-relaxed mb-6">
-                    Upload 3-5 quotes you&apos;ve sent to customers before (PDF or photo). Our AI reads them and pulls the priced line items straight into your price book -- your own real pricing, not generic defaults.
+                    Upload 3-5 quotes you&apos;ve sent to customers before (PDF or photo). Our AI reads them and pulls the priced line items straight into your price book - your own real pricing, not generic defaults.
                   </p>
 
                   <div className="border-2 border-dashed border-[var(--line)] rounded-2xl p-8 text-center mb-4 hover:border-[var(--amber)] hover:bg-[var(--amber-light)]/20 transition-all">
                     <FileUp size={32} className="text-[var(--ink-faint)] mx-auto mb-3" />
                     <p className="text-[14px] font-semibold text-[var(--ink)] mb-1">Drop your quotes here or click to browse</p>
-                    <p className="text-[12px] text-[var(--ink-faint)] mb-4">PDF, JPG, PNG, or WebP -- up to 5 files</p>
+                    <p className="text-[12px] text-[var(--ink-faint)] mb-4">PDF, JPG, PNG, or WebP - up to 5 files</p>
                     <label className={`btn-primary inline-flex cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform ${quoteFiles.length >= 5 ? "opacity-50 pointer-events-none" : ""}`}>
                       <Upload size={14} /> Select files
                       <input type="file" accept=".pdf,image/*" multiple className="hidden"
@@ -715,7 +715,7 @@ export default function OnboardingPage() {
                   )}
 
                   <TipBox icon={Sparkles}>
-                    Messier quotes are fine -- the AI skips anything it isn&apos;t confident about rather than guessing at a price.
+                    Messier quotes are fine - the AI skips anything it isn&apos;t confident about rather than guessing at a price.
                   </TipBox>
                 </>
               )}
@@ -761,7 +761,7 @@ export default function OnboardingPage() {
               {pricingTab === "xero" && (
                 <>
                   <p className="text-[14px] text-[var(--ink-soft)] leading-relaxed mb-6">
-                    Connecting Xero syncs your chart of accounts and contacts for invoicing -- it&apos;s a quick OAuth step best done from Settings so it doesn&apos;t interrupt onboarding.
+                    Connecting Xero syncs your chart of accounts and contacts for invoicing - it&apos;s a quick OAuth step best done from Settings so it doesn&apos;t interrupt onboarding.
                   </p>
                   <div className="rounded-xl border-2 border-[var(--line)] px-4 py-4 mb-6 flex items-center justify-between gap-3">
                     <div>
@@ -771,7 +771,7 @@ export default function OnboardingPage() {
                     <ExternalLink size={16} className="text-[var(--ink-faint)] shrink-0" />
                   </div>
                   <TipBox icon={Sparkles}>
-                    Finish onboarding now -- you&apos;ll find the Xero connect button waiting for you in Settings.
+                    Finish onboarding now - you&apos;ll find the Xero connect button waiting for you in Settings.
                   </TipBox>
                 </>
               )}
@@ -780,10 +780,10 @@ export default function OnboardingPage() {
               {pricingTab === "later" && (
                 <>
                   <p className="text-[14px] text-[var(--ink-soft)] leading-relaxed mb-6">
-                    No problem -- you can add pricing manually as you quote, or come back to upload a CSV or past quotes anytime from Settings &gt; Price Book.
+                    No problem - you can add pricing manually as you quote, or come back to upload a CSV or past quotes anytime from Settings &gt; Price Book.
                   </p>
                   <TipBox icon={Sparkles}>
-                    Swiftscope still works great with an empty price book -- you can type in prices as you go and they&apos;ll be remembered for next time.
+                    Swiftscope still works great with an empty price book - you can type in prices as you go and they&apos;ll be remembered for next time.
                   </TipBox>
                 </>
               )}

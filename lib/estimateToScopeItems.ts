@@ -19,8 +19,8 @@ export function quoteLineItemsToScopeItems(
 }
 
 /**
- * Map aggregate calc results into 1–2 scope lines.
- * Pass materialsCost that is RAW (pre-margin) — call calcs with marginPct: 0.
+ * Map aggregate calc results into 1-2 scope lines.
+ * Pass materialsCost that is RAW (pre-margin) - call calcs with marginPct: 0.
  */
 export function aggregateEstimateToScopeItems(
   result: { labourHours: number; materialsCost: number },

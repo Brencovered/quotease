@@ -23,7 +23,7 @@ interface Annotation {
   opacity: number; fading: boolean;
 }
 
-/* ─── Spec: CatalogItem -- maps to MaterialRow from price book ───── */
+/* ─── Spec: CatalogItem - maps to MaterialRow from price book ───── */
 interface CatalogItem {
   item_key:   string;
   name:       string;     // display label
@@ -826,7 +826,7 @@ function CameraPage() {
       });
       setCalibMode(false); setCalibStep("pick");
     } catch {
-      // Fall through -- invalid
+      // Fall through - invalid
     }
   }
 
@@ -930,7 +930,7 @@ function CameraPage() {
                   )}
                 </div>
 
-                {/* Priced line items (editable subtotals -- spec Option B) */}
+                {/* Priced line items (editable subtotals - spec Option B) */}
                 {hasCatalog && roomLineItems.length > 0 && (
                   <div className="divide-y divide-gray-50">
                     {roomLineItems.map(li => (
@@ -1105,7 +1105,7 @@ function CameraPage() {
           {/* Semi-transparent overlay with hole */}
           <div className="absolute inset-0 bg-black/50" />
 
-          {/* The target box -- clear hole in overlay */}
+          {/* The target box - clear hole in overlay */}
           <div className="relative z-10" style={{
             width: targetW, height: targetH,
             border: "3px solid #00FF88",
@@ -1185,7 +1185,7 @@ function CameraPage() {
       <div className="absolute bottom-0 left-0 right-0 z-10"
         style={{ padding: "12px 16px calc(80px + env(safe-area-inset-bottom))", background: "linear-gradient(to top,rgba(0,0,0,.8),transparent)" }}>
 
-        {/* Locked overlay -- must calibrate first (non-stamp mode) */}
+        {/* Locked overlay - must calibrate first (non-stamp mode) */}
         {isLocked && (
           <div className="mb-3 flex items-center gap-2 bg-amber-500/20 border border-amber-400/40 rounded-xl px-3 py-2">
             <AlertTriangle size={13} className="text-amber-400 shrink-0" />
@@ -1379,7 +1379,7 @@ function CameraPage() {
                 <p className="text-[11px] font-bold uppercase text-gray-500 mb-1">
                   {items.find(i => i.key === formItem)?.unit === "m" ? "Length (m)" : "Quantity"}
                 </p>
-                {/* Spec: editable output -- tradie can override calculated length */}
+                {/* Spec: editable output - tradie can override calculated length */}
                 <div className="flex items-center gap-1">
                   <button onClick={() => setFormQty(q => Math.max(0.5, q - 1))} className="border border-gray-200 rounded-lg p-1.5 bg-white"><Minus size={12} /></button>
                   <input type="number" min={0.1} step={0.1} value={formQty}

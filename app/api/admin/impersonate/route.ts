@@ -5,7 +5,7 @@
  * browser in AS the target tradie account, for training/support purposes.
  * Every use is written to admin_impersonation_log.
  *
- * This does NOT touch the tradie's password and doesn't require it -- it
+ * This does NOT touch the tradie's password and doesn't require it - it
  * uses Supabase's admin "generate link" API, the same mechanism used for
  * password-reset/invite emails, except we never send the email and instead
  * hand the link straight back to the admin.

@@ -22,7 +22,7 @@ export default function TrialOnboardingWidget({ initialProgress }: Props) {
 
   async function dismiss() {
     setDismissing(true);
-    setHidden(true); // optimistic -- don't make them wait on the network
+    setHidden(true); // optimistic - don't make them wait on the network
     try {
       await fetch("/api/onboarding/dismiss", {
         method: "POST",

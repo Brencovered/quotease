@@ -216,7 +216,7 @@ export default function CrewDayClient({
           </p>
           <h1 className="font-display text-[28px] text-[var(--ink)] leading-none">Crew</h1>
           <p className="text-[13px] text-[var(--ink-faint)] mt-1">
-            Assign with a start date — they show on My day with a ping.
+            Assign with a start date - they show on My day with a ping.
           </p>
         </div>
         <Link

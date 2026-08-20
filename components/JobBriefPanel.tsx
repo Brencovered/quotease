@@ -33,7 +33,7 @@ export default function JobBriefPanel({
   assignedTo: string | null;
   assignedToMemberId?: string | null;
   teamMembers?: TeamMemberOption[];
-  /** Other crew already on the job — used for clash hints after save. */
+  /** Other crew already on the job - used for clash hints after save. */
   crewMemberIds?: string[];
 }) {
   const [siteNotes, setSiteNotes] = useState(initialNotes ?? "");
@@ -126,7 +126,7 @@ export default function JobBriefPanel({
     <div className="card">
       <p className="section-tag mb-1">Who &amp; when</p>
       <p className="font-semibold text-[var(--ink)] mb-1">Schedule and site notes</p>
-      <p className="text-[12.5px] text-[var(--ink-faint)] mb-4">Start date, who&apos;s lead, gate codes, parking, dogs — anything before you turn up.</p>
+      <p className="text-[12.5px] text-[var(--ink-faint)] mb-4">Start date, who&apos;s lead, gate codes, parking, dogs - anything before you turn up.</p>
 
       <div className="grid sm:grid-cols-3 gap-3 mb-3">
         <label className="block">

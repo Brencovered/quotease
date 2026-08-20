@@ -69,7 +69,7 @@ export default function AdminDirectoryPanel() {
   const [limit, setLimit] = useState(50);
   const [loading, setLoading] = useState(true);
 
-  // Filters — tri-state: "all" | "yes" | "no"
+  // Filters - tri-state: "all" | "yes" | "no"
   const [search, setSearch] = useState("");
   const [tradeFilter, setTradeFilter] = useState("");
   const [emailFilter, setEmailFilter] = useState<TriState>("all");
@@ -96,7 +96,7 @@ export default function AdminDirectoryPanel() {
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const [confirmDelete, setConfirmDelete] = useState<string[] | null>(null);
 
-  // Add tradie -- for listings the scraper missed (a business too new to
+  // Add tradie - for listings the scraper missed (a business too new to
   // be indexed yet, one with a weak web presence, etc.)
   const [showAddForm, setShowAddForm] = useState(false);
   const [newListing, setNewListing] = useState({
@@ -244,7 +244,7 @@ export default function AdminDirectoryPanel() {
 
   // Send "claim your free listing" invites to selected unclaimed rows with
   // an email address on file (built for manually-added leads, e.g. from
-  // hiPages -- not for bulk-emailing the whole Google Places directory)
+  // hiPages - not for bulk-emailing the whole Google Places directory)
   async function sendClaimInvites(ids: string[]) {
     setSendingInvites(true);
     setInviteResult(null);
@@ -265,7 +265,7 @@ export default function AdminDirectoryPanel() {
         setInviteResult(parts.join(", "));
       }
     } catch {
-      setInviteResult("Failed to send invites -- check your connection");
+      setInviteResult("Failed to send invites - check your connection");
     } finally {
       setSendingInvites(false);
     }
@@ -304,7 +304,7 @@ export default function AdminDirectoryPanel() {
     }
   }
 
-  // Export CSV -- same filters as the current view, but not limited to the
+  // Export CSV - same filters as the current view, but not limited to the
   // on-screen page: the tradie picks how many rows to pull.
   async function exportCsv() {
     setExporting(true);
@@ -922,7 +922,7 @@ export default function AdminDirectoryPanel() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Tri-State Filter — All | Has | No                                  */
+/*  Tri-State Filter - All | Has | No                                  */
 /* ------------------------------------------------------------------ */
 
 function TriStateFilter({

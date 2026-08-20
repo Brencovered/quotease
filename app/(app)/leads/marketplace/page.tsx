@@ -71,7 +71,7 @@ export default async function LeadsPage() {
   const subscribedSuburbs = [...new Set(activeSubs.map((s) => s.suburb))];
   const subscribedTrades = [...new Set(activeSubs.map((s) => s.trade))];
 
-  // Build the query — match any of their subscribed trade+suburb combos
+  // Build the query - match any of their subscribed trade+suburb combos
   let query = supabase
     .from("job_requests")
     .select("*, job_claims(request_id, status)")

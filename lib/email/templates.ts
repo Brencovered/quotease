@@ -123,7 +123,7 @@ export function buildWeeklyScheduleEmail(vars: {
     .join("");
 
   return {
-    subject: `${vars.businessName} — Your schedule ${vars.weekLabel} (${totalJobs} job${totalJobs === 1 ? "" : "s"})`,
+    subject: `${vars.businessName} - Your schedule ${vars.weekLabel} (${totalJobs} job${totalJobs === 1 ? "" : "s"})`,
     html: `
 <!DOCTYPE html>
 <html>
@@ -139,7 +139,7 @@ export function buildWeeklyScheduleEmail(vars: {
           <tr>
             <td style="padding:28px 24px 20px;background:#0f172a;">
               <p style="margin:0;font-size:20px;font-weight:800;color:#fbbf24;letter-spacing:-0.02em;">${htmlEscape(vars.businessName)}</p>
-              <p style="margin:4px 0 0;font-size:13px;color:#94a3b8;">Weekly schedule — ${htmlEscape(vars.weekLabel)}</p>
+              <p style="margin:4px 0 0;font-size:13px;color:#94a3b8;">Weekly schedule - ${htmlEscape(vars.weekLabel)}</p>
             </td>
           </tr>
           <tr>
@@ -220,7 +220,7 @@ export function buildDirectoryClaimInviteEmail(vars: {
   listingUrl: string;
 }) {
   return {
-    subject: `${vars.businessName} -- your free Swiftscope directory page is ready`,
+    subject: `${vars.businessName} - your free Swiftscope directory page is ready`,
     html: `
       <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; color: #0a1722;">
         <p>Hi,</p>
@@ -262,7 +262,7 @@ export function buildDirectoryEnquiryEmail(vars: {
     <hr/>
     <p style="background:#fffbeb;border:1px solid #ffe58f;border-radius:8px;padding:12px 16px;font-size:13px;color:#5a4a00;">
       This lead came through your free, unclaimed Swiftscope directory page. Claim it to receive enquiries like
-      this straight to your own account, manage your photos and services, and get a verified badge --
+      this straight to your own account, manage your photos and services, and get a verified badge -
       <a href="https://swiftscope.com.au/directory/claim" style="color:#c98600;font-weight:600;">claim your listing free</a>.
     </p>
   `;
@@ -290,7 +290,7 @@ export function buildDirectoryEnquiryEmail(vars: {
  *
  * Sent alongside the tradie's copy whenever the listing has a real email
  * on file. Previously the team only ever saw these enquiries when the
- * listing email was missing/malformed (the fallback case) -- this gives
+ * listing email was missing/malformed (the fallback case) - this gives
  * visibility into every quote request that goes out, not just the ones
  * that had nowhere else to go.
  * ──────────────────────────────────────────────────────────────────── */
@@ -361,8 +361,8 @@ export function buildLeadMatchEmail(vars: {
 }) {
   const tempLabel: Record<string, string> = {
     early: "Early stage",
-    warm: "Warm — interested in speaking soon",
-    hot: "Hot — budget approved, ready to go",
+    warm: "Warm - interested in speaking soon",
+    hot: "Hot - budget approved, ready to go",
   };
   const tempColor: Record<string, string> = {
     hot: "#dc2626",
@@ -371,7 +371,7 @@ export function buildLeadMatchEmail(vars: {
   };
 
   return {
-    subject: `New ${vars.trade} lead — ${vars.suburb} (${tempLabel[vars.leadTemperature] ?? ""})`,
+    subject: `New ${vars.trade} lead - ${vars.suburb} (${tempLabel[vars.leadTemperature] ?? ""})`,
     html: `
       <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
         <div style="background: #0a1722; color: white; padding: 20px 24px; border-radius: 12px 12px 0 0;">
@@ -383,7 +383,7 @@ export function buildLeadMatchEmail(vars: {
           ${vars.additionalDetails ? `<p style="margin: 0 0 8px;"><strong style="color: #0a1722;">Details:</strong> ${htmlEscape(vars.additionalDetails)}</p>` : ""}
           ${vars.budget ? `<p style="margin: 0 0 8px;"><strong style="color: #0a1722;">Budget:</strong> ${htmlEscape(vars.budget)}</p>` : ""}
           ${vars.timeline ? `<p style="margin: 0 0 8px;"><strong style="color: #0a1722;">Timeline:</strong> ${htmlEscape(vars.timeline)}</p>` : ""}
-          ${vars.photoCount ? `<p style="margin: 0 0 16px;"><strong style="color: #0a1722;">Photos:</strong> ${vars.photoCount} attached — view and claim to see them</p>` : ""}
+          ${vars.photoCount ? `<p style="margin: 0 0 16px;"><strong style="color: #0a1722;">Photos:</strong> ${vars.photoCount} attached - view and claim to see them</p>` : ""}
           <p style="margin: 0 0 24px;"><strong style="color: #0a1722;">Suburb:</strong> ${htmlEscape(vars.suburb)}${vars.postcode ? ` ${htmlEscape(vars.postcode)}` : ""}</p>
           <a href="${vars.appUrl}/leads" style="display: inline-block; background: #ffb400; color: #0a1722; padding: 14px 28px; border-radius: 10px; font-weight: bold; text-decoration: none; font-size: 15px;">
             View and claim this lead →
@@ -462,7 +462,7 @@ export const EMAIL_TEMPLATES: EmailTemplateMeta[] = [
         appUrl: "https://swiftscope.com.au",
         jobs: [
           { id: "sample-1", clientName: "Jane Smith", siteAddress: "12 Rosslyn Ave, Seaford", title: "Downlight upgrade", status: "scheduled", dateRange: "Mon 3 Aug" },
-          { id: "sample-2", clientName: "Rory Bread", siteAddress: "8 Coventry St", title: "Switchboard upgrade", status: "in_progress", dateRange: "Wed 5 Aug — Thu 6 Aug" },
+          { id: "sample-2", clientName: "Rory Bread", siteAddress: "8 Coventry St", title: "Switchboard upgrade", status: "in_progress", dateRange: "Wed 5 Aug - Thu 6 Aug" },
         ],
       }),
   },

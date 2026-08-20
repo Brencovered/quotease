@@ -235,7 +235,7 @@ export default function QuoteBuilder({
   // Sticky header only: it has no room for a separate "on-site items" chip
   // like the Review step breakdown does, so its Labour/Materials figures
   // must fold in package/plan-markup/drawing/voice/live-annotate items too
-  // -- otherwise a package-only quote shows misleading near-zero Labour and
+  // - otherwise a package-only quote shows misleading near-zero Labour and
   // Materials up top while Total (which already includes siteTotal) looks
   // correct, making it seem like labour/materials "aren't applied".
   const headerLabourHours = Math.round((displayLabourHours + siteItemsLabourHours(siteItems)) * 10) / 10;
@@ -758,7 +758,7 @@ function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions
           )}
           {analysisResult && detectedItems.length === 0 && (
             <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
-              <p className="text-[12.5px] font-semibold text-amber-800">{analysisResult.notes || "Analysis complete — no items detected. Try a clearer image."}</p>
+              <p className="text-[12.5px] font-semibold text-amber-800">{analysisResult.notes || "Analysis complete - no items detected. Try a clearer image."}</p>
             </div>
           )}
         </div>

@@ -11,7 +11,7 @@ type PriceBookItem = {
   trade: string | null; imported_at: string;
 };
 
-// Known supplier CSV formats -- maps their column headers to our fields
+// Known supplier CSV formats - maps their column headers to our fields
 const SUPPLIER_PRESETS: Record<string, {
   label: string;
   descCol: string;
@@ -305,7 +305,7 @@ export default function PriceBookPanel({
                     <div key={f.label}>
                       <label className="block text-[11.5px] font-semibold text-[var(--ink-soft)] mb-1">{f.label}</label>
                       <select value={f.val} onChange={e => f.set(e.target.value)} className="app-field text-[12.5px]">
-                        <option value="">-- skip --</option>
+                        <option value="">Skip</option>
                         {csvHeaders.map(h => <option key={h} value={h}>{h}</option>)}
                       </select>
                     </div>

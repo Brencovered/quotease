@@ -58,7 +58,7 @@ export default function PackagesView({
   const [priceBook, setPriceBook] = useState<{ item_key: string; label: string; unit_cost: number }[]>([]);
 
   // Load the FULL price book on mount. Supabase caps un-limited selects at
-  // 1000 rows -- with 2000+ items, a single query silently drops everything
+  // 1000 rows - with 2000+ items, a single query silently drops everything
   // past row 1000 (which turned out to be all the Custom items and every
   // downlight), making the AI assistant think nothing matched. Paginate.
   useEffect(() => {

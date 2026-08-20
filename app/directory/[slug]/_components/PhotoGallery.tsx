@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 /**
  * Only renders photos that are already cached as real URLs (Supabase Storage
- * or tradie-uploaded). Never calls /api/places/photo -- that hits Google
+ * or tradie-uploaded). Never calls /api/places/photo - that hits Google
  * API on every view and runs up costs. Uncached Google photo_reference tokens
  * are silently filtered out.
  */

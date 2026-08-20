@@ -35,7 +35,7 @@ export interface SeoRefreshResult {
  * page whose indexability crossed the 3-listing threshold, and pings
  * Google with the sitemap. Shared by the weekly cron
  * (app/api/cron/refresh-seo) and the admin manual-trigger route
- * (app/api/admin/seo/refresh) -- same logic either way, just a different
+ * (app/api/admin/seo/refresh) - same logic either way, just a different
  * caller and auth check.
  */
 export async function runSeoRefresh(): Promise<SeoRefreshResult> {
@@ -47,14 +47,14 @@ export async function runSeoRefresh(): Promise<SeoRefreshResult> {
   let pagesNewlyDeindexed = 0;
 
   try {
-    // PostgREST silently caps an unpaginated select at 1,000 rows --
+    // PostgREST silently caps an unpaginated select at 1,000 rows -
     // directory_listing now has 4,889+ rows with a suburb, so a plain
     // .select() here was quietly aggregating against roughly a fifth of
     // the real directory and calling it the whole thing. This is exactly
     // why trade counts per suburb looked far lower here than in the admin
     // directory's own search (e.g. 81 results for a suburb there, a
     // fraction of that reflected in trade_suburb_pages). Page through the
-    // full table explicitly rather than relying on one unbounded select --
+    // full table explicitly rather than relying on one unbounded select -
     // same fix already applied once before to the admin coverage
     // dashboard for this exact class of bug.
     const PAGE_SIZE = 1000;
@@ -73,7 +73,7 @@ export async function runSeoRefresh(): Promise<SeoRefreshResult> {
     }
 
     type Agg = { suburb: string; state: string; count: number; ratingSum: number; ratingCount: number; reviews: number };
-    // Key includes state -- suburb name alone can collide across states
+    // Key includes state - suburb name alone can collide across states
     // (e.g. Seaford VIC and Seaford SA, a real duplicate confirmed in
     // this directory), which would otherwise merge two entirely
     // different physical locations into one aggregate.
@@ -142,7 +142,7 @@ export async function runSeoRefresh(): Promise<SeoRefreshResult> {
         if (isIndexed) pagesNewlyIndexed++; else pagesNewlyDeindexed++;
         pathsToRevalidate.add(`/${tradeToSlug(trade)}-${suburbSlug}-${state}`);
       }
-      // Every suburb hub page touched this run, unconditionally -- not
+      // Every suburb hub page touched this run, unconditionally - not
       // just ones whose indexed status changed. Suburb hub pages were
       // never revalidated at all before this fix existed, so a page
       // visited before its suburb had enough real data (caching a 404)
@@ -151,7 +151,7 @@ export async function runSeoRefresh(): Promise<SeoRefreshResult> {
       suburbHubPaths.add(`/tradies-in/${suburbSlug}-${state}`);
     }
 
-    // Bulk upsert in chunks rather than one row at a time -- with ~1,000+
+    // Bulk upsert in chunks rather than one row at a time - with ~1,000+
     // distinct trade+suburb+state combinations, a sequential await-per-row
     // loop here was thousands of individual network round trips (multiple
     // minutes, genuinely at risk of exceeding this route's execution

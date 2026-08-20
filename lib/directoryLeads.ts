@@ -1,9 +1,9 @@
 /**
  * Directory lead priority matrix + pipeline helpers.
  *
- * Hot  — budget in mind and looking to start ASAP
- * Warm — have an idea, checking / comparing prices
- * Cold — costing a job 6+ months out
+ * Hot  - budget in mind and looking to start ASAP
+ * Warm - have an idea, checking / comparing prices
+ * Cold - costing a job 6+ months out
  */
 
 export type LeadPriority = "hot" | "warm" | "cold";
@@ -38,9 +38,9 @@ export const PIPELINE_LABEL: Record<LeadPipelineStatus, string> = {
 };
 
 export const URGENCY_OPTIONS: { id: LeadUrgency; label: string; priority: LeadPriority }[] = [
-  { id: "asap", label: "Ready to start soon — I have a budget", priority: "hot" },
-  { id: "checking", label: "Have an idea — just checking prices", priority: "warm" },
-  { id: "later", label: "Planning 6+ months ahead — want a sense of cost", priority: "cold" },
+  { id: "asap", label: "Ready to start soon - I have a budget", priority: "hot" },
+  { id: "checking", label: "Have an idea - just checking prices", priority: "warm" },
+  { id: "later", label: "Planning 6+ months ahead - want a sense of cost", priority: "cold" },
 ];
 
 export function priorityFromUrgency(urgency: string | null | undefined): LeadPriority | null {

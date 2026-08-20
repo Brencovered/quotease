@@ -297,7 +297,7 @@ function AccountControlsCard({ profile }: { profile: ProfileRow }) {
           <p className="text-[13px] font-semibold text-[var(--ink)] mb-1">Free access</p>
           <p className="text-[12px] text-[var(--ink-faint)] mb-2">
             {compAccess
-              ? "Complimentary access ON — billing bypassed"
+              ? "Complimentary access ON - billing bypassed"
               : "Normal billing applies"}
           </p>
           <button

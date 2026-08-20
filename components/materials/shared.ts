@@ -115,7 +115,7 @@ export const TRADE_COLORS: Record<string, string> = {
   custom: "#0a1722",
 };
 
-/** Canonical product trades — keep materials UI in sync with quoting. */
+/** Canonical product trades - keep materials UI in sync with quoting. */
 export const TRADES = PRODUCT_TRADES;
 
 export const UNITS = ["ea", "m", "m2", "m3", "hr", "kg", "each", "box", "roll", "set", "pair", "lot"];
