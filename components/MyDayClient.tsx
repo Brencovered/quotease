@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   MapPin,
   Briefcase,
-  ChevronRight,
 } from "lucide-react";
 
 export type MyDayJob = {
@@ -30,13 +29,12 @@ const STATUS_LABEL: Record<string, string> = {
   scheduled: "Scheduled",
   in_progress: "On site",
   on_hold: "On hold",
-  awaiting_sign_off: "Awaiting sign-off",
+  awaiting_sign_off: "Sign-off",
 };
 
 function formatTime(iso: string | null): string | null {
   if (!iso) return null;
   if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
-  // Midnight Z from date-only promotion — treat as date, no clock time
   if (iso.endsWith("T00:00:00.000Z") || iso.endsWith("T00:00:00Z")) return null;
   try {
     return new Date(iso).toLocaleTimeString("en-AU", {
@@ -53,7 +51,7 @@ function mapsUrl(address: string) {
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
 }
 
-function JobCard({
+function JobTile({
   job,
   busy,
   onStatus,
@@ -68,83 +66,143 @@ function JobCard({
   const noStart = forceNoStartLabel || job.has_start_date === false || !job.scheduled_start;
   const canStart = job.status === "scheduled" || job.status === "on_hold";
   const canComplete = job.status === "in_progress" || job.status === "awaiting_sign_off";
+  const onSite = job.status === "in_progress";
+
+  function stop(e: MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
 
   return (
-    <article className="card !p-0 overflow-hidden">
-      <Link href={`/jobs/${job.id}`} className="block px-4 pt-4 pb-3 hover:bg-[var(--app-bg)]/60 transition-colors">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mb-0.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-faint)]">
-                #{job.job_number}
-              </span>
-              <span className="text-[11px] font-semibold text-[var(--amber-deep)]">
-                {STATUS_LABEL[job.status] ?? job.status}
-              </span>
-              {noStart ? (
-                <span className="text-[11px] font-semibold text-[var(--ink-faint)]">No start date</span>
-              ) : time ? (
-                <span className="text-[11px] font-semibold text-[var(--ink-soft)]">{time}</span>
-              ) : null}
-            </div>
-            <p className="font-semibold text-[15px] text-[var(--ink)] truncate">
-              {job.client_name || "No client name"}
-            </p>
-            {job.title && (
-              <p className="text-[13px] text-[var(--ink-soft)] truncate">{job.title}</p>
-            )}
-            {job.site_address && (
-              <p className="text-[12.5px] text-[var(--ink-faint)] mt-1 flex items-start gap-1">
-                <MapPin size={12} className="mt-0.5 shrink-0" />
-                <span>{job.site_address}</span>
-              </p>
-            )}
-          </div>
-          <ChevronRight size={18} className="text-[var(--ink-faint)] shrink-0 mt-1" />
+    <article
+      className={[
+        "relative flex flex-col rounded-2xl border bg-[var(--surface)] overflow-hidden min-h-[148px]",
+        onSite ? "border-[var(--amber)]/50 shadow-[0_0_0_1px_rgba(255,180,0,0.12)]" : "border-[var(--line)]",
+      ].join(" ")}
+    >
+      <Link href={`/jobs/${job.id}`} className="flex-1 flex flex-col p-3 pb-2 active:bg-[var(--app-bg)]">
+        <div className="flex items-center justify-between gap-1.5 mb-1.5">
+          <span className="text-[10px] font-bold text-[var(--ink-faint)]">#{job.job_number}</span>
+          {noStart ? (
+            <span className="text-[10px] font-semibold text-[var(--ink-faint)] truncate">No start date</span>
+          ) : time ? (
+            <span className="text-[10px] font-bold text-[var(--ink-soft)]">{time}</span>
+          ) : (
+            <span className="text-[10px] font-semibold text-[var(--amber-deep)] truncate">
+              {STATUS_LABEL[job.status] ?? job.status}
+            </span>
+          )}
         </div>
+
+        <p className="font-semibold text-[14px] text-[var(--ink)] leading-snug line-clamp-2 mb-0.5">
+          {job.client_name || "No client name"}
+        </p>
+        {job.title && (
+          <p className="text-[12px] text-[var(--ink-soft)] truncate mb-1">{job.title}</p>
+        )}
+        {job.site_address ? (
+          <p className="mt-auto text-[11.5px] text-[var(--ink-faint)] line-clamp-2 flex gap-1">
+            <MapPin size={11} className="mt-0.5 shrink-0" />
+            <span>{job.site_address}</span>
+          </p>
+        ) : (
+          <span className="mt-auto" />
+        )}
+
+        {(noStart || time) && (
+          <p className="text-[10px] font-semibold text-[var(--amber-deep)] mt-1.5">
+            {STATUS_LABEL[job.status] ?? job.status}
+          </p>
+        )}
       </Link>
 
-      <div className="px-3 pb-3 flex flex-wrap gap-2 border-t border-[var(--line-subtle)] pt-3">
-        {job.client_phone && (
+      <div className="flex items-stretch border-t border-[var(--line-subtle)]">
+        {job.client_phone ? (
           <a
             href={`tel:${job.client_phone.replace(/\s/g, "")}`}
-            className="btn-secondary text-[12.5px] py-2 px-3 inline-flex items-center gap-1.5"
+            onClick={stop}
+            className="flex-1 flex items-center justify-center py-2.5 text-[var(--ink-soft)] hover:bg-[var(--app-bg)]"
+            aria-label="Call"
           >
-            <Phone size={13} /> Call
+            <Phone size={15} />
           </a>
-        )}
-        {job.site_address && (
+        ) : null}
+        {job.site_address ? (
           <a
             href={mapsUrl(job.site_address)}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-secondary text-[12.5px] py-2 px-3 inline-flex items-center gap-1.5"
+            onClick={stop}
+            className="flex-1 flex items-center justify-center py-2.5 text-[var(--ink-soft)] hover:bg-[var(--app-bg)] border-l border-[var(--line-subtle)]"
+            aria-label="Navigate"
           >
-            <Navigation size={13} /> Navigate
+            <Navigation size={15} />
           </a>
-        )}
+        ) : null}
         {canStart && (
           <button
             type="button"
             disabled={busy}
-            onClick={() => onStatus(job.id, "in_progress")}
-            className="btn-primary text-[12.5px] py-2 px-3 inline-flex items-center gap-1.5 disabled:opacity-50"
+            onClick={(e) => {
+              stop(e);
+              onStatus(job.id, "in_progress");
+            }}
+            className="flex-[1.4] flex items-center justify-center gap-1 py-2.5 bg-[var(--amber)] text-[var(--navy)] font-bold text-[12px] disabled:opacity-50 border-l border-[var(--line-subtle)]"
           >
-            <Play size={13} /> {busy ? "…" : "Start"}
+            <Play size={13} strokeWidth={2.5} />
+            {busy ? "…" : "Start"}
           </button>
         )}
         {canComplete && (
           <button
             type="button"
             disabled={busy}
-            onClick={() => onStatus(job.id, "complete")}
-            className="btn-primary text-[12.5px] py-2 px-3 inline-flex items-center gap-1.5 disabled:opacity-50"
+            onClick={(e) => {
+              stop(e);
+              onStatus(job.id, "complete");
+            }}
+            className="flex-[1.4] flex items-center justify-center gap-1 py-2.5 bg-[var(--amber)] text-[var(--navy)] font-bold text-[12px] disabled:opacity-50 border-l border-[var(--line-subtle)]"
           >
-            <CheckCircle2 size={13} /> {busy ? "…" : "Done"}
+            <CheckCircle2 size={13} strokeWidth={2.5} />
+            {busy ? "…" : "Done"}
           </button>
+        )}
+        {!canStart && !canComplete && (
+          <Link
+            href={`/jobs/${job.id}`}
+            className="flex-1 flex items-center justify-center py-2.5 text-[12px] font-semibold text-[var(--ink-soft)] border-l border-[var(--line-subtle)]"
+          >
+            Open
+          </Link>
         )}
       </div>
     </article>
+  );
+}
+
+function TileGrid({
+  jobs,
+  busyId,
+  onStatus,
+  forceNoStartLabel,
+}: {
+  jobs: MyDayJob[];
+  busyId: string | null;
+  onStatus: (jobId: string, status: string) => void;
+  forceNoStartLabel?: boolean;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-2.5 sm:gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      {jobs.map((job) => (
+        <JobTile
+          key={job.id}
+          job={job}
+          busy={busyId === job.id}
+          onStatus={onStatus}
+          forceNoStartLabel={forceNoStartLabel}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -194,15 +252,15 @@ export default function MyDayClient({
 
   return (
     <main className="page-wrap pb-24 sm:pb-10">
-      <div className="mb-5">
-        <p className="text-[11px] font-bold tracking-[0.16em] uppercase text-[var(--amber-deep)] mb-1">
-          {dateLabel}
-        </p>
-        <h1 className="font-display text-[28px] text-[var(--ink)] leading-none mb-1">{title}</h1>
-        <p className="text-[13.5px] text-[var(--ink-faint)]">
-          {scopedToSelf
-            ? "Only jobs with today’s start date (plus any with no start date yet)."
-            : "Jobs with a start date of today. Undated jobs are listed separately — not the whole board."}
+      <div className="mb-4 flex items-end justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-bold tracking-[0.16em] uppercase text-[var(--amber-deep)] mb-1">
+            {dateLabel}
+          </p>
+          <h1 className="font-display text-[26px] sm:text-[28px] text-[var(--ink)] leading-none">{title}</h1>
+        </div>
+        <p className="text-[12px] text-[var(--ink-faint)] text-right shrink-0 max-w-[14ch] sm:max-w-none">
+          {scopedToSelf ? "Your jobs" : "By start date"}
         </p>
       </div>
 
@@ -229,58 +287,47 @@ export default function MyDayClient({
           </div>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-7">
           <section>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-faint)] mb-2">
-              Starting today
-            </p>
+            <div className="flex items-baseline justify-between gap-2 mb-2.5">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-faint)]">
+                Starting today
+              </p>
+              <span className="text-[11px] font-semibold text-[var(--ink-faint)]">{todayJobs.length}</span>
+            </div>
             {todayJobs.length === 0 ? (
               <p className="text-[13px] text-[var(--ink-faint)]">No jobs with a start date of today.</p>
             ) : (
-              <div className="space-y-3">
-                {todayJobs.map((job) => (
-                  <JobCard
-                    key={job.id}
-                    job={job}
-                    busy={busyId === job.id}
-                    onStatus={setStatus}
-                  />
-                ))}
-              </div>
+              <TileGrid jobs={todayJobs} busyId={busyId} onStatus={setStatus} />
             )}
           </section>
 
           {undatedJobs.length > 0 && (
             <section>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-faint)] mb-2">
-                No start date
-              </p>
-              <p className="text-[12.5px] text-[var(--ink-faint)] mb-3">
-                Open jobs that aren’t scheduled yet — set a date on the job to move them into today.
-              </p>
-              <div className="space-y-3">
-                {undatedJobs.map((job) => (
-                  <JobCard
-                    key={job.id}
-                    job={job}
-                    busy={busyId === job.id}
-                    onStatus={setStatus}
-                    forceNoStartLabel
-                  />
-                ))}
+              <div className="flex items-baseline justify-between gap-2 mb-2.5">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-faint)]">
+                  No start date
+                </p>
+                <span className="text-[11px] font-semibold text-[var(--ink-faint)]">{undatedJobs.length}</span>
               </div>
+              <TileGrid
+                jobs={undatedJobs}
+                busyId={busyId}
+                onStatus={setStatus}
+                forceNoStartLabel
+              />
             </section>
           )}
         </div>
       )}
 
-      <div className="mt-6 flex flex-wrap gap-2">
-        <Link href="/jobs" className="text-[13px] font-semibold text-[var(--navy)] underline underline-offset-2">
-          Open jobs board
+      <div className="mt-6 flex flex-wrap gap-2 text-[13px]">
+        <Link href="/jobs" className="font-semibold text-[var(--navy)] underline underline-offset-2">
+          Jobs board
         </Link>
         <span className="text-[var(--ink-faint)]">·</span>
-        <Link href="/schedule" className="text-[13px] font-semibold text-[var(--navy)] underline underline-offset-2">
-          Full schedule
+        <Link href="/schedule" className="font-semibold text-[var(--navy)] underline underline-offset-2">
+          Schedule
         </Link>
       </div>
     </main>
