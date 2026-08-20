@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { PAYMENT_TERM_PRESETS } from "@/lib/paymentTerms";
 import { ChevronRight, ChevronLeft, Check, Plus, Trash2, Paperclip, X, Sparkles } from "lucide-react";
@@ -890,9 +891,9 @@ export default function GenericQuoteBuilder({
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-[var(--ink-soft)] leading-relaxed">
             Before you send: confirm materials and labour rates are yours, not starter estimates from onboarding.
             Update them in{" "}
-            <a href="/materials" className="font-semibold text-[var(--navy)] underline underline-offset-2">
+            <Link href="/materials" className="font-semibold text-[var(--navy)] underline underline-offset-2">
               Price book
-            </a>
+            </Link>
             {" "}if anything still looks generic.
           </div>
 
