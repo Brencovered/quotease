@@ -38,8 +38,6 @@ export default function DirectoryLeadsPanel({
   const [query, setQuery] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<"all" | LeadPriority>("all");
   const [pipelineFilter, setPipelineFilter] = useState<"all" | LeadPipelineStatus>("all");
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -73,20 +71,10 @@ export default function DirectoryLeadsPanel({
     return { byPriority, byPipeline, byType, byBudget };
   }, [rows]);
 
-  async function convert(id: string) {
-    setBusyId(id);
-    setError(null);
-    try {
-      const res = await fetch(`/api/directory/enquiries/${id}/convert`, { method: "POST" });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Couldn’t start quote");
-      router.push(`/quotes/${data.quoteId}`);
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn’t start quote");
-    } finally {
-      setBusyId(null);
-    }
+  function startQuote(id: string) {
+    // Open the normal /quote wizard with this lead prefilled - do not
+    // create an empty draft and dump onto the finished-quote page.
+    router.push(`/quote?enquiry_id=${encodeURIComponent(id)}`);
   }
 
   return (
@@ -181,10 +169,6 @@ export default function DirectoryLeadsPanel({
         </div>
       )}
 
-      {error && (
-        <p className="mb-3 text-[13px] font-semibold text-[var(--red)]">{error}</p>
-      )}
-
       <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl overflow-hidden">
         {filtered.length === 0 ? (
           <p className="p-8 text-center text-[13.5px] text-[var(--ink-faint)]">
@@ -229,19 +213,18 @@ export default function DirectoryLeadsPanel({
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2 shrink-0">
-                    {mode === "owner" && r.pipeline_status === "new" && !r.quote_id && (
+                    {mode === "owner" && !r.job_id && (r.pipeline_status === "new" || r.pipeline_status === "quoting") && (
                       <button
                         type="button"
-                        disabled={busyId === r.id}
-                        onClick={() => void convert(r.id)}
+                        onClick={() => startQuote(r.id)}
                         className="btn-primary text-[12px] py-1.5 px-3"
                       >
-                        {busyId === r.id ? "…" : "Start quote"}
+                        {r.quote_id ? "Continue quote" : "Start quote"}
                       </button>
                     )}
                     {r.quote_id && (
                       <Link href={`/quotes/${r.quote_id}`} className="btn-secondary text-[12px] py-1.5 px-3">
-                        Open quote
+                        View quote
                       </Link>
                     )}
                     {r.job_id && (

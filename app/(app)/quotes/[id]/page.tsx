@@ -132,7 +132,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
         </div>
 
         {lead && (
-          <div className="mb-4">
+          <div className="mb-4 space-y-3">
             <LeadOriginBadge
               leadCode={lead.lead_code}
               priority={lead.priority}
@@ -140,6 +140,14 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
               budget={lead.budget}
               customerType={lead.customer_type}
             />
+            {quote.status === "draft" && Number(quote.total_cost ?? 0) === 0 && enquiryId && (
+              <Link
+                href={`/quote?enquiry_id=${enquiryId}`}
+                className="btn-primary inline-flex w-auto px-4 py-2 text-[13px]"
+              >
+                Continue in quote builder
+              </Link>
+            )}
           </div>
         )}
 

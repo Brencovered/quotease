@@ -58,6 +58,7 @@ export default function GenericQuoteBuilder({
   jobSizeTiers,
   siteConditions,
   teamMembers,
+  leadPrefill,
 }: {
   tradeKey: string;
   profile: { hourly_rate: number; materials_margin_pct: number; archetype_defaults?: Record<string, string> };
@@ -69,6 +70,18 @@ export default function GenericQuoteBuilder({
   jobSizeTiers?: Array<{ id: string; name: string; max_days: number | null; markup_pct: number; sort_order: number }>;
   siteConditions?: SiteConditionTemplateRow[];
   teamMembers?: Array<{ id: string; name: string | null; email: string }>;
+  leadPrefill?: {
+    enquiryId: string;
+    clientName: string;
+    clientEmail: string;
+    clientPhone: string;
+    jobNotes: string;
+    leadCode: string | null;
+    priority: string | null;
+    urgency: string | null;
+    budget: string | null;
+    customerType: string | null;
+  } | null;
 }) {
   const lib = materials ?? [];
   const [archetypeDefaults, setArchetypeDefaults] = useState<Record<string, string>>(
@@ -117,7 +130,7 @@ export default function GenericQuoteBuilder({
 
   const [step,        setStep]        = useState(0);
   const [jobType,     setJobType]     = useState(jobTypes[0] ?? "Custom job");
-  const [description, setDescription] = useState("");
+  const [description, setDescription] = useState(leadPrefill?.jobNotes ?? "");
   const [siteAccess,  setSiteAccess]  = useState<GenericIntake["siteAccess"]>("na");
   const [siteAccessNote, setSiteAccessNote] = useState("");
   // A brand new quote starts genuinely empty - previously seeded from
@@ -130,8 +143,9 @@ export default function GenericQuoteBuilder({
   // added, via the same materials search used everywhere else.
   const [items,       setItems]       = useState<GenericLineItem[]>([]);
 
-  const [clientName,  setClientName]  = useState("");
-  const [clientEmail, setClientEmail] = useState("");
+  const [clientName,  setClientName]  = useState(leadPrefill?.clientName ?? "");
+  const [clientEmail, setClientEmail] = useState(leadPrefill?.clientEmail ?? "");
+  const [clientPhone] = useState(leadPrefill?.clientPhone ?? "");
   const [siteAddress, setSiteAddress] = useState("");
   const [clientId, setClientId] = useState<string | null>(preClientId ?? null);
   const [plannedCrew, setPlannedCrew] = useState<string[]>([]);
@@ -148,7 +162,7 @@ export default function GenericQuoteBuilder({
     () => markupMaterialsToScopeItems(preMarkupMaterials, preMarkupSource ?? "plan markup")
   );
   const [annotationMeta, setAnnotationMeta] = useState<{id:string;label:string;itemKey:string;type:string;qty:number;unit:string;note:string;length?:number;colour:string;frameData:string;roomName?:string}[]>([]);
-  const [siteNotes, setSiteNotes] = useState("");
+  const [siteNotes, setSiteNotes] = useState(leadPrefill?.jobNotes ?? "");
   const [extraLines, setExtraLines]   = useState<ExtraLine[]>([]);
   const [saving,      setSaving]      = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -261,7 +275,20 @@ export default function GenericQuoteBuilder({
     const businessId = await getActiveBusinessId(supabase, user.id);
 
     const resolvedClientId = await resolveClientId(supabase, businessId, clientId, clientName, clientEmail, siteAddress);
-    const intakeData = { ...intake, tradeKey };
+    const intakeData = {
+      ...intake,
+      tradeKey,
+      ...(leadPrefill
+        ? {
+            source: "directory_lead",
+            lead_code: leadPrefill.leadCode,
+            priority: leadPrefill.priority,
+            urgency: leadPrefill.urgency,
+            budget: leadPrefill.budget,
+            customer_type: leadPrefill.customerType,
+          }
+        : {}),
+    };
     const extraTotals = extraLinesTotals(extraLines, profile.hourly_rate ?? 85, effectiveMargin);
     const siteLabourSave   = siteItemsLabourHours(siteItems);
     const siteMatlsSave    = siteItemsMaterialsTotal(siteItems, effectiveMargin);
@@ -272,6 +299,7 @@ export default function GenericQuoteBuilder({
       client_id:     resolvedClientId,
       client_name:   clientName,
       client_email:  clientEmail,
+      client_phone:  clientPhone || null,
       site_address:  siteAddress,
       site_notes:    siteNotes || null,
       trade:         tradeKey,
@@ -290,9 +318,22 @@ export default function GenericQuoteBuilder({
       markup_materials: [],
       status:        sendEmail ? "sent" : "draft",
       sent_at:       sendEmail ? new Date().toISOString() : null,
+      directory_enquiry_id: leadPrefill?.enquiryId ?? null,
     }).select().single();
 
     if (error) { setSaveMessage(error.message); setSaving(false); return; }
+
+    if (leadPrefill?.enquiryId) {
+      await supabase
+        .from("directory_enquiries")
+        .update({
+          quote_id: quote.id,
+          pipeline_status: sendEmail ? "quote_sent" : "quoting",
+          status: "replied",
+        })
+        .eq("id", leadPrefill.enquiryId)
+        .eq("profile_id", businessId);
+    }
 
     for (const file of drawingFiles) {
       const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
@@ -334,6 +375,20 @@ export default function GenericQuoteBuilder({
 
   return (
     <div className="page-wrap-narrow">
+      {leadPrefill && (
+        <div className="mb-4 rounded-xl border border-[var(--amber)]/40 bg-[var(--amber-light)]/40 px-4 py-3">
+          <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--amber-deep)]">Directory lead</p>
+          <p className="text-[14px] font-semibold text-[var(--ink)] mt-0.5">
+            {[leadPrefill.leadCode, leadPrefill.priority ? leadPrefill.priority.toUpperCase() : null]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+          <p className="text-[12.5px] text-[var(--ink-soft)] mt-0.5">
+            {[leadPrefill.customerType, leadPrefill.budget].filter(Boolean).join(" · ") || "Customer details prefilled from the lead"}
+          </p>
+        </div>
+      )}
+
       {/* Live total */}
       <div className="sticky top-12 sm:top-0 z-30 mb-4 -mx-4 sm:mx-0 px-4 sm:px-0">
         <div className="bg-[var(--navy)] rounded-none sm:rounded-2xl px-5 py-3 flex items-center justify-between"
