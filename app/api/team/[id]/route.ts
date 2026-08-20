@@ -11,7 +11,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getTeamContext } from "@/lib/team";
-import { ensureInviteAuthUser, teamInviteEmailHtml } from "@/lib/teamInvite";
+import { ensureInviteAuthUser, teamInviteAcceptBaseUrl, teamInviteEmailHtml } from "@/lib/teamInvite";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
@@ -89,7 +89,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       .select("business_name")
       .eq("id", ctx.businessId)
       .single();
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
+    const appUrl = teamInviteAcceptBaseUrl(request);
     const acceptUrl = `${appUrl}/team/accept/${invite.invite_token}`;
     const businessName = profile?.business_name || "their Swiftscope account";
 
@@ -120,7 +120,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         );
       }
     }
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, acceptUrl });
   }
 
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });
