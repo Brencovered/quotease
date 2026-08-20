@@ -48,13 +48,14 @@ interface PackagesTabProps {
 }
 
 export default function PackagesView({
+  accountTrade,
   packages,
   loading,
   businessId,
   hourlyRate,
   supabase,
   onPackagesChanged,
-}: PackagesTabProps) {
+}: PackagesTabProps & { accountTrade: string | null }) {
   const [priceBook, setPriceBook] = useState<{ item_key: string; label: string; unit_cost: number }[]>([]);
 
   // Load the FULL price book on mount. Supabase caps un-limited selects at
@@ -96,7 +97,12 @@ export default function PackagesView({
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formTitle, setFormTitle] = useState("");
-  const [formTrade, setFormTrade] = useState("electrician");
+  // Always the account's own trade. This used to default to "electrician"
+  // with a dropdown, so a roofer saving a package tagged it electrician and
+  // it then never appeared in the roofer quote builder, because
+  // PackagePicker filters .eq("trade", trade). Not a picker any more:
+  // an account has one trade, set at onboarding.
+  const formTrade = accountTrade ?? "";
   const [formDescription, setFormDescription] = useState("");
   const [formLabourHours, setFormLabourHours] = useState(0);
   const [formItems, setFormItems] = useState<PackageItem[]>([{ ...EMPTY_ITEM, sort_order: 0 }]);
@@ -113,7 +119,6 @@ export default function PackagesView({
   function openCreateModal() {
     setEditingId(null);
     setFormTitle("");
-    setFormTrade("electrician");
     setFormDescription("");
     setFormLabourHours(0);
     setFormItems([{ ...EMPTY_ITEM, sort_order: 0 }]);
@@ -124,7 +129,6 @@ export default function PackagesView({
   function openEditModal(pkg: Pkg) {
     setEditingId(pkg.id);
     setFormTitle(pkg.title);
-    setFormTrade(pkg.trade);
     setFormDescription(pkg.description ?? "");
     setFormLabourHours(pkg.labour_hours ?? 0);
     setFormItems(
@@ -529,15 +533,13 @@ export default function PackagesView({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Trade is the account's own, not a choice. Shown read-only
+                    so it is clear what the package will be filed under. */}
                 <div>
                   <label className="block text-[12px] font-bold text-[var(--ink-soft)] mb-1.5">Trade</label>
-                  <select className="app-field" value={formTrade} onChange={(e) => setFormTrade(e.target.value)}>
-                    {TRADES.map((t) => (
-                      <option key={t.key} value={t.key}>
-                        {t.label}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="app-field flex items-center text-[var(--ink-soft)] bg-[var(--line)]/20">
+                    {TRADES.find((t) => t.key === formTrade)?.label ?? "Not set"}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[12px] font-bold text-[var(--ink-soft)] mb-1.5">Labour Hours</label>

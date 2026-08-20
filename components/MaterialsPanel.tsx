@@ -34,6 +34,11 @@ export default function MaterialsPanel() {
   const [searchQuery, setSearchQuery] = useState("");
   const [supplierFilter, setSupplierFilter] = useState("");
   const [tradeFilter, setTradeFilter] = useState("");
+  // The account's own trade, from profiles.trades[0]. Materials and packages
+  // are tagged with this rather than offering a picker: an account has one
+  // trade, chosen at onboarding, and every place that let the user pick was
+  // defaulting to "electrician" and silently mis-filing their price book.
+  const [accountTrade, setAccountTrade] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalMaterials, setTotalMaterials] = useState(0);
 
@@ -95,9 +100,10 @@ export default function MaterialsPanel() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("hourly_rate")
+        .select("hourly_rate, trades")
         .eq("id", resolvedBusinessId)
         .single();
+      if (profile?.trades?.[0]) setAccountTrade(profile.trades[0]);
       if (profile?.hourly_rate) {
         setHourlyRate(profile.hourly_rate);
       }
@@ -330,6 +336,7 @@ export default function MaterialsPanel() {
       {/* ---- Tab 1: Materials ---- */}
       {activeTab === "materials" && (
         <MaterialsCatalog
+          accountTrade={accountTrade}
           materials={materials}
           loading={materialsLoading}
           error={materialsError}
@@ -374,6 +381,7 @@ export default function MaterialsPanel() {
       {/* ---- Tab 3: Packages ---- */}
       {activeTab === "packages" && (
         <PackagesView
+          accountTrade={accountTrade}
           packages={packages}
           loading={packagesLoading}
           businessId={businessId}
@@ -443,6 +451,7 @@ export default function MaterialsPanel() {
       {/* ---- Material Modal ---- */}
       {materialModalOpen && (
         <MaterialModal
+          accountTrade={accountTrade}
           material={editingMaterial}
           onClose={() => {
             setMaterialModalOpen(false);
