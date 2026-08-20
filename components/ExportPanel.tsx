@@ -1,14 +1,16 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Download, Filter, Check } from "lucide-react";
+import { Download, Filter, Check, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { incGst } from "@/lib/gst";
+import { quoteInvoiceExGst } from "@/lib/exportQuoteTotal";
 
 type Quote = {
   id: string; client_name: string | null; client_email: string | null;
   site_address: string | null; trade: string | null; job_type: string | null;
   total_cost: number | null; labour_hours: number | null; materials_cost: number | null;
-  markup_materials: number | null; amount_paid: number | null; status: string;
+  markup_materials: unknown; amount_paid: number | null; status: string;
   invoice_number: string | null; xero_exported_at: string | null;
   sent_at: string | null; accepted_at: string | null; completed_at: string | null;
   paid_at: string | null; created_at: string; scheduled_date: string | null;
@@ -31,12 +33,30 @@ function fmt(date: string | null) {
   return new Date(date).toLocaleDateString("en-AU", { day:"2-digit", month:"2-digit", year:"numeric" });
 }
 
+function money(n: number) {
+  return n.toLocaleString("en-AU", { maximumFractionDigits: 0 });
+}
+
 function invoiceNum(q: Quote, idx: number) {
   return q.invoice_number ?? `INV-${String(idx + 1).padStart(4, "0")}`;
 }
 
+function triggerCsvDownload(filename: string, csv: string) {
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.rel = "noopener";
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export default function ExportPanel({
-  quotes, variations, actuals, businessName, abn,
+  quotes, variations, actuals, businessName: _businessName, abn: _abn,
 }: {
   quotes: Quote[];
   variations: Variation[];
@@ -51,20 +71,25 @@ export default function ExportPanel({
   const [selected,    setSelected]    = useState<Set<string>>(new Set());
   const [exporting,   setExporting]   = useState(false);
   const [exported,    setExported]    = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
-  // Compute effective total per quote
+  // Ex-GST invoice total: quote total + approved variations + markup lines.
+  // Never `+ markup_materials` when it is an array - that string-coerces.
   const effectiveTotals = useMemo(() => {
     const map: Record<string, number> = {};
     for (const q of quotes) {
       const varTotal = variations
         .filter(v => v.quote_id === q.id)
-        .reduce((s, v) => s + (v.total_cost ?? 0), 0);
-      map[q.id] = (q.total_cost ?? 0) + varTotal + (q.markup_materials ?? 0);
+        .reduce((s, v) => s + (Number(v.total_cost) || 0), 0);
+      map[q.id] = quoteInvoiceExGst({
+        totalCost: q.total_cost,
+        markupMaterials: q.markup_materials,
+        approvedVariationsTotal: varTotal,
+      });
     }
     return map;
   }, [quotes, variations]);
 
-  // Filtered list
   const filtered = useMemo(() => {
     return quotes.filter(q => {
       if (tradeFilter !== "all" && q.trade !== tradeFilter) return false;
@@ -81,7 +106,13 @@ export default function ExportPanel({
     });
   }, [quotes, tradeFilter, statusFilter, dateFrom, dateTo]);
 
+  const selectedRows = useMemo(
+    () => filtered.filter(q => selected.has(q.id)),
+    [filtered, selected]
+  );
+  const selectedTotal = selectedRows.reduce((s, q) => s + (effectiveTotals[q.id] ?? 0), 0);
   const allSelected = filtered.length > 0 && filtered.every(q => selected.has(q.id));
+  const prevExported = filtered.filter(q => q.xero_exported_at).length;
 
   function toggleAll() {
     if (allSelected) {
@@ -101,7 +132,7 @@ export default function ExportPanel({
   }
 
   function buildXeroCSV(rows: Quote[]): string {
-    // Xero invoice import format
+    // Xero UnitAmount is tax-exclusive when TaxType is GST on income.
     const headers = [
       "*ContactName","EmailAddress","POAddressLine1","*InvoiceNumber",
       "*InvoiceDate","*DueDate","*Description","*Quantity","*UnitAmount",
@@ -111,8 +142,13 @@ export default function ExportPanel({
     rows.forEach((q, i) => {
       const invNum   = invoiceNum(q, i);
       const date     = fmt(q.accepted_at ?? q.created_at);
-      const dueDate  = fmt(q.paid_at ?? q.accepted_at ?? q.created_at);
-      const total    = effectiveTotals[q.id] ?? 0;
+      const dueDate  = fmt(
+        q.paid_at
+          ?? (q.accepted_at
+            ? new Date(new Date(q.accepted_at).getTime() + 14 * 86400000).toISOString()
+            : q.created_at)
+      );
+      const totalEx  = effectiveTotals[q.id] ?? 0;
       const desc     = `${TRADE_LABEL[q.trade ?? "custom"] ?? q.trade} - ${q.job_type ?? "Service"} at ${q.site_address ?? ""}`.replace(/,/g, " ");
       const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
       lines.push([
@@ -120,12 +156,12 @@ export default function ExportPanel({
         esc(q.client_email ?? ""),
         esc(q.site_address ?? ""),
         esc(invNum),
-        date, date,
+        date, dueDate,
         esc(desc),
         "1",
-        total.toFixed(2),
-        "200", // Services income account
-        "OUTPUT2", // GST on income
+        totalEx.toFixed(2),
+        "200",
+        "OUTPUT",
         esc(TRADE_LABEL[q.trade ?? "custom"] ?? ""),
         esc(q.trade ?? ""),
       ].join(","));
@@ -134,7 +170,7 @@ export default function ExportPanel({
   }
 
   function buildMYOBCSV(rows: Quote[]): string {
-    // MYOB AccountRight invoice import format
+    // MYOB "Total Incl. Tax" expects GST-inclusive dollars.
     const headers = [
       "Co./Last Name","First Name","Addr 1 - Line 1","Invoice #",
       "Date","Description","Total Incl. Tax","Tax Code","Status",
@@ -143,7 +179,7 @@ export default function ExportPanel({
     rows.forEach((q, i) => {
       const invNum = invoiceNum(q, i);
       const date   = fmt(q.accepted_at ?? q.created_at);
-      const total  = effectiveTotals[q.id] ?? 0;
+      const totalInc = incGst(effectiveTotals[q.id] ?? 0);
       const desc   = `${TRADE_LABEL[q.trade ?? "custom"] ?? q.trade} - ${q.job_type ?? "Service"}`.replace(/,/g, " ");
       const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
       lines.push([
@@ -152,7 +188,7 @@ export default function ExportPanel({
         esc(invNum),
         date,
         esc(desc),
-        total.toFixed(2),
+        totalInc.toFixed(2),
         "GST",
         q.status === "paid" ? "Closed" : "Open",
       ].join(","));
@@ -161,42 +197,43 @@ export default function ExportPanel({
   }
 
   async function doExport(format: "xero" | "myob") {
-    const rows = filtered.filter(q => selected.has(q.id));
-    if (!rows.length) return;
+    setExportError(null);
+    const rows = selectedRows;
+    if (!rows.length) {
+      setExportError("Select at least one job in the list above, then try again.");
+      return;
+    }
+
     setExporting(true);
+    try {
+      const csv = format === "xero" ? buildXeroCSV(rows) : buildMYOBCSV(rows);
+      triggerCsvDownload(
+        `swiftscope-${format}-export-${new Date().toISOString().slice(0, 10)}.csv`,
+        csv
+      );
 
-    const csv  = format === "xero" ? buildXeroCSV(rows) : buildMYOBCSV(rows);
-    // BOM ensures Excel opens with correct encoding
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
-    a.href     = url;
-    a.download = `swiftscope-${format}-export-${new Date().toISOString().slice(0, 10)}.csv`;
-    // Must append to DOM for Firefox compatibility
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+      const supabase = createClient();
+      const { error } = await supabase.from("quotes")
+        .update({ xero_exported_at: new Date().toISOString() })
+        .in("id", rows.map(r => r.id));
+      if (error) {
+        // File already downloaded - surface a soft warning only.
+        console.error("[export] mark exported failed:", error.message);
+      }
 
-    // Mark as exported in DB
-    const supabase = createClient();
-    await supabase.from("quotes")
-      .update({ xero_exported_at: new Date().toISOString() })
-      .in("id", rows.map(r => r.id));
-
-    setExporting(false);
-    setExported(true);
-    setTimeout(() => setExported(false), 3000);
+      setExported(true);
+      setTimeout(() => setExported(false), 3000);
+    } catch (err) {
+      console.error("[export] download failed:", err);
+      setExportError(err instanceof Error ? err.message : "Could not build the CSV. Try again.");
+    } finally {
+      setExporting(false);
+    }
   }
-
-  const selectedRows = filtered.filter(q => selected.has(q.id));
-  const selectedTotal = selectedRows.reduce((s, q) => s + (effectiveTotals[q.id] ?? 0), 0);
-  const prevExported = filtered.filter(q => q.xero_exported_at).length;
 
   return (
     <div className="space-y-4">
 
-      {/* How to use */}
       <div className="card bg-[var(--navy)]">
         <p className="text-[12px] font-bold uppercase tracking-wider text-[var(--steel-3)] mb-3">How it works</p>
         <div className="grid sm:grid-cols-3 gap-4">
@@ -216,7 +253,6 @@ export default function ExportPanel({
         </div>
       </div>
 
-      {/* Filters */}
       <div className="card">
         <div className="flex items-center gap-2 mb-3">
           <Filter size={14} className="text-[var(--ink-faint)]" />
@@ -255,7 +291,6 @@ export default function ExportPanel({
         )}
       </div>
 
-      {/* Results table */}
       <div className="card p-0 overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--line)] bg-[var(--app-bg)]">
           <div className="flex items-center gap-3">
@@ -266,9 +301,10 @@ export default function ExportPanel({
               {prevExported > 0 && <span className="ml-2 text-[var(--green)]">· {prevExported} previously exported</span>}
             </p>
           </div>
-          {selected.size > 0 && (
+          {selectedRows.length > 0 && (
             <p className="text-[12.5px] font-semibold text-[var(--ink-soft)]">
-              {selected.size} selected · <span className="text-[var(--amber)] font-bold">${selectedTotal.toLocaleString()}</span>
+              {selectedRows.length} selected · <span className="text-[var(--amber)] font-bold">${money(selectedTotal)}</span>
+              <span className="text-[var(--ink-faint)] font-medium"> ex GST</span>
             </p>
           )}
         </div>
@@ -279,7 +315,7 @@ export default function ExportPanel({
           </div>
         ) : (
           <div className="divide-y divide-[var(--line-subtle)]">
-            {filtered.map((q, _i) => {
+            {filtered.map((q) => {
               const inv   = invoiceNum(q, quotes.indexOf(q));
               const total = effectiveTotals[q.id] ?? 0;
               const act   = actuals.find(a => a.quote_id === q.id);
@@ -308,9 +344,10 @@ export default function ExportPanel({
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="font-display text-[17px] text-[var(--ink)]">${total.toLocaleString()}</p>
+                    <p className="font-display text-[17px] text-[var(--ink)]">${money(total)}</p>
+                    <p className="text-[11px] text-[var(--ink-faint)]">ex GST · ${money(incGst(total))} inc</p>
                     <p className="text-[11px] text-[var(--ink-faint)]">
-                      {q.status === "paid" ? "paid" : `$${(q.amount_paid ?? 0).toLocaleString()} paid`}
+                      {q.status === "paid" ? "paid" : `$${money(q.amount_paid ?? 0)} paid`}
                     </p>
                     {act && (
                       <p className="text-[11px] text-[var(--ink-faint)]">{act.actual_hours}h actual</p>
@@ -323,15 +360,19 @@ export default function ExportPanel({
         )}
       </div>
 
-      {/* Export actions */}
       <div className="card">
         <div className="flex items-center justify-between mb-4">
           <div>
             <p className="font-semibold text-[var(--ink)]">
-              {selected.size > 0 ? `${selected.size} job${selected.size !== 1 ? "s" : ""} selected` : "Select jobs above to export"}
+              {selectedRows.length > 0
+                ? `${selectedRows.length} job${selectedRows.length !== 1 ? "s" : ""} selected`
+                : "Select jobs above to export"}
             </p>
-            {selected.size > 0 && (
-              <p className="text-[13px] text-[var(--ink-faint)]">Total value: <span className="font-bold text-[var(--ink)]">${selectedTotal.toLocaleString()}</span></p>
+            {selectedRows.length > 0 && (
+              <p className="text-[13px] text-[var(--ink-faint)]">
+                Total value: <span className="font-bold text-[var(--ink)]">${money(selectedTotal)}</span> ex GST
+                {" "}· <span className="font-bold text-[var(--ink)]">${money(incGst(selectedTotal))}</span> inc GST
+              </p>
             )}
           </div>
           {exported && (
@@ -341,32 +382,40 @@ export default function ExportPanel({
           )}
         </div>
 
+        {exportError && (
+          <div className="flex items-start gap-2 rounded-xl bg-[var(--red-bg)] text-[var(--red)] px-3 py-2.5 text-[13px] font-semibold mb-3">
+            <AlertCircle size={14} className="shrink-0 mt-0.5" />
+            <span>{exportError}</span>
+          </div>
+        )}
+
         <div className="grid sm:grid-cols-2 gap-3">
           <button
+            type="button"
             onClick={() => doExport("xero")}
-            disabled={selected.size === 0 || exporting}
+            disabled={selectedRows.length === 0 || exporting}
             className="btn-primary justify-center disabled:opacity-40">
-            <Download size={15} /> Download Xero CSV
+            <Download size={15} /> {exporting ? "Preparing..." : "Download Xero CSV"}
           </button>
           <button
+            type="button"
             onClick={() => doExport("myob")}
-            disabled={selected.size === 0 || exporting}
+            disabled={selectedRows.length === 0 || exporting}
             className="btn-secondary justify-center disabled:opacity-40">
-            <Download size={15} /> Download MYOB CSV
+            <Download size={15} /> {exporting ? "Preparing..." : "Download MYOB CSV"}
           </button>
         </div>
 
         <div className="mt-4 pt-4 border-t border-[var(--line-subtle)] space-y-1.5">
           <p className="text-[12px] font-bold text-[var(--ink-faint)] uppercase tracking-wide">Import instructions</p>
           <p className="text-[12.5px] text-[var(--ink-faint)]">
-            <span className="font-semibold text-[var(--ink-soft)]">Xero:</span> Accounts &gt; Sales Overview &gt; Import &gt; select the CSV file
+            <span className="font-semibold text-[var(--ink-soft)]">Xero:</span> Accounts &gt; Sales Overview &gt; Import &gt; select the CSV file. Amounts are ex GST (TaxType OUTPUT).
           </p>
           <p className="text-[12.5px] text-[var(--ink-faint)]">
-            <span className="font-semibold text-[var(--ink-soft)]">MYOB:</span> Sales &gt; Sales Register &gt; Import Sales &gt; select the CSV file
+            <span className="font-semibold text-[var(--ink-soft)]">MYOB:</span> Sales &gt; Sales Register &gt; Import Sales &gt; select the CSV file. Amounts are GST-inclusive.
           </p>
           <p className="text-[12px] text-[var(--ink-faint)] mt-2">
             Jobs marked as previously exported won&apos;t be deselected automatically - you can re-export them if needed.
-            GST is calculated at 10% on the total.
           </p>
         </div>
       </div>
