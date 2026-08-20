@@ -64,7 +64,6 @@ export default function JobBriefPanel({
         scheduled_start: start,
         scheduled_end: end,
         estimated_days: days,
-        assigned_to_member_id: assignedToMemberId || null,
       })
       .eq("id", jobId);
 
@@ -77,10 +76,23 @@ export default function JobBriefPanel({
           scheduled_start: start,
           scheduled_end: end,
           estimated_days: days,
-          assigned_to_member_id: assignedToMemberId || null,
-          assigned_to: assignedMember ? (assignedMember.name || assignedMember.email) : null,
         })
         .eq("id", quoteId);
+    }
+
+    // Primary assignee: notify via API (push → My day + email).
+    if (assignedToMemberId !== (initialAssignedMemberId ?? "")) {
+      await fetch(`/api/jobs/${jobId}/assign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamMemberId: assignedToMemberId || null }),
+      });
+    } else if (!assignedToMemberId && initialAssignedMemberId) {
+      await fetch(`/api/jobs/${jobId}/assign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamMemberId: null }),
+      });
     }
 
     // Simple clash check: same assignee already on another job that day.

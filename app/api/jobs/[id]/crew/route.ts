@@ -103,7 +103,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     await sendPushToUser(admin, member.member_user_id, {
       title: "Added to a job",
       body: `You're on ${jobTitle}${when ? ` - ${when}` : ""}`,
-      url: `/jobs/${jobId}`,
+      url: `/today`,
     });
   }
 
