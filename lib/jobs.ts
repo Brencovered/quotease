@@ -19,7 +19,6 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { resolveScheduledStart } from "@/lib/scheduleNormalize";
-import { humanizeIntakePublic } from "@/lib/humanizeIntake";
 
 export interface JobRow {
   id: string;
@@ -132,27 +131,6 @@ export async function getOrCreateJobForQuote(supabase: SupabaseClient, quoteId: 
     await supabase.from("job_crew").insert(
       plannedCrew.map((teamMemberId) => ({ job_id: created.id, team_member_id: teamMemberId, profile_id: quote.profile_id }))
     );
-  }
-
-  // Seed install-progress lines from the quote scope so the board badges
-  // and job detail progress panel have something to work with immediately.
-  try {
-    const scopeLines = humanizeIntakePublic(quote.intake_data as Record<string, unknown> | null, quote.trade ?? "electrician");
-    if (scopeLines.length) {
-      await supabase.from("job_line_items").insert(
-        scopeLines.slice(0, 40).map((label, i) => ({
-          job_id: created.id,
-          profile_id: quote.profile_id,
-          label,
-          quantity: 1,
-          unit: "ea",
-          status: "not_started",
-          sort_order: i,
-        }))
-      );
-    }
-  } catch (e) {
-    console.error("getOrCreateJobForQuote: line item seed failed", e);
   }
 
   return created as JobRow;

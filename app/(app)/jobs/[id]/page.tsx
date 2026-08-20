@@ -20,7 +20,6 @@ import { resolveAnnotationFrameUrls, type AnnotationMetaPersisted } from "@/lib/
 import JobActionsBar from "@/components/JobActionsBar";
 import QuickJobActionsBar from "@/components/QuickJobActionsBar";
 import JobProgressStepper from "@/components/JobProgressStepper";
-import JobLineItemsPanel from "@/components/JobLineItemsPanel";
 import TimesheetsPanel from "@/components/TimesheetsPanel";
 import JobTabs from "@/components/JobTabs";
 import { humanizeIntake, summarizeConditions } from "@/lib/scopeOfWorks";
@@ -77,7 +76,6 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     { data: crewRows },
     resolvedAnnotations,
     jobPlans,
-    { data: lineItemRows },
   ] = await Promise.all([
     (async (): Promise<Array<{ item_key: string; label: string; unit_cost: number }>> => {
       const pbItems = await getCachedPriceBook(businessId, jobTrade);
@@ -109,11 +107,9 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
       const urlByPath = new Map((signedBatch ?? []).map((s) => [s.path, s.signedUrl]));
       return plans.map((p) => ({ ...p, signedUrl: urlByPath.get(p.storage_path) }));
     })(),
-    supabase.from("job_line_items").select("*").eq("job_id", job.id).order("sort_order"),
   ]);
   const teamMembers: Array<{ id: string; name: string | null; email: string }> = teamRows ?? [];
   const jobCrew: Array<{ id: string; team_member_id: string }> = crewRows ?? [];
-  const lineItems = lineItemRows ?? [];
   const assignedMember = teamMembers.find((m) => m.id === job.assigned_to_member_id);
 
   // Approved variations and drawing-markup materials add to what's owed on
@@ -270,12 +266,6 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               )}
 
               <JobTasksPanel quoteId={quote?.id ?? null} jobId={job.id} profileId={businessId} initialTasks={taskRows ?? []} teamMembers={teamMembers} />
-
-              <JobLineItemsPanel
-                jobId={job.id}
-                initialItems={lineItems as never}
-                scopeLines={scopeLines}
-              />
 
               <DocketsPanel
                 jobId={job.id}
