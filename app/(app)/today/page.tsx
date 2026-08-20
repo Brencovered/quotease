@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getTeamContext, canSeePricing } from "@/lib/team";
+import { getTeamContext, canSeePricing, isFieldWorker } from "@/lib/team";
 import AppHeader from "@/components/AppHeader";
 import MyDayClient, { type MyDayJob, type MyDayTask } from "@/components/MyDayClient";
 import { resolveScheduledStart } from "@/lib/scheduleNormalize";
@@ -34,10 +34,12 @@ export default async function TodayPage() {
   const today = melbourneToday();
   let todayJobs: MyDayJob[] = [];
   let undatedJobs: MyDayJob[] = [];
+  let openJobs: MyDayJob[] = [];
   let tasks: MyDayTask[] = [];
   let viewerLabel = "Your day";
   let scopedToSelf = false;
   let showCrewLink = false;
+  let canClaimOpenJobs = false;
 
   try {
     const supabase = await createClient();
@@ -45,6 +47,10 @@ export default async function TodayPage() {
     if (userData.user) {
       const ctx = await getTeamContext(supabase, userData.user.id);
       showCrewLink = canSeePricing(ctx) || ctx.isOwner;
+      // Field workers + assigned-only managers can claim unassigned work.
+      canClaimOpenJobs =
+        isFieldWorker(ctx) ||
+        (ctx.role === "manager" && ctx.accessScope === "assigned_only");
 
       const [{ data: jobRows }, { data: membership }, { data: crewRows }, { data: taskRows }] =
         await Promise.all([
@@ -93,46 +99,57 @@ export default async function TodayPage() {
           : "My day"
         : "Today";
 
-      const mapped = (jobRows ?? [])
-        .map((j) => {
-          const start = resolveScheduledStart(j.scheduled_start, j.scheduled_date);
-          const crew = crewByJob.get(j.id) ?? [];
-          if (j.assigned_to_member_id && !crew.includes(j.assigned_to_member_id)) {
-            crew.unshift(j.assigned_to_member_id);
-          }
-          const startDay = dayKey(start) ?? dayKey(j.scheduled_date);
-          const hasStartDate = Boolean(startDay);
-          const onDay = startDay === today;
-          const assignedToMe = myMemberId
-            ? j.assigned_to_member_id === myMemberId || crew.includes(myMemberId)
-            : true;
-          return {
-            id: j.id,
-            job_number: j.job_number as number,
-            client_name: j.client_name as string | null,
-            client_phone: j.client_phone as string | null,
-            client_email: j.client_email as string | null,
-            site_address: j.site_address as string | null,
-            title: (j.title ?? j.trade) as string | null,
-            status: j.status as string,
-            scheduled_start: start,
-            total_cost: j.total_cost as number | null,
-            has_start_date: hasStartDate,
-            assigned_to_me: assignedToMe,
-            on_day: onDay,
-          };
-        })
-        .filter((j) => !(restrictToAssigned && !j.assigned_to_me));
+      const mapped = (jobRows ?? []).map((j) => {
+        const start = resolveScheduledStart(j.scheduled_start, j.scheduled_date);
+        const crew = crewByJob.get(j.id) ?? [];
+        if (j.assigned_to_member_id && !crew.includes(j.assigned_to_member_id)) {
+          crew.unshift(j.assigned_to_member_id);
+        }
+        const startDay = dayKey(start) ?? dayKey(j.scheduled_date);
+        const hasStartDate = Boolean(startDay);
+        const onDay = startDay === today;
+        const assignedToMe = myMemberId
+          ? j.assigned_to_member_id === myMemberId || crew.includes(myMemberId)
+          : true;
+        const isOpen =
+          !j.assigned_to_member_id && crew.length === 0 && onDay;
+        return {
+          id: j.id,
+          job_number: j.job_number as number,
+          client_name: j.client_name as string | null,
+          client_phone: j.client_phone as string | null,
+          client_email: j.client_email as string | null,
+          site_address: j.site_address as string | null,
+          title: (j.title ?? j.trade) as string | null,
+          status: j.status as string,
+          scheduled_start: start,
+          total_cost: j.total_cost as number | null,
+          has_start_date: hasStartDate,
+          assigned_to_me: assignedToMe,
+          on_day: onDay,
+          is_open: isOpen,
+        };
+      });
 
-      todayJobs = mapped
+      // Open pool for claimers — before filtering to "mine only"
+      if (canClaimOpenJobs && myMemberId) {
+        openJobs = mapped
+          .filter((j) => j.is_open)
+          .sort((a, b) => (a.scheduled_start ?? "").localeCompare(b.scheduled_start ?? ""))
+          .map(({ assigned_to_me: _a, on_day: _o, is_open: _i, ...job }) => job);
+      }
+
+      const mine = mapped.filter((j) => !(restrictToAssigned && !j.assigned_to_me));
+
+      todayJobs = mine
         .filter((j) => j.on_day)
         .sort((a, b) => (a.scheduled_start ?? "").localeCompare(b.scheduled_start ?? ""))
-        .map(({ assigned_to_me: _a, on_day: _o, ...job }) => job);
+        .map(({ assigned_to_me: _a, on_day: _o, is_open: _i, ...job }) => job);
 
-      undatedJobs = mapped
+      undatedJobs = mine
         .filter((j) => !j.has_start_date)
         .sort((a, b) => a.job_number - b.job_number)
-        .map(({ assigned_to_me: _a, on_day: _o, ...job }) => job);
+        .map(({ assigned_to_me: _a, on_day: _o, is_open: _i, ...job }) => job);
 
       tasks = (taskRows ?? [])
         .filter((t) => {
@@ -173,6 +190,8 @@ export default async function TodayPage() {
       <MyDayClient
         todayJobs={todayJobs}
         undatedJobs={undatedJobs}
+        openJobs={openJobs}
+        canClaimOpenJobs={canClaimOpenJobs}
         tasks={tasks}
         title={viewerLabel}
         dateLabel={dateLabel}
