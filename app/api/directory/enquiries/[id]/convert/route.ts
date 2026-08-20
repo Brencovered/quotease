@@ -34,12 +34,15 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("hourly_rate, materials_margin_pct, default_expiry_days, trades")
+    .select("default_expiry_days, trades")
     .eq("id", ctx.businessId)
     .single();
 
   const trade = Array.isArray(profile?.trades) && profile.trades[0] ? profile.trades[0] : "electrician";
+  const jobSummary = ((lead.job_description as string) || "").trim().slice(0, 120) || "Directory lead";
 
+  // Quotes do not store hourly_rate / materials_margin_pct (those live on
+  // profiles) or title (that is a jobs field). Match the builders' insert shape.
   const { data: quote, error } = await supabase
     .from("quotes")
     .insert({
@@ -48,13 +51,13 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       client_name: lead.customer_name,
       client_email: lead.customer_email,
       client_phone: lead.customer_phone,
-      title: (lead.job_description as string)?.slice(0, 120) || "Directory lead",
+      job_type: jobSummary,
+      site_notes: (lead.job_description as string) || null,
       status: "draft",
       total_cost: 0,
       materials_cost: 0,
       labour_hours: 0,
-      hourly_rate: profile?.hourly_rate ?? 95,
-      materials_margin_pct: profile?.materials_margin_pct ?? 20,
+      markup_materials: [],
       quote_expires_at: new Date(
         Date.now() + (profile?.default_expiry_days ?? 30) * 86400000
       ).toISOString(),
@@ -73,7 +76,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     .single();
 
   if (error || !quote) {
-    return NextResponse.json({ error: error?.message || "Couldn’t create quote" }, { status: 500 });
+    return NextResponse.json({ error: error?.message || "Could not create quote" }, { status: 500 });
   }
 
   await supabase
