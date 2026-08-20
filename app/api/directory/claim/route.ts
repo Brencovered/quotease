@@ -76,10 +76,38 @@ export async function POST(req: NextRequest) {
   const postcode = typeof body.postcode === "string" ? body.postcode.trim() : "";
   const abn = typeof body.abn === "string" ? body.abn.replace(/\s+/g, "") : "";
   const logoUrl = typeof body.logoUrl === "string" ? body.logoUrl.trim() : "";
+  const streetAddress = typeof body.streetAddress === "string" ? body.streetAddress.trim() : "";
+  const contactPhone = typeof body.contactPhone === "string" ? body.contactPhone.trim() : "";
 
   if (!businessName || !trade || !suburb) {
     return NextResponse.json(
       { error: "Business name, trade, and suburb are required" },
+      { status: 400 }
+    );
+  }
+
+  // Address and contact phone are only mandatory when creating a brand new
+  // listing (no listingId, ie no existing scraped listing matched). A
+  // claimed listing already has scraped_contact_phone from the Google
+  // import; forcing a fresh phone number here would break that path for no
+  // reason. This is also why the check sits after the listingId lookup
+  // rather than the generic required-fields block above.
+  const isCreatingNew = !listingId;
+  if (isCreatingNew && (!streetAddress || !contactPhone)) {
+    return NextResponse.json(
+      { error: "Business address and contact number are required" },
+      { status: 400 }
+    );
+  }
+
+  // AU phone numbers only: 10 digits, or +61 with 9. Stripped of spaces and
+  // punctuation before the check so "0412 345 678" and "0412-345-678" both
+  // pass. Only checked when a phone was actually supplied -- on the claim
+  // path it may legitimately be blank.
+  const phoneDigits = contactPhone.replace(/[\s()-]/g, "");
+  if (contactPhone && !/^(\+?61|0)\d{9}$/.test(phoneDigits)) {
+    return NextResponse.json(
+      { error: "Please enter a valid Australian phone number" },
       { status: 400 }
     );
   }
@@ -247,6 +275,8 @@ export async function POST(req: NextRequest) {
       trades: [trade],
       suburb,
       postcode: postcode || null,
+      street_address: streetAddress,
+      contact_phone: phoneDigits,
       logo_url: logoUrl || null,
       profile_id: businessId,
       is_claimed: true,
@@ -262,6 +292,8 @@ export async function POST(req: NextRequest) {
           ? "A business name is required."
           : createErr?.message?.includes("suburb must be a real suburb")
           ? "Please enter your actual suburb, not just the city."
+          : createErr?.message?.includes("contact_phone is required")
+          ? "A contact number is required."
           : "Failed to create listing" },
       { status: 400 }
     );

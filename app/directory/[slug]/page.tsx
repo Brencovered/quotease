@@ -11,6 +11,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { CLAIMED_DIRECTORY_PAGES_ENABLED, QUOTE_REQUESTS_ENABLED } from "@/lib/featureFlags";
 import MarketingNav from "@/components/MarketingNav";
 import DirectoryCard from "@/components/DirectoryCard";
+import ContactReveal from "@/components/directory/ContactReveal";
 import { tradieListingMeta, buildDirectorySlug, getTradeVariants } from "@/lib/seo/meta";
 import { getGoogleReviewsUrl } from "@/lib/seo/gbp";
 import PhotoGallery from "./_components/PhotoGallery";
@@ -54,6 +55,7 @@ type Listing = {
   suburb: string | null; postcode: string | null;
   latitude: number | null; longitude: number | null;
   scraped_contact_phone: string | null;
+  contact_phone: string | null; street_address: string | null;
   website_url: string | null; scraped_contact_email: string | null;
   google_rating: number | null; google_reviews_count: number | null;
   photo_references: string[] | null; place_id: string | null;
@@ -308,11 +310,12 @@ export default async function TradieProfilePage({
                   <MessageSquare size={15} /> Request a quote
                 </a>
               )}
-              {listing.scraped_contact_phone && (
-                <a href={`tel:${listing.scraped_contact_phone}`}
-                  className={`${QUOTE_REQUESTS_ENABLED ? "bg-white/10 text-white hover:bg-white/20" : "bg-[#ffb400] text-[#0a1722] hover:opacity-90"} font-bold text-[14px] px-6 py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2 whitespace-nowrap`}>
-                  <Phone size={15} /> Call now
-                </a>
+              {(listing.contact_phone || listing.scraped_contact_phone) && (
+                <ContactReveal
+                  kind="phone"
+                  value={listing.contact_phone || listing.scraped_contact_phone!}
+                  className={`${QUOTE_REQUESTS_ENABLED ? "bg-white/10 text-white hover:bg-white/20" : "bg-[#ffb400] text-[#0a1722] hover:opacity-90"} font-bold text-[14px] px-6 py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2 whitespace-nowrap`}
+                />
               )}
             </div>
           </div>
@@ -360,10 +363,12 @@ export default async function TradieProfilePage({
                 <p className="text-[12px] font-bold text-gray-500 uppercase tracking-wide">Contact</p>
               </div>
               <div className="space-y-2">
-                {listing.scraped_contact_phone && (
-                  <a href={`tel:${listing.scraped_contact_phone}`} className="flex items-center gap-2 text-[13px] font-semibold text-gray-700 hover:text-[#0a1722] transition-colors">
-                    <Phone size={13} className="text-gray-400" /> {listing.scraped_contact_phone}
-                  </a>
+                {(listing.contact_phone || listing.scraped_contact_phone) && (
+                  <ContactReveal
+                    kind="phone"
+                    value={listing.contact_phone || listing.scraped_contact_phone!}
+                    className="flex items-center gap-2 text-[13px] font-semibold text-gray-700 hover:text-[#0a1722] transition-colors"
+                  />
                 )}
                 {listing.website_url && domain && (
                   <a href={listing.website_url} target="_blank" rel="noopener noreferrer"
@@ -383,7 +388,7 @@ export default async function TradieProfilePage({
                     <Link2 size={13} className="text-gray-400" /> Facebook <ExternalLink size={11} className="text-gray-300" />
                   </a>
                 )}
-                {!listing.scraped_contact_phone && !listing.website_url && (
+                {!listing.contact_phone && !listing.scraped_contact_phone && !listing.website_url && (
                   <p className="text-[12.5px] text-gray-400">
                     {QUOTE_REQUESTS_ENABLED ? "No contact details on file. Request a quote above." : "No contact details on file."}
                   </p>
@@ -506,10 +511,12 @@ export default async function TradieProfilePage({
                   </div>
                 )}
                 <div className="space-y-2">
-                  {listing.scraped_contact_phone && (
-                    <a href={`tel:${listing.scraped_contact_phone}`} className="flex items-center justify-center gap-2 w-full bg-[#0a1722] text-white font-bold text-[13px] py-3 rounded-xl hover:opacity-90 transition-opacity">
-                      <Phone size={14} /> Call
-                    </a>
+                  {(listing.contact_phone || listing.scraped_contact_phone) && (
+                    <ContactReveal
+                      kind="phone"
+                      value={listing.contact_phone || listing.scraped_contact_phone!}
+                      className="flex items-center justify-center gap-2 w-full bg-[#0a1722] text-white font-bold text-[13px] py-3 rounded-xl hover:opacity-90 transition-opacity"
+                    />
                   )}
                   {listing.website_url && (
                     <a href={listing.website_url} target="_blank" rel="noopener noreferrer"
