@@ -2,44 +2,40 @@
 
 import type { ReactNode } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { LayoutDashboard, FileText, CalendarDays, TrendingUp, Paperclip } from "lucide-react";
+import { Play, FileText, Paperclip, Wallet } from "lucide-react";
 
 const TABS = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "plans", label: "Materials & Plans", icon: FileText },
-  { id: "schedule", label: "Team & Schedule", icon: CalendarDays },
-  { id: "profit", label: "Profit", icon: TrendingUp },
+  { id: "run", label: "Run", icon: Play },
+  { id: "plans", label: "Plans", icon: FileText },
   { id: "files", label: "Files", icon: Paperclip },
+  { id: "money", label: "Money", icon: Wallet },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
 
+/** Old tab ids from the five-tab layout — map so shared links still work. */
+const LEGACY: Record<string, TabId> = {
+  overview: "run",
+  schedule: "run",
+  profit: "money",
+};
+
 /**
- * Tabs are kept in the URL (?tab=profit) rather than plain component state,
- * so a link straight to "the profit tab" (e.g. texted from the office) and
- * the browser back button both do the right thing.
- *
- * Only the active tab's content is rendered - not all five kept mounted
- * and hidden via CSS. This page was the single worst route in production
- * Speed Insights (7.46s FCP) before this change; rendering and hydrating
- * every panel across all five tabs on every load, regardless of which one
- * is visible - including the canvas-based plan markup tool - is real,
- * avoidable work most visits never need. The tradeoff: switching tabs away
- * from a half-filled form (e.g. an in-progress "add variation" draft) and
- * back now resets it, since that tab's component actually unmounts. That's
- * a minor inconvenience worth trading for a measured multi-second FCP
- * improvement on the page's most common route.
+ * Tabs live in the URL (?tab=money) so deep links and back work.
+ * Only the active tab mounts — this page was a Speed Insights hotspot
+ * when every panel (including plan canvas) hydrated on every visit.
  */
 export default function JobTabs({
-  overview, plans, schedule, profit, files, hiddenTabs = [],
+  run, plans, files, money, hiddenTabs = [],
 }: Record<TabId, ReactNode> & { hiddenTabs?: TabId[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const visibleTabs = TABS.filter((t) => !hiddenTabs.includes(t.id));
-  const requested = searchParams.get("tab");
-  const active: TabId = (visibleTabs.some((t) => t.id === requested) ? requested : "overview") as TabId;
+  const raw = searchParams.get("tab") ?? "run";
+  const requested = (LEGACY[raw] ?? raw) as string;
+  const active: TabId = (visibleTabs.some((t) => t.id === requested) ? requested : "run") as TabId;
 
   function setTab(id: TabId) {
     const params = new URLSearchParams(searchParams.toString());
@@ -47,7 +43,7 @@ export default function JobTabs({
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   }
 
-  const content: Record<TabId, ReactNode> = { overview, plans, schedule, profit, files };
+  const content: Record<TabId, ReactNode> = { run, plans, files, money };
 
   return (
     <div>
@@ -55,8 +51,9 @@ export default function JobTabs({
         {visibleTabs.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
+            type="button"
             onClick={() => setTab(id)}
-            className={`flex-1 flex items-center justify-center gap-1.5 whitespace-nowrap text-[12.5px] font-bold rounded-lg py-2 px-2.5 transition-colors ${
+            className={`flex-1 flex items-center justify-center gap-1.5 whitespace-nowrap text-[12.5px] font-bold rounded-lg py-2.5 px-2.5 transition-colors ${
               active === id ? "bg-[var(--surface)] text-[var(--navy)] shadow-sm" : "text-[var(--ink-faint)]"
             }`}
           >
