@@ -38,7 +38,7 @@ function dayKey(iso: string | null | undefined): string | null {
 export default async function CrewDayPage() {
   const days = Array.from({ length: 7 }, (_, i) => melbourneDayOffset(i));
   let members: CrewDayMember[] = [];
-  let jobsByDay: Record<string, CrewDayJob[]> = Object.fromEntries(days.map((d) => [d, []]));
+  const jobsByDay: Record<string, CrewDayJob[]> = Object.fromEntries(days.map((d) => [d, []]));
   let canManage = false;
 
   try {
