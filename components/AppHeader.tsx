@@ -56,9 +56,9 @@ const FIELD_DESKTOP_NAV: NavItem[] = [
 
 const OWNER_MOBILE_NAV: NavItem[] = [
   { href: "/today", icon: Sun, label: "My day" },
-  { href: "/jobs", icon: Briefcase, label: "Jobs" },
+  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/quote", icon: Plus, label: "Quote", fab: true },
-  { href: "/crew", icon: UsersRound, label: "Crew" },
+  { href: "/jobs", icon: Briefcase, label: "Jobs" },
   { href: "/schedule", icon: CalendarDays, label: "Schedule" },
 ];
 
@@ -315,6 +315,14 @@ export default function AppHeader() {
                 </>
               ) : (
                 <>
+                  <Link
+                    prefetch={false}
+                    href="/dashboard"
+                    onClick={() => setMoreOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]"
+                  >
+                    <LayoutDashboard size={15} className="text-[var(--ink-faint)]" /> Dashboard
+                  </Link>
                   <Link
                     prefetch={false}
                     href="/quotes"
