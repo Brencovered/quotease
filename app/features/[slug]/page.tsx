@@ -28,9 +28,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const feature = getFeatureBySlug(slug);
   if (!feature) return { title: "Features - Swiftscope" };
+  const canonical = `https://swiftscope.com.au/features/${feature.slug}`;
   return {
     title: `${feature.label} - Swiftscope`,
     description: feature.note,
+    alternates: { canonical },
+    openGraph: { title: `${feature.label} - Swiftscope`, description: feature.note, url: canonical, siteName: "Swiftscope", type: "website" },
+    twitter: { card: "summary", title: `${feature.label} - Swiftscope`, description: feature.note },
   };
 }
 
