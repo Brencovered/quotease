@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PAYMENT_TERM_PRESETS } from "@/lib/paymentTerms";
 import { ChevronRight, ChevronLeft, Check, Plus, Trash2, Paperclip, X, Sparkles } from "lucide-react";
@@ -128,7 +128,18 @@ export default function GenericQuoteBuilder({
     return base + adjustment;
   }, [selectedPricingTier, selectedJobSizeTier, profile.materials_margin_pct]);
 
-  const [step,        setStep]        = useState(0);
+  // Prefer the draft step immediately so returning from /camera does not
+  // flash the Customer tab before useEffect restores the rest.
+  const [step, setStep] = useState(() => {
+    try {
+      const raw = sessionStorage.getItem("swiftscope_quote_draft");
+      if (!raw) return 0;
+      const saved = JSON.parse(raw) as { step?: number };
+      return typeof saved.step === "number" ? saved.step : 0;
+    } catch {
+      return 0;
+    }
+  });
   const [jobType,     setJobType]     = useState(jobTypes[0] ?? "Custom job");
   const [description, setDescription] = useState(leadPrefill?.jobNotes ?? "");
   const [siteAccess,  setSiteAccess]  = useState<GenericIntake["siteAccess"]>("na");
@@ -166,6 +177,44 @@ export default function GenericQuoteBuilder({
   const [extraLines, setExtraLines]   = useState<ExtraLine[]>([]);
   const [saving,      setSaving]      = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+
+  // Restore draft after /camera remounts this builder. saveDraft already
+  // writes step + fields; without this, step resets to Customer and the
+  // live-markup review never remounts until the user clicks Quote capture again.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("swiftscope_quote_draft");
+      if (!raw) return;
+      const saved = JSON.parse(raw) as {
+        clientName?: string;
+        clientEmail?: string;
+        siteAddress?: string;
+        intake?: Partial<GenericIntake>;
+        step?: number;
+        extraLines?: ExtraLine[];
+        siteItems?: ScopeItem[];
+        annotationMeta?: typeof annotationMeta;
+        siteNotes?: string;
+      };
+      if (saved.clientName) setClientName(saved.clientName);
+      if (saved.clientEmail) setClientEmail(saved.clientEmail);
+      if (saved.siteAddress) setSiteAddress(saved.siteAddress);
+      if (saved.intake) {
+        if (saved.intake.jobType) setJobType(saved.intake.jobType);
+        if (saved.intake.description != null) setDescription(saved.intake.description);
+        if (Array.isArray(saved.intake.lineItems)) setItems(saved.intake.lineItems);
+        if (saved.intake.siteAccess) setSiteAccess(saved.intake.siteAccess);
+        if (saved.intake.siteAccessNote != null) setSiteAccessNote(saved.intake.siteAccessNote);
+      }
+      if (typeof saved.step === "number") setStep(saved.step);
+      if (saved.extraLines) setExtraLines(saved.extraLines);
+      if (saved.siteItems) setSiteItems(saved.siteItems);
+      if (saved.annotationMeta) setAnnotationMeta(saved.annotationMeta);
+      if (saved.siteNotes) setSiteNotes(saved.siteNotes);
+    } catch {
+      // ignore corrupt drafts
+    }
+  }, []);
 
   const intake: GenericIntake = useMemo(() => ({
     jobType, description, lineItems: items, siteAccess, siteAccessNote,
@@ -445,14 +494,41 @@ export default function GenericQuoteBuilder({
             onSaveDraft={saveDraft}
             onAnnotationMeta={(meta) => setAnnotationMeta(meta)}
             onAddLineItems={(items) => {
-              setSiteItems((prev) => mergeAnnotationScopeItems(prev, items.map((item) => ({
+              const mapped = items.map((item) => ({
                 description: item.description,
                 quantity: item.quantity,
                 unit: item.unit,
                 notes: item.notes,
-                materialsCost: (item as {materialsCost?: number}).materialsCost ?? 0,
-                labourHrs: (item as {labourHrs?: number}).labourHrs ?? 0,
-              }))));
+                materialsCost: (item as { materialsCost?: number }).materialsCost ?? 0,
+                labourHrs: (item as { labourHrs?: number }).labourHrs ?? 0,
+              }));
+              const itemsStep = STEPS.findIndex((s) => s.id === "items");
+              const nextStep = itemsStep >= 0 ? itemsStep : step;
+              setSiteItems((prev) => {
+                const next = mergeAnnotationScopeItems(prev, mapped);
+                try {
+                  sessionStorage.setItem(
+                    "swiftscope_quote_draft",
+                    JSON.stringify({
+                      clientName,
+                      clientEmail,
+                      siteAddress,
+                      intake,
+                      step: nextStep,
+                      extraLines,
+                      siteItems: next,
+                      annotationMeta,
+                      siteNotes,
+                    })
+                  );
+                } catch {
+                  // ignore quota / private mode
+                }
+                return next;
+              });
+              // Show the new lines instead of leaving the user on Quote capture
+              // (or Customer, if draft restore had not run yet).
+              setStep(nextStep);
             }}
           />
 
