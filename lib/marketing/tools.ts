@@ -14,6 +14,8 @@ export type ToolMeta = {
   hook: string;
   hookCta: string;
   hookHref: string;
+  /** What a visitor can do before creating an account */
+  accessLabel: string;
 };
 
 export const TOOL_DISCLAIMER =
@@ -160,6 +162,7 @@ export const TOOLS: ToolMeta[] = [
     hook: "Save your true charge-out rate straight into your Swiftscope profile so on-site quotes automatically protect your profit.",
     hookCta: "Start 7-day free trial",
     hookHref: "/signup",
+    accessLabel: "No login required",
   },
   {
     slug: "margin-markup",
@@ -172,6 +175,7 @@ export const TOOLS: ToolMeta[] = [
     hook: "Stop doing driveway math at Bunnings. Swiftscope applies your exact pre-configured profit margins to materials instantly.",
     hookCta: "Try Swiftscope free",
     hookHref: "/signup",
+    accessLabel: "No login required",
   },
   {
     slug: "quote-pdf",
@@ -184,6 +188,7 @@ export const TOOLS: ToolMeta[] = [
     hook: "Creating this PDF took minutes at your desk. Swiftscope's AI voice quote builder creates and sends this in seconds from your driveway.",
     hookCta: "Try voice and on-site quoting free",
     hookHref: "/signup",
+    accessLabel: "Build free · email and phone to download the PDF",
   },
   {
     slug: "vehicle-cost",
@@ -196,6 +201,7 @@ export const TOOLS: ToolMeta[] = [
     hook: "Automatically include your custom vehicle trip fee in every quote with one tap in Swiftscope.",
     hookCta: "Build quotes with real costs",
     hookHref: "/signup",
+    accessLabel: "No login required",
   },
   {
     slug: "ballpark-cost",
@@ -208,6 +214,7 @@ export const TOOLS: ToolMeta[] = [
     hook: "This estimate reflects local Australian trade averages. Want an exact price tailored to your space? Browse local, verified tradies.",
     hookCta: "Find local tradies",
     hookHref: "/directory",
+    accessLabel: "No login required",
   },
   {
     slug: "diy-materials",
@@ -220,6 +227,7 @@ export const TOOLS: ToolMeta[] = [
     hook: "Realised the heavy lifting is bigger than you thought? Pass the job to a local tradie.",
     hookCta: "Browse the directory",
     hookHref: "/directory",
+    accessLabel: "No login required",
   },
 ];
 

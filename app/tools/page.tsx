@@ -5,6 +5,20 @@ import MarketingNav from "@/components/MarketingNav";
 import { ToolDisclaimer } from "@/components/marketing/tools/ToolShell";
 import { toolsByAudience } from "@/lib/marketing/tools";
 
+function AccessBadge({ label }: { label: string }) {
+  const fullyFree = label.startsWith("No login");
+  return (
+    <span
+      className={[
+        "inline-flex self-start mb-2 text-[11px] font-bold tracking-[0.08em] uppercase px-2 py-0.5 rounded",
+        fullyFree ? "text-[#1c7a3a] bg-[#e8f5ec]" : "text-[#8a5a00] bg-[#fff6db]",
+      ].join(" ")}
+    >
+      {label}
+    </span>
+  );
+}
+
 export const metadata: Metadata = {
   title: "Free tradie calculators and homeowner tools - Swiftscope",
   description:
@@ -28,7 +42,10 @@ export default function ToolsIndexPage() {
             Useful before you sign up.
           </h1>
           <p className="font-sans text-[16px] leading-[1.65] text-[#c5d4e0] max-w-[48ch] mb-5">
-            Calculators and checklists for tradies who price work, and homeowners who plan jobs. No login required.
+            Calculators and checklists for tradies who price work, and homeowners who plan jobs. Use every tool in the browser with no account.
+          </p>
+          <p className="font-sans text-[13.5px] leading-[1.6] text-white/70 max-w-[52ch] mb-5">
+            Saving rates, sending a real quote, or exporting a PDF with your details needs a free trial. Playing with the numbers does not.
           </p>
           <p className="font-sans text-[13px] leading-[1.6] text-white/55 max-w-[52ch] border-l-2 border-[#ffb400]/70 pl-4">
             Planning guidelines only. Not financial, tax, or legal advice.
@@ -62,6 +79,7 @@ export default function ToolsIndexPage() {
                 <span className="font-display text-[1.45rem] tracking-wide text-[#071018] group-hover:text-[#b88400] transition-colors mb-2">
                   {tool.shortTitle}
                 </span>
+                <AccessBadge label={tool.accessLabel} />
                 <span className="font-sans text-[14.5px] leading-[1.6] text-[#3d4a55] flex-1">
                   {tool.description}
                 </span>
@@ -94,6 +112,7 @@ export default function ToolsIndexPage() {
                 <span className="font-display text-[1.35rem] tracking-wide text-[#071018] group-hover:text-[#b88400] transition-colors mb-2">
                   {tool.shortTitle}
                 </span>
+                <AccessBadge label={tool.accessLabel} />
                 <span className="font-sans text-[14.5px] leading-[1.6] text-[#3d4a55] flex-1">
                   {tool.description}
                 </span>

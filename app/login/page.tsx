@@ -423,6 +423,8 @@ function LoginForm() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     autoFocus
+                    autoComplete="email"
+                    inputMode="email"
                     className="app-field"
                     placeholder="you@example.com"
                   />
@@ -448,13 +450,15 @@ function LoginForm() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
+                      autoComplete="current-password"
                       className="app-field pr-16"
                       placeholder="••••••••"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-[var(--ink-faint)] hover:text-[var(--ink-soft)] transition-colors"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[52px] px-3 text-[13px] font-bold text-[var(--ink-soft)] hover:text-[var(--ink)] transition-colors"
                     >
                       {showPassword ? "Hide" : "Show"}
                     </button>

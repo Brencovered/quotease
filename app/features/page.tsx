@@ -72,7 +72,7 @@ export default function FeaturesPage() {
           </div>
 
           {/* Cost comparison */}
-          <div className="bg-[#1a242c] rounded-3xl p-8 md:p-10">
+          <div id="pricing" className="bg-[#1a242c] rounded-3xl p-8 md:p-10 scroll-mt-[88px]">
             <div className="grid md:grid-cols-2 gap-8 items-center">
               <div>
                 <h3 className="font-display text-[2rem] text-white mb-2">What you might be paying now</h3>
@@ -104,6 +104,9 @@ export default function FeaturesPage() {
                 </Link>
               </div>
             </div>
+            <p className="font-sans text-[12px] leading-relaxed text-[#8aa4b4] mt-6 max-w-[72ch]">
+              Competitor figures are indicative public list prices for a typical sole trader or small crew, rounded for comparison. Check each vendor&apos;s current pricing. Swiftscope is $45/month flat with unlimited seats and a directory listing included.
+            </p>
           </div>
         </div>
       </div>

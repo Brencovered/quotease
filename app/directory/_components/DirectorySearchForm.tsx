@@ -100,7 +100,7 @@ export default function DirectorySearchForm({
   }, [navigate]);
 
   return (
-    <div id="listings" className="sticky top-0 z-20 border-b shadow-sm" style={{ background: "var(--surface)", borderColor: "var(--line)" }}>
+    <div id="listings" className="sticky top-[72px] z-30 border-b shadow-sm" style={{ background: "var(--surface)", borderColor: "var(--line)" }}>
       <form className="max-w-6xl mx-auto px-6 py-3 flex flex-wrap gap-2 items-center" onChange={handleChange} onSubmit={handleSubmit}>
         <select name="trade" defaultValue={trade ?? ""} className="app-field text-[13px] w-auto bg-white pl-3 pr-2">
           <option value="">All trades</option>
@@ -185,17 +185,20 @@ export default function DirectorySearchForm({
             Clear all
           </Link>
         )}
-
-        <span className="text-[12px] ml-auto hidden sm:block" style={{ color: "var(--ink-faint)" }}>
-          {count} result{count !== 1 ? "s" : ""}
-          {search ? ` - "${search}"` : ""}
-          {trade ? ` - ${TRADE_LABELS[trade] ?? trade}` : ""}
-          {postcode ? ` - ${postcode}` : ""}
-          {radius ? ` - ${RADIUS_OPTIONS.find((r) => r.value === radius)?.label ?? radius}` : ""}
-          {reviews ? ` - ${REVIEW_RANGES.find((r) => r.value === reviews)?.label ?? reviews}` : ""}
-          {rating ? ` - ${RATING_OPTIONS.find((r) => r.value === rating)?.label ?? rating}` : ""}
-        </span>
       </form>
+      <div className="max-w-6xl mx-auto px-6 pb-3">
+        <p className="text-[14px] font-extrabold" style={{ color: "var(--ink)" }}>
+          {count} result{count !== 1 ? "s" : ""}
+          <span className="font-semibold" style={{ color: "var(--ink-faint)" }}>
+            {search ? ` · "${search}"` : ""}
+            {trade ? ` · ${TRADE_LABELS[trade] ?? trade}` : ""}
+            {postcode ? ` · ${postcode}` : ""}
+            {radius ? ` · ${RADIUS_OPTIONS.find((r) => r.value === radius)?.label ?? radius}` : ""}
+            {reviews ? ` · ${REVIEW_RANGES.find((r) => r.value === reviews)?.label ?? reviews}` : ""}
+            {rating ? ` · ${RATING_OPTIONS.find((r) => r.value === rating)?.label ?? rating}` : ""}
+          </span>
+        </p>
+      </div>
     </div>
   );
 }
