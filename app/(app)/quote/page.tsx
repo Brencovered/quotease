@@ -200,6 +200,7 @@ export default async function NewQuotePage({
     plan_id?: string;
     package_id?: string;
     bundle_id?: string;
+    enquiry_id?: string;
   }>;
 }) {
   let { trade: tradeParm } = await searchParams;
@@ -209,6 +210,7 @@ export default async function NewQuotePage({
     plan_id: planId,
     package_id: packageId,
     bundle_id: bundleId,
+    enquiry_id: enquiryId,
   } = await searchParams;
 
   const supabase = await createClient();
@@ -355,6 +357,76 @@ export default async function NewQuotePage({
     onboarded_at: dbProfile.onboarded_at,
   };
 
+  // Directory lead → open the wizard with customer + job notes prefilled.
+  // Mark pipeline as quoting when they enter the builder from a new lead.
+  let leadPrefill: {
+    enquiryId: string;
+    clientName: string;
+    clientEmail: string;
+    clientPhone: string;
+    jobNotes: string;
+    leadCode: string | null;
+    priority: string | null;
+    urgency: string | null;
+    budget: string | null;
+    customerType: string | null;
+  } | null = null;
+
+  if (enquiryId) {
+    const { data: lead } = await supabase
+      .from("directory_enquiries")
+      .select(
+        "id, lead_code, priority, urgency, budget, customer_type, customer_name, customer_email, customer_phone, job_description, pipeline_status, quote_id"
+      )
+      .eq("id", enquiryId)
+      .eq("profile_id", businessId)
+      .maybeSingle();
+
+    if (lead) {
+      leadPrefill = {
+        enquiryId: lead.id,
+        clientName: lead.customer_name ?? "",
+        clientEmail: lead.customer_email ?? "",
+        clientPhone: lead.customer_phone ?? "",
+        jobNotes: lead.job_description ?? "",
+        leadCode: lead.lead_code,
+        priority: lead.priority,
+        urgency: lead.urgency,
+        budget: lead.budget,
+        customerType: lead.customer_type,
+      };
+
+      if (lead.pipeline_status === "new") {
+        await supabase
+          .from("directory_enquiries")
+          .update({ pipeline_status: "quoting", status: "replied" })
+          .eq("id", lead.id);
+      }
+
+      // Drop empty placeholder drafts from the old convert flow so
+      // Continue quote opens a clean builder instead of a $0 orphan.
+      if (lead.quote_id) {
+        const { data: existing } = await supabase
+          .from("quotes")
+          .select("id, status, total_cost")
+          .eq("id", lead.quote_id)
+          .eq("profile_id", businessId)
+          .maybeSingle();
+        if (
+          existing &&
+          existing.status === "draft" &&
+          Number(existing.total_cost ?? 0) === 0
+        ) {
+          await supabase.from("quotes").delete().eq("id", existing.id);
+          await supabase
+            .from("directory_enquiries")
+            .update({ quote_id: null })
+            .eq("id", lead.id);
+        }
+      }
+    }
+  }
+
   return (
     <>
       <AppHeader />
@@ -369,7 +441,7 @@ export default async function NewQuotePage({
               return (
                 <Link
                   key={t}
-                  href={`/quote?trade=${t}`}
+                  href={`/quote?trade=${t}${enquiryId ? `&enquiry_id=${enquiryId}` : ""}`}
                   className={`px-4 py-1.5 rounded-lg text-[13px] font-bold capitalize whitespace-nowrap border-2 transition-colors ${
                     t === selectedTrade
                       ? "border-[var(--navy)] bg-[var(--navy)] text-white"
@@ -396,6 +468,7 @@ export default async function NewQuotePage({
         jobSizeTiers={resolvedJobSizeTiers}
         siteConditions={siteConditions}
         teamMembers={teamMembers}
+        leadPrefill={leadPrefill}
       />
     </>
   );

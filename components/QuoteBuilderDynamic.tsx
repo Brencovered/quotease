@@ -33,6 +33,18 @@ interface BuilderProps {
   jobSizeTiers: Array<{ id: string; name: string; max_days: number | null; markup_pct: number; sort_order: number }>;
   siteConditions: Array<{ id: string; trade: string; label: string; kind: "fixed" | "daily"; default_amount: number; sort_order: number }>;
   teamMembers: Array<{ id: string; name: string | null; email: string }>;
+  leadPrefill?: {
+    enquiryId: string;
+    clientName: string;
+    clientEmail: string;
+    clientPhone: string;
+    jobNotes: string;
+    leadCode: string | null;
+    priority: string | null;
+    urgency: string | null;
+    budget: string | null;
+    customerType: string | null;
+  } | null;
 }
 
 function TradeBuilderInner({ tradeKey, profile, ...rest }: BuilderProps) {
