@@ -49,6 +49,9 @@ export default function MarketingNav({
             <Link href="/features" className="text-white/75 hover:text-white font-semibold text-sm transition-colors">
               Features
             </Link>
+            <Link href="/#pricing" className="text-white/75 hover:text-white font-semibold text-sm transition-colors">
+              Pricing
+            </Link>
             <Link href="/for" className="text-white/75 hover:text-white font-semibold text-sm transition-colors">
               For Tradies
             </Link>
@@ -114,6 +117,9 @@ export default function MarketingNav({
           <div className="lg:hidden bg-[#1a242c] border-t border-white/10 px-6 py-5 flex flex-col gap-1">
             <Link href="/features" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">
               Features
+            </Link>
+            <Link href="/#pricing" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">
+              Pricing · $45/mo
             </Link>
             <Link href="/for" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">
               For Tradies

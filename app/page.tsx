@@ -115,7 +115,7 @@ export default async function Home() {
       </section>
 
       {/* Pricing: one offer */}
-      <section className="bg-white">
+      <section id="pricing" className="bg-white scroll-mt-[88px]">
         <div className="max-w-[1280px] mx-auto px-6 py-16 sm:py-20">
           <div className="max-w-2xl">
             <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-3">Pricing</p>
@@ -201,6 +201,7 @@ export default async function Home() {
             <span className="font-display text-lg tracking-wide text-white">SwiftScope</span>
             <div className="flex flex-wrap gap-x-6 gap-y-2 text-[12.5px] font-semibold text-white/40">
               <Link href="/features" className="hover:text-white transition-colors">Features</Link>
+              <Link href="/#pricing" className="hover:text-white transition-colors">Pricing</Link>
               <Link href="/for" className="hover:text-white transition-colors">For Tradies</Link>
               <Link href="/tools" className="hover:text-white transition-colors">Tools</Link>
               <Link href="/how-it-works" className="hover:text-white transition-colors">How it works</Link>

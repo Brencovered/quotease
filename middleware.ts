@@ -112,13 +112,16 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
 
   // Content Security Policy
   // NOTE: When adding new external sources, add them to the relevant directive.
+  // Google Analytics 4 + gtag hit regional collect hosts, GTM, and (unless
+  // ads signals are off) DoubleClick pixels. Vercel Analytics / Speed Insights
+  // load from va.vercel-scripts.com and report to vitals.vercel-insights.com.
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com",
+    "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://*.googletagmanager.com https://va.vercel-scripts.com",
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https://images.unsplash.com https://*.supabase.co https://www.google-analytics.com https://www.googletagmanager.com https://www.google.com https://www.google.com.au",
+    "img-src 'self' data: blob: https://images.unsplash.com https://*.supabase.co https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://www.google.com https://www.google.com.au https://stats.g.doubleclick.net",
     "font-src 'self'",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com https://api.anthropic.com https://www.google-analytics.com https://analytics.google.com https://www.google.com https://api.stripe.com https://api.xero.com https://identity.xero.com",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com https://api.anthropic.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://www.google.com https://www.googletagmanager.com https://*.googletagmanager.com https://stats.g.doubleclick.net https://api.stripe.com https://*.stripe.com https://js.stripe.com https://api.xero.com https://identity.xero.com https://va.vercel-scripts.com https://vitals.vercel-insights.com https://*.vercel-insights.com",
     "manifest-src 'self'",
     "frame-ancestors 'none'",
     "base-uri 'self'",

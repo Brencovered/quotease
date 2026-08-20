@@ -250,8 +250,19 @@ function SignupForm() {
                       <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">
                         <MapPin size={12} className="inline mr-0.5" />Primary suburb you work in
                       </label>
-                      <input type="text" value={suburb} onChange={(e) => setSuburb(e.target.value)} required
-                        className="app-field" placeholder="e.g. Marrickville, NSW" />
+                      <input
+                        type="text"
+                        value={suburb}
+                        onChange={(e) => setSuburb(e.target.value)}
+                        required
+                        autoComplete="address-level2"
+                        spellCheck={false}
+                        className="app-field"
+                        placeholder="e.g. Marrickville, NSW"
+                      />
+                      <p className="text-[11.5px] text-[var(--ink-faint)] mt-1.5">
+                        Suburb and state. Your phone may suggest Australian places as you type.
+                      </p>
                     </div>
 
                     {/* Trade */}
@@ -273,9 +284,13 @@ function SignupForm() {
                       <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Password</label>
                       <div className="relative">
                         <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)}
-                          required minLength={6} className="app-field pr-16" placeholder="At least 6 characters" />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-[var(--ink-faint)] hover:text-[var(--ink-soft)] transition-colors">
+                          required minLength={6} autoComplete="new-password" className="app-field pr-16" placeholder="At least 6 characters" />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                          className="absolute right-1 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[52px] px-3 text-[13px] font-bold text-[var(--ink-soft)] hover:text-[var(--ink)] transition-colors"
+                        >
                           {showPassword ? "Hide" : "Show"}
                         </button>
                       </div>

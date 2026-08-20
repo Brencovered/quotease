@@ -263,8 +263,11 @@ export default function QuoteTapDemo() {
           <br />
           Mark it up. Price it. Send it.
         </h2>
-        <p className="font-sans text-[15.5px] text-[#4a5560] leading-[1.65] max-w-[44ch] mb-5">
+        <p className="font-sans text-[15.5px] text-[#4a5560] leading-[1.65] max-w-[44ch] mb-3">
           Tap fittings on the plan or drag a run for cable, pipe, skirting, or gutter. Set job type and margin the same way you would on a real quote.
+        </p>
+        <p className="font-sans text-[13px] font-semibold text-[#5a6a78] leading-snug max-w-[44ch] mb-5">
+          Try it here with no account. Sending a real quote to a client takes a 7-day free trial.
         </p>
 
         <div className="flex flex-wrap gap-2 mb-5" role="tablist" aria-label="Choose a trade">
@@ -559,8 +562,19 @@ export default function QuoteTapDemo() {
 
             <div className="px-3 pb-3 space-y-2">
               {sent ? (
-                <div className="flex items-center justify-center gap-2 bg-[#e8f5ec] text-[#1c7a3a] font-extrabold text-[13.5px] py-3.5 rounded-xl">
-                  Quote sent. Client notified.
+                <div className="rounded-xl bg-[#e8f5ec] px-3 py-3.5 text-center">
+                  <p className="font-extrabold text-[13.5px] text-[#1c7a3a] mb-1">
+                    Demo send complete
+                  </p>
+                  <p className="text-[12px] font-semibold text-[#3d6b4a] mb-3">
+                    Nothing was emailed. Start a trial to send this to a real client.
+                  </p>
+                  <Link
+                    href="/signup"
+                    className="inline-flex items-center justify-center w-full bg-[#ffb400] text-[#071018] font-extrabold text-[13.5px] py-2.5 rounded-lg hover:bg-[#e89e00] transition-colors"
+                  >
+                    Start free trial
+                  </Link>
                 </div>
               ) : (
                 <button
@@ -574,7 +588,7 @@ export default function QuoteTapDemo() {
                       : "bg-[#ffb400] text-[#071018] hover:bg-[#e89e00]",
                   ].join(" ")}
                 >
-                  <Send size={14} aria-hidden /> Send {trade.label.toLowerCase()} quote
+                  <Send size={14} aria-hidden /> Preview {trade.label.toLowerCase()} send
                 </button>
               )}
               {(items.length > 0 || sent || runStart) && (
