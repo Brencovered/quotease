@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveBusinessId, getTeamContext, isFieldWorker } from "@/lib/team";
+import { setCachedIsFieldWorker } from "@/lib/navRoleCache";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
 import {
   Timer,
@@ -336,6 +337,7 @@ function LoginForm() {
       let target = next && next.startsWith("/") ? next : "/dashboard";
       if (user) {
         const ctx = await getTeamContext(supabase, user.id);
+        setCachedIsFieldWorker(isFieldWorker(ctx));
         if (isFieldWorker(ctx)) {
           target = next && next.startsWith("/") ? next : "/today";
         } else if (ctx.isOwner) {

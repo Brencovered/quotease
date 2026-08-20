@@ -1,10 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect } from "react";
 import { LEADS_ENABLED } from "@/lib/featureFlags";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import {
+  clearCachedIsFieldWorker,
+  getCachedIsFieldWorker,
+  setCachedIsFieldWorker,
+} from "@/lib/navRoleCache";
 import {
   LayoutDashboard,
   FileText,
@@ -70,28 +75,48 @@ export default function AppHeader() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [moreExpanded, setMoreExpanded] = useState(false);
   const [quoteCount, setQuoteCount] = useState(0);
+  // Start unknown — never paint owner tools until role is confirmed.
+  // Cache restores instantly on remount (nav clicks remount this component).
   const [isFieldWorker, setIsFieldWorker] = useState(false);
   const [roleReady, setRoleReady] = useState(false);
 
-  useEffect(() => {
-    async function loadContext() {
-      try {
-        const res = await fetch("/api/team/context");
-        if (res.ok) {
-          const data = await res.json();
-          setIsFieldWorker(Boolean(data.isFieldWorker));
-        }
-      } catch {
-        // Default to full nav if context fails — better than locking owners out.
-      } finally {
-        setRoleReady(true);
-      }
+  useLayoutEffect(() => {
+    const cached = getCachedIsFieldWorker();
+    if (cached !== null) {
+      setIsFieldWorker(cached);
+      setRoleReady(true);
     }
-    loadContext();
   }, []);
 
   useEffect(() => {
-    if (isFieldWorker) return;
+    let cancelled = false;
+    async function loadContext() {
+      try {
+        const res = await fetch("/api/team/context");
+        if (!res.ok) throw new Error("context failed");
+        const data = await res.json();
+        const field = Boolean(data.isFieldWorker);
+        if (cancelled) return;
+        setCachedIsFieldWorker(field);
+        setIsFieldWorker(field);
+        setRoleReady(true);
+      } catch {
+        // If we have a cache, keep it. Otherwise don't unlock owner tools
+        // by mistake — stay field-safe until we know.
+        if (!cancelled && getCachedIsFieldWorker() === null) {
+          setIsFieldWorker(true);
+          setRoleReady(true);
+        }
+      }
+    }
+    loadContext();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!roleReady || isFieldWorker) return;
     async function fetchQuoteCount() {
       try {
         const res = await fetch("/api/quotes/count");
@@ -104,9 +129,10 @@ export default function AppHeader() {
       }
     }
     fetchQuoteCount();
-  }, [isFieldWorker]);
+  }, [isFieldWorker, roleReady]);
 
   async function logOut() {
+    clearCachedIsFieldWorker();
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/login");
@@ -127,13 +153,14 @@ export default function AppHeader() {
     }`;
   }
 
-  const homeHref = isFieldWorker ? "/today" : "/dashboard";
-  const desktopNav = isFieldWorker ? FIELD_DESKTOP_NAV : OWNER_DESKTOP_NAV;
-  const mobileNav = isFieldWorker ? FIELD_MOBILE_NAV : OWNER_MOBILE_NAV;
+  // Until role is known, show field nav only — never flash owner tools.
+  const showFieldNav = !roleReady || isFieldWorker;
+  const homeHref = showFieldNav ? "/today" : "/dashboard";
+  const desktopNav = showFieldNav ? FIELD_DESKTOP_NAV : OWNER_DESKTOP_NAV;
+  const mobileNav = showFieldNav ? FIELD_MOBILE_NAV : OWNER_MOBILE_NAV;
 
   return (
     <>
-      {/* -- Desktop sidebar -- */}
       <aside
         className="hidden sm:flex flex-col fixed top-0 left-0 bottom-0 z-40 bg-[var(--navy)] border-r border-white/[0.06]"
         style={{ width: "var(--sidebar-width)" }}
@@ -146,7 +173,7 @@ export default function AppHeader() {
           SWIFTSCOPE
         </Link>
 
-        {!isFieldWorker && (
+        {!showFieldNav && (
           <div className="px-4 pb-4">
             <Link
               prefetch={false}
@@ -159,7 +186,7 @@ export default function AppHeader() {
         )}
 
         <nav className="flex-1 flex flex-col gap-0.5 px-3 overflow-y-auto">
-          {(!roleReady ? OWNER_DESKTOP_NAV : desktopNav).map((n) => {
+          {desktopNav.map((n) => {
             const active = isActive(n.href);
             return (
               <Link
@@ -174,7 +201,7 @@ export default function AppHeader() {
               >
                 <n.icon size={17} strokeWidth={active ? 2.2 : 1.8} />
                 {n.label}
-                {!isFieldWorker && n.label === "Quotes" && quoteCount > 0 && (
+                {!showFieldNav && n.label === "Quotes" && quoteCount > 0 && (
                   <span className="ml-auto bg-[var(--amber)] text-[var(--navy)] text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
                     {quoteCount}
                   </span>
@@ -183,7 +210,7 @@ export default function AppHeader() {
             );
           })}
 
-          {!isFieldWorker && (
+          {!showFieldNav && (
             <>
               {LEADS_ENABLED && (
                 <Link prefetch={false} href="/leads" className={navLinkClasses("/leads")}>
@@ -237,7 +264,6 @@ export default function AppHeader() {
         </div>
       </aside>
 
-      {/* -- Mobile top bar -- */}
       <header className="sm:hidden bg-[var(--navy)] sticky top-0 z-40 h-12 flex items-center justify-between px-4 relative">
         <Link
           prefetch={false}
@@ -258,7 +284,7 @@ export default function AppHeader() {
           <>
             <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
             <div className="absolute top-12 right-4 z-50 bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-lg overflow-hidden w-52">
-              {isFieldWorker ? (
+              {showFieldNav ? (
                 <>
                   <Link
                     prefetch={false}
@@ -390,12 +416,11 @@ export default function AppHeader() {
         )}
       </header>
 
-      {/* -- Mobile bottom nav -- */}
       <nav
         className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-[var(--surface)] border-t border-[var(--line)] flex items-center safe-bottom"
         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
-        {(roleReady ? mobileNav : OWNER_MOBILE_NAV).map((n) => {
+        {mobileNav.map((n) => {
           const active = isActive(n.href);
           if (n.fab) {
             return (

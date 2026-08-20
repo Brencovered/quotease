@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { setCachedIsFieldWorker } from "@/lib/navRoleCache";
 
 export default function TeamAcceptPanel({
   token,
@@ -46,6 +47,15 @@ export default function TeamAcceptPanel({
       if (!res.ok) {
         setError(body.error ?? "Couldn't accept this invite.");
         return;
+      }
+      try {
+        const ctxRes = await fetch("/api/team/context");
+        if (ctxRes.ok) {
+          const ctx = await ctxRes.json();
+          setCachedIsFieldWorker(Boolean(ctx.isFieldWorker));
+        }
+      } catch {
+        // nav cache is best-effort
       }
       router.push("/today");
       router.refresh();
@@ -94,6 +104,18 @@ export default function TeamAcceptPanel({
             "Password set, but sign-in failed. Try logging in with your new password."
         );
         return;
+      }
+
+      try {
+        const ctxRes = await fetch("/api/team/context");
+        if (ctxRes.ok) {
+          const ctx = await ctxRes.json();
+          setCachedIsFieldWorker(Boolean(ctx.isFieldWorker));
+        } else {
+          setCachedIsFieldWorker(true);
+        }
+      } catch {
+        setCachedIsFieldWorker(true);
       }
 
       router.push("/today");
