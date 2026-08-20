@@ -1,10 +1,12 @@
 /**
  * POST /api/team/accept
  * ----------------------
- * Call once the invited person is logged in. Links their auth user to the
- * team_members row and flips it to "active". Requires their logged-in
- * email to match the invited email -- the invite link's token alone isn't
- * enough, so a forwarded/leaked link can't be used by someone else.
+ * Call once the invited person is already logged in (e.g. they signed in
+ * from the accept page). Links their auth user to the team_members row
+ * and flips it to "active". Requires their logged-in email to match the
+ * invited email — the invite link's token alone isn't enough.
+ *
+ * New invitees without a password use POST /api/team/complete-invite instead.
  *
  * Body: { token: string }
  */
@@ -38,19 +40,42 @@ export async function POST(request: Request) {
   if (invite.status === "removed") {
     return NextResponse.json({ error: "This invite has been revoked." }, { status: 410 });
   }
+  if (invite.status === "active") {
+    return NextResponse.json({ ok: true, alreadyActive: true });
+  }
   if (invite.owner_profile_id === userData.user.id) {
-    return NextResponse.json({ error: "You can't join your own business as a team member." }, { status: 400 });
+    return NextResponse.json(
+      { error: "You can't join your own business as a team member." },
+      { status: 400 }
+    );
   }
   if (invite.email.toLowerCase() !== (userData.user.email ?? "").toLowerCase()) {
     return NextResponse.json(
-      { error: `This invite was sent to ${invite.email}. Log in with that email to accept it.` },
+      {
+        error: `This invite was sent to ${invite.email}. Log in with that email to accept it.`,
+      },
       { status: 403 }
     );
   }
 
+  // Mark invitee profile onboarded so middleware never sends them through
+  // owner onboarding (their access is via team_members → owner's business).
+  await admin
+    .from("profiles")
+    .update({
+      contact_email: userData.user.email,
+      onboarded_at: new Date().toISOString(),
+    })
+    .eq("id", userData.user.id)
+    .is("onboarded_at", null);
+
   const { error: updateError } = await admin
     .from("team_members")
-    .update({ member_user_id: userData.user.id, status: "active", joined_at: new Date().toISOString() })
+    .update({
+      member_user_id: userData.user.id,
+      status: "active",
+      joined_at: new Date().toISOString(),
+    })
     .eq("id", invite.id);
 
   if (updateError) {
