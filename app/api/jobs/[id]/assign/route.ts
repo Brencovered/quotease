@@ -27,7 +27,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const { data: job } = await supabase
     .from("jobs")
-    .select("id, title, site_address, scheduled_start, scheduled_date, quote_id, job_number, client_name, assigned_to_member_id")
+    .select("id, site_address, scheduled_start, scheduled_date, quote_id, job_number, client_name, assigned_to_member_id")
     .eq("id", jobId)
     .eq("profile_id", ctx.businessId)
     .single();
@@ -88,7 +88,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       { onConflict: "job_id,team_member_id", ignoreDuplicates: true }
     );
 
-    const jobTitle = job.title || job.client_name || `Job #${job.job_number}`;
+    const jobLabel = job.job_number != null ? `Job #${job.job_number}` : "a job";
+    const address = (job.site_address ?? "").trim() || null;
     const whenSource = scheduledStartIso || job.scheduled_start || job.scheduled_date;
     const when = whenSource
       ? new Date(
@@ -103,6 +104,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       : null;
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
     const todayUrl = `${appUrl}/today`;
+    const subjectBits = [jobLabel, address].filter(Boolean);
+    const whereBits = [
+      `<strong>${jobLabel}</strong>`,
+      address ? `at <strong>${address}</strong>` : null,
+      when,
+    ].filter(Boolean);
 
     if (RESEND_API_KEY && member.email) {
       try {
@@ -112,11 +119,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           body: JSON.stringify({
             from: "Swiftscope <noreply@swiftscope.com.au>",
             to: [member.email],
-            subject: `You're on: ${jobTitle}`,
+            subject: `You're on: ${subjectBits.join(" · ")}`,
             html: `
               <p>${member.name ? `Hi ${member.name},` : "Hi,"}</p>
-              <p>You've been assigned to <strong>${jobTitle}</strong>${job.site_address ? ` at ${job.site_address}` : ""}${when ? `, ${when}` : ""}.</p>
-              <p><a href="${todayUrl}">Open My day</a> to call, navigate, and start the job.</p>
+              <p>You've been assigned to ${whereBits.join(", ")}.</p>
+              <p><a href="${todayUrl}">Open My day</a> to call, navigate, and run the job.</p>
             `,
           }),
         });
@@ -128,7 +135,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (member.member_user_id && teamMemberId !== job.assigned_to_member_id) {
       await sendPushToUser(createAdminClient(), member.member_user_id, {
         title: "You're on a job",
-        body: `${jobTitle}${when ? ` · ${when}` : ""}`,
+        body: [jobLabel, address, when].filter(Boolean).join(" · "),
         url: `/today`,
       });
     }

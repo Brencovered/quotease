@@ -38,7 +38,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // business simply won't find either row.
   const { data: job } = await supabase
     .from("jobs")
-    .select("id, title, site_address, scheduled_start")
+    .select("id, job_number, site_address, scheduled_start")
     .eq("id", jobId)
     .single();
   if (!job) {
@@ -67,12 +67,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: insertErr.message }, { status: 400 });
   }
 
-  const jobTitle = job.title || "a job";
+  const jobLabel = job.job_number != null ? `Job #${job.job_number}` : "a job";
+  const address = (job.site_address ?? "").trim() || null;
   const when = job.scheduled_start
     ? new Date(job.scheduled_start).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })
     : null;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
   const jobUrl = `${appUrl}/jobs/${jobId}`;
+  const subjectBits = [jobLabel, address].filter(Boolean);
+  const whereBits = [
+    `<strong>${jobLabel}</strong>`,
+    address ? `at <strong>${address}</strong>` : null,
+    when ? `scheduled for ${when}` : null,
+  ].filter(Boolean);
 
   const admin = createAdminClient();
 
@@ -84,10 +91,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         body: JSON.stringify({
           from: "Swiftscope <noreply@swiftscope.com.au>",
           to: [member.email],
-          subject: `You've been added to a job: ${jobTitle}`,
+          subject: `You've been added to ${subjectBits.join(" · ")}`,
           html: `
             <p>${member.name ? `Hi ${member.name},` : "Hi,"}</p>
-            <p>You've been added to <strong>${jobTitle}</strong>${job.site_address ? ` at ${job.site_address}` : ""}${when ? `, scheduled for ${when}` : ""}.</p>
+            <p>You've been added to ${whereBits.join(", ")}.</p>
             <p><a href="${jobUrl}">View the job on Swiftscope</a> for drawings, materials, and site notes.</p>
           `,
         }),
@@ -102,7 +109,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (member.member_user_id) {
     await sendPushToUser(admin, member.member_user_id, {
       title: "Added to a job",
-      body: `You're on ${jobTitle}${when ? ` - ${when}` : ""}`,
+      body: [jobLabel, address, when].filter(Boolean).join(" · "),
       url: `/today`,
     });
   }
