@@ -248,19 +248,19 @@ export default function TeamPageClient({
               <input type="email" required placeholder="Email address" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} className="app-field" />
               <input type="text" placeholder="Name (optional)" value={inviteName} onChange={(e) => setInviteName(e.target.value)} className="app-field" />
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className="app-field text-[13px] w-auto py-2">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3">
+              <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className="app-field text-[13px] w-full sm:w-auto py-2">
                 <option value="site_member">Site member - no pricing, just their own jobs</option>
                 <option value="manager">Manager - sees pricing</option>
                 <option value="admin">Admin - can also manage team</option>
               </select>
               {inviteRole === "manager" && (
-                <select value={inviteAccessScope} onChange={(e) => setInviteAccessScope(e.target.value)} className="app-field text-[13px] w-auto py-2">
+                <select value={inviteAccessScope} onChange={(e) => setInviteAccessScope(e.target.value)} className="app-field text-[13px] w-full sm:w-auto py-2">
                   <option value="all">All jobs</option>
                   <option value="assigned_only">Only jobs they&apos;re assigned to</option>
                 </select>
               )}
-              <button type="submit" disabled={sending} className="btn-primary" style={{ width: "auto", padding: "10px 20px" }}>
+              <button type="submit" disabled={sending} className="btn-primary w-full sm:w-auto" style={{ padding: "10px 20px" }}>
                 {sending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
                 {sending ? " Sending..." : " Send invite"}
               </button>
@@ -292,12 +292,12 @@ export default function TeamPageClient({
             <Mail size={16} className="text-amber-600" /> Pending invites
           </h3>
           {resendMsg && <p className="text-[12px] font-semibold text-[var(--ink-soft)] mb-2">{resendMsg}</p>}
-          <div className="space-y-2">
+          <div className="space-y-3">
             {pendingInvites.map((inv) => (
-              <div key={inv.id} className="flex items-center justify-between gap-3 py-2 border-b border-[var(--line-subtle)] last:border-0">
-                <div>
-                  <p className="text-[14px] font-semibold text-[var(ink)]">{inv.email}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
+              <div key={inv.id} className="py-3 border-b border-[var(--line-subtle)] last:border-0 space-y-2">
+                <div className="min-w-0">
+                  <p className="text-[14px] font-semibold text-[var(--ink)] break-all">{inv.email}</p>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
                     <span className={`pill ${ROLE_STYLE[inv.role]?.bg ?? ROLE_STYLE.site_member.bg} ${ROLE_STYLE[inv.role]?.text ?? ROLE_STYLE.site_member.text}`}>
                       {ROLE_STYLE[inv.role]?.label ?? inv.role}
                     </span>
@@ -305,7 +305,7 @@ export default function TeamPageClient({
                   </div>
                 </div>
                 {isOwner && (
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex flex-wrap items-center gap-1">
                     <button
                       onClick={() => copyAcceptLink(inv.invite_token, inv.id)}
                       className="text-[12px] font-bold text-[var(--navy)] hover:bg-[var(--app-bg)] rounded-lg px-2.5 py-1.5 transition-colors"
@@ -330,7 +330,7 @@ export default function TeamPageClient({
 
       {/* Active members */}
       <div className="card">
-        <h3 className="font-bold text-[16px] text-[var(ink)] mb-3 flex items-center gap-2">
+        <h3 className="font-bold text-[16px] text-[var(--ink)] mb-3 flex items-center gap-2">
           <UserCheck size={16} /> Team members
         </h3>
         {members.length === 0 ? (
@@ -342,73 +342,100 @@ export default function TeamPageClient({
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1">
             {members.map((m) => {
               const status = STATUS_STYLE[m.status] ?? STATUS_STYLE.active;
               const role = ROLE_STYLE[m.role] ?? ROLE_STYLE.site_member;
               return (
-                <div key={m.id} className="flex items-center justify-between gap-3 py-2 border-b border-[var(--line-subtle)] last:border-0">
-                  <div className="flex items-center gap-3 min-w-0">
+                <div
+                  key={m.id}
+                  className="py-3 border-b border-[var(--line-subtle)] last:border-0 space-y-2.5"
+                >
+                  <div className="flex items-start gap-3 min-w-0">
                     <div className="w-9 h-9 rounded-full bg-[var(--app-bg)] border border-[var(--line)] flex items-center justify-center shrink-0">
-                      <span className="text-[13px] font-bold text-[var(--ink-soft)]">{(m.name || m.email).charAt(0).toUpperCase()}</span>
+                      <span className="text-[13px] font-bold text-[var(--ink-soft)]">
+                        {(m.name || m.email).charAt(0).toUpperCase()}
+                      </span>
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-[14px] font-semibold text-[var(ink)] truncate">{m.name || m.email}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[14px] font-semibold text-[var(--ink)] truncate">
+                        {m.name || m.email}
+                      </p>
+                      {m.name && (
+                        <p className="text-[12px] text-[var(--ink-faint)] truncate">{m.email}</p>
+                      )}
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                         <span className={`pill ${role.bg} ${role.text}`}>{role.label}</span>
                         <span className={`pill ${status.bg} ${status.text}`}>{status.label}</span>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    {isAdmin && (
-                      editingRateId === m.id ? (
-                        <span className="flex items-center gap-1">
-                          <span className="text-[12px] text-[var(--ink-faint)]">$</span>
-                          <input
-                            type="number"
-                            autoFocus
-                            defaultValue={m.hourly_rate ?? defaultHourlyRate}
-                            onChange={(e) => setRateDraft(e.target.value)}
-                            onBlur={() => saveRate(m.id)}
-                            onKeyDown={(e) => e.key === "Enter" && saveRate(m.id)}
-                            className="app-field text-[12px] py-1 w-16"
-                          />
-                          <span className="text-[11px] text-[var(--ink-faint)]">/hr</span>
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => { setEditingRateId(m.id); setRateDraft(String(m.hourly_rate ?? defaultHourlyRate)); }}
-                          disabled={savingRateId === m.id}
-                          className="text-[12px] font-semibold text-[var(--ink-soft)] hover:text-[var(--navy)]"
-                          title="Set this person's hourly labour rate"
-                        >
-                          {savingRateId === m.id ? "Saving..." : `$${m.hourly_rate ?? defaultHourlyRate}/hr${m.hourly_rate == null ? " (default)" : ""}`}
-                        </button>
-                      )
-                    )}
                     {isOwner && m.role !== "owner" && (
-                      <div className="flex items-center gap-2">
-                        <select value={m.role} onChange={(e) => updateRole(m.id, e.target.value, m.accessScope ?? "all")} disabled={updatingRoleId === m.id}
-                          className="app-field text-[12px] py-1 w-auto">
-                          <option value="site_member">Site member</option>
-                          <option value="manager">Manager</option>
-                          <option value="admin">Admin</option>
-                        </select>
-                        {m.role === "manager" && (
-                          <select value={m.accessScope ?? "all"} onChange={(e) => updateRole(m.id, "manager", e.target.value)} disabled={updatingRoleId === m.id}
-                            className="app-field text-[12px] py-1 w-auto">
-                            <option value="all">All jobs</option>
-                            <option value="assigned_only">Assigned only</option>
-                          </select>
-                        )}
-                        <button onClick={() => removeMember(m.id)} disabled={removingId === m.id}
-                          className="p-1.5 rounded-lg hover:bg-[var(--red-bg)] transition-colors disabled:opacity-50">
-                          <Trash2 size={14} className="text-[var(--ink-faint)]" />
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => removeMember(m.id)}
+                        disabled={removingId === m.id}
+                        className="p-2 rounded-lg hover:bg-[var(--red-bg)] transition-colors disabled:opacity-50 shrink-0"
+                        aria-label="Remove team member"
+                      >
+                        <Trash2 size={14} className="text-[var(--ink-faint)]" />
+                      </button>
                     )}
                   </div>
+
+                  {(isAdmin || (isOwner && m.role !== "owner")) && (
+                    <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 pl-0 sm:pl-12">
+                      {isAdmin && (
+                        editingRateId === m.id ? (
+                          <span className="flex items-center gap-1">
+                            <span className="text-[12px] text-[var(--ink-faint)]">$</span>
+                            <input
+                              type="number"
+                              autoFocus
+                              defaultValue={m.hourly_rate ?? defaultHourlyRate}
+                              onChange={(e) => setRateDraft(e.target.value)}
+                              onBlur={() => saveRate(m.id)}
+                              onKeyDown={(e) => e.key === "Enter" && saveRate(m.id)}
+                              className="app-field text-[12px] py-1.5 w-20"
+                            />
+                            <span className="text-[11px] text-[var(--ink-faint)]">/hr</span>
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => { setEditingRateId(m.id); setRateDraft(String(m.hourly_rate ?? defaultHourlyRate)); }}
+                            disabled={savingRateId === m.id}
+                            className="text-[12px] font-semibold text-[var(--ink-soft)] hover:text-[var(--navy)] self-start py-1.5"
+                            title="Set this person's hourly labour rate"
+                          >
+                            {savingRateId === m.id ? "Saving..." : `$${m.hourly_rate ?? defaultHourlyRate}/hr${m.hourly_rate == null ? " (default)" : ""}`}
+                          </button>
+                        )
+                      )}
+                      {isOwner && m.role !== "owner" && (
+                        <>
+                          <select
+                            value={m.role}
+                            onChange={(e) => updateRole(m.id, e.target.value, m.accessScope ?? "all")}
+                            disabled={updatingRoleId === m.id}
+                            className="app-field text-[12px] py-1.5 w-full sm:w-auto"
+                          >
+                            <option value="site_member">Site member</option>
+                            <option value="manager">Manager</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                          {m.role === "manager" && (
+                            <select
+                              value={m.accessScope ?? "all"}
+                              onChange={(e) => updateRole(m.id, "manager", e.target.value)}
+                              disabled={updatingRoleId === m.id}
+                              className="app-field text-[12px] py-1.5 w-full sm:w-auto"
+                            >
+                              <option value="all">All jobs</option>
+                              <option value="assigned_only">Assigned only</option>
+                            </select>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
