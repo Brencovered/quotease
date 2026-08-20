@@ -50,6 +50,10 @@ const PUBLIC_PAGE_PATHS = [
   "/how-it-works",
   "/blog",
   "/q",
+  // Invitees set a password here before they have a session — must stay
+  // public. Also excluded from PROTECTED_PAGE_PREFIXES below because /team
+  // itself is authenticated.
+  "/team/accept",
 ];
 
 /** Routes that require authentication + active subscription */
