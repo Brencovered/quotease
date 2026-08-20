@@ -23,7 +23,7 @@ import PreferredStartDateField from "@/components/PreferredStartDateField";
 import { splitGst } from "@/lib/gst";
 import { persistAnnotationFrames } from "@/lib/siteAnnotations";
 import JobDescriptionField from "@/components/JobDescriptionField";
-import { MaterialSearchAdd, ScopeItemsList, type ScopeItem } from "@/components/ScopeOfWorkStep";
+import { MaterialSearchAdd, ScopeItemsList, mergeAnnotationScopeItems, type ScopeItem } from "@/components/ScopeOfWorkStep";
 import PeripheralsPanel from "@/components/PeripheralsPanel";
 import type { SiteConditionTemplateRow } from "@/lib/peripherals";
 import TradeEstimateAssistant, { DEDICATED_ESTIMATE_TRADES, type DedicatedTradeKey } from "@/components/TradeEstimateAssistant";
@@ -445,19 +445,14 @@ export default function GenericQuoteBuilder({
             onSaveDraft={saveDraft}
             onAnnotationMeta={(meta) => setAnnotationMeta(meta)}
             onAddLineItems={(items) => {
-              setSiteItems((prev) => [
-                ...prev,
-                ...items.map((item) => ({
-                  id: Math.random().toString(36).slice(2),
-                  label: item.description,
-                  qty: item.quantity,
-                  unit: item.unit,
-                  note: item.notes,
-                  materialsCost: (item as {materialsCost?: number}).materialsCost ?? 0,
-                  labourHrs: (item as {labourHrs?: number}).labourHrs ?? 0,
-                  source: "annotation" as const,
-                })),
-              ]);
+              setSiteItems((prev) => mergeAnnotationScopeItems(prev, items.map((item) => ({
+                description: item.description,
+                quantity: item.quantity,
+                unit: item.unit,
+                notes: item.notes,
+                materialsCost: (item as {materialsCost?: number}).materialsCost ?? 0,
+                labourHrs: (item as {labourHrs?: number}).labourHrs ?? 0,
+              }))));
             }}
           />
 

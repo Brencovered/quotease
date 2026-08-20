@@ -7,6 +7,7 @@ import DrawingAnalysisReviewTable, {
   type DetectedItem,
   type ReviewLineItem,
 } from "@/components/DrawingAnalysisReviewTable";
+import { aggregateLiveMarkupPins } from "@/lib/aggregateLiveMarkup";
 
 /**
  * Starting labour-hour estimate per annotation tag, used ONLY to pre-fill
@@ -66,6 +67,7 @@ export default function LiveSiteAnnotation({
   const [pendingItems, setPendingItems] = useState<DetectedItem[]>([]);
   const [added, setAdded] = useState(false);
   const [addedCount, setAddedCount] = useState(0);
+  const [addedPins, setAddedPins] = useState(0);
 
   // Check for results when page regains focus (after camera page returns)
   useEffect(() => {
@@ -82,24 +84,20 @@ export default function LiveSiteAnnotation({
           note: string; length?: number;
         }[];
 
-        // Hand off to the same review-and-price step drawing takeoff and
-        // voice quoting use - counts come from the camera markup, prices
-        // come from the real price book, never from a hardcoded guess.
-        // Freeform notes (itemKey "__note__") are deliberately excluded
-        // here - they're not tied to a material or cost, only to the
-        // site report via onAnnotationMeta below, which still gets ALL
-        // annotations including notes.
-        const detected: DetectedItem[] = annotations
-          .filter((ann) => ann.itemKey !== "__note__")
-          .map((ann) => ({
-            label: ann.length != null ? `${ann.label} (~${ann.length}m)` : ann.label,
-            item_key: ann.itemKey,
-            quantity: ann.qty,
-            unit: ann.unit,
-            labour_hours: (ANNOTATION_LABOUR_HOURS[ann.itemKey] ?? 0) * ann.qty,
-          }));
+        // Roll identical pins into one review row (6× Downlight → qty 6).
+        // Freeform notes stay out of pricing - they only go to the site
+        // report via onAnnotationMeta below.
+        const pinCount = annotations.filter((a) => a.itemKey !== "__note__").length;
+        const detected: DetectedItem[] = aggregateLiveMarkupPins(annotations).map((line) => ({
+          label: line.label,
+          item_key: line.itemKey,
+          quantity: line.quantity,
+          unit: line.unit,
+          labour_hours: Math.round(((ANNOTATION_LABOUR_HOURS[line.itemKey] ?? 0) * line.quantity) * 100) / 100,
+        }));
 
         setAdded(false);
+        setAddedPins(pinCount);
         setPendingItems(detected);
 
         if (rawMeta && onAnnotationMeta) {
@@ -138,7 +136,7 @@ export default function LiveSiteAnnotation({
           <div>
             <p className="font-bold text-[14px] text-[var(--ink)]">Live site markup</p>
             <p className="text-[12.5px] text-[var(--ink-faint)]">
-              Open your camera and tap or draw on the live view to mark up items. Each annotation adds to your quote automatically.
+              Open your camera and tap or draw on the live view. Matching items stack as a count on one quote line - not separate recordings.
             </p>
           </div>
         </div>
@@ -162,7 +160,9 @@ export default function LiveSiteAnnotation({
           <div className="flex items-center gap-2 bg-green-50 border border-green-100 rounded-xl px-3 py-2.5 mb-3">
             <Check size={14} className="text-green-600 shrink-0" />
             <p className="text-[13px] font-semibold text-green-700">
-              {addedCount} annotation{addedCount !== 1 ? "s" : ""} added to quote
+              {addedPins > addedCount
+                ? `${addedPins} pins → ${addedCount} quote line${addedCount !== 1 ? "s" : ""}`
+                : `${addedCount} line${addedCount !== 1 ? "s" : ""} added to quote`}
             </p>
           </div>
         )}
@@ -187,7 +187,11 @@ export default function LiveSiteAnnotation({
         <DrawingAnalysisReviewTable
           detectedItems={pendingItems}
           confidence="high"
-          notes="Counts from your camera markup - prices from your price book."
+          notes={
+            addedPins > pendingItems.length
+              ? `${addedPins} pins rolled into ${pendingItems.length} line${pendingItems.length !== 1 ? "s" : ""} - prices from your price book.`
+              : "Counts from your camera markup - prices from your price book."
+          }
           lib={lib ?? []}
           trade={trade}
           archetypeDefaults={archetypeDefaults}
