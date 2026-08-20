@@ -19,7 +19,7 @@ import PackagePicker from "@/components/PackagePicker";
 import { resolveClientId } from "@/lib/resolveClientId";
 import { getActiveBusinessId } from "@/lib/team";
 import { PAYMENT_TERM_PRESETS, type PaymentTerm } from "@/lib/paymentTerms";
-import { MaterialSearchAdd, ScopeItemsList } from "@/components/ScopeOfWorkStep";
+import { MaterialSearchAdd, ScopeItemsList, mergeAnnotationScopeItems } from "@/components/ScopeOfWorkStep";
 import PeripheralsPanel from "@/components/PeripheralsPanel";
 import type { SiteConditionTemplateRow } from "@/lib/peripherals";
 
@@ -600,19 +600,14 @@ export default function RooferQuoteBuilder({
         onSaveDraft={saveDraft}
         onAnnotationMeta={(meta) => setAnnotationMeta(meta)}
         onAddLineItems={(items) => {
-          setSiteItems((prev) => [
-            ...prev,
-            ...items.map((item) => ({
-              id: Math.random().toString(36).slice(2),
-              label: item.description,
-              qty: item.quantity,
-              unit: item.unit,
-              note: item.notes,
-              materialsCost: (item as {materialsCost?: number}).materialsCost ?? 0,
-              labourHrs: (item as {labourHrs?: number}).labourHrs ?? 0,
-              source: "annotation" as const,
-            })),
-          ]);
+          setSiteItems((prev) => mergeAnnotationScopeItems(prev, items.map((item) => ({
+            description: item.description,
+            quantity: item.quantity,
+            unit: item.unit,
+            notes: item.notes,
+            materialsCost: (item as {materialsCost?: number}).materialsCost ?? 0,
+            labourHrs: (item as {labourHrs?: number}).labourHrs ?? 0,
+          }))));
         }}
       />
 

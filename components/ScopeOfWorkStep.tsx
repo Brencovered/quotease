@@ -40,6 +40,51 @@ export type ScopeItem = {
   peripheralKey?: string;
 };
 
+/** Merge live-markup accept rows into scope: same label+unit stacks qty. */
+export function mergeAnnotationScopeItems(
+  prev: ScopeItem[],
+  incoming: Array<{
+    description: string;
+    quantity: number;
+    unit: string;
+    notes: string;
+    materialsCost: number;
+    labourHrs: number;
+  }>
+): ScopeItem[] {
+  const next = [...prev];
+  for (const item of incoming) {
+    const idx = next.findIndex(
+      (s) =>
+        s.source === "annotation" &&
+        s.label === item.description &&
+        s.unit === item.unit &&
+        !s.overridden
+    );
+    if (idx >= 0) {
+      const existing = next[idx];
+      next[idx] = {
+        ...existing,
+        qty: Math.round((existing.qty + item.quantity) * 100) / 100,
+        materialsCost: Math.round((existing.materialsCost + item.materialsCost) * 100) / 100,
+        labourHrs: Math.round((existing.labourHrs + item.labourHrs) * 100) / 100,
+      };
+    } else {
+      next.push({
+        id: Math.random().toString(36).slice(2),
+        label: item.description,
+        qty: item.quantity,
+        unit: item.unit,
+        note: item.notes,
+        materialsCost: item.materialsCost,
+        labourHrs: item.labourHrs,
+        source: "annotation",
+      });
+    }
+  }
+  return next;
+}
+
 type MaterialRow = { item_key: string; label: string; unit_cost: number };
 
 /**
