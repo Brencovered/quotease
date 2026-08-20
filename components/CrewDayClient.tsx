@@ -49,17 +49,20 @@ export default function CrewDayClient({
   members,
   days,
   jobsByDay: initialJobsByDay,
+  needsDateJobs: initialNeedsDate = [],
   tasks: initialTasks,
   todayIso,
 }: {
   members: CrewDayMember[];
   days: string[];
   jobsByDay: Record<string, CrewDayJob[]>;
+  needsDateJobs?: CrewDayJob[];
   tasks: CrewTask[];
   todayIso: string;
 }) {
   const router = useRouter();
   const [jobsByDay, setJobsByDay] = useState(initialJobsByDay);
+  const [needsDateJobs, setNeedsDateJobs] = useState(initialNeedsDate);
   const [tasks, setTasks] = useState(initialTasks);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +70,7 @@ export default function CrewDayClient({
   // Per-member assign / task composers
   const [assignFor, setAssignFor] = useState<string | null>(null);
   const [assignJobId, setAssignJobId] = useState("");
+  const [assignDate, setAssignDate] = useState(todayIso);
   const [taskFor, setTaskFor] = useState<string | null>(null);
   const [taskTitle, setTaskTitle] = useState("");
   const [taskJobId, setTaskJobId] = useState("");
@@ -97,20 +101,27 @@ export default function CrewDayClient({
     });
   }
 
-  async function assignJob(jobId: string, teamMemberId: string | null) {
+  async function assignJob(jobId: string, teamMemberId: string | null, scheduledStart?: string) {
     setBusy(`assign-${jobId}`);
     setError(null);
     try {
       const res = await fetch(`/api/jobs/${jobId}/assign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teamMemberId }),
+        body: JSON.stringify({
+          teamMemberId,
+          scheduledStart: scheduledStart || undefined,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Couldn’t assign");
       setJobMembers(jobId, teamMemberId ? [teamMemberId] : []);
+      if (scheduledStart) {
+        setNeedsDateJobs((prev) => prev.filter((j) => j.id !== jobId));
+      }
       setAssignFor(null);
       setAssignJobId("");
+      setAssignDate(todayIso);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn’t assign");
@@ -205,7 +216,7 @@ export default function CrewDayClient({
           </p>
           <h1 className="font-display text-[28px] text-[var(--ink)] leading-none">Crew</h1>
           <p className="text-[13px] text-[var(--ink-faint)] mt-1">
-            Assign jobs and tasks here — they land on My day with a ping.
+            Assign with a start date — they show on My day with a ping.
           </p>
         </div>
         <Link
@@ -330,11 +341,19 @@ export default function CrewDayClient({
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2 items-center">
+                      <input
+                        type="date"
+                        defaultValue={todayIso}
+                        id={`date-${j.id}`}
+                        className="app-field text-[13px] w-auto py-1.5"
+                      />
                       <select
                         defaultValue=""
                         onChange={(e) => {
                           const id = e.target.value;
-                          if (id) void assignJob(j.id, id);
+                          if (!id) return;
+                          const dateEl = document.getElementById(`date-${j.id}`) as HTMLInputElement | null;
+                          void assignJob(j.id, id, dateEl?.value || todayIso);
                         }}
                         disabled={busy === `assign-${j.id}`}
                         className="app-field text-[13px] w-auto py-1.5"
@@ -473,9 +492,9 @@ export default function CrewDayClient({
 
                     {assignFor === m.id && (
                       <div className="mt-2 flex flex-wrap gap-2 items-center">
-                        {assignable.length === 0 ? (
+                        {assignable.length === 0 && needsDateJobs.length === 0 ? (
                           <p className="text-[12px] text-[var(--ink-faint)]">
-                            No other jobs today to assign. Set a start date on a job first.
+                            No jobs to assign. Create a job or set one undated below.
                           </p>
                         ) : (
                           <>
@@ -491,11 +510,24 @@ export default function CrewDayClient({
                                   {j.member_ids.length ? " (has crew)" : ""}
                                 </option>
                               ))}
+                              {needsDateJobs
+                                .filter((j) => !j.member_ids.includes(m.id))
+                                .map((j) => (
+                                  <option key={j.id} value={j.id}>
+                                    {jobLabel(j)} · needs date
+                                  </option>
+                                ))}
                             </select>
+                            <input
+                              type="date"
+                              value={assignDate}
+                              onChange={(e) => setAssignDate(e.target.value)}
+                              className="app-field text-[13px] w-auto py-1.5"
+                            />
                             <button
                               type="button"
-                              disabled={!assignJobId || busy?.startsWith("assign-")}
-                              onClick={() => void assignJob(assignJobId, m.id)}
+                              disabled={!assignJobId || !assignDate || busy?.startsWith("assign-")}
+                              onClick={() => void assignJob(assignJobId, m.id, assignDate)}
                               className="btn-primary text-[12px] py-1.5 px-3"
                             >
                               Assign

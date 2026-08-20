@@ -57,7 +57,7 @@ export default async function TodayPage() {
           supabase
             .from("jobs")
             .select(
-              "id, job_number, client_name, client_phone, client_email, site_address, title, trade, status, scheduled_date, scheduled_start, assigned_to_member_id, total_cost"
+              "id, job_number, client_name, client_phone, client_email, site_address, title, trade, status, scheduled_date, scheduled_start, assigned_to_member_id, total_cost, amount_paid, work_started_at"
             )
             .eq("profile_id", ctx.businessId)
             .not("status", "in", '("cancelled","archived","complete","invoiced","partially_paid")')
@@ -124,6 +124,8 @@ export default async function TodayPage() {
           status: j.status as string,
           scheduled_start: start,
           total_cost: j.total_cost as number | null,
+          amount_paid: (j.amount_paid as number | null) ?? 0,
+          work_started_at: (j.work_started_at as string | null) ?? null,
           has_start_date: hasStartDate,
           assigned_to_me: assignedToMe,
           on_day: onDay,
@@ -141,13 +143,19 @@ export default async function TodayPage() {
 
       const mine = mapped.filter((j) => !(restrictToAssigned && !j.assigned_to_me));
 
+      // Today = dated for today, plus anything already on site (carry-over).
       todayJobs = mine
-        .filter((j) => j.on_day)
-        .sort((a, b) => (a.scheduled_start ?? "").localeCompare(b.scheduled_start ?? ""))
+        .filter((j) => j.on_day || j.status === "in_progress")
+        .sort((a, b) => {
+          if (a.status === "in_progress" && b.status !== "in_progress") return -1;
+          if (b.status === "in_progress" && a.status !== "in_progress") return 1;
+          return (a.scheduled_start ?? "").localeCompare(b.scheduled_start ?? "");
+        })
         .map(({ assigned_to_me: _a, on_day: _o, is_open: _i, ...job }) => job);
 
+      // Undated stays a count for owners (set a date) — not a tile dump on My day.
       undatedJobs = mine
-        .filter((j) => !j.has_start_date)
+        .filter((j) => !j.has_start_date && j.status !== "in_progress")
         .sort((a, b) => a.job_number - b.job_number)
         .map(({ assigned_to_me: _a, on_day: _o, is_open: _i, ...job }) => job);
 
@@ -189,7 +197,7 @@ export default async function TodayPage() {
       <AppHeader />
       <MyDayClient
         todayJobs={todayJobs}
-        undatedJobs={undatedJobs}
+        undatedCount={showCrewLink ? undatedJobs.length : 0}
         openJobs={openJobs}
         canClaimOpenJobs={canClaimOpenJobs}
         tasks={tasks}
@@ -197,6 +205,7 @@ export default async function TodayPage() {
         dateLabel={dateLabel}
         scopedToSelf={scopedToSelf}
         showCrewLink={showCrewLink}
+        canManageMoney={showCrewLink}
       />
     </>
   );

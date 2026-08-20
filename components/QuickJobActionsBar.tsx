@@ -10,12 +10,14 @@ export default function QuickJobActionsBar({
   totalCost,
   amountPaid,
   completedAt,
+  hideComplete = false,
 }: {
   jobId: string;
   status: string;
   totalCost: number;
   amountPaid: number;
   completedAt: string | null;
+  hideComplete?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -51,12 +53,12 @@ export default function QuickJobActionsBar({
       <div className="flex flex-wrap gap-2">
         {status !== "complete" && status !== "invoiced" && status !== "archived" && status !== "cancelled" && (
           <>
-            {status === "scheduled" && (
+            {!hideComplete && status === "scheduled" && (
               <button onClick={() => updateStatus({ status: "in_progress" })} disabled={busy} className="btn-secondary text-[13px] py-2 px-4">
                 Mark in progress
               </button>
             )}
-            {!completedAt && (
+            {!hideComplete && !completedAt && (
               <button onClick={completeWithCelebration} disabled={busy} className="btn-secondary text-[13px] py-2 px-4">
                 Mark job complete
               </button>

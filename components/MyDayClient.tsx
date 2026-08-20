@@ -7,6 +7,7 @@ import {
   Phone,
   Navigation,
   Play,
+  Pause,
   CheckCircle2,
   MapPin,
   Briefcase,
@@ -16,6 +17,8 @@ import {
   ListTodo,
   HandMetal,
 } from "lucide-react";
+import { suggestHoursFromStart } from "@/lib/jobTime";
+import JobDoneSheet, { type DoneNextStep } from "@/components/JobDoneSheet";
 
 export type MyDayJob = {
   id: string;
@@ -28,6 +31,8 @@ export type MyDayJob = {
   status: string;
   scheduled_start: string | null;
   total_cost: number | null;
+  amount_paid?: number | null;
+  work_started_at?: string | null;
   has_start_date?: boolean;
 };
 
@@ -69,18 +74,20 @@ function mapsUrl(address: string) {
 function JobTile({
   job,
   busy,
-  onStatus,
-  forceNoStartLabel,
+  onStart,
+  onPause,
+  onDone,
 }: {
   job: MyDayJob;
   busy: boolean;
-  onStatus: (jobId: string, status: string) => void;
-  forceNoStartLabel?: boolean;
+  onStart: (jobId: string) => void;
+  onPause: (jobId: string) => void;
+  onDone: (job: MyDayJob) => void;
 }) {
   const time = formatTime(job.scheduled_start);
-  const noStart = forceNoStartLabel || job.has_start_date === false || !job.scheduled_start;
   const canStart = job.status === "scheduled" || job.status === "on_hold";
-  const canComplete = job.status === "in_progress" || job.status === "awaiting_sign_off";
+  const canPause = job.status === "in_progress";
+  const canComplete = job.status === "in_progress" || job.status === "awaiting_sign_off" || job.status === "on_hold";
   const onSite = job.status === "in_progress";
 
   function stop(e: MouseEvent) {
@@ -98,9 +105,7 @@ function JobTile({
       <Link href={`/jobs/${job.id}`} className="flex-1 flex flex-col p-3 pb-2 active:bg-[var(--app-bg)]">
         <div className="flex items-center justify-between gap-1.5 mb-1.5">
           <span className="text-[10px] font-bold text-[var(--ink-faint)]">#{job.job_number}</span>
-          {noStart ? (
-            <span className="text-[10px] font-semibold text-[var(--ink-faint)] truncate">No start date</span>
-          ) : time ? (
+          {time ? (
             <span className="text-[10px] font-bold text-[var(--ink-soft)]">{time}</span>
           ) : (
             <span className="text-[10px] font-semibold text-[var(--amber-deep)] truncate">
@@ -124,7 +129,7 @@ function JobTile({
           <span className="mt-auto" />
         )}
 
-        {(noStart || time) && (
+        {time && (
           <p className="text-[10px] font-semibold text-[var(--amber-deep)] mt-1.5">
             {STATUS_LABEL[job.status] ?? job.status}
           </p>
@@ -160,12 +165,26 @@ function JobTile({
             disabled={busy}
             onClick={(e) => {
               stop(e);
-              onStatus(job.id, "in_progress");
+              onStart(job.id);
             }}
             className="flex-[1.4] flex items-center justify-center gap-1 py-2.5 bg-[var(--amber)] text-[var(--navy)] font-bold text-[12px] disabled:opacity-50 border-l border-[var(--line-subtle)]"
           >
             <Play size={13} strokeWidth={2.5} />
             {busy ? "…" : "Start"}
+          </button>
+        )}
+        {canPause && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={(e) => {
+              stop(e);
+              onPause(job.id);
+            }}
+            className="flex-1 flex items-center justify-center py-2.5 text-[var(--ink-soft)] font-bold text-[12px] disabled:opacity-50 border-l border-[var(--line-subtle)]"
+            aria-label="Pause"
+          >
+            <Pause size={13} />
           </button>
         )}
         {canComplete && (
@@ -174,7 +193,7 @@ function JobTile({
             disabled={busy}
             onClick={(e) => {
               stop(e);
-              onStatus(job.id, "complete");
+              onDone(job);
             }}
             className="flex-[1.4] flex items-center justify-center gap-1 py-2.5 bg-[var(--amber)] text-[var(--navy)] font-bold text-[12px] disabled:opacity-50 border-l border-[var(--line-subtle)]"
           >
@@ -182,7 +201,7 @@ function JobTile({
             {busy ? "…" : "Done"}
           </button>
         )}
-        {!canStart && !canComplete && (
+        {!canStart && !canComplete && !canPause && (
           <Link
             href={`/jobs/${job.id}`}
             className="flex-1 flex items-center justify-center py-2.5 text-[12px] font-semibold text-[var(--ink-soft)] border-l border-[var(--line-subtle)]"
@@ -198,13 +217,15 @@ function JobTile({
 function TileGrid({
   jobs,
   busyId,
-  onStatus,
-  forceNoStartLabel,
+  onStart,
+  onPause,
+  onDone,
 }: {
   jobs: MyDayJob[];
   busyId: string | null;
-  onStatus: (jobId: string, status: string) => void;
-  forceNoStartLabel?: boolean;
+  onStart: (jobId: string) => void;
+  onPause: (jobId: string) => void;
+  onDone: (job: MyDayJob) => void;
 }) {
   return (
     <div className="grid grid-cols-2 gap-2.5 sm:gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -213,8 +234,9 @@ function TileGrid({
           key={job.id}
           job={job}
           busy={busyId === job.id}
-          onStatus={onStatus}
-          forceNoStartLabel={forceNoStartLabel}
+          onStart={onStart}
+          onPause={onPause}
+          onDone={onDone}
         />
       ))}
     </div>
@@ -223,7 +245,7 @@ function TileGrid({
 
 export default function MyDayClient({
   todayJobs,
-  undatedJobs,
+  undatedCount = 0,
   openJobs = [],
   canClaimOpenJobs = false,
   tasks: initialTasks = [],
@@ -231,9 +253,10 @@ export default function MyDayClient({
   dateLabel,
   scopedToSelf,
   showCrewLink = false,
+  canManageMoney = false,
 }: {
   todayJobs: MyDayJob[];
-  undatedJobs: MyDayJob[];
+  undatedCount?: number;
   openJobs?: MyDayJob[];
   canClaimOpenJobs?: boolean;
   tasks?: MyDayTask[];
@@ -241,6 +264,7 @@ export default function MyDayClient({
   dateLabel: string;
   scopedToSelf: boolean;
   showCrewLink?: boolean;
+  canManageMoney?: boolean;
 }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -248,6 +272,7 @@ export default function MyDayClient({
   const [openPool, setOpenPool] = useState(openJobs);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [doneJob, setDoneJob] = useState<MyDayJob | null>(null);
 
   async function toggleTask(task: MyDayTask) {
     const next = task.status === "done" ? "todo" : "done";
@@ -292,31 +317,97 @@ export default function MyDayClient({
     }
   }
 
-  async function setStatus(jobId: string, status: string) {
+  async function postStatus(jobId: string, body: Record<string, unknown>) {
     setBusyId(jobId);
     setError(null);
     try {
       const res = await fetch("/api/jobs/update-status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          status === "complete"
-            ? { jobId, completeJob: true }
-            : { jobId, status }
-        ),
+        body: JSON.stringify({ jobId, ...body }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Couldn’t update job");
-      if (data.timesheetLogged?.hours) {
-        setToast(`Logged ${data.timesheetLogged.hours}h on this job`);
-        setTimeout(() => setToast(null), 4000);
-      } else if (status === "in_progress") {
+      return data as {
+        timesheetLogged?: { hours: number };
+        pausedOther?: { job_number: number } | null;
+      };
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function startJob(jobId: string) {
+    try {
+      const data = await postStatus(jobId, { status: "in_progress" });
+      if (data.pausedOther?.job_number) {
+        setToast(`Started — paused job #${data.pausedOther.job_number}`);
+      } else {
         setToast("Started — time is running");
-        setTimeout(() => setToast(null), 2500);
       }
+      setTimeout(() => setToast(null), 3500);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn’t update job");
+    }
+  }
+
+  async function pauseJob(jobId: string) {
+    try {
+      await postStatus(jobId, { status: "on_hold" });
+      setToast("Paused — clock kept for when you resume");
+      setTimeout(() => setToast(null), 3000);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn’t update job");
+    }
+  }
+
+  async function confirmDone(opts: {
+    hours: number | null;
+    next: DoneNextStep;
+    cashAmount?: number;
+  }) {
+    if (!doneJob) return;
+    const jobId = doneJob.id;
+    setBusyId(jobId);
+    setError(null);
+    try {
+      const body: Record<string, unknown> = {
+        completeJob: true,
+        hours: opts.hours,
+        skipTimesheet: opts.hours == null,
+      };
+      if (opts.next === "sign_off") {
+        body.completeJob = false;
+        body.status = "awaiting_sign_off";
+        body.logHoursOnly = true;
+      }
+      if (opts.next === "cash" && opts.cashAmount && opts.cashAmount > 0) {
+        body.paymentAmount = opts.cashAmount;
+      }
+
+      const res = await fetch("/api/jobs/update-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId, ...body }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Couldn’t finish");
+
+      setDoneJob(null);
+      if (opts.next === "invoice") {
+        window.open(`/api/jobs/${jobId}/invoice-pdf`, "_blank");
+      }
+      if (data.timesheetLogged?.hours) {
+        setToast(`Logged ${data.timesheetLogged.hours}h`);
+      } else {
+        setToast(opts.next === "sign_off" ? "Awaiting sign-off" : "Job complete");
+      }
+      setTimeout(() => setToast(null), 3500);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn’t finish");
     } finally {
       setBusyId(null);
     }
@@ -325,7 +416,6 @@ export default function MyDayClient({
   const openTasks = tasks.filter((t) => t.status !== "done");
   const empty =
     todayJobs.length === 0 &&
-    undatedJobs.length === 0 &&
     openTasks.length === 0 &&
     openPool.length === 0;
 
@@ -364,21 +454,36 @@ export default function MyDayClient({
         </div>
       )}
 
+      {showCrewLink && undatedCount > 0 && (
+        <Link
+          href="/jobs"
+          className="mb-4 flex items-center justify-between gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[13px]"
+        >
+          <span className="text-[var(--ink-soft)]">
+            <span className="font-bold text-[var(--ink)]">{undatedCount}</span> job
+            {undatedCount === 1 ? "" : "s"} need a start date
+          </span>
+          <span className="font-semibold text-[var(--navy)] shrink-0">Set dates →</span>
+        </Link>
+      )}
+
       {empty ? (
         <div className="card text-center py-10">
           <Briefcase size={28} className="mx-auto text-[var(--ink-faint)] mb-3" />
-          <p className="font-semibold text-[var(--ink)] mb-1">Nothing scheduled for today</p>
+          <p className="font-semibold text-[var(--ink)] mb-1">Nothing for today</p>
           <p className="text-[13px] text-[var(--ink-faint)] mb-4 max-w-[36ch] mx-auto">
             {scopedToSelf
-              ? "Nothing on you yet. If there’s open work above, grab a job — or wait for an assign."
-              : "Set a start date on the job or schedule to see it here."}
+              ? "Nothing on you yet. Grab open work above, or wait for an assign with a date."
+              : "Assign someone with a start date from Crew — or put yourself on a job."}
           </p>
           <div className="flex flex-wrap justify-center gap-2">
+            {showCrewLink && (
+              <Link href="/crew" className="btn-primary text-[13px] py-2 px-3">
+                Crew
+              </Link>
+            )}
             <Link href="/schedule" className="btn-secondary text-[13px] py-2 px-3">
               Schedule
-            </Link>
-            <Link href="/jobs" className="btn-primary text-[13px] py-2 px-3">
-              Jobs board
             </Link>
           </div>
         </div>
@@ -392,9 +497,6 @@ export default function MyDayClient({
                 </p>
                 <span className="text-[11px] font-semibold text-[var(--ink-faint)]">{openPool.length}</span>
               </div>
-              <p className="text-[12.5px] text-[var(--ink-faint)] mb-2.5">
-                Unassigned jobs starting today. Claim one if you’re free.
-              </p>
               <ul className="space-y-2">
                 {openPool.map((job) => (
                   <li
@@ -477,49 +579,34 @@ export default function MyDayClient({
           <section>
             <div className="flex items-baseline justify-between gap-2 mb-2.5">
               <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-faint)]">
-                Starting today
+                On today
               </p>
               <span className="text-[11px] font-semibold text-[var(--ink-faint)]">{todayJobs.length}</span>
             </div>
             {todayJobs.length === 0 ? (
-              <p className="text-[13px] text-[var(--ink-faint)]">No jobs with a start date of today.</p>
+              <p className="text-[13px] text-[var(--ink-faint)]">No dated or on-site jobs.</p>
             ) : (
               <TileGrid
                 jobs={todayJobs}
                 busyId={busyId}
-                onStatus={setStatus}
+                onStart={(id) => void startJob(id)}
+                onPause={(id) => void pauseJob(id)}
+                onDone={setDoneJob}
               />
             )}
           </section>
-
-          {undatedJobs.length > 0 && (
-            <section>
-              <div className="flex items-baseline justify-between gap-2 mb-2.5">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-faint)]">
-                  No start date
-                </p>
-                <span className="text-[11px] font-semibold text-[var(--ink-faint)]">{undatedJobs.length}</span>
-              </div>
-              <TileGrid
-                jobs={undatedJobs}
-                busyId={busyId}
-                onStatus={setStatus}
-                forceNoStartLabel
-              />
-            </section>
-          )}
         </div>
       )}
 
-      <div className="mt-6 flex flex-wrap gap-2 text-[13px]">
-        <Link href="/jobs" className="font-semibold text-[var(--navy)] underline underline-offset-2">
-          Jobs board
-        </Link>
-        <span className="text-[var(--ink-faint)]">·</span>
-        <Link href="/schedule" className="font-semibold text-[var(--navy)] underline underline-offset-2">
-          Schedule
-        </Link>
-      </div>
+      <JobDoneSheet
+        open={Boolean(doneJob)}
+        suggestedHours={suggestHoursFromStart(doneJob?.work_started_at)}
+        owing={Math.max((doneJob?.total_cost ?? 0) - (doneJob?.amount_paid ?? 0), 0)}
+        canManageMoney={canManageMoney}
+        busy={busyId === doneJob?.id}
+        onCancel={() => setDoneJob(null)}
+        onConfirm={(opts) => void confirmDone(opts)}
+      />
     </main>
   );
 }
