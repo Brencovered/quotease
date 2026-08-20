@@ -3,7 +3,7 @@
  * --------------------------
  * Takeoff archetypes: the abstract things a tradie counts on a plan or that
  * AI drawing analysis detects ("downlight", "GPO", "cable run"). These are
- * deliberately generic -- counting should be fast on-site.
+ * deliberately generic - counting should be fast on-site.
  *
  * Pricing, however, must come from the tradie's REAL price book. Each
  * archetype defines keyword filters that scope a searchable picker to the
@@ -13,7 +13,7 @@
  * "<trade>:<archetype_key>" and auto-applied on future takeoffs.
  *
  * `exclude` keywords filter out accessory noise (e.g. trims/frames matching
- * "downlight") from the DEFAULT view -- the tradie can still find them via
+ * "downlight") from the DEFAULT view - the tradie can still find them via
  * search, which clears the exclusion.
  */
 
@@ -36,7 +36,7 @@ export const ARCHETYPE_CATEGORIES: Record<string, ArchetypeCategory[]> = {
     { key: "conduit", label: "Conduit run",    keywords: ["conduit"] },
     { key: "sb",      label: "Switchboard",    keywords: ["switchboard"], exclude: ["label", "lock", "filler"] },
     { key: "circuit", label: "New circuit",    keywords: ["mcb", "rcbo", "rcd", "circuit breaker"] },
-    // -- Structured-intake calculator keys (calcElectricianQuote). Reuses
+    // - Structured-intake calculator keys (calcElectricianQuote). Reuses
     // "data" and "smoke" above; adds the rest of the wizard's fields so
     // they can also be linked to real price-book products.
     { key: "pp",               label: "Power point",              keywords: ["power outlet", "powerpoint", "socket outlet", "gpo"] },
@@ -76,7 +76,7 @@ export const ARCHETYPE_CATEGORIES: Record<string, ArchetypeCategory[]> = {
     { key: "pipe_cold",  label: "Cold water pipe", keywords: ["pipe", "pex", "copper"] },
     { key: "pipe_hot",   label: "Hot water pipe",  keywords: ["pipe", "pex", "copper"] },
     { key: "pipe_waste", label: "Waste pipe",  keywords: ["waste", "pvc", "dwv"] },
-    // -- Structured-intake calculator keys (calcPlumberQuote). Separate
+    // - Structured-intake calculator keys (calcPlumberQuote). Separate
     // namespace from the AI-detection keys above so a tradie's per-fixture
     // job-detail form (not just AI drawing/voice) can also resolve real
     // price-book products instead of the built-in demo defaults.
@@ -109,7 +109,7 @@ export const ARCHETYPE_CATEGORIES: Record<string, ArchetypeCategory[]> = {
     { key: "window",     label: "Window",       keywords: ["window"] },
     { key: "skirting",   label: "Skirting",     keywords: ["skirting"] },
     { key: "decking",    label: "Decking",      keywords: ["decking"] },
-    // -- Structured-intake calculator keys (calcCarpenterQuote).
+    // - Structured-intake calculator keys (calcCarpenterQuote).
     { key: "framing_lm",     label: "Framing timber (per LM)", keywords: ["framing", "timber"] },
     { key: "sheet_ply",      label: "Structural ply sheet",    keywords: ["ply", "structural"] },
     { key: "sheet_mdf",      label: "MDF sheet",               keywords: ["mdf"] },

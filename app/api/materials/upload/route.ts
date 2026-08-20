@@ -34,7 +34,7 @@ function parseCSVLine(line: string): string[] {
  *  - `sampleRows`: a matched column that is empty in (almost) all data rows is
  *    rejected and the next alias is tried. Xero exports include a
  *    PurchasesDescription header that is blank on every row while the real
- *    names live in ItemName -- matching on header alone silently imported
+ *    names live in ItemName - matching on header alone silently imported
  *    SKU codes as descriptions.
  *  - `claimed`: a column already assigned to another field can't be matched
  *    again. Without this, the alias "unit" substring-matched
@@ -196,14 +196,14 @@ export async function POST(request: Request) {
         const normalized = normalizeTradeValue(rawTradeValue);
         if (normalized) {
           // Genuinely a recognised trade (e.g. the column really did say
-          // "carpenter", or a synonym like "electrical") -- safe to use
+          // "carpenter", or a synonym like "electrical") - safe to use
           // as the hard trade filter.
           trade = normalized;
         } else if (rawTradeValue.trim()) {
-          // Not a real trade -- this is the supplier's own product
+          // Not a real trade - this is the supplier's own product
           // category (e.g. Bunnings' "Timber - Posts", "Decking").
           // Keep it for reference/search, but never let it silently
-          // become the trade filter -- that's exactly the bug where a
+          // become the trade filter - that's exactly the bug where a
           // real "Treated Pine Post" became unfindable in every trade's
           // quote builder because nothing was ever tagged "carpenter".
           category = rawTradeValue.trim();
@@ -211,7 +211,7 @@ export async function POST(request: Request) {
       }
 
       /* Fallback: first unclaimed col = description, second with $/number = cost.
-         Never fall back to the SKU column -- importing codes as descriptions
+         Never fall back to the SKU column - importing codes as descriptions
          makes the whole price book unsearchable. */
       if (!description && fields[0] && ci.sku !== 0) description = fields[0];
       if (!costPriceRaw) {

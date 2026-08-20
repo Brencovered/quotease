@@ -133,7 +133,7 @@ export default function FindTradieHeroSearch({
 
         {/* Step indicator */}
         <p className="text-[11px] font-bold tracking-[.15em] uppercase text-[#8b96a1] mb-4">
-          Step 1 of 2 — Tell us what you need
+          Step 1 of 2 - Tell us what you need
         </p>
 
         {/* Search form card */}

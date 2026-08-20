@@ -101,7 +101,7 @@ export function humanizeIntake(intake: Record<string, unknown> | null | undefine
   }
 
   // Certificate of Electrical Safety is an electrical-work-specific
-  // compliance document -- was previously pushed unconditionally for
+  // compliance document - was previously pushed unconditionally for
   // every trade's quote (a carpenter or plumber quote would show it too,
   // which makes no sense and could look like a fabricated compliance
   // claim). Only relevant for electrician quotes.
@@ -113,11 +113,11 @@ export function humanizeIntake(intake: Record<string, unknown> | null | undefine
 }
 
 /**
- * These fields deliberately never show up in humanizeIntake() above -- they
+ * These fields deliberately never show up in humanizeIntake() above - they
  * affect the price (see the overallAccess multiplier in lib/calc.ts) but
  * aren't purchasable scope items, so listing them as scope lines would be
  * misleading. Previously that meant they were captured, silently changed
- * the total, and then vanished -- no trace anywhere for the tradie (or
+ * the total, and then vanished - no trace anywhere for the tradie (or
  * customer) to see why the price came out the way it did. This surfaces
  * them as a separate, short "conditions considered" summary instead.
  */
@@ -142,7 +142,7 @@ export function summarizeConditions(intake: Record<string, unknown> | null | und
       lines.push(`${label}: ${valueLabel}`);
     } else if (typeof value === "string" && value.trim()) {
       // No mapped label for this value (e.g. generic trade's free-text job
-      // type, or a value from a trade not yet added to the shared map) --
+      // type, or a value from a trade not yet added to the shared map) -
       // show the raw value rather than silently dropping it.
       lines.push(`${label}: ${value}`);
     }

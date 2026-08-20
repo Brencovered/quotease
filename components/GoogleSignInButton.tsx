@@ -3,7 +3,7 @@
 /**
  * components/GoogleSignInButton.tsx
  * -----------------------------------
- * Used on both /login and /signup. Either way it's the same OAuth call --
+ * Used on both /login and /signup. Either way it's the same OAuth call -
  * Supabase/Google don't distinguish "signing up" from "logging in", a
  * Google account either already has a matching Supabase user or it
  * doesn't, and app/auth/callback/route.ts (already handles the
@@ -12,7 +12,7 @@
  * -> /dashboard (or `next`, if one was passed through).
  *
  * redirectTo has to be an absolute URL pointing at our own callback route
- * (not Google's) -- Supabase's OAuth flow is: browser -> Google ->
+ * (not Google's) - Supabase's OAuth flow is: browser -> Google ->
  * Supabase's own /auth/v1/callback (the one shown in the Supabase
  * dashboard) -> back to whatever redirectTo says, with a `code` param
  * for this app's /auth/callback to exchange for a session.
@@ -53,7 +53,7 @@ export default function GoogleSignInButton({ next, label = "Continue with Google
         setError(error.message);
         setLoading(false);
       }
-      // On success the browser navigates to Google -- nothing else to do
+      // On success the browser navigates to Google - nothing else to do
       // here, and there's nothing left to render once that redirect fires.
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not reach Google.");

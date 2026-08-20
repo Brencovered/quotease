@@ -37,12 +37,12 @@ const DetectedItemsVoiceSchema = z.object({
 // it's the same underlying cost (one Claude API call) and the same kind of
 // assist, so a separate quota would just be confusing rather than more fair.
 //
-// This electrician prompt/shape is kept exactly as it was -- QuoteBuilder.tsx
+// This electrician prompt/shape is kept exactly as it was - QuoteBuilder.tsx
 // autofills its intake form directly from these fixed fields. Every other
 // trade is dispatched dynamically below via getTradeVoicePrompt, returning
 // detected_items instead (previously every non-electrician trade ran through
 // THIS electrician-only prompt and the result was discarded but for a
-// confidence badge -- voice quoting simply didn't work for them).
+// confidence badge - voice quoting simply didn't work for them).
 const ELECTRICIAN_SYSTEM_PROMPT = `You are helping a tradie turn a voice note recorded on site into a structured quote.
 They walked around describing the job out loud - it'll be informal, may go off on tangents, and won't
 use precise terminology. Extract what you can about an electrical job:

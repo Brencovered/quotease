@@ -4,19 +4,19 @@
  * Generates keyword ideas for the core product (job management / quoting
  * software for tradies), not the directory. Unlike generateDirectoryKeywords
  * (which mechanically derives from live trade+suburb data), there's no
- * equivalent live dataset to derive SaaS keywords from -- this is a
+ * equivalent live dataset to derive SaaS keywords from - this is a
  * template-based expansion grounded in what Swiftscope actually is: a flat-
  * rate SaaS consolidating tools like ServiceM8, Tradify, Fergus, HiPages,
  * GroundPlan and SimPro for Australian trade businesses (electricians,
  * plumbers, carpenters, roofers, and generic trades).
  *
- * Deliberately not AI-generated -- a fixed, reviewable template list is
+ * Deliberately not AI-generated - a fixed, reviewable template list is
  * easier to keep honest (no invented competitor claims, no keywords that
  * don't match what the product actually does) and costs nothing to run
  * repeatedly as the template list grows.
  *
  * Safe to re-run any time: same upsert-with-ignoreDuplicates pattern as
- * generateDirectoryKeywords -- existing keywords (including ones already
+ * generateDirectoryKeywords - existing keywords (including ones already
  * triaged into Targeting/Tracking/Ignore) are never touched or duplicated.
  */
 
@@ -29,7 +29,7 @@ const TRADES_PLURAL: Record<string, string> = {
   tradie: "tradies",
 };
 
-// The actual named tools Swiftscope consolidates -- kept in sync with
+// The actual named tools Swiftscope consolidates - kept in sync with
 // product_information rather than invented. Only used for genuine
 // comparison/alternative-style keywords, not fabricated claims.
 const COMPETITORS = ["ServiceM8", "Tradify", "Fergus", "SimPro", "GroundPlan"];
@@ -59,21 +59,21 @@ function buildTemplates(): KeywordTemplate[] {
     templates.push({ keyword: `${trade} quoting app`, intent: "Commercial", notes: `Trade-specific: ${trade}` });
   }
 
-  // Pricing-led terms -- the flat $45/mo positioning is a real
+  // Pricing-led terms - the flat $45/mo positioning is a real
   // differentiator against per-seat/tiered competitor pricing.
   templates.push({ keyword: "flat rate quoting software", intent: "Commercial", notes: "Pricing differentiator" });
   templates.push({ keyword: "affordable quoting software for tradies", intent: "Commercial", notes: "Pricing differentiator" });
   templates.push({ keyword: "quoting software no per user fee", intent: "Commercial", notes: "Pricing differentiator" });
 
   // Genuine alternative/comparison terms against the named tools
-  // Swiftscope actually consolidates -- never invent a claim about a
+  // Swiftscope actually consolidates - never invent a claim about a
   // competitor, just the comparison search pattern itself.
   for (const competitor of COMPETITORS) {
     templates.push({ keyword: `${competitor} alternative`, intent: "Commercial", notes: `Alternative-to search for ${competitor}` });
     templates.push({ keyword: `swiftscope vs ${competitor}`, intent: "Commercial", notes: `Direct comparison search for ${competitor}` });
   }
 
-  // AI-feature-led terms -- genuine product features (drawing/voice/photo
+  // AI-feature-led terms - genuine product features (drawing/voice/photo
   // analysis for quote building), a real differentiator worth targeting.
   templates.push({ keyword: "ai quoting software tradies", intent: "Commercial", notes: "AI feature differentiator" });
   templates.push({ keyword: "quote from photo app tradies", intent: "Commercial", notes: "AI feature differentiator" });

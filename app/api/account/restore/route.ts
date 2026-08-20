@@ -4,7 +4,7 @@
  * Owner or admin only. Un-deletes the business's account within the
  * 30-day recovery window (deleted_at is cleared). If the purge cron has
  * already run, the account and login no longer exist and this can't
- * help -- that's expected, the window has closed.
+ * help - that's expected, the window has closed.
  *
  * No body needed; the business is resolved from the session.
  */

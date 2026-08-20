@@ -97,7 +97,7 @@ export function ToolSources({ sources }: { sources: ToolSource[] }) {
         Guides and further reading
       </h2>
       <p className="font-sans text-[14.5px] leading-[1.65] text-[#5a6a78] max-w-[54ch] mb-6">
-        Use these sources to check current benchmarks and formulas. Our tools are guidelines only — not quotes or professional advice. Swiftscope does not endorse third-party advice beyond linking the reference.
+        Use these sources to check current benchmarks and formulas. Our tools are guidelines only - not quotes or professional advice. Swiftscope does not endorse third-party advice beyond linking the reference.
       </p>
       <ul className="space-y-4 max-w-3xl">
         {sources.map((source) => (

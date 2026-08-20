@@ -26,7 +26,7 @@ export interface MarkupMaterial {
   unit: string;
   unitCost: number;
   totalCost: number;
-  /** Estimated install time for this takeoff line, hours. Optional -- older
+  /** Estimated install time for this takeoff line, hours. Optional - older
       saved drafts / plans-library exports won't have this yet. */
   labourHrs?: number;
 }
@@ -56,7 +56,7 @@ export function markupLabourHours(items: MarkupMaterial[] | undefined): number {
 }
 
 /** Combined charge-out total (labour + materials-at-margin) for a set of
-    takeoff/markup materials -- the number that should actually be quoted. */
+    takeoff/markup materials - the number that should actually be quoted. */
 export function markupChargeTotal(items: MarkupMaterial[] | undefined, rate: number, effectiveMarginPct: number): number {
   return markupMaterialsTotal(items, effectiveMarginPct) + markupLabourTotal(items, rate);
 }
@@ -71,10 +71,10 @@ export function siteItemsChargeTotal(items: SiteItem[], rate: number, effectiveM
  * Converts package / plan-markup / material-bundle items into the same
  * ScopeItem shape used by the Scope step's "Materials & labour" list, so
  * they show up as itemized, editable/removable lines the tradie can
- * actually see and verify -- instead of being silently folded into a
+ * actually see and verify - instead of being silently folded into a
  * single lump-sum total with no itemized display anywhere in the wizard.
  *
- * `totalCost` here must already be the RAW (pre-margin) cost -- the same
+ * `totalCost` here must already be the RAW (pre-margin) cost - the same
  * contract as every other ScopeItem.materialsCost, since the effective
  * margin gets applied once, uniformly, by siteItemsMaterialsTotal. Any
  * per-item margin baked in upstream (e.g. old plan-markup shapes) must be

@@ -206,7 +206,7 @@ export default function AdminBlogPanel({ posts: initialPosts }: { posts: Post[] 
       tags: p.tags.length ? p.tags : plan.tags,
       blocks: parseBlocks(skeleton),
     }));
-    toast("Outline added -- headings and takeaways only");
+    toast("Outline added - headings and takeaways only");
   }
 
   function insertDraftedSection(markdown: string) {
@@ -216,7 +216,7 @@ export default function AdminBlogPanel({ posts: initialPosts }: { posts: Post[] 
     setPost(p => {
       // If an empty stub for this exact heading already exists (added by
       // "Use this outline"), replace that heading plus whatever sits under
-      // it -- up to the next heading/divider -- with the real draft rather
+      // it - up to the next heading/divider - with the real draft rather
       // than duplicating the heading.
       if (heading && (heading.type === "h2" || heading.type === "h3")) {
         const idx = p.blocks.findIndex(
@@ -228,10 +228,10 @@ export default function AdminBlogPanel({ posts: initialPosts }: { posts: Post[] 
           return { ...p, blocks: [...p.blocks.slice(0, idx), ...draftBlocks, ...p.blocks.slice(end)] };
         }
       }
-      // No matching stub -- just append.
+      // No matching stub - just append.
       return { ...p, blocks: [...p.blocks, ...draftBlocks] };
     });
-    toast("Section drafted -- review before publishing");
+    toast("Section drafted - review before publishing");
   }
 
   /* ── Save ───────────────────────────────────────────────────── */
@@ -423,7 +423,7 @@ export default function AdminBlogPanel({ posts: initialPosts }: { posts: Post[] 
   );
 
   /* ════════════════════════════════════════════════════════════════
-     EDIT VIEW — with modular block editor
+     EDIT VIEW - with modular block editor
   ════════════════════════════════════════════════════════════════ */
   return (
     <div className="space-y-5 max-w-5xl">
@@ -474,7 +474,7 @@ export default function AdminBlogPanel({ posts: initialPosts }: { posts: Post[] 
                 <span className="text-[13px] font-semibold text-[var(--ink-soft)]">
                   {uploading ? "Uploading..." : "Upload cover image"}
                 </span>
-                <span className="text-[11.5px] text-[var(--ink-faint)]">JPG, PNG, WebP — recommended 1200x630</span>
+                <span className="text-[11.5px] text-[var(--ink-faint)]">JPG, PNG, WebP - recommended 1200x630</span>
               </button>
             )}
           </div>

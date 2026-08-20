@@ -1,5 +1,5 @@
 /**
- * drawingValidation.ts — Image quality validation for AI drawing analysis
+ * drawingValidation.ts - Image quality validation for AI drawing analysis
  *
  * Validates uploaded building drawings/plans (images and PDFs) before they are
  * sent to Claude AI. Provides actionable feedback to tradies.
@@ -26,7 +26,7 @@ export type ImageQualityScore = "high" | "medium" | "low" | "rejected";
 export interface ValidationResult {
   /** Whether the file passes the minimum bar for AI analysis. */
   valid: boolean;
-  /** Quality tier — used to decide whether to proceed or ask for a re-upload. */
+  /** Quality tier - used to decide whether to proceed or ask for a re-upload. */
   score: ImageQualityScore;
   /** Image dimensions (not available for PDFs). */
   dimensions?: { width: number; height: number };
@@ -86,13 +86,13 @@ const PDF_PAGE_COUNT_LOW = 50;
  *
  * **Scoring rules (images):**
  * - shortest side < 400 px  → `rejected`
- * - shortest side 400–799 px → `low`
- * - shortest side 800–1599 px → `medium`
+ * - shortest side 400-799 px → `low`
+ * - shortest side 800-1599 px → `medium`
  * - shortest side ≥ 1600 px → `high`
  *
  * **Scoring rules (PDFs):**
  * - ≤ 20 pages → `high`
- * - 21–50 pages → `medium`
+ * - 21-50 pages → `medium`
  * - > 50 pages → `low`
  *
  * @param buffer   Raw file bytes from `file.arrayBuffer()`.

@@ -4,7 +4,7 @@
  * Call once the invited person is already logged in (e.g. they signed in
  * from the accept page). Links their auth user to the team_members row
  * and flips it to "active". Requires their logged-in email to match the
- * invited email — the invite link's token alone isn't enough.
+ * invited email - the invite link's token alone isn't enough.
  *
  * New invitees without a password use POST /api/team/complete-invite instead.
  *

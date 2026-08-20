@@ -25,7 +25,7 @@ import TradieSchema from "@/components/seo/TradieSchema";
  * submitting a "request a quote" enquiry that never gets a response hurts
  * trust more than not offering it at all. Flip back to true once there's
  * enough directory coverage that a submitted enquiry reliably reaches a
- * real, responsive tradie. Nothing else needs to change to re-enable --
+ * real, responsive tradie. Nothing else needs to change to re-enable -
  * the form, API route, and DB table are untouched.
  */
 
@@ -215,7 +215,7 @@ export default async function TradieProfilePage({
 
   // The verified badge is a claimed-page addition (gated behind its own
   // flag). The owner's real contact_email is fetched here too whenever
-  // quote requests are on and this listing is claimed -- a claimed
+  // quote requests are on and this listing is claimed - a claimed
   // business's quote enquiries go straight to their real account email,
   // not the (possibly stale) scraped one. Both live in one lookup rather
   // than two separate admin-client round trips.

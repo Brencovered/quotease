@@ -93,9 +93,9 @@ function errorResponse(
  * POST handler for the drawing analysis endpoint.
  *
  * Expects a `multipart/form-data` body with:
- * - `file` — the drawing image or PDF (required)
- * - `trade` — trade discipline string, defaults to `"electrician"`
- * - `instructions` — optional free-text instructions
+ * - `file` - the drawing image or PDF (required)
+ * - `trade` - trade discipline string, defaults to `"electrician"`
+ * - `instructions` - optional free-text instructions
  *
  * Returns a JSON object containing the full analysis result, model info,
  * usage breakdown, validation summary, and advisory gate info.
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     } = await supabase.auth.getUser();
 
     if (authError || !authUser) {
-      return errorResponse(401, { error: "Unauthorized — please sign in." });
+      return errorResponse(401, { error: "Unauthorized - please sign in." });
     }
 
     const rl = await checkRateLimit(`analyze-drawing:${authUser.id}`, 10, 10 * 60 * 1000);
@@ -153,10 +153,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       });
     }
 
-    // ── 5. Parse the file -- either a direct multipart upload (small
+    // ── 5. Parse the file - either a direct multipart upload (small
     //      files, the common case, no extra round trip) or a JSON body
     //      pointing at a file the client already uploaded straight to
-    //      Supabase Storage (large files -- Vercel serverless functions
+    //      Supabase Storage (large files - Vercel serverless functions
     //      cap the request body at ~4.5MB, a real architectural PDF or a
     //      full-res phone photo routinely exceeds that, and there's no
     //      app-level config that raises this limit) ──────────────────────
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       if (downloadError || !fileData) {
         return errorResponse(400, {
-          error: "Could not retrieve the uploaded file. It may have expired -- please try uploading again.",
+          error: "Could not retrieve the uploaded file. It may have expired - please try uploading again.",
         });
       }
 
@@ -238,7 +238,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       userId: authUser.id,
     });
 
-    // Temp storage object has served its purpose -- clean it up regardless
+    // Temp storage object has served its purpose - clean it up regardless
     // of what happens next. Fire-and-forget, a leftover temp file is a
     // minor storage cost, not worth failing the response over.
     if (tempStoragePath) {
@@ -331,8 +331,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 /**
  * Update the usage counters on the user's profile.
  *
- * - **Free tier** — increments `ai_free_analyses_used`.
- * - **Add-on** — sets `ai_addon_period` to the current billing period string
+ * - **Free tier** - increments `ai_free_analyses_used`.
+ * - **Add-on** - sets `ai_addon_period` to the current billing period string
  *   and increments `ai_addon_analyses_used`.
  *
  * Errors are logged but never thrown (fire-and-forget).

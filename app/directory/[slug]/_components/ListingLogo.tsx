@@ -6,12 +6,12 @@ import { Wrench } from "lucide-react";
 /**
  * The sidebar business logo, with a graceful fallback if `logoUrl` 404s or
  * otherwise fails to load. Scraped logo URLs (favicons, og:image, etc.)
- * aren't guaranteed to stay valid forever -- a site redesign, a dead
+ * aren't guaranteed to stay valid forever - a site redesign, a dead
  * domain, or a bad scrape can all leave a stale/broken URL on file. Without
  * this, a broken <img> just shows the browser's broken-image icon next to
  * the raw alt text, which is what showed up in production.
  *
- * http:// URLs are treated as invalid up front, never even attempted --
+ * http:// URLs are treated as invalid up front, never even attempted -
  * an http:// image on this https:// page is mixed content, and browsers
  * handle that inconsistently (onError doesn't reliably fire the way it
  * does for a normal failed load), so these were showing up as

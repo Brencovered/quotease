@@ -3,7 +3,7 @@
  * --------------------
  * Simple on/off switches for features that are built and working but
  * deliberately not surfaced yet. Kept as plain constants (not env vars)
- * since these are product decisions, not per-environment config -- flip
+ * since these are product decisions, not per-environment config - flip
  * the value and redeploy.
  */
 
@@ -18,10 +18,10 @@
  * (browse, call, email, visit website) is the focus until there's enough
  * tradie density for the lead flow to reliably deliver a response.
  *
- * Nothing downstream was deleted -- /get-quotes, /leads, the directory
+ * Nothing downstream was deleted - /get-quotes, /leads, the directory
  * enquiry form/modal, /api/directory/enquire, /api/job-requests/*, and
  * their tables are all intact. Every one of those now checks this flag
- * directly (the API routes didn't originally -- only the pages did, which
+ * directly (the API routes didn't originally - only the pages did, which
  * meant a direct POST to /api/job-requests or /api/job-requests/notify
  * still worked, and stray test/old requests kept reaching real inboxes
  * despite the UI being dark). Flip this back to true (and the matching
@@ -34,7 +34,7 @@ export const LEADS_ENABLED = false;
 /**
  * The per-listing "request a quote" enquiry form on directory pages
  * (app/api/directory/enquire, the QuoteForm component). Separate from
- * LEADS_ENABLED above -- that's the broader lead-matching flow
+ * LEADS_ENABLED above - that's the broader lead-matching flow
  * (/get-quotes, homeowner posts a job, matched tradies get notified),
  * which stays off. This is just the simpler, per-business enquiry form.
  *
@@ -42,25 +42,25 @@ export const LEADS_ENABLED = false;
  *  - Claimed listing: sent to the account's real email (profiles.contact_email)
  *  - Unclaimed listing: sent to the scraped contact email if we have a
  *    valid one on file, falling back to Swiftscope's own inbox otherwise
- *    -- and includes a claim-your-page nudge, since this is a genuine,
+ *    - and includes a claim-your-page nudge, since this is a genuine,
  *    concrete "here's why you'd want an account" moment for an unclaimed
  *    business.
  *
  * Was two separate hardcoded `false` constants in
  * app/directory/[slug]/page.tsx and components/DirectoryCard.tsx, kept in
- * sync manually -- promoted to one shared flag here instead.
+ * sync manually - promoted to one shared flag here instead.
  */
 export const QUOTE_REQUESTS_ENABLED = true;
 
 /**
  * The free claimed directory page: ABN/licence verification badge, manual
  * photo gallery, quote capture into the real quotes table, monthly goal
- * setting, and the business marketing pack. No paid tier -- claiming a
+ * setting, and the business marketing pack. No paid tier - claiming a
  * page is free, zero barrier to adopt. (No Stripe/billing was ever built
- * for this, so there's nothing to remove -- it was always just this flag.)
+ * for this, so there's nothing to remove - it was always just this flag.)
  *
  * Live as of 20 July 2026. ABN verification (lib/abnLookup.ts) degrades
- * gracefully to "unverified" until ABN_LOOKUP_GUID is set in Vercel --
+ * gracefully to "unverified" until ABN_LOOKUP_GUID is set in Vercel -
  * the Verified Business badge won't actually turn on for anyone until
  * that's configured, but nothing breaks in the meantime.
  */

@@ -54,7 +54,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
     compliance: {
       badge: "COES",
       title: "COES and compliance on the quote",
-      body: "Add Certificate of Electrical Safety notes and compliance line items with the priced scope. Your COES process stays yours — Swiftscope keeps the paperwork with the job.",
+      body: "Add Certificate of Electrical Safety notes and compliance line items with the priced scope. Your COES process stays yours - Swiftscope keeps the paperwork with the job.",
     },
     demoJobs: [
       {
@@ -65,7 +65,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
           { name: "7 kW wall charger supply", qty: "1 ea", amount: money(890) },
           { name: "6 mm² twin & earth run", qty: "14 m", amount: money(280) },
           { name: "Circuit breaker + isolator", qty: "1 lot", amount: money(165) },
-          { name: "Labour — install & test", qty: "4.5 h", amount: money(495) },
+          { name: "Labour - install & test", qty: "4.5 h", amount: money(495) },
         ],
       },
       {
@@ -76,7 +76,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
           { name: "Main switchboard enclosure", qty: "1 ea", amount: money(620) },
           { name: "RCBO circuits", qty: "8 ea", amount: money(480) },
           { name: "Men / earth upgrade", qty: "1 lot", amount: money(210) },
-          { name: "Labour — changeover", qty: "6 h", amount: money(660) },
+          { name: "Labour - changeover", qty: "6 h", amount: money(660) },
         ],
       },
       {
@@ -87,7 +87,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
           { name: "LED downlight, standard", qty: "12 ea", amount: money(420) },
           { name: "1.5 mm T&E cable", qty: "35 m", amount: money(175) },
           { name: "Ceiling cans / trims", qty: "12 ea", amount: money(96) },
-          { name: "Labour — cut & fit", qty: "3.5 h", amount: money(385) },
+          { name: "Labour - cut & fit", qty: "3.5 h", amount: money(385) },
         ],
       },
       {
@@ -98,7 +98,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
           { name: "Power points & switches", qty: "42 ea", amount: money(1260) },
           { name: "Cable package", qty: "1 lot", amount: money(1850) },
           { name: "Smoke alarms (interconnected)", qty: "4 ea", amount: money(320) },
-          { name: "Labour — rough-in", qty: "28 h", amount: money(3080) },
+          { name: "Labour - rough-in", qty: "28 h", amount: money(3080) },
         ],
       },
     ],
@@ -119,7 +119,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
     compliance: {
       badge: "WWC",
       title: "Waterproofing certs stay with the job",
-      body: "Note waterproofing certificates and wet-area compliance on the quote so the builder and homeowner see inclusions before they accept — not as a surprise later.",
+      body: "Note waterproofing certificates and wet-area compliance on the quote so the builder and homeowner see inclusions before they accept - not as a surprise later.",
     },
     demoJobs: [
       {
@@ -130,7 +130,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
           { name: "250 L heat pump HWS", qty: "1 ea", amount: money(2100) },
           { name: "Tempering valve + isolators", qty: "1 lot", amount: money(185) },
           { name: "Copper / PEX tie-ins", qty: "1 lot", amount: money(140) },
-          { name: "Labour — swap & commission", qty: "3 h", amount: money(390) },
+          { name: "Labour - swap & commission", qty: "3 h", amount: money(390) },
         ],
       },
       {
@@ -141,7 +141,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
           { name: "Shower mixer + rose", qty: "1 set", amount: money(420) },
           { name: "Vanity taps + waste", qty: "1 set", amount: money(280) },
           { name: "Drainage run relocates", qty: "1 lot", amount: money(650) },
-          { name: "Labour — rough-in & fit-off", qty: "8 h", amount: money(1040) },
+          { name: "Labour - rough-in & fit-off", qty: "8 h", amount: money(1040) },
         ],
       },
       {
@@ -152,7 +152,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
           { name: "Call-out / first hour", qty: "1 ea", amount: money(180) },
           { name: "Electric eel / jet", qty: "1 lot", amount: money(95) },
           { name: "Camera inspection", qty: "optional", amount: money(120) },
-          { name: "Labour — clear & test", qty: "1.5 h", amount: money(195) },
+          { name: "Labour - clear & test", qty: "1.5 h", amount: money(195) },
         ],
       },
       {
@@ -163,7 +163,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
           { name: "Sink + tap package", qty: "1 set", amount: money(380) },
           { name: "Dishwasher isolator", qty: "1 ea", amount: money(65) },
           { name: "Waste & water rough-in", qty: "1 lot", amount: money(240) },
-          { name: "Labour — fit-off", qty: "4 h", amount: money(520) },
+          { name: "Labour - fit-off", qty: "4 h", amount: money(520) },
         ],
       },
     ],
@@ -184,7 +184,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
     compliance: {
       badge: "Take-off",
       title: "Timber take-offs that match the quote",
-      body: "Keep framing and decking take-offs with the priced scope — lengths, waste factor, and fixings — so the job board matches what you sold, not a second guess later.",
+      body: "Keep framing and decking take-offs with the priced scope - lengths, waste factor, and fixings - so the job board matches what you sold, not a second guess later.",
     },
     demoJobs: [
       {
@@ -195,7 +195,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
           { name: "Treated pine joists / bearers", qty: "1 lot", amount: money(1480) },
           { name: "Decking boards", qty: "42 m²", amount: money(2100) },
           { name: "Fixings & connectors", qty: "1 lot", amount: money(320) },
-          { name: "Labour — frame & lay", qty: "24 h", amount: money(2640) },
+          { name: "Labour - frame & lay", qty: "24 h", amount: money(2640) },
         ],
       },
       {
@@ -206,7 +206,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
           { name: "Wall frames package", qty: "1 lot", amount: money(3200) },
           { name: "Lintels & bracing", qty: "1 lot", amount: money(680) },
           { name: "Fixings", qty: "1 lot", amount: money(240) },
-          { name: "Labour — stand & fix", qty: "32 h", amount: money(3520) },
+          { name: "Labour - stand & fix", qty: "32 h", amount: money(3520) },
         ],
       },
       {
@@ -216,7 +216,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
         lines: [
           { name: "Internal doors supply", qty: "6 ea", amount: money(900) },
           { name: "Jambs & hardware", qty: "6 sets", amount: money(420) },
-          { name: "Labour — hang & adjust", qty: "8 h", amount: money(880) },
+          { name: "Labour - hang & adjust", qty: "8 h", amount: money(880) },
           { name: "Architraves", qty: "1 lot", amount: money(260) },
         ],
       },
@@ -228,7 +228,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
           { name: "Posts & beams", qty: "1 lot", amount: money(1100) },
           { name: "Rafters / battens", qty: "1 lot", amount: money(640) },
           { name: "Fixings & brackets", qty: "1 lot", amount: money(180) },
-          { name: "Labour — build", qty: "16 h", amount: money(1760) },
+          { name: "Labour - build", qty: "16 h", amount: money(1760) },
         ],
       },
     ],
@@ -249,7 +249,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
     compliance: {
       badge: "SWMS",
       title: "Height work SWMS / JSA with the job",
-      body: "Keep SWMS and height-work notes against the quote so your crew sees the same scope you sold — scaffold allowances included, not buried in a text thread.",
+      body: "Keep SWMS and height-work notes against the quote so your crew sees the same scope you sold - scaffold allowances included, not buried in a text thread.",
     },
     demoJobs: [
       {
@@ -260,7 +260,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
           { name: "Colorbond sheets", qty: "180 m²", amount: money(5400) },
           { name: "Battens & fixings", qty: "1 lot", amount: money(980) },
           { name: "Ridge & flashings", qty: "1 lot", amount: money(720) },
-          { name: "Labour — strip & lay", qty: "40 h", amount: money(4400) },
+          { name: "Labour - strip & lay", qty: "40 h", amount: money(4400) },
         ],
       },
       {
@@ -271,7 +271,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
           { name: "Quad gutter", qty: "48 m", amount: money(960) },
           { name: "Fascia / barges", qty: "1 lot", amount: money(540) },
           { name: "Downpipes", qty: "4 ea", amount: money(320) },
-          { name: "Labour — install", qty: "12 h", amount: money(1320) },
+          { name: "Labour - install", qty: "12 h", amount: money(1320) },
         ],
       },
       {
@@ -282,7 +282,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
           { name: "Call-out / diagnose", qty: "1 ea", amount: money(160) },
           { name: "Flashing / sealant", qty: "1 lot", amount: money(85) },
           { name: "Sheet patch", qty: "as req.", amount: money(120) },
-          { name: "Labour — repair", qty: "3 h", amount: money(330) },
+          { name: "Labour - repair", qty: "3 h", amount: money(330) },
         ],
       },
       {
@@ -292,7 +292,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
         lines: [
           { name: "Replacement tiles", qty: "24 ea", amount: money(216) },
           { name: "Sarking / battens", qty: "1 lot", amount: money(140) },
-          { name: "Labour — replace & bed", qty: "5 h", amount: money(550) },
+          { name: "Labour - replace & bed", qty: "5 h", amount: money(550) },
           { name: "Ridge pointing", qty: "8 m", amount: money(160) },
         ],
       },
@@ -314,7 +314,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
     compliance: {
       badge: "Prep",
       title: "Prep notes that protect the margin",
-      body: "Scope prep levels and plaster repairs on the quote so clients see why the number is what it is — and you are not absorbing surprises for free.",
+      body: "Scope prep levels and plaster repairs on the quote so clients see why the number is what it is - and you are not absorbing surprises for free.",
     },
     demoJobs: [
       {
@@ -325,7 +325,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
           { name: "Wash & Wear low sheen", qty: "40 L", amount: money(720) },
           { name: "Primer / sealer", qty: "15 L", amount: money(240) },
           { name: "Prep & fill allowance", qty: "1 lot", amount: money(380) },
-          { name: "Labour — walls & ceilings", qty: "36 h", amount: money(3240) },
+          { name: "Labour - walls & ceilings", qty: "36 h", amount: money(3240) },
         ],
       },
       {
@@ -335,7 +335,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
         lines: [
           { name: "Exterior acrylic", qty: "60 L", amount: money(1080) },
           { name: "Prep / scrape / sand", qty: "1 lot", amount: money(650) },
-          { name: "Labour — exterior", qty: "48 h", amount: money(4320) },
+          { name: "Labour - exterior", qty: "48 h", amount: money(4320) },
           { name: "Fascia & trim", qty: "1 lot", amount: money(420) },
         ],
       },
@@ -346,7 +346,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
         lines: [
           { name: "Feature colour paint", qty: "4 L", amount: money(95) },
           { name: "Prep & tape", qty: "1 lot", amount: money(60) },
-          { name: "Labour — cut & roll", qty: "4 h", amount: money(360) },
+          { name: "Labour - cut & roll", qty: "4 h", amount: money(360) },
           { name: "Touch-up kit", qty: "1 ea", amount: money(25) },
         ],
       },
@@ -357,7 +357,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
         lines: [
           { name: "Full house paint package", qty: "1 lot", amount: money(2800) },
           { name: "Ceiling flat", qty: "30 L", amount: money(390) },
-          { name: "Labour — full package", qty: "60 h", amount: money(5400) },
+          { name: "Labour - full package", qty: "60 h", amount: money(5400) },
           { name: "Door & trim enamel", qty: "12 L", amount: money(288) },
         ],
       },
@@ -379,7 +379,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
     compliance: {
       badge: "WWC",
       title: "Waterproofing certificates upfront",
-      body: "Call out waterproofing and wet-area compliance on the quote so builders and homeowners know the job is covered — before they tap accept.",
+      body: "Call out waterproofing and wet-area compliance on the quote so builders and homeowners know the job is covered - before they tap accept.",
     },
     demoJobs: [
       {
@@ -390,7 +390,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
           { name: "Porcelain tiles supply", qty: "22 m²", amount: money(990) },
           { name: "Waterproofing membrane", qty: "1 lot", amount: money(420) },
           { name: "Adhesive, grout, trim", qty: "1 lot", amount: money(280) },
-          { name: "Labour — set & grout", qty: "18 h", amount: money(1980) },
+          { name: "Labour - set & grout", qty: "18 h", amount: money(1980) },
         ],
       },
       {
@@ -400,7 +400,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
         lines: [
           { name: "Splashback tiles", qty: "4.5 m²", amount: money(270) },
           { name: "Adhesive & grout", qty: "1 lot", amount: money(85) },
-          { name: "Labour — set", qty: "5 h", amount: money(550) },
+          { name: "Labour - set", qty: "5 h", amount: money(550) },
           { name: "Trim / endpoints", qty: "1 lot", amount: money(60) },
         ],
       },
@@ -411,7 +411,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
         lines: [
           { name: "Pavers supply", qty: "28 m²", amount: money(1120) },
           { name: "Bedding sand / adhesive", qty: "1 lot", amount: money(240) },
-          { name: "Labour — lay", qty: "16 h", amount: money(1760) },
+          { name: "Labour - lay", qty: "16 h", amount: money(1760) },
           { name: "Edge restraints", qty: "1 lot", amount: money(180) },
         ],
       },
@@ -422,7 +422,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
         lines: [
           { name: "Wall & floor tiles", qty: "14 m²", amount: money(630) },
           { name: "Waterproofing redo", qty: "1 lot", amount: money(380) },
-          { name: "Labour — strip & reset", qty: "12 h", amount: money(1320) },
+          { name: "Labour - strip & reset", qty: "12 h", amount: money(1320) },
           { name: "Niche & trim", qty: "1 lot", amount: money(160) },
         ],
       },
@@ -444,7 +444,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
     compliance: {
       badge: "Scope",
       title: "Clear inclusions before the dig",
-      body: "Separate softscape, hardscape, and hire so clients know what is in — and what needs a variation if the soil turns nasty.",
+      body: "Separate softscape, hardscape, and hire so clients know what is in - and what needs a variation if the soil turns nasty.",
     },
     demoJobs: [
       {
@@ -454,7 +454,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
         lines: [
           { name: "Plants & mulch", qty: "1 lot", amount: money(1200) },
           { name: "Soil & compost", qty: "4 m³", amount: money(320) },
-          { name: "Labour — plant & finish", qty: "20 h", amount: money(1800) },
+          { name: "Labour - plant & finish", qty: "20 h", amount: money(1800) },
           { name: "Edging", qty: "24 m", amount: money(360) },
         ],
       },
@@ -465,7 +465,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
         lines: [
           { name: "Sleepers / blocks", qty: "1 lot", amount: money(2400) },
           { name: "Drainage gravel", qty: "1 lot", amount: money(380) },
-          { name: "Labour — build", qty: "28 h", amount: money(2520) },
+          { name: "Labour - build", qty: "28 h", amount: money(2520) },
           { name: "Machine hire", qty: "1 day", amount: money(450) },
         ],
       },
@@ -476,7 +476,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
         lines: [
           { name: "Instant turf", qty: "80 m²", amount: money(960) },
           { name: "Soil prep", qty: "1 lot", amount: money(280) },
-          { name: "Labour — lay & roll", qty: "8 h", amount: money(720) },
+          { name: "Labour - lay & roll", qty: "8 h", amount: money(720) },
           { name: "Starter fertiliser", qty: "1 lot", amount: money(65) },
         ],
       },
@@ -487,7 +487,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
         lines: [
           { name: "Pavers", qty: "22 m²", amount: money(990) },
           { name: "Base & bedding", qty: "1 lot", amount: money(420) },
-          { name: "Labour — lay", qty: "18 h", amount: money(1620) },
+          { name: "Labour - lay", qty: "18 h", amount: money(1620) },
           { name: "Edge restraints", qty: "1 lot", amount: money(160) },
         ],
       },
@@ -574,7 +574,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
     compliance: {
       badge: "Pour",
       title: "Pour specs on the quote",
-      body: "Lock thickness, steel, and finish type on the quote so variations are clear when the site changes — not argued after the pour.",
+      body: "Lock thickness, steel, and finish type on the quote so variations are clear when the site changes - not argued after the pour.",
     },
     demoJobs: [
       {
@@ -585,7 +585,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
           { name: "N20 concrete", qty: "2.4 m³", amount: money(720) },
           { name: "Mesh & bar chairs", qty: "1 lot", amount: money(180) },
           { name: "Formwork", qty: "1 lot", amount: money(140) },
-          { name: "Labour — form & finish", qty: "8 h", amount: money(880) },
+          { name: "Labour - form & finish", qty: "8 h", amount: money(880) },
         ],
       },
       {
@@ -596,7 +596,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
           { name: "N25 concrete", qty: "8 m³", amount: money(2400) },
           { name: "SL82 mesh", qty: "1 lot", amount: money(420) },
           { name: "Pump hire", qty: "1 ea", amount: money(380) },
-          { name: "Labour — pour & finish", qty: "16 h", amount: money(1760) },
+          { name: "Labour - pour & finish", qty: "16 h", amount: money(1760) },
         ],
       },
       {
@@ -606,7 +606,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
         lines: [
           { name: "Concrete supply", qty: "12 m³", amount: money(3600) },
           { name: "Steel & prep", qty: "1 lot", amount: money(680) },
-          { name: "Labour — pour", qty: "20 h", amount: money(2200) },
+          { name: "Labour - pour", qty: "20 h", amount: money(2200) },
           { name: "Expansion joints", qty: "1 lot", amount: money(160) },
         ],
       },
@@ -649,7 +649,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
         lines: [
           { name: "ColorBond panels", qty: "28 m", amount: money(1680) },
           { name: "Posts & caps", qty: "15 ea", amount: money(525) },
-          { name: "Labour — dig & stand", qty: "14 h", amount: money(1260) },
+          { name: "Labour - dig & stand", qty: "14 h", amount: money(1260) },
           { name: "Concrete for posts", qty: "1 lot", amount: money(180) },
         ],
       },
@@ -671,7 +671,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
         lines: [
           { name: "Gate supply", qty: "1 ea", amount: money(420) },
           { name: "Hardware", qty: "1 lot", amount: money(85) },
-          { name: "Labour — hang", qty: "4 h", amount: money(360) },
+          { name: "Labour - hang", qty: "4 h", amount: money(360) },
           { name: "Post upgrade", qty: "as req.", amount: money(120) },
         ],
       },
@@ -704,7 +704,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
     compliance: {
       badge: "ARC",
       title: "Electrical & refrigerant notes on scope",
-      body: "Keep isolator, pipe length, and commissioning notes on the quote so the homeowner sees a complete install — not a call-back bill.",
+      body: "Keep isolator, pipe length, and commissioning notes on the quote so the homeowner sees a complete install - not a call-back bill.",
     },
     demoJobs: [
       {
@@ -715,7 +715,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
           { name: "2.5 kW split supply", qty: "1 ea", amount: money(980) },
           { name: "Mounts & pipe set", qty: "1 lot", amount: money(220) },
           { name: "Electrical isolator", qty: "1 ea", amount: money(95) },
-          { name: "Labour — install & commission", qty: "4 h", amount: money(440) },
+          { name: "Labour - install & commission", qty: "4 h", amount: money(440) },
         ],
       },
       {
@@ -748,7 +748,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
           { name: "Ducted system supply", qty: "1 lot", amount: money(6500) },
           { name: "Ducting & vents", qty: "1 lot", amount: money(1800) },
           { name: "Electrical", qty: "1 lot", amount: money(650) },
-          { name: "Labour — install", qty: "24 h", amount: money(2640) },
+          { name: "Labour - install", qty: "24 h", amount: money(2640) },
         ],
       },
     ],
@@ -769,7 +769,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
     compliance: {
       badge: "Plan",
       title: "Deliverables named on the quote",
-      body: "Spell out survey type, plans, and turnaround so clients accept a clear scope — not a vague site visit fee.",
+      body: "Spell out survey type, plans, and turnaround so clients accept a clear scope - not a vague site visit fee.",
     },
     demoJobs: [
       {

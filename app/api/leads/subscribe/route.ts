@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, trade, suburb, is_active: true });
   }
 
-  // No specific trade/suburb — reactivate ALL inactive subscriptions
+  // No specific trade/suburb - reactivate ALL inactive subscriptions
   const { error } = await supabase
     .from("lead_subscriptions")
     .update({ is_active: true })

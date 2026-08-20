@@ -161,7 +161,7 @@ export default function LeadsPanel({
               <p className="text-[12.5px] font-semibold text-[var(--green)]">{cardMsg}</p>
             )}
 
-            {/* Homeowner contact -- only shown after claiming */}
+            {/* Homeowner contact - only shown after claiming */}
             {homeowner && (
               <div className="bg-[var(--green-bg)] rounded-xl p-4 space-y-1.5">
                 <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--green)] mb-2">Contact details</p>

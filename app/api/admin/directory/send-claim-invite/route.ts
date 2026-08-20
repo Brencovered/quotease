@@ -7,11 +7,11 @@ import { buildDirectoryClaimInviteEmail } from "@/lib/email/templates";
 
 /**
  * Sends a "claim your free listing" invite email to selected directory_listing
- * rows -- built for manually-added leads (e.g. businesses found on hiPages
+ * rows - built for manually-added leads (e.g. businesses found on hiPages
  * and added one at a time via the "Add tradie" form with an email address),
  * not for bulk-emailing the whole Google Places-sourced directory.
  *
- * Deliberately per-recipient rather than reusing /api/admin/outreach as-is --
+ * Deliberately per-recipient rather than reusing /api/admin/outreach as-is -
  * each email links to that specific listing's claim page, prefilled with
  * their own business name/suburb/trade, not one shared template.
  */

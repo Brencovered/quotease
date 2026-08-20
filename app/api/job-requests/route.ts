@@ -5,7 +5,7 @@
  * (components/GetQuotesForm.tsx).
  *
  * Accepts multipart/form-data (not JSON) so photos can come in the same
- * request as the rest of the job details -- fields are sent as regular
+ * request as the rest of the job details - fields are sent as regular
  * form fields, photos as one or more "photos" file entries.
  *
  * Sibling routes /api/job-requests/{notify,claim,reject} already existed
@@ -18,7 +18,7 @@
  *   3. Upload any photos to the job-files bucket under leads/{id}/... and
  *      save their storage paths on the request
  *   4. Fire the existing notify route so matching tradies get emailed
- *      (best-effort -- the lead is saved either way, so a notify hiccup
+ *      (best-effort - the lead is saved either way, so a notify hiccup
  *      doesn't lose the request itself)
  */
 
@@ -33,7 +33,7 @@ const MAX_PHOTOS = 6;
 const MAX_PHOTO_BYTES = 10 * 1024 * 1024; // 10MB each
 
 // GetQuotesForm's JOB_STAGES values -> job_requests.lead_temperature.
-// "ready to hire" reads as hot, "planning stage" reads as early -- these
+// "ready to hire" reads as hot, "planning stage" reads as early - these
 // don't share the same words by coincidence, they're describing the same
 // three-stage funnel the notify route already understands.
 const STAGE_TO_TEMPERATURE: Record<string, string> = {
@@ -48,7 +48,7 @@ function str(v: FormDataEntryValue | null): string {
 
 export async function POST(req: NextRequest) {
   // The public form (/get-quotes) already redirects away when this flow is
-  // off, but that only stops people using the page -- this route was still
+  // off, but that only stops people using the page - this route was still
   // directly POST-able the whole time, with nothing here checking the flag.
   // That gap is how stray/test submissions kept reaching real tradies'
   // inboxes (and the internal "no tradies matched" notification) even
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
   }
   for (const p of photos) {
     if (p.size > MAX_PHOTO_BYTES) {
-      return NextResponse.json({ error: `${p.name} is too large -- please keep photos under 10MB.` }, { status: 400 });
+      return NextResponse.json({ error: `${p.name} is too large - please keep photos under 10MB.` }, { status: 400 });
     }
     if (!p.type.startsWith("image/")) {
       return NextResponse.json({ error: `${p.name} isn't an image file.` }, { status: 400 });
@@ -100,13 +100,13 @@ export async function POST(req: NextRequest) {
   }
 
   // homeowner_profiles/job_requests RLS requires auth.uid() = id, which was
-  // designed around a logged-in homeowner portal that doesn't exist yet --
+  // designed around a logged-in homeowner portal that doesn't exist yet -
   // this form is a public, no-login "get quotes" flow, so an anonymous
   // session can never satisfy that policy. Use the admin client for these
   // writes; everything is validated above first.
   const supabase = createAdminClient();
 
-  // property_type has no column of its own on job_requests -- fold it
+  // property_type has no column of its own on job_requests - fold it
   // into the description rather than lose it or add a column for a
   // single extra word.
   const description = propertyType ? `[${propertyType}] ${jobDescription}` : jobDescription;
@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Could not save your job request. Please try again." }, { status: 500 });
   }
 
-  // Upload any photos. Best-effort per file -- one bad upload shouldn't
+  // Upload any photos. Best-effort per file - one bad upload shouldn't
   // lose the whole lead, which is already saved by this point.
   if (photos.length > 0) {
     const paths: string[] = [];
@@ -173,7 +173,7 @@ export async function POST(req: NextRequest) {
 
   // Best-effort: notify matching tradies. The lead is already saved, so
   // a failure here shouldn't turn into a failure response for the
-  // homeowner -- log it and move on.
+  // homeowner - log it and move on.
   try {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? new URL(req.url).origin;
     await fetch(`${appUrl}/api/job-requests/notify`, {

@@ -192,7 +192,7 @@ function resolveUrl(url: string, base: string): string {
     try { resolved = new URL(url, base).href; }
     catch { resolved = `${base.replace(/\/$/, "")}${url.startsWith("/") ? url : `/${url}`}`; }
   }
-  // Force https regardless of how we got here -- an http:// image on an
+  // Force https regardless of how we got here - an http:// image on an
   // https:// page is mixed content, which browsers handle inconsistently
   // (onError doesn't reliably fire the way it does for a normal failed
   // load), so this showed up as a permanently broken logo rather than
@@ -325,7 +325,7 @@ function extractEmails(html: string): string | null {
 // Step 3b: Scrape website for logo
 // ---------------------------------------------------------------------------
 
-// og:image is deliberately NOT used as a logo source -- it's meant for
+// og:image is deliberately NOT used as a logo source - it's meant for
 // social-media link previews and is almost always a generic hero/content
 // photo, not a logo. Using it here was exactly why a scraped business's
 // "logo" would show a random banner photo (e.g. a hero shot from their

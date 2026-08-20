@@ -4,7 +4,7 @@
  * DrawingAnalysisReviewTable
  * --------------------------
  * Review step after AI drawing analysis. Detected items are abstract
- * archetypes ("Downlight" x14, "Cable run" 40m) -- fast to count, but they
+ * archetypes ("Downlight" x14, "Cable run" 40m) - fast to count, but they
  * must NEVER price themselves from templates or fuzzy label guesses:
  * pricing comes from the tradie's real price book.
  *
@@ -68,7 +68,7 @@ export default function DrawingAnalysisReviewTable({
   trade?:        string;
   /** Map "trade:archetype_key" -> price_book item_key from profiles.archetype_defaults */
   archetypeDefaults?: Record<string, string>;
-  /** Persist a newly chosen default; fire-and-forget. Optional -- when
+  /** Persist a newly chosen default; fire-and-forget. Optional - when
       absent (older trade builders), selections still price the row but
       aren't remembered across quotes. */
   onSaveDefault?: (archetypeKey: string, itemKey: string) => void;
@@ -159,7 +159,7 @@ export default function DrawingAnalysisReviewTable({
       .map((r) => ({
         // Carry the real product name into the quote line so what the client
         // sees matches what actually gets installed and costed.
-        label:     r.product ? `${r.label} — ${r.product.label}` : r.label,
+        label:     r.product ? `${r.label} - ${r.product.label}` : r.label,
         item_key:  r.product?.item_key ?? r.item_key,
         quantity:  r.confirmedQty,
         unit:      r.unit,
@@ -182,7 +182,7 @@ export default function DrawingAnalysisReviewTable({
       <div className="flex items-center justify-between mb-3">
         <div>
           <p className="font-bold text-[14px] text-[var(--ink)]">Drawing analysis results</p>
-          <p className="text-[12px] text-[var(--ink-faint)]">Counts from the drawing, prices from your price book, labour hours estimated -- adjust before adding</p>
+          <p className="text-[12px] text-[var(--ink-faint)]">Counts from the drawing, prices from your price book, labour hours estimated - adjust before adding</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setCollapsed((c) => !c)} className="text-[var(--ink-faint)] p-1">
@@ -198,7 +198,7 @@ export default function DrawingAnalysisReviewTable({
       <div className={`flex items-start gap-2 rounded-xl border px-3 py-2 mb-3 ${confStyle}`}>
         <AlertTriangle size={13} className="mt-0.5 shrink-0" />
         <div>
-          <p className="text-[12px] font-bold capitalize">{confidence} confidence — review before accepting</p>
+          <p className="text-[12px] font-bold capitalize">{confidence} confidence - review before accepting</p>
           {notes && <p className="text-[11.5px] mt-0.5 opacity-90">{notes}</p>}
         </div>
       </div>
@@ -274,7 +274,7 @@ export default function DrawingAnalysisReviewTable({
                     <span className="text-[11px] text-[var(--ink-soft)] font-semibold">{row.unit}</span>
                   </div>
 
-                  {/* Labour hours -- AI estimate, editable, never shown to the customer */}
+                  {/* Labour hours - AI estimate, editable, never shown to the customer */}
                   <div className="col-span-2">
                     <input
                       type="number"
@@ -332,13 +332,13 @@ export default function DrawingAnalysisReviewTable({
           {hasUnpriced && (
             <div className="flex items-center gap-1.5 text-[11.5px] text-amber-600 mb-2">
               <AlertTriangle size={12} />
-              <span>Some items aren&apos;t priced yet — tap &quot;Price book&quot; to choose the product you install.</span>
+              <span>Some items aren&apos;t priced yet - tap &quot;Price book&quot; to choose the product you install.</span>
             </div>
           )}
           {hasManual && (
             <div className="flex items-center gap-1.5 text-[11.5px] text-amber-600 mb-2">
               <AlertTriangle size={12} />
-              <span>Manually priced items aren&apos;t linked to your price book — supplier price changes won&apos;t flow through.</span>
+              <span>Manually priced items aren&apos;t linked to your price book - supplier price changes won&apos;t flow through.</span>
             </div>
           )}
 

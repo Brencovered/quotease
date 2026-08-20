@@ -93,7 +93,7 @@ export interface ElectricianIntake {
   siteAccess:         "na" | "easy" | "moderate" | "difficult" | "custom";
   multistorey:        boolean;
   smokeAlarms:        number;
-  // COES always required -- removed from UI, always true in calc
+  // COES always required - removed from UI, always true in calc
   callout:            boolean;
   ccew:               boolean;
   notes?:             string;
@@ -158,7 +158,7 @@ export function calcElectricianQuote(
   addLine("Supply & install light point",    intake.lightPoints, "each", 0.5, "lp");
   addLine("Supply & install switch",         intake.switches,    "each", 0.3, "sw");
 
-  // Downlights -- three supply modes
+  // Downlights - three supply modes
   if (intake.downlights > 0) {
     const supply = intake.downlightSupply ?? "supply_and_fit";
     if (supply === "wire_and_fit") {
@@ -274,12 +274,12 @@ export function calcElectricianQuote(
     });
   }
 
-  // COES -- always included once there's actually some electrical work
+  // COES - always included once there's actually some electrical work
   // being quoted (genuinely required for real electrical work), not shown
   // as a checkbox. Was previously pushed completely unconditionally, so a
   // brand new, entirely blank quote (nothing entered yet) already showed
   // 0.5h labour and a non-zero total before any actual work was specified
-  // -- same class of bug as the carpenter fixings-allowance fix.
+  // - same class of bug as the carpenter fixings-allowance fix.
   if (lines.length > 0) {
     const coesHrs = 0.5;
     lines.push({ label: "Certificate of Electrical Safety (COES)", qty: 1, unit: "each", unitCost: 0, labour: coesHrs, total: Math.round(coesHrs * hourlyRate) });

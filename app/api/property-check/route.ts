@@ -25,7 +25,7 @@ async function identify(serviceUrl: string, lat: number, lon: number): Promise<u
   const geometry = JSON.stringify({ x: lon, y: lat, spatialReference: { wkid: 4326 } });
   // Use a very tight map extent (~20m radius) and tolerance of 1 pixel to avoid
   // false positives from neighbouring properties
-  const delta = 0.0001; // ~11m -- tight enough to stay on-parcel
+  const delta = 0.0001; // ~11m - tight enough to stay on-parcel
   const mapExtent = `${lon - delta},${lat - delta},${lon + delta},${lat + delta}`;
   const params = new URLSearchParams({
     f: "json",
@@ -33,7 +33,7 @@ async function identify(serviceUrl: string, lat: number, lon: number): Promise<u
     geometryType: "esriGeometryPoint",
     sr: "4326",
     layers: "all",
-    tolerance: "1",        // 1 pixel only -- was 3 (too loose)
+    tolerance: "1",        // 1 pixel only - was 3 (too loose)
     mapExtent,
     imageDisplay: "800,800,96",
     returnGeometry: "false",

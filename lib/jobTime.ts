@@ -1,4 +1,4 @@
-/** Suggested hours from a work clock start, 15-min steps, 0.25–16h cap. */
+/** Suggested hours from a work clock start, 15-min steps, 0.25-16h cap. */
 export function suggestHoursFromStart(startedAtIso: string | null | undefined, nowMs = Date.now()): number | null {
   if (!startedAtIso) return null;
   const startedAt = new Date(startedAtIso);

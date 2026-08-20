@@ -6,7 +6,7 @@ import { seedTradeBook } from "@/lib/tradeMaterialSeed";
 
 /**
  * Backfill starter materials + package for each trade on the business
- * profile. Safe to call repeatedly — seed helpers no-op when data exists.
+ * profile. Safe to call repeatedly - seed helpers no-op when data exists.
  * Used by the materials book so accounts that onboarded before generic
  * trade seeding still get a usable book.
  */

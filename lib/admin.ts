@@ -3,13 +3,13 @@
  * ------------
  * Gatekeeping for the internal /admin dashboard.
  *
- * There's no separate "role" column anywhere -- access is controlled by an
+ * There's no separate "role" column anywhere - access is controlled by an
  * email allowlist in the ADMIN_EMAILS env var (comma-separated). Set it in
  * Vercel under Project Settings > Environment Variables, e.g.:
  *
  *   ADMIN_EMAILS=bren.norris360@gmail.com,team@swiftscope.com.au
  *
- * Every /admin route checks this server-side before rendering anything --
+ * Every /admin route checks this server-side before rendering anything -
  * see app/admin/layout.tsx.
  */
 

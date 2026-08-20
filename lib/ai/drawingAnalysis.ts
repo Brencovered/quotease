@@ -3,9 +3,9 @@
  * @description Orchestrator module for the AI drawing analysis pipeline.
  *
  * Composes three specialised sub-modules into a single cohesive flow:
- * 1. **Image validation** (`drawingValidation`) — checks file quality before AI processing
- * 2. **Trade gate** (`tradeGates`) — advisory trade matching + query optimisation
- * 3. **Schema + parsing** (`analysisSchema`) — structured output schemas & confidence scoring
+ * 1. **Image validation** (`drawingValidation`) - checks file quality before AI processing
+ * 2. **Trade gate** (`tradeGates`) - advisory trade matching + query optimisation
+ * 3. **Schema + parsing** (`analysisSchema`) - structured output schemas & confidence scoring
  *
  * The orchestrator handles the full lifecycle: validation → gating → prompt building →
  * Claude API call → response parsing → confidence scoring → result assembly.
@@ -62,7 +62,7 @@ export class TradeGateError extends Error {
 }
 
 /**
- * Thrown when the AI analysis itself fails — e.g. API error, unparseable
+ * Thrown when the AI analysis itself fails - e.g. API error, unparseable
  * response, or empty result.
  *
  * The `code` field is machine-readable and safe to switch on in the UI.
@@ -124,7 +124,7 @@ export interface AnalysisSuccess {
 //  CONSTANTS
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Primary vision model — used for both images and PDFs. */
+/** Primary vision model - used for both images and PDFs. */
 const PRIMARY_MODEL = "anthropic/claude-sonnet-4.6";
 
 /** Fallback model used when the primary model returns a 5xx or rate-limit error. */
@@ -154,7 +154,7 @@ const SUPPORTED_MIME_TYPES = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Convert an {@link ImageQualityScore} string into a numeric 0–100 score
+ * Convert an {@link ImageQualityScore} string into a numeric 0-100 score
  * suitable for `buildSystemPrompt`.
  *
  * | Score string | Numeric value |
@@ -181,7 +181,7 @@ function qualityScoreToNumeric(score: ValidationResult["score"]): number {
 
 /**
  * Build the user message content array for the AI SDK (routed through the
- * Vercel AI Gateway). Both images and PDFs use the `file` content part --
+ * Vercel AI Gateway). Both images and PDFs use the `file` content part -
  * `image` parts are deprecated in favour of `file` with an image media type.
  */
 function buildUserContent(
@@ -201,9 +201,9 @@ function buildUserContent(
  * Call Claude through the Vercel AI Gateway, with automatic fallback to a
  * cheaper model if the primary model call fails.
  *
- * @param model    — Primary model name (Gateway string, e.g. "anthropic/claude-sonnet-4.6").
- * @param system   — System prompt text.
- * @param content  — User message content array (image/PDF as a `file` part).
+ * @param model    - Primary model name (Gateway string, e.g. "anthropic/claude-sonnet-4.6").
+ * @param system   - System prompt text.
+ * @param content  - User message content array (image/PDF as a `file` part).
  * @returns Raw text content from the assistant message.
  * @throws AnalysisError on permanent failure.
  */
@@ -278,19 +278,19 @@ async function callClaude(
  * Run the full drawing analysis pipeline.
  *
  * Pipeline stages (in order):
- * 1. **Validate image** — check quality, dimensions, file size. Throw
+ * 1. **Validate image** - check quality, dimensions, file size. Throw
  *    {@link ValidationError} on failure.
- * 2. **Trade gate** — advisory check for trade registration & instruction
+ * 2. **Trade gate** - advisory check for trade registration & instruction
  *    quality. Never blocks, but the result is returned for UI feedback.
- * 3. **Build system prompt** — combine trade expertise, JSON schema, image
+ * 3. **Build system prompt** - combine trade expertise, JSON schema, image
  *    quality context, and user instructions.
- * 4. **Call Claude** — send image/PDF to Anthropic Messages API with
+ * 4. **Call Claude** - send image/PDF to Anthropic Messages API with
  *    automatic fallback on server errors.
- * 5. **Parse response** — strip markdown, validate JSON, check required fields.
- * 6. **Compute confidence** — run weighted scoring over the dimension
+ * 5. **Parse response** - strip markdown, validate JSON, check required fields.
+ * 6. **Compute confidence** - run weighted scoring over the dimension
  *    breakdown and merge back into the result.
  *
- * @param params — {@link AnalysisParams} containing file, trade, auth, etc.
+ * @param params - {@link AnalysisParams} containing file, trade, auth, etc.
  * @returns {@link AnalysisSuccess} with parsed result, model name, timing, and
  *          advisory gate/validation metadata.
  *
@@ -383,7 +383,7 @@ export async function analyzeDrawing(params: AnalysisParams): Promise<AnalysisSu
  * Use this in the UI to filter the file-picker or show a pre-upload
  * compatibility message.
  *
- * @param mimeType — MIME type string (e.g. `"image/png"`).
+ * @param mimeType - MIME type string (e.g. `"image/png"`).
  * @returns `true` if the type can be analysed.
  */
 export function isSupportedMimeType(mimeType: string): boolean {

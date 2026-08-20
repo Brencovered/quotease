@@ -307,7 +307,7 @@ export default function MyDayClient({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Couldn’t claim job");
       setOpenPool((prev) => prev.filter((j) => j.id !== jobId));
-      setToast(data.alreadyYours ? "Already on your list" : "It’s yours — see Starting today");
+      setToast(data.alreadyYours ? "Already on your list" : "It’s yours - see Starting today");
       setTimeout(() => setToast(null), 3000);
       router.refresh();
     } catch (err) {
@@ -341,9 +341,9 @@ export default function MyDayClient({
     try {
       const data = await postStatus(jobId, { status: "in_progress" });
       if (data.pausedOther?.job_number) {
-        setToast(`Started — paused job #${data.pausedOther.job_number}`);
+        setToast(`Started - paused job #${data.pausedOther.job_number}`);
       } else {
-        setToast("Started — time is running");
+        setToast("Started - time is running");
       }
       setTimeout(() => setToast(null), 3500);
       router.refresh();
@@ -355,7 +355,7 @@ export default function MyDayClient({
   async function pauseJob(jobId: string) {
     try {
       await postStatus(jobId, { status: "on_hold" });
-      setToast("Paused — clock kept for when you resume");
+      setToast("Paused - clock kept for when you resume");
       setTimeout(() => setToast(null), 3000);
       router.refresh();
     } catch (err) {
@@ -474,7 +474,7 @@ export default function MyDayClient({
           <p className="text-[13px] text-[var(--ink-faint)] mb-4 max-w-[36ch] mx-auto">
             {scopedToSelf
               ? "Nothing on you yet. Grab open work above, or wait for an assign with a date."
-              : "Assign someone with a start date from Crew — or put yourself on a job."}
+              : "Assign someone with a start date from Crew - or put yourself on a job."}
           </p>
           <div className="flex flex-wrap justify-center gap-2">
             {showCrewLink && (
@@ -493,7 +493,7 @@ export default function MyDayClient({
             <section>
               <div className="flex items-baseline justify-between gap-2 mb-2.5">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--amber-deep)] flex items-center gap-1.5">
-                  <HandMetal size={12} /> Open today — grab one
+                  <HandMetal size={12} /> Open today - grab one
                 </p>
                 <span className="text-[11px] font-semibold text-[var(--ink-faint)]">{openPool.length}</span>
               </div>

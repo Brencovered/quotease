@@ -36,7 +36,7 @@ const XERO_CLIENT_SECRET = process.env.XERO_CLIENT_SECRET!;
 function isAuthorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
-    console.error("[check-xero-connections] CRON_SECRET is not set -- rejecting all requests, including Vercel's own cron trigger.");
+    console.error("[check-xero-connections] CRON_SECRET is not set - rejecting all requests, including Vercel's own cron trigger.");
     return false;
   }
   return request.headers.get("authorization") === `Bearer ${secret}`;

@@ -189,7 +189,7 @@ export default function TeamAcceptPanel({
         ) : (
           <>
             <p className="text-[14px] text-[var(--ink-soft)] leading-[1.6] mb-5">
-              {invitedName ? `Hi ${invitedName} — ` : ""}
+              {invitedName ? `Hi ${invitedName} - ` : ""}
               you&apos;ve been added to <strong className="text-[var(--ink)]">{businessName}</strong>
               . Set a password for{" "}
               <strong className="text-[var(--ink)]">{invitedEmail}</strong> to

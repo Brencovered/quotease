@@ -101,7 +101,7 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
           setLeadSubs(data.subscriptions ?? []);
         }
       } catch {
-        // Silent fail — lead prefs are non-critical
+        // Silent fail - lead prefs are non-critical
       } finally {
         setLeadSubsLoading(false);
       }
@@ -203,12 +203,12 @@ export default function SettingsPanel({ profile }: { profile: Profile }) {
         </div>
       </div>
 
-      {/* Trade (read-only -- set once at onboarding) */}
+      {/* Trade (read-only - set once at onboarding) */}
       <div className="card mb-4">
         <p className="section-tag mb-1">Trade</p>
         <p className="font-semibold text-[var(--ink)] mb-1">Your trade</p>
         <p className="text-[13px] text-[var(--ink-faint)] mb-3">
-          Set when you signed up -- your quote builder, price book, and materials are all tailored to this trade. Contact support if you need it changed.
+          Set when you signed up - your quote builder, price book, and materials are all tailored to this trade. Contact support if you need it changed.
         </p>
         <div className="flex items-center gap-2 rounded-xl border-2 border-[var(--navy)] bg-[var(--navy)] text-white px-3 py-2.5 font-semibold w-fit">
           <span className="text-[13px]">{TRADES.find((t) => t.key === trades[0])?.label ?? "Not set"}</span>

@@ -10,18 +10,18 @@ const BATCH_SIZE = 25;
 
 /**
  * Re-extracts logo_url for existing listings using the corrected priority
- * order (extractLogoUrl in ../scrape/route.ts) -- built for the ~500
+ * order (extractLogoUrl in ../scrape/route.ts) - built for the ~500
  * listings scraped just before that fix landed, which picked up a generic
  * og:image (a hero/content photo) instead of an actual logo.
  *
  * Deliberately does NOT re-run the Google Places Nearby Search/Place
- * Details steps -- those already have good data (rating, photos, etc.) and
+ * Details steps - those already have good data (rating, photos, etc.) and
  * cost real API credits per call. This only re-fetches each business's own
  * website (free) and re-runs the logo detection, updating logo_url when a
  * better one is found.
  *
  * Processes one bounded batch per call (BATCH_SIZE) rather than all
- * matching rows at once, to stay well inside Vercel's function duration --
+ * matching rows at once, to stay well inside Vercel's function duration -
  * the client is expected to keep calling this with an increasing `offset`
  * until `remaining` is 0.
  */

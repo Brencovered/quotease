@@ -26,7 +26,7 @@ export type TradeDiscipline =
 /** Confidence levels for individual detected items. */
 export type ItemConfidence = "high" | "medium" | "low";
 
-/** Unit of measurement for detected items — must align with the price book. */
+/** Unit of measurement for detected items - must align with the price book. */
 export type ItemUnit = "each" | "m" | "m2" | "m3" | "hr" | "lot" | "point";
 
 /** Overall confidence classification. */
@@ -38,7 +38,7 @@ export type OverallConfidence = "high" | "medium" | "low";
  * The `item_key` must map directly to a row in the `material_items` price book.
  */
 export interface DetectedItem {
-  /** Human-readable label (e.g. "Weatherproof GPO — Rear Pergola"). */
+  /** Human-readable label (e.g. "Weatherproof GPO - Rear Pergola"). */
   label: string;
 
   /** Price-book key (e.g. "gpo_wp", "dl", "shower"). */
@@ -47,7 +47,7 @@ export interface DetectedItem {
   /** Total quantity required for this line item. */
   quantity: number;
 
-  /** Unit of measure — drives rate look-up in the price book. */
+  /** Unit of measure - drives rate look-up in the price book. */
   unit: ItemUnit;
 
   /**
@@ -61,7 +61,7 @@ export interface DetectedItem {
 
   /**
    * Required when confidence === "low".
-   * Explain *why* the detection is uncertain — e.g. symbol obscured,
+   * Explain *why* the detection is uncertain - e.g. symbol obscured,
    * partially cropped, or inferred from room context rather than legend.
    */
   notes?: string;
@@ -70,16 +70,16 @@ export interface DetectedItem {
 /**
  * Weighted multi-dimension confidence breakdown.
  *
- * Each dimension is scored 0–100.  The `score` field is the weighted
+ * Each dimension is scored 0-100.  The `score` field is the weighted
  * aggregate used to derive the `overall` classification.
  */
 export interface ConfidenceBreakdown {
   overall: OverallConfidence;
 
-  /** Weighted aggregate score (0–100). */
+  /** Weighted aggregate score (0-100). */
   score: number;
 
-  /** Per-dimension raw scores (0–100). */
+  /** Per-dimension raw scores (0-100). */
   dimensions: {
     image_quality: number;
     drawing_clarity: number;
@@ -126,7 +126,7 @@ export interface DrawingAnalysisResult {
 //  TRADE-SPECIFIC ITEM KEY REGISTRIES
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Item keys for the electrical trade — map to `material_items.price_book`. */
+/** Item keys for the electrical trade - map to `material_items.price_book`. */
 const ELECTRICIAN_ITEM_KEYS: string[] = [
   "dl",              // downlights
   "dl_pendant",      // pendant lights
@@ -152,7 +152,7 @@ const ELECTRICIAN_ITEM_KEYS: string[] = [
   "exit",            // exit light
 ];
 
-/** Item keys for the plumbing trade — map to `material_items.price_book`. */
+/** Item keys for the plumbing trade - map to `material_items.price_book`. */
 const PLUMBER_ITEM_KEYS: string[] = [
   "wc",              // toilet / water closet
   "wc_wall",         // wall-hung toilet
@@ -179,7 +179,7 @@ const PLUMBER_ITEM_KEYS: string[] = [
   "mixer",           // mixer tap
 ];
 
-/** Item keys for the carpentry trade — map to `material_items.price_book`. */
+/** Item keys for the carpentry trade - map to `material_items.price_book`. */
 const CARPENTER_ITEM_KEYS: string[] = [
   "wall_frame",      // wall framing
   "floor_frame",     // floor framing
@@ -197,7 +197,7 @@ const CARPENTER_ITEM_KEYS: string[] = [
   "insulation",      // insulation (unit = m2 or m3)
 ];
 
-/** Item keys for the tiling trade — map to `material_items.price_book`. */
+/** Item keys for the tiling trade - map to `material_items.price_book`. */
 const TILER_ITEM_KEYS: string[] = [
   "tile_floor",      // floor tiles (unit = m2)
   "tile_wall",       // wall tiles (unit = m2)
@@ -210,7 +210,7 @@ const TILER_ITEM_KEYS: string[] = [
   "substrate",       // substrate prep (unit = m2)
 ];
 
-/** Item keys for the landscaping trade — map to `material_items.price_book`. */
+/** Item keys for the landscaping trade - map to `material_items.price_book`. */
 const LANDSCAPER_ITEM_KEYS: string[] = [
   "paving",          // paving (unit = m2)
   "turf",            // turf / sod (unit = m2)
@@ -224,7 +224,7 @@ const LANDSCAPER_ITEM_KEYS: string[] = [
   "planter",         // planter box
 ];
 
-/** Item keys from the original flat schema — used as the fallback. */
+/** Item keys from the original flat schema - used as the fallback. */
 const DEFAULT_ITEM_KEYS: string[] = [
   // Electrical
   "dl", "gpo", "sw", "data", "exhaust", "smoke",
@@ -262,21 +262,21 @@ Analyse the uploaded electrical drawing set and extract all quantifiable items.
 COUNT AND EXTRACT:
 - All GPO variants: single GPO, double GPO (GPO-DOUBLE), USB GPO (GPO-USB), weatherproof GPO (GPO-WP)
 - All lighting: downlights (DL1-DL4), pendant lights (PL), wall lights (WL), LED strip lighting
-- Exhaust fans (EX1, EX2) — note wall-mounted vs ceiling-mounted
-- Smoke alarms (SMK) — note interconnected vs standalone, mains-powered vs battery
-- Data points (DATA) — CAT6/CAT6A
+- Exhaust fans (EX1, EX2) - note wall-mounted vs ceiling-mounted
+- Smoke alarms (SMK) - note interconnected vs standalone, mains-powered vs battery
+- Data points (DATA) - CAT6/CAT6A
 - TV and TEL outlets
 - Switch types: 1-way (S1), 2-way (S2), dimmer (SD)
 - Switchboard details: new board, upgrade, 3-phase indicators, RCD counts
 - External items: garden lights, external GPOs, sensor lights
-- Cable runs and conduit runs in metres — estimate from room dimensions if not dimensioned
+- Cable runs and conduit runs in metres - estimate from room dimensions if not dimensioned
 - Emergency lighting and exit lights for commercial jobs
 
 MEASUREMENT RULES:
 - Cable / conduit: use dimensioned runs where shown; otherwise estimate shortest route
   between outlet and switchboard allowing 15 % extra for drops and coiling.
 - Labour hours = TOTAL for the full quantity. Round to nearest 0.25 hr.
-- If a room is labelled but no outlets shown, do NOT fabricate items — flag as "TBC".
+- If a room is labelled but no outlets shown, do NOT fabricate items - flag as "TBC".
 
 CONFIDENCE GUIDE:
 - HIGH: symbol clearly visible, in legend, unambiguous.
@@ -285,8 +285,8 @@ CONFIDENCE GUIDE:
   For LOW items you MUST include a "notes" field explaining why.
 
 VERIFICATION WARNINGS (include in top-level notes):
-- Flag any sheet marked "FOR COORDINATION ONLY" or "TYPICAL" — quantities may differ on other sheets.
-- Note un-dimensioned layouts — cable runs are estimates only.
+- Flag any sheet marked "FOR COORDINATION ONLY" or "TYPICAL" - quantities may differ on other sheets.
+- Note un-dimensioned layouts - cable runs are estimates only.
 - Highlight any 3-phase work, switchboard relocations, or mains upgrades.
 - Call out TBC items clearly so the estimator can follow up.
 `;
@@ -301,19 +301,19 @@ COUNT AND EXTRACT:
 - Vanities: single or double bowl
 - Bathtubs: freestanding, built-in, or spa
 - Showers: note tiling flange, hob vs hobless, rose size
-- Laundry tubs (LT) — single or double
+- Laundry tubs (LT) - single or double
 - Kitchen sinks (KS): single or double bowl, under-mount or over-mount
 - Floor wastes (FW): standard or linear / strip drain
 - Hot water units: gas instant (HWU-GAS), electric storage (HWU-ELEC), heat-pump (HWU-HP)
 - Taps and mixers: count per fixture, note chrome vs matte black if specified
-- Pipework: cold water, hot water, sanitary waste, stormwater, gas — in metres
-- Guttering and downpipes — note material (colorbond, PVC) if shown
+- Pipework: cold water, hot water, sanitary waste, stormwater, gas - in metres
+- Guttering and downpipes - note material (colorbond, PVC) if shown
 - Stormwater connections and absorption pits
 
 MEASUREMENT RULES:
 - Pipework: use dimensioned runs where shown; otherwise estimate from plan layout
   allowing 10 % extra for risers and joints.
-- Pipe unit is ALWAYS metres — never "each" for pipe runs.
+- Pipe unit is ALWAYS metres - never "each" for pipe runs.
 - Labour hours = TOTAL for the full quantity. Round to nearest 0.25 hr.
 - Do NOT count fixtures shown on reflected ceiling plans unless they are plumbing fixtures.
 
@@ -324,9 +324,9 @@ CONFIDENCE GUIDE:
   For LOW items you MUST include a "notes" field explaining why.
 
 VERIFICATION WARNINGS (include in top-level notes):
-- Flag any "TYPICAL" sheet — actual fixture counts may vary.
-- Note if pipe sizes are not shown — estimates assume standard residential sizing.
-- Call out gas hot water if gas line not shown on plan — may need additional gas run.
+- Flag any "TYPICAL" sheet - actual fixture counts may vary.
+- Note if pipe sizes are not shown - estimates assume standard residential sizing.
+- Call out gas hot water if gas line not shown on plan - may need additional gas run.
 - Highlight any pump systems, rainwater tanks, or grey-water systems.
 - Flag un-dimensioned pipe runs as estimated quantities only.
 `;
@@ -336,20 +336,20 @@ You are an expert carpentry and framing estimating assistant for Australian resi
 Analyse the uploaded architectural / structural drawing set and extract all quantifiable carpentry items.
 
 COUNT AND EXTRACT:
-- Wall framing: timber or steel stud walls — note stud size (70×35, 90×35) and spacing (450, 600)
-- Floor framing: joists, bearers, sub-floor — note timber sizes and span
-- Roof framing: trusses, rafters, collar ties — note pitch and span
-- Structural steel beams (SB) — note UB size if shown
-- Lintels over doors and windows — note steel or timber
-- Doors: internal hinged, cavity sliders, external hinged, bi-fold, stacker — note sizes (820, 870, 920, 2040)
-- Windows: sliding, awning, fixed, louvre — note sizes from schedule
+- Wall framing: timber or steel stud walls - note stud size (70×35, 90×35) and spacing (450, 600)
+- Floor framing: joists, bearers, sub-floor - note timber sizes and span
+- Roof framing: trusses, rafters, collar ties - note pitch and span
+- Structural steel beams (SB) - note UB size if shown
+- Lintels over doors and windows - note steel or timber
+- Doors: internal hinged, cavity sliders, external hinged, bi-fold, stacker - note sizes (820, 870, 920, 2040)
+- Windows: sliding, awning, fixed, louvre - note sizes from schedule
 - Skirting boards (unit = metres of perimeter)
 - Architraves (unit = metres of door/window perimeter)
-- Decking (unit = m2) — note timber species and board width if specified
-- Bulkheads — count and describe extent
-- Staircases — note timber or steel, number of treads
-- External cladding (unit = m2) — note weatherboard, fibre cement, or timber
-- Insulation (batts or blanket) — unit = m2 of wall/ceiling area
+- Decking (unit = m2) - note timber species and board width if specified
+- Bulkheads - count and describe extent
+- Staircases - note timber or steel, number of treads
+- External cladding (unit = m2) - note weatherboard, fibre cement, or timber
+- Insulation (batts or blanket) - unit = m2 of wall/ceiling area
 
 MEASUREMENT RULES:
 - Linear items (skirting, architrave): calculate from plan dimensions.
@@ -364,9 +364,9 @@ CONFIDENCE GUIDE:
   For LOW items you MUST include a "notes" field explaining why.
 
 VERIFICATION WARNINGS (include in top-level notes):
-- Flag structural engineer's details if separate from architectural set — steel sizes may differ.
-- Note any "TYPICAL" framing details — actual sizes may vary on engineered drawings.
-- Call out proprietary systems (e.g. Posi-Strut, SmartJoist) — these affect labour rates.
+- Flag structural engineer's details if separate from architectural set - steel sizes may differ.
+- Note any "TYPICAL" framing details - actual sizes may vary on engineered drawings.
+- Call out proprietary systems (e.g. Posi-Strut, SmartJoist) - these affect labour rates.
 - Highlight any non-standard spans or load-bearing walls that may require additional lintels.
 `;
 
@@ -379,7 +379,7 @@ COUNT AND EXTRACT:
 - Wall tiles (unit = m2): note full-height vs splashback-height
 - Feature tiles (unit = m2): accent walls, niches, mosaic strips
 - Waterproofing membrane (unit = m2): note AS 3740 wet-area extents (shower, bath, floor)
-- Screed bed (unit = m2): note thickness if specified (typically 20–40 mm for falls)
+- Screed bed (unit = m2): note thickness if specified (typically 20-40 mm for falls)
 - Shower niches: count each niche, note size (e.g. 300×300, 600×300)
 - Tile trim (unit = m): aluminium or PVC edge trim for exposed tile edges
 - Grouting (unit = m2): calculate as total tiled area
@@ -387,22 +387,22 @@ COUNT AND EXTRACT:
 
 MEASUREMENT RULES:
 - Tile area = net wall / floor area LESS fixtures (vanity, toilet, bath) where full-height tiling stops.
-- Allow 10 % wastage for standard layouts, 15 % for diagonal or mosaic patterns — note this in notes.
+- Allow 10 % wastage for standard layouts, 15 % for diagonal or mosaic patterns - note this in notes.
 - Labour hours = TOTAL for the full quantity. Round to nearest 0.25 hr.
-- Waterproofing: calculate per AS 3740 — full shower enclosure, 150 mm splash on walls, full floor in wet rooms.
+- Waterproofing: calculate per AS 3740 - full shower enclosure, 150 mm splash on walls, full floor in wet rooms.
 
 CONFIDENCE GUIDE:
 - HIGH: room schedule visible, tile spec shown, dimensions provided.
-- MEDIUM: room layout visible but tile spec not shown — quantities are floor/wall area only.
+- MEDIUM: room layout visible but tile spec not shown - quantities are floor/wall area only.
 - LOW: tiling inferred from room type (e.g. "bathroom") but no tiling indicated on drawing.
   For LOW items you MUST include a "notes" field explaining why.
 
 VERIFICATION WARNINGS (include in top-level notes):
-- Flag any sheet marked "TYPICAL" — actual tile layouts may differ room-to-room.
-- Note if tile sizes are not specified — labour rates vary significantly for large-format vs mosaic.
-- Call out floor-waste locations — they affect screed falls and waterproofing extents.
-- Highlight any epoxy grout, stone tiles, or rectified-edge specifications — these change material and labour rates.
-- Flag any "tile by others" notes — do not double-count.
+- Flag any sheet marked "TYPICAL" - actual tile layouts may differ room-to-room.
+- Note if tile sizes are not specified - labour rates vary significantly for large-format vs mosaic.
+- Call out floor-waste locations - they affect screed falls and waterproofing extents.
+- Highlight any epoxy grout, stone tiles, or rectified-edge specifications - these change material and labour rates.
+- Flag any "tile by others" notes - do not double-count.
 `;
 
 const LANDSCAPER_EXPERTISE = `
@@ -425,7 +425,7 @@ MEASUREMENT RULES:
 - Area items (paving, turf, decking): calculate from plan dimensions or scaled measurement.
 - Linear items (retaining wall, fencing, edging, drainage): measure centre-line from plan.
 - Labour hours = TOTAL for the full quantity. Round to nearest 0.25 hr.
-- Irrigation: count each zone (point) or measure pipe runs in metres — whichever is shown.
+- Irrigation: count each zone (point) or measure pipe runs in metres - whichever is shown.
 
 CONFIDENCE GUIDE:
 - HIGH: dimensioned landscape plan with material legends.
@@ -434,10 +434,10 @@ CONFIDENCE GUIDE:
   For LOW items you MUST include a "notes" field explaining why.
 
 VERIFICATION WARNINGS (include in top-level notes):
-- Flag any "TYPICAL" or "INDICATIVE" landscape plan — actual extents may differ.
-- Note if levels / contours are not shown — retaining wall heights are estimates.
-- Call out any existing structures to be retained vs demolished — affects access and prep.
-- Highlight pool proximity — may affect drainage and fencing compliance (pool certifier required).
+- Flag any "TYPICAL" or "INDICATIVE" landscape plan - actual extents may differ.
+- Note if levels / contours are not shown - retaining wall heights are estimates.
+- Call out any existing structures to be retained vs demolished - affects access and prep.
+- Highlight pool proximity - may affect drainage and fencing compliance (pool certifier required).
 - Flag any council requirement notes (e.g. DA conditions, easements) that affect scope.
 `;
 
@@ -483,7 +483,7 @@ const ITEM_SCHEMA_FRAGMENT = `
       "required": ["label", "item_key", "quantity", "unit", "labour_hours", "confidence"],
       "properties": {
         "label": { "type": "string", "description": "Human-readable description including location context." },
-        "item_key": { "type": "string", "description": "Price-book key — must be one of the allowed keys listed above." },
+        "item_key": { "type": "string", "description": "Price-book key - must be one of the allowed keys listed above." },
         "quantity": { "type": "number", "minimum": 0, "description": "Total quantity required." },
         "unit": { "type": "string", "enum": ["each", "m", "m2", "m3", "hr", "lot", "point"], "description": "Unit of measure for rate lookup." },
         "labour_hours": { "type": "number", "description": "TOTAL install time for the full quantity. Round to nearest 0.25 hr." },
@@ -574,7 +574,7 @@ function normaliseTrade(trade: string): string {
  * fields.
  *
  * @param trade - Target trade discipline (e.g. "electrician", "plumber").
- *                Accepts synonyms — normalised internally.
+ *                Accepts synonyms - normalised internally.
  * @returns A formatted schema instruction string ready for prompt injection.
  *
  * @example
@@ -588,7 +588,7 @@ export function getTradeAnalysisSchema(trade: string): string {
   const itemKeyList = itemKeys.map((k) => `    "${k}"`).join(",\n");
 
   return `
-## OUTPUT FORMAT — STRICT JSON ONLY
+## OUTPUT FORMAT - STRICT JSON ONLY
 
 You must return a single valid JSON object. Do NOT wrap it in markdown code fences.
 Do NOT include any commentary outside the JSON.
@@ -620,16 +620,16 @@ ${METADATA_SCHEMA_FRAGMENT.trim().replace(/^/gm, "  ")}
 - **medium**: The symbol is visible but partially obscured, cropped, or the legend entry is unclear.
 - **low**: The item is hard to see, ambiguous, or inferred from room context rather than directly observed on the drawing.
 
-When confidence is "low", you MUST include a "notes" field on that item explaining why (e.g. "symbol partially obscured by dimension line", "inferred from 'ENSUITE' label — no specific fixture shown").
+When confidence is "low", you MUST include a "notes" field on that item explaining why (e.g. "symbol partially obscured by dimension line", "inferred from 'ENSUITE' label - no specific fixture shown").
 
-### Confidence breakdown dimensions (score 0–100 each)
+### Confidence breakdown dimensions (score 0-100 each)
 
 - **image_quality**: Overall image resolution, brightness, contrast, and compression artefacts. 100 = crisp, well-lit, no artefacts. 0 = unreadable.
 - **drawing_clarity**: How clean and legible the drawing lines, dimensions, and text are. 100 = sharp vector-quality lines. 0 = smudged or faint.
 - **trade_match**: How relevant the drawing content is to the target trade. 100 = dedicated trade drawings with full legends. 0 = no trade-relevant content.
 - **symbol_recognition**: How clearly trade-specific symbols and legends can be identified and cross-referenced. 100 = complete legend with all symbols. 0 = no legend or unrecognisable symbols.
 
-The "reasoning" field should be 1–2 sentences explaining the scores in practical terms an estimator would understand.
+The "reasoning" field should be 1-2 sentences explaining the scores in practical terms an estimator would understand.
 
 ### labour_hours
 
@@ -661,7 +661,7 @@ Extract from the title block, cover sheet, or sheet headers:
  * - score ≥ 50 → "medium"
  * - score <  50 → "low"
  *
- * @param breakdown - Raw per-dimension scores (0–100).
+ * @param breakdown - Raw per-dimension scores (0-100).
  * @returns Overall classification and the computed aggregate score.
  *
  * @example
@@ -715,7 +715,7 @@ export function calculateOverallConfidence(breakdown: {
  *
  * @param rawText - The raw text returned by the LLM (may include markdown,
  *                  leading/trailing whitespace, or extra commentary).
- * @returns A {@link DrawingAnalysisResult} — caller should still run
+ * @returns A {@link DrawingAnalysisResult} - caller should still run
  *          `calculateOverallConfidence()` over the dimensions and merge
  *          the result back into `confidence.overall` / `confidence.score`.
  * @throws If the response contains no valid JSON, no items array, or
@@ -839,8 +839,8 @@ export function parseAnalysisResponse(rawText: string): DrawingAnalysisResult {
   ) {
     const cb = obj.confidence_breakdown as Record<string, unknown>;
     confidence = {
-      overall: "low", // placeholder — caller should compute
-      score: 0,       // placeholder — caller should compute
+      overall: "low", // placeholder - caller should compute
+      score: 0,       // placeholder - caller should compute
       dimensions: {
         image_quality: clampScore(cb.image_quality),
         drawing_clarity: clampScore(cb.drawing_clarity),
@@ -934,7 +934,7 @@ export function parseAnalysisResponse(rawText: string): DrawingAnalysisResult {
  * 4. Optional additional instructions from the caller
  *
  * @param trade - Target trade discipline (normalised internally).
- * @param imageQualityScore - Pre-computed image quality score (0–100).
+ * @param imageQualityScore - Pre-computed image quality score (0-100).
  * @param instructions - Optional extra instructions to append (e.g. client notes,
  *                       special conditions, prior-quote context).
  * @returns A complete system prompt string ready for the Claude API.
@@ -955,11 +955,11 @@ export function buildSystemPrompt(
   // Quality context
   let qualityContext: string;
   if (imageQualityScore >= 80) {
-    qualityContext = `The uploaded image quality score is ${imageQualityScore}/100. The image is of excellent quality — you can confidently read fine details, small symbols, and dimension text.`;
+    qualityContext = `The uploaded image quality score is ${imageQualityScore}/100. The image is of excellent quality - you can confidently read fine details, small symbols, and dimension text.`;
   } else if (imageQualityScore >= 60) {
-    qualityContext = `The uploaded image quality score is ${imageQualityScore}/100. The image is of good quality — most symbols and text should be readable. Flag any items where symbol clarity is reduced.`;
+    qualityContext = `The uploaded image quality score is ${imageQualityScore}/100. The image is of good quality - most symbols and text should be readable. Flag any items where symbol clarity is reduced.`;
   } else if (imageQualityScore >= 40) {
-    qualityContext = `The uploaded image quality score is ${imageQualityScore}/100. The image quality is moderate. Focus on clearly visible items and larger symbols. Be conservative — mark ambiguous detections as "medium" or "low" confidence and explain why.`;
+    qualityContext = `The uploaded image quality score is ${imageQualityScore}/100. The image quality is moderate. Focus on clearly visible items and larger symbols. Be conservative - mark ambiguous detections as "medium" or "low" confidence and explain why.`;
   } else {
     qualityContext = `The uploaded image quality score is ${imageQualityScore}/100. The image quality is POOR. Focus ONLY on clearly visible, large items. Do NOT guess at obscured symbols or small text. Mark almost everything as "low" confidence with explanatory notes. Recommend the user uploads a higher-resolution scan.`;
   }
@@ -1008,7 +1008,7 @@ export class AnalysisParseError extends Error {
 }
 
 /**
- * Clamp a raw score value to the 0–100 range.
+ * Clamp a raw score value to the 0-100 range.
  */
 function clampScore(value: unknown): number {
   const num = typeof value === "number" ? value : 0;

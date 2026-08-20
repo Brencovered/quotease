@@ -55,7 +55,7 @@ export interface TradeSuburbContent {
   topListings: TradeSuburbListing[];
   pricingRange: string | null;
   faqs: FaqItem[];
-  /** false when listingCount is below the indexing threshold -- the page
+  /** false when listingCount is below the indexing threshold - the page
    *  component should still render (good for conversions / internal
    *  linking) but lib/seo/meta.ts will mark it noindex. */
   hasEnoughListingsToIndex: boolean;
@@ -66,23 +66,23 @@ const TOP_LISTINGS_COUNT = 5;
 const MIN_REVIEWS_FOR_RANKING = 3;
 
 // NOTE: illustrative only, not derived from real Swiftscope quote data.
-// Manually maintained -- update periodically or replace with real
+// Manually maintained - update periodically or replace with real
 // aggregated data once volume supports it. AUD, ex-GST, rough national
 // averages for common residential jobs as of mid-2026.
 const PRICING_RANGES: Record<string, string> = {
-  electrician: "$80–$150 for a standard callout, $400–$1,500+ for switchboard upgrades",
-  plumber:     "$80–$150 for a standard callout, $300–$1,200+ for hot water unit replacement",
-  builder:     "$1,500–$5,000+ for small renovations, much higher for extensions",
-  roofer:      "$50–$120 per square metre for re-roofing depending on material",
-  painter:     "$30–$50 per square metre for interior repainting",
-  carpenter:   "$70–$120 per hour, with material costs on top",
-  tiler:       "$60–$100 per square metre installed, excluding tiles",
-  landscaper:  "$3,000–$15,000+ for a typical backyard makeover",
-  concreter:   "$60–$100 per square metre for a standard slab",
-  fencer:      "$50–$150 per linear metre depending on fence type",
-  aircon:      "$2,500–$6,000 installed for a split system",
-  surveyor:    "$600–$2,500 depending on the type of survey required",
-  arborist:    "$300–$2,000+ depending on tree size and access",
+  electrician: "$80-$150 for a standard callout, $400-$1,500+ for switchboard upgrades",
+  plumber:     "$80-$150 for a standard callout, $300-$1,200+ for hot water unit replacement",
+  builder:     "$1,500-$5,000+ for small renovations, much higher for extensions",
+  roofer:      "$50-$120 per square metre for re-roofing depending on material",
+  painter:     "$30-$50 per square metre for interior repainting",
+  carpenter:   "$70-$120 per hour, with material costs on top",
+  tiler:       "$60-$100 per square metre installed, excluding tiles",
+  landscaper:  "$3,000-$15,000+ for a typical backyard makeover",
+  concreter:   "$60-$100 per square metre for a standard slab",
+  fencer:      "$50-$150 per linear metre depending on fence type",
+  aircon:      "$2,500-$6,000 installed for a split system",
+  surveyor:    "$600-$2,500 depending on the type of survey required",
+  arborist:    "$300-$2,000+ depending on tree size and access",
 };
 
 // buildSlug moved to lib/seo/meta.ts as buildDirectorySlug - was
@@ -102,7 +102,7 @@ export async function generateTradeSuburbContent(
     // generateStaticParams + revalidate, so it prerenders at build time,
     // and the cookie-aware server client throws DYNAMIC_SERVER_USAGE in a
     // prerender rather than returning a client. The catch below then
-    // swallowed that throw and rendered the page with zero listings --
+    // swallowed that throw and rendered the page with zero listings -
     // every prebuilt trade/suburb page shipped empty AND noindexed (see
     // hasEnoughListingsToIndex), and stayed that way for a full
     // revalidate window. Directory data is public and has an anon SELECT
@@ -113,7 +113,7 @@ export async function generateTradeSuburbContent(
     // (e.g. "South Melbourne"), but the URL only has a slug
     // ("south-melbourne"). Rather than guess at a SQL pattern that handles
     // every punctuation/casing variant, pull every listing for the trade and
-    // match in code by re-slugifying each row's suburb -- small dataset,
+    // match in code by re-slugifying each row's suburb - small dataset,
     // simpler and more reliable than fragile ILIKE patterns.
     //
     // Real bug, confirmed against live data: two different raw trade

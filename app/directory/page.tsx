@@ -45,7 +45,7 @@ const getDirectoryHeroStats = unstable_cache(
       return { totalListings, suburbsCovered };
     } catch (err) {
       // This is decorative hero copy, not the source of truth for listing
-      // data -- a transient env/config issue during background revalidation
+      // data - a transient env/config issue during background revalidation
       // (e.g. a missing key on a fresh preview deployment) should degrade
       // to 0s here, not take down the entire /directory page for every
       // visitor until the next successful revalidation.
@@ -192,7 +192,7 @@ export default async function DirectoryPage({
   const search = searchParam?.trim();
   const radiusKm = radius ? parseFloat(radius) : NaN;
   // A name search isn't distance-based (you already know who you're
-  // looking for) -- always use the plain query path below rather than the
+  // looking for) - always use the plain query path below rather than the
   // radius RPC, which has no name parameter to extend.
   const hasRadius = !search && !isNaN(radiusKm) && radiusKm > 0;
 
@@ -288,7 +288,7 @@ export default async function DirectoryPage({
 
     // A trade keyword detected in the free-text search (e.g. "urgent
     // plumber" -> plumber) only applies if the user hasn't already picked
-    // a trade via the structured Trade field -- that explicit choice
+    // a trade via the structured Trade field - that explicit choice
     // always wins.
     let effectiveTrade = trade;
 
@@ -297,7 +297,7 @@ export default async function DirectoryPage({
 
       // Only treat the detected trade as a real filter when the query
       // resolved to *nothing but* that trade + noise words ("urgent
-      // plumber", "roofer asap") -- confidently a trade search. If
+      // plumber", "roofer asap") - confidently a trade search. If
       // anything else is left over, a trade-like word might just be
       // part of a business name ("Spark Ease Electrical"), so fall back
       // to a plain text search across all non-noise words instead,
@@ -309,18 +309,18 @@ export default async function DirectoryPage({
       if (isPureTradeQuery && !effectiveTrade) effectiveTrade = detectedTrade;
 
       // Each remaining word must appear *somewhere* across
-      // business_name/blurb, in any order -- far more forgiving than
+      // business_name/blurb, in any order - far more forgiving than
       // requiring the entire original phrase to match verbatim, which
       // almost never happens. Each .or() call ANDs against the others;
       // only conditions *within* one .or() call are OR'd.
       //
-      // Deliberately NOT searching services_offered here anymore --
+      // Deliberately NOT searching services_offered here anymore -
       // confirmed twice in production that including
       // "services_offered::text.ilike.%x%" inside this nested/grouped
       // .or() filter fails to parse under PostgREST's grammar (even
       // fully unquoted, plain single words with nothing special in them
       // still crashed). Rather than guess a third time, keep this to the
-      // two plain, uncast text columns, which are guaranteed to work --
+      // two plain, uncast text columns, which are guaranteed to work -
       // if service-keyword search needs to come back, it should go
       // through a proper Postgres function instead of an inline filter
       // cast, and be tested against the real PostgREST endpoint first.

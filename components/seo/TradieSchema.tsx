@@ -8,10 +8,10 @@
  *   - HomeAndConstructionBusiness (more specific, still well-supported)
  *
  * ASSUMPTIONS:
- * - address.addressRegion defaults to "VIC" -- will need state data for
+ * - address.addressRegion defaults to "VIC" - will need state data for
  *   other states once listings expand beyond Victoria.
  * - telephone is from scraped_contact_phone; some listings won't have it.
- * - priceRange is hardcoded as "$$" (mid-range) -- no pricing data on
+ * - priceRange is hardcoded as "$$" (mid-range) - no pricing data on
  *   individual listings yet. Can be personalised once claimed tradies
  *   set their own hourly rate on the profile.
  * - geo coordinates come from the directory_listing table directly.
@@ -133,7 +133,7 @@ export default function TradieSchema({
         worstRating: "1",
       },
     }),
-    // Individual reviews -- only emit when review has actual text content.
+    // Individual reviews - only emit when review has actual text content.
     // Empty reviewBody or missing author causes Google validation errors.
     ...(reviews && reviews.filter(r => r.text?.trim() && r.authorName?.trim() && r.rating >= 1 && r.rating <= 5 && r.time > 0).length > 0 && {
       review: reviews
@@ -162,7 +162,7 @@ export default function TradieSchema({
   );
 }
 
-// -- Directory/listing-list schema ----------------------------------------
+// - Directory/listing-list schema ----------------------------------------
 
 interface DirectoryPageSchemaProps {
   trade: string;
@@ -184,7 +184,7 @@ interface DirectoryPageSchemaProps {
  * Tells Google this page is a curated list of local businesses.
  */
 export function DirectoryPageSchema({ trade, suburb, state = "VIC", listings }: DirectoryPageSchemaProps) {
-  const { plural } = { plural: `${trade}s` }; // simplified -- lib/seo/meta.ts has the full map
+  const { plural } = { plural: `${trade}s` }; // simplified - lib/seo/meta.ts has the full map
   const schema = {
     "@context": "https://schema.org",
     "@type": "ItemList",

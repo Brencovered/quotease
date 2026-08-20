@@ -365,7 +365,7 @@ export default function ExportPanel({
             <span className="font-semibold text-[var(--ink-soft)]">MYOB:</span> Sales &gt; Sales Register &gt; Import Sales &gt; select the CSV file
           </p>
           <p className="text-[12px] text-[var(--ink-faint)] mt-2">
-            Jobs marked as previously exported won&apos;t be deselected automatically -- you can re-export them if needed.
+            Jobs marked as previously exported won&apos;t be deselected automatically - you can re-export them if needed.
             GST is calculated at 10% on the total.
           </p>
         </div>

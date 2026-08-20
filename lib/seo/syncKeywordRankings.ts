@@ -71,7 +71,7 @@ export async function syncKeywordRankings(): Promise<SyncResult> {
 
     if (!match) {
       // No GSC data for this term in the window. Leave existing position data
-      // and status alone -- absence of data isn't evidence the keyword
+      // and status alone - absence of data isn't evidence the keyword
       // dropped out of the index, it may just be outside the 28-day window.
       continue;
     }
@@ -85,7 +85,7 @@ export async function syncKeywordRankings(): Promise<SyncResult> {
     };
 
     // Only auto-promote status to "ranking" if the keyword hasn't been
-    // deliberately set to "ignore" -- never override a manual decision.
+    // deliberately set to "ignore" - never override a manual decision.
     if (kw.status !== "ignore" && kw.status !== "ranking") {
       payload.status = "ranking";
     }

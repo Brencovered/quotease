@@ -44,7 +44,7 @@ export default function VariationRespondForm({
       <div className="bg-green-50 border border-green-100 rounded-xl px-5 py-4 text-center">
         <p className="font-bold text-green-800">Variation approved</p>
         <p className="text-[13px] text-green-700 mt-1">
-          Thanks — {title} (+${amount.toLocaleString()}) is now on the job.
+          Thanks - {title} (+${amount.toLocaleString()}) is now on the job.
         </p>
       </div>
     );

@@ -86,7 +86,7 @@ export default function CoveragePage() {
   }, [postcodes, stateFilter, sortKey, sortAsc]);
 
   // Thin spots: postcodes with a real total but near-zero for a specific
-  // trade -- these are what "insights into areas with low trade numbers"
+  // trade - these are what "insights into areas with low trade numbers"
   // actually means. Sorted so the biggest, best-established postcodes with
   // a glaring gap surface first (most worth scraping).
   const thinSpots = useMemo(() => {
@@ -188,7 +188,7 @@ export default function CoveragePage() {
           <h1 className="font-display text-2xl text-[var(--ink)]">Directory coverage</h1>
           <p className="text-[13px] text-[var(--ink-faint)]">
             {postcodes.length.toLocaleString()} postcodes across {stateCount} states with at least one listing.
-            Only shows gaps within existing data -- postcodes with zero listings at all don&apos;t appear here.
+            Only shows gaps within existing data - postcodes with zero listings at all don&apos;t appear here.
             Click any cell to run a real scrape for that postcode + trade ({SCRAPE_RADIUS_KM}km radius) right here.
           </p>
         </div>
@@ -201,7 +201,7 @@ export default function CoveragePage() {
       {thinSpots.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
           <p className="text-[12px] font-bold text-amber-800 uppercase tracking-wide mb-3">
-            Worth scraping next -- established postcodes with a thin trade
+            Worth scraping next - established postcodes with a thin trade
           </p>
           <div className="flex flex-wrap gap-2">
             {thinSpots.map((s) => {

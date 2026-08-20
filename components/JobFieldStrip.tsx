@@ -13,7 +13,7 @@ function mapsUrl(address: string) {
 
 /**
  * Thumb-first strip for running a job. Sticky above mobile nav.
- * Owner money actions only appear after Done (via JobDoneSheet) — not here.
+ * Owner money actions only appear after Done (via JobDoneSheet) - not here.
  */
 export default function JobFieldStrip({
   jobId,
@@ -75,9 +75,9 @@ export default function JobFieldStrip({
   async function start() {
     const data = await postStatus({ status: "in_progress" });
     if (data.pausedOther?.job_number) {
-      setToast(`Started — paused job #${data.pausedOther.job_number}`);
+      setToast(`Started - paused job #${data.pausedOther.job_number}`);
     } else {
-      setToast("Started — time is running");
+      setToast("Started - time is running");
     }
     setTimeout(() => setToast(null), 3500);
     router.refresh();
@@ -85,7 +85,7 @@ export default function JobFieldStrip({
 
   async function pause() {
     await postStatus({ status: "on_hold" });
-    setToast("Paused — clock kept for when you resume");
+    setToast("Paused - clock kept for when you resume");
     setTimeout(() => setToast(null), 3000);
     router.refresh();
   }

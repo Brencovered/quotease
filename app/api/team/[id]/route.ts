@@ -1,7 +1,7 @@
 /**
- * POST /api/team/[id] -- update role, remove, or resend invite for a team member
+ * POST /api/team/[id] - update role, remove, or resend invite for a team member
  * --------------------------------------------------------------------------------
- * Owner or admin only (enforced by RLS -- "Owner manages team" and
+ * Owner or admin only (enforced by RLS - "Owner manages team" and
  * "Admin manages team" policies).
  *
  * Body: { action: "remove" } | { action: "set_role", role: "admin" | "manager" | "site_member", accessScope?: "all" | "assigned_only" } | { action: "resend" }
@@ -115,7 +115,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       } catch (err) {
         console.error("[team/resend] failed to send email:", err);
         return NextResponse.json(
-          { error: "Couldn't send the email -- try again shortly." },
+          { error: "Couldn't send the email - try again shortly." },
           { status: 502 }
         );
       }

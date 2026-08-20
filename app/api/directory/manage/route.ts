@@ -9,7 +9,7 @@ const MAX_PHOTOS = 8;
 /**
  * GET/PATCH for the editable fields on a business's own claimed listing:
  * description, logo, gallery photos, socials. Uses the admin client for
- * the actual directory_listing reads/writes -- same reasoning as
+ * the actual directory_listing reads/writes - same reasoning as
  * claim/route.ts and goal/route.ts: directory_listing has no owner-scoped
  * RLS policy (public-read only), so the session client would silently
  * no-op on any write here.

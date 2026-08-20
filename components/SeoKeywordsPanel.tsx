@@ -254,7 +254,7 @@ export default function SeoKeywordsPanel() {
             onClick={generateSaasKeywords}
             disabled={generatingSaas}
             className="btn-secondary text-[12.5px] py-2 px-3.5 flex items-center gap-1.5"
-            title="Adds keyword ideas for the core quoting/job-management product -- category terms, trade-specific terms, pricing-led terms, and genuine alternative/comparison terms against ServiceM8/Tradify/Fergus/etc"
+            title="Adds keyword ideas for the core quoting/job-management product - category terms, trade-specific terms, pricing-led terms, and genuine alternative/comparison terms against ServiceM8/Tradify/Fergus/etc"
           >
             <Target size={13} className={generatingSaas ? "animate-pulse" : ""} />
             {generatingSaas ? "Generating..." : "Generate SaaS keywords"}

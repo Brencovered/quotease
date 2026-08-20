@@ -107,7 +107,7 @@ export default function VariationsPanel({ quoteId, jobId, hourlyRate, margin, va
 
   async function copyClientLink(v: Variation) {
     const url = clientLink(v);
-    if (!url) { setLinkMsg("Link not ready yet — refresh and try again"); return; }
+    if (!url) { setLinkMsg("Link not ready yet - refresh and try again"); return; }
     try {
       await navigator.clipboard.writeText(url);
       setLinkMsg("Client link copied");

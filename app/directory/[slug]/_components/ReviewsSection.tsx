@@ -19,7 +19,7 @@ function ReviewStars({ rating }: { rating: number }) {
 }
 
 // Google's profile_photo_url values occasionally 404 or get rate-limited
-// hotlinked from googleusercontent.com -- same broken-image risk as the
+// hotlinked from googleusercontent.com - same broken-image risk as the
 // listing logo, so this needs the same onError fallback rather than a raw
 // <img>.
 function ReviewAvatar({ src, name }: { src: string | null; name: string }) {

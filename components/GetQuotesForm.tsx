@@ -104,7 +104,7 @@ export default function GetQuotesForm({ user, homeowner }: { user: UserData | nu
   const { toast, showToast } = useSimpleToast();
 
   // ── Form data (backed by localStorage) ───────────────────────────
-  // Must start from the exact same default on server and client --
+  // Must start from the exact same default on server and client -
   // reading localStorage inside the useState initializer ran during the
   // client's hydration render too, so a returning visitor with saved
   // data got a client-rendered form that didn't match the server-
@@ -291,7 +291,7 @@ export default function GetQuotesForm({ user, homeowner }: { user: UserData | nu
             </div>
           </div>
 
-          {/* Additional details -- measurements, access notes, etc */}
+          {/* Additional details - measurements, access notes, etc */}
           <div>
             <label className="block text-[12.5px] font-bold text-[var(--ink)] mb-2.5">
               Any measurements or extra details? <span className="text-[var(--ink-faint)] font-medium">(optional)</span>
@@ -319,7 +319,7 @@ export default function GetQuotesForm({ user, homeowner }: { user: UserData | nu
                   const picked = Array.from(e.target.files ?? []);
                   const tooBig = picked.find((f) => f.size > 10 * 1024 * 1024);
                   const notImage = picked.find((f) => !f.type.startsWith("image/"));
-                  if (tooBig) { setPhotoError(`${tooBig.name} is too large -- please keep photos under 10MB.`); e.target.value = ""; return; }
+                  if (tooBig) { setPhotoError(`${tooBig.name} is too large - please keep photos under 10MB.`); e.target.value = ""; return; }
                   if (notImage) { setPhotoError(`${notImage.name} isn't an image file.`); e.target.value = ""; return; }
                   setPhotoError(null);
                   setPhotos((prev) => [...prev, ...picked].slice(0, MAX_PHOTOS));

@@ -33,9 +33,9 @@ const TEMPLATES = [
     id: "intro", label: "Swiftscope intro",
     subject: "The quoting tool tradies are using to win jobs on the driveway",
     html: `<p>Hi there,</p>
-<p>We're Swiftscope — a quoting and job management platform built specifically for Australian trade businesses.</p>
+<p>We're Swiftscope - a quoting and job management platform built specifically for Australian trade businesses.</p>
 <p>Tradies using Swiftscope are quoting on site from their phone in minutes, sending professional quotes before leaving the driveway, and winning more jobs because their clients can say yes before anyone else calls.</p>
-<p>It replaces the patchwork of tools most trade businesses are stitching together — job management, scheduling, drawing markup, and Xero sync — for a flat $45/month with no per-seat fees.</p>
+<p>It replaces the patchwork of tools most trade businesses are stitching together - job management, scheduling, drawing markup, and Xero sync - for a flat $45/month with no per-seat fees.</p>
 <p>We're offering a free 7-day trial with no credit card required.</p>
 <p><a href="https://swiftscope.com.au/signup">Start your free trial here</a></p>
 <p>The Swiftscope team<br/>swiftscope.com.au</p>`,
@@ -46,13 +46,13 @@ const TEMPLATES = [
     html: `<p>Hi there,</p>
 <p>Just following up on our earlier note about Swiftscope.</p>
 <p>If you haven't had a chance to explore it yet, we'd love to show you how tradies are using it to quote faster and win more jobs on site.</p>
-<p>The 7-day free trial is still open — no card required, takes about 5 minutes to set up.</p>
+<p>The 7-day free trial is still open - no card required, takes about 5 minutes to set up.</p>
 <p><a href="https://swiftscope.com.au/signup">Try Swiftscope free</a></p>
 <p>The Swiftscope team</p>`,
   },
   {
     id: "directory", label: "Join the directory",
-    subject: "Get found by homeowners in your area — free on Swiftscope",
+    subject: "Get found by homeowners in your area - free on Swiftscope",
     html: `<p>Hi there,</p>
 <p>We've built a tradie directory at swiftscope.com.au where homeowners in your area are already searching for local trade businesses.</p>
 <p>Getting listed is free. You'll get a profile page with your Google rating, your trades, and a direct contact button for homeowners to reach you.</p>
@@ -218,18 +218,18 @@ export default function AdminOutreachPanel({
           <p className="text-[12.5px] text-[var(--ink-soft)] mt-0.5 max-w-lg">
             Export unclaimed listings with an email as a CSV, ready to import as a HubSpot list. Each row includes a
             personalised claim link (via <code className="text-[11px] bg-[var(--line-subtle)] px-1 py-0.5 rounded">claim_url</code>)
-            that resolves straight to that exact business — no searching required on their end.
+            that resolves straight to that exact business - no searching required on their end.
           </p>
         </div>
         <div className="flex gap-2 shrink-0">
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- file download from an API route, not page navigation; next/link's client-side routing is the wrong tool here */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages - file download from an API route, not page navigation; next/link's client-side routing is the wrong tool here */}
           <a
             href="/api/admin/directory/export-outreach-csv?includeContacted=true"
             className="btn-secondary px-4 py-2 text-[12.5px]"
           >
             <Eye size={13} /> Preview CSV
           </a>
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- same as above */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages - same as above */}
           <a
             href="/api/admin/directory/export-outreach-csv"
             className="btn-primary px-4 py-2 text-[12.5px]"

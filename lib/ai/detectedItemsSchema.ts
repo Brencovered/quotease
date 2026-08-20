@@ -31,8 +31,8 @@ Rules for detected_items:
 - For metre-based items (cable, conduit, pipe runs, gutters), set unit to "m" and estimate total metres
 - For area items (roof sections), set unit to "m2"
 - "labour_hours" is your best-practice estimate of TOTAL install time for the row's full quantity
-  (not per-unit) -- e.g. 14 downlights at ~0.25hr each = 3.5, a 20m cable run = 1.5, a switchboard
+  (not per-unit) - e.g. 14 downlights at ~0.25hr each = 3.5, a 20m cable run = 1.5, a switchboard
   upgrade = 4. Base it on standard Australian trade productivity rates. Round to the nearest 0.25hr.
-  This is a starting estimate the tradie will review and adjust, not the final word -- always include it.
+  This is a starting estimate the tradie will review and adjust, not the final word - always include it.
 
 Output ONLY the JSON object. No other text before or after it.`;

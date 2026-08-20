@@ -26,7 +26,7 @@ export default async function BillingPage() {
         .eq("id", businessId)
         .single();
       trialEndsAt = profile?.trial_ends_at ?? null;
-      // Comp access renders the same as an active subscription -- a tradie
+      // Comp access renders the same as an active subscription - a tradie
       // you've comped shouldn't be nagged to subscribe.
       isSubscribed =
         profile?.comp_access === true ||

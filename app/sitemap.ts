@@ -8,7 +8,7 @@
  *    login, signup)
  * 2. Individual tradie listing pages (/directory/[slug])
  * 3. Trade×suburb programmatic pages (/electricians-seaford-vic etc.)
- *    -- only included when at least MIN_LISTINGS_FOR_INDEX listings exist
+ *    - only included when at least MIN_LISTINGS_FOR_INDEX listings exist
  *    to avoid indexing thin pages that could hurt overall domain quality.
  *
  * ASSUMPTIONS:
@@ -18,7 +18,7 @@
  *   `buildSlug(row)` with `row.slug`.
  * - Trade×suburb pages don't exist as Next.js routes yet (built in Prompt 2).
  *   Their URLs are included now so Google starts crawling before the pages
- *   are live -- this is intentional pre-submission, not an error.
+ *   are live - this is intentional pre-submission, not an error.
  * - `lastModified` for directory listings uses `updated_at` if available,
  *   falls back to `created_at`.
  *
@@ -33,7 +33,7 @@ import { tradeToSlug, buildDirectorySlug } from "@/lib/seo/meta";
 import { LEADS_ENABLED } from "@/lib/featureFlags";
 import { TRADE_HUBS } from "@/lib/marketing/trade-hubs";
 
-// The site's canonical host is the bare apex -- www 308s to it, enforced
+// The site's canonical host is the bare apex - www 308s to it, enforced
 // in both middleware.ts (NON_CANONICAL_HOSTS) and the Vercel domain
 // config. Sitemap URLs must be the final canonical form; URLs that
 // redirect get flagged in audits and waste crawl budget.
@@ -45,7 +45,7 @@ import { TRADE_HUBS } from "@/lib/marketing/trade-hubs";
 // middleware.ts if the canonical host ever changes.
 const BASE_URL = "https://swiftscope.com.au";
 
-// NOTE: adjust as listings grow -- don't index trade×suburb pages that are
+// NOTE: adjust as listings grow - don't index trade×suburb pages that are
 // too thin, as thin pages dilute overall domain quality in Google's eyes.
 const MIN_LISTINGS_FOR_INDEX = 3;
 
@@ -89,7 +89,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/privacy`,          changeFrequency: "yearly",  priority: 0.2 },
   ];
 
-  // Supabase env vars won't be present at build time in CI -- return
+  // Supabase env vars won't be present at build time in CI - return
   // static-only sitemap then; the revalidation will hydrate it at runtime.
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
     return staticPages;
@@ -114,7 +114,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   // ── 3. Trade×suburb programmatic pages ───────────────────────────────
-  // Source directly from trade_suburb_pages -- same table the actual
+  // Source directly from trade_suburb_pages - same table the actual
   // trade+suburb and suburb-hub pages read from, already has correct
   // per-listing state (derived from postcode, not a hardcoded "vic").
   // Previously used a separate RPC/direct-query path that never had
@@ -163,7 +163,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // ── 5. Blog posts ────────────────────────────────────────────────────
   // /blog and /blog/[slug] have existed as routes since launch but were
-  // never emitted here, so Google had no discovery path to them at all --
+  // never emitted here, so Google had no discovery path to them at all -
   // absent from the sitemap and reachable only via the marketing nav.
   // That made every published post effectively invisible in search, which
   // is the whole reason the blog exists.

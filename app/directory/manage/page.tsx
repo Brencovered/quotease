@@ -106,7 +106,7 @@ export default function ManageDirectoryListingPage() {
   function addLicense() {
     const type = licenseTypeInput.trim();
     const number = licenseNumberInput.trim();
-    // Number is optional -- some certifications (e.g. "Working at Heights")
+    // Number is optional - some certifications (e.g. "Working at Heights")
     // don't have a formal licence number to enter, and requiring one
     // silently blocked adding those.
     if (!type || licenses.length >= 10) return;
@@ -244,7 +244,7 @@ export default function ManageDirectoryListingPage() {
             View live page <ExternalLink size={12} />
           </a>
         </div>
-        <p className="text-[14px] text-[#5a6b78] mb-8">{listing.business_name} -- {listing.suburb}</p>
+        <p className="text-[14px] text-[#5a6b78] mb-8">{listing.business_name} - {listing.suburb}</p>
 
         {error && (
           <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 text-[13.5px] rounded-xl px-4 py-3 mb-6">
@@ -343,7 +343,7 @@ export default function ManageDirectoryListingPage() {
                 {licenses.map((l, i) => (
                   <div key={`${l.type}-${l.number}-${i}`} className="flex items-center justify-between gap-2 bg-[#f1f4f6] rounded-lg px-3 py-2">
                     <span className="text-[13px] text-[#0a1722]">
-                      <span className="font-semibold">{l.type}</span>{l.number ? ` -- ${l.number}` : ""}
+                      <span className="font-semibold">{l.type}</span>{l.number ? ` - ${l.number}` : ""}
                     </span>
                     <button onClick={() => removeLicense(i)} className="text-[#8a97a1] hover:text-[#0a1722] shrink-0">
                       <X size={14} />
@@ -458,7 +458,7 @@ export default function ManageDirectoryListingPage() {
           </button>
         </div>
 
-        {/* Monthly goal -- private to this page, never shown to the public */}
+        {/* Monthly goal - private to this page, never shown to the public */}
         <div className="card p-6 rounded-2xl bg-[#fffbeb] mt-6">
           <OwnerGoalWidget />
         </div>

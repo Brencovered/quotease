@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdminEmail } from "@/lib/admin";
 
 const GOOGLE_API_KEY = process.env.GOOGLE_PLACES_API_KEY!;
-const BATCH = 50; // per single invocation -- call repeatedly to drain backlog
+const BATCH = 50; // per single invocation - call repeatedly to drain backlog
 
 export async function POST(_req: NextRequest) {
   const supabase = await createClient();
@@ -38,7 +38,7 @@ export async function POST(_req: NextRequest) {
     const uncached = refs.filter(r => !r.startsWith("http"));
 
     if (uncached.length === 0) {
-      // Already cached -- just stamp it
+      // Already cached - just stamp it
       await admin.from("directory_listing")
         .update({ photos_cached_at: new Date().toISOString() })
         .eq("id", row.id);

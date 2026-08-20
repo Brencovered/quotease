@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
 
   if (!ref) return NextResponse.json({ error: "No ref" }, { status: 400 });
 
-  // Only serve already-cached (http) URLs -- block live Google calls
+  // Only serve already-cached (http) URLs - block live Google calls
   // This endpoint is now disabled until the bulk cache job clears the backlog
   // Remove this check once all photo_references are real URLs
   if (!ref.startsWith("http")) {

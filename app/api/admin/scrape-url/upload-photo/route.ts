@@ -5,12 +5,12 @@ import { isAdminEmail } from "@/lib/admin";
 
 /**
  * Uploads a single photo file during the manual scraper's review step,
- * before any real listing exists yet -- stored under a staging path
+ * before any real listing exists yet - stored under a staging path
  * (manual-staging/) since there's no listing id to scope it to at this
  * point. The confirm step (app/api/admin/scrape-url) re-downloads and
  * re-stores whatever's still in photo_urls under the actual listing's own
  * path once it's created/updated, so this staged file doesn't need to be
- * cleaned up by anything else -- it's just a transient stop on the way to
+ * cleaned up by anything else - it's just a transient stop on the way to
  * being added to fields.photo_urls for review/reordering/removal like any
  * other photo.
  */

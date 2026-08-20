@@ -22,7 +22,7 @@ export async function POST(
   const ctx = await getTeamContext(supabase, userData.user.id);
 
   // Owner claiming: treat as themselves only if they also have a team_members
-  // row — owners usually assign via Crew. Allow owners to claim only when they
+  // row - owners usually assign via Crew. Allow owners to claim only when they
   // have an active membership row (unusual). Prefer: any active membership.
   const { data: membership } = await supabase
     .from("team_members")
@@ -84,7 +84,7 @@ export async function POST(
 
   if ((crewOnJob ?? []).length > 0) {
     return NextResponse.json(
-      { error: "This job already has crew assigned — ask the boss." },
+      { error: "This job already has crew assigned - ask the boss." },
       { status: 409 }
     );
   }

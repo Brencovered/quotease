@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { pushQuoteToXero } from "@/lib/xero";
 import { getOrCreateJobForQuote } from "@/lib/jobs";
 import { getActiveBusinessId } from "@/lib/team";
+import { pipelineFromQuoteStatus } from "@/lib/directoryLeads";
 
 const ALLOWED_STATUSES = ["draft", "sent", "accepted", "declined", "paid"];
 
@@ -118,6 +119,40 @@ export async function POST(request: Request) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Keep linked directory lead pipeline in sync with quote lifecycle.
+  const { data: linkedQuote } = await supabase
+    .from("quotes")
+    .select("directory_enquiry_id, status")
+    .eq("id", quoteId)
+    .maybeSingle();
+
+  if (linkedQuote?.directory_enquiry_id) {
+    const nextPipeline = pipelineFromQuoteStatus(
+      (update.status as string | undefined) ?? linkedQuote.status
+    );
+    const leadPatch: Record<string, unknown> = {};
+    if (nextPipeline) leadPatch.pipeline_status = nextPipeline;
+
+    if (status === "accepted" || status === "paid" || completeJob) {
+      const job = await getOrCreateJobForQuote(supabase, quoteId);
+      if (job) {
+        leadPatch.job_id = job.id;
+        leadPatch.pipeline_status = "on_job";
+        await supabase
+          .from("jobs")
+          .update({ directory_enquiry_id: linkedQuote.directory_enquiry_id })
+          .eq("id", job.id);
+      }
+    }
+
+    if (Object.keys(leadPatch).length > 0) {
+      await supabase
+        .from("directory_enquiries")
+        .update(leadPatch)
+        .eq("id", linkedQuote.directory_enquiry_id);
+    }
   }
 
   // Push to Xero the moment a quote is won - that's the point it actually

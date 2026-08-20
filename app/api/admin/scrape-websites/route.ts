@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
 
   const admin = createAdminClient();
 
-  // Build targeted query based on mode -- only fetch listings that actually
+  // Build targeted query based on mode - only fetch listings that actually
   // need the specific field we're trying to fill
   let query = admin
     .from("directory_listing")
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
     if (!html) {
       results.failed++;
       results.skipReasons["fetch failed / timeout"] = (results.skipReasons["fetch failed / timeout"] ?? 0) + 1;
-      // Stamp so we don't retry immediately -- will retry after other listings
+      // Stamp so we don't retry immediately - will retry after other listings
       await admin.from("directory_listing")
         .update({ website_scraped_at: new Date().toISOString() })
         .eq("id", listing.id);
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
       if (blurb) { updates.blurb = blurb; updated.push("blurb"); }
     }
 
-    // About (extended description -- separate from blurb)
+    // About (extended description - separate from blurb)
     if ((mode === "blurb" || mode === "all") && !listing.blurb) {
       const about = extractAbout(html);
       if (about && !updates.blurb) { updates.blurb = about; updated.push("blurb (about)"); }
@@ -163,7 +163,7 @@ export async function POST(req: NextRequest) {
       if (lics.length > 0) { updates.licenses = lics; updated.push(`${lics.length} licence(s)`); }
     }
 
-    // Services from sub-pages (only in all mode -- extra network call)
+    // Services from sub-pages (only in all mode - extra network call)
     if (mode === "all" && !(listing as {services_offered?: unknown}).services_offered) {
       const subs = await scrapeSubPages(html, url);
       const svcs = [...extractServices(html)];
@@ -196,7 +196,7 @@ export async function POST(req: NextRequest) {
           updates.photos_cached_at = new Date().toISOString();
           updated.push(`photo_references (${newPhotos.length} photos)`);
         } else {
-          // No photos found on website -- stamp so we don't retry immediately
+          // No photos found on website - stamp so we don't retry immediately
           updates.photos_cached_at = new Date().toISOString();
           results.skipReasons["no photos found on site"] = (results.skipReasons["no photos found on site"] ?? 0) + 1;
         }

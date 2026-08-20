@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/admin";
 
 /* ------------------------------------------------------------------ */
-/*  POST  – upload a blog image to storage                             */
+/*  POST  - upload a blog image to storage                             */
 /*  FormData: file (File), type ("cover" | "avatar")                   */
 /* ------------------------------------------------------------------ */
 export async function POST(request: Request) {

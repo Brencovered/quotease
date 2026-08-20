@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { LEADS_ENABLED } from "@/lib/featureFlags";
 
-// Runs hourly via Vercel cron -- escalates stale requests to wider radius
+// Runs hourly via Vercel cron - escalates stale requests to wider radius
 
 export async function GET() {
   if (!LEADS_ENABLED) {

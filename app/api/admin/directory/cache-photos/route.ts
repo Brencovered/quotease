@@ -8,7 +8,7 @@ export const maxDuration = 60;
 /**
  * Admin-triggered version of the photo-caching batch (see
  * lib/cachePhotosBatch.ts for the full explanation). Same logic the
- * weekly cron (app/api/cron/cache-photos) runs automatically -- this is
+ * weekly cron (app/api/cron/cache-photos) runs automatically - this is
  * just for running it on demand from /admin/scraper rather than waiting
  * for the next scheduled run.
  */

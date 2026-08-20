@@ -863,7 +863,7 @@ export function CsvUploadModal({ onClose, onImported }: { onClose: () => void; o
                         onChange={(e) => setColumnMap((prev) => ({ ...prev, [field]: e.target.value }))}
                         style={{ padding: "6px 10px", fontSize: "12px" }}
                       >
-                        <option value="">-- ignore --</option>
+                        <option value="">Ignore</option>
                         {headers.map((h) => (
                           <option key={h} value={h}>
                             {h}

@@ -148,7 +148,7 @@ export default function HomeHero() {
           <div className="lg:col-span-5 flex flex-col justify-end">
             <p className="font-sans text-[14.5px] sm:text-[16px] leading-[1.6] text-[#9eb0bf] mb-5 sm:mb-7 max-w-[42ch]">
               <span className="sm:hidden">
-                A complete online quoting and pricing solution for trade businesses. Built to be used standing on site — mark up the job, price it directly from your price book, and send before you leave the driveway.
+                A complete online quoting and pricing solution for trade businesses. Built to be used standing on site - mark up the job, price it directly from your price book, and send before you leave the driveway.
               </span>
               <span className="hidden sm:inline">
                 A complete online quoting and pricing solution for trade businesses. Built to be used standing on site, mark up the job, price it directly from your price book, and send before you leave the driveway.

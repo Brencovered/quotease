@@ -17,7 +17,7 @@
  *   at build time (best for crawl budget + avoids empty pages getting
  *   indexed by accident). Combinations posted after build (dynamicParams)
  *   still resolve on-demand and get cached per the revalidate window.
- * - revalidate: 604800 (1 week) per the brief -- directory listings don't
+ * - revalidate: 604800 (1 week) per the brief - directory listings don't
  *   change fast enough to need anything shorter, and it keeps Supabase
  *   read volume sane as this scales to hundreds of suburbs.
  */
@@ -40,12 +40,12 @@ interface PageProps {
 }
 
 export async function generateStaticParams() {
-  // Only pre-build combos that actually have listings -- avoids wasting
+  // Only pre-build combos that actually have listings - avoids wasting
   // build time/crawl budget on empty pages. New combos still resolve
   // on-demand at runtime (dynamicParams defaults to true).
   try {
     const admin = createAdminClient();
-    // PostgREST silently caps an unpaginated select at 1,000 rows --
+    // PostgREST silently caps an unpaginated select at 1,000 rows -
     // directory_listing has 4,889+ rows with a suburb, so this was only
     // ever pre-building static params from a fraction of the real
     // directory. Page through explicitly instead.
@@ -74,7 +74,7 @@ export async function generateStaticParams() {
       .filter(([, count]) => count >= 3)
       .map(([tradeSuburb]) => ({ tradeSuburb }));
   } catch (err) {
-    // Build-time without Supabase env vars (CI) -- fall back to no
+    // Build-time without Supabase env vars (CI) - fall back to no
     // pre-rendered params; everything resolves on-demand at runtime instead.
     console.error("[trade-suburb generateStaticParams] skipped:", err);
     return [];
@@ -177,7 +177,7 @@ export default async function TradeSuburbPage({ params }: PageProps) {
         </div>
       )}
 
-      {/* NO LISTINGS YET -- still useful for conversion, not indexed (see meta) */}
+      {/* NO LISTINGS YET - still useful for conversion, not indexed (see meta) */}
       {listingCount === 0 && (
         <div className="bg-white border-b border-[#e8ecef]">
           <div className="max-w-5xl mx-auto px-6 py-16 text-center">

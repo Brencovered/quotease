@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 
 /* ════════════════════════════════════════════════════════════════
-   TYPES — every content block in a blog post
+   TYPES - every content block in a blog post
    ════════════════════════════════════════════════════════════════ */
 
 export type BlockType =
@@ -55,7 +55,7 @@ export interface BlogPostData {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   BLOCK DEFINITIONS — metadata about each block type
+   BLOCK DEFINITIONS - metadata about each block type
    ════════════════════════════════════════════════════════════════ */
 
 export interface BlockDef {
@@ -67,7 +67,7 @@ export interface BlockDef {
 }
 
 const BLOCK_DEFS: BlockDef[] = [
-  { type: "h1",            label: "Main Heading",    description: "Page title — use once at the top",         icon: Heading1,        category: "text" },
+  { type: "h1",            label: "Main Heading",    description: "Page title - use once at the top",         icon: Heading1,        category: "text" },
   { type: "h2",            label: "Section Heading", description: "Major section divider",                    icon: Heading2,        category: "text" },
   { type: "h3",            label: "Sub Heading",     description: "Subsection within a section",              icon: Heading3,        category: "text" },
   { type: "paragraph",     label: "Paragraph",       description: "Body text with optional formatting",       icon: Type,            category: "text" },
@@ -125,7 +125,7 @@ export function createBlock(type: BlockType): ContentBlock {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   FORMATTING TOOLBAR — bold, italic, link insertion
+   FORMATTING TOOLBAR - bold, italic, link insertion
    ════════════════════════════════════════════════════════════════ */
 
 function FormattingToolbar({
@@ -248,11 +248,11 @@ function FormattingToolbar({
 }
 
 /* ════════════════════════════════════════════════════════════════
-   BLOCK EDITOR COMPONENTS — one per block type
+   BLOCK EDITOR COMPONENTS - one per block type
    ════════════════════════════════════════════════════════════════ */
 
 function HeadingEditor({ block, onChange }: { block: ContentBlock; onChange: (b: ContentBlock) => void }) {
-  const labels = { h1: "Main heading (H1) — the big title for this section", h2: "Section heading (H2)", h3: "Sub heading (H3)" };
+  const labels = { h1: "Main heading (H1) - the big title for this section", h2: "Section heading (H2)", h3: "Sub heading (H3)" };
   const placeholders = { h1: "e.g. How to Quote Faster On Site", h2: "e.g. The Problem with Paper Quotes", h3: "e.g. Step 1: Upload Your Price List" };
   return (
     <div className="space-y-2">
@@ -308,7 +308,7 @@ function BlockquoteEditor({ block, onChange }: { block: ContentBlock; onChange: 
         value={block.content}
         onChange={e => onChange({ ...block, content: e.target.value })}
         rows={3}
-        placeholder='e.g. "Since switching to Swiftscope, we quote 3x faster and win more jobs." — John Smith, Electrician'
+        placeholder='e.g. "Since switching to Swiftscope, we quote 3x faster and win more jobs." - John Smith, Electrician'
         className="app-field text-[13.5px] italic resize-y"
       />
     </div>
@@ -592,7 +592,7 @@ function HrEditor() {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   SINGLE BLOCK CARD — wraps any block editor with controls
+   SINGLE BLOCK CARD - wraps any block editor with controls
    ════════════════════════════════════════════════════════════════ */
 
 function BlockCard({
@@ -671,7 +671,7 @@ function BlockCard({
 }
 
 /* ════════════════════════════════════════════════════════════════
-   ADD BLOCK MENU — categorized dropdown
+   ADD BLOCK MENU - categorized dropdown
    ════════════════════════════════════════════════════════════════ */
 
 function AddBlockMenu({ onAdd }: { onAdd: (type: BlockType) => void }) {

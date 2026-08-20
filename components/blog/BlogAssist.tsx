@@ -3,12 +3,12 @@
 /**
  * components/blog/BlogAssist.tsx
  * -------------------------------
- * "Stuck? Get an outline" -- turns a target SEO keyword into a structured
+ * "Stuck? Get an outline" - turns a target SEO keyword into a structured
  * plan (title, slug, excerpt, category, tags, key takeaways, section
  * headings) via /api/admin/blog/assist/plan, and can optionally draft the
  * prose for individual sections via /api/admin/blog/assist/draft.
  *
- * This only ever proposes structure and, if asked, section drafts -- it
+ * This only ever proposes structure and, if asked, section drafts - it
  * never silently overwrites anything. "Use this outline" only fills in
  * metadata plus empty section headings. Body copy always requires an
  * explicit "Draft this" (one section) or "Draft all sections" (every
@@ -80,7 +80,7 @@ export default function BlogAssist({ postTitle, onUseOutline, onInsertSection }:
     }
   }
 
-  /** Fetches the draft for one section. Throws on failure -- caller decides how to handle. */
+  /** Fetches the draft for one section. Throws on failure - caller decides how to handle. */
   async function fetchSectionDraft(section: PlanSection): Promise<string> {
     if (!plan) throw new Error("No outline loaded");
     const res = await fetch("/api/admin/blog/assist/draft", {
@@ -118,7 +118,7 @@ export default function BlogAssist({ postTitle, onUseOutline, onInsertSection }:
     setDraftingAll(true); setError("");
     const failures: string[] = [];
     for (let i = 0; i < plan.sections.length; i++) {
-      if (draftedIdx.has(i)) continue; // already drafted -- don't overwrite or waste a call
+      if (draftedIdx.has(i)) continue; // already drafted - don't overwrite or waste a call
       setDrafting(i);
       try {
         const text = await fetchSectionDraft(plan.sections[i]);
@@ -257,7 +257,7 @@ export default function BlogAssist({ postTitle, onUseOutline, onInsertSection }:
               Use this outline
             </button>
             <span className="text-[11.5px] text-[var(--ink-faint)]">
-              Fills in the title, slug, excerpt and headings. Draft buttons above add body copy per section --
+              Fills in the title, slug, excerpt and headings. Draft buttons above add body copy per section -
               review and edit before publishing either way.
             </span>
           </div>

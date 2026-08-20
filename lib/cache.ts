@@ -40,12 +40,12 @@ export const getCachedPriceBook = unstable_cache(
     // one of the canonical trade keys, but CSV import used to (see
     // app/api/materials/upload's history) write a raw supplier product
     // category straight into this column instead ("Timber - Posts",
-    // "Decking", etc, from a Bunnings Trade export) -- those rows can
+    // "Decking", etc, from a Bunnings Trade export) - those rows can
     // never match .eq("trade", requestedTrade), so they were silently
     // invisible to every trade's quote builder despite clearly being
     // real, relevant materials. Import now validates against real trade
     // values (see normalizeTradeValue), but existing rows imported before
-    // that fix still carry the raw category as their trade value --
+    // that fix still carry the raw category as their trade value -
     // surface them here too rather than leave them orphaned.
     const [exactMatch, miscategorized] = await Promise.all([
       supabase
@@ -69,7 +69,7 @@ export const getCachedPriceBook = unstable_cache(
       return [];
     }
     if (miscategorized.error) {
-      // Not fatal -- still return the exact-match rows we did get.
+      // Not fatal - still return the exact-match rows we did get.
       console.error("getCachedPriceBook (miscategorized) error:", miscategorized.error.message);
       return exactMatch.data ?? [];
     }
@@ -171,11 +171,11 @@ export const getCachedBoardColumns = unstable_cache(
     return getOrSeedBoardColumns(supabase, profileId);
   },
   ["board-columns"],
-  { revalidate: 60 } // 1 minute — columns change more often
+  { revalidate: 60 } // 1 minute - columns change more often
 );
 
 /* ------------------------------------------------------------------ */
-/*  Profile (lightweight — just the fields we need)                    */
+/*  Profile (lightweight - just the fields we need)                    */
 /* ------------------------------------------------------------------ */
 export const getCachedProfile = unstable_cache(
   async (businessId: string) => {

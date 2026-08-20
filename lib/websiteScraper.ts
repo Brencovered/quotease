@@ -14,10 +14,10 @@ export function getRandomUserAgent(): string {
 }
 
 // Every text-extraction function below strips tags but never decoded HTML
-// entities -- "Design &amp; Planning" was showing up verbatim as literal
+// entities - "Design &amp; Planning" was showing up verbatim as literal
 // text instead of "Design & Planning". Covers the handful of entities that
 // actually show up in real page copy (not attempting a full HTML entity
-// table -- ampersand, quotes, and numeric entities cover the practical
+// table - ampersand, quotes, and numeric entities cover the practical
 // cases).
 export function decodeHtmlEntities(text: string): string {
   return text
@@ -128,7 +128,7 @@ export function extractPhotos(html: string, baseUrl: string): string[] {
 }
 
 /**
- * Filter photos -- remove likely logo/icon images and dedupe against the logo URL.
+ * Filter photos - remove likely logo/icon images and dedupe against the logo URL.
  */
 export function filterPhotos(photos: string[], logoUrl: string | null): string[] {
   return photos.filter(url => {
@@ -155,7 +155,7 @@ export function filterPhotos(photos: string[], logoUrl: string | null): string[]
  * classes, and <title>, from raw HTML before any content-extraction regex
  * runs. Needed because a container-matching regex (e.g. "find a div whose
  * class contains 'about'") can't tell how big that container actually is
- * -- on a lot of modern sites the whole page (title, breadcrumb, full nav
+ * - on a lot of modern sites the whole page (title, breadcrumb, full nav
  * menu, then the real content) ends up nested inside one wrapper div/main
  * whose id or class happens to contain "about", so the match swallows all
  * of it. Stripping chrome first means even a too-greedy container match
@@ -363,7 +363,7 @@ export async function scrapeSubPages(
   if (aboutHref) {
     const aboutHtml = await fetchSubPage(aboutHref[1]);
     if (aboutHtml) {
-      // Try the same targeted extraction used on the homepage first --
+      // Try the same targeted extraction used on the homepage first -
       // it looks for an actual about/story container or heading+paragraph,
       // rather than just grabbing whatever text happens to come first on
       // the page. On a lot of modern sites that's the full mega-menu
@@ -376,7 +376,7 @@ export async function scrapeSubPages(
       } else {
         // Fallback: stripChrome already removed script/style/nav/header/
         // footer/title/menu chrome above (via extractAbout's own call to
-        // it) -- redo that here since this path works from the raw
+        // it) - redo that here since this path works from the raw
         // aboutHtml directly, then prefer content inside <main> if present,
         // and only then fall back to the whole (already-stripped) body.
         let stripped = stripChrome(aboutHtml);
@@ -395,7 +395,7 @@ export async function scrapeSubPages(
   if (serviceHref && serviceHref[1] !== aboutHref?.[1]) {
     const servHtml = await fetchSubPage(serviceHref[1]);
     if (servHtml) {
-      // Extract service list items from the services page -- strip chrome
+      // Extract service list items from the services page - strip chrome
       // first, otherwise this happily scoops up every <li> in the nav menu
       // too (which is exactly how a services page's real content ends up
       // as a list of nav labels like "Design & Planning", "Careers").

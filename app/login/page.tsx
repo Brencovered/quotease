@@ -519,7 +519,7 @@ export default function LoginPage() {
     <Suspense
       fallback={
         /* Server-rendered while the client form hydrates. Without this the
-           initial HTML was completely empty (fallback={null}) -- crawlers
+           initial HTML was completely empty (fallback={null}) - crawlers
            saw no h1 and no content at all. */
         <div className="min-h-screen flex items-center justify-center px-4">
           <div className="text-center">

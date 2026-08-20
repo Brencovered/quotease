@@ -106,7 +106,7 @@ export function calcCarpenterQuote(
   const labourCost   = totalHours * hourlyRate;
   const calloutFee   = intake.callout ? (costs.callout ?? 0) : 0;
 
-  // Fixings allowance -- genuinely needed whenever there's real carpentry
+  // Fixings allowance - genuinely needed whenever there's real carpentry
   // work being quoted (every job uses some screws/nails/brackets), but was
   // previously added completely unconditionally, so a brand new, entirely
   // blank quote (every quantity still at 0) already showed a non-zero

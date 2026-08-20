@@ -3,7 +3,7 @@
  * ----------------------
  * Owner or admin only. Creates a team_members row (status "invited"),
  * provisions an Auth user for the invitee (no password yet), and emails
- * a link to set their password and join the company — not /signup.
+ * a link to set their password and join the company - not /signup.
  *
  * Body: { email: string, name?: string, role?: "admin" | "manager" | "site_member", accessScope?: "all" | "assigned_only" }
  */
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
       .eq("status", "invited");
   } catch (err) {
     console.error("[team/invite] ensureInviteAuthUser failed:", err);
-    // Invite row still exists — accept page can provision on complete-invite.
+    // Invite row still exists - accept page can provision on complete-invite.
   }
 
   const appUrl = teamInviteAcceptBaseUrl(request);

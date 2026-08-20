@@ -25,6 +25,8 @@ import JobTabs from "@/components/JobTabs";
 import JobFieldStrip from "@/components/JobFieldStrip";
 import { humanizeIntake, summarizeConditions } from "@/lib/scopeOfWorks";
 import { getCachedPriceBook, getCachedLegacyMaterials } from "@/lib/cache";
+import LeadOriginBadge from "@/components/LeadOriginBadge";
+import type { LeadPriority, LeadPipelineStatus } from "@/lib/directoryLeads";
 
 const STATUS_LABELS: Record<string, string> = {
   scheduled: "Scheduled",
@@ -130,11 +132,32 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     : null;
   const whoLabel = assignedMember ? (assignedMember.name || assignedMember.email) : null;
 
+  type LeadRow = {
+    lead_code: string | null;
+    priority: LeadPriority | null;
+    pipeline_status: LeadPipelineStatus;
+    budget: string | null;
+    customer_type: string | null;
+  };
+  let lead: LeadRow | null = null;
+  const enquiryId =
+    (job.directory_enquiry_id as string | null | undefined) ??
+    (quote?.directory_enquiry_id as string | null | undefined) ??
+    null;
+  if (enquiryId) {
+    const { data } = await supabase
+      .from("directory_enquiries")
+      .select("lead_code, priority, pipeline_status, budget, customer_type")
+      .eq("id", enquiryId)
+      .maybeSingle();
+    lead = (data as LeadRow | null) ?? null;
+  }
+
   return (
     <>
       <AppHeader />
       <main className="page-wrap-narrow pb-28">
-        {/* One job identity strip — not duplicated status banners + finance card */}
+        {/* One job identity strip - not duplicated status banners + finance card */}
         <div className="mb-4">
           <p className="text-[12px] text-[var(--ink-faint)] mb-1">
             <Link href="/jobs" className="hover:underline">Jobs</Link>
@@ -164,10 +187,30 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           </div>
         </div>
 
+        {lead && canManageMoney && (
+          <div className="mb-4">
+            <LeadOriginBadge
+              leadCode={lead.lead_code}
+              priority={lead.priority}
+              pipelineStatus={lead.pipeline_status}
+              budget={lead.budget}
+              customerType={lead.customer_type}
+            />
+          </div>
+        )}
+
         <JobTabs
           hiddenTabs={canManageMoney ? [] : ["money"]}
           run={
             <>
+              {lead && !canManageMoney && (
+                <LeadOriginBadge
+                  leadCode={lead.lead_code}
+                  priority={lead.priority}
+                  pipelineStatus={lead.pipeline_status}
+                  compact
+                />
+              )}
               {canManageMoney && stepperColumns.length > 0 && (
                 <JobProgressStepper jobId={job.id} status={job.status} columns={stepperColumns} />
               )}
@@ -272,7 +315,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                 />
               ) : (
                 <p className="text-[13px] text-[var(--ink-faint)]">
-                  Plan markup needs a linked quote — this job was created without one.
+                  Plan markup needs a linked quote - this job was created without one.
                 </p>
               )}
               <SiteAnnotationReport annotations={resolvedAnnotations} />

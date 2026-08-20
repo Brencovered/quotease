@@ -36,7 +36,7 @@ export default async function ReportsPage() {
 
       stats = computeReportStats(jobs ?? [], payments ?? [], teamRows ?? [], timesheetRows ?? []);
 
-      // Day 7 onboarding milestone -- fire-and-forget, never block the page.
+      // Day 7 onboarding milestone - fire-and-forget, never block the page.
       markOnboardingMilestone(supabase, businessId, "report_viewed_at").catch(() => {});
     }
   } catch (err) {

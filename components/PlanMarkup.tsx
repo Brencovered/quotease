@@ -447,7 +447,7 @@ export default function PlanMarkup({
             draggable={false}
           />
 
-          {/* SVG overlay -- exactly the same size as the img */}
+          {/* SVG overlay - exactly the same size as the img */}
           <svg className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-visible">
             {/* Calibration */}
             {calibration&&(()=>{const p1=toD(calibration.p1),p2=toD(calibration.p2);return<g><line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#a855f7" strokeWidth="2" strokeDasharray="5 3"/><circle cx={p1.x} cy={p1.y} r="4" fill="#a855f7"/><circle cx={p2.x} cy={p2.y} r="4" fill="#a855f7"/></g>;})()}
@@ -554,7 +554,7 @@ export default function PlanMarkup({
                     const mat = materials.find(m => m.item_key === e.target.value);
                     if (mat) updateShape(openShape.id, { material_key: mat.item_key, material_label: mat.label, unit_cost: mat.unit_cost });
                   }}>
-                  <option value="">-- or pick from your quote materials --</option>
+                  <option value="">Or pick from your quote materials</option>
                   {materials.map(m => <option key={m.item_key} value={m.item_key}>{m.label} (${m.unit_cost}/{openShape.unit})</option>)}
                 </select>
               )}

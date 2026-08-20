@@ -3,15 +3,15 @@
  * --------------------
  * Account deletion is a 30-day soft-delete, not an instant wipe:
  *
- *   softDeleteAccount  -- cancels billing immediately, marks the account
+ *   softDeleteAccount  - cancels billing immediately, marks the account
  *                          deleted_at = now(), signs them out. The account
  *                          and everything in it (quotes, clients, price
  *                          book) still exists, untouched, in the database.
- *   restoreAccount     -- clears deleted_at. Available any time before the
+ *   restoreAccount     - clears deleted_at. Available any time before the
  *                          purge job runs (i.e. within the 30-day window).
- *                          Does NOT restore a canceled subscription -- the
+ *                          Does NOT restore a canceled subscription - the
  *                          tradie needs to resubscribe if it lapsed.
- *   purgeAccount       -- the real, irreversible deletion. Only ever
+ *   purgeAccount       - the real, irreversible deletion. Only ever
  *                          called by the daily cron job (30+ days after
  *                          deleted_at) or an explicit admin "delete now"
  *                          override. Cascades to quotes, clients, price
@@ -44,7 +44,7 @@ async function cancelStripeSubscriptions(profileId: string) {
     try {
       await stripe.subscriptions.cancel(subId);
     } catch {
-      // Already canceled/doesn't exist on Stripe's side -- fine, keep going.
+      // Already canceled/doesn't exist on Stripe's side - fine, keep going.
     }
   }
 }
@@ -83,7 +83,7 @@ export async function purgeAccount(profileId: string): Promise<{ error?: string 
   // pointing at a deleted user.
   await admin.from("team_members").delete().eq("member_user_id", profileId);
 
-  // Deletes the profile row -- cascades to quotes, clients, price book
+  // Deletes the profile row - cascades to quotes, clients, price book
   // items, job attachments, team_members (as owner), etc.
   const { error: profileError } = await admin.from("profiles").delete().eq("id", profileId);
   if (profileError) return { error: profileError.message };

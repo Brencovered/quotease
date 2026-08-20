@@ -9,13 +9,13 @@
  *
  * Selecting a package fetches its line items and hands them to the caller
  * via onSelect, which merges them straight into the wizard's in-memory
- * scope list (setSiteItems) -- the same "package" source channel that
+ * scope list (setSiteItems) - the same "package" source channel that
  * ScopeItem already had a slot for. This deliberately does NOT navigate or
  * reload the page (an earlier version did, via ?package_id=<id>, which
  * wiped every other field in the wizard the moment it ran). Because
  * nothing here touches the URL or remounts anything, it's safe to render
  * on the Quote capture step, mid-workflow, where a package is actually
- * useful -- not just at the very start before anything's been entered.
+ * useful - not just at the very start before anything's been entered.
  */
 
 import { useEffect, useState } from "react";
@@ -148,7 +148,7 @@ export default function PackagePicker({ trade, onSelect }: { trade: string; onSe
               {loading && <p className="text-[12.5px] text-[var(--ink-faint)] text-center py-6">Loading...</p>}
               {!loading && packages.length === 0 && (
                 <p className="text-[12.5px] text-[var(--ink-faint)] text-center py-6">
-                  No saved packages for this trade yet — you can create one under Materials &gt; Packages.
+                  No saved packages for this trade yet - you can create one under Materials &gt; Packages.
                 </p>
               )}
               {packages.map((pkg) => (

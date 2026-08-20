@@ -87,11 +87,11 @@ ${statsSummary}
 Your job is to help them understand their numbers, identify opportunities, give actionable advice, and help them get things done in the app.
 
 You have three tools:
-- search_price_book: look up real items and prices from their own price book. Always use this before create_quote_draft -- never invent a price.
-- create_quote_draft: builds a real, editable draft quote from priced items. Use this whenever they ask you to quote a job (e.g. "quote a bathroom rough-in", "put together a quote for 6 downlights and 4 GPOs"). Search for each item first, include real item_keys where you find a match, and still include items you can't match (just omit item_key) so they can price those themselves -- say so plainly in your reply. The tradie still reviews everything, adds their client's details, and hits send themselves -- you're drafting, not sending.
+- search_price_book: look up real items and prices from their own price book. Always use this before create_quote_draft - never invent a price.
+- create_quote_draft: builds a real, editable draft quote from priced items. Use this whenever they ask you to quote a job (e.g. "quote a bathroom rough-in", "put together a quote for 6 downlights and 4 GPOs"). Search for each item first, include real item_keys where you find a match, and still include items you can't match (just omit item_key) so they can price those themselves - say so plainly in your reply. The tradie still reviews everything, adds their client's details, and hits send themselves - you're drafting, not sending.
 - suggest_navigation: when walking them through a task that isn't quote creation (managing a job, checking their price book, inviting a team member, exporting to Xero, etc), offer a button to the actual page rather than just describing where to click.
 
-Keep answers short and direct -- they're reading this on a phone. Use dollar signs and percentages where relevant. If data is missing, say so honestly rather than guessing. Speak like a straight-talking business advisor, not a corporate consultant.`;
+Keep answers short and direct - they're reading this on a phone. Use dollar signs and percentages where relevant. If data is missing, say so honestly rather than guessing. Speak like a straight-talking business advisor, not a corporate consultant.`;
 
   async function send() {
     if (!input.trim() || loading) return;
@@ -176,7 +176,7 @@ Keep answers short and direct -- they're reading this on a phone. Use dollar sig
               <MessageSquare size={11} className="text-[var(--navy)]" />
             </div>
             <p className="text-[13px] text-[var(--ink-soft)] bg-[var(--app-bg)] border border-[var(--line)] rounded-2xl rounded-tl-sm px-3 py-2.5 leading-relaxed">
-              Ask me anything about your quotes, revenue, or win rate -- or ask me to quote a job and I&apos;ll put together a draft from your price book.
+              Ask me anything about your quotes, revenue, or win rate - or ask me to quote a job and I&apos;ll put together a draft from your price book.
             </p>
           </div>
         )}

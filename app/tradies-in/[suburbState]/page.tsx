@@ -37,15 +37,15 @@ import { parseSuburbSlug, suburbLandingCanonical, getTradeDisplay, tradeToSlug }
 import MarketingNav from "@/components/MarketingNav";
 import { buildDirectorySlug } from "@/lib/seo/meta";
 
-export const revalidate = 604800; // 1 week -- same cadence as the trade+suburb pages
+export const revalidate = 604800; // 1 week - same cadence as the trade+suburb pages
 
 export async function generateStaticParams() {
   try {
     const admin = createAdminClient();
-    // Paginate explicitly -- PostgREST silently caps an unpaginated
+    // Paginate explicitly - PostgREST silently caps an unpaginated
     // select at 1,000 rows, and trade_suburb_pages now has 2,900+ rows
     // (same class of bug already fixed elsewhere in this file's sibling
-    // routes -- applying it here too rather than repeat it a third time).
+    // routes - applying it here too rather than repeat it a third time).
     const PAGE_SIZE = 1000;
     const rows: { suburb_slug: string; state: string; listing_count: number | null }[] = [];
     for (let from = 0; ; from += PAGE_SIZE) {
@@ -109,11 +109,11 @@ async function loadSuburbContent(suburbSlug: string, state: string) {
   console.error(`[tradies-in] DIAG: query for suburbSlug="${suburbSlug}" state="${state}" -> error=${tradesErr ? tradesErr.message : "null"}, rowCount=${trades ? trades.length : "null"}`);
 
   // A genuine query failure (timeout, transient network blip, connection
-  // pressure -- more likely now that this route is force-dynamic and every
+  // pressure - more likely now that this route is force-dynamic and every
   // request hits the database fresh) must NOT be treated the same as "this
   // suburb genuinely has no data". Confirmed exactly this symptom: the
   // identical URL flip-flopped between 200 and 404 within seconds on the
-  // same deployment -- that's a transient query failure being silently
+  // same deployment - that's a transient query failure being silently
   // read as "not found", not a real content gap. Throwing here lets
   // Next.js's error boundary handle it (and Vercel retry/log it properly)
   // instead of permanently telling users and Google the page doesn't exist.
@@ -141,7 +141,7 @@ async function loadSuburbContent(suburbSlug: string, state: string) {
     .limit(6);
 
   if (listingsErr) {
-    // Non-fatal -- the page is still meaningful without the "top rated"
+    // Non-fatal - the page is still meaningful without the "top rated"
     // section, so degrade gracefully here rather than fail the whole page.
     console.error(`[tradies-in] directory_listing top-listings query failed for ${suburb}:`, listingsErr.message);
   }

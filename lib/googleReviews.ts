@@ -9,7 +9,7 @@
  *
  * Reviews are "Atmosphere Data" under Google's Places API pricing (unlike
  * the Basic/Contact Data already scraped for rating/phone/photos), by far
- * the most expensive tier -- kept in check with Next's fetch cache rather
+ * the most expensive tier - kept in check with Next's fetch cache rather
  * than calling on every page view. 3-month revalidate window: reviews
  * don't change fast enough to justify a fresh paid call every week.
  */
@@ -28,7 +28,7 @@ export interface GoogleReview {
 /**
  * Returns up to 5 of Google's "most relevant" reviews for a place, or an
  * empty array if the key isn't configured, the place has none, or the
- * request fails for any reason -- this is supplementary content, so it
+ * request fails for any reason - this is supplementary content, so it
  * should never be the thing that breaks a listing page.
  */
 export async function getPlaceReviews(placeId: string): Promise<GoogleReview[]> {
@@ -42,7 +42,7 @@ export async function getPlaceReviews(placeId: string): Promise<GoogleReview[]> 
   try {
     const res = await fetch(url, {
       signal: controller.signal,
-      next: { revalidate: 7776000 }, // ~3 months -- reviews don't change fast enough to justify weekly Atmosphere-tier calls
+      next: { revalidate: 7776000 }, // ~3 months - reviews don't change fast enough to justify weekly Atmosphere-tier calls
     });
     clearTimeout(timeout);
 
@@ -53,7 +53,7 @@ export async function getPlaceReviews(placeId: string): Promise<GoogleReview[]> 
 
     const data = await res.json();
     // Google's Places API returns HTTP 200 even for key/quota/billing
-    // problems -- the actual outcome is in the JSON body's status field
+    // problems - the actual outcome is in the JSON body's status field
     // (OK, ZERO_RESULTS, OVER_QUERY_LIMIT, REQUEST_DENIED, INVALID_REQUEST,
     // UNKNOWN_ERROR). Log anything other than OK/ZERO_RESULTS so a
     // sitewide failure (e.g. quota exhausted) is actually visible instead

@@ -5,32 +5,32 @@
  * (components/DashboardChatAssistant.tsx). This is separate from the
  * generic /api/ai/chat passthrough (still used for plain Q&A and the
  * materials Package Assistant) because this one runs a real agentic tool
- * loop with server-side DB access -- it's not just a text-in/text-out
+ * loop with server-side DB access - it's not just a text-in/text-out
  * proxy to the Anthropic API.
  *
  * Three tools, all resolved server-side so the model never has to invent
  * numbers or guess at what exists in the account:
  *
- *   search_price_book   -- looks up the tradie's own material_items by
+ *   search_price_book   - looks up the tradie's own material_items by
  *                           keyword. The model should call this before
  *                           creating a quote draft so item prices are
  *                           real, not guessed.
- *   create_quote_draft  -- creates a real "packages" + "package_items"
+ *   create_quote_draft  - creates a real "packages" + "package_items"
  *                           row (the same mechanism the Packages feature
  *                           already uses) from a list of items. Price is
  *                           always resolved server-side from
  *                           material_items by item_key; if an item_key
  *                           doesn't match anything on file, its cost is
  *                           left at 0 and flagged in the label as
- *                           "(EST -- add price)" rather than trusting
+ *                           "(EST - add price)" rather than trusting
  *                           whatever number the model produced. Returns a
  *                           URL the client renders as a button that opens
  *                           the quote builder pre-loaded with these items
  *                           (?package_id=...), landing the tradie exactly
- *                           where the Packages feature already does --
+ *                           where the Packages feature already does -
  *                           they still add the client, review pricing,
  *                           and hit send themselves.
- *   suggest_navigation  -- for walking someone through a task that isn't
+ *   suggest_navigation  - for walking someone through a task that isn't
  *                          "build a quote" (managing a job, checking the
  *                          price book, inviting a team member, etc). Path
  *                          is checked against an allowlist so the model
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
 
   const businessId = await getActiveBusinessId(supabase, userData.user.id);
 
-  // Day 6 onboarding milestone -- no other clean signal that someone has
+  // Day 6 onboarding milestone - no other clean signal that someone has
   // actually used the assistant, so record it here. Fire-and-forget: never
   // let this block or fail the real chat response.
   markOnboardingMilestone(supabase, businessId, "ai_assistant_used_at").catch(() => {});
@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
     }),
     create_quote_draft: tool({
       description:
-        "Creates a draft quote (as a reusable package of priced items) that the tradie can open, edit, add their client's details to, and send. Only call this once you know real item_keys and prices from search_price_book for as many items as possible -- for anything you can't match, still include it with item_key omitted so the tradie can price it themselves, and say so in your reply.",
+        "Creates a draft quote (as a reusable package of priced items) that the tradie can open, edit, add their client's details to, and send. Only call this once you know real item_keys and prices from search_price_book for as many items as possible - for anything you can't match, still include it with item_key omitted so the tradie can price it themselves, and say so in your reply.",
       inputSchema: z.object({
         trade: z.string().describe("The trade this quote is for, e.g. electrician, plumber, carpenter, roofer"),
         title: z.string().describe("Short description of the job, e.g. 'Bathroom reno rough-in'"),
@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
           item_key: z.string().optional().describe("Exact item_key from a search_price_book result. Omit if no real match exists."),
           label: z.string().describe("Item description"),
           quantity: z.number(),
-          unit: z.string().optional().describe("each, m, m2, hr, etc -- default 'ea'"),
+          unit: z.string().optional().describe("each, m, m2, hr, etc - default 'ea'"),
           labour_hours: z.number().optional().describe("Estimated total install time for this line, in hours"),
         })),
       }),
@@ -148,11 +148,11 @@ export async function POST(req: NextRequest) {
         const title = rawTitle.slice(0, 120);
 
         if (rawItems.length === 0) {
-          return { error: "No items provided -- nothing to create." };
+          return { error: "No items provided - nothing to create." };
         }
 
         // Resolve real prices server-side. Never trust a price the model
-        // might have included -- only item_key -> material_items lookups.
+        // might have included - only item_key -> material_items lookups.
         const keys = rawItems.map((i) => i.item_key ?? "").filter(Boolean);
         const priceMap = new Map<string, number>();
         if (keys.length > 0) {
@@ -178,7 +178,7 @@ export async function POST(req: NextRequest) {
           totalHours += hours;
           estimatedTotal += qty * unitCost;
           return {
-            label: priced ? raw.label : `${raw.label} (EST -- add price)`,
+            label: priced ? raw.label : `${raw.label} (EST - add price)`,
             qty,
             unit: (raw.unit ?? "ea").slice(0, 20),
             unit_cost: unitCost,

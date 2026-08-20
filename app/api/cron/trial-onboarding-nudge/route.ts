@@ -3,14 +3,14 @@
  * -------------------------------------
  * Daily automation (see vercel.json for schedule). Sends each trialing
  * business a "today's focus" email matching their current trial day
- * (days 2-7 -- day 1 happens live in the signup/onboarding wizard, so no
+ * (days 2-7 - day 1 happens live in the signup/onboarding wizard, so no
  * email is needed for it).
  *
  * Skips a business if:
  *   - their trial has already ended or they've converted to paid
  *   - they dismissed the in-app checklist widget (treat that as "stop
  *     nagging me" for email too)
- *   - they're an invited team member rather than the business owner --
+ *   - they're an invited team member rather than the business owner -
  *     team members get their own stub profile + trial_ends_at from the
  *     signup trigger, but the checklist (upload pricing, invite your
  *     team...) is owner-oriented and would be confusing to send them
@@ -31,7 +31,7 @@ import { buildTrialNudgeEmail } from "@/lib/email/templates";
 function isAuthorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
-    console.error("[trial-onboarding-nudge] CRON_SECRET is not set -- rejecting all requests, including Vercel's own cron trigger.");
+    console.error("[trial-onboarding-nudge] CRON_SECRET is not set - rejecting all requests, including Vercel's own cron trigger.");
     return false;
   }
   return request.headers.get("authorization") === `Bearer ${secret}`;
@@ -64,7 +64,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ sent: 0, skipped: 0 });
   }
 
-  // Exclude invited team members -- their own stub profile has a trial too,
+  // Exclude invited team members - their own stub profile has a trial too,
   // but the owner-oriented checklist doesn't apply to them.
   const { data: memberRows } = await admin
     .from("team_members")

@@ -13,7 +13,7 @@
  * single bad record doesn't block the rest of the batch.
  *
  * AUTH: protected by CRON_SECRET, same pattern as the other cron routes
- * (see /api/cron/refresh-seo) -- Vercel Cron sends
+ * (see /api/cron/refresh-seo) - Vercel Cron sends
  * `Authorization: Bearer ${CRON_SECRET}` automatically once that env var
  * is set in the Vercel project and referenced in vercel.json.
  */
@@ -27,7 +27,7 @@ const GRACE_PERIOD_DAYS = 30;
 function isAuthorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
-    console.error("[purge-deleted-accounts] CRON_SECRET is not set -- rejecting all requests, including Vercel's own cron trigger.");
+    console.error("[purge-deleted-accounts] CRON_SECRET is not set - rejecting all requests, including Vercel's own cron trigger.");
     return false;
   }
   return request.headers.get("authorization") === `Bearer ${secret}`;

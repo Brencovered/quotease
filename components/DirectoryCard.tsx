@@ -84,10 +84,10 @@ function PhotoSlider({ refs, name, trade, onFirstLoad, onFirstError, visible = t
   onFirstLoad?: () => void; onFirstError?: () => void; visible?: boolean;
 }) {
   const [idx, setIdx] = useState(0);
-  // Only show cached photos (real URLs) -- never proxy to Google
+  // Only show cached photos (real URLs) - never proxy to Google
   const photos = refs.filter(r => r.startsWith("http")).slice(0, 3);
 
-  // No cached photos -- show branded placeholder
+  // No cached photos - show branded placeholder
   if (photos.length === 0) {
     return <SwiftscopeCover trade={trade} onLoad={onFirstLoad} />;
   }
@@ -311,7 +311,7 @@ export default function DirectoryCard({ listing, index = 0 }: { listing: Listing
             <p className="text-[12.5px] text-gray-600 leading-relaxed mb-3 line-clamp-2 flex-1">{listing.blurb}</p>
           )}
 
-          {/* Services offered -- compact, so a service-based search match is
+          {/* Services offered - compact, so a service-based search match is
               visible on the card itself, not just findable */}
           {listing.services_offered && listing.services_offered.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-3">

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import AccountDeletedPanel from "@/components/AccountDeletedPanel";
 import { getTeamContext } from "@/lib/team";
 
-// Always fetch fresh -- deleted_at can change (restore) between visits.
+// Always fetch fresh - deleted_at can change (restore) between visits.
 export const dynamic = "force-dynamic";
 
 const GRACE_PERIOD_DAYS = 30;
@@ -26,7 +26,7 @@ export default async function AccountDeletedPage() {
     .eq("id", ctx.businessId)
     .single();
 
-  // Not actually deleted (e.g. already restored in another tab) -- nothing
+  // Not actually deleted (e.g. already restored in another tab) - nothing
   // for this page to do, send them back into the app.
   if (!profile?.deleted_at) redirect("/quote");
 

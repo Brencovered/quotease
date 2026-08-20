@@ -13,12 +13,12 @@ function currentMonthStart(): string {
  * GET: returns the current month's self-set target (if any) plus progress,
  * for the owner's claimed listing only. Progress is currently counted from
  * directory_enquiries (the existing quote-request capture table) since
- * quote submissions aren't yet wired into the real quotes table -- update
+ * quote submissions aren't yet wired into the real quotes table - update
  * this count source once that wiring lands.
  *
  * Uses the admin client for the actual reads/writes (session client is only
  * for auth.getUser() + getActiveBusinessId, which correctly resolves team
- * members to their owner's business id) -- directory_goals' own RLS policy
+ * members to their owner's business id) - directory_goals' own RLS policy
  * checks profile_id = auth.uid() directly and would otherwise block a team
  * member acting on the owner's behalf.
  */
@@ -67,7 +67,7 @@ export async function GET() {
 
 /**
  * POST: sets (or updates) the current month's self-set target. Private to
- * the tradie -- there is no public score, leaderboard, or ranking built on
+ * the tradie - there is no public score, leaderboard, or ranking built on
  * top of this.
  */
 export async function POST(req: NextRequest) {

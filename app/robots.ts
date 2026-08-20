@@ -9,7 +9,7 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: "*",
         allow: "/",
         disallow: [
-          // Internal app pages -- not public content. Previously one
+          // Internal app pages - not public content. Previously one
           // shared "/electrician/" prefix; now trade-neutral top-level
           // paths with nothing in common to prefix-match on.
           "/dashboard/",
@@ -38,7 +38,7 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
       // Ahrefs and Semrush do not send traffic to this site or influence
-      // its Google/Bing rankings -- they crawl to build data products they
+      // its Google/Bing rankings - they crawl to build data products they
       // sell to their own customers. 72 AhrefsBot hits in 24h vs 158
       // Googlebot + 170 GoogleOther, so this is not currently a load
       // problem, but there is no reason to give them the same unthrottled

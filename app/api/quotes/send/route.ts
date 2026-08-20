@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ok: true,
       quoteUrl,
-      warning: "Quote saved but email was not sent — RESEND_API_KEY is not configured. Add it to your environment variables to enable email delivery.",
+      warning: "Quote saved but email was not sent - RESEND_API_KEY is not configured. Add it to your environment variables to enable email delivery.",
     });
   }
 

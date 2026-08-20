@@ -55,7 +55,7 @@ export default function AccountDeletedPanel({
         </div>
 
         <p className="text-[14px] text-[var(--ink-soft)] mb-1">
-          This account will be permanently deleted -- quotes, clients, price book, everything -- on{" "}
+          This account will be permanently deleted - quotes, clients, price book, everything - on{" "}
           <strong>{fmtDate(purgeDateIso)}</strong>.
         </p>
         {canRestore ? (
@@ -64,7 +64,7 @@ export default function AccountDeletedPanel({
           </p>
         ) : (
           <p className="text-[13px] text-[var(--ink-faint)] mb-5">
-            Until then, nothing has been removed. Only the account owner or an admin can restore it -- get in touch with them if you need this account back.
+            Until then, nothing has been removed. Only the account owner or an admin can restore it - get in touch with them if you need this account back.
           </p>
         )}
 

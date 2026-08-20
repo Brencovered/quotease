@@ -7,7 +7,7 @@ const STATUSES = ["idea", "scoped", "roadmap", "in_progress", "in_branch", "live
 const CATEGORIES = ["feature", "bug", "infra"] as const;
 
 // roadmap_items has RLS enabled with no policies (admin-only, service-role-only
-// table — see migration). The session client below is used purely to identify
+// table - see migration). The session client below is used purely to identify
 // the caller via isAdminEmail(); all actual reads/writes use the admin client.
 async function requireAdmin() {
   const supabase = await createClient();
@@ -19,7 +19,7 @@ async function requireAdmin() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  POST – create a new roadmap item                                   */
+/*  POST - create a new roadmap item                                   */
 /* ------------------------------------------------------------------ */
 export async function POST(request: Request) {
   const auth = await requireAdmin();
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  PUT – update an existing roadmap item                              */
+/*  PUT - update an existing roadmap item                              */
 /* ------------------------------------------------------------------ */
 export async function PUT(request: Request) {
   const auth = await requireAdmin();
@@ -116,7 +116,7 @@ export async function PUT(request: Request) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  DELETE – delete a roadmap item                                     */
+/*  DELETE - delete a roadmap item                                     */
 /* ------------------------------------------------------------------ */
 export async function DELETE(request: Request) {
   const auth = await requireAdmin();

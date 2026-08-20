@@ -28,13 +28,13 @@ export async function POST(req: NextRequest) {
       await resend.emails.send({
         from,
         to: notifyTo,
-        subject: `Tool lead: ${tool} — ${businessName || email}`,
+        subject: `Tool lead: ${tool} - ${businessName || email}`,
         html: `
           <h2>Free tool capture</h2>
           <p><strong>Tool:</strong> ${escapeHtml(tool)}</p>
           <p><strong>Email:</strong> ${escapeHtml(email)}</p>
-          <p><strong>Business:</strong> ${escapeHtml(businessName || "—")}</p>
-          <p><strong>Phone:</strong> ${escapeHtml(phone || "—")}</p>
+          <p><strong>Business:</strong> ${escapeHtml(businessName || "-")}</p>
+          <p><strong>Phone:</strong> ${escapeHtml(phone || "-")}</p>
         `,
       });
     } catch {

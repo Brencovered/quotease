@@ -12,7 +12,7 @@ import { getPeripheralsForBusiness, type SiteConditionTemplateRow } from "@/lib/
 import Link from "next/link";
 import { BookOpen, Users } from "lucide-react";
 
-// Always fetch fresh -- Xero OAuth redirect must see updated connection state
+// Always fetch fresh - Xero OAuth redirect must see updated connection state
 export const dynamic = "force-dynamic";
 
 export default function SettingsPage() {

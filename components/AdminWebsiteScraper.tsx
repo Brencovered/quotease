@@ -212,7 +212,7 @@ export default function AdminWebsiteScraper() {
       <div className="bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3">
         <p className="font-bold text-[13px] text-blue-900 mb-1">How this works</p>
         <div className="text-[12.5px] text-blue-700 space-y-1">
-          <p><strong>Photos:</strong> Pulls og:image, Twitter card image, hero section images, and JSON-LD image data. Stores to Supabase Storage -- no Google API calls.</p>
+          <p><strong>Photos:</strong> Pulls og:image, Twitter card image, hero section images, and JSON-LD image data. Stores to Supabase Storage - no Google API calls.</p>
           <p><strong>Logo:</strong> Looks for img[alt*=logo], apple-touch-icon, then favicon. Better than Google&apos;s photo_references for brand marks.</p>
           <p><strong>Blurb:</strong> Uses meta description or og:description. Shows on the directory listing card.</p>
           <p><strong>Rate:</strong> 30 listings per batch, 8 second timeout per site, skips non-200 responses.</p>

@@ -4,7 +4,7 @@
  * Daily automation (see vercel.json for schedule). The recurring-jobs
  * schema (is_recurring_template, recurrence_rule, next_occurrence_date,
  * parent_job_id) has existed for a while, but until this route nothing
- * ever advanced a template automatically -- generateNextOccurrence()
+ * ever advanced a template automatically - generateNextOccurrence()
  * in lib/jobs.ts was only reachable via a manual "generate next" button
  * in QuickJobsPanel. A tradie who set up a recurring job and didn't
  * remember to click that button simply never got the follow-up job.
@@ -12,11 +12,11 @@
  * This finds every recurring template whose next_occurrence_date has
  * arrived (or passed) and spawns occurrences for it, looping per
  * template in case the cron missed one or more prior days (e.g. an
- * outage) so occurrences aren't silently skipped -- capped so a bad
+ * outage) so occurrences aren't silently skipped - capped so a bad
  * or ancient row can't spin forever.
  *
  * AUTH: protected by CRON_SECRET, same pattern as the other cron routes
- * (see /api/cron/purge-deleted-accounts) -- Vercel Cron sends
+ * (see /api/cron/purge-deleted-accounts) - Vercel Cron sends
  * `Authorization: Bearer ${CRON_SECRET}` automatically once that env var
  * is set in the Vercel project and referenced in vercel.json.
  */
@@ -30,7 +30,7 @@ const MAX_OCCURRENCES_PER_TEMPLATE = 24; // safety cap per run, not a product li
 function isAuthorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
-    console.error("[generate-recurring-jobs] CRON_SECRET is not set -- rejecting all requests, including Vercel's own cron trigger.");
+    console.error("[generate-recurring-jobs] CRON_SECRET is not set - rejecting all requests, including Vercel's own cron trigger.");
     return false;
   }
   return request.headers.get("authorization") === `Bearer ${secret}`;

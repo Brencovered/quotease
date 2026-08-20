@@ -50,7 +50,7 @@ const PUBLIC_PAGE_PATHS = [
   "/how-it-works",
   "/blog",
   "/q",
-  // Invitees set a password here before they have a session — must stay
+  // Invitees set a password here before they have a session - must stay
   // public. Also excluded from PROTECTED_PAGE_PREFIXES below because /team
   // itself is authenticated.
   "/team/accept",
@@ -152,7 +152,7 @@ function isAdminEmail(email: string | undefined): boolean {
 // OAuth and ended up with a fully populated profile (business_name
 // "plumber", trade, suburb, a 7-day trial) despite 103.78.46.30 being
 // blocked. Root cause: OAuth account creation happens on Supabase's own
-// infrastructure, and handle_new_user() -- a Postgres trigger -- fires
+// infrastructure, and handle_new_user() - a Postgres trigger - fires
 // synchronously on that insert and populates the profile directly from
 // signup metadata. None of that ever touches my application code, so the
 // checks in app/api/directory/claim and app/api/onboarding/welcome never
@@ -164,13 +164,13 @@ function isAdminEmail(email: string | undefined): boolean {
 // after the OAuth redirect passes through this middleware first, before
 // any session is established or any page renders. Checking here cannot
 // undo the auth.users row Supabase already created, but it can stop a
-// blocked IP from doing anything further with it -- no working session,
+// blocked IP from doing anything further with it - no working session,
 // no onboarding, no listing.
 //
 // Deliberately NOT a database round trip on every request. The comment
 // in lib/ipBlocklist.ts already explains why: that would add real
 // latency to every page view on the site for a list that currently holds
-// one row. Cached instead -- refetched at most once a minute, module
+// one row. Cached instead - refetched at most once a minute, module
 // scope, which Vercel's Edge runtime persists across invocations within
 // the same isolate. Worst case, a newly blocked IP takes up to 60s to
 // start being enforced here; the two route-level checks remain instant
@@ -197,7 +197,7 @@ async function getBlockedIps(): Promise<Set<string>> {
     return blockedIpCache.ips;
   } catch {
     // Fail open on the cached value if we have one, otherwise fail open
-    // entirely -- same reasoning as lib/ipBlocklist.ts: a lookup failure
+    // entirely - same reasoning as lib/ipBlocklist.ts: a lookup failure
     // blocking real traffic sitewide is worse than a known-bad IP getting
     // through occasionally. This is a targeted response to specific
     // abuse, never the primary defence.
@@ -230,7 +230,7 @@ const BOT_PATTERNS: { pattern: RegExp; label: string }[] = [
 
 /**
  * Fire-and-forget insert into public.traffic_log via the REST API
- * directly (plain fetch, no supabase-js client) -- this file runs on the
+ * directly (plain fetch, no supabase-js client) - this file runs on the
  * Edge runtime, and a full client import here is unnecessary weight for
  * one insert. Never awaited by the caller and never throws: a failure
  * here must never be able to affect the response middleware returns.
@@ -244,7 +244,7 @@ function logTraffic(request: NextRequest, pathname: string, event: NextFetchEven
     const userAgent = request.headers.get("user-agent");
     const bot = userAgent ? BOT_PATTERNS.find((b) => b.pattern.test(userAgent)) : undefined;
 
-    // Real client IP, left-most x-forwarded-for entry -- see lib/clientIp.ts
+    // Real client IP, left-most x-forwarded-for entry - see lib/clientIp.ts
     // for why the left-most (not last) entry is the one that is actually
     // the visitor rather than a Vercel edge hop.
     const forwardedFor = request.headers.get("x-forwarded-for");
@@ -275,7 +275,7 @@ function logTraffic(request: NextRequest, pathname: string, event: NextFetchEven
 
     // NextFetchEvent.waitUntil keeps this fetch alive past the point
     // middleware returns its response, which is required on the Edge
-    // runtime -- without it, the function can tear down and cancel the
+    // runtime - without it, the function can tear down and cancel the
     // in-flight insert before it completes, silently dropping the row.
     event.waitUntil(promise);
   } catch {
@@ -290,17 +290,17 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
   // -1. Traffic log, for the real-time admin activity view. Deliberately
   //     the very first thing in this function, before any redirect or
   //     auth branch, so every request middleware sees is captured
-  //     regardless of which path it takes afterward -- a 308 canonical
+  //     regardless of which path it takes afterward - a 308 canonical
   //     redirect, an admin 403, a normal page load, all logged the same.
   //
   //     Excludes /admin/* and /api/admin/* entirely. Two real bugs found
   //     by checking the actual numbers after a "why do I have so much
   //     traffic" question: the admin activity page itself polls
   //     /api/admin/activity every 4 seconds, and that self-polling was
-  //     counted as public site traffic -- 687 of a reported 2,698
+  //     counted as public site traffic - 687 of a reported 2,698
   //     "human" hits in 24h, from 4 IPs, was the dashboard watching
   //     itself. The rest of /admin/* (directory, tradies, outreach, seo,
-  //     scraper, roadmap, emails -- everywhere the actual admin was
+  //     scraper, roadmap, emails - everywhere the actual admin was
   //     browsing) added another ~130 hits from 3 IPs on top of that.
   //     Neither is a visitor. Excluding both at the source, not filtering
   //     them out at display time, since counting them at all was the bug.
@@ -316,7 +316,7 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
 
   // ------------------------------------------------------------------
   // -0.5. IP blocklist. After logging (a blocked attempt is itself worth
-  //       having in the activity feed) but before every other branch --
+  //       having in the activity feed) but before every other branch -
   //       host canonicalisation, auth, admin checks all come after this,
   //       so a blocked IP is refused before any of that logic runs, not
   //       just before the routes that used to be the only enforcement
@@ -340,10 +340,10 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
 
   // ------------------------------------------------------------------
   // 0. Canonicalise host: redirect every non-canonical production host
-  //    (Vercel's own aliases, plus www) to the real canonical domain --
+  //    (Vercel's own aliases, plus www) to the real canonical domain -
   //    PAGE requests only.
   // ------------------------------------------------------------------
-  // Canonical host is the bare apex (swiftscope.com.au), not www --
+  // Canonical host is the bare apex (swiftscope.com.au), not www -
   // matches every claim link, email template, and external reference
   // already in use elsewhere in this app. There's no SEO difference
   // between www/non-www once one is picked and enforced; what matters is
@@ -352,23 +352,23 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
   // https://swiftscope.com.au/sitemap.xml and
   // https://www.swiftscope.com.au/sitemap.xml were independently
   // submitted and successfully crawled (1,722 pages each) with no
-  // redirect between the two hosts -- Google was indexing the same
+  // redirect between the two hosts - Google was indexing the same
   // content under two separate hostnames, which is exactly what produces
   // "Duplicate without user-selected canonical" in Search Console.
   //
   // These specific hostnames are the fixed production aliases Vercel
-  // assigns to this project (confirmed via the project's domains list) --
+  // assigns to this project (confirmed via the project's domains list) -
   // NOT the per-deployment preview URLs (which have unique hashes/branch
   // names and must keep working unredirected for reviewing branches
   // before merge).
   //
-  // Deliberately excludes /api/* -- if the app is already loaded from a
+  // Deliberately excludes /api/* - if the app is already loaded from a
   // non-canonical host (e.g. someone opened www.swiftscope.com.au or
   // quotease.vercel.app directly) and its client-side JS calls
   // fetch("/api/..."), redirecting that call turns it into a
   // cross-origin request. The browser then won't carry the
   // swiftscope.com.au session cookie along, and the redirected response
-  // isn't necessarily readable back to the calling page either -- this
+  // isn't necessarily readable back to the calling page either - this
   // broke "Send" on a quote for exactly this reason. API correctness
   // matters more here than SEO canonicalisation, and robots.txt already
   // disallows crawling /api/ anyway.
@@ -512,7 +512,7 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    // Cron secret is valid (or no secret configured -- dev mode)
+    // Cron secret is valid (or no secret configured - dev mode)
     return addSecurityHeaders(response);
   }
 
@@ -521,7 +521,7 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
   // ------------------------------------------------------------------
 
   if (!user) {
-    // Not logged in -- redirect to login with a return URL
+    // Not logged in - redirect to login with a return URL
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
@@ -559,12 +559,12 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
 
   if (isAdminRoute) {
     if (!isAdminEmail(user.email ?? undefined)) {
-      // Not an admin -- redirect to dashboard
+      // Not an admin - redirect to dashboard
       return NextResponse.redirect(
         new URL("/dashboard", request.url)
       );
     }
-    // Admin is authorised -- add headers and continue
+    // Admin is authorised - add headers and continue
     return addSecurityHeaders(response);
   }
 
@@ -587,7 +587,7 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
     .eq("id", businessId)
     .single();
 
-  // Site members (basic access) only need My day / their jobs — bounce them
+  // Site members (basic access) only need My day / their jobs - bounce them
   // off owner tooling so they never land on an empty dashboard.
   const { data: membershipRow } = await supabase
     .from("team_members")
@@ -627,16 +627,16 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
     return NextResponse.redirect(new URL(FIELD_WORKER_HOME, request.url));
   }
 
-  // Trade selection is mandatory -- quoting is trade-specific, so an
+  // Trade selection is mandatory - quoting is trade-specific, so an
   // account with no trade set can't meaningfully use the app at all.
   // Client-side signup validation exists but isn't airtight on its own
   // (confirmed: real accounts have ended up with an empty trades array
-  // despite that) -- this is the actual, unbypassable guarantee, checked
+  // despite that) - this is the actual, unbypassable guarantee, checked
   // on every protected page regardless of onboarded_at, since an account
   // could in principle be marked onboarded with no trade ever having
   // been set. Redirects to /onboarding, which shows a mandatory trade
   // picker first when it detects this.
-  // Field workers inherit the owner's trade book via team membership —
+  // Field workers inherit the owner's trade book via team membership -
   // never send them through owner onboarding for an empty personal profile.
   const hasNoTrade = !profile?.trades || profile.trades.length === 0;
   if (
@@ -671,12 +671,12 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
     const hasAccess = isActive || isTrialing || hasCompAccess || trialStillValid;
 
     if (!hasAccess) {
-      // Subscription expired or never started -- redirect to billing
+      // Subscription expired or never started - redirect to billing
       return NextResponse.redirect(new URL("/billing", request.url));
     }
   }
 
-  // All checks passed -- add security headers and continue
+  // All checks passed - add security headers and continue
   return addSecurityHeaders(response);
 }
 

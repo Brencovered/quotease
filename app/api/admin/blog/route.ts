@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/admin";
 
 /* ------------------------------------------------------------------ */
-/*  POST  – create a new blog post                                     */
+/*  POST  - create a new blog post                                     */
 /* ------------------------------------------------------------------ */
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  PUT  – update an existing blog post                                */
+/*  PUT  - update an existing blog post                                */
 /* ------------------------------------------------------------------ */
 export async function PUT(request: Request) {
   const supabase = await createClient();
@@ -103,7 +103,7 @@ export async function PUT(request: Request) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  DELETE  – delete a blog post                                       */
+/*  DELETE  - delete a blog post                                       */
 /* ------------------------------------------------------------------ */
 export async function DELETE(request: Request) {
   const supabase = await createClient();

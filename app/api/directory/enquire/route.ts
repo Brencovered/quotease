@@ -38,6 +38,8 @@ export async function POST(req: NextRequest) {
     jobType,
     budget,
     stage,
+    urgency,
+    customerType,
     others,
     message,
   } = body;
@@ -73,29 +75,53 @@ export async function POST(req: NextRequest) {
   // client: this insert is server-validated above and comes from anonymous
   // homeowners with no session, so there's no meaningful RLS role to grant
   // here. Previously this used the regular client, which failed on every
-  // submission -- Supabase's insert().select() requires a SELECT policy for
+  // submission - Supabase's insert().select() requires a SELECT policy for
   // the RETURNING clause too, not just an INSERT policy, and anon had none.
   const admin = createAdminClient();
   let enquiryId: string | null = null;
 
+  const { priorityFromUrgency, makeLeadCode } = await import("@/lib/directoryLeads");
+  const urgencyStr = typeof urgency === "string" ? urgency : typeof stage === "string" ? stage : null;
+  const priority = priorityFromUrgency(urgencyStr);
+
+  // Resolve claimed listing → business profile so the owner sees it in /leads
+  let profileId: string | null = null;
+  if (typeof listing_id === "string" && listing_id) {
+    const { data: listing } = await admin
+      .from("directory_listing")
+      .select("profile_id")
+      .eq("id", listing_id)
+      .maybeSingle();
+    profileId = listing?.profile_id ?? null;
+  }
+
   try {
+    const tempId = crypto.randomUUID();
+    const leadCode = makeLeadCode(tempId);
     const { data, error } = await admin
       .from("directory_enquiries")
       .insert({
+        id: tempId,
         listing_id: typeof listing_id === "string" ? listing_id : null,
         business_name: typeof business_name === "string" ? business_name : null,
         to_email: toAddress,
-        is_claimed: is_claimed === true,
+        is_claimed: is_claimed === true || Boolean(profileId),
         customer_name: customerName,
         customer_email: customerEmail,
         customer_phone: typeof phone === "string" ? phone.trim() || null : null,
         job_description: jobDesc,
         budget: typeof budget === "string" ? budget || null : null,
-        stage: typeof stage === "string" ? stage || null : null,
+        stage: urgencyStr,
+        urgency: urgencyStr,
+        priority,
+        customer_type: typeof customerType === "string" ? customerType || null : null,
+        pipeline_status: "new",
+        lead_code: leadCode,
+        profile_id: profileId,
         status: "new",
         email_sent: false,
       })
-      .select("id")
+      .select("id, lead_code")
       .single();
 
     if (error) {

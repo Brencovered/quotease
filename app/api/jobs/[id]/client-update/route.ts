@@ -1,7 +1,7 @@
 /**
  * POST /api/jobs/[id]/client-update
  * Email (and log) a short status update to the client.
- * SMS customer messaging was removed — use Call from My day instead.
+ * SMS customer messaging was removed - use Call from My day instead.
  *
  * Body: { template: "on_way" | "running_late" | "there_tomorrow" | "done_today", customMessage?: string }
  */
@@ -21,7 +21,7 @@ const TEMPLATES: Record<string, { subject: string; body: (name: string, business
   running_late: {
     subject: "Running a bit late",
     body: (name, business) =>
-      `Hi${name ? ` ${name}` : ""},\n\nWe're running a bit behind — still coming today, just later than planned. Sorry for the wait.\n\nThanks,\n${business}`,
+      `Hi${name ? ` ${name}` : ""},\n\nWe're running a bit behind - still coming today, just later than planned. Sorry for the wait.\n\nThanks,\n${business}`,
   },
   there_tomorrow: {
     subject: "See you tomorrow",

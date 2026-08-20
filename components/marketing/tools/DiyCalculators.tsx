@@ -17,13 +17,13 @@ const PREMIX_BAG_M3 = 0.009;
 const PREMIX_BAG_KG = 20;
 /** Wet concrete density used for DIY effort messaging. */
 const CONCRETE_KG_PER_M3 = 2400;
-/** Default paint coverage mid of 14–16 m²/L per coat. */
+/** Default paint coverage mid of 14-16 m²/L per coat. */
 const DEFAULT_COVERAGE = 15;
 const DOOR_M2 = 2;
 const WINDOW_M2 = 1.5;
 /** Cementitious grout bulk density (kg/m³). */
 const GROUT_DENSITY = 1600;
-/** Industry tile waste buffer (10%–15%; default mid-high). */
+/** Industry tile waste buffer (10%-15%; default mid-high). */
 const TILE_WASTE = 1.15;
 
 export default function DiyCalculators() {
@@ -214,7 +214,7 @@ function PaintCalc() {
             />
           </div>
           <p className="font-sans text-[13px] leading-[1.6] text-[#5a6a78]">
-            Guideline only. Australian interior acrylics often cover about 14–16 m²/L per coat — see the{" "}
+            Guideline only. Australian interior acrylics often cover about 14-16 m²/L per coat - see the{" "}
             <SourceInline href="https://www.dulux.com.au/paint/wash-and-wear/">
               Dulux Wash&Wear coverage guide
             </SourceInline>{" "}
@@ -245,7 +245,7 @@ function PaintCalc() {
           </dl>
           {bigJob ? (
             <EffortHook
-              effort={`You are looking at roughly ${Math.ceil(result.totalL)} litres of paint across primer and two topcoats — plus masking, cutting-in, and ladder time. Prefer a pro finish?`}
+              effort={`You are looking at roughly ${Math.ceil(result.totalL)} litres of paint across primer and two topcoats - plus masking, cutting-in, and ladder time. Prefer a pro finish?`}
               cta="Find a local painter in your suburb"
               href="/directory?trade=Painter"
             />
@@ -332,8 +332,8 @@ function TileCalc() {
             />
           </div>
           <p className="font-sans text-[13px] leading-[1.6] text-[#5a6a78]">
-            Guideline only. Box count includes a 15% allowance (industry practice is typically 10%–15%
-            for cuts and breakage) — see the{" "}
+            Guideline only. Box count includes a 15% allowance (industry practice is typically 10%-15%
+            for cuts and breakage) - see the{" "}
             <SourceInline href="https://www.beaumont-tiles.com.au/blogs/how-to-measure-your-floor-for-tiling">
               Beaumont Tiles measuring guide
             </SourceInline>{" "}
@@ -349,7 +349,7 @@ function TileCalc() {
         <ToolPanel title="Tiles and grout">
           <dl>
             <ToolResultRow label="Surface area" value={`${result.surface.toFixed(2)} m²`} />
-            <ToolResultRow label="With 15% allowance" value={`${result.withWaste.toFixed(2)} m²`} hint="10%–15% buffer is typical" />
+            <ToolResultRow label="With 15% allowance" value={`${result.withWaste.toFixed(2)} m²`} hint="10%-15% buffer is typical" />
             <ToolResultRow label="Approx tiles" value={`${Math.ceil(result.tilesApprox)}`} />
             <ToolResultRow
               label="Boxes to buy"
@@ -363,7 +363,7 @@ function TileCalc() {
           </dl>
           {bigJob ? (
             <EffortHook
-              effort={`About ${Math.ceil(result.boxes)} boxes plus ~${result.groutKg.toFixed(1)} kg of grout — and a lot of cutting, levelling, and curing time. Prefer to hand it over?`}
+              effort={`About ${Math.ceil(result.boxes)} boxes plus ~${result.groutKg.toFixed(1)} kg of grout - and a lot of cutting, levelling, and curing time. Prefer to hand it over?`}
               cta="Find a local tiler in your suburb"
               href="/directory?trade=Tiler"
             />

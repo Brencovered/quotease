@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useLayoutEffect } from "react";
-import { LEADS_ENABLED } from "@/lib/featureFlags";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -40,6 +39,7 @@ type NavItem = {
 const OWNER_DESKTOP_NAV: NavItem[] = [
   { href: "/today", icon: Sun, label: "My day" },
   { href: "/crew", icon: UsersRound, label: "Crew" },
+  { href: "/leads", icon: Zap, label: "Leads" },
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/materials", icon: Package, label: "Materials" },
   { href: "/jobs", icon: Briefcase, label: "Jobs" },
@@ -75,7 +75,7 @@ export default function AppHeader() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [moreExpanded, setMoreExpanded] = useState(false);
   const [quoteCount, setQuoteCount] = useState(0);
-  // Start unknown — never paint owner tools until role is confirmed.
+  // Start unknown - never paint owner tools until role is confirmed.
   // Cache restores instantly on remount (nav clicks remount this component).
   const [isFieldWorker, setIsFieldWorker] = useState(false);
   const [roleReady, setRoleReady] = useState(false);
@@ -102,7 +102,7 @@ export default function AppHeader() {
         setRoleReady(true);
       } catch {
         // If we have a cache, keep it. Otherwise don't unlock owner tools
-        // by mistake — stay field-safe until we know.
+        // by mistake - stay field-safe until we know.
         if (!cancelled && getCachedIsFieldWorker() === null) {
           setIsFieldWorker(true);
           setRoleReady(true);
@@ -153,7 +153,7 @@ export default function AppHeader() {
     }`;
   }
 
-  // Until role is known, show field nav only — never flash owner tools.
+  // Until role is known, show field nav only - never flash owner tools.
   const showFieldNav = !roleReady || isFieldWorker;
   const homeHref = showFieldNav ? "/today" : "/dashboard";
   const desktopNav = showFieldNav ? FIELD_DESKTOP_NAV : OWNER_DESKTOP_NAV;
@@ -212,12 +212,6 @@ export default function AppHeader() {
 
           {!showFieldNav && (
             <>
-              {LEADS_ENABLED && (
-                <Link prefetch={false} href="/leads" className={navLinkClasses("/leads")}>
-                  <Zap size={17} /> Leads
-                </Link>
-              )}
-
               <Link prefetch={false} href="/clients" className={navLinkClasses("/clients")}>
                 <Users size={17} /> Clients
               </Link>
@@ -369,16 +363,14 @@ export default function AppHeader() {
                   >
                     <UsersRound size={15} className="text-[var(--ink-faint)]" /> Team
                   </Link>
-                  {LEADS_ENABLED && (
-                    <Link
-                      prefetch={false}
-                      href="/leads"
-                      onClick={() => setMoreOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]"
-                    >
-                      <Zap size={15} className="text-[var(--ink-faint)]" /> Leads
-                    </Link>
-                  )}
+                  <Link
+                    prefetch={false}
+                    href="/leads"
+                    onClick={() => setMoreOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]"
+                  >
+                    <Zap size={15} className="text-[var(--ink-faint)]" /> Leads
+                  </Link>
                   <Link
                     prefetch={false}
                     href="/export"

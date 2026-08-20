@@ -13,7 +13,7 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
-/** Old tab ids from the five-tab layout — map so shared links still work. */
+/** Old tab ids from the five-tab layout - map so shared links still work. */
 const LEGACY: Record<string, TabId> = {
   overview: "run",
   schedule: "run",
@@ -22,7 +22,7 @@ const LEGACY: Record<string, TabId> = {
 
 /**
  * Tabs live in the URL (?tab=money) so deep links and back work.
- * Only the active tab mounts — this page was a Speed Insights hotspot
+ * Only the active tab mounts - this page was a Speed Insights hotspot
  * when every panel (including plan canvas) hydrated on every visit.
  */
 export default function JobTabs({

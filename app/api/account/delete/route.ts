@@ -3,7 +3,7 @@
  * -------------------------
  * Owner or admin only. Soft-deletes the account: cancels any active Stripe
  * subscriptions immediately and marks deleted_at = now(). Nothing is
- * actually removed -- the tradie (or an admin) can restore within 30 days
+ * actually removed - the tradie (or an admin) can restore within 30 days
  * via /api/account/restore. After 30 days the daily purge cron
  * permanently deletes it (see lib/deleteAccount.ts).
  *
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
 
   const expected = (profile?.business_name ?? "").trim().toLowerCase();
   if (!expected || (confirmBusinessName ?? "").trim().toLowerCase() !== expected) {
-    return NextResponse.json({ error: "Business name didn't match -- account not deleted." }, { status: 400 });
+    return NextResponse.json({ error: "Business name didn't match - account not deleted." }, { status: 400 });
   }
 
   const result = await softDeleteAccount(ctx.businessId);

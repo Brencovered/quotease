@@ -82,7 +82,7 @@ export default function CategoryMaterialPicker({
             <p className="text-[12.5px] text-[var(--ink-faint)] text-center py-6">
               {search
                 ? "No items match that search."
-                : `No ${archetypeLabel.toLowerCase()} items found in your price book — try searching, or add one in Materials.`}
+                : `No ${archetypeLabel.toLowerCase()} items found in your price book - try searching, or add one in Materials.`}
             </p>
           )}
           {filtered.map((item) => (

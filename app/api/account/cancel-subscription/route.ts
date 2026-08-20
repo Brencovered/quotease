@@ -3,7 +3,7 @@
  * --------------------------------------
  * Self-service. Cancels the logged-in tradie's own subscription at the end
  * of the current billing period (they keep access they've already paid
- * for -- no immediate cutoff). Pass { resume: true } to undo a pending
+ * for - no immediate cutoff). Pass { resume: true } to undo a pending
  * cancellation before it takes effect.
  *
  * Body: { resume?: boolean }
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
       cancel_at_period_end: !resume,
     });
 
-    // Optimistic update -- the webhook will also sync this shortly, but the
+    // Optimistic update - the webhook will also sync this shortly, but the
     // tradie shouldn't have to refresh to see the result of their own click.
     await supabase
       .from("profiles")

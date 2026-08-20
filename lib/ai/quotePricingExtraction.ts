@@ -7,10 +7,10 @@
  * of empty defaults.
  *
  * Modelled on lib/ai/drawingAnalysis.ts's multimodal pattern (file content
- * part + Vercel AI Gateway), but much simpler -- no trade gating, no
+ * part + Vercel AI Gateway), but much simpler - no trade gating, no
  * confidence scoring, just "read this document and pull out priced line
  * items". Deliberately tolerant of messy real-world quote formats (some
- * won't have unit prices, some will just be lump sums) -- items without a
+ * won't have unit prices, some will just be lump sums) - items without a
  * usable price are dropped rather than guessed.
  */
 
@@ -20,7 +20,7 @@ import { MODELS } from "./gateway";
 
 const ExtractedItemSchema = z.object({
   description: z.string().describe("The item or line-item description as written on the quote, cleaned up slightly for readability"),
-  unit: z.string().describe("Unit of sale, e.g. 'each', 'hour', 'metre', 'lot' -- infer 'each' if not stated"),
+  unit: z.string().describe("Unit of sale, e.g. 'each', 'hour', 'metre', 'lot' - infer 'each' if not stated"),
   unit_cost: z.number().describe("The price for one unit, in dollars. If only a line total is given for a quantity, divide it out."),
 });
 
@@ -47,7 +47,7 @@ Be conservative: if you're not confident an item genuinely has a real, specific 
 
 /**
  * Extract priced line items from a single quote file (PDF or image).
- * Returns an empty array (not an error) if nothing usable was found --
+ * Returns an empty array (not an error) if nothing usable was found -
  * a blank or non-quote document shouldn't block the rest of onboarding.
  */
 export async function extractPricingFromQuote(
@@ -80,7 +80,7 @@ export async function extractPricingFromQuote(
         err instanceof APICallError && (err.statusCode === undefined || err.statusCode >= 500 || err.statusCode === 429);
       if (!isRetryable || model === MODELS.VISION_FALLBACK) {
         // Last attempt failed, or a non-retryable error (e.g. malformed
-        // file) -- don't throw and block the rest of onboarding over one
+        // file) - don't throw and block the rest of onboarding over one
         // bad upload; just report nothing extracted for this file.
         console.error(`[quote-pricing-extraction] ${model} failed:`, err);
         return [];

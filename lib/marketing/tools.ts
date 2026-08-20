@@ -1,5 +1,5 @@
 /**
- * Free tools registry — tradie acquisition + homeowner directory traffic.
+ * Free tools registry - tradie acquisition + homeowner directory traffic.
  */
 
 export type ToolAudience = "tradie" | "homeowner";
@@ -66,7 +66,7 @@ export const VEHICLE_SOURCES: ToolSource[] = [
   {
     label: "ATO cents-per-kilometre method",
     href: "https://www.ato.gov.au/individuals-and-families/income-deductions-offsets-and-records/deductions-you-can-claim/work-related-deductions/cars-transport-and-travel/motor-vehicle-and-car-expenses/expenses-for-a-car-you-own-or-lease/cents-per-kilometre-method",
-    note: "Official cents-per-km rates (88c for 2024–25 and 2025–26; check the year you are claiming).",
+    note: "Official cents-per-km rates (88c for 2024-25 and 2025-26; check the year you are claiming).",
   },
   {
     label: "ATO motor vehicle expenses (business)",
@@ -87,7 +87,7 @@ export const BALLPARK_SOURCES: ToolSource[] = [
   {
     label: "hipages Bathroom Renovation Cost Guide",
     href: "https://hipages.com.au/article/how_much_does_bathroom_renovation_cost",
-    note: "Industry benchmark ranges: budget updates about $8,000–$15,000 (without shifting plumbing), mid-range overhauls about $15,000–$25,000+, and high-end / ensuite work $25,000–$35,000+.",
+    note: "Industry benchmark ranges: budget updates about $8,000-$15,000 (without shifting plumbing), mid-range overhauls about $15,000-$25,000+, and high-end / ensuite work $25,000-$35,000+.",
   },
   {
     label: "hipages Home Renovation Cost Guide",
@@ -105,7 +105,7 @@ export const DIY_SOURCES: ToolSource[] = [
   {
     label: "Dulux Wash&Wear coverage guide",
     href: "https://www.dulux.com.au/paint/wash-and-wear/",
-    note: "Australian interior acrylic spread rates commonly guide around 14–16 m²/L per coat (product can lists the exact rate).",
+    note: "Australian interior acrylic spread rates commonly guide around 14-16 m²/L per coat (product can lists the exact rate).",
   },
   {
     label: "Dulux paint calculator",
@@ -125,7 +125,7 @@ export const DIY_SOURCES: ToolSource[] = [
   {
     label: "Showtile Tile Calculator Guide",
     href: "https://showtile.com.au/tile-calculator/",
-    note: "Industry practice of adding a 10%–15% buffer on net wall/floor area for edge cuts and breakage.",
+    note: "Industry practice of adding a 10%-15% buffer on net wall/floor area for edge cuts and breakage.",
   },
 ];
 
@@ -203,7 +203,7 @@ export const TOOLS: ToolMeta[] = [
     title: "Ballpark renovation and job cost estimator",
     shortTitle: "Ballpark costs",
     description:
-      "Estimate Australian job costs by project type, finish quality, and footprint — plus common hidden extras like asbestos or structural repairs.",
+      "Estimate Australian job costs by project type, finish quality, and footprint - plus common hidden extras like asbestos or structural repairs.",
     audience: "homeowner",
     hook: "This estimate reflects local Australian trade averages. Want an exact price tailored to your space? Browse local, verified tradies.",
     hookCta: "Find local tradies",
@@ -215,7 +215,7 @@ export const TOOLS: ToolMeta[] = [
     title: "DIY material calculators",
     shortTitle: "DIY materials",
     description:
-      "Concrete volume with bag counts and weight, paint coverage with primer and two topcoats, plus tile boxes and grout kilograms — with wastage buffers built in.",
+      "Concrete volume with bag counts and weight, paint coverage with primer and two topcoats, plus tile boxes and grout kilograms - with wastage buffers built in.",
     audience: "homeowner",
     hook: "Realised the heavy lifting is bigger than you thought? Pass the job to a local tradie.",
     hookCta: "Browse the directory",
@@ -263,7 +263,7 @@ export const QUOTE_PDF_FAQS = [
 export const VEHICLE_FAQS = [
   {
     q: "What is the ATO cents-per-kilometre rate?",
-    a: "The ATO cents-per-km method is 88 cents per kilometre for the 2024–25 and 2025–26 income years (rates change. Always check the ATO page for the year you are claiming). This tool compares your estimated running cost to that rate for planning only.",
+    a: "The ATO cents-per-km method is 88 cents per kilometre for the 2024-25 and 2025-26 income years (rates change. Always check the ATO page for the year you are claiming). This tool compares your estimated running cost to that rate for planning only.",
   },
   {
     q: "Why include a tool replacement pool?",

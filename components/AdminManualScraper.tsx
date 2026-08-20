@@ -59,7 +59,7 @@ export default function AdminManualScraper() {
   const [saving,    setSaving]    = useState(false);
   const [error,     setError]     = useState<string | null>(null);
 
-  // Review step -- populated after a scrape, before anything is saved.
+  // Review step - populated after a scrape, before anything is saved.
   const [preview,   setPreview]   = useState<PreviewResponse | null>(null);
   const [fields,    setFields]    = useState<EditableFields | null>(null);
   const [result,    setResult]    = useState<ConfirmResponse | null>(null);
@@ -185,7 +185,7 @@ export default function AdminManualScraper() {
         </p>
       </div>
 
-      {/* Input -- only shown before a preview exists */}
+      {/* Input - only shown before a preview exists */}
       {!preview && !result && (
         <div className="card space-y-4">
           <div>
@@ -232,14 +232,14 @@ export default function AdminManualScraper() {
         </div>
       )}
 
-      {/* Review + edit step -- nothing has been saved yet */}
+      {/* Review + edit step - nothing has been saved yet */}
       {preview && fields && (
         <div className="space-y-4">
           {preview.existingListingId && (
             <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3">
               <RefreshCw size={16} className="text-blue-700 shrink-0" />
               <p className="text-[13px] text-blue-800">
-                <span className="font-bold">Existing listing found</span> ({preview.existingBusinessName}) --
+                <span className="font-bold">Existing listing found</span> ({preview.existingBusinessName}) -
                 confirming will update it, not create a duplicate.
               </p>
             </div>
@@ -248,7 +248,7 @@ export default function AdminManualScraper() {
           <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
             <Pencil size={15} className="text-[var(--amber-deep)] shrink-0" />
             <p className="text-[13px] text-[var(--amber-deep)] font-semibold">
-              Review and correct anything below before confirming -- nothing has been saved to the directory yet.
+              Review and correct anything below before confirming - nothing has been saved to the directory yet.
             </p>
           </div>
 
@@ -261,7 +261,7 @@ export default function AdminManualScraper() {
                   value={fields.business_name ?? ""}
                   onChange={e => updateField("business_name", e.target.value || null)}
                   className="app-field"
-                  placeholder="Not found -- enter manually"
+                  placeholder="Not found - enter manually"
                 />
               </Field>
 
@@ -270,7 +270,7 @@ export default function AdminManualScraper() {
                   value={fields.phone ?? ""}
                   onChange={e => updateField("phone", e.target.value || null)}
                   className="app-field"
-                  placeholder="Not found -- enter manually"
+                  placeholder="Not found - enter manually"
                 />
               </Field>
 
@@ -307,7 +307,7 @@ export default function AdminManualScraper() {
                   value={fields.logo_url ?? ""}
                   onChange={e => updateField("logo_url", e.target.value || null)}
                   className="app-field"
-                  placeholder="Not found -- paste a URL"
+                  placeholder="Not found - paste a URL"
                 />
               </Field>
             </div>
@@ -326,7 +326,7 @@ export default function AdminManualScraper() {
                 value={fields.blurb ?? ""}
                 onChange={e => updateField("blurb", e.target.value || null)}
                 className="app-field min-h-[80px]"
-                placeholder="Not found -- write a short description"
+                placeholder="Not found - write a short description"
               />
             </Field>
 
@@ -396,7 +396,7 @@ export default function AdminManualScraper() {
             {/* Photos */}
             <div>
               <p className="text-[11px] font-bold uppercase text-[var(--ink-faint)] mb-2">
-                Photos ({fields.photo_urls.length}/6) -- remove any that don&apos;t belong, or add your own
+                Photos ({fields.photo_urls.length}/6) - remove any that don&apos;t belong, or add your own
               </p>
               {fields.photo_urls.length > 0 && (
                 <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-2">
@@ -520,7 +520,7 @@ export default function AdminManualScraper() {
               ["Years experience", "Established year, \"X years experience\" patterns"],
               ["Licences",         "QBCC, VBA, Master Electricians, ABN, contractor licences"],
               ["Services",         "Services page + homepage service lists (up to 12 items)"],
-              ["Existing listings","Matched by website URL -- you'll confirm update vs create"],
+              ["Existing listings","Matched by website URL - you'll confirm update vs create"],
             ].map(([label, src]) => (
               <div key={label} className="flex items-baseline gap-1.5">
                 <Check size={11} className="text-[var(--amber-deep)] shrink-0 mt-0.5" />

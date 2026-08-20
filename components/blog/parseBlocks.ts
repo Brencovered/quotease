@@ -78,7 +78,7 @@ export function parseBlocks(md: string): ContentBlock[] {
     // pattern also matches a ### line (^## consumes the first two hashes,
     // then (.+) captures "# text"), which silently mistyped every H3 as
     // an H2 containing a stray leading "#". This is the same bug that was
-    // fixed in app/blog/[slug]/page.tsx's parseContent -- that fix never
+    // fixed in app/blog/[slug]/page.tsx's parseContent - that fix never
     // made it into this parser, which is the one the admin editor and
     // AI-drafted sections actually round-trip through.
     const h3Match = line.match(/^###\s*(.+)$/);
@@ -289,7 +289,7 @@ function isBlockStart(line: string): boolean {
 /**
  * Splits a "| a | b | c |" row into ["a", "b", "c"]. A naive line.split("|")
  * produces a leading AND trailing empty string for a row with outer pipes
- * (the standard markdown table format) -- stripping exactly one leading and
+ * (the standard markdown table format) - stripping exactly one leading and
  * one trailing pipe character before splitting, rather than filtering empty
  * strings out of the split result, is what keeps a genuinely blank interior
  * cell (e.g. an intentionally empty price) intact instead of collapsing it

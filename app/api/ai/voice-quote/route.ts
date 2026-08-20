@@ -56,7 +56,7 @@ Rules:
 - Use professional Australian trade terminology
 - Quantities must be numbers (not strings)
 - If a quantity is not specified, default to 1
-- Unit costs are optional -- only include if clearly stated or strongly implied by standard rates
+- Unit costs are optional - only include if clearly stated or strongly implied by standard rates
 - Notes should capture location, spec, or any clarification needed
 - Warnings should flag anything ambiguous or missing that affects the quote
 - Do not invent items that weren't mentioned
