@@ -1,7 +1,7 @@
 /**
  * POST /api/jobs/[id]/client-update
- * Email (and log) a short status update to the client. SMS is left to the
- * device via sms: links in the UI — no Twilio dependency.
+ * Email (and log) a short status update to the client.
+ * SMS customer messaging was removed — use Call from My day instead.
  *
  * Body: { template: "on_way" | "running_late" | "there_tomorrow" | "done_today", customMessage?: string }
  */
@@ -65,9 +65,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const business = profile?.business_name ?? "Your tradie";
   const firstName = (job.client_name ?? "").split(" ")[0] || "";
   const subject = template?.subject ?? `Update from ${business}`;
-  const text =
-    customMessage ||
-    template!.body(firstName, business);
+  const text = customMessage || template!.body(firstName, business);
 
   const email = job.client_email?.trim();
   let emailed = false;
@@ -91,9 +89,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (res.ok) emailed = true;
     else emailWarning = `Email failed (${res.status})`;
   } else if (email && !RESEND_API_KEY) {
-    emailWarning = "Email not configured — use SMS from your phone.";
+    emailWarning = "Email not configured.";
   } else if (!email) {
-    emailWarning = "No client email on this job — use SMS.";
+    emailWarning = "No client email on this job.";
   }
 
   await supabase.from("communication_log").insert({
@@ -103,13 +101,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     type: "job_update",
     subject,
     body: text,
-    sent_to: email || job.client_phone || null,
+    sent_to: email || null,
   });
 
-  const smsBody = encodeURIComponent(text);
-  const smsHref = job.client_phone
-    ? `sms:${job.client_phone.replace(/\s/g, "")}?&body=${smsBody}`
-    : null;
   const mailtoHref = email
     ? `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`
     : null;
@@ -118,7 +112,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     ok: true,
     emailed,
     warning: emailWarning,
-    smsHref,
     mailtoHref,
     subject,
     text,

@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getTeamContext, canSeePricing } from "@/lib/team";
 import AppHeader from "@/components/AppHeader";
-import MyDayClient, { type MyDayJob } from "@/components/MyDayClient";
+import MyDayClient, { type MyDayJob, type MyDayTask } from "@/components/MyDayClient";
 import { resolveScheduledStart } from "@/lib/scheduleNormalize";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +34,7 @@ export default async function TodayPage() {
   const today = melbourneToday();
   let todayJobs: MyDayJob[] = [];
   let undatedJobs: MyDayJob[] = [];
+  let tasks: MyDayTask[] = [];
   let viewerLabel = "Your day";
   let scopedToSelf = false;
   let showCrewLink = false;
@@ -45,23 +46,33 @@ export default async function TodayPage() {
       const ctx = await getTeamContext(supabase, userData.user.id);
       showCrewLink = canSeePricing(ctx) || ctx.isOwner;
 
-      const [{ data: jobRows }, { data: membership }, { data: crewRows }] = await Promise.all([
-        supabase
-          .from("jobs")
-          .select(
-            "id, job_number, client_name, client_phone, client_email, site_address, title, trade, status, scheduled_date, scheduled_start, assigned_to_member_id, total_cost"
-          )
-          .eq("profile_id", ctx.businessId)
-          .not("status", "in", '("cancelled","archived","complete","invoiced","partially_paid")')
-          .order("scheduled_start", { ascending: true, nullsFirst: false }),
-        supabase
-          .from("team_members")
-          .select("id, name")
-          .eq("member_user_id", userData.user.id)
-          .eq("status", "active")
-          .maybeSingle(),
-        supabase.from("job_crew").select("job_id, team_member_id").eq("profile_id", ctx.businessId),
-      ]);
+      const [{ data: jobRows }, { data: membership }, { data: crewRows }, { data: taskRows }] =
+        await Promise.all([
+          supabase
+            .from("jobs")
+            .select(
+              "id, job_number, client_name, client_phone, client_email, site_address, title, trade, status, scheduled_date, scheduled_start, assigned_to_member_id, total_cost"
+            )
+            .eq("profile_id", ctx.businessId)
+            .not("status", "in", '("cancelled","archived","complete","invoiced","partially_paid")')
+            .order("scheduled_start", { ascending: true, nullsFirst: false }),
+          supabase
+            .from("team_members")
+            .select("id, name")
+            .eq("member_user_id", userData.user.id)
+            .eq("status", "active")
+            .maybeSingle(),
+          supabase.from("job_crew").select("job_id, team_member_id").eq("profile_id", ctx.businessId),
+          supabase
+            .from("job_tasks")
+            .select(
+              "id, title, status, due_date, assigned_to_member_id, job_id, jobs:job_id(job_number, client_name, title)"
+            )
+            .eq("profile_id", ctx.businessId)
+            .neq("status", "done")
+            .or(`due_date.eq.${today},due_date.is.null`)
+            .order("created_at", { ascending: true }),
+        ]);
 
       const myMemberId = membership?.id ?? null;
       const crewByJob = new Map<string, string[]>();
@@ -113,17 +124,38 @@ export default async function TodayPage() {
         })
         .filter((j) => !(restrictToAssigned && !j.assigned_to_me));
 
-      // Strict: only jobs whose start date is today (not every progress-board job).
       todayJobs = mapped
         .filter((j) => j.on_day)
         .sort((a, b) => (a.scheduled_start ?? "").localeCompare(b.scheduled_start ?? ""))
         .map(({ assigned_to_me: _a, on_day: _o, ...job }) => job);
 
-      // Separate list — clearly labeled, not mixed into “today”.
       undatedJobs = mapped
         .filter((j) => !j.has_start_date)
         .sort((a, b) => a.job_number - b.job_number)
         .map(({ assigned_to_me: _a, on_day: _o, ...job }) => job);
+
+      tasks = (taskRows ?? [])
+        .filter((t) => {
+          if (!restrictToAssigned || !myMemberId) return true;
+          return t.assigned_to_member_id === myMemberId;
+        })
+        .map((t) => {
+          const job = t.jobs as unknown as {
+            job_number: number;
+            client_name: string | null;
+            title: string | null;
+          } | null;
+          return {
+            id: t.id,
+            title: t.title,
+            status: t.status,
+            due_date: t.due_date,
+            job_id: t.job_id,
+            job_label: job
+              ? `#${job.job_number} · ${job.client_name || job.title || "Job"}`
+              : null,
+          };
+        });
     }
   } catch (err) {
     console.error("My day page error:", err);
@@ -141,6 +173,7 @@ export default async function TodayPage() {
       <MyDayClient
         todayJobs={todayJobs}
         undatedJobs={undatedJobs}
+        tasks={tasks}
         title={viewerLabel}
         dateLabel={dateLabel}
         scopedToSelf={scopedToSelf}

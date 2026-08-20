@@ -78,6 +78,8 @@ const PROTECTED_PAGE_PREFIXES = [
   "/seo",
   "/comms",
   "/leads",
+  "/today",
+  "/crew",
 ];
 
 /** Routes that require admin email */
@@ -585,6 +587,46 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
     .eq("id", businessId)
     .single();
 
+  // Site members (basic access) only need My day / their jobs — bounce them
+  // off owner tooling so they never land on an empty dashboard.
+  const { data: membershipRow } = await supabase
+    .from("team_members")
+    .select("role")
+    .eq("member_user_id", user.id)
+    .eq("status", "active")
+    .maybeSingle();
+  const isFieldWorker =
+    membershipRow?.role === "site_member" || membershipRow?.role === "member";
+
+  const FIELD_WORKER_HOME = "/today";
+  const FIELD_WORKER_BLOCKED_PREFIXES = [
+    "/dashboard",
+    "/quote",
+    "/quotes",
+    "/materials",
+    "/margins",
+    "/packages",
+    "/reports",
+    "/plans",
+    "/clients",
+    "/team",
+    "/crew",
+    "/leads",
+    "/export",
+    "/map",
+    "/comms",
+    "/seo",
+    "/camera",
+  ];
+  if (
+    isFieldWorker &&
+    FIELD_WORKER_BLOCKED_PREFIXES.some(
+      (p) => pathname === p || pathname.startsWith(p + "/")
+    )
+  ) {
+    return NextResponse.redirect(new URL(FIELD_WORKER_HOME, request.url));
+  }
+
   // Trade selection is mandatory -- quoting is trade-specific, so an
   // account with no trade set can't meaningfully use the app at all.
   // Client-side signup validation exists but isn't airtight on its own
@@ -594,14 +636,22 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
   // could in principle be marked onboarded with no trade ever having
   // been set. Redirects to /onboarding, which shows a mandatory trade
   // picker first when it detects this.
+  // Field workers inherit the owner's trade book via team membership —
+  // never send them through owner onboarding for an empty personal profile.
   const hasNoTrade = !profile?.trades || profile.trades.length === 0;
-  if (hasNoTrade && pathname !== "/onboarding" && pathname !== "/billing") {
+  if (
+    !isFieldWorker &&
+    hasNoTrade &&
+    pathname !== "/onboarding" &&
+    pathname !== "/billing"
+  ) {
     return NextResponse.redirect(new URL("/onboarding", request.url));
   }
 
   // Onboarding check: if not onboarded, redirect to /onboarding
   // (allow the onboarding page itself and the billing page so they can pay)
   if (
+    !isFieldWorker &&
     !profile?.onboarded_at &&
     pathname !== "/onboarding" &&
     pathname !== "/billing"
