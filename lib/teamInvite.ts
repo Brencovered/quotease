@@ -121,3 +121,27 @@ export function teamInviteEmailHtml(opts: {
     <p style="color:#888;font-size:12px">This adds you to their company — you don&apos;t need to create a separate Swiftscope business.</p>
   `;
 }
+
+/**
+ * Base URL for invite accept links.
+ *
+ * Prefer the deployment that handled the invite (request origin) so preview
+ * invites stay on that preview. NEXT_PUBLIC_APP_URL is usually production,
+ * which would bounce preview testers onto live middleware that still
+ * redirects /team/accept → /login until the fix is merged.
+ *
+ * On production, request origin is already swiftscope.com.au.
+ */
+export function teamInviteAcceptBaseUrl(request: Request): string {
+  const requestOrigin = new URL(request.url).origin.replace(/\/$/, "");
+  const host = new URL(request.url).host;
+  const isPreviewHost =
+    host.endsWith(".vercel.app") ||
+    host.includes("localhost") ||
+    host.startsWith("127.0.0.1");
+
+  if (isPreviewHost) return requestOrigin;
+
+  const configured = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "");
+  return configured || requestOrigin;
+}
