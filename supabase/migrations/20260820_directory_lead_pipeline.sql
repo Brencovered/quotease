@@ -69,6 +69,7 @@ comment on column public.directory_enquiries.urgency is 'asap | checking | later
 update public.directory_enquiries de
 set profile_id = dl.profile_id
 from public.directory_listing dl
-where de.listing_id = dl.id
+where de.listing_id is not null
+  and de.listing_id = dl.id::text
   and de.profile_id is null
   and dl.profile_id is not null;
