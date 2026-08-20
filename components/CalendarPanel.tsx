@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveBusinessId } from "@/lib/team";
 import { CalendarDays, MapPin, ChevronLeft, ChevronRight, Plus, Bell, Send, Trash2, Pencil } from "lucide-react";
+import { businessDateKey } from "@/lib/scheduleNormalize";
 
 type ScheduledJob = {
   id: string;
@@ -65,7 +66,10 @@ type CalEvent = {
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const DAY_NAMES   = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
-function toDateStr(d: Date) { return d.toISOString().slice(0,10); }
+// Calendar day bucketing is always Australia/Melbourne (see businessDateKey
+// in lib/scheduleNormalize.ts) so month view, crew week, and list view can
+// never disagree on which day a job falls on.
+const toDateStr = businessDateKey;
 function getDaysInMonth(y: number, m: number) { return new Date(y, m+1, 0).getDate(); }
 function getFirstDay(y: number, m: number)    { return new Date(y, m, 1).getDay(); }
 
@@ -78,7 +82,11 @@ export default function CalendarPanel({
   followUps?: QuoteFollowUp[];
   teamMembers?: TeamMember[];
 }) {
-  const today = new Date();
+  // Anchor "today" to the Australia/Melbourne calendar date, not the
+  // viewing device's local date -- otherwise the initial month/week shown
+  // and the "today" highlight can be a day off for anyone not on AEST/AEDT.
+  const todayKey = businessDateKey(new Date());
+  const today = new Date(`${todayKey}T00:00:00`);
   const [year,  setYear]  = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [weekAnchor, setWeekAnchor] = useState(() => mondayOf(today));
@@ -427,7 +435,7 @@ export default function CalendarPanel({
           <div className="flex items-center justify-between mb-3">
             <button onClick={() => setWeekAnchor((d) => { const n = new Date(d); n.setDate(n.getDate() - 7); return n; })} className="p-1.5 rounded-lg hover:bg-[var(--app-bg)]"><ChevronLeft size={16} /></button>
             <p className="font-bold text-[var(--ink)] text-[14px]">
-              Week of {weekAnchor.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}
+              Week of {weekAnchor.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric", timeZone: "Australia/Melbourne" })}
             </p>
             <button onClick={() => setWeekAnchor((d) => { const n = new Date(d); n.setDate(n.getDate() + 7); return n; })} className="p-1.5 rounded-lg hover:bg-[var(--app-bg)]"><ChevronRight size={16} /></button>
           </div>
@@ -440,7 +448,7 @@ export default function CalendarPanel({
                   <th className="text-left p-2 text-[var(--ink-faint)] font-semibold">Crew</th>
                   {Array.from({ length: 7 }).map((_, i) => {
                     const d = new Date(weekAnchor); d.setDate(d.getDate() + i);
-                    return <th key={i} className="text-left p-2 text-[var(--ink-faint)] font-semibold">{d.toLocaleDateString("en-AU", { weekday: "short", day: "numeric" })}</th>;
+                    return <th key={i} className="text-left p-2 text-[var(--ink-faint)] font-semibold">{d.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", timeZone: "Australia/Melbourne" })}</th>;
                   })}
                 </tr>
               </thead>
@@ -564,8 +572,8 @@ export default function CalendarPanel({
               {j.scheduled_start ? (
                 <p className="text-[13px] text-[var(--ink-soft)] mt-2 flex gap-1.5 items-center">
                   <CalendarDays size={13} className="text-[var(--amber-deep)]" />
-                  {new Date(j.scheduled_start).toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"})}
-                  {j.scheduled_end && j.scheduled_end!==j.scheduled_start && ` - ${new Date(j.scheduled_end).toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"})}`}
+                  {new Date(j.scheduled_start).toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short",timeZone:"Australia/Melbourne"})}
+                  {j.scheduled_end && j.scheduled_end!==j.scheduled_start && ` - ${new Date(j.scheduled_end).toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short",timeZone:"Australia/Melbourne"})}`}
                   {j.estimated_days && <span className="text-[var(--ink-faint)] ml-1">({j.estimated_days}d)</span>}
                 </p>
               ) : (
@@ -590,7 +598,7 @@ export default function CalendarPanel({
                       <p className="text-[14px] font-semibold text-[var(--ink)]">{ev.title}</p>
                       {ev.description && <p className="text-[12.5px] text-[var(--ink-faint)]">{ev.description}</p>}
                       <p className="text-[12px] text-[var(--ink-faint)] mt-0.5">
-                        {new Date(ev.event_date).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}
+                        {new Date(ev.event_date).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", timeZone: "Australia/Melbourne" })}
                         {!ev.is_all_day && ev.start_time && ` at ${ev.start_time}`}
                         {ev.end_time && ` - ${ev.end_time}`}
                       </p>
