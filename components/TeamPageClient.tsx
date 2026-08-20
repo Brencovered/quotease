@@ -75,9 +75,11 @@ export default function TeamPageClient({
   const [inviteAccessScope, setInviteAccessScope] = useState("all");
   const [sending, setSending] = useState(false);
   const [sendMsg, setSendMsg] = useState("");
+  const [lastAcceptUrl, setLastAcceptUrl] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [resendMsg, setResendMsg] = useState("");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [updatingRoleId, setUpdatingRoleId] = useState<string | null>(null);
   const [editingRateId, setEditingRateId] = useState<string | null>(null);
   const [rateDraft, setRateDraft] = useState("");
@@ -102,6 +104,7 @@ export default function TeamPageClient({
       const data = await res.json();
       if (res.ok) {
         setSendMsg(`Invite sent to ${inviteEmail.trim()}`);
+        setLastAcceptUrl(typeof data.acceptUrl === "string" ? data.acceptUrl : null);
         setInviteEmail("");
         setInviteName("");
         setInviteRole("site_member");
@@ -109,6 +112,7 @@ export default function TeamPageClient({
         router.refresh();
       } else {
         setSendMsg(data.error || "Failed to send invite");
+        setLastAcceptUrl(null);
       }
     } catch {
       setSendMsg("Something went wrong");
@@ -158,9 +162,26 @@ export default function TeamPageClient({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "resend" }),
     });
+    const data = await res.json().catch(() => ({}));
     setResendingId(null);
-    setResendMsg(res.ok ? "Reminder sent" : "Couldn't send - try again shortly");
+    if (res.ok) {
+      setResendMsg("Reminder sent");
+      if (typeof data.acceptUrl === "string") setLastAcceptUrl(data.acceptUrl);
+    } else {
+      setResendMsg("Couldn't send - try again shortly");
+    }
     setTimeout(() => setResendMsg(""), 3000);
+  }
+
+  async function copyAcceptLink(token: string, id: string) {
+    const url = `${window.location.origin}/team/accept/${token}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      setLastAcceptUrl(url);
+    }
   }
 
   async function saveRate(memberId: string) {
@@ -247,6 +268,19 @@ export default function TeamPageClient({
             {sendMsg && (
               <p className={`text-[13px] font-semibold ${sendMsg.includes("sent") ? "text-[var(--green)]" : "text-[var(--red)]"}`}>{sendMsg}</p>
             )}
+            {lastAcceptUrl && (
+              <div className="rounded-lg border border-[var(--line)] bg-[var(--app-bg)] p-3 mt-1">
+                <p className="text-[12px] font-semibold text-[var(--ink-soft)] mb-1">Invite link (open on this same site)</p>
+                <p className="text-[12px] text-[var(--ink)] break-all mb-2">{lastAcceptUrl}</p>
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard.writeText(lastAcceptUrl)}
+                  className="text-[12px] font-bold text-[var(--navy)] hover:underline"
+                >
+                  Copy link
+                </button>
+              </div>
+            )}
           </form>
         </div>
       )}
@@ -272,6 +306,12 @@ export default function TeamPageClient({
                 </div>
                 {isOwner && (
                   <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => copyAcceptLink(inv.invite_token, inv.id)}
+                      className="text-[12px] font-bold text-[var(--navy)] hover:bg-[var(--app-bg)] rounded-lg px-2.5 py-1.5 transition-colors"
+                    >
+                      {copiedId === inv.id ? "Copied" : "Copy link"}
+                    </button>
                     <button onClick={() => resendInvite(inv.id)} disabled={resendingId === inv.id}
                       className="text-[12px] font-bold text-[var(--ink-soft)] hover:bg-[var(--app-bg)] rounded-lg px-2.5 py-1.5 transition-colors disabled:opacity-50">
                       {resendingId === inv.id ? "Sending..." : "Resend"}

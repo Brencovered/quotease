@@ -50,6 +50,10 @@ const PUBLIC_PAGE_PATHS = [
   "/how-it-works",
   "/blog",
   "/q",
+  // Invitees set a password here before they have a session — must stay
+  // public. Also excluded from PROTECTED_PAGE_PREFIXES below because /team
+  // itself is authenticated.
+  "/team/accept",
 ];
 
 /** Routes that require authentication + active subscription */
@@ -432,9 +436,11 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
   // to /onboarding because that page has its own separate onboarded_at
   // check, but /dashboard has no such page-level check and was relying
   // entirely on this now-fixed middleware gate.
-  const isProtectedPage = PROTECTED_PAGE_PREFIXES.some(
-    (p) => pathname === p || pathname.startsWith(p + "/")
-  );
+  const isProtectedPage =
+    !pathname.startsWith("/team/accept/") &&
+    PROTECTED_PAGE_PREFIXES.some(
+      (p) => pathname === p || pathname.startsWith(p + "/")
+    );
 
   // Check if this is an admin route (same bare-path fix as isProtectedPage above)
   const isAdminRoute = ADMIN_PREFIXES.some(
