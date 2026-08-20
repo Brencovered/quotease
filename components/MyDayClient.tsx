@@ -14,6 +14,7 @@ import {
   Square,
   CheckSquare,
   ListTodo,
+  HandMetal,
 } from "lucide-react";
 
 export type MyDayJob = {
@@ -223,6 +224,8 @@ function TileGrid({
 export default function MyDayClient({
   todayJobs,
   undatedJobs,
+  openJobs = [],
+  canClaimOpenJobs = false,
   tasks: initialTasks = [],
   title,
   dateLabel,
@@ -231,6 +234,8 @@ export default function MyDayClient({
 }: {
   todayJobs: MyDayJob[];
   undatedJobs: MyDayJob[];
+  openJobs?: MyDayJob[];
+  canClaimOpenJobs?: boolean;
   tasks?: MyDayTask[];
   title: string;
   dateLabel: string;
@@ -240,6 +245,7 @@ export default function MyDayClient({
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [tasks, setTasks] = useState(initialTasks);
+  const [openPool, setOpenPool] = useState(openJobs);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -263,6 +269,24 @@ export default function MyDayClient({
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn’t update task");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function claimJob(jobId: string) {
+    setBusyId(`claim-${jobId}`);
+    setError(null);
+    try {
+      const res = await fetch(`/api/jobs/${jobId}/claim`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Couldn’t claim job");
+      setOpenPool((prev) => prev.filter((j) => j.id !== jobId));
+      setToast(data.alreadyYours ? "Already on your list" : "It’s yours — see Starting today");
+      setTimeout(() => setToast(null), 3000);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn’t claim job");
     } finally {
       setBusyId(null);
     }
@@ -299,7 +323,11 @@ export default function MyDayClient({
   }
 
   const openTasks = tasks.filter((t) => t.status !== "done");
-  const empty = todayJobs.length === 0 && undatedJobs.length === 0 && openTasks.length === 0;
+  const empty =
+    todayJobs.length === 0 &&
+    undatedJobs.length === 0 &&
+    openTasks.length === 0 &&
+    openPool.length === 0;
 
   return (
     <main className="page-wrap pb-24 sm:pb-10">
@@ -341,7 +369,9 @@ export default function MyDayClient({
           <Briefcase size={28} className="mx-auto text-[var(--ink-faint)] mb-3" />
           <p className="font-semibold text-[var(--ink)] mb-1">Nothing scheduled for today</p>
           <p className="text-[13px] text-[var(--ink-faint)] mb-4 max-w-[36ch] mx-auto">
-            Set a start date on the job or schedule to see it here. Owners can also add tasks from Crew.
+            {scopedToSelf
+              ? "Nothing on you yet. If there’s open work above, grab a job — or wait for an assign."
+              : "Set a start date on the job or schedule to see it here."}
           </p>
           <div className="flex flex-wrap justify-center gap-2">
             <Link href="/schedule" className="btn-secondary text-[13px] py-2 px-3">
@@ -354,6 +384,51 @@ export default function MyDayClient({
         </div>
       ) : (
         <div className="space-y-7">
+          {canClaimOpenJobs && openPool.length > 0 && (
+            <section>
+              <div className="flex items-baseline justify-between gap-2 mb-2.5">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--amber-deep)] flex items-center gap-1.5">
+                  <HandMetal size={12} /> Open today — grab one
+                </p>
+                <span className="text-[11px] font-semibold text-[var(--ink-faint)]">{openPool.length}</span>
+              </div>
+              <p className="text-[12.5px] text-[var(--ink-faint)] mb-2.5">
+                Unassigned jobs starting today. Claim one if you’re free.
+              </p>
+              <ul className="space-y-2">
+                {openPool.map((job) => (
+                  <li
+                    key={job.id}
+                    className="rounded-2xl border border-dashed border-[var(--amber)]/45 bg-[var(--surface)] p-3 flex items-start gap-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        href={`/jobs/${job.id}`}
+                        className="font-semibold text-[14px] text-[var(--ink)] hover:underline"
+                      >
+                        #{job.job_number} · {job.client_name || job.title || "Job"}
+                      </Link>
+                      {job.site_address && (
+                        <p className="text-[12px] text-[var(--ink-faint)] mt-0.5 flex gap-1">
+                          <MapPin size={12} className="mt-0.5 shrink-0" />
+                          <span className="line-clamp-2">{job.site_address}</span>
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      disabled={busyId === `claim-${job.id}`}
+                      onClick={() => void claimJob(job.id)}
+                      className="shrink-0 btn-primary text-[12px] py-2 px-3"
+                    >
+                      {busyId === `claim-${job.id}` ? "…" : "I’ll take it"}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           {openTasks.length > 0 && (
             <section>
               <div className="flex items-baseline justify-between gap-2 mb-2.5">
