@@ -78,7 +78,7 @@ function SignupRightPanel() {
         </div>
 
         <h2 className="reveal font-display text-[2.4rem] xl:text-[2.8rem] text-white leading-[1.05] mb-4">
-          Join 200+ tradies already winning more jobs
+          Win more jobs from the driveway
         </h2>
         <p className="reveal text-[14px] text-[#8b96a1] leading-relaxed mb-8 max-w-md">
           The quoting platform built for Australian electricians, plumbers, builders, and more. Fast, simple, and made for life on the tools.
@@ -117,7 +117,7 @@ function MobileTeaser() {
       <div className="absolute w-[300px] h-[300px] rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(255,180,0,0.18) 0%, transparent 65%)", top: "-30%", right: "-10%" }} />
       <div className="relative z-10 text-center">
         <span className="text-[10px] font-bold tracking-[.2em] uppercase text-[var(--amber)]">Swiftscope for Tradies</span>
-        <h2 className="font-display text-[1.8rem] text-white leading-tight mt-2 mb-2">Join 200+ tradies winning more jobs</h2>
+        <h2 className="font-display text-[1.8rem] text-white leading-tight mt-2 mb-2">Win more jobs from the driveway</h2>
         <p className="text-[12.5px] text-[#8b96a1] mb-4">7-day free trial - then $45/month flat</p>
         <div className="flex items-center justify-center gap-4 text-[11px] font-semibold text-[#8b96a1]">
           <span className="flex items-center gap-1"><Shield size={11} style={{ color: "var(--amber)" }} /> No credit card</span>
