@@ -10,6 +10,9 @@ import {
   CheckCircle2,
   MapPin,
   Briefcase,
+  MessageSquare,
+  X,
+  UsersRound,
 } from "lucide-react";
 
 export type MyDayJob = {
@@ -17,6 +20,7 @@ export type MyDayJob = {
   job_number: number;
   client_name: string | null;
   client_phone: string | null;
+  client_email?: string | null;
   site_address: string | null;
   title: string | null;
   status: string;
@@ -31,6 +35,13 @@ const STATUS_LABEL: Record<string, string> = {
   on_hold: "On hold",
   awaiting_sign_off: "Sign-off",
 };
+
+const CLIENT_TEMPLATES = [
+  { key: "on_way", label: "On our way" },
+  { key: "running_late", label: "Running late" },
+  { key: "there_tomorrow", label: "There tomorrow" },
+  { key: "done_today", label: "Done for today" },
+] as const;
 
 function formatTime(iso: string | null): string | null {
   if (!iso) return null;
@@ -55,11 +66,13 @@ function JobTile({
   job,
   busy,
   onStatus,
+  onMessage,
   forceNoStartLabel,
 }: {
   job: MyDayJob;
   busy: boolean;
   onStatus: (jobId: string, status: string) => void;
+  onMessage: (job: MyDayJob) => void;
   forceNoStartLabel?: boolean;
 }) {
   const time = formatTime(job.scheduled_start);
@@ -67,6 +80,7 @@ function JobTile({
   const canStart = job.status === "scheduled" || job.status === "on_hold";
   const canComplete = job.status === "in_progress" || job.status === "awaiting_sign_off";
   const onSite = job.status === "in_progress";
+  const canMessage = Boolean(job.client_phone || job.client_email);
 
   function stop(e: MouseEvent) {
     e.preventDefault();
@@ -139,6 +153,19 @@ function JobTile({
             <Navigation size={15} />
           </a>
         ) : null}
+        {canMessage && (
+          <button
+            type="button"
+            onClick={(e) => {
+              stop(e);
+              onMessage(job);
+            }}
+            className="flex-1 flex items-center justify-center py-2.5 text-[var(--ink-soft)] hover:bg-[var(--app-bg)] border-l border-[var(--line-subtle)]"
+            aria-label="Message client"
+          >
+            <MessageSquare size={15} />
+          </button>
+        )}
         {canStart && (
           <button
             type="button"
@@ -184,11 +211,13 @@ function TileGrid({
   jobs,
   busyId,
   onStatus,
+  onMessage,
   forceNoStartLabel,
 }: {
   jobs: MyDayJob[];
   busyId: string | null;
   onStatus: (jobId: string, status: string) => void;
+  onMessage: (job: MyDayJob) => void;
   forceNoStartLabel?: boolean;
 }) {
   return (
@@ -199,6 +228,7 @@ function TileGrid({
           job={job}
           busy={busyId === job.id}
           onStatus={onStatus}
+          onMessage={onMessage}
           forceNoStartLabel={forceNoStartLabel}
         />
       ))}
@@ -212,16 +242,21 @@ export default function MyDayClient({
   title,
   dateLabel,
   scopedToSelf,
+  showCrewLink = false,
 }: {
   todayJobs: MyDayJob[];
   undatedJobs: MyDayJob[];
   title: string;
   dateLabel: string;
   scopedToSelf: boolean;
+  showCrewLink?: boolean;
 }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const [messageJob, setMessageJob] = useState<MyDayJob | null>(null);
+  const [msgBusy, setMsgBusy] = useState(false);
 
   async function setStatus(jobId: string, status: string) {
     setBusyId(jobId);
@@ -236,15 +271,55 @@ export default function MyDayClient({
             : { jobId, status }
         ),
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Couldn’t update job");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Couldn’t update job");
+      if (data.timesheetLogged?.hours) {
+        setToast(`Logged ${data.timesheetLogged.hours}h on this job`);
+        setTimeout(() => setToast(null), 4000);
+      } else if (status === "in_progress") {
+        setToast("Started — time is running");
+        setTimeout(() => setToast(null), 2500);
       }
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn’t update job");
     } finally {
       setBusyId(null);
+    }
+  }
+
+  async function sendClientUpdate(template: string) {
+    if (!messageJob) return;
+    setMsgBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/jobs/${messageJob.id}/client-update`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ template }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Couldn’t send update");
+
+      if (data.smsHref && messageJob.client_phone) {
+        window.location.href = data.smsHref;
+      } else if (!data.emailed && data.mailtoHref) {
+        window.location.href = data.mailtoHref;
+      }
+
+      setToast(
+        data.emailed
+          ? "Update emailed to client"
+          : data.smsHref
+            ? "Opening SMS…"
+            : data.warning || "Update logged"
+      );
+      setTimeout(() => setToast(null), 3500);
+      setMessageJob(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn’t send update");
+    } finally {
+      setMsgBusy(false);
     }
   }
 
@@ -259,14 +334,29 @@ export default function MyDayClient({
           </p>
           <h1 className="font-display text-[26px] sm:text-[28px] text-[var(--ink)] leading-none">{title}</h1>
         </div>
-        <p className="text-[12px] text-[var(--ink-faint)] text-right shrink-0 max-w-[14ch] sm:max-w-none">
-          {scopedToSelf ? "Your jobs" : "By start date"}
-        </p>
+        {showCrewLink ? (
+          <Link
+            href="/crew"
+            className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-[var(--navy)] border border-[var(--line)] rounded-xl px-3 py-2 hover:border-[var(--navy)]"
+          >
+            <UsersRound size={14} /> Crew
+          </Link>
+        ) : (
+          <p className="text-[12px] text-[var(--ink-faint)] text-right shrink-0">
+            {scopedToSelf ? "Your jobs" : "By start date"}
+          </p>
+        )}
       </div>
 
-      {error && (
-        <div className="mb-4 rounded-xl border border-red-200 bg-[var(--red-bg)] px-3 py-2.5 text-[13px] font-semibold text-[var(--red)]">
-          {error}
+      {(error || toast) && (
+        <div
+          className={`mb-4 rounded-xl border px-3 py-2.5 text-[13px] font-semibold ${
+            error
+              ? "border-red-200 bg-[var(--red-bg)] text-[var(--red)]"
+              : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink)]"
+          }`}
+        >
+          {error ?? toast}
         </div>
       )}
 
@@ -298,7 +388,12 @@ export default function MyDayClient({
             {todayJobs.length === 0 ? (
               <p className="text-[13px] text-[var(--ink-faint)]">No jobs with a start date of today.</p>
             ) : (
-              <TileGrid jobs={todayJobs} busyId={busyId} onStatus={setStatus} />
+              <TileGrid
+                jobs={todayJobs}
+                busyId={busyId}
+                onStatus={setStatus}
+                onMessage={setMessageJob}
+              />
             )}
           </section>
 
@@ -314,6 +409,7 @@ export default function MyDayClient({
                 jobs={undatedJobs}
                 busyId={busyId}
                 onStatus={setStatus}
+                onMessage={setMessageJob}
                 forceNoStartLabel
               />
             </section>
@@ -330,6 +426,48 @@ export default function MyDayClient({
           Schedule
         </Link>
       </div>
+
+      {messageJob && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/40"
+            aria-label="Close"
+            onClick={() => setMessageJob(null)}
+          />
+          <div className="relative w-full sm:max-w-md bg-[var(--surface)] rounded-t-2xl sm:rounded-2xl border border-[var(--line)] p-4 pb-6 shadow-xl">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-faint)]">
+                  Update client
+                </p>
+                <p className="font-semibold text-[var(--ink)]">
+                  {messageJob.client_name || `Job #${messageJob.job_number}`}
+                </p>
+              </div>
+              <button type="button" onClick={() => setMessageJob(null)} className="p-1.5 text-[var(--ink-faint)]">
+                <X size={18} />
+              </button>
+            </div>
+            <p className="text-[12.5px] text-[var(--ink-faint)] mb-3">
+              Opens SMS on your phone{messageJob.client_email ? " (and emails if set up)" : ""}.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {CLIENT_TEMPLATES.map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  disabled={msgBusy}
+                  onClick={() => sendClientUpdate(t.key)}
+                  className="btn-secondary text-[13px] py-2.5 px-3 disabled:opacity-50"
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

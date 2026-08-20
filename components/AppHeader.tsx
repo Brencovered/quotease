@@ -27,6 +27,7 @@ import {
 
 const DESKTOP_NAV = [
   { href: "/today",     icon: Sun,             label: "My day" },
+  { href: "/crew",      icon: UsersRound,      label: "Crew" },
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/materials", icon: Package,         label: "Materials" },
   { href: "/jobs",      icon: Briefcase,       label: "Jobs" },
@@ -176,7 +177,7 @@ export default function AppHeader() {
 
       {/* -- Mobile top bar -- */}
       <header className="sm:hidden bg-[var(--navy)] sticky top-0 z-40 h-12 flex items-center justify-between px-4 relative">
-        <Link prefetch={false} href="/today" className="font-display text-[14px] tracking-widest text-white">
+        <Link prefetch={false} href="/dashboard" className="font-display text-[14px] tracking-widest text-white">
           SWIFTSCOPE
         </Link>
         <button onClick={() => setMoreOpen((v) => !v)} className="text-[var(--steel-2)] p-1" aria-label="More">
@@ -187,8 +188,11 @@ export default function AppHeader() {
           <>
             <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
             <div className="absolute top-12 right-4 z-50 bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-lg overflow-hidden w-52">
-              <Link prefetch={false} href="/dashboard" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
-                <LayoutDashboard size={15} className="text-[var(--ink-faint)]" /> Dashboard
+              <Link prefetch={false} href="/quotes" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
+                <FileText size={15} className="text-[var(--ink-faint)]" /> Quotes
+              </Link>
+              <Link prefetch={false} href="/crew" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
+                <UsersRound size={15} className="text-[var(--ink-faint)]" /> Crew
               </Link>
               <Link prefetch={false} href="/materials" onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]">
                 <Package size={15} className="text-[var(--ink-faint)]" /> Materials

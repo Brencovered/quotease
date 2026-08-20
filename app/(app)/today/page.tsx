@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getTeamContext } from "@/lib/team";
+import { getTeamContext, canSeePricing } from "@/lib/team";
 import AppHeader from "@/components/AppHeader";
 import MyDayClient, { type MyDayJob } from "@/components/MyDayClient";
 import { resolveScheduledStart } from "@/lib/scheduleNormalize";
@@ -36,18 +36,20 @@ export default async function TodayPage() {
   let undatedJobs: MyDayJob[] = [];
   let viewerLabel = "Your day";
   let scopedToSelf = false;
+  let showCrewLink = false;
 
   try {
     const supabase = await createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (userData.user) {
       const ctx = await getTeamContext(supabase, userData.user.id);
+      showCrewLink = canSeePricing(ctx) || ctx.isOwner;
 
       const [{ data: jobRows }, { data: membership }, { data: crewRows }] = await Promise.all([
         supabase
           .from("jobs")
           .select(
-            "id, job_number, client_name, client_phone, site_address, title, trade, status, scheduled_date, scheduled_start, assigned_to_member_id, total_cost"
+            "id, job_number, client_name, client_phone, client_email, site_address, title, trade, status, scheduled_date, scheduled_start, assigned_to_member_id, total_cost"
           )
           .eq("profile_id", ctx.businessId)
           .not("status", "in", '("cancelled","archived","complete","invoiced","partially_paid")')
@@ -98,6 +100,7 @@ export default async function TodayPage() {
             job_number: j.job_number as number,
             client_name: j.client_name as string | null,
             client_phone: j.client_phone as string | null,
+            client_email: j.client_email as string | null,
             site_address: j.site_address as string | null,
             title: (j.title ?? j.trade) as string | null,
             status: j.status as string,
@@ -141,6 +144,7 @@ export default async function TodayPage() {
         title={viewerLabel}
         dateLabel={dateLabel}
         scopedToSelf={scopedToSelf}
+        showCrewLink={showCrewLink}
       />
     </>
   );
