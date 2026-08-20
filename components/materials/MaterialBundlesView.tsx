@@ -47,6 +47,7 @@ interface MaterialBundlesViewProps {
   bundles: MaterialBundle[];
   loading: boolean;
   businessId: string | null;
+  accountTrade: string | null;
   onBundlesChanged: () => void;
 }
 
@@ -54,12 +55,14 @@ export default function MaterialBundlesView({
   bundles,
   loading,
   businessId,
+  accountTrade,
   onBundlesChanged,
 }: MaterialBundlesViewProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formTitle, setFormTitle] = useState("");
-  const [formTrade, setFormTrade] = useState("electrician");
+  // Same as packages: account trade only, never a hardcoded electrician default.
+  const formTrade = accountTrade ?? "";
   const [formDescription, setFormDescription] = useState("");
   const [formItems, setFormItems] = useState<BundleItem[]>([{ ...EMPTY_ITEM, sort_order: 0 }]);
   const [saving, setSaving] = useState(false);
@@ -70,7 +73,6 @@ export default function MaterialBundlesView({
   function openCreateModal() {
     setEditingId(null);
     setFormTitle("");
-    setFormTrade("electrician");
     setFormDescription("");
     setFormItems([{ ...EMPTY_ITEM, sort_order: 0 }]);
     setFormError("");
@@ -80,7 +82,6 @@ export default function MaterialBundlesView({
   function openEditModal(bundle: MaterialBundle) {
     setEditingId(bundle.id);
     setFormTitle(bundle.title);
-    setFormTrade(bundle.trade);
     setFormDescription(bundle.description ?? "");
     setFormItems(
       bundle.items.length > 0
@@ -422,15 +423,12 @@ export default function MaterialBundlesView({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Trade is the account's own, not a choice. */}
                 <div>
                   <label className="block text-[12px] font-bold text-[var(--ink-soft)] mb-1.5">Trade</label>
-                  <select className="app-field" value={formTrade} onChange={(e) => setFormTrade(e.target.value)}>
-                    {TRADES.map((t) => (
-                      <option key={t.key} value={t.key}>
-                        {t.label}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="app-field flex items-center text-[var(--ink-soft)] bg-[var(--line)]/20">
+                    {TRADES.find((t) => t.key === formTrade)?.label ?? "Not set"}
+                  </div>
                 </div>
               </div>
 

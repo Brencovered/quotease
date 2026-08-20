@@ -168,11 +168,17 @@ export async function POST(request: Request) {
       .single();
     const { data: quote } = await supabase
       .from("quotes")
-      .select("id, client_name, client_email, total_cost, invoice_number")
+      .select("id, client_name, client_email, total_cost, invoice_number, intake_data")
       .eq("id", quoteId)
       .single();
     if (profile?.xero_connected && quote) {
-      xeroResult = await pushQuoteToXero(quote, profile);
+      xeroResult = await pushQuoteToXero(
+        {
+          ...quote,
+          intake_data: (quote.intake_data as Record<string, unknown> | null) ?? null,
+        },
+        profile
+      );
     }
   }
 

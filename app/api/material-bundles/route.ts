@@ -70,7 +70,7 @@ export async function POST(request: Request) {
     .insert({
       profile_id: businessId,
       title: title.trim(),
-      trade: trade ?? "electrician",
+      trade: trade || "",
       description: description?.trim() || null,
       status: "active",
     })

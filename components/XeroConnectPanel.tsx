@@ -26,10 +26,10 @@ export default function XeroConnectPanel({
   return (
     <div className="card">
       <p className="section-tag mb-1">Xero integration</p>
-      <p className="font-semibold text-[var(--ink)] mb-1">Live sync with Xero</p>
+      <p className="font-semibold text-[var(--ink)] mb-1">Push invoices to Xero</p>
       <p className="text-[13px] text-[var(--ink-faint)] mb-4">
-        Connect Xero to push accepted quotes directly as invoices - no CSV, no double-entry.
-        Contacts, invoices and payments sync automatically.
+        Connect Xero to push accepted quotes as draft invoices - client, reference, and scope lines when available.
+        Payments still clear in Xero; mark jobs paid in Swiftscope when you want the board to match.
       </p>
 
       {connected ? (
