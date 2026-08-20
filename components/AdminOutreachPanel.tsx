@@ -222,14 +222,14 @@ export default function AdminOutreachPanel({
           </p>
         </div>
         <div className="flex gap-2 shrink-0">
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages - file download from an API route, not page navigation; next/link's client-side routing is the wrong tool here */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- file download from an API route, not page navigation; next/link's client-side routing is the wrong tool here */}
           <a
             href="/api/admin/directory/export-outreach-csv?includeContacted=true"
             className="btn-secondary px-4 py-2 text-[12.5px]"
           >
             <Eye size={13} /> Preview CSV
           </a>
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages - same as above */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- same as above */}
           <a
             href="/api/admin/directory/export-outreach-csv"
             className="btn-primary px-4 py-2 text-[12.5px]"

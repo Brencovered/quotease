@@ -745,7 +745,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 case "image":
                   return (
                     <figure key={i} className="my-8">
-                      {/* eslint-disable-next-line @next/next/no-img-element - arbitrary admin-pasted URL, not a whitelistable domain like cover_url */}
+                      {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary admin-pasted URL, not a whitelistable domain like cover_url */}
                       <img src={block.src} alt={block.alt} className="w-full rounded-2xl" />
                       {block.alt && <figcaption className="text-center text-[12px] text-[#8aa4b4] mt-2">{block.alt}</figcaption>}
                     </figure>
