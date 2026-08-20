@@ -13,7 +13,6 @@ import JobFilesPanel from "@/components/JobFilesPanel";
 import JobCrewPanel from "@/components/JobCrewPanel";
 import JobBriefPanel from "@/components/JobBriefPanel";
 import JobTasksPanel from "@/components/JobTasksPanel";
-import SupplierOrderPanel from "@/components/SupplierOrderPanel";
 import JobTimeline from "@/components/JobTimeline";
 import JobPlansPanel from "@/components/JobPlansPanel";
 import SiteAnnotationReport from "@/components/SiteAnnotationReport";
@@ -276,24 +275,6 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                 jobId={job.id}
                 initialItems={lineItems as never}
                 scopeLines={scopeLines}
-              />
-
-              <SupplierOrderPanel
-                jobId={job.id}
-                quoteId={quote?.id ?? null}
-                jobNumber={job.job_number}
-                clientName={job.client_name}
-                siteAddress={job.site_address}
-                scopeLines={scopeLines}
-                jobLineItems={(lineItems as Array<{ id: string; label: string; quantity: number; unit: string; status: string }>).map((l) => ({
-                  id: l.id,
-                  label: l.label,
-                  quantity: l.quantity,
-                  unit: l.unit,
-                  status: l.status,
-                }))}
-                tradeMaterials={tradeMaterials}
-                trade={jobTrade}
               />
 
               <DocketsPanel
