@@ -49,12 +49,97 @@ async function getValidAccessToken(profile: XeroProfile): Promise<string | null>
   return tokens.access_token;
 }
 
+type XeroLineItem = {
+  Description: string;
+  Quantity: number;
+  UnitAmount: number;
+  AccountCode: string;
+};
+
+/** Build Xero line items from quote intake when we have priced site scope.
+ *  Falls back to a single total line when there is nothing itemised. */
+export function buildXeroQuoteLineItems(quote: {
+  id: string;
+  total_cost: number | null;
+  invoice_number: string | null;
+  intake_data?: Record<string, unknown> | null;
+}): XeroLineItem[] {
+  const accountCode = "200"; // default sales account in a new Xero org
+  const siteItems = Array.isArray(quote.intake_data?.site_items)
+    ? (quote.intake_data!.site_items as {
+        label?: string;
+        qty?: number;
+        unit?: string;
+        note?: string;
+        materialsCost?: number;
+        labourHrs?: number;
+      }[])
+    : [];
+
+  const lines: XeroLineItem[] = [];
+  for (const item of siteItems) {
+    const label = (item.label ?? "").trim();
+    if (!label) continue;
+    const qty = Number(item.qty) || 0;
+    if (qty <= 0) continue;
+    const materials = Number(item.materialsCost) || 0;
+    const labourHrs = Number(item.labourHrs) || 0;
+    // Prefer materials sell total when present; otherwise skip zero-dollar noise.
+    // Labour without materials becomes a separate hours note line if hours exist.
+    if (materials > 0) {
+      const note = item.note?.trim();
+      lines.push({
+        Description: note ? `${label} (${note})` : label,
+        Quantity: qty,
+        UnitAmount: Math.round((materials / qty) * 100) / 100,
+        AccountCode: accountCode,
+      });
+    } else if (labourHrs > 0) {
+      lines.push({
+        Description: `${label} - labour`,
+        Quantity: labourHrs,
+        UnitAmount: 0,
+        AccountCode: accountCode,
+      });
+    }
+  }
+
+  const lineSum = lines.reduce((s, l) => s + l.Quantity * l.UnitAmount, 0);
+  const total = Number(quote.total_cost) || 0;
+  const remainder = Math.round((total - lineSum) * 100) / 100;
+
+  if (lines.length === 0) {
+    return [
+      {
+        Description: `Quote ${quote.invoice_number ?? quote.id.slice(0, 8)}`,
+        Quantity: 1,
+        UnitAmount: total,
+        AccountCode: accountCode,
+      },
+    ];
+  }
+
+  // Keep the invoice total aligned with the accepted quote when scope lines
+  // don't cover labour/extras (common - site_items often hold materials only).
+  if (Math.abs(remainder) >= 0.01) {
+    lines.push({
+      Description: remainder >= 0 ? "Labour and other charges" : "Quote adjustment",
+      Quantity: 1,
+      UnitAmount: remainder,
+      AccountCode: accountCode,
+    });
+  }
+
+  return lines;
+}
+
 export async function pushQuoteToXero(quote: {
   id: string;
   client_name: string | null;
   client_email: string | null;
   total_cost: number | null;
   invoice_number: string | null;
+  intake_data?: Record<string, unknown> | null;
 }, profile: XeroProfile): Promise<{ ok: boolean; error?: string }> {
   if (!profile.xero_connected || !profile.xero_tenant_id) {
     return { ok: false, error: "Xero not connected" };
@@ -70,6 +155,8 @@ export async function pushQuoteToXero(quote: {
     Accept: "application/json",
   };
 
+  const lineItems = buildXeroQuoteLineItems(quote);
+
   // Xero's API will match an existing contact by name automatically if one
   // exists - no need to search-then-create, a plain create with the same
   // name reuses it.
@@ -81,14 +168,7 @@ export async function pushQuoteToXero(quote: {
         {
           Type: "ACCREC",
           Contact: { Name: quote.client_name || "Unnamed client", EmailAddress: quote.client_email || undefined },
-          LineItems: [
-            {
-              Description: `Quote ${quote.invoice_number ?? quote.id.slice(0, 8)}`,
-              Quantity: 1,
-              UnitAmount: quote.total_cost ?? 0,
-              AccountCode: "200", // standard default sales account code in a new Xero org
-            },
-          ],
+          LineItems: lineItems,
           Status: "DRAFT",
           Reference: quote.invoice_number ?? undefined,
         },

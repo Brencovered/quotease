@@ -6,6 +6,7 @@ import SiteAnnotationReport from "@/components/SiteAnnotationReport";
 import SafeLogoImage from "@/components/SafeLogoImage";
 import { resolveAnnotationFrameUrls, type AnnotationMetaPersisted } from "@/lib/siteAnnotations";
 import { humanizeIntakePublic } from "@/lib/humanizeIntake";
+import { groupSiteItemsForDisplay } from "@/lib/groupSiteItemsForDisplay";
 import { splitGst } from "@/lib/gst";
 
 export default async function PublicQuotePage({ params }: { params: Promise<{ token: string }> }) {
@@ -42,6 +43,17 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
   const hasBankDetails = !!(profile.bank_bsb && profile.bank_account_number);
 
   const scopeLines = humanizeIntakePublic(quote.intake_data as Record<string, unknown> | null, quote.trade ?? "electrician");
+
+  // Merged for display only. Every add path in every builder (manual,
+  // voice, drawing, plan markup, packages, site annotations) appends a new
+  // row rather than incrementing an existing one's qty, since each row
+  // stays independently editable while the quote is being built. That is
+  // correct in the builder and wrong here: the customer should see
+  // "Downlight x18", not eighteen identical bullet points. See
+  // lib/groupSiteItemsForDisplay for the full reasoning.
+  const rawSiteItems = ((quote.intake_data as Record<string, unknown>)?.site_items ?? []) as
+    { label: string; qty: number; unit: string; note?: string }[];
+  const groupedSiteItems = groupSiteItemsForDisplay(rawSiteItems);
   const savedAnnotations = (quote.intake_data as { annotation_meta?: AnnotationMetaPersisted[] } | null)?.annotation_meta;
   const resolvedAnnotations = await resolveAnnotationFrameUrls(supabase, savedAnnotations);
   const totals = splitGst(quote.total_cost ?? 0);
@@ -85,17 +97,21 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
               </div>
             )}
 
-            {/* Site annotation items shown as priced line items */}
-            {Array.isArray((quote.intake_data as Record<string,unknown>)?.site_items) &&
-              ((quote.intake_data as Record<string,unknown>)?.site_items as {label:string;qty:number;unit:string;note:string}[]).length > 0 && (
+            {/* Site annotation items shown as priced line items, grouped so
+                repeated taps on the same item (e.g. eighteen downlights added
+                one at a time) show as one line at the summed quantity. */}
+            {groupedSiteItems.length > 0 && (
               <div className="mb-5">
                 <p className="text-[11px] tracking-[.1em] uppercase text-[var(--amber-deep)] font-bold mb-2">Included items</p>
                 <div className="space-y-2">
-                  {((quote.intake_data as Record<string,unknown>)?.site_items as {label:string;qty:number;unit:string;note:string}[]).map((item, i) => (
+                  {groupedSiteItems.map((item, i) => (
                     <div key={i} className="flex items-center justify-between text-[13.5px] py-1.5 border-b border-[var(--line-subtle)]">
                       <div>
                         <p className="font-semibold text-[var(--ink)]">{item.label}</p>
-                        <p className="text-[12px] text-[var(--ink-faint)]">{item.qty} {item.unit}</p>
+                        <p className="text-[12px] text-[var(--ink-faint)]">
+                          {item.qty} {item.unit}
+                          {item.note && <span className="text-[var(--ink-faint)]"> · {item.note}</span>}
+                        </p>
                       </div>
                     </div>
                   ))}

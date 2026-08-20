@@ -425,10 +425,12 @@ export default function MaterialsCatalog({
 
 export function MaterialModal({
   material,
+  accountTrade,
   onClose,
   onSaved,
 }: {
   material: Material | null;
+  accountTrade: string | null;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -437,7 +439,10 @@ export function MaterialModal({
   const [supplier, setSupplier] = useState(material?.supplier ?? "");
   const [unit, setUnit] = useState(material?.unit ?? "ea");
   const [costPrice, setCostPrice] = useState(material?.cost_price ?? 0);
-  const [trade, setTrade] = useState(material?.trade ?? "electrician");
+  // Falls back to the account's own trade, never to a hardcoded one. The old
+  // "electrician" default meant a roofer adding a material by hand filed it
+  // under electrician, where their own quote builder could not see it.
+  const [trade] = useState(material?.trade ?? accountTrade ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -466,7 +471,8 @@ export function MaterialModal({
         supplier: supplier.trim(),
         unit: unit || "ea",
         cost_price: costPrice,
-        trade: trade || "electrician",
+        // Never fall back to "electrician" - leave untagged if unknown.
+        trade: trade || null,
       };
 
       let res;
@@ -583,15 +589,12 @@ export function MaterialModal({
             </div>
           </div>
 
+          {/* Read-only: the trade is the account's, not a per-item choice. */}
           <div>
             <label className="block text-[12px] font-bold text-[var(--ink-soft)] mb-1.5">Trade</label>
-            <select className="app-field" value={trade} onChange={(e) => setTrade(e.target.value)}>
-              {TRADES.map((t) => (
-                <option key={t.key} value={t.key}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
+            <div className="app-field flex items-center text-[var(--ink-soft)] bg-[var(--line)]/20">
+              {TRADES.find((t) => t.key === trade)?.label ?? "Not set"}
+            </div>
           </div>
         </div>
 

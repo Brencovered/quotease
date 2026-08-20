@@ -14,7 +14,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
 
   const { data: quote, error } = await supabase
     .from("quotes")
-    .select("id, profile_id, client_name, client_email, total_cost, invoice_number, status, profiles!quotes_profile_id_fkey(business_name, contact_email)")
+    .select("id, profile_id, client_name, client_email, total_cost, invoice_number, intake_data, status, profiles!quotes_profile_id_fkey(business_name, contact_email)")
     .eq("public_token", token)
     .single();
 
@@ -48,7 +48,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
       .single();
     if (profile?.xero_connected) {
       // Best-effort - a Xero hiccup shouldn't block the client's acceptance.
-      await pushQuoteToXero(quote, profile).catch(() => null);
+      await pushQuoteToXero(
+        {
+          id: quote.id,
+          client_name: quote.client_name,
+          client_email: quote.client_email,
+          total_cost: quote.total_cost,
+          invoice_number: quote.invoice_number,
+          intake_data: (quote.intake_data as Record<string, unknown> | null) ?? null,
+        },
+        profile
+      ).catch(() => null);
     }
   }
 

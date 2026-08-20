@@ -887,6 +887,15 @@ export default function GenericQuoteBuilder({
             <p className="text-[13px] text-[var(--ink-faint)]">{siteAddress || "No site address set"}</p>
           </div>
 
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-[var(--ink-soft)] leading-relaxed">
+            Before you send: confirm materials and labour rates are yours, not starter estimates from onboarding.
+            Update them in{" "}
+            <a href="/materials" className="font-semibold text-[var(--navy)] underline underline-offset-2">
+              Price book
+            </a>
+            {" "}if anything still looks generic.
+          </div>
+
           <ExtraJobLines
             lines={extraLines}
             onChange={setExtraLines}

@@ -640,7 +640,7 @@ export default function OnboardingPage() {
                 </div>
                 <div>
                   <h1 className="font-display text-[26px] text-[var(--ink)]">Get your pricing set up</h1>
-                  <p className="text-[13px] text-[var(--ink-faint)]">Pick whichever&apos;s fastest for you - all optional</p>
+                  <p className="text-[13px] text-[var(--ink-faint)]">Your real costs make quotes trustworthy - starter estimates are only a fallback</p>
                 </div>
               </div>
 
@@ -780,10 +780,10 @@ export default function OnboardingPage() {
               {pricingTab === "later" && (
                 <>
                   <p className="text-[14px] text-[var(--ink-soft)] leading-relaxed mb-6">
-                    No problem - you can add pricing manually as you quote, or come back to upload a CSV or past quotes anytime from Settings &gt; Price Book.
+                    You can finish setup now and add pricing from Settings &gt; Price Book. Until you replace starter estimates with your real costs, treat quote totals as rough only.
                   </p>
                   <TipBox icon={Sparkles}>
-                    Swiftscope still works great with an empty price book - you can type in prices as you go and they&apos;ll be remembered for next time.
+                    We seed a small starter book so the first quote is not blank - those prices are placeholders, not your rates. Upload a CSV or past quotes before you send anything to a client.
                   </TipBox>
                 </>
               )}

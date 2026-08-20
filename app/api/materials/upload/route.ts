@@ -122,12 +122,29 @@ export async function POST(request: Request) {
   const hasHeader = isHeaderRow(firstRow);
   if (hasHeader) startIndex = 1;
 
-  /* ---- get user's trade ---- */
-  let defaultTrade = "electrician";
-  try {
-    const { data: profile } = await supabase.from("profiles").select("trade").eq("id", businessId).single();
-    if (profile?.trade) defaultTrade = normalizeTradeValue(profile.trade) ?? defaultTrade;
-  } catch { /* ignore */ }
+  /* ---- get the account's trade ----
+     This queried .select("trade") for months. There is no `trade` column on
+     profiles; it is `trades`, a text[]. PostgREST returned a 42703 error,
+     the bare catch swallowed it, and defaultTrade stayed "electrician" --
+     so EVERY CSV upload on EVERY account tagged its entire price book as
+     electrician. A roofer importing their supplier file got a price book
+     that was invisible in the roofer quote builder, because PackagePicker
+     and the builders filter on .eq("trade", trade).
+
+     No hardcoded fallback now. If the account has no trade we leave the
+     rows untagged rather than filing them under someone else's trade:
+     untagged shows up under "All trades" and can be fixed, whereas
+     mislabelled looks correct and is never noticed. */
+  const { data: profile, error: profileErr } = await supabase
+    .from("profiles")
+    .select("trades")
+    .eq("id", businessId)
+    .single();
+  if (profileErr) {
+    console.error("[materials/upload] could not read account trade:", profileErr.message);
+  }
+  const accountTrade = normalizeTradeValue(profile?.trades?.[0] ?? "") ?? null;
+  const defaultTrade = accountTrade;
 
   /* ---- build column index map ---- */
   const ci: Record<string, number> = {};
