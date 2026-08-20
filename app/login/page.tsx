@@ -243,7 +243,7 @@ function LoginRightPanel() {
           />
           <FeatureItem
             icon={Users}
-            text="200+ active tradies on the platform"
+            text="Unlimited seats, no per-user fees"
           />
         </div>
 
@@ -257,7 +257,7 @@ function LoginRightPanel() {
         >
           <Zap size={18} style={{ color: "var(--amber)" }} />
           <span className="text-[13px] font-bold" style={{ color: "var(--amber)" }}>
-            200+ active tradies
+            7-day free trial · no card
           </span>
         </div>
       </div>
