@@ -33,12 +33,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       .eq("id", job.profile_id)
       .single();
 
-    const { data: lineItemRows } = await supabase
-      .from("job_line_items")
-      .select("label, quantity, unit")
-      .eq("job_id", id)
-      .order("sort_order");
-
     let logoBytes: Uint8Array | null = null;
     if (profile?.logo_url) {
       try {
@@ -48,7 +42,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }
 
     const { generateInvoicePdf } = await import("@/lib/generateInvoicePdf");
-    const pdfBytes = await generateInvoicePdf(job, profile ?? {}, logoBytes, lineItemRows ?? []);
+    const pdfBytes = await generateInvoicePdf(job, profile ?? {}, logoBytes);
 
     const filename = `Invoice-${job.job_number}-${(job.client_name ?? "client").replace(/[^a-zA-Z0-9]/g, "-")}.pdf`;
 
