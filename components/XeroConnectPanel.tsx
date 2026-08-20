@@ -69,7 +69,7 @@ export default function XeroConnectPanel({
         </div>
       ) : (
         <div className="space-y-3">
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages - intentional: this is a
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- intentional: this is a
               full-page navigation to an API route that kicks off the Xero OAuth redirect, not a
               Next.js page route, so next/link's client-side router isn't the right tool here. */}
           <a href="/api/xero/connect"
