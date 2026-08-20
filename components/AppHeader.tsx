@@ -37,11 +37,11 @@ const DESKTOP_NAV = [
 
 /** Keep mobile bottom bar to five slots + centre Quote FAB. */
 const MOBILE_NAV = [
-  { href: "/today",    icon: Sun,          label: "My day" },
-  { href: "/jobs",     icon: Briefcase,    label: "Jobs" },
-  { href: "/quote",    icon: Plus,         label: "Quote", fab: true as const },
-  { href: "/quotes",   icon: FileText,     label: "Quotes" },
-  { href: "/schedule", icon: CalendarDays, label: "Schedule" },
+  { href: "/dashboard", icon: LayoutDashboard, label: "Home" },
+  { href: "/today",     icon: Sun,             label: "My day" },
+  { href: "/quote",     icon: Plus,            label: "Quote", fab: true as const },
+  { href: "/jobs",      icon: Briefcase,       label: "Jobs" },
+  { href: "/schedule",  icon: CalendarDays,    label: "Schedule" },
 ];
 
 export default function AppHeader() {
