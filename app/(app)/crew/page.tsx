@@ -3,7 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { getTeamContext, canSeePricing } from "@/lib/team";
 import AppHeader from "@/components/AppHeader";
 import { resolveScheduledStart } from "@/lib/scheduleNormalize";
-import CrewDayClient, { type CrewDayMember, type CrewDayJob } from "@/components/CrewDayClient";
+import CrewDayClient, {
+  type CrewDayMember,
+  type CrewDayJob,
+  type CrewTask,
+} from "@/components/CrewDayClient";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +42,10 @@ function dayKey(iso: string | null | undefined): string | null {
 export default async function CrewDayPage() {
   const days = Array.from({ length: 7 }, (_, i) => melbourneDayOffset(i));
   let members: CrewDayMember[] = [];
-  const jobsByDay: Record<string, CrewDayJob[]> = Object.fromEntries(days.map((d) => [d, []]));
+  const jobsByDay: Record<string, CrewDayJob[]> = Object.fromEntries(
+    days.map((d) => [d, []])
+  );
+  let tasks: CrewTask[] = [];
   let canManage = false;
 
   try {
@@ -48,22 +55,35 @@ export default async function CrewDayPage() {
       const ctx = await getTeamContext(supabase, userData.user.id);
       canManage = canSeePricing(ctx) || ctx.isOwner;
 
-      const [{ data: memberRows }, { data: jobRows }, { data: crewRows }] = await Promise.all([
-        supabase
-          .from("team_members")
-          .select("id, name, email")
-          .eq("owner_profile_id", ctx.businessId)
-          .eq("status", "active")
-          .order("name"),
-        supabase
-          .from("jobs")
-          .select(
-            "id, job_number, client_name, site_address, title, trade, status, scheduled_date, scheduled_start, assigned_to_member_id"
-          )
-          .eq("profile_id", ctx.businessId)
-          .not("status", "in", '("cancelled","archived","complete","invoiced","partially_paid")'),
-        supabase.from("job_crew").select("job_id, team_member_id").eq("profile_id", ctx.businessId),
-      ]);
+      const [{ data: memberRows }, { data: jobRows }, { data: crewRows }, { data: taskRows }] =
+        await Promise.all([
+          supabase
+            .from("team_members")
+            .select("id, name, email")
+            .eq("owner_profile_id", ctx.businessId)
+            .eq("status", "active")
+            .order("name"),
+          supabase
+            .from("jobs")
+            .select(
+              "id, job_number, client_name, site_address, title, trade, status, scheduled_date, scheduled_start, assigned_to_member_id"
+            )
+            .eq("profile_id", ctx.businessId)
+            .not("status", "in", '("cancelled","archived","complete","invoiced","partially_paid")'),
+          supabase
+            .from("job_crew")
+            .select("job_id, team_member_id")
+            .eq("profile_id", ctx.businessId),
+          supabase
+            .from("job_tasks")
+            .select(
+              "id, title, status, due_date, assigned_to_member_id, job_id, jobs:job_id(job_number, client_name, title)"
+            )
+            .eq("profile_id", ctx.businessId)
+            .neq("status", "done")
+            .or(`due_date.eq.${days[0]},due_date.is.null`)
+            .order("created_at", { ascending: true }),
+        ]);
 
       members = (memberRows ?? []).map((m) => ({
         id: m.id,
@@ -98,6 +118,25 @@ export default async function CrewDayPage() {
         };
         jobsByDay[d] = [...(jobsByDay[d] ?? []), job];
       }
+
+      tasks = (taskRows ?? []).map((t) => {
+        const job = t.jobs as unknown as {
+          job_number: number;
+          client_name: string | null;
+          title: string | null;
+        } | null;
+        return {
+          id: t.id,
+          title: t.title,
+          status: t.status,
+          due_date: t.due_date,
+          assigned_to_member_id: t.assigned_to_member_id,
+          job_id: t.job_id,
+          job_label: job
+            ? `#${job.job_number} · ${job.client_name || job.title || "Job"}`
+            : null,
+        };
+      });
     }
   } catch (err) {
     console.error("Crew day error:", err);
@@ -123,7 +162,13 @@ export default async function CrewDayPage() {
   return (
     <>
       <AppHeader />
-      <CrewDayClient members={members} days={days} jobsByDay={jobsByDay} />
+      <CrewDayClient
+        members={members}
+        days={days}
+        jobsByDay={jobsByDay}
+        tasks={tasks}
+        todayIso={days[0]}
+      />
     </>
   );
 }

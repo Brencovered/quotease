@@ -13,6 +13,9 @@ import {
   MessageSquare,
   X,
   UsersRound,
+  Square,
+  CheckSquare,
+  ListTodo,
 } from "lucide-react";
 
 export type MyDayJob = {
@@ -27,6 +30,15 @@ export type MyDayJob = {
   scheduled_start: string | null;
   total_cost: number | null;
   has_start_date?: boolean;
+};
+
+export type MyDayTask = {
+  id: string;
+  title: string;
+  status: string;
+  due_date: string | null;
+  job_id: string | null;
+  job_label: string | null;
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -239,6 +251,7 @@ function TileGrid({
 export default function MyDayClient({
   todayJobs,
   undatedJobs,
+  tasks: initialTasks = [],
   title,
   dateLabel,
   scopedToSelf,
@@ -246,6 +259,7 @@ export default function MyDayClient({
 }: {
   todayJobs: MyDayJob[];
   undatedJobs: MyDayJob[];
+  tasks?: MyDayTask[];
   title: string;
   dateLabel: string;
   scopedToSelf: boolean;
@@ -253,10 +267,36 @@ export default function MyDayClient({
 }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [tasks, setTasks] = useState(initialTasks);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [messageJob, setMessageJob] = useState<MyDayJob | null>(null);
   const [msgBusy, setMsgBusy] = useState(false);
+
+  async function toggleTask(task: MyDayTask) {
+    const next = task.status === "done" ? "todo" : "done";
+    setBusyId(`task-${task.id}`);
+    try {
+      const res = await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: next }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Couldn’t update task");
+      }
+      setTasks((prev) =>
+        next === "done"
+          ? prev.filter((t) => t.id !== task.id)
+          : prev.map((t) => (t.id === task.id ? { ...t, status: next } : t))
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn’t update task");
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   async function setStatus(jobId: string, status: string) {
     setBusyId(jobId);
@@ -323,7 +363,8 @@ export default function MyDayClient({
     }
   }
 
-  const empty = todayJobs.length === 0 && undatedJobs.length === 0;
+  const openTasks = tasks.filter((t) => t.status !== "done");
+  const empty = todayJobs.length === 0 && undatedJobs.length === 0 && openTasks.length === 0;
 
   return (
     <main className="page-wrap pb-24 sm:pb-10">
@@ -365,7 +406,7 @@ export default function MyDayClient({
           <Briefcase size={28} className="mx-auto text-[var(--ink-faint)] mb-3" />
           <p className="font-semibold text-[var(--ink)] mb-1">Nothing scheduled for today</p>
           <p className="text-[13px] text-[var(--ink-faint)] mb-4 max-w-[36ch] mx-auto">
-            Set a start date on the job or schedule to see it here.
+            Set a start date on the job or schedule to see it here. Owners can also add tasks from Crew.
           </p>
           <div className="flex flex-wrap justify-center gap-2">
             <Link href="/schedule" className="btn-secondary text-[13px] py-2 px-3">
@@ -378,6 +419,51 @@ export default function MyDayClient({
         </div>
       ) : (
         <div className="space-y-7">
+          {openTasks.length > 0 && (
+            <section>
+              <div className="flex items-baseline justify-between gap-2 mb-2.5">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-faint)] flex items-center gap-1.5">
+                  <ListTodo size={12} /> Tasks
+                </p>
+                <span className="text-[11px] font-semibold text-[var(--ink-faint)]">{openTasks.length}</span>
+              </div>
+              <ul className="space-y-1.5">
+                {openTasks.map((t) => (
+                  <li
+                    key={t.id}
+                    className="flex items-center gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5"
+                  >
+                    <button
+                      type="button"
+                      disabled={busyId === `task-${t.id}`}
+                      onClick={() => void toggleTask(t)}
+                      className="shrink-0"
+                    >
+                      {t.status === "done" ? (
+                        <CheckSquare size={17} className="text-[var(--green)]" />
+                      ) : (
+                        <Square size={17} className="text-[var(--ink-faint)]" />
+                      )}
+                    </button>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13.5px] font-semibold text-[var(--ink)] truncate">{t.title}</p>
+                      {t.job_id && t.job_label ? (
+                        <Link
+                          href={`/jobs/${t.job_id}`}
+                          className="text-[11.5px] text-[var(--navy)] font-semibold truncate block"
+                        >
+                          {t.job_label}
+                        </Link>
+                      ) : (
+                        <p className="text-[11.5px] text-[var(--ink-faint)]">Standalone task</p>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           <section>
             <div className="flex items-baseline justify-between gap-2 mb-2.5">
               <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-faint)]">

@@ -78,6 +78,8 @@ const PROTECTED_PAGE_PREFIXES = [
   "/seo",
   "/comms",
   "/leads",
+  "/today",
+  "/crew",
 ];
 
 /** Routes that require admin email */
