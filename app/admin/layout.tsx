@@ -37,6 +37,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <Link href="/admin/outreach" className="text-[var(--steel-1)] hover:text-white">Outreach</Link>
             <Link href="/admin/emails" className="text-[var(--steel-1)] hover:text-white">Emails</Link>
             <Link href="/admin/quote-requests" className="text-[var(--steel-1)] hover:text-white">Quote requests</Link>
+            <Link href="/admin/directory-leads" className="text-[var(--steel-1)] hover:text-white">Directory leads</Link>
             <Link href="/admin/roadmap" className="text-[var(--steel-1)] hover:text-white">Roadmap</Link>
             <Link href="/admin/blog" className="text-[var(--steel-1)] hover:text-white">Blog</Link>
             <Link href="/admin/seo" className="text-[var(--steel-1)] hover:text-white">SEO</Link>

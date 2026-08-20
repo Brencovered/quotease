@@ -17,13 +17,15 @@ export default function QuoteForm({ listing }: { listing: Listing }) {
   const [phone, setPhone] = useState("");
   const [jobType, setJobType] = useState("");
   const [budget, setBudget] = useState("");
+  const [urgency, setUrgency] = useState("");
+  const [customerType, setCustomerType] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
 
   async function submit() {
-    if (!name || !email || !jobType) {
-      setError("Please fill in your name, email and job description.");
+    if (!name || !email || !jobType || !urgency) {
+      setError("Please fill in name, email, job description, and where you’re at.");
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -50,6 +52,8 @@ export default function QuoteForm({ listing }: { listing: Listing }) {
         phone,
         jobType,
         budget,
+        urgency,
+        customerType,
       }),
     });
     setSending(false);
@@ -130,6 +134,32 @@ export default function QuoteForm({ listing }: { listing: Listing }) {
 
         <div>
           <p className="text-[11.5px] font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            Where are you at? *
+          </p>
+          <div className="space-y-1.5">
+            {[
+              { id: "asap", label: "Ready to start soon — I have a budget" },
+              { id: "checking", label: "Have an idea — just checking prices" },
+              { id: "later", label: "Planning 6+ months ahead — want a sense of cost" },
+            ].map((o) => (
+              <button
+                key={o.id}
+                type="button"
+                onClick={() => setUrgency(o.id)}
+                className={`w-full text-left px-3 py-2.5 rounded-lg text-[12.5px] font-semibold border transition-all ${
+                  urgency === o.id
+                    ? "border-[#0a1722] bg-[#0a1722] text-white"
+                    : "border-gray-200 text-gray-600 hover:border-gray-400"
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[11.5px] font-semibold text-gray-500 uppercase tracking-wide mb-2">
             Budget (optional)
           </p>
           <div className="grid grid-cols-3 gap-1.5">
@@ -137,6 +167,7 @@ export default function QuoteForm({ listing }: { listing: Listing }) {
               (b) => (
                 <button
                   key={b}
+                  type="button"
                   onClick={() => setBudget(b === budget ? "" : b)}
                   className={`px-2 py-2 rounded-lg text-[12px] font-semibold border transition-all ${
                     budget === b
@@ -148,6 +179,28 @@ export default function QuoteForm({ listing }: { listing: Listing }) {
                 </button>
               ),
             )}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[11.5px] font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            Job type (optional)
+          </p>
+          <div className="grid grid-cols-2 gap-1.5">
+            {["Residential", "Commercial"].map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setCustomerType(t === customerType ? "" : t)}
+                className={`px-2 py-2 rounded-lg text-[12px] font-semibold border transition-all ${
+                  customerType === t
+                    ? "border-[#0a1722] bg-[#0a1722] text-white"
+                    : "border-gray-200 text-gray-600 hover:border-gray-400"
+                }`}
+              >
+                {t}
+              </button>
+            ))}
           </div>
         </div>
 

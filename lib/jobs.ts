@@ -97,6 +97,7 @@ export async function getOrCreateJobForQuote(supabase: SupabaseClient, quoteId: 
       scheduled_end: quote.scheduled_end ?? resolveScheduledStart(quote.scheduled_start, quote.scheduled_date),
       assigned_to_member_id: quote.assigned_to_member_id,
       amount_paid: quote.amount_paid ?? 0,
+      directory_enquiry_id: quote.directory_enquiry_id ?? null,
     })
     .select("*")
     .single();

@@ -13,6 +13,8 @@ import SiteAnnotationReport from "@/components/SiteAnnotationReport";
 import { resolveAnnotationFrameUrls, type AnnotationMetaPersisted } from "@/lib/siteAnnotations";
 import { humanizeIntake, summarizeConditions } from "@/lib/scopeOfWorks";
 import { getCachedPriceBook, getCachedLegacyMaterials } from "@/lib/cache";
+import LeadOriginBadge from "@/components/LeadOriginBadge";
+import type { LeadPriority, LeadPipelineStatus } from "@/lib/directoryLeads";
 
 // This route is for a quote that hasn't been won yet - draft, sent, or
 // declined. The moment a client accepts, it stops being a quote you're
@@ -85,6 +87,23 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
     );
   }
 
+  type LeadRow = {
+    lead_code: string | null;
+    priority: LeadPriority | null;
+    pipeline_status: LeadPipelineStatus;
+    budget: string | null;
+    customer_type: string | null;
+  };
+  let lead: LeadRow | null = null;
+  const enquiryId = quote.directory_enquiry_id as string | null | undefined;
+  if (enquiryId) {
+    const { data } = await supabase
+      .from("directory_enquiries")
+      .select("lead_code, priority, pipeline_status, budget, customer_type")
+      .eq("id", enquiryId)
+      .maybeSingle();
+    lead = (data as LeadRow | null) ?? null;
+  }
 
   const statusColor: Record<string, string> = {
     draft: "bg-[var(--app-bg)] text-[var(--ink-soft)]",
@@ -111,6 +130,18 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
             </a>
           </div>
         </div>
+
+        {lead && (
+          <div className="mb-4">
+            <LeadOriginBadge
+              leadCode={lead.lead_code}
+              priority={lead.priority}
+              pipelineStatus={lead.pipeline_status}
+              budget={lead.budget}
+              customerType={lead.customer_type}
+            />
+          </div>
+        )}
 
         <div className="card mb-4">
           <p className="section-tag mb-3">Scope and cost</p>
