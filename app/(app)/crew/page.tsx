@@ -46,6 +46,7 @@ export default async function CrewDayPage() {
     days.map((d) => [d, []])
   );
   let tasks: CrewTask[] = [];
+  let needsDateJobs: CrewDayJob[] = [];
   let canManage = false;
 
   try {
@@ -98,10 +99,10 @@ export default async function CrewDayPage() {
       }
 
       const daySet = new Set(days);
+      const needsDate: CrewDayJob[] = [];
       for (const j of jobRows ?? []) {
         const start = resolveScheduledStart(j.scheduled_start, j.scheduled_date);
         const d = dayKey(start) ?? dayKey(j.scheduled_date);
-        if (!d || !daySet.has(d)) continue;
         const crew = crewByJob.get(j.id) ?? [];
         if (j.assigned_to_member_id && !crew.includes(j.assigned_to_member_id)) {
           crew.unshift(j.assigned_to_member_id);
@@ -116,8 +117,14 @@ export default async function CrewDayPage() {
           scheduled_start: start,
           member_ids: crew,
         };
+        if (!d) {
+          needsDate.push(job);
+          continue;
+        }
+        if (!daySet.has(d)) continue;
         jobsByDay[d] = [...(jobsByDay[d] ?? []), job];
       }
+      needsDateJobs = needsDate;
 
       tasks = (taskRows ?? []).map((t) => {
         const job = t.jobs as unknown as {
@@ -166,6 +173,7 @@ export default async function CrewDayPage() {
         members={members}
         days={days}
         jobsByDay={jobsByDay}
+        needsDateJobs={needsDateJobs}
         tasks={tasks}
         todayIso={days[0]}
       />

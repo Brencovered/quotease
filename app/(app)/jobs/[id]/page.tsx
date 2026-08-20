@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { loadJobDetailData } from "@/lib/jobDetail";
-import { getTeamContext } from "@/lib/team";
+import { getTeamContext, canSeePricing } from "@/lib/team";
 import { getOrSeedBoardColumns } from "@/lib/jobBoard";
 import AppHeader from "@/components/AppHeader";
 import VariationsPanel from "@/components/VariationsPanel";
@@ -22,6 +22,7 @@ import QuickJobActionsBar from "@/components/QuickJobActionsBar";
 import JobProgressStepper from "@/components/JobProgressStepper";
 import TimesheetsPanel from "@/components/TimesheetsPanel";
 import JobTabs from "@/components/JobTabs";
+import JobFieldStrip from "@/components/JobFieldStrip";
 import { humanizeIntake, summarizeConditions } from "@/lib/scopeOfWorks";
 import { getCachedPriceBook, getCachedLegacyMaterials } from "@/lib/cache";
 
@@ -46,6 +47,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   const ctx = await getTeamContext(supabase, userData.user.id);
   const businessId = ctx.businessId;
   const isAdmin = ctx.isOwner || ctx.role === "admin";
+  const canManageMoney = canSeePricing(ctx) || ctx.isOwner;
 
   const data = await loadJobDetailData(supabase, id, businessId);
   if (!data) notFound();
@@ -131,7 +133,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   return (
     <>
       <AppHeader />
-      <main className="page-wrap-narrow">
+      <main className="page-wrap-narrow pb-28">
         {/* One job identity strip — not duplicated status banners + finance card */}
         <div className="mb-4">
           <p className="text-[12px] text-[var(--ink-faint)] mb-1">
@@ -163,14 +165,14 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         </div>
 
         <JobTabs
-          hiddenTabs={isAdmin ? [] : ["money"]}
+          hiddenTabs={canManageMoney ? [] : ["money"]}
           run={
             <>
-              {stepperColumns.length > 0 && (
+              {canManageMoney && stepperColumns.length > 0 && (
                 <JobProgressStepper jobId={job.id} status={job.status} columns={stepperColumns} />
               )}
 
-              {quote ? (
+              {quote && (canManageMoney || quote.status === "draft" || quote.status === "sent") ? (
                 <JobActionsBar
                   quoteId={quote.id}
                   jobId={job.id}
@@ -180,16 +182,18 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                   amountPaid={amountPaid}
                   hasClientEmail={!!quote.client_email}
                   completedAt={job.completed_at ?? quote.completed_at}
+                  hideComplete
                 />
-              ) : (
+              ) : canManageMoney ? (
                 <QuickJobActionsBar
                   jobId={job.id}
                   status={job.status}
                   totalCost={effectiveTotal}
                   amountPaid={amountPaid}
                   completedAt={job.completed_at}
+                  hideComplete
                 />
-              )}
+              ) : null}
 
               <JobBriefPanel
                 jobId={job.id}
@@ -202,7 +206,9 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                 teamMembers={teamMembers}
                 crewMemberIds={jobCrew.map((c: { team_member_id: string }) => c.team_member_id)}
               />
-              <JobCrewPanel jobId={job.id} initialCrew={jobCrew} teamMembers={teamMembers} />
+              {canManageMoney && (
+                <JobCrewPanel jobId={job.id} initialCrew={jobCrew} teamMembers={teamMembers} />
+              )}
 
               <JobTasksPanel
                 quoteId={quote?.id ?? null}
@@ -243,12 +249,14 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                 </details>
               )}
 
-              <Link
-                href="/schedule"
-                className="flex items-center justify-center gap-1.5 text-[13px] font-semibold text-[var(--navy)] border-2 border-[var(--line)] rounded-xl py-2.5 hover:border-[var(--navy)]"
-              >
-                Full schedule calendar
-              </Link>
+              {canManageMoney && (
+                <Link
+                  href="/schedule"
+                  className="flex items-center justify-center gap-1.5 text-[13px] font-semibold text-[var(--navy)] border-2 border-[var(--line)] rounded-xl py-2.5 hover:border-[var(--navy)]"
+                >
+                  Full schedule calendar
+                </Link>
+              )}
             </>
           }
           plans={
@@ -448,6 +456,18 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               </>
             ) : null
           }
+        />
+
+        <JobFieldStrip
+          jobId={job.id}
+          businessId={businessId}
+          status={job.status}
+          workStartedAt={job.work_started_at ?? null}
+          clientPhone={job.client_phone ?? quote?.client_phone ?? null}
+          siteAddress={job.site_address}
+          totalCost={effectiveTotal}
+          amountPaid={amountPaid}
+          canManageMoney={canManageMoney}
         />
       </main>
     </>

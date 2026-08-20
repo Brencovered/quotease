@@ -55,10 +55,10 @@ const FIELD_DESKTOP_NAV: NavItem[] = [
 ];
 
 const OWNER_MOBILE_NAV: NavItem[] = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Home" },
   { href: "/today", icon: Sun, label: "My day" },
-  { href: "/quote", icon: Plus, label: "Quote", fab: true },
   { href: "/jobs", icon: Briefcase, label: "Jobs" },
+  { href: "/quote", icon: Plus, label: "Quote", fab: true },
+  { href: "/crew", icon: UsersRound, label: "Crew" },
   { href: "/schedule", icon: CalendarDays, label: "Schedule" },
 ];
 

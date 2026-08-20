@@ -18,6 +18,7 @@ export default function JobActionsBar({
   amountPaid,
   hasClientEmail,
   completedAt,
+  hideComplete = false,
 }: {
   quoteId: string;
   jobId?: string | null;
@@ -29,6 +30,8 @@ export default function JobActionsBar({
   amountPaid: number;
   hasClientEmail: boolean;
   completedAt: string | null;
+  /** When true, Start/Done lives on JobFieldStrip — don’t duplicate Complete. */
+  hideComplete?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -120,7 +123,7 @@ export default function JobActionsBar({
 
         {showJobOps && (
           <>
-            {!completedAt && jobStatus !== "complete" && (
+            {!hideComplete && !completedAt && jobStatus !== "complete" && (
               <button onClick={() => updateJobStatus({ completeJob: true })} disabled={busy} className="btn-secondary text-[13px] py-2 px-4">
                 Mark job complete
               </button>

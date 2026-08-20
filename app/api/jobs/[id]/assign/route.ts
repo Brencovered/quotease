@@ -45,23 +45,37 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     member = data;
   }
 
-  const { error: jobErr } = await supabase
-    .from("jobs")
-    .update({
-      assigned_to_member_id: teamMemberId,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", jobId);
+  // Optional start date (YYYY-MM-DD) — assign + schedule in one action so My day fills.
+  const scheduledStartRaw =
+    typeof body.scheduledStart === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.scheduledStart)
+      ? body.scheduledStart
+      : null;
+  const scheduledStartIso = scheduledStartRaw
+    ? new Date(`${scheduledStartRaw}T09:00:00`).toISOString()
+    : null;
+
+  const jobPatch: Record<string, unknown> = {
+    assigned_to_member_id: teamMemberId,
+    updated_at: new Date().toISOString(),
+  };
+  if (scheduledStartIso) {
+    jobPatch.scheduled_date = scheduledStartRaw;
+    jobPatch.scheduled_start = scheduledStartIso;
+  }
+
+  const { error: jobErr } = await supabase.from("jobs").update(jobPatch).eq("id", jobId);
   if (jobErr) return NextResponse.json({ error: jobErr.message }, { status: 500 });
 
   if (job.quote_id) {
-    await supabase
-      .from("quotes")
-      .update({
-        assigned_to_member_id: teamMemberId,
-        assigned_to: member ? member.name || member.email : null,
-      })
-      .eq("id", job.quote_id);
+    const quotePatch: Record<string, unknown> = {
+      assigned_to_member_id: teamMemberId,
+      assigned_to: member ? member.name || member.email : null,
+    };
+    if (scheduledStartIso) {
+      quotePatch.scheduled_date = scheduledStartRaw;
+      quotePatch.scheduled_start = scheduledStartIso;
+    }
+    await supabase.from("quotes").update(quotePatch).eq("id", job.quote_id);
   }
 
   if (member) {
@@ -75,8 +89,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     );
 
     const jobTitle = job.title || job.client_name || `Job #${job.job_number}`;
-    const when = job.scheduled_start || job.scheduled_date
-      ? new Date(job.scheduled_start ?? `${job.scheduled_date}T12:00:00`).toLocaleDateString("en-AU", {
+    const whenSource = scheduledStartIso || job.scheduled_start || job.scheduled_date;
+    const when = whenSource
+      ? new Date(
+          typeof whenSource === "string" && whenSource.length === 10
+            ? `${whenSource}T12:00:00`
+            : whenSource
+        ).toLocaleDateString("en-AU", {
           weekday: "short",
           day: "numeric",
           month: "short",
