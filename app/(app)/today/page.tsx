@@ -17,7 +17,6 @@ function melbourneToday(): string {
 
 function dayKey(iso: string | null | undefined): string | null {
   if (!iso) return null;
-  // Date-only strings are already YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
   try {
     return new Intl.DateTimeFormat("en-CA", {
@@ -33,7 +32,8 @@ function dayKey(iso: string | null | undefined): string | null {
 
 export default async function TodayPage() {
   const today = melbourneToday();
-  let jobs: MyDayJob[] = [];
+  let todayJobs: MyDayJob[] = [];
+  let undatedJobs: MyDayJob[] = [];
   let viewerLabel = "Your day";
   let scopedToSelf = false;
 
@@ -69,8 +69,6 @@ export default async function TodayPage() {
         crewByJob.set(row.job_id, list);
       }
 
-      // Site members (and assigned-only managers) only see jobs they're on.
-      // Owners/admins/full managers see the whole business day — right for solo + tiny teams.
       const restrictToAssigned =
         Boolean(myMemberId) &&
         (ctx.role === "site_member" || (ctx.role === "manager" && ctx.accessScope === "assigned_only"));
@@ -82,15 +80,16 @@ export default async function TodayPage() {
           : "My day"
         : "Today";
 
-      jobs = (jobRows ?? [])
+      const mapped = (jobRows ?? [])
         .map((j) => {
           const start = resolveScheduledStart(j.scheduled_start, j.scheduled_date);
           const crew = crewByJob.get(j.id) ?? [];
           if (j.assigned_to_member_id && !crew.includes(j.assigned_to_member_id)) {
             crew.unshift(j.assigned_to_member_id);
           }
-          const onDay = dayKey(start) === today || dayKey(j.scheduled_date) === today;
-          const inFlight = j.status === "in_progress" || j.status === "on_hold" || j.status === "awaiting_sign_off";
+          const startDay = dayKey(start) ?? dayKey(j.scheduled_date);
+          const hasStartDate = Boolean(startDay);
+          const onDay = startDay === today;
           const assignedToMe = myMemberId
             ? j.assigned_to_member_id === myMemberId || crew.includes(myMemberId)
             : true;
@@ -104,21 +103,24 @@ export default async function TodayPage() {
             status: j.status as string,
             scheduled_start: start,
             total_cost: j.total_cost as number | null,
+            has_start_date: hasStartDate,
             assigned_to_me: assignedToMe,
             on_day: onDay,
-            in_flight: inFlight,
           };
         })
-        .filter((j) => {
-          if (restrictToAssigned && !j.assigned_to_me) return false;
-          return j.on_day || j.in_flight;
-        })
-        .sort((a, b) => {
-          if (a.status === "in_progress" && b.status !== "in_progress") return -1;
-          if (b.status === "in_progress" && a.status !== "in_progress") return 1;
-          return (a.scheduled_start ?? "").localeCompare(b.scheduled_start ?? "");
-        })
-        .map(({ on_day: _o, in_flight: _i, assigned_to_me: _a, ...job }) => job);
+        .filter((j) => !(restrictToAssigned && !j.assigned_to_me));
+
+      // Strict: only jobs whose start date is today (not every progress-board job).
+      todayJobs = mapped
+        .filter((j) => j.on_day)
+        .sort((a, b) => (a.scheduled_start ?? "").localeCompare(b.scheduled_start ?? ""))
+        .map(({ assigned_to_me: _a, on_day: _o, ...job }) => job);
+
+      // Separate list — clearly labeled, not mixed into “today”.
+      undatedJobs = mapped
+        .filter((j) => !j.has_start_date)
+        .sort((a, b) => a.job_number - b.job_number)
+        .map(({ assigned_to_me: _a, on_day: _o, ...job }) => job);
     }
   } catch (err) {
     console.error("My day page error:", err);
@@ -134,7 +136,8 @@ export default async function TodayPage() {
     <>
       <AppHeader />
       <MyDayClient
-        jobs={jobs}
+        todayJobs={todayJobs}
+        undatedJobs={undatedJobs}
         title={viewerLabel}
         dateLabel={dateLabel}
         scopedToSelf={scopedToSelf}

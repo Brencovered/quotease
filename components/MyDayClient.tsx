@@ -23,7 +23,7 @@ export type MyDayJob = {
   status: string;
   scheduled_start: string | null;
   total_cost: number | null;
-  assigned_to_me?: boolean;
+  has_start_date?: boolean;
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -36,6 +36,8 @@ const STATUS_LABEL: Record<string, string> = {
 function formatTime(iso: string | null): string | null {
   if (!iso) return null;
   if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+  // Midnight Z from date-only promotion — treat as date, no clock time
+  if (iso.endsWith("T00:00:00.000Z") || iso.endsWith("T00:00:00Z")) return null;
   try {
     return new Date(iso).toLocaleTimeString("en-AU", {
       hour: "numeric",
@@ -51,13 +53,110 @@ function mapsUrl(address: string) {
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
 }
 
+function JobCard({
+  job,
+  busy,
+  onStatus,
+  forceNoStartLabel,
+}: {
+  job: MyDayJob;
+  busy: boolean;
+  onStatus: (jobId: string, status: string) => void;
+  forceNoStartLabel?: boolean;
+}) {
+  const time = formatTime(job.scheduled_start);
+  const noStart = forceNoStartLabel || job.has_start_date === false || !job.scheduled_start;
+  const canStart = job.status === "scheduled" || job.status === "on_hold";
+  const canComplete = job.status === "in_progress" || job.status === "awaiting_sign_off";
+
+  return (
+    <article className="card !p-0 overflow-hidden">
+      <Link href={`/jobs/${job.id}`} className="block px-4 pt-4 pb-3 hover:bg-[var(--app-bg)]/60 transition-colors">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mb-0.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-faint)]">
+                #{job.job_number}
+              </span>
+              <span className="text-[11px] font-semibold text-[var(--amber-deep)]">
+                {STATUS_LABEL[job.status] ?? job.status}
+              </span>
+              {noStart ? (
+                <span className="text-[11px] font-semibold text-[var(--ink-faint)]">No start date</span>
+              ) : time ? (
+                <span className="text-[11px] font-semibold text-[var(--ink-soft)]">{time}</span>
+              ) : null}
+            </div>
+            <p className="font-semibold text-[15px] text-[var(--ink)] truncate">
+              {job.client_name || "No client name"}
+            </p>
+            {job.title && (
+              <p className="text-[13px] text-[var(--ink-soft)] truncate">{job.title}</p>
+            )}
+            {job.site_address && (
+              <p className="text-[12.5px] text-[var(--ink-faint)] mt-1 flex items-start gap-1">
+                <MapPin size={12} className="mt-0.5 shrink-0" />
+                <span>{job.site_address}</span>
+              </p>
+            )}
+          </div>
+          <ChevronRight size={18} className="text-[var(--ink-faint)] shrink-0 mt-1" />
+        </div>
+      </Link>
+
+      <div className="px-3 pb-3 flex flex-wrap gap-2 border-t border-[var(--line-subtle)] pt-3">
+        {job.client_phone && (
+          <a
+            href={`tel:${job.client_phone.replace(/\s/g, "")}`}
+            className="btn-secondary text-[12.5px] py-2 px-3 inline-flex items-center gap-1.5"
+          >
+            <Phone size={13} /> Call
+          </a>
+        )}
+        {job.site_address && (
+          <a
+            href={mapsUrl(job.site_address)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-secondary text-[12.5px] py-2 px-3 inline-flex items-center gap-1.5"
+          >
+            <Navigation size={13} /> Navigate
+          </a>
+        )}
+        {canStart && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onStatus(job.id, "in_progress")}
+            className="btn-primary text-[12.5px] py-2 px-3 inline-flex items-center gap-1.5 disabled:opacity-50"
+          >
+            <Play size={13} /> {busy ? "…" : "Start"}
+          </button>
+        )}
+        {canComplete && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onStatus(job.id, "complete")}
+            className="btn-primary text-[12.5px] py-2 px-3 inline-flex items-center gap-1.5 disabled:opacity-50"
+          >
+            <CheckCircle2 size={13} /> {busy ? "…" : "Done"}
+          </button>
+        )}
+      </div>
+    </article>
+  );
+}
+
 export default function MyDayClient({
-  jobs,
+  todayJobs,
+  undatedJobs,
   title,
   dateLabel,
   scopedToSelf,
 }: {
-  jobs: MyDayJob[];
+  todayJobs: MyDayJob[];
+  undatedJobs: MyDayJob[];
   title: string;
   dateLabel: string;
   scopedToSelf: boolean;
@@ -91,6 +190,8 @@ export default function MyDayClient({
     }
   }
 
+  const empty = todayJobs.length === 0 && undatedJobs.length === 0;
+
   return (
     <main className="page-wrap pb-24 sm:pb-10">
       <div className="mb-5">
@@ -100,8 +201,8 @@ export default function MyDayClient({
         <h1 className="font-display text-[28px] text-[var(--ink)] leading-none mb-1">{title}</h1>
         <p className="text-[13.5px] text-[var(--ink-faint)]">
           {scopedToSelf
-            ? "Jobs you’re on today — call, navigate, start, done."
-            : "Today’s jobs for the business. Board and schedule stay one tap away."}
+            ? "Only jobs with today’s start date (plus any with no start date yet)."
+            : "Jobs with a start date of today. Undated jobs are listed separately — not the whole board."}
         </p>
       </div>
 
@@ -111,12 +212,12 @@ export default function MyDayClient({
         </div>
       )}
 
-      {jobs.length === 0 ? (
+      {empty ? (
         <div className="card text-center py-10">
           <Briefcase size={28} className="mx-auto text-[var(--ink-faint)] mb-3" />
-          <p className="font-semibold text-[var(--ink)] mb-1">Nothing on for today</p>
+          <p className="font-semibold text-[var(--ink)] mb-1">Nothing scheduled for today</p>
           <p className="text-[13px] text-[var(--ink-faint)] mb-4 max-w-[36ch] mx-auto">
-            Schedule a job or open the board to see what’s coming up.
+            Set a start date on the job or schedule to see it here.
           </p>
           <div className="flex flex-wrap justify-center gap-2">
             <Link href="/schedule" className="btn-secondary text-[13px] py-2 px-3">
@@ -128,89 +229,48 @@ export default function MyDayClient({
           </div>
         </div>
       ) : (
-        <div className="space-y-3">
-          {jobs.map((job) => {
-            const time = formatTime(job.scheduled_start);
-            const busy = busyId === job.id;
-            const canStart = job.status === "scheduled" || job.status === "on_hold";
-            const canComplete = job.status === "in_progress" || job.status === "awaiting_sign_off";
+        <div className="space-y-8">
+          <section>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-faint)] mb-2">
+              Starting today
+            </p>
+            {todayJobs.length === 0 ? (
+              <p className="text-[13px] text-[var(--ink-faint)]">No jobs with a start date of today.</p>
+            ) : (
+              <div className="space-y-3">
+                {todayJobs.map((job) => (
+                  <JobCard
+                    key={job.id}
+                    job={job}
+                    busy={busyId === job.id}
+                    onStatus={setStatus}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
 
-            return (
-              <article key={job.id} className="card !p-0 overflow-hidden">
-                <Link href={`/jobs/${job.id}`} className="block px-4 pt-4 pb-3 hover:bg-[var(--app-bg)]/60 transition-colors">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-faint)]">
-                          #{job.job_number}
-                        </span>
-                        <span className="text-[11px] font-semibold text-[var(--amber-deep)]">
-                          {STATUS_LABEL[job.status] ?? job.status}
-                        </span>
-                        {time && (
-                          <span className="text-[11px] font-semibold text-[var(--ink-soft)]">{time}</span>
-                        )}
-                      </div>
-                      <p className="font-semibold text-[15px] text-[var(--ink)] truncate">
-                        {job.client_name || "No client name"}
-                      </p>
-                      {job.title && (
-                        <p className="text-[13px] text-[var(--ink-soft)] truncate">{job.title}</p>
-                      )}
-                      {job.site_address && (
-                        <p className="text-[12.5px] text-[var(--ink-faint)] mt-1 flex items-start gap-1">
-                          <MapPin size={12} className="mt-0.5 shrink-0" />
-                          <span>{job.site_address}</span>
-                        </p>
-                      )}
-                    </div>
-                    <ChevronRight size={18} className="text-[var(--ink-faint)] shrink-0 mt-1" />
-                  </div>
-                </Link>
-
-                <div className="px-3 pb-3 flex flex-wrap gap-2 border-t border-[var(--line-subtle)] pt-3">
-                  {job.client_phone && (
-                    <a
-                      href={`tel:${job.client_phone.replace(/\s/g, "")}`}
-                      className="btn-secondary text-[12.5px] py-2 px-3 inline-flex items-center gap-1.5"
-                    >
-                      <Phone size={13} /> Call
-                    </a>
-                  )}
-                  {job.site_address && (
-                    <a
-                      href={mapsUrl(job.site_address)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn-secondary text-[12.5px] py-2 px-3 inline-flex items-center gap-1.5"
-                    >
-                      <Navigation size={13} /> Navigate
-                    </a>
-                  )}
-                  {canStart && (
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => setStatus(job.id, "in_progress")}
-                      className="btn-primary text-[12.5px] py-2 px-3 inline-flex items-center gap-1.5 disabled:opacity-50"
-                    >
-                      <Play size={13} /> {busy ? "…" : "Start"}
-                    </button>
-                  )}
-                  {canComplete && (
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => setStatus(job.id, "complete")}
-                      className="btn-primary text-[12.5px] py-2 px-3 inline-flex items-center gap-1.5 disabled:opacity-50"
-                    >
-                      <CheckCircle2 size={13} /> {busy ? "…" : "Done"}
-                    </button>
-                  )}
-                </div>
-              </article>
-            );
-          })}
+          {undatedJobs.length > 0 && (
+            <section>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-faint)] mb-2">
+                No start date
+              </p>
+              <p className="text-[12.5px] text-[var(--ink-faint)] mb-3">
+                Open jobs that aren’t scheduled yet — set a date on the job to move them into today.
+              </p>
+              <div className="space-y-3">
+                {undatedJobs.map((job) => (
+                  <JobCard
+                    key={job.id}
+                    job={job}
+                    busy={busyId === job.id}
+                    onStatus={setStatus}
+                    forceNoStartLabel
+                  />
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       )}
 
