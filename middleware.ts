@@ -117,11 +117,16 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   // load from va.vercel-scripts.com and report to vitals.vercel-insights.com.
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://*.googletagmanager.com https://va.vercel-scripts.com",
+    "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://*.googletagmanager.com https://va.vercel-scripts.com https://*.posthog.com",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https://images.unsplash.com https://*.supabase.co https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://www.google.com https://www.google.com.au https://stats.g.doubleclick.net",
     "font-src 'self'",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com https://api.anthropic.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://www.google.com https://www.googletagmanager.com https://*.googletagmanager.com https://stats.g.doubleclick.net https://api.stripe.com https://*.stripe.com https://js.stripe.com https://api.xero.com https://identity.xero.com https://va.vercel-scripts.com https://vitals.vercel-insights.com https://*.vercel-insights.com",
+    // worker-src did not exist as its own directive before, so it fell back
+    // to default-src 'self', which blocks the web worker PostHog's session
+    // replay recorder runs in. PostHog's own CSP docs call this out
+    // explicitly: https://posthog.com/docs/libraries/js.
+    "worker-src 'self' blob: data:",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com https://api.anthropic.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://www.google.com https://www.googletagmanager.com https://*.googletagmanager.com https://stats.g.doubleclick.net https://api.stripe.com https://*.stripe.com https://js.stripe.com https://api.xero.com https://identity.xero.com https://va.vercel-scripts.com https://vitals.vercel-insights.com https://*.vercel-insights.com https://*.posthog.com",
     "manifest-src 'self'",
     "frame-ancestors 'none'",
     "base-uri 'self'",
