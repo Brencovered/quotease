@@ -5,6 +5,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Inter, Anton } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
+import { PostHogProvider } from "@/components/PostHogProvider";
 import OrganizationSchema from "@/components/seo/OrganizationSchema";
 
 // next/font/google self-hosts files (no runtime Google Fonts request) and
@@ -71,7 +72,9 @@ export default function RootLayout({
         <OrganizationSchema />
       </head>
       <body className="min-h-full flex flex-col">
-        <Providers>{children}</Providers>
+        <PostHogProvider>
+          <Providers>{children}</Providers>
+        </PostHogProvider>
         <Analytics />
         <SpeedInsights />
         {/* Google Analytics */}
