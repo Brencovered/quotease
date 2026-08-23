@@ -19,6 +19,38 @@ const nextConfig: NextConfig = {
   // has bookmarked, still point at the old /electrician/* paths and need
   // to keep resolving correctly indefinitely, not just until people
   // notice things are broken.
+  /* ------------------------------------------------------------------ */
+  /*  PostHog reverse proxy                                             */
+  /* ------------------------------------------------------------------ */
+  // Routes /ingest/* on this domain through to PostHog's ingestion API,
+  // so the browser never has to call posthog.com (or the US/EU regional
+  // host) directly. Ad blockers and privacy extensions commonly block
+  // known analytics domains by hostname pattern-matching, which silently
+  // drops events for a real share of visitors; a first-party path is far
+  // less likely to be treated as third-party tracking. This is PostHog's
+  // own documented recommendation, not a workaround specific to this app.
+  //
+  // skipTrailingSlashRedirect required: without it, Next's own trailing-
+  // slash handling can intercept /ingest/decide (no trailing slash in
+  // PostHog's own requests) before this rewrite ever sees it.
+  skipTrailingSlashRedirect: true,
+  async rewrites() {
+    // PostHog has separate US and EU cloud regions with different
+    // ingestion hosts -- which one applies depends entirely on which
+    // region was picked when the account was created (shown in the
+    // project's Settings > Project in the PostHog dashboard). Defaults to
+    // US since that is PostHog's default for new signups, but this must
+    // be set correctly via env var for an EU-region project or every
+    // event silently fails to ingest.
+    const region = process.env.POSTHOG_REGION === "eu" ? "eu" : "us";
+    const apiHost = `https://${region}.i.posthog.com`;
+    const assetHost = `https://${region}-assets.i.posthog.com`;
+    return [
+      { source: "/ingest/static/:path*", destination: `${assetHost}/static/:path*` },
+      { source: "/ingest/:path*", destination: `${apiHost}/:path*` },
+    ];
+  },
+
   async redirects() {
     return [
       { source: "/electrician", destination: "/quote", permanent: true },
