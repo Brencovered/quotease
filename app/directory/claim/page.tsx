@@ -54,7 +54,11 @@ function ClaimDirectoryListingInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [step, setStep] = useState<Step>("auth");
+  const [isAuthed, setIsAuthed] = useState(false);
+  // Search/resolve/abn now come before auth (see the mount effect below for
+  // why), so "auth" is no longer the entry step. Kept as a step in the Step
+  // type -- it is still shown, just later, right before the actual submit.
+  const [step, setStep] = useState<Step>("search");
 
   // Auth step - deliberately separate from the main app's /login and
   // /signup: this is the free claimed directory page's own entry point, not the
@@ -104,17 +108,65 @@ function ClaimDirectoryListingInner() {
     return false;
   }
 
-  // Already signed in (e.g. an existing $45 tradie extending into a
-  // directory page) - skip straight past the auth step. If they already
-  // have a claimed listing, skip straight to managing it instead of
-  // searching for a business all over again.
+  // Reordered from auth-first after checking real numbers: 2,080 page
+  // loads and 495 distinct visitors to this page over 5 days, and exactly
+  // one ever reached the actual claim submission. The very first thing
+  // everyone saw was a mandatory account-creation form, before they had
+  // even confirmed their business was in the directory or seen anything
+  // resembling a payoff. Search/resolve/abn now come first regardless of
+  // auth state; an account is only asked for at the point someone is
+  // actually about to submit, once they have something concrete to want.
+  //
+  // Auth state is still checked on mount, for three things that still
+  // need it up front: (1) an already-logged-in tradie (e.g. an existing
+  // $45 platform user extending into the directory) should skip the auth
+  // step entirely at submission time; (2) someone who already has a
+  // claimed listing should be sent straight to managing it, not back
+  // through search; (3) restoring in-progress claim data after an email
+  // confirmation round trip -- see below.
+  const STASH_KEY = "swiftscope_claim_draft";
+
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(async ({ data }) => {
+      setIsAuthed(!!data.user);
+
       if (data.user) {
+        // Email confirmation redirects the browser to a fresh load of this
+        // same page, which loses all React state -- businessName and
+        // suburb survive via the URL's own query params, but abn, logoUrl
+        // and which exact listing was matched do not, since those are
+        // only ever set interactively during search -> resolve -> abn.
+        // Stashed to sessionStorage right before the redirect (see
+        // handleAuth), restored here so a signup that required email
+        // confirmation does not throw away two screens of already-entered
+        // work and land the person back at a blank search box.
+        const stashed = sessionStorage.getItem(STASH_KEY);
+        if (stashed) {
+          sessionStorage.removeItem(STASH_KEY);
+          try {
+            const draft = JSON.parse(stashed);
+            setBusinessName(draft.businessName ?? "");
+            setTrade(draft.trade ?? "");
+            setSuburb(draft.suburb ?? "");
+            setPostcode(draft.postcode ?? "");
+            setAbn(draft.abn ?? "");
+            setLogoUrl(draft.logoUrl ?? null);
+            setSelectedListingId(draft.selectedListingId ?? null);
+            setCheckingAuth(false);
+            await finaliseClaim(draft.selectedListingId === "new" ? null : draft.selectedListingId, draft);
+            return;
+          } catch {
+            // Malformed stash -- fall through to the normal flow rather
+            // than getting stuck.
+          }
+        }
+
         const redirected = await redirectIfAlreadyClaimed();
-        if (!redirected) await resolveEntryStep();
+        if (redirected) { setCheckingAuth(false); return; }
       }
+
+      await resolveEntryStep();
       setCheckingAuth(false);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -194,8 +246,25 @@ function ClaimDirectoryListingInner() {
         });
         if (signUpError) { setError(signUpError.message); return; }
         if (data.session) {
-          await resolveEntryStep();
+          // No email confirmation required for this project/config -
+          // straight to submitting the claim they already filled in,
+          // rather than back through resolveEntryStep (which would send
+          // them to "search" and throw away everything entered so far).
+          await finaliseClaim(selectedListingId === "new" ? null : selectedListingId);
         } else {
+          // Email confirmation required. The browser is about to redirect
+          // away and this component will fully unmount, so stash what has
+          // already been entered -- it is restored and submitted
+          // automatically by the mount effect once they click back
+          // through from their inbox and land here authenticated.
+          try {
+            sessionStorage.setItem(STASH_KEY, JSON.stringify({
+              businessName, trade, suburb, postcode, abn, logoUrl, selectedListingId,
+            }));
+          } catch {
+            // sessionStorage can throw in some privacy modes - the person
+            // just re-enters ABN/logo after confirming, not a hard failure.
+          }
           setCheckYourEmail(true);
         }
       } else {
@@ -205,7 +274,11 @@ function ClaimDirectoryListingInner() {
         });
         if (signInError) { setError(signInError.message); return; }
         const redirected = await redirectIfAlreadyClaimed();
-        if (!redirected) await resolveEntryStep();
+        if (!redirected) {
+          // Logging in mid-claim (not a fresh visit) - submit what was
+          // already collected rather than sending them back to search.
+          await finaliseClaim(selectedListingId === "new" ? null : selectedListingId);
+        }
       }
     } catch {
       setError("Could not reach the server. Please try again.");
@@ -271,27 +344,42 @@ function ClaimDirectoryListingInner() {
     }
   }
 
-  async function finaliseClaim(listingId: string | null) {
+  async function finaliseClaim(
+    listingId: string | null,
+    override?: { businessName: string; trade: string; suburb: string; postcode: string; abn: string; logoUrl: string | null }
+  ) {
     setSubmitting(true);
     setError(null);
+    // override is used only right after restoring a sessionStorage draft
+    // (see the mount effect): the setState calls that just ran to restore
+    // that draft have not re-rendered yet, so businessName/trade/etc in
+    // this closure would still read the empty initial values, not what
+    // was just restored. Reading from the override object sidesteps that
+    // rather than relying on state that has not settled yet.
+    const b = override ?? { businessName, trade, suburb, postcode, abn, logoUrl };
     try {
       const res = await fetch("/api/directory/claim", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           listingId,
-          businessName,
-          trade,
-          suburb,
-          postcode: postcode.trim() || undefined,
-          abn: abn.trim() || undefined,
-          logoUrl: logoUrl || undefined,
+          businessName: b.businessName,
+          trade: b.trade,
+          suburb: b.suburb,
+          postcode: b.postcode.trim() || undefined,
+          abn: b.abn.trim() || undefined,
+          logoUrl: b.logoUrl || undefined,
         }),
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Something went wrong. Please try again.");
         setExistingListingSlug(data.existingSlug ?? null);
+        // Restoring from a draft and the submit itself failed (eg the
+        // listing was claimed by someone else in the meantime) - land on
+        // "abn" rather than leaving them stuck on a blank auth screen with
+        // no way back to their own entered data.
+        if (override) setStep("abn");
         return;
       }
       setResultSlug(data.slug);
@@ -300,6 +388,7 @@ function ClaimDirectoryListingInner() {
       setStep("done");
     } catch {
       setError("Something went wrong. Please check your connection and try again.");
+      if (override) setStep("abn");
     } finally {
       setSubmitting(false);
     }
@@ -343,6 +432,15 @@ function ClaimDirectoryListingInner() {
 
         {step === "auth" && (
           <div className="card p-6 rounded-2xl bg-white">
+            {!checkYourEmail && (
+              <button
+                type="button"
+                onClick={() => setStep("abn")}
+                className="text-[13px] font-semibold text-[#5a6b78] hover:text-[#0a1722] mb-4"
+              >
+                ← Back to your details
+              </button>
+            )}
             {checkYourEmail ? (
               <div className="text-center py-4">
                 <Mail size={32} className="text-[#ffb400] mx-auto mb-3" />
@@ -573,12 +671,24 @@ function ClaimDirectoryListingInner() {
               />
             </div>
             <button
-              onClick={() => finaliseClaim(selectedListingId === "new" ? null : selectedListingId)}
+              onClick={() => {
+                if (isAuthed) {
+                  finaliseClaim(selectedListingId === "new" ? null : selectedListingId);
+                } else {
+                  // This is the one and only place an account is asked
+                  // for now - right at the point of actually committing,
+                  // with the business already matched and every field
+                  // already filled in, not as the first thing a visitor
+                  // sees before they know whether their business is even
+                  // in the directory.
+                  setStep("auth");
+                }
+              }}
               disabled={submitting}
               className="btn-primary w-full flex items-center justify-center gap-2"
             >
               {submitting ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-              {submitting ? "Setting up your page..." : "Finish setup"}
+              {submitting ? "Setting up your page..." : isAuthed ? "Finish setup" : "Create account & finish setup"}
             </button>
           </div>
         )}
