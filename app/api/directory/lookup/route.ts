@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { CLAIMED_DIRECTORY_PAGES_ENABLED } from "@/lib/featureFlags";
+import { checkRateLimit } from "@/lib/rateLimit";
+import { getClientIp } from "@/lib/clientIp";
 
 /**
  * Business lookup step shared by both the free claimed directory page and
@@ -9,9 +11,27 @@ import { CLAIMED_DIRECTORY_PAGES_ENABLED } from "@/lib/featureFlags";
  * out of this naturally as similarity 1.0) so a new signup can either
  * claim an existing scraped listing or be told none exists and create one.
  *
- * Auth-gated (not public): the caller must already have a Supabase session,
- * consistent with every other business-scoped route in the app. This runs
- * after account creation but before/during onboarding, not before signup.
+ * Was auth-gated until this route started 401ing on real traffic: the
+ * claim page's account-creation step was moved from first to last (see
+ * app/directory/claim/page.tsx), specifically so people can search and see
+ * their business matched before being asked for an account -- but this
+ * route still assumed the old order, where search only ever happened
+ * after signup. The comment here used to say exactly that; it was
+ * describing an assumption the UI reorder deliberately broke.
+ *
+ * Not actually a security requirement, just an accidental dependency on
+ * page order: nothing in this handler uses `user` for anything beyond the
+ * gate itself, directory_listing already has a public anon SELECT policy
+ * (this data is not sensitive -- every one of these listings has its own
+ * public page), and anon already has execute on the underlying RPC.
+ * Removing the auth check does not expose anything that was not already
+ * public; it just lets an anonymous visitor reach the same public data
+ * through this endpoint instead of only through /directory pages.
+ *
+ * IP-rate-limited in its place, since making a search endpoint callable
+ * without an account does mean it can now be hit at volume with no signup
+ * required first, which the old auth gate incidentally prevented as a
+ * side effect even though that was never its purpose.
  */
 export async function POST(req: NextRequest) {
   // Defense in depth: nothing should link here while the feature is off,
@@ -21,9 +41,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not available yet" }, { status: 404 });
   }
 
+  const ip = getClientIp(req);
+  const rl = await checkRateLimit(`directory-lookup:${ip ?? "unknown"}`, 20, 10 * 60 * 1000);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "Too many searches. Please wait a moment and try again." }, { status: 429, headers: rl.retryAfterSeconds ? { "Retry-After": String(rl.retryAfterSeconds) } : undefined });
+  }
+
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   let body: Record<string, unknown>;
   try {

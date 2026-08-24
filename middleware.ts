@@ -119,7 +119,24 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
     "default-src 'self'",
     "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://*.googletagmanager.com https://va.vercel-scripts.com https://*.posthog.com",
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https://images.unsplash.com https://*.supabase.co https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://www.google.com https://www.google.com.au https://stats.g.doubleclick.net",
+    // Directory listing logos are hotlinked from each business's own
+    // website, scraped individually at import time (almara.com.au,
+    // paramountair.com.au, fisherbros.com.au, and so on -- 4,461 of 4,467
+    // logo_url values across the directory, checked directly). There is
+    // no finite domain list that can cover "every tradie's own website,
+    // forever" -- that is structurally impossible for a strict CSP, and
+    // is why this started blocking real logos (eg on the claim page's
+    // matched-listing card) the moment someone's business happened to be
+    // on a domain not already in an explicit allowlist below.
+    //
+    // https: is a low-risk relaxation specifically for img-src: an image
+    // URL cannot execute script in a modern browser, unlike script-src or
+    // connect-src, where a wildcard would be a real problem. The proper
+    // long-term fix is rehosting these logos into Supabase Storage at
+    // import time (already done for a handful) so the directory does not
+    // depend on 4,000+ external sites staying up and serving the same
+    // file forever -- worth doing, just not an emergency-patch scope.
+    "img-src 'self' data: blob: https:",
     "font-src 'self'",
     // worker-src did not exist as its own directive before, so it fell back
     // to default-src 'self', which blocks the web worker PostHog's session
