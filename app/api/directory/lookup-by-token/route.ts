@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CLAIMED_DIRECTORY_PAGES_ENABLED } from "@/lib/featureFlags";
+import { checkRateLimit } from "@/lib/rateLimit";
+import { getClientIp } from "@/lib/clientIp";
 
 /**
  * Resolves a claim_token straight to its exact directory_listing row - no
@@ -10,20 +11,31 @@ import { CLAIMED_DIRECTORY_PAGES_ENABLED } from "@/lib/featureFlags";
  * single confirmed match instead of having to search for their own
  * business and pick it out of a list.
  *
- * Uses the admin client for the actual read since directory_listing has no
- * end-user RLS policy (admin-managed, public-read only via the page routes,
- * not via this API) - but still requires a session, consistent with
- * lookup/route.ts, since this only makes sense mid-claim-flow (after the
- * auth step) not as a public unauthenticated endpoint.
+ * Was auth-gated until this route started 401ing on real traffic, for the
+ * same reason as lookup/route.ts: the claim page's account-creation step
+ * moved from first to last, so resolveEntryStep() (which calls this route)
+ * now runs before auth for everyone, including someone clicking straight
+ * in from an outreach email who has never signed up yet -- exactly who
+ * this route exists for.
+ *
+ * The auth check was never the actual security boundary here anyway. The
+ * token is: it is an unguessable value emailed to one specific business,
+ * and this uses the admin client (bypasses RLS) purely because
+ * directory_listing has no end-user RLS policy for this shape of read, not
+ * because a session was doing any gatekeeping. Everything returned here
+ * (business_name, suburb, trades, rating, logo) is the same public data
+ * already shown on that business's own public listing page.
  */
 export async function POST(req: NextRequest) {
   if (!CLAIMED_DIRECTORY_PAGES_ENABLED) {
     return NextResponse.json({ error: "Not available yet" }, { status: 404 });
   }
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const ip = getClientIp(req);
+  const rl = await checkRateLimit(`directory-lookup-token:${ip ?? "unknown"}`, 20, 10 * 60 * 1000);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "Too many attempts. Please wait a moment and try again." }, { status: 429, headers: rl.retryAfterSeconds ? { "Retry-After": String(rl.retryAfterSeconds) } : undefined });
+  }
 
   let body: Record<string, unknown>;
   try {
