@@ -33,7 +33,27 @@ function GoogleLogo() {
   );
 }
 
-export default function GoogleSignInButton({ next, label = "Continue with Google" }: { next?: string | null; label?: string }) {
+export default function GoogleSignInButton({
+  next,
+  label = "Continue with Google",
+  callbackPath = "/auth/callback",
+}: {
+  next?: string | null;
+  label?: string;
+  /**
+   * Which server route exchanges the OAuth code for a session and decides
+   * where to send the person afterward. Defaults to the shared
+   * /auth/callback (main platform login/signup), which force-redirects a
+   * brand-new or never-onboarded user to /onboarding regardless of `next`.
+   * That is correct for the main app, but wrong for a context like the
+   * directory claim page: a brand-new tradie signing in with Google from
+   * there needs to land back on their claim, not get pulled into the $45
+   * plan's onboarding wizard. Pass a dedicated callback route (see
+   * app/api/directory/auth-callback/route.ts) for any entry point where
+   * that platform-onboarding redirect would be the wrong behaviour.
+   */
+  callbackPath?: string;
+}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,7 +62,7 @@ export default function GoogleSignInButton({ next, label = "Continue with Google
     setError(null);
     try {
       const supabase = createClient();
-      const redirectTo = new URL("/auth/callback", window.location.origin);
+      const redirectTo = new URL(callbackPath, window.location.origin);
       if (next && next.startsWith("/")) redirectTo.searchParams.set("next", next);
 
       const { error } = await supabase.auth.signInWithOAuth({

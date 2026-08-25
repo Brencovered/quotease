@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import MarketingNav from "@/components/MarketingNav";
+import GoogleSignInButton from "@/components/GoogleSignInButton";
 import {
   Search, Loader2, CheckCircle2, ArrowRight, Star,
   MapPin, ShieldCheck, AlertCircle, Mail, Lock, ImagePlus,
@@ -448,8 +449,38 @@ function ClaimDirectoryListingInner() {
                 <p className="text-[13.5px] text-[#5a6b78]">
                   We&apos;ve sent a confirmation link to {email}. Click it to come back here and set up your page.
                 </p>
+                <p className="text-[12.5px] text-[#8a97a1] mt-3">
+                  Nothing arriving after a few minutes usually means you already have an account with
+                  this email -- try the &quot;Log in&quot; tab instead, including &quot;Continue with
+                  Google&quot; if that is how you originally signed up.
+                </p>
               </div>
             ) : (
+              <>
+                {/* Added after a real tradie got stuck: they had signed up
+                    for the $45 platform via Google separately, then tried
+                    email+password here with the same address. Supabase
+                    silently sends no confirmation email for an email that
+                    is already registered (by design, to prevent account
+                    enumeration) -- this button means someone in that exact
+                    situation can just sign back in the way they actually
+                    signed up, instead of only ever seeing an email
+                    password form and hitting the same silent dead end.
+                    Routed through a dedicated callback
+                    (app/api/directory/auth-callback), not the shared
+                    /auth/callback -- that one force-redirects a brand-new
+                    user to the $45 plan's /onboarding regardless of where
+                    they came from, which would recreate the same kind of
+                    confusion for a genuinely new Google signup here. */}
+                <GoogleSignInButton
+                  next={`/directory/claim${searchParams.toString() ? `?${searchParams.toString()}` : ""}`}
+                  callbackPath="/api/directory/auth-callback"
+                />
+                <div className="flex items-center gap-3 my-5">
+                  <div className="h-px flex-1 bg-[#e8ecef]" />
+                  <span className="text-[11.5px] font-semibold text-[#8a97a1] uppercase tracking-wide">or</span>
+                  <div className="h-px flex-1 bg-[#e8ecef]" />
+                </div>
               <form onSubmit={handleAuth} className="space-y-5">
                 <div className="flex gap-1 bg-[#f1f4f6] rounded-lg p-1 mb-1">
                   <button
@@ -509,6 +540,7 @@ function ClaimDirectoryListingInner() {
                   This is just for your directory page - not the full Swiftscope job management sign up. Already claimed a listing? Log in above to manage it.
                 </p>
               </form>
+              </>
             )}
           </div>
         )}
