@@ -86,6 +86,15 @@ function ClaimDirectoryListingInner() {
   const [selectedListingId, setSelectedListingId] = useState<string | null | "new">(null);
 
   const [abn, setAbn] = useState("");
+  // Only ever required/shown for a brand new listing (selectedListingId
+  // === "new"), never when claiming an existing scraped one -- those
+  // already carry their own contact data from the Google Places import.
+  // Required by a database trigger on source='manual' regardless of what
+  // this page sends; these fields existed nowhere in this form for a real
+  // stretch of time, meaning every new-listing creation was silently
+  // failing at the trigger with no way to fix it from here.
+  const [streetAddress, setStreetAddress] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
   // logoUrl is only ever the real, uploaded Supabase Storage public URL --
   // never set to a local preview. pendingLogoFile holds a selected file
   // before it can actually be uploaded, and logoPreviewUrl (an effect
@@ -161,6 +170,8 @@ function ClaimDirectoryListingInner() {
             setPostcode(draft.postcode ?? "");
             setAbn(draft.abn ?? "");
             setSelectedListingId(draft.selectedListingId ?? null);
+            setStreetAddress(draft.streetAddress ?? "");
+            setContactPhone(draft.contactPhone ?? "");
             setCheckingAuth(false);
 
             // A logo picked before a session existed was stashed as a
@@ -192,6 +203,8 @@ function ClaimDirectoryListingInner() {
               postcode: draft.postcode ?? "",
               abn: draft.abn ?? "",
               logoUrl: resolvedLogoUrl,
+              streetAddress: draft.streetAddress ?? "",
+              contactPhone: draft.contactPhone ?? "",
             });
             return;
           } catch {
@@ -259,6 +272,7 @@ function ClaimDirectoryListingInner() {
       const pendingLogoDataUrl = pendingLogoFile ? await fileToDataUrl(pendingLogoFile) : null;
       sessionStorage.setItem(STASH_KEY, JSON.stringify({
         businessName, trade, suburb, postcode, abn, logoUrl, selectedListingId,
+        streetAddress, contactPhone,
         pendingLogoDataUrl, pendingLogoFileName: pendingLogoFile?.name ?? null,
       }));
     } catch {
@@ -454,7 +468,7 @@ function ClaimDirectoryListingInner() {
 
   async function finaliseClaim(
     listingId: string | null,
-    override?: { businessName: string; trade: string; suburb: string; postcode: string; abn: string; logoUrl: string | null }
+    override?: { businessName: string; trade: string; suburb: string; postcode: string; abn: string; logoUrl: string | null; streetAddress: string; contactPhone: string }
   ) {
     setSubmitting(true);
     setError(null);
@@ -464,7 +478,7 @@ function ClaimDirectoryListingInner() {
     // this closure would still read the empty initial values, not what
     // was just restored. Reading from the override object sidesteps that
     // rather than relying on state that has not settled yet.
-    const b = override ?? { businessName, trade, suburb, postcode, abn, logoUrl };
+    const b = override ?? { businessName, trade, suburb, postcode, abn, logoUrl, streetAddress, contactPhone };
     try {
       const res = await fetch("/api/directory/claim", {
         method: "POST",
@@ -477,6 +491,8 @@ function ClaimDirectoryListingInner() {
           postcode: b.postcode.trim() || undefined,
           abn: b.abn.trim() || undefined,
           logoUrl: b.logoUrl || undefined,
+          streetAddress: b.streetAddress.trim() || undefined,
+          contactPhone: b.contactPhone.trim() || undefined,
         }),
       });
       const data = await res.json();
@@ -530,7 +546,7 @@ function ClaimDirectoryListingInner() {
       // Pass the freshly uploaded URL explicitly rather than relying on
       // the setLogoUrl above having re-rendered yet -- same staleness
       // reasoning as finaliseClaim's own override parameter.
-      await finaliseClaim(listingId, { businessName, trade, suburb, postcode, abn, logoUrl: url });
+      await finaliseClaim(listingId, { businessName, trade, suburb, postcode, abn, logoUrl: url, streetAddress, contactPhone });
     } catch (err) {
       setError(`Logo upload failed: ${err instanceof Error ? err.message : "please try again"}. You can remove it and try again, or finish without one.`);
       setStep("abn");
@@ -826,6 +842,41 @@ function ClaimDirectoryListingInner() {
             >
               ← Back to search
             </button>
+
+            {selectedListingId === "new" && (
+              <>
+                <div>
+                  <label className="block text-[13px] font-semibold text-[#0a1722] mb-1.5">Business address</label>
+                  <input
+                    type="text"
+                    value={streetAddress}
+                    onChange={(e) => setStreetAddress(e.target.value)}
+                    placeholder="e.g. 12 King Street, Newtown"
+                    className="app-field w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[13px] font-semibold text-[#0a1722] mb-1.5">Contact number</label>
+                  <input
+                    type="tel"
+                    value={contactPhone}
+                    onChange={(e) => setContactPhone(e.target.value)}
+                    placeholder="e.g. 0412 345 678"
+                    className="app-field w-full"
+                  />
+                  {/* Not for verification -- it is the number a homeowner
+                      sees on the finished listing page, shown behind a
+                      tap-to-reveal (see ContactReveal) rather than sitting
+                      in the page's raw HTML, so it is not immediately
+                      scrapeable. Required by a database trigger on new
+                      (source='manual') listings regardless of what this
+                      form sends -- see check_listing_has_real_identity. */}
+                  <p className="text-[11.5px] text-[#8a97a1] mt-1.5">
+                    Shown on your listing page behind a tap-to-reveal, so it is not sitting in plain text for scrapers.
+                  </p>
+                </div>
+              </>
+            )}
             <div>
               <label className="block text-[13px] font-semibold text-[#0a1722] mb-2">Logo or photo (optional)</label>
               <div className="flex items-center gap-4">
@@ -859,6 +910,10 @@ function ClaimDirectoryListingInner() {
             </div>
             <button
               onClick={() => {
+                if (selectedListingId === "new" && (!streetAddress.trim() || !contactPhone.trim())) {
+                  setError("Please add your business address and contact number.");
+                  return;
+                }
                 if (isAuthed) {
                   finaliseClaim(selectedListingId === "new" ? null : selectedListingId);
                 } else {
