@@ -76,12 +76,37 @@ export async function POST(req: NextRequest) {
   const postcode = typeof body.postcode === "string" ? body.postcode.trim() : "";
   const abn = typeof body.abn === "string" ? body.abn.replace(/\s+/g, "") : "";
   const logoUrl = typeof body.logoUrl === "string" ? body.logoUrl.trim() : "";
+  const streetAddress = typeof body.streetAddress === "string" ? body.streetAddress.trim() : "";
+  const contactPhone = typeof body.contactPhone === "string" ? body.contactPhone.trim() : "";
+  const phoneDigits = contactPhone.replace(/[\s()-]/g, "");
 
   if (!businessName || !trade || !suburb) {
     return NextResponse.json(
       { error: "Business name, trade, and suburb are required" },
       { status: 400 }
     );
+  }
+
+  // Only required when creating a brand new listing, not when claiming an
+  // existing scraped one -- those already carry their own contact data
+  // from the Google Places import. This exact pair (a database trigger
+  // that requires contact_phone on source='manual', with no client-side
+  // field to ever collect it) was live and silently failing every new
+  // listing creation before this was added: streetAddress/contactPhone
+  // existed in the schema and the trigger, but nothing in this route or
+  // the claim page's UI had collected or sent them, so every insert hit
+  // the trigger's exception and fell through to the generic "Failed to
+  // create listing" message with no indication of why.
+  if (!listingId) {
+    if (!streetAddress || !contactPhone) {
+      return NextResponse.json(
+        { error: "Business address and a contact number are required to create a new listing." },
+        { status: 400 }
+      );
+    }
+    if (!/^(\+?61|0)\d{9}$/.test(phoneDigits)) {
+      return NextResponse.json({ error: "Please enter a valid Australian phone number." }, { status: 400 });
+    }
   }
 
   if (postcode && !/^\d{4}$/.test(postcode)) {
@@ -248,6 +273,8 @@ export async function POST(req: NextRequest) {
       suburb,
       postcode: postcode || null,
       logo_url: logoUrl || null,
+      street_address: streetAddress,
+      contact_phone: phoneDigits,
       profile_id: businessId,
       is_claimed: true,
       source: "manual",
@@ -262,6 +289,8 @@ export async function POST(req: NextRequest) {
           ? "A business name is required."
           : createErr?.message?.includes("suburb must be a real suburb")
           ? "Please enter your actual suburb, not just the city."
+          : createErr?.message?.includes("contact_phone is required")
+          ? "A contact number is required to create a new listing."
           : "Failed to create listing" },
       { status: 400 }
     );
