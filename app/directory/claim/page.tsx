@@ -86,7 +86,15 @@ function ClaimDirectoryListingInner() {
   const [selectedListingId, setSelectedListingId] = useState<string | null | "new">(null);
 
   const [abn, setAbn] = useState("");
+  // logoUrl is only ever the real, uploaded Supabase Storage public URL --
+  // never set to a local preview. pendingLogoFile holds a selected file
+  // before it can actually be uploaded, and logoPreviewUrl (an effect
+  // below) is what the abn step's <img> actually displays: the real
+  // logoUrl once uploaded, or a local object URL for pendingLogoFile in
+  // the meantime. See handleLogoChange for why the split exists.
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [resultSlug, setResultSlug] = useState<string | null>(null);
   const [resultOutcome, setResultOutcome] = useState<"claimed" | "created_new" | null>(null);
@@ -152,10 +160,39 @@ function ClaimDirectoryListingInner() {
             setSuburb(draft.suburb ?? "");
             setPostcode(draft.postcode ?? "");
             setAbn(draft.abn ?? "");
-            setLogoUrl(draft.logoUrl ?? null);
             setSelectedListingId(draft.selectedListingId ?? null);
             setCheckingAuth(false);
-            await finaliseClaim(draft.selectedListingId === "new" ? null : draft.selectedListingId, draft);
+
+            // A logo picked before a session existed was stashed as a
+            // data URL (see stashDraftForRedirect), not uploaded yet --
+            // there is a real session now, so do the actual upload here
+            // rather than passing the stashed data URL itself down to
+            // finaliseClaim, which expects a real Supabase Storage URL,
+            // not a multi-megabyte base64 string.
+            let resolvedLogoUrl: string | null = draft.logoUrl ?? null;
+            if (draft.pendingLogoDataUrl) {
+              try {
+                const file = dataUrlToFile(draft.pendingLogoDataUrl, draft.pendingLogoFileName ?? "logo.jpg");
+                resolvedLogoUrl = await uploadLogoFile(file, data.user.id);
+                setLogoUrl(resolvedLogoUrl);
+              } catch (err) {
+                console.error("[claim] failed to upload stashed logo:", err);
+                // Not fatal to the claim itself -- proceed without a
+                // logo rather than blocking someone's entire signup over
+                // an image that failed to re-upload.
+              }
+            } else {
+              setLogoUrl(resolvedLogoUrl);
+            }
+
+            await finaliseClaim(draft.selectedListingId === "new" ? null : draft.selectedListingId, {
+              businessName: draft.businessName ?? "",
+              trade: draft.trade ?? "",
+              suburb: draft.suburb ?? "",
+              postcode: draft.postcode ?? "",
+              abn: draft.abn ?? "",
+              logoUrl: resolvedLogoUrl,
+            });
             return;
           } catch {
             // Malformed stash -- fall through to the normal flow rather
@@ -211,6 +248,26 @@ function ClaimDirectoryListingInner() {
     }
   }
 
+  // Shared by both full-page-redirect paths (email confirmation and
+  // Google sign-in) that unmount this component before it can come back.
+  // A raw File cannot survive that (not serialisable to sessionStorage),
+  // so a selected-but-not-yet-uploaded logo is converted to a data URL
+  // first -- the mount effect's restore logic converts it back to a File
+  // and does the real upload once a session actually exists.
+  async function stashDraftForRedirect() {
+    try {
+      const pendingLogoDataUrl = pendingLogoFile ? await fileToDataUrl(pendingLogoFile) : null;
+      sessionStorage.setItem(STASH_KEY, JSON.stringify({
+        businessName, trade, suburb, postcode, abn, logoUrl, selectedListingId,
+        pendingLogoDataUrl, pendingLogoFileName: pendingLogoFile?.name ?? null,
+      }));
+    } catch {
+      // sessionStorage can throw in some privacy modes, and a very large
+      // image could in principle exceed its quota -- the person just
+      // re-enters ABN/logo after confirming, not a hard failure either way.
+    }
+  }
+
   async function handleAuth(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -251,21 +308,14 @@ function ClaimDirectoryListingInner() {
           // straight to submitting the claim they already filled in,
           // rather than back through resolveEntryStep (which would send
           // them to "search" and throw away everything entered so far).
-          await finaliseClaim(selectedListingId === "new" ? null : selectedListingId);
+          await resolvePendingLogoAndFinalise(selectedListingId === "new" ? null : selectedListingId);
         } else {
           // Email confirmation required. The browser is about to redirect
           // away and this component will fully unmount, so stash what has
           // already been entered -- it is restored and submitted
           // automatically by the mount effect once they click back
           // through from their inbox and land here authenticated.
-          try {
-            sessionStorage.setItem(STASH_KEY, JSON.stringify({
-              businessName, trade, suburb, postcode, abn, logoUrl, selectedListingId,
-            }));
-          } catch {
-            // sessionStorage can throw in some privacy modes - the person
-            // just re-enters ABN/logo after confirming, not a hard failure.
-          }
+          await stashDraftForRedirect();
           setCheckYourEmail(true);
         }
       } else {
@@ -278,7 +328,7 @@ function ClaimDirectoryListingInner() {
         if (!redirected) {
           // Logging in mid-claim (not a fresh visit) - submit what was
           // already collected rather than sending them back to search.
-          await finaliseClaim(selectedListingId === "new" ? null : selectedListingId);
+          await resolvePendingLogoAndFinalise(selectedListingId === "new" ? null : selectedListingId);
         }
       }
     } catch {
@@ -322,24 +372,81 @@ function ClaimDirectoryListingInner() {
     }
   }
 
+  // Keeps the abn step's preview in sync with whichever of logoUrl /
+  // pendingLogoFile is currently the real answer, and revokes the object
+  // URL when it is replaced or the component unmounts, so a page session
+  // with several logo picks does not leak blob URLs.
+  useEffect(() => {
+    if (logoUrl) {
+      setLogoPreviewUrl(logoUrl);
+      return;
+    }
+    if (pendingLogoFile) {
+      const objectUrl = URL.createObjectURL(pendingLogoFile);
+      setLogoPreviewUrl(objectUrl);
+      return () => URL.revokeObjectURL(objectUrl);
+    }
+    setLogoPreviewUrl(null);
+  }, [logoUrl, pendingLogoFile]);
+
+  function fileToDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error ?? new Error("Could not read file"));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function dataUrlToFile(dataUrl: string, filename: string): File {
+    const [header, base64] = dataUrl.split(",");
+    const mime = header.match(/data:(.*?);base64/)?.[1] ?? "image/jpeg";
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new File([bytes], filename, { type: mime });
+  }
+
+  // The actual Supabase Storage write, split out of handleLogoChange so it
+  // can also run later -- once authentication actually exists -- for a
+  // file that was selected before it did.
+  async function uploadLogoFile(file: File, userId: string): Promise<string> {
+    const supabase = createClient();
+    const ext = file.name.split(".").pop() ?? "jpg";
+    const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error: uploadErr } = await supabase.storage.from("logos").upload(path, file, { upsert: false });
+    if (uploadErr) throw new Error(uploadErr.message);
+    const { data } = supabase.storage.from("logos").getPublicUrl(path);
+    return data.publicUrl;
+  }
+
   async function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingLogo(true);
     setError(null);
     try {
+      // This is the bug a real tradie hit: the abn step (where this input
+      // lives) is now reached before authentication, on purpose, but this
+      // upload still silently required a session -- `if (!user) return`
+      // with no error shown, so choosing a logo before creating an
+      // account looked like it worked (the file picker closed normally)
+      // while nothing was actually uploaded and the placeholder icon never
+      // changed. Store the file and preview it locally instead of
+      // uploading yet; the real upload happens once a session actually
+      // exists, from whichever path gets there (see finaliseClaim's
+      // callers and the mount effect's stash-restore).
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const ext = file.name.split(".").pop() ?? "jpg";
-      const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: uploadErr } = await supabase.storage.from("logos").upload(path, file, { upsert: false });
-      if (uploadErr) {
-        setError(`Logo upload failed: ${uploadErr.message}`);
+      if (!user) {
+        setPendingLogoFile(file);
         return;
       }
-      const { data } = supabase.storage.from("logos").getPublicUrl(path);
-      setLogoUrl(data.publicUrl);
+      const url = await uploadLogoFile(file, user.id);
+      setLogoUrl(url);
+      setPendingLogoFile(null);
+    } catch (err) {
+      setError(`Logo upload failed: ${err instanceof Error ? err.message : "please try again"}`);
     } finally {
       setUploadingLogo(false);
     }
@@ -392,6 +499,41 @@ function ClaimDirectoryListingInner() {
       if (override) setStep("abn");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  // Uploads pendingLogoFile if one was selected before a session existed
+  // (see handleLogoChange), then submits the claim. Used by both
+  // immediate-auth paths in handleAuth (a fresh signup with no email
+  // confirmation required, and logging into an existing account) -- both
+  // stay on this page with no redirect, so pendingLogoFile is still a
+  // real File in memory and can just be uploaded directly, no stash
+  // needed.
+  async function resolvePendingLogoAndFinalise(listingId: string | null) {
+    if (!pendingLogoFile) {
+      await finaliseClaim(listingId);
+      return;
+    }
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        // Should not happen -- this is only called right after a
+        // successful auth call -- but fail safely rather than throw if
+        // it somehow does.
+        await finaliseClaim(listingId);
+        return;
+      }
+      const url = await uploadLogoFile(pendingLogoFile, user.id);
+      setLogoUrl(url);
+      setPendingLogoFile(null);
+      // Pass the freshly uploaded URL explicitly rather than relying on
+      // the setLogoUrl above having re-rendered yet -- same staleness
+      // reasoning as finaliseClaim's own override parameter.
+      await finaliseClaim(listingId, { businessName, trade, suburb, postcode, abn, logoUrl: url });
+    } catch (err) {
+      setError(`Logo upload failed: ${err instanceof Error ? err.message : "please try again"}. You can remove it and try again, or finish without one.`);
+      setStep("abn");
     }
   }
 
@@ -475,6 +617,7 @@ function ClaimDirectoryListingInner() {
                 <GoogleSignInButton
                   next={`/directory/claim${searchParams.toString() ? `?${searchParams.toString()}` : ""}`}
                   callbackPath="/api/directory/auth-callback"
+                  onBeforeRedirect={stashDraftForRedirect}
                 />
                 <div className="flex items-center gap-3 my-5">
                   <div className="h-px flex-1 bg-[#e8ecef]" />
@@ -671,13 +814,25 @@ function ClaimDirectoryListingInner() {
 
         {step === "abn" && (
           <div className="card p-6 rounded-2xl bg-white space-y-5">
+            {/* The suburb validation error can only ever be shown after
+                Finish setup is clicked from here, but suburb itself is only
+                ever editable on "search" -- this step never had a way back
+                to it at all, so anyone who hit that error was stuck reading
+                "please fix your suburb" on a screen with no suburb field. */}
+            <button
+              type="button"
+              onClick={() => setStep("search")}
+              className="text-[13px] font-semibold text-[#5a6b78] hover:text-[#0a1722]"
+            >
+              ← Back to search
+            </button>
             <div>
               <label className="block text-[13px] font-semibold text-[#0a1722] mb-2">Logo or photo (optional)</label>
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 rounded-xl bg-[#f1f4f6] overflow-hidden flex items-center justify-center shrink-0">
-                  {logoUrl ? (
+                  {logoPreviewUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                    <img src={logoPreviewUrl} alt="Logo" className="w-full h-full object-cover" />
                   ) : (
                     <ImagePlus size={20} className="text-[#8a97a1]" />
                   )}

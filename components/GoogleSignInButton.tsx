@@ -37,6 +37,7 @@ export default function GoogleSignInButton({
   next,
   label = "Continue with Google",
   callbackPath = "/auth/callback",
+  onBeforeRedirect,
 }: {
   next?: string | null;
   label?: string;
@@ -53,6 +54,15 @@ export default function GoogleSignInButton({
    * that platform-onboarding redirect would be the wrong behaviour.
    */
   callbackPath?: string;
+  /**
+   * Awaited immediately before the OAuth redirect fires. This click is
+   * the last chance to run any code at all -- Google navigates the whole
+   * tab away next, so any caller with in-progress form state that is not
+   * already saved server-side needs to persist it here (eg to
+   * sessionStorage) or it is gone when the person comes back. Optional
+   * because /login and /signup have no such state to lose.
+   */
+  onBeforeRedirect?: () => void | Promise<void>;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +71,8 @@ export default function GoogleSignInButton({
     setLoading(true);
     setError(null);
     try {
+      if (onBeforeRedirect) await onBeforeRedirect();
+
       const supabase = createClient();
       const redirectTo = new URL(callbackPath, window.location.origin);
       if (next && next.startsWith("/")) redirectTo.searchParams.set("next", next);
