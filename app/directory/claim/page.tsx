@@ -705,14 +705,37 @@ function ClaimDirectoryListingInner() {
         )}
 
         {step === "search" && (
-          <form onSubmit={handleSearch} className="card p-6 rounded-2xl bg-white space-y-5">
-            <div>
-              <label className="block text-[13px] font-semibold text-[#0a1722] mb-1.5">Business name</label>
-              <input
-                type="text"
-                value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
-                placeholder="e.g. Smith Electrical"
+          <>
+            {/* Deliberately not conditional on any client-side auth check --
+                a real tradie reported repeatedly landing back on this
+                search step instead of their existing listing, and every
+                server-side piece the auto-redirect depends on
+                (redirectIfAlreadyClaimed -> /api/directory/manage ->
+                getActiveBusinessId) checked out correctly against their
+                real account and a real, already-claimed listing. The most
+                likely remaining explanation is the session itself not
+                being present on whichever load this ran on (this page has
+                been tested across multiple browsers, and a session lives
+                per-browser) -- but rather than keep chasing the exact
+                cause with no way to reproduce it, this gives a direct,
+                manual path that works regardless of why the automatic one
+                did not fire on a given visit. If there is no session,
+                clicking this simply lands on a normal "please log in"
+                state on /directory/manage rather than a dead end. */}
+            <Link
+              href="/directory/manage"
+              className="block text-center text-[13px] font-semibold text-[#5a6b78] hover:text-[#0a1722] mb-4"
+            >
+              Already claimed your listing? Manage it here →
+            </Link>
+            <form onSubmit={handleSearch} className="card p-6 rounded-2xl bg-white space-y-5">
+              <div>
+                <label className="block text-[13px] font-semibold text-[#0a1722] mb-1.5">Business name</label>
+                <input
+                  type="text"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  placeholder="e.g. Smith Electrical"
                 className="app-field w-full"
               />
             </div>
@@ -764,7 +787,8 @@ function ClaimDirectoryListingInner() {
               {searching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
               {searching ? "Searching..." : "Find my business"}
             </button>
-          </form>
+            </form>
+          </>
         )}
 
         {step === "resolve" && (
