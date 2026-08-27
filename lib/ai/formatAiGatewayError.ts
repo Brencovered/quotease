@@ -2,29 +2,72 @@
  * Map AI Gateway / AI SDK failures into short admin-facing messages.
  * The blog assist UI only shows `error` from the JSON body, so a generic
  * "Planning failed" hides whether auth, credits, or the model blew up.
+ *
+ * AI SDK wraps provider failures in RetryError (lastError / errors[]), so
+ * we walk the chain rather than reading only the outer message.
  */
+
+type Walked = { name: string; statusCode?: number; message: string };
+
+function walkError(err: unknown): Walked {
+  const seen = new Set<unknown>();
+  const parts: string[] = [];
+  let name = "";
+  let statusCode: number | undefined;
+
+  const visit = (value: unknown) => {
+    if (value == null || seen.has(value)) return;
+    if (typeof value === "string") {
+      parts.push(value);
+      return;
+    }
+    if (typeof value !== "object") return;
+    seen.add(value);
+    const o = value as Record<string, unknown>;
+    if (typeof o.name === "string" && !name) name = o.name;
+    if (typeof o.statusCode === "number" && statusCode === undefined) {
+      statusCode = o.statusCode;
+    }
+    if (typeof o.type === "string") parts.push(o.type);
+    if (typeof o.message === "string") parts.push(o.message);
+    visit(o.lastError);
+    visit(o.cause);
+    if (Array.isArray(o.errors)) {
+      for (const nested of o.errors) visit(nested);
+    }
+  };
+
+  visit(err);
+  return { name, statusCode, message: parts.join("\n") };
+}
+
+export function isGatewayRateLimitError(err: unknown): boolean {
+  const { name, statusCode, message } = walkError(err);
+  return (
+    statusCode === 429 ||
+    name === "GatewayRateLimitError" ||
+    /rate_limit_exceeded|GatewayRateLimitError|rate-?limited/i.test(message) ||
+    /Free tier requests on this model are rate-limited/i.test(message)
+  );
+}
+
+export function aiGatewayHttpStatus(err: unknown): number {
+  return isGatewayRateLimitError(err) ? 429 : 500;
+}
+
 export function formatAiGatewayError(err: unknown): string {
-  const name =
-    err && typeof err === "object" && "name" in err
-      ? String((err as { name?: unknown }).name)
-      : "";
-  const statusCode =
-    err && typeof err === "object" && "statusCode" in err
-      ? Number((err as { statusCode?: unknown }).statusCode)
-      : undefined;
-  const message =
-    err instanceof Error
-      ? err.message
-      : typeof err === "string"
-        ? err
-        : "";
+  const { name, statusCode, message } = walkError(err);
 
   if (
     name === "GatewayAuthenticationError" ||
     /Unauthenticated request to AI Gateway/i.test(message) ||
     /AI_GATEWAY_API_KEY/i.test(message)
   ) {
-    return "AI Gateway is not authenticated. Set AI_GATEWAY_API_KEY in the Vercel project env (AI Gateway → API Keys), or confirm OIDC is enabled for this deployment.";
+    return "AI Gateway is not authenticated. Set AI_GATEWAY_API_KEY in the Vercel project env (AI Gateway > API Keys), or confirm OIDC is enabled for this deployment.";
+  }
+
+  if (isGatewayRateLimitError(err)) {
+    return "AI Gateway free tier is rate-limiting this model. Wait a minute and try again, or top up AI Gateway credits in the Vercel dashboard (AI Gateway > top up) so drafting is not throttled.";
   }
 
   if (
@@ -39,7 +82,7 @@ export function formatAiGatewayError(err: unknown): string {
     /Free tier users do not have access to this model/i.test(message) ||
     /does not have access to this model/i.test(message)
   ) {
-    return "This AI Gateway account cannot use the requested model. Blog assist now uses openai/gpt-4o-mini with anthropic/claude-3-haiku as fallback - the same pair drawing-analysis already uses successfully.";
+    return "This AI Gateway account cannot use the requested model. Blog assist now uses openai/gpt-4o-mini with google/gemini-2.5-flash-lite and anthropic/claude-3-haiku as fallbacks.";
   }
 
   if (name === "NoObjectGeneratedError" || /NoObjectGenerated/i.test(message)) {
