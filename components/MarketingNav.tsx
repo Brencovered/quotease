@@ -1,14 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ChevronDown } from "lucide-react";
 import { LEADS_ENABLED, CLAIMED_DIRECTORY_PAGES_ENABLED } from "@/lib/featureFlags";
+import { TRADE_PAGES } from "@/lib/marketing/tradePages";
 
 /**
  * Shared top nav for the marketing site (home, /features, /how-it-works).
  * Stays fixed on scroll so Sign up free remains visible.
  * `transparent` starts clear over the homepage hero, then solidifies on scroll.
+ *
+ * Trades is a dropdown rather than a plain link because there is no index
+ * page at /quoting-software: the six trade pages are the destination, and
+ * a menu gets a visitor to their own trade in one click instead of two. It
+ * reads TRADE_PAGES directly, so adding a trade adds a menu item.
+ *
+ * Merged from two branches that touched this file independently: main
+ * added the scroll-solidify behaviour and the compact prop; the trade
+ * pages branch added this dropdown, which is also the only real
+ * navigation entry point those six pages have ever had -- they existed
+ * with zero incoming links from anywhere on the live site until this
+ * merge, which is the direct explanation for zero recorded sessions
+ * entering through them despite the pages themselves being built weeks
+ * earlier.
  */
 export default function MarketingNav({
   transparent = false,
@@ -20,6 +35,8 @@ export default function MarketingNav({
 }) {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [tradesOpen, setTradesOpen] = useState(false);
+  const tradesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -27,6 +44,25 @@ export default function MarketingNav({
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // Pointer-only open/close strands keyboard and touch users with a menu
+  // they cannot dismiss, so the button toggles too and both Escape and a
+  // click anywhere else close it.
+  useEffect(() => {
+    if (!tradesOpen) return;
+    function onPointerDown(e: MouseEvent) {
+      if (!tradesRef.current?.contains(e.target as Node)) setTradesOpen(false);
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setTradesOpen(false);
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [tradesOpen]);
 
   const solid = !transparent || scrolled || open;
 
@@ -52,6 +88,42 @@ export default function MarketingNav({
             <Link href="/#pricing" className="text-white/75 hover:text-white font-semibold text-sm transition-colors">
               Pricing
             </Link>
+
+            <div
+              ref={tradesRef}
+              className="relative"
+              onMouseEnter={() => setTradesOpen(true)}
+              onMouseLeave={() => setTradesOpen(false)}
+            >
+              <button
+                type="button"
+                onClick={() => setTradesOpen((v) => !v)}
+                aria-expanded={tradesOpen}
+                aria-haspopup="true"
+                className="flex items-center gap-1.5 text-white/75 hover:text-white font-semibold text-sm transition-colors"
+              >
+                Trades
+                <ChevronDown size={14} className={`transition-transform ${tradesOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {tradesOpen && (
+                <div className="absolute left-0 top-full pt-3 w-[260px]">
+                  <div className="bg-[#12212f] border border-white/10 rounded-xl shadow-2xl overflow-hidden py-1.5">
+                    {TRADE_PAGES.map((t) => (
+                      <Link
+                        key={t.slug}
+                        href={`/quoting-software/${t.slug}`}
+                        onClick={() => setTradesOpen(false)}
+                        className="block px-4 py-2.5 font-semibold text-[14px] text-white/80 hover:text-white hover:bg-white/[0.06] transition-colors"
+                      >
+                        {t.Trade}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <Link href="/for" className="text-white/75 hover:text-white font-semibold text-sm transition-colors">
               For Tradies
             </Link>
@@ -114,14 +186,27 @@ export default function MarketingNav({
         </div>
 
         {open && (
-          <div className="lg:hidden bg-[#1a242c] border-t border-white/10 px-6 py-5 flex flex-col gap-1">
+          <div className="lg:hidden bg-[#1a242c] border-t border-white/10 px-6 py-5 flex flex-col gap-1 max-h-[calc(100vh-72px)] overflow-y-auto">
             <Link href="/features" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">
               Features
             </Link>
             <Link href="/#pricing" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">
               Pricing · $45/mo
             </Link>
-            <Link href="/for" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">
+
+            <p className="text-white/45 font-semibold text-[11px] uppercase tracking-wide pt-3 pb-1">Trades</p>
+            {TRADE_PAGES.map((t) => (
+              <Link
+                key={t.slug}
+                href={`/quoting-software/${t.slug}`}
+                onClick={() => setOpen(false)}
+                className="text-white/85 font-semibold text-[15px] py-2 pl-1"
+              >
+                {t.Trade}
+              </Link>
+            ))}
+
+            <Link href="/for" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5 mt-2">
               For Tradies
             </Link>
             <Link href="/tools" onClick={() => setOpen(false)} className="text-white/85 font-semibold text-[15px] py-2.5">
@@ -166,7 +251,6 @@ export default function MarketingNav({
           </div>
         )}
       </div>
-      {/* Reserve space when nav is not overlaid on a hero */}
       {!transparent ? <div className="h-[72px]" aria-hidden /> : null}
     </>
   );
