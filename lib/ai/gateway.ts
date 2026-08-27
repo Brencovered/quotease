@@ -12,7 +12,7 @@
  * Model strings like "openai/gpt-4o-mini" are resolved by the gateway.
  */
 
-import { generateText, generateObject, streamText } from "ai";
+import { generateText, Output, streamText } from "ai";
 import { type ZodSchema } from "zod";
 
 // Only used for local dev - Vercel injects auth automatically in production
@@ -20,17 +20,22 @@ if (process.env.AI_GATEWAY_API_KEY) {
   process.env.AI_GATEWAY_API_KEY = process.env.AI_GATEWAY_API_KEY;
 }
 
+// Keep HAIKU/SONNET as aliases of the Gateway-accessible IDs. This account's
+// AI Gateway key is rejected on newer Anthropic IDs (haiku-4.5 / sonnet-4.6)
+// with 403 "Free tier users do not have access to this model", which made
+// blog outline assist, chat, and analyze-voice return HTTP 500.
+const TEXT_PRIMARY = "openai/gpt-4o-mini";
+const TEXT_FALLBACK = "anthropic/claude-3-haiku";
+const VISION_PRIMARY = "openai/gpt-4o";
+const VISION_FALLBACK = "anthropic/claude-3-5-sonnet";
+
 export const MODELS = {
-  TEXT_PRIMARY:    "openai/gpt-4o-mini",
-  TEXT_FALLBACK:   "anthropic/claude-3-haiku",
-  VISION_PRIMARY:  "openai/gpt-4o",
-  VISION_FALLBACK: "anthropic/claude-3-5-sonnet",
-  // Used by the chat, business-assistant, and analyze-voice routes below -
-  // named separately from the pair above since those were already in use
-  // by drawing-analysis/voice-quote and this keeps their behaviour
-  // untouched while migrating the remaining direct-fetch routes.
-  HAIKU:  "anthropic/claude-haiku-4.5",
-  SONNET: "anthropic/claude-sonnet-4.6",
+  TEXT_PRIMARY,
+  TEXT_FALLBACK,
+  VISION_PRIMARY,
+  VISION_FALLBACK,
+  HAIKU: TEXT_FALLBACK,
+  SONNET: VISION_FALLBACK,
 } as const;
 
 /**
@@ -93,8 +98,8 @@ export async function generateWithFallback(opts: {
 }
 
 /**
- * generateObject with automatic fallback.
- * Returns structured JSON matching the provided Zod schema.
+ * Structured JSON with automatic fallback.
+ * generateObject was removed in AI SDK v6; this uses generateText + Output.object.
  */
 export async function generateObjectWithFallback<T>(opts: {
   primaryModel:  string;
@@ -105,13 +110,16 @@ export async function generateObjectWithFallback<T>(opts: {
 }) {
   for (const model of [opts.primaryModel, opts.fallbackModel]) {
     try {
-      const result = await generateObject({
+      const result = await generateText({
         model,
         system: opts.system,
         prompt: opts.prompt,
-        schema: opts.schema,
+        output: Output.object({ schema: opts.schema }),
       });
-      return { object: result.object, model, usage: result.usage };
+      if (result.output == null) {
+        throw new Error("Model returned no structured output");
+      }
+      return { object: result.output, model, usage: result.usage };
     } catch (err) {
       console.error(`[AI Gateway] ${model} failed:`, err);
       if (model === opts.fallbackModel) throw err;
