@@ -47,6 +47,16 @@ export interface BlogAssistProps {
   onInsertSection: (markdown: string) => void;
 }
 
+async function parseJsonBody(res: Response): Promise<{ error?: string; plan?: Plan; text?: string }> {
+  const raw = await res.text();
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw) as { error?: string; plan?: Plan; text?: string };
+  } catch {
+    throw new Error(`Request failed (${res.status}). The server did not return JSON.`);
+  }
+}
+
 export default function BlogAssist({ postTitle, onUseOutline, onInsertSection }: BlogAssistProps) {
   const [open, setOpen] = useState(false);
   const [keyword, setKeyword] = useState("");
@@ -70,8 +80,9 @@ export default function BlogAssist({ postTitle, onUseOutline, onInsertSection }:
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ keyword: keyword.trim(), postType, notes: notes.trim() }),
       });
-      const data = await res.json();
+      const data = await parseJsonBody(res);
       if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+      if (!data.plan) throw new Error("Outline response was empty. Try again.");
       setPlan(data.plan as Plan);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Planning failed");
@@ -94,9 +105,10 @@ export default function BlogAssist({ postTitle, onUseOutline, onInsertSection }:
         otherHeadings: plan.sections.map(s => s.heading),
       }),
     });
-    const data = await res.json();
+    const data = await parseJsonBody(res);
     if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
-    return data.text as string;
+    if (!data.text) throw new Error("Draft response was empty. Try again.");
+    return data.text;
   }
 
   async function draftSection(i: number) {
@@ -198,12 +210,14 @@ export default function BlogAssist({ postTitle, onUseOutline, onInsertSection }:
         />
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="space-y-2">
         <button onClick={planOutline} disabled={planning} className="btn-primary text-[12.5px] py-2 px-4 flex items-center gap-1.5">
           {planning ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
           {planning ? "Planning..." : "Plan an outline"}
         </button>
-        {error && <span className="text-[12px] font-semibold text-[var(--red)]">{error}</span>}
+        {error && (
+          <p className="text-[12.5px] font-semibold text-[var(--red)] leading-snug">{error}</p>
+        )}
       </div>
 
       {plan && (
