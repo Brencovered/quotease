@@ -129,6 +129,7 @@ export default function BlogAssist({ postTitle, onUseOutline, onInsertSection }:
     if (!plan) return;
     setDraftingAll(true); setError("");
     const failures: string[] = [];
+    let lastErr = "";
     for (let i = 0; i < plan.sections.length; i++) {
       if (draftedIdx.has(i)) continue; // already drafted - don't overwrite or waste a call
       setDrafting(i);
@@ -136,14 +137,19 @@ export default function BlogAssist({ postTitle, onUseOutline, onInsertSection }:
         const text = await fetchSectionDraft(plan.sections[i]);
         onInsertSection(text);
         setDraftedIdx(prev => new Set(prev).add(i));
-      } catch {
+      } catch (err) {
         failures.push(plan.sections[i].heading);
+        lastErr = err instanceof Error ? err.message : "";
       }
     }
     setDrafting(null);
     setDraftingAll(false);
     if (failures.length) {
-      setError(`Drafted the rest, but failed on: ${failures.join(", ")}. Try those individually.`);
+      setError(
+        lastErr
+          ? `Failed on: ${failures.join(", ")}. ${lastErr}`
+          : `Drafted the rest, but failed on: ${failures.join(", ")}. Try those individually.`
+      );
     }
   }
 

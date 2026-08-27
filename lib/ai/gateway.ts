@@ -26,17 +26,26 @@ if (process.env.AI_GATEWAY_API_KEY) {
 // blog outline assist, chat, and analyze-voice return HTTP 500.
 const TEXT_PRIMARY = "openai/gpt-4o-mini";
 const TEXT_FALLBACK = "anthropic/claude-3-haiku";
+const TEXT_FLASH = "google/gemini-2.5-flash-lite";
 const VISION_PRIMARY = "openai/gpt-4o";
 const VISION_FALLBACK = "anthropic/claude-3-5-sonnet";
 
 export const MODELS = {
   TEXT_PRIMARY,
   TEXT_FALLBACK,
+  TEXT_FLASH,
   VISION_PRIMARY,
   VISION_FALLBACK,
   HAIKU: TEXT_FALLBACK,
   SONNET: VISION_FALLBACK,
 } as const;
+
+/** Cheap text models on separate Gateway free-tier RPM buckets. */
+export const TEXT_MODELS = [TEXT_PRIMARY, TEXT_FLASH, TEXT_FALLBACK] as const;
+
+function uniqueModels(...ids: Array<string | undefined>): string[] {
+  return [...new Set(ids.filter((id): id is string => !!id))];
+}
 
 /**
  * generateText over a full multi-turn message list (as opposed to a single
@@ -51,7 +60,7 @@ export async function generateTextWithMessagesFallback(opts: {
   messages:      any[];
   maxTokens?: number;
 }) {
-  const models = [...new Set([opts.primaryModel, opts.fallbackModel])];
+  const models = uniqueModels(opts.primaryModel, opts.fallbackModel);
   for (const model of models) {
     try {
       const result = await generateText({
@@ -59,12 +68,14 @@ export async function generateTextWithMessagesFallback(opts: {
         system: opts.system,
         messages: opts.messages,
         maxOutputTokens: opts.maxTokens ?? 2048,
+        maxRetries: 0,
       });
       return { text: result.text, model, usage: result.usage };
     } catch (err) {
       console.error(`[AI Gateway] ${model} failed:`, err);
       if (model === models[models.length - 1]) throw err;
-      console.warn(`[AI Gateway] Falling back to ${opts.fallbackModel}`);
+      const next = models[models.indexOf(model) + 1];
+      console.warn(`[AI Gateway] Falling back to ${next}`);
     }
   }
   throw new Error("All models failed");
@@ -74,13 +85,14 @@ export async function generateTextWithMessagesFallback(opts: {
  * generateText with automatic fallback.
  */
 export async function generateWithFallback(opts: {
-  primaryModel:  string;
-  fallbackModel: string;
+  primaryModel?:  string;
+  fallbackModel?: string;
+  models?:        string[];
   system:        string;
   prompt:        string;
   maxTokens?: number;
 }) {
-  const models = [...new Set([opts.primaryModel, opts.fallbackModel])];
+  const models = uniqueModels(...(opts.models ?? [opts.primaryModel, opts.fallbackModel]));
   for (const model of models) {
     try {
       const result = await generateText({
@@ -88,12 +100,14 @@ export async function generateWithFallback(opts: {
         system:    opts.system,
         prompt:    opts.prompt,
         maxOutputTokens: opts.maxTokens ?? 1024,
+        maxRetries: 0,
       });
       return { text: result.text, model, usage: result.usage };
     } catch (err) {
       console.error(`[AI Gateway] ${model} failed:`, err);
       if (model === models[models.length - 1]) throw err;
-      console.warn(`[AI Gateway] Falling back to ${opts.fallbackModel}`);
+      const next = models[models.indexOf(model) + 1];
+      console.warn(`[AI Gateway] Falling back to ${next}`);
     }
   }
   throw new Error("All models failed");
@@ -104,13 +118,14 @@ export async function generateWithFallback(opts: {
  * generateObject was removed in AI SDK v6; this uses generateText + Output.object.
  */
 export async function generateObjectWithFallback<T>(opts: {
-  primaryModel:  string;
-  fallbackModel: string;
+  primaryModel?:  string;
+  fallbackModel?: string;
+  models?:        string[];
   system:        string;
   prompt:        string;
   schema:        ZodSchema<T>;
 }) {
-  const models = [...new Set([opts.primaryModel, opts.fallbackModel])];
+  const models = uniqueModels(...(opts.models ?? [opts.primaryModel, opts.fallbackModel]));
   for (const model of models) {
     try {
       const result = await generateText({
@@ -118,6 +133,7 @@ export async function generateObjectWithFallback<T>(opts: {
         system: opts.system,
         prompt: opts.prompt,
         output: Output.object({ schema: opts.schema }),
+        maxRetries: 0,
       });
       if (result.output == null) {
         throw new Error("Model returned no structured output");
@@ -126,7 +142,8 @@ export async function generateObjectWithFallback<T>(opts: {
     } catch (err) {
       console.error(`[AI Gateway] ${model} failed:`, err);
       if (model === models[models.length - 1]) throw err;
-      console.warn(`[AI Gateway] Falling back to ${opts.fallbackModel}`);
+      const next = models[models.indexOf(model) + 1];
+      console.warn(`[AI Gateway] Falling back to ${next}`);
     }
   }
   throw new Error("All models failed");
@@ -142,7 +159,7 @@ export async function streamWithFallback(opts: {
   prompt:        string;
   maxTokens?: number;
 }) {
-  const models = [...new Set([opts.primaryModel, opts.fallbackModel])];
+  const models = uniqueModels(opts.primaryModel, opts.fallbackModel);
   for (const model of models) {
     try {
       return streamText({
@@ -150,11 +167,13 @@ export async function streamWithFallback(opts: {
         system:    opts.system,
         prompt:    opts.prompt,
         maxOutputTokens: opts.maxTokens ?? 1024,
+        maxRetries: 0,
       });
     } catch (err) {
       console.error(`[AI Gateway] ${model} failed:`, err);
       if (model === models[models.length - 1]) throw err;
-      console.warn(`[AI Gateway] Falling back to ${opts.fallbackModel}`);
+      const next = models[models.indexOf(model) + 1];
+      console.warn(`[AI Gateway] Falling back to ${next}`);
     }
   }
   throw new Error("All models failed");

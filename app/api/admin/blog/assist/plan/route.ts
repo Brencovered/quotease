@@ -16,8 +16,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/admin";
-import { generateObjectWithFallback, MODELS } from "@/lib/ai/gateway";
-import { formatAiGatewayError } from "@/lib/ai/formatAiGatewayError";
+import { generateObjectWithFallback, TEXT_MODELS } from "@/lib/ai/gateway";
+import { aiGatewayHttpStatus, formatAiGatewayError } from "@/lib/ai/formatAiGatewayError";
 import { checkRateLimit, rateLimitResponseInit } from "@/lib/rateLimit";
 
 const PlanSchema = z.object({
@@ -101,8 +101,7 @@ Plan 4 to 6 sections.`;
 
   try {
     const result = await generateObjectWithFallback<Plan>({
-      primaryModel:  MODELS.TEXT_PRIMARY,
-      fallbackModel: MODELS.HAIKU,
+      models:        [...TEXT_MODELS],
       system:        buildSystemPrompt(),
       prompt,
       schema:        PlanSchema,
@@ -113,7 +112,7 @@ Plan 4 to 6 sections.`;
     console.error("[blog-assist/plan] Error:", err);
     return NextResponse.json(
       { error: formatAiGatewayError(err) },
-      { status: 500 }
+      { status: aiGatewayHttpStatus(err) }
     );
   }
 }
