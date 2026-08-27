@@ -32,5 +32,7 @@ describe("MODELS aliases", () => {
     expect(MODELS.SONNET).toBe(MODELS.VISION_FALLBACK);
     expect(MODELS.HAIKU).toBe("anthropic/claude-3-haiku");
     expect(MODELS.SONNET).toBe("anthropic/claude-3-5-sonnet");
+    expect(MODELS.TEXT_PRIMARY).not.toBe(MODELS.HAIKU);
+    expect(MODELS.SONNET).not.toBe(MODELS.HAIKU);
   });
 });

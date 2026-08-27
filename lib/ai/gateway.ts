@@ -51,7 +51,8 @@ export async function generateTextWithMessagesFallback(opts: {
   messages:      any[];
   maxTokens?: number;
 }) {
-  for (const model of [opts.primaryModel, opts.fallbackModel]) {
+  const models = [...new Set([opts.primaryModel, opts.fallbackModel])];
+  for (const model of models) {
     try {
       const result = await generateText({
         model,
@@ -62,7 +63,7 @@ export async function generateTextWithMessagesFallback(opts: {
       return { text: result.text, model, usage: result.usage };
     } catch (err) {
       console.error(`[AI Gateway] ${model} failed:`, err);
-      if (model === opts.fallbackModel) throw err;
+      if (model === models[models.length - 1]) throw err;
       console.warn(`[AI Gateway] Falling back to ${opts.fallbackModel}`);
     }
   }
@@ -79,7 +80,8 @@ export async function generateWithFallback(opts: {
   prompt:        string;
   maxTokens?: number;
 }) {
-  for (const model of [opts.primaryModel, opts.fallbackModel]) {
+  const models = [...new Set([opts.primaryModel, opts.fallbackModel])];
+  for (const model of models) {
     try {
       const result = await generateText({
         model,
@@ -90,7 +92,7 @@ export async function generateWithFallback(opts: {
       return { text: result.text, model, usage: result.usage };
     } catch (err) {
       console.error(`[AI Gateway] ${model} failed:`, err);
-      if (model === opts.fallbackModel) throw err;
+      if (model === models[models.length - 1]) throw err;
       console.warn(`[AI Gateway] Falling back to ${opts.fallbackModel}`);
     }
   }
@@ -108,7 +110,8 @@ export async function generateObjectWithFallback<T>(opts: {
   prompt:        string;
   schema:        ZodSchema<T>;
 }) {
-  for (const model of [opts.primaryModel, opts.fallbackModel]) {
+  const models = [...new Set([opts.primaryModel, opts.fallbackModel])];
+  for (const model of models) {
     try {
       const result = await generateText({
         model,
@@ -122,7 +125,7 @@ export async function generateObjectWithFallback<T>(opts: {
       return { object: result.output, model, usage: result.usage };
     } catch (err) {
       console.error(`[AI Gateway] ${model} failed:`, err);
-      if (model === opts.fallbackModel) throw err;
+      if (model === models[models.length - 1]) throw err;
       console.warn(`[AI Gateway] Falling back to ${opts.fallbackModel}`);
     }
   }
@@ -139,7 +142,8 @@ export async function streamWithFallback(opts: {
   prompt:        string;
   maxTokens?: number;
 }) {
-  for (const model of [opts.primaryModel, opts.fallbackModel]) {
+  const models = [...new Set([opts.primaryModel, opts.fallbackModel])];
+  for (const model of models) {
     try {
       return streamText({
         model,
@@ -149,7 +153,7 @@ export async function streamWithFallback(opts: {
       });
     } catch (err) {
       console.error(`[AI Gateway] ${model} failed:`, err);
-      if (model === opts.fallbackModel) throw err;
+      if (model === models[models.length - 1]) throw err;
       console.warn(`[AI Gateway] Falling back to ${opts.fallbackModel}`);
     }
   }

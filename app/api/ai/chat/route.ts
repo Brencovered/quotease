@@ -16,8 +16,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const result = await generateTextWithMessagesFallback({
-      primaryModel: MODELS.HAIKU,
-      fallbackModel: MODELS.TEXT_FALLBACK,
+      primaryModel: MODELS.TEXT_PRIMARY,
+      fallbackModel: MODELS.HAIKU,
       system,
       messages,
       maxTokens: 4096,
