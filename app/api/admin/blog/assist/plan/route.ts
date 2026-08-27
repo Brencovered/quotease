@@ -17,6 +17,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/admin";
 import { generateObjectWithFallback, MODELS } from "@/lib/ai/gateway";
+import { formatAiGatewayError } from "@/lib/ai/formatAiGatewayError";
 import { checkRateLimit, rateLimitResponseInit } from "@/lib/rateLimit";
 
 const PlanSchema = z.object({
@@ -99,8 +100,11 @@ Author's angle (real information or a story only they know, use it if given): ${
 Plan 4 to 6 sections.`;
 
   try {
+    // Prefer OpenAI mini for structured outlines — Anthropic structured-output
+    // via generateObject has been flaky through the gateway; Haiku remains the
+    // Anthropic fallback so planning still works if OpenAI is unavailable.
     const result = await generateObjectWithFallback<Plan>({
-      primaryModel:  MODELS.SONNET,
+      primaryModel:  MODELS.TEXT_PRIMARY,
       fallbackModel: MODELS.HAIKU,
       system:        buildSystemPrompt(),
       prompt,
@@ -111,7 +115,7 @@ Plan 4 to 6 sections.`;
   } catch (err) {
     console.error("[blog-assist/plan] Error:", err);
     return NextResponse.json(
-      { error: "Planning failed. Please try again." },
+      { error: formatAiGatewayError(err) },
       { status: 500 }
     );
   }
