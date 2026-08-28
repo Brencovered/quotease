@@ -262,6 +262,31 @@ const BOT_PATTERNS: { pattern: RegExp; label: string }[] = [
  */
 function logTraffic(request: NextRequest, pathname: string, event: NextFetchEvent) {
   try {
+    // Next.js's <Link> prefetches the target page the moment it scrolls
+    // into the viewport, by default, on every Link in the app -- not on
+    // click. That request hits this exact middleware and, until this
+    // check existed, was logged identically to a real visit. Found by
+    // being asked directly where a listing-pageview number came from:
+    // every "View profile" card on /directory uses a plain <Link> with no
+    // prefetch={false}, so a visitor scrolling past 20 search results
+    // without opening any of them could log 20 "page views" for pages
+    // they never actually looked at. Both header names below are real:
+    // "Next-Router-Prefetch" is the current App Router convention;
+    // "Purpose"/"Sec-Purpose: prefetch" are the browser/older-Next
+    // signal, kept as a fallback since which one shows up has changed
+    // across Next versions. This is a permanent gap in every count taken
+    // from this table before this fix -- there was no header captured
+    // to separate a prefetch from a real visit after the fact, so that
+    // data cannot be corrected retroactively, only prevented going
+    // forward.
+    if (
+      request.headers.get("next-router-prefetch") ||
+      request.headers.get("purpose") === "prefetch" ||
+      request.headers.get("sec-purpose")?.includes("prefetch")
+    ) {
+      return;
+    }
+
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!url || !key) return; // never block a request for a missing log config
