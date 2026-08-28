@@ -8,6 +8,7 @@ import {
   Square, CheckSquare, SquareMinus, AlertTriangle, Download, ShieldCheck,
 } from "lucide-react";
 import { buildDirectorySlug } from "@/lib/seo/meta";
+import { AdminDirectoryPageScraper } from "@/components/AdminDirectoryPageScraper";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -415,6 +416,10 @@ export default function AdminDirectoryPanel() {
             {exporting ? "Exporting..." : "Download CSV"}
           </button>
         </div>
+      </div>
+
+      <div className="mb-5">
+        <AdminDirectoryPageScraper />
       </div>
 
       {showAddForm && (

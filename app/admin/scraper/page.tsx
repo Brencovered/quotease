@@ -6,6 +6,7 @@ import {
   Image, Globe, Wrench, Play, MapPin, Hash, Clock, Zap, ChevronDown,
   CheckSquare, Square, X, RefreshCw,
 } from "lucide-react";
+import { AdminDirectoryPageScraper } from "@/components/AdminDirectoryPageScraper";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -333,7 +334,12 @@ export default function AdminScraperPage() {
         <h1 className="font-display text-2xl text-[var(--ink)]">Tradie Scraper</h1>
         <p className="text-[13px] text-[var(--ink-soft)]">
           Find and import tradies from Google Places. Select one or more trades and a postcode.
+          Or paste a Google / Yellow Pages results URL below.
         </p>
+      </div>
+
+      <div className="mb-6">
+        <AdminDirectoryPageScraper />
       </div>
 
       {/* Refresh logos - fixes bad logos (e.g. og:image hero photos) on
