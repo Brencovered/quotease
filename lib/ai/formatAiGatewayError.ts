@@ -51,6 +51,36 @@ export function isGatewayRateLimitError(err: unknown): boolean {
   );
 }
 
+export function gatewayRetryAfterSeconds(err: unknown, fallback = 20): number {
+  const seen = new Set<unknown>();
+  let found: number | undefined;
+
+  const visit = (value: unknown) => {
+    if (value == null || found != null || seen.has(value) || typeof value !== "object") return;
+    seen.add(value);
+    const o = value as Record<string, unknown>;
+    const headers = o.responseHeaders;
+    if (headers && typeof headers === "object") {
+      const raw =
+        (headers as Record<string, unknown>)["retry-after"] ??
+        (headers as Record<string, unknown>)["Retry-After"];
+      const n = Number.parseInt(String(raw ?? ""), 10);
+      if (Number.isFinite(n) && n > 0) {
+        found = n;
+        return;
+      }
+    }
+    visit(o.lastError);
+    visit(o.cause);
+    if (Array.isArray(o.errors)) {
+      for (const nested of o.errors) visit(nested);
+    }
+  };
+
+  visit(err);
+  return Math.min(Math.max(found ?? fallback, 8), 60);
+}
+
 export function aiGatewayHttpStatus(err: unknown): number {
   return isGatewayRateLimitError(err) ? 429 : 500;
 }
