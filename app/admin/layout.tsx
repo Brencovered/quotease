@@ -43,6 +43,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <Link href="/admin/seo" className="text-[var(--steel-1)] hover:text-white">SEO</Link>
             <Link href="/admin/integrations" className="text-[var(--amber)] hover:text-white">Integrations</Link>
             <Link href="/admin/scraper" className="text-[var(--amber)] hover:text-white">Google scraper</Link>
+            <Link href="/admin/page-scraper" className="text-[var(--amber)] hover:text-white">Page scraper</Link>
             <Link href="/admin/website-scraper" className="text-[var(--amber)] hover:text-white">Website scraper</Link>
             <Link href="/admin/manual-scraper" className="text-[var(--amber)] hover:text-white">Manual scraper</Link>
           </nav>
