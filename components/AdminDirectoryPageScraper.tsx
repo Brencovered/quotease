@@ -101,9 +101,10 @@ export function AdminDirectoryPageScraper() {
         <Globe className="w-4 h-4 text-[var(--amber)]" /> Directory page scraper
       </h2>
       <p className="text-[12.5px] text-[var(--ink-soft)] mb-4">
-        Paste a Google Search, Google Maps, or Yellow Pages results URL. We pull business
-        name, suburb, website, and email (from the business site when the directory does not
-        show it). Preview first, then import. Nothing is saved until you confirm.
+        Paste a Google Maps, Google Search, or Yellow Pages results URL. Google pages cannot
+        be read directly, so we look the same search up on Yellow Pages (Places is skipped
+        when that Google Cloud project has billing off). Preview first, then import. Nothing
+        is saved until you confirm.
       </p>
 
       <div className="flex flex-col gap-2 sm:flex-row">

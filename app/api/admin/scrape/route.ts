@@ -23,6 +23,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/admin";
 import { geocodeAddress } from "@/lib/geocode";
+import { formatPlacesApiError, isPlacesBillingBlock } from "@/lib/googlePlaces";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -236,6 +237,10 @@ async function searchPlacesNearby(
       };
 
       if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
+        const msg = formatPlacesApiError(data.status, data.error_message);
+        if (isPlacesBillingBlock(data.status, data.error_message) || data.status === "REQUEST_DENIED") {
+          throw new Error(msg);
+        }
         console.error(`[scrape] Places API error: ${data.status}`); break;
       }
       if (data.results?.length) results.push(...data.results);
@@ -244,6 +249,8 @@ async function searchPlacesNearby(
       if (!nextPageToken) break;
       await sleep(2000);
     } catch (err) {
+      if (err instanceof Error && isPlacesBillingBlock("", err.message)) throw err;
+      if (err instanceof Error && /Google Places/.test(err.message)) throw err;
       console.error("[scrape] Nearby search error:", err); break;
     }
   }
@@ -599,10 +606,15 @@ export async function POST(request: Request) {
   const allResults: ScrapeResultItem[] = [];
   const perTrade: PerTradeSummary[] = [];
 
-  for (const trade of trades) {
-    const { results, summary } = await runTradeScrape(trade, postcode, center.lat, center.lng, radiusMetres, existingIds, admin);
-    allResults.push(...results);
-    perTrade.push(summary);
+  try {
+    for (const trade of trades) {
+      const { results, summary } = await runTradeScrape(trade, postcode, center.lat, center.lng, radiusMetres, existingIds, admin);
+      allResults.push(...results);
+      perTrade.push(summary);
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Scrape failed";
+    return NextResponse.json({ success: false, error: message }, { status: 502 });
   }
 
   // Aggregate

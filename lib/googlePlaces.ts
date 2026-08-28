@@ -2,6 +2,28 @@ const GOOGLE_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 const FIND_PLACE_URL = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json";
 const DETAILS_URL = "https://maps.googleapis.com/maps/api/place/details/json";
 
+/** True when Google is blocking Places until Cloud Billing is enabled. */
+export function isPlacesBillingBlock(status?: string, errorMessage?: string): boolean {
+  const blob = `${status ?? ""} ${errorMessage ?? ""}`;
+  return /enable billing|gmp-get-started|billing on the google cloud project/i.test(blob);
+}
+
+/** Admin-facing copy for a Places JSON status. Never pass Google's billing URL through as-is. */
+export function formatPlacesApiError(status: string, errorMessage?: string): string {
+  if (isPlacesBillingBlock(status, errorMessage)) {
+    return "Google Places cannot run because billing is off on the Google Cloud project for this API key. The trade-and-postcode Google scraper needs that. For a pasted Maps URL, use Page scraper: we look the same search up on Yellow Pages instead.";
+  }
+  if (status === "REQUEST_DENIED") {
+    return "Google Places rejected this API key (REQUEST_DENIED). Check key restrictions and that Places API is enabled.";
+  }
+  if (status === "OVER_QUERY_LIMIT") {
+    return "Google Places hit its quota. Try again in a few minutes.";
+  }
+  return errorMessage && !/gmp-get-started|console\.cloud\.google/i.test(errorMessage)
+    ? errorMessage
+    : `Google Places failed (${status}).`;
+}
+
 export interface GoogleListingData {
   place_id: string | null;
   google_rating: number | null;

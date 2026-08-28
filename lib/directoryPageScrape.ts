@@ -9,6 +9,7 @@
 
 import { getRandomUserAgent } from "@/lib/websiteScraper";
 import { scrapeWebsite } from "@/lib/websiteScrape";
+import { formatPlacesApiError } from "@/lib/googlePlaces";
 
 export type DirectoryPageSource = "google" | "yellowpages" | "html";
 
@@ -90,6 +91,33 @@ export function detectDirectorySource(url: string): DirectoryPageSource {
   } catch {
     return "html";
   }
+}
+
+/** Split "plumbers in Newtown NSW" into a Yellow Pages clue + location. */
+export function splitTradeAndLocation(query: string): { clue: string; location: string } {
+  const q = query.replace(/\s+/g, " ").trim();
+  if (!q) return { clue: "", location: "" };
+
+  const named = q.match(/^(.+?)\s+(?:in|near|around|at)\s+(.+)$/i);
+  if (named) return { clue: named[1].trim(), location: named[2].trim() };
+
+  const withState = q.match(/^(.*?)\s+(.+?\b(?:NSW|VIC|QLD|WA|SA|TAS|NT|ACT)\b(?:\s+\d{4})?)$/i);
+  if (withState && withState[1].trim().length >= 3) {
+    return { clue: withState[1].trim(), location: withState[2].trim() };
+  }
+
+  const parts = q.split(" ");
+  if (parts.length >= 2) {
+    return { clue: parts.slice(0, -1).join(" "), location: parts[parts.length - 1] };
+  }
+  return { clue: q, location: "" };
+}
+
+export function yellowPagesSearchUrl(query: string): string {
+  const { clue, location } = splitTradeAndLocation(query);
+  const params = new URLSearchParams({ clue: clue || query });
+  if (location) params.set("locationClue", location);
+  return `https://www.yellowpages.com.au/search/listings?${params}`;
 }
 
 /** Pull the search text from a Google Maps / Search URL. */
@@ -331,7 +359,7 @@ async function googleTextSearch(query: string): Promise<DirectoryPageListing[]> 
     results?: { place_id: string; name: string; formatted_address?: string; formatted_phone_number?: string }[];
   };
   if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
-    throw new Error(data.error_message || `Google Places status: ${data.status}`);
+    throw new Error(formatPlacesApiError(data.status, data.error_message));
   }
   const rows: DirectoryPageListing[] = [];
   for (const r of (data.results ?? []).slice(0, MAX_LISTINGS)) {
@@ -415,6 +443,22 @@ async function resolveGoogleQuery(url: string): Promise<string | null> {
   }
 }
 
+async function tryGoogleTextSearch(query: string): Promise<DirectoryPageListing[]> {
+  if (!process.env.GOOGLE_PLACES_API_KEY) return [];
+  try {
+    return await googleTextSearch(query);
+  } catch {
+    // Billing off, key blocked, quota, network: fall back to Yellow Pages.
+    return [];
+  }
+}
+
+async function scrapeYellowPagesForQuery(query: string): Promise<DirectoryPageListing[]> {
+  const html = await fetchHtml(yellowPagesSearchUrl(query), "https://www.yellowpages.com.au/");
+  if (!html) return [];
+  return parseYellowPagesHtml(html).slice(0, MAX_LISTINGS);
+}
+
 export async function scrapeDirectoryPage(rawUrl: string): Promise<{
   source: DirectoryPageSource;
   query: string | null;
@@ -430,12 +474,24 @@ export async function scrapeDirectoryPage(rawUrl: string): Promise<{
     if (!query) {
       throw new Error("Could not read a search query from that Google URL. Use a Maps search or place link.");
     }
-    const listings = await enrichEmails(await googleTextSearch(query));
+
+    const places = await tryGoogleTextSearch(query);
+    const viaPlaces = places.length > 0;
+    const listings = viaPlaces ? places : await scrapeYellowPagesForQuery(query);
+
+    if (listings.length === 0) {
+      throw new Error(
+        `No listings for "${query}". Google result pages cannot be read directly, and Yellow Pages returned none. Paste a Yellow Pages search-results URL instead.`,
+      );
+    }
+
     return {
-      source,
+      source: viaPlaces ? "google" : "yellowpages",
       query,
-      listings,
-      note: `Google result pages are JavaScript-rendered, so we ran Places Text Search for "${query}" and opened each business website for an email (up to ${EMAIL_ENRICH_CAP}).`,
+      listings: await enrichEmails(listings),
+      note: viaPlaces
+        ? `Google result pages are JavaScript-rendered, so we ran Places Text Search for "${query}" and opened each business website for an email (up to ${EMAIL_ENRICH_CAP}).`
+        : `Google pages are JavaScript-rendered and Places is not available (billing is off on that Google Cloud project), so we searched Yellow Pages for "${query}".`,
     };
   }
 

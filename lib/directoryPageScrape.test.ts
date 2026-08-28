@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   detectDirectorySource,
   googleQueryFromUrl,
@@ -6,7 +6,11 @@ import {
   parseYellowPagesHtml,
   suburbFromAuAddress,
   sanitizeSuburb,
+  splitTradeAndLocation,
+  yellowPagesSearchUrl,
+  scrapeDirectoryPage,
 } from "./directoryPageScrape";
+import { formatPlacesApiError, isPlacesBillingBlock } from "./googlePlaces";
 
 describe("detectDirectorySource", () => {
   it("flags Google Maps and Search hosts", () => {
@@ -98,5 +102,100 @@ describe("parseYellowPagesHtml", () => {
     const rows = parseYellowPagesHtml(html);
     expect(rows.some((r) => r.business_name === "Coastal Plumbing")).toBe(true);
     expect(rows[0].website_url).toBe("https://coastalplumbing.com.au");
+  });
+});
+
+describe("splitTradeAndLocation", () => {
+  it("splits 'in' / state patterns for Yellow Pages", () => {
+    expect(splitTradeAndLocation("plumbers in Newtown NSW")).toEqual({
+      clue: "plumbers",
+      location: "Newtown NSW",
+    });
+    expect(splitTradeAndLocation("electricians Bondi NSW")).toEqual({
+      clue: "electricians",
+      location: "Bondi NSW",
+    });
+    expect(splitTradeAndLocation("plumbers parramatta")).toEqual({
+      clue: "plumbers",
+      location: "parramatta",
+    });
+  });
+});
+
+describe("yellowPagesSearchUrl", () => {
+  it("builds a listings search URL", () => {
+    const url = yellowPagesSearchUrl("plumbers in Newtown NSW");
+    expect(url).toContain("yellowpages.com.au/search/listings");
+    expect(url).toContain("clue=plumbers");
+    expect(url).toContain("locationClue=Newtown");
+  });
+});
+
+describe("formatPlacesApiError", () => {
+  const googleBilling =
+    "You must enable Billing on the Google Cloud Project at https://console.cloud.google.com/project/_/billing/enable Learn more at https://developers.google.com/maps/gmp-get-started";
+
+  it("does not pass Google's billing URL through to the admin", () => {
+    expect(isPlacesBillingBlock("REQUEST_DENIED", googleBilling)).toBe(true);
+    const msg = formatPlacesApiError("REQUEST_DENIED", googleBilling);
+    expect(msg).not.toMatch(/console\.cloud\.google/);
+    expect(msg).not.toMatch(/gmp-get-started/);
+    expect(msg).toMatch(/Yellow Pages/);
+  });
+});
+
+describe("scrapeDirectoryPage Google fallback", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("searches Yellow Pages when Places billing is off", async () => {
+    vi.stubEnv("GOOGLE_PLACES_API_KEY", "test-key");
+    const ypHtml = `<script type="application/ld+json">${JSON.stringify({
+      "@type": "LocalBusiness",
+      name: "Newtown Pipes",
+      email: "hi@newtownpipes.com.au",
+      url: "https://newtownpipes.com.au",
+      address: { addressLocality: "Newtown", addressRegion: "NSW", postalCode: "2042" },
+    })}</script>`;
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo) => {
+        const url = String(input);
+        if (url.includes("maps.googleapis.com")) {
+          return {
+            ok: true,
+            json: async () => ({
+              status: "REQUEST_DENIED",
+              error_message:
+                "You must enable Billing on the Google Cloud Project at https://console.cloud.google.com/project/_/billing/enable Learn more at https://developers.google.com/maps/gmp-get-started",
+            }),
+          };
+        }
+        if (url.includes("yellowpages.com.au")) {
+          return {
+            ok: true,
+            headers: { get: (_name: string): string => "text/html" },
+            text: async (): Promise<string> => ypHtml,
+          };
+        }
+        return {
+          ok: false,
+          headers: { get: (_name: string): string => "" },
+          text: async (): Promise<string> => "",
+          json: async () => ({}),
+        };
+      }),
+    );
+
+    const result = await scrapeDirectoryPage(
+      "https://www.google.com/maps/search/plumbers+in+Newtown+NSW",
+    );
+    expect(result.source).toBe("yellowpages");
+    expect(result.listings[0].business_name).toBe("Newtown Pipes");
+    expect(result.listings[0].email).toBe("hi@newtownpipes.com.au");
+    expect(result.note).toMatch(/Yellow Pages/);
   });
 });
