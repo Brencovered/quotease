@@ -75,6 +75,24 @@ export async function POST(req: NextRequest) {
       });
       if (res.ok) {
         results.sent++;
+        // Matches export-outreach-csv's existing pattern, which this route
+        // never had: without this, there is no record anywhere of who was
+        // sent an invite through this specific path once the request
+        // finishes. The only trace was Resend's own external dashboard,
+        // which is not queryable from here, and results.sent was a plain
+        // in-memory counter thrown away the moment this response returned.
+        // "Who else got this exact email besides Revma and Tucker" could
+        // not be answered for anything sent before this fix -- fixed here
+        // so it can be answered going forward: filter directory_listing on
+        // outreach_contacted_at is not null and is_claimed = false to find
+        // anyone invited through this button who has still not claimed.
+        const { error: markErr } = await admin
+          .from("directory_listing")
+          .update({ outreach_contacted_at: new Date().toISOString() })
+          .eq("id", listing.id);
+        if (markErr) {
+          console.error(`[send-claim-invite] sent to ${toEmail} but failed to mark outreach_contacted_at:`, markErr.message);
+        }
       } else {
         results.failed++;
         const err = await res.json().catch(() => ({}));
