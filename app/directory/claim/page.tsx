@@ -230,6 +230,23 @@ function ClaimDirectoryListingInner() {
   async function resolveEntryStep() {
     const token = searchParams.get("token");
     if (!token) {
+      // A real gap, not a hunch: two outreach-campaign visitors (Revma
+      // Electrical, Tucker Wired Electrical Solutions) landed on this
+      // exact search screen with their business name already filled in
+      // from the link's ?name=&trade=&suburb= params, and neither ever
+      // clicked "Find my business" -- zero accounts, zero claim attempts,
+      // nothing. A form that already shows your own business name reads
+      // as "this is already done" to someone skimming an email link, not
+      // as "there is still a button to press." Auto-run the same search
+      // a token link already gets, rather than making a fully-identified
+      // outreach visitor click through a form that looks finished.
+      const nameParam = searchParams.get("name");
+      const tradeParam = searchParams.get("trade");
+      const suburbParam = searchParams.get("suburb");
+      if (nameParam?.trim() && tradeParam?.trim() && suburbParam?.trim()) {
+        const ran = await runSearch(nameParam, tradeParam, suburbParam, searchParams.get("postcode") ?? "");
+        if (ran) return;
+      }
       setStep("search");
       return;
     }
@@ -352,6 +369,31 @@ function ClaimDirectoryListingInner() {
     }
   }
 
+  async function runSearch(name: string, tradeVal: string, suburbVal: string, postcodeVal: string): Promise<boolean> {
+    setSearching(true);
+    try {
+      const res = await fetch("/api/directory/lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ businessName: name, trade: tradeVal, suburb: suburbVal, postcode: postcodeVal.trim() || undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Search failed. Please try again.");
+        return false;
+      }
+      setMatches(data.matches ?? []);
+      setStrongMatch(data.strongMatch ?? null);
+      setStep("resolve");
+      return true;
+    } catch {
+      setError("Search failed. Please check your connection and try again.");
+      return false;
+    } finally {
+      setSearching(false);
+    }
+  }
+
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -363,27 +405,7 @@ function ClaimDirectoryListingInner() {
       setError("Postcode must be 4 digits.");
       return;
     }
-
-    setSearching(true);
-    try {
-      const res = await fetch("/api/directory/lookup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ businessName, trade, suburb, postcode: postcode.trim() || undefined }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Search failed. Please try again.");
-        return;
-      }
-      setMatches(data.matches ?? []);
-      setStrongMatch(data.strongMatch ?? null);
-      setStep("resolve");
-    } catch {
-      setError("Search failed. Please check your connection and try again.");
-    } finally {
-      setSearching(false);
-    }
+    await runSearch(businessName, trade, suburb, postcode);
   }
 
   // Keeps the abn step's preview in sync with whichever of logoUrl /
