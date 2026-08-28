@@ -29,7 +29,6 @@ const TEXT_PRIMARY = "openai/gpt-4o-mini";
 const TEXT_FALLBACK = "anthropic/claude-3-haiku";
 const TEXT_FLASH = "google/gemini-2.5-flash-lite";
 const TEXT_NOVA = "amazon/nova-micro";
-const TEXT_QWEN = "alibaba/qwen3.7-flash";
 const VISION_PRIMARY = "openai/gpt-4o";
 const VISION_FALLBACK = "anthropic/claude-3-5-sonnet";
 
@@ -38,7 +37,6 @@ export const MODELS = {
   TEXT_FALLBACK,
   TEXT_FLASH,
   TEXT_NOVA,
-  TEXT_QWEN,
   VISION_PRIMARY,
   VISION_FALLBACK,
   HAIKU: TEXT_FALLBACK,
@@ -50,7 +48,6 @@ export const TEXT_MODELS = [
   TEXT_PRIMARY,
   TEXT_FLASH,
   TEXT_NOVA,
-  TEXT_QWEN,
   TEXT_FALLBACK,
 ] as const;
 

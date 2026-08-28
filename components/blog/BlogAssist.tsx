@@ -125,10 +125,13 @@ export default function BlogAssist({ postTitle, onUseOutline, onInsertSection }:
     });
     const data = await parseJsonBody(res);
     if (!res.ok) {
-      const retryAfter = typeof data.retryAfter === "number" && data.retryAfter > 0
+      // Only auto-wait on the gateway 429 payload we emit (`retryAfter`,
+      // capped 8-60s). The route's own 40/hour limiter uses
+      // `retryAfterSeconds` plus a Retry-After header that can be ~1 hour.
+      const gatewayWait = typeof data.retryAfter === "number" && data.retryAfter > 0 && data.retryAfter <= 60
         ? data.retryAfter
-        : Number.parseInt(res.headers.get("Retry-After") || "", 10) || 20;
-      throw new DraftHttpError(data.error || `Request failed (${res.status})`, res.status, retryAfter);
+        : 0;
+      throw new DraftHttpError(data.error || `Request failed (${res.status})`, res.status, gatewayWait);
     }
     if (!data.text) throw new Error("Draft response was empty. Try again.");
     return data.text;
@@ -146,7 +149,7 @@ export default function BlogAssist({ postTitle, onUseOutline, onInsertSection }:
         return await fetchSectionDraft(section, startOffset + attempt - 1);
       } catch (err) {
         lastErr = err;
-        if (err instanceof DraftHttpError && err.status === 429 && attempt < maxAttempts) {
+        if (err instanceof DraftHttpError && err.status === 429 && err.retryAfter > 0 && attempt < maxAttempts) {
           const wait = err.retryAfter;
           onWait(`Rate limited. Waiting ${wait}s, then retrying "${section.heading}" (attempt ${attempt + 1} of ${maxAttempts})...`);
           await sleep(wait * 1000);
@@ -190,7 +193,7 @@ export default function BlogAssist({ postTitle, onUseOutline, onInsertSection }:
       } catch (err) {
         failures.push(plan.sections[i].heading);
         lastErr = err instanceof Error ? err.message : "";
-        if (err instanceof DraftHttpError && err.status === 429) {
+        if (err instanceof DraftHttpError && err.status === 429 && err.retryAfter > 0) {
           setStatus(`Rate limited after "${plan.sections[i].heading}". Waiting ${err.retryAfter}s before the next section...`);
           await sleep(err.retryAfter * 1000);
         }
