@@ -2,7 +2,7 @@
 
 import { Search, Filter, Star, ArrowUpDown, Locate } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useTransition } from "react";
+import { useCallback, useEffect, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 const ALL_TRADES = [
@@ -94,14 +94,56 @@ export default function DirectorySearchForm({
     navigate(e.currentTarget);
   }, [navigate]);
 
+  // Real data surfaced this: a genuine visitor typing "Lime plumbing" one
+  // letter at a time produced seven separate full navigations, seven
+  // server-side searches, and seven distinct $pageview captures for what
+  // was one person doing one thing. The form-level onChange above fires
+  // on every keystroke from the free-text search and postcode inputs, not
+  // just on the dropdowns it was clearly designed for (a single click on
+  // a <select> is naturally one event; a text field is not). Debounced
+  // separately below so a dropdown still applies the instant it is
+  // clicked -- there is nothing to wait for there -- while typed input
+  // waits for a pause before it navigates.
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleFormChange = useCallback((e: React.FormEvent<HTMLFormElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName === "INPUT" && (target as HTMLInputElement).type === "text") {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      const form = e.currentTarget;
+      debounceRef.current = setTimeout(() => navigate(form), 450);
+      return;
+    }
+    // A dropdown, or anything else: apply immediately, and drop any
+    // pending debounced text-input navigation so it cannot fire a moment
+    // later with stale field values.
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    handleChange(e);
+  }, [handleChange, navigate]);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
   const handleSubmit = useCallback((e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    // Enter-to-submit while a debounce is still pending should navigate
+    // immediately with the current value, not wait out the timer too.
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
     navigate(e.currentTarget);
   }, [navigate]);
 
   return (
     <div id="listings" className="sticky top-[72px] z-30 border-b shadow-sm" style={{ background: "var(--surface)", borderColor: "var(--line)" }}>
-      <form className="max-w-6xl mx-auto px-6 py-3 flex flex-wrap gap-2 items-center" onChange={handleChange} onSubmit={handleSubmit}>
+      <form className="max-w-6xl mx-auto px-6 py-3 flex flex-wrap gap-2 items-center" onChange={handleFormChange} onSubmit={handleSubmit}>
         <select name="trade" defaultValue={trade ?? ""} className="app-field text-[13px] w-auto bg-white pl-3 pr-2">
           <option value="">All trades</option>
           {ALL_TRADES.map((t) => (
