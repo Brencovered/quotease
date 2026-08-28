@@ -47,13 +47,29 @@ export interface BlogAssistProps {
   onInsertSection: (markdown: string) => void;
 }
 
-async function parseJsonBody(res: Response): Promise<{ error?: string; plan?: Plan; text?: string }> {
+async function parseJsonBody(res: Response): Promise<{
+  error?: string; plan?: Plan; text?: string; retryAfter?: number;
+}> {
   const raw = await res.text();
   if (!raw) return {};
   try {
-    return JSON.parse(raw) as { error?: string; plan?: Plan; text?: string };
+    return JSON.parse(raw) as { error?: string; plan?: Plan; text?: string; retryAfter?: number };
   } catch {
     throw new Error(`Request failed (${res.status}). The server did not return JSON.`);
+  }
+}
+
+function sleep(ms: number) {
+  return new Promise<void>(resolve => setTimeout(resolve, ms));
+}
+
+class DraftHttpError extends Error {
+  status: number;
+  retryAfter: number;
+  constructor(message: string, status: number, retryAfter: number) {
+    super(message);
+    this.status = status;
+    this.retryAfter = retryAfter;
   }
 }
 
@@ -67,13 +83,14 @@ export default function BlogAssist({ postTitle, onUseOutline, onInsertSection }:
   const [draftingAll, setDraftingAll] = useState(false);
   const [draftedIdx, setDraftedIdx] = useState<Set<number>>(new Set());
   const [error, setError] = useState("");
+  const [status, setStatus] = useState("");
   const [plan, setPlan] = useState<Plan | null>(null);
 
   const busy = drafting !== null || draftingAll;
 
   async function planOutline() {
     if (!keyword.trim()) { setError("Enter a target keyword first."); return; }
-    setError(""); setPlanning(true); setPlan(null); setDraftedIdx(new Set());
+    setError(""); setStatus(""); setPlanning(true); setPlan(null); setDraftedIdx(new Set());
     try {
       const res = await fetch("/api/admin/blog/assist/plan", {
         method: "POST",
@@ -92,7 +109,7 @@ export default function BlogAssist({ postTitle, onUseOutline, onInsertSection }:
   }
 
   /** Fetches the draft for one section. Throws on failure - caller decides how to handle. */
-  async function fetchSectionDraft(section: PlanSection): Promise<string> {
+  async function fetchSectionDraft(section: PlanSection, modelOffset: number): Promise<string> {
     if (!plan) throw new Error("No outline loaded");
     const res = await fetch("/api/admin/blog/assist/draft", {
       method: "POST",
@@ -103,22 +120,57 @@ export default function BlogAssist({ postTitle, onUseOutline, onInsertSection }:
         heading: section.heading,
         brief: section.brief,
         otherHeadings: plan.sections.map(s => s.heading),
+        modelOffset,
       }),
     });
     const data = await parseJsonBody(res);
-    if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+    if (!res.ok) {
+      // Only auto-wait on the gateway 429 payload we emit (`retryAfter`,
+      // capped 8-60s). The route's own 40/hour limiter uses
+      // `retryAfterSeconds` plus a Retry-After header that can be ~1 hour.
+      const gatewayWait = typeof data.retryAfter === "number" && data.retryAfter > 0 && data.retryAfter <= 60
+        ? data.retryAfter
+        : 0;
+      throw new DraftHttpError(data.error || `Request failed (${res.status})`, res.status, gatewayWait);
+    }
     if (!data.text) throw new Error("Draft response was empty. Try again.");
     return data.text;
   }
 
+  async function fetchSectionDraftWithRetry(
+    section: PlanSection,
+    startOffset: number,
+    onWait: (msg: string) => void,
+  ): Promise<string> {
+    const maxAttempts = 4;
+    let lastErr: unknown;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await fetchSectionDraft(section, startOffset + attempt - 1);
+      } catch (err) {
+        lastErr = err;
+        if (err instanceof DraftHttpError && err.status === 429 && err.retryAfter > 0 && attempt < maxAttempts) {
+          const wait = err.retryAfter;
+          onWait(`Rate limited. Waiting ${wait}s, then retrying "${section.heading}" (attempt ${attempt + 1} of ${maxAttempts})...`);
+          await sleep(wait * 1000);
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw lastErr instanceof Error ? lastErr : new Error("Drafting failed");
+  }
+
   async function draftSection(i: number) {
     if (!plan) return;
-    setDrafting(i); setError("");
+    setDrafting(i); setError(""); setStatus("");
     try {
-      const text = await fetchSectionDraft(plan.sections[i]);
+      const text = await fetchSectionDraftWithRetry(plan.sections[i], i, setStatus);
       onInsertSection(text);
       setDraftedIdx(prev => new Set(prev).add(i));
+      setStatus("");
     } catch (err) {
+      setStatus("");
       setError(err instanceof Error ? err.message : "Drafting failed");
     } finally {
       setDrafting(null);
@@ -127,23 +179,29 @@ export default function BlogAssist({ postTitle, onUseOutline, onInsertSection }:
 
   async function draftAllSections() {
     if (!plan) return;
-    setDraftingAll(true); setError("");
+    setDraftingAll(true); setError(""); setStatus("");
     const failures: string[] = [];
     let lastErr = "";
     for (let i = 0; i < plan.sections.length; i++) {
-      if (draftedIdx.has(i)) continue; // already drafted - don't overwrite or waste a call
+      if (draftedIdx.has(i)) continue;
       setDrafting(i);
       try {
-        const text = await fetchSectionDraft(plan.sections[i]);
+        const text = await fetchSectionDraftWithRetry(plan.sections[i], i, setStatus);
         onInsertSection(text);
         setDraftedIdx(prev => new Set(prev).add(i));
+        setStatus("");
       } catch (err) {
         failures.push(plan.sections[i].heading);
         lastErr = err instanceof Error ? err.message : "";
+        if (err instanceof DraftHttpError && err.status === 429 && err.retryAfter > 0) {
+          setStatus(`Rate limited after "${plan.sections[i].heading}". Waiting ${err.retryAfter}s before the next section...`);
+          await sleep(err.retryAfter * 1000);
+        }
       }
     }
     setDrafting(null);
     setDraftingAll(false);
+    setStatus("");
     if (failures.length) {
       setError(
         lastErr
@@ -223,6 +281,9 @@ export default function BlogAssist({ postTitle, onUseOutline, onInsertSection }:
         </button>
         {error && (
           <p className="text-[12.5px] font-semibold text-[var(--red)] leading-snug">{error}</p>
+        )}
+        {status && (
+          <p className="text-[12.5px] font-semibold text-[var(--amber-deep)] leading-snug">{status}</p>
         )}
       </div>
 

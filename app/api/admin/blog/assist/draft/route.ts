@@ -13,8 +13,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/admin";
-import { generateWithFallback, TEXT_MODELS } from "@/lib/ai/gateway";
-import { aiGatewayHttpStatus, formatAiGatewayError } from "@/lib/ai/formatAiGatewayError";
+import { generateWithFallback, textModelsFrom } from "@/lib/ai/gateway";
+import { aiGatewayHttpStatus, formatAiGatewayError, gatewayRetryAfterSeconds } from "@/lib/ai/formatAiGatewayError";
 import { checkRateLimit, rateLimitResponseInit } from "@/lib/rateLimit";
 
 const FORMAT_NOTES = `CONTENT FORMAT this section must follow (plain markdown, no HTML):
@@ -59,6 +59,9 @@ export async function POST(req: NextRequest) {
   const otherHeadings = Array.isArray(body.otherHeadings)
     ? body.otherHeadings.filter((h): h is string => typeof h === "string")
     : [];
+  const modelOffset = Number.isFinite(Number(body.modelOffset))
+    ? Math.floor(Number(body.modelOffset))
+    : 0;
 
   if (!heading || !brief) {
     return NextResponse.json({ error: "heading and brief are required" }, { status: 400 });
@@ -75,18 +78,24 @@ Include at least one internal link. No preamble, no sign-off, no explanation of 
 
   try {
     const result = await generateWithFallback({
-      models:        [...TEXT_MODELS],
+      models:        textModelsFrom(modelOffset),
       system:        `You write SEO blog posts for Swiftscope, Australian trade business software.\n\n${FORMAT_NOTES}`,
       prompt,
       maxTokens: 700,
+      maxRateLimitHops: 2,
     });
 
     return NextResponse.json({ text: result.text, model: result.model });
   } catch (err) {
     console.error("[blog-assist/draft] Error:", err);
+    const status = aiGatewayHttpStatus(err);
+    const retryAfter = status === 429 ? gatewayRetryAfterSeconds(err) : undefined;
     return NextResponse.json(
-      { error: formatAiGatewayError(err) },
-      { status: aiGatewayHttpStatus(err) }
+      { error: formatAiGatewayError(err), retryAfter },
+      {
+        status,
+        headers: retryAfter ? { "Retry-After": String(retryAfter) } : undefined,
+      }
     );
   }
 }

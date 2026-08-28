@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { aiGatewayHttpStatus, formatAiGatewayError, isGatewayRateLimitError } from "./formatAiGatewayError";
-import { MODELS } from "./gateway";
+import { aiGatewayHttpStatus, formatAiGatewayError, gatewayRetryAfterSeconds, isGatewayRateLimitError } from "./formatAiGatewayError";
+import { MODELS, textModelsFrom } from "./gateway";
 
 describe("formatAiGatewayError", () => {
   it("maps free-tier model 403s to actionable copy", () => {
@@ -38,6 +38,16 @@ describe("formatAiGatewayError", () => {
     expect(formatAiGatewayError(retry)).toMatch(/top up/i);
     expect(aiGatewayHttpStatus(retry)).toBe(429);
     expect(isGatewayRateLimitError(retry)).toBe(true);
+    expect(gatewayRetryAfterSeconds(retry)).toBe(20);
+  });
+
+  it("reads Retry-After from nested gateway errors", () => {
+    const lastError = Object.assign(new Error("rate-limited"), {
+      name: "GatewayRateLimitError",
+      statusCode: 429,
+      responseHeaders: { "retry-after": "35" },
+    });
+    expect(gatewayRetryAfterSeconds(lastError)).toBe(35);
   });
 });
 
@@ -50,5 +60,8 @@ describe("MODELS aliases", () => {
     expect(MODELS.TEXT_PRIMARY).not.toBe(MODELS.HAIKU);
     expect(MODELS.SONNET).not.toBe(MODELS.HAIKU);
     expect(MODELS.TEXT_FLASH).toBe("google/gemini-2.5-flash-lite");
+    expect(textModelsFrom(0)[0]).toBe(MODELS.TEXT_PRIMARY);
+    expect(textModelsFrom(1)[0]).toBe(MODELS.TEXT_FLASH);
+    expect(textModelsFrom(2)[0]).toBe("amazon/nova-micro");
   });
 });

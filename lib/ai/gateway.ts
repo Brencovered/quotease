@@ -14,6 +14,7 @@
 
 import { generateText, Output, streamText } from "ai";
 import { type ZodSchema } from "zod";
+import { isGatewayRateLimitError } from "@/lib/ai/formatAiGatewayError";
 
 // Only used for local dev - Vercel injects auth automatically in production
 if (process.env.AI_GATEWAY_API_KEY) {
@@ -27,6 +28,7 @@ if (process.env.AI_GATEWAY_API_KEY) {
 const TEXT_PRIMARY = "openai/gpt-4o-mini";
 const TEXT_FALLBACK = "anthropic/claude-3-haiku";
 const TEXT_FLASH = "google/gemini-2.5-flash-lite";
+const TEXT_NOVA = "amazon/nova-micro";
 const VISION_PRIMARY = "openai/gpt-4o";
 const VISION_FALLBACK = "anthropic/claude-3-5-sonnet";
 
@@ -34,6 +36,7 @@ export const MODELS = {
   TEXT_PRIMARY,
   TEXT_FALLBACK,
   TEXT_FLASH,
+  TEXT_NOVA,
   VISION_PRIMARY,
   VISION_FALLBACK,
   HAIKU: TEXT_FALLBACK,
@@ -41,7 +44,20 @@ export const MODELS = {
 } as const;
 
 /** Cheap text models on separate Gateway free-tier RPM buckets. */
-export const TEXT_MODELS = [TEXT_PRIMARY, TEXT_FLASH, TEXT_FALLBACK] as const;
+export const TEXT_MODELS = [
+  TEXT_PRIMARY,
+  TEXT_FLASH,
+  TEXT_NOVA,
+  TEXT_FALLBACK,
+] as const;
+
+export function textModelsFrom(offset = 0): string[] {
+  const list = [...TEXT_MODELS];
+  const n = list.length;
+  if (n === 0) return list;
+  const i = ((offset % n) + n) % n;
+  return [...list.slice(i), ...list.slice(0, i)];
+}
 
 function uniqueModels(...ids: Array<string | undefined>): string[] {
   return [...new Set(ids.filter((id): id is string => !!id))];
@@ -91,8 +107,12 @@ export async function generateWithFallback(opts: {
   system:        string;
   prompt:        string;
   maxTokens?: number;
+  /** After this many 429s in one call, stop so we do not empty every RPM bucket. */
+  maxRateLimitHops?: number;
 }) {
   const models = uniqueModels(...(opts.models ?? [opts.primaryModel, opts.fallbackModel]));
+  const maxHops = opts.maxRateLimitHops ?? models.length;
+  let rateLimitHops = 0;
   for (const model of models) {
     try {
       const result = await generateText({
@@ -105,6 +125,10 @@ export async function generateWithFallback(opts: {
       return { text: result.text, model, usage: result.usage };
     } catch (err) {
       console.error(`[AI Gateway] ${model} failed:`, err);
+      if (isGatewayRateLimitError(err)) {
+        rateLimitHops += 1;
+        if (rateLimitHops >= maxHops) throw err;
+      }
       if (model === models[models.length - 1]) throw err;
       const next = models[models.indexOf(model) + 1];
       console.warn(`[AI Gateway] Falling back to ${next}`);
