@@ -91,11 +91,20 @@ export default function HomeHero() {
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
+  // Only the first scene's images (1 background + 1 phone) load immediately.
+  // The other two scenes' images are deferred so they don't compete for
+  // bandwidth with the priority hero image during first paint / LCP.
+  const [showAllScenes, setShowAllScenes] = useState(false);
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setReduceMotion(true);
     }
+  }, []);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setShowAllScenes(true), 1200);
+    return () => window.clearTimeout(id);
   }, []);
 
   useEffect(() => {
@@ -177,30 +186,33 @@ export default function HomeHero() {
 
         <div className="relative">
           <div className="relative aspect-[5/6] sm:aspect-[16/10] lg:aspect-[2.15/1] overflow-hidden rounded-2xl sm:rounded-3xl bg-[#0e2030] home-media-stage">
-            {SCENES.map((s, i) => (
-              <div
-                key={s.key}
-                className={[
-                  "absolute inset-0 transition-opacity duration-700 ease-out",
-                  i === active ? "opacity-100" : "opacity-0",
-                ].join(" ")}
-                aria-hidden={i !== active}
-              >
-                <Image
-                  src={s.image}
-                  alt={s.alt}
-                  fill
-                  sizes="(max-width: 1280px) 100vw, 1280px"
-                  priority={i === 0}
-                  quality={90}
+            {SCENES.map((s, i) => {
+              if (i !== 0 && !showAllScenes) return null;
+              return (
+                <div
+                  key={s.key}
                   className={[
-                    "object-cover",
-                    s.objectPos,
-                    i === active && !reduceMotion ? "home-hero-kenburns" : "",
+                    "absolute inset-0 transition-opacity duration-700 ease-out",
+                    i === active ? "opacity-100" : "opacity-0",
                   ].join(" ")}
-                />
-              </div>
-            ))}
+                  aria-hidden={i !== active}
+                >
+                  <Image
+                    src={s.image}
+                    alt={s.alt}
+                    fill
+                    sizes="(max-width: 1280px) 100vw, 1280px"
+                    priority={i === 0}
+                    quality={i === 0 ? 90 : 75}
+                    className={[
+                      "object-cover",
+                      s.objectPos,
+                      i === active && !reduceMotion ? "home-hero-kenburns" : "",
+                    ].join(" ")}
+                  />
+                </div>
+              );
+            })}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/25" />
             <div className="absolute inset-0 bg-gradient-to-l from-black/50 via-black/10 to-transparent" />
 
@@ -244,27 +256,30 @@ export default function HomeHero() {
               </div>
             </div>
 
-            <div
-              key={`phone-${scene.key}`}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 h-[62%] sm:h-[80%] sm:right-5 lg:right-8 home-overlay-in"
-              style={{ aspectRatio: `${PHONE_W} / ${PHONE_H}` }}
-            >
+            {(active === 0 || showAllScenes) && (
               <div
-                className={[
-                  "relative h-full w-full drop-shadow-[0_24px_55px_rgba(0,0,0,0.6)]",
-                  !reduceMotion ? "home-phone-float" : "",
-                ].join(" ")}
+                key={`phone-${scene.key}`}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 h-[62%] sm:h-[80%] sm:right-5 lg:right-8 home-overlay-in"
+                style={{ aspectRatio: `${PHONE_W} / ${PHONE_H}` }}
               >
-                <Image
-                  src={scene.phone}
-                  alt={scene.phoneAlt}
-                  fill
-                  sizes="(max-width: 640px) 130px, 200px"
-                  quality={90}
-                  className="object-contain"
-                />
+                <div
+                  className={[
+                    "relative h-full w-full drop-shadow-[0_24px_55px_rgba(0,0,0,0.6)]",
+                    !reduceMotion ? "home-phone-float" : "",
+                  ].join(" ")}
+                >
+                  <Image
+                    src={scene.phone}
+                    alt={scene.phoneAlt}
+                    fill
+                    sizes="(max-width: 640px) 130px, 200px"
+                    priority={active === 0}
+                    quality={active === 0 ? 90 : 75}
+                    className="object-contain"
+                  />
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div
