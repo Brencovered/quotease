@@ -27,9 +27,11 @@ export default function DirectoryPanel({
   const [email,    setEmail]    = useState(profile?.directory_email ?? "");
   const [saving,   setSaving]   = useState(false);
   const [saved,    setSaved]    = useState(false);
+  const [error,    setError]    = useState<string | null>(null);
 
   async function save() {
     setSaving(true);
+    setError(null);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaving(false); return; }
@@ -43,6 +45,26 @@ export default function DirectoryPanel({
       directory_phone:    phone   || null,
       directory_email:    email   || null,
     }).eq("id", businessId);
+
+    // The update above only persists the form's own state - it does NOT
+    // put the business on the public directory (directory_listing is a
+    // separate table with no owner-scoped RLS, so this has to go through
+    // a server route running as admin). Without this call, "Saved" would
+    // show even though nothing changed on swiftscope.com.au/directory.
+    try {
+      const res = await fetch("/api/directory/self-listing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled, suburb, postcode, bio, website, phone, email }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error || "Saved your settings, but couldn't update the public listing");
+      }
+    } catch {
+      setError("Saved your settings, but couldn't reach the server to update the public listing");
+    }
+
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
@@ -124,9 +146,15 @@ export default function DirectoryPanel({
         </div>
       )}
 
+      {error && (
+        <p className="text-[12.5px] text-[var(--red,#c0392b)] font-semibold mb-3">
+          {error}
+        </p>
+      )}
+
       <button onClick={save} disabled={saving}
         className="btn-primary w-full justify-center mt-4">
-        {saved ? <><Check size={14} /> Saved</> : saving ? "Saving..." : "Save directory settings"}
+        {saved && !error ? <><Check size={14} /> Saved</> : saving ? "Saving..." : "Save directory settings"}
       </button>
     </div>
   );
