@@ -126,6 +126,9 @@ export default function HomeHero() {
       <div className="relative max-w-[1280px] mx-auto px-5 sm:px-6">
         <div className="grid lg:grid-cols-12 gap-5 lg:gap-10 mb-7 sm:mb-10 lg:mb-12 home-hero-copy">
           <div className="lg:col-span-7">
+            <p className="inline-flex items-center gap-2 rounded-full bg-white/[0.06] border border-white/15 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-[#ffb400] mb-4 sm:mb-5">
+              Quoting &amp; job software for trade businesses
+            </p>
             <p className="font-display text-[clamp(2.4rem,8vw,4.8rem)] leading-[0.88] tracking-wide text-white mb-3 sm:mb-5">
               SwiftScope
             </p>
@@ -159,13 +162,13 @@ export default function HomeHero() {
                 href="/signup"
                 className="inline-flex items-center justify-center bg-[#ffb400] text-[#050b11] font-extrabold text-[14px] sm:text-[15px] px-5 sm:px-6 py-3 sm:py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors"
               >
-                Start free for 7 days
+                I&apos;m a tradie &middot; start free
               </Link>
               <Link
                 href="/directory"
                 className="inline-flex items-center gap-2 text-white font-bold text-[14px] sm:text-[15px] px-4 sm:px-5 py-3 sm:py-3.5 rounded-lg border border-white/25 hover:border-white/55 transition-colors"
               >
-                Find a tradie <ArrowRight size={15} aria-hidden />
+                I need a tradie <ArrowRight size={15} aria-hidden />
               </Link>
             </div>
             <TrialRiskReversal tone="light" className="mb-3" />
