@@ -511,7 +511,7 @@ export default async function DirectoryPage({
               Browse directory <ArrowRight size={15} />
             </Link>
             {CLAIMED_DIRECTORY_PAGES_ENABLED && (
-              <Link href="/directory/claim" className="inline-flex items-center gap-2 text-[13.5px] font-semibold text-white underline underline-offset-4 decoration-white/30 hover:decoration-white/70 transition-colors px-2">
+              <Link href="/directory/claim" className="inline-flex items-center gap-2 text-white font-bold text-[14px] px-6 py-3.5 rounded-xl border border-white/25 hover:border-white/55 hover:bg-white/5 transition-colors">
                 Own a trade business? Claim your free listing
               </Link>
             )}
@@ -665,8 +665,8 @@ export default async function DirectoryPage({
                     <Link href="#listings" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-8 py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors">
                       Browse directory <ArrowRight size={15} />
                     </Link>
-                    <Link href="/signup" className="inline-flex items-center gap-2 text-white font-bold text-[14px] px-8 py-3.5 rounded-xl border border-white/25 hover:border-white/50 hover:bg-white/5 transition-all">
-                      List your business
+                    <Link href="/directory/claim" className="inline-flex items-center gap-2 text-white font-bold text-[14px] px-8 py-3.5 rounded-xl border border-white/25 hover:border-white/50 hover:bg-white/5 transition-all">
+                      List your business free
                     </Link>
                   </div>
                 </div>
@@ -762,8 +762,8 @@ export default async function DirectoryPage({
                     <Link href="#listings" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-8 py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors">
                       Browse directory <ArrowRight size={15} />
                     </Link>
-                    <Link href="/signup" className="inline-flex items-center gap-2 text-white font-bold text-[14px] px-8 py-3.5 rounded-xl border border-white/25 hover:border-white/50 hover:bg-white/5 transition-all">
-                      List your business
+                    <Link href="/directory/claim" className="inline-flex items-center gap-2 text-white font-bold text-[14px] px-8 py-3.5 rounded-xl border border-white/25 hover:border-white/50 hover:bg-white/5 transition-all">
+                      List your business free
                     </Link>
                   </div>
                 </div>
