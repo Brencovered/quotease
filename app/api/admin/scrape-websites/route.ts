@@ -10,7 +10,8 @@ async function downloadAndStore(
   photoUrl: string,
   listingId: string,
   idx: number,
-  admin: ReturnType<typeof createAdminClient>
+  admin: ReturnType<typeof createAdminClient>,
+  source: "website" | "google" = "website"
 ): Promise<string | null> {
   try {
     const controller = new AbortController();
@@ -26,7 +27,7 @@ async function downloadAndStore(
     const buffer = Buffer.from(await res.arrayBuffer());
     if (buffer.length < 5000) return null; // skip tiny icons
     const ext = contentType.includes("png") ? "png" : "jpg";
-    const path = `website/${listingId}/${idx}.${ext}`;
+    const path = `${source}/${listingId}/${idx}.${ext}`;
     const { error } = await admin.storage
       .from("directory-photos")
       .upload(path, buffer, { upsert: true, contentType });
@@ -55,6 +56,79 @@ export async function POST(req: NextRequest) {
     blurb: string | null; photo_references: string[] | null; services_offered: string[] | null;
     scraped_contact_phone: string | null; trades: string[] | null;
   };
+
+  // google_photos resolves the raw Google Place photo tokens already
+  // sitting in photo_references (from the original import) into real,
+  // stored http images via the Places Photo API - the tokens are valid
+  // references to real business photos Google already verified, so
+  // this doesn't depend on a business's own website having anything
+  // usable. Verified this is necessary, not redundant with the "photos"
+  // mode above: ran that mode against production and checked the
+  // results directly - the eligibility fix correctly re-selected
+  // listings with no renderable photo, but extractPhotos() (pulling
+  // from the business's own site) still found nothing for nearly all
+  // of them, so they stayed imageless even after being "processed".
+  // Separate branch: doesn't touch fetchWebsiteHtml at all, and costs
+  // real money (~$7 per 1,000 Places Photo requests), so it's its own
+  // explicit mode rather than folded into "photos" - a person running
+  // this needs to know they're choosing to spend, not get it by default.
+  if (mode === "google_photos") {
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: "GOOGLE_PLACES_API_KEY not configured" }, { status: 500 });
+    }
+
+    const [{ data: rpcListings }, { data: rpcCount }] = await Promise.all([
+      admin.rpc("listings_needing_photo_recache", { p_limit: BATCH }),
+      admin.rpc("count_listings_needing_photo_recache"),
+    ]);
+    const googlePhotoListings = (rpcListings ?? []) as ListingRow[];
+
+    const results = {
+      processed: 0, updated: 0, skipped: 0, failed: 0,
+      remaining: Math.max(0, ((rpcCount as number | null) ?? 0) - BATCH),
+      detail: [] as string[],
+      skipReasons: {} as Record<string, number>,
+      photoRequestsMade: 0,
+      estimatedCostUsd: 0,
+    };
+
+    for (const listing of googlePhotoListings) {
+      results.processed++;
+      const refs = (listing.photo_references ?? []).filter(r => !r.startsWith("http")).slice(0, 4);
+      if (refs.length === 0) {
+        results.skipped++;
+        continue;
+      }
+
+      const stored: string[] = [];
+      for (let i = 0; i < refs.length; i++) {
+        results.photoRequestsMade++;
+        const photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1024&photo_reference=${encodeURIComponent(refs[i])}&key=${apiKey}`;
+        const url = await downloadAndStore(photoUrl, listing.id, i, admin, "google");
+        if (url) stored.push(url);
+      }
+
+      if (stored.length > 0) {
+        await admin.from("directory_listing")
+          .update({ photo_references: stored, photos_cached_at: new Date().toISOString() })
+          .eq("id", listing.id);
+        results.updated++;
+        results.detail.push(`✓ ${listing.business_name} (${stored.length} photo${stored.length !== 1 ? "s" : ""} resolved)`);
+      } else {
+        // Billing off, quota exceeded, or every referenced photo is gone -
+        // stamp anyway so this doesn't retry every batch indefinitely.
+        await admin.from("directory_listing")
+          .update({ photos_cached_at: new Date().toISOString() })
+          .eq("id", listing.id);
+        results.failed++;
+        results.skipReasons["Places Photo API returned nothing"] = (results.skipReasons["Places Photo API returned nothing"] ?? 0) + 1;
+      }
+    }
+
+    results.estimatedCostUsd = Math.round((results.photoRequestsMade / 1000) * 7 * 100) / 100;
+    return NextResponse.json(results);
+  }
 
   let listings: ListingRow[] | null;
   let count: number;

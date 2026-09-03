@@ -45,13 +45,15 @@ interface RunResult {
   remaining: number;
   detail: string[];
   skipReasons?: Record<string, number>;
+  photoRequestsMade?: number;
+  estimatedCostUsd?: number;
 }
 
 export default function AdminWebsiteScraper() {
   const [stats,     setStats]     = useState<Stats | null>(null);
   const [running,   setRunning]   = useState(false);
   const [result,    setResult]    = useState<RunResult | null>(null);
-  const [mode,      setMode]      = useState<"all" | "photos" | "logo" | "blurb">("all");
+  const [mode,      setMode]      = useState<"all" | "photos" | "logo" | "blurb" | "google_photos">("all");
   const [showLog,   setShowLog]   = useState(false);
   const [autoRun,   setAutoRun]   = useState(false);
   const [runCount,  setRunCount]  = useState(0);
@@ -181,27 +183,59 @@ export default function AdminWebsiteScraper() {
               </button>
             ))}
           </div>
+
+          {/* Separate, costed mode - kept visually distinct from the free
+              options above since it's the only one that spends real
+              money. Resolves the raw Google Place photo tokens already
+              sitting in photo_references (from the original import)
+              into real stored images via the Places Photo API, instead
+              of hoping a business's own website has usable photos -
+              confirmed against real production data that for most of
+              the ~2,000 listings still missing a renderable photo, it
+              doesn't. */}
+          <button
+            onClick={() => setMode("google_photos")}
+            className="w-full mt-2 flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 text-left transition-all"
+            style={{
+              borderColor: mode === "google_photos" ? "#b45309" : "var(--line)",
+              background:  mode === "google_photos" ? "rgba(217,119,6,.06)" : "white",
+            }}
+          >
+            <span className="shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800">
+              Paid
+            </span>
+            <span className="flex-1">
+              <span className="block font-bold text-[13px] text-[var(--ink)]">Photos via Google Places</span>
+              <span className="block text-[11px] text-[var(--ink-faint)]">
+                Resolves existing Google photo tokens into real images - ~$7 per 1,000 photo requests, roughly 1-4 requests per listing
+              </span>
+            </span>
+          </button>
         </div>
 
-        {/* Auto-run toggle */}
-        <label className="flex items-center gap-2.5 cursor-pointer">
-          <div onClick={() => setAutoRun(a => !a)}
-            className={`w-10 h-6 rounded-full transition-colors ${autoRun ? "bg-[var(--navy)]" : "bg-[var(--line)]"}`}>
-            <div className={`w-4 h-4 bg-white rounded-full mt-1 transition-transform ${autoRun ? "translate-x-5" : "translate-x-1"}`} />
-          </div>
-          <div>
-            <p className="text-[13px] font-semibold text-[var(--ink)]">Auto-run</p>
-            <p className="text-[11.5px] text-[var(--ink-faint)]">Keep running batches of 30 automatically until done</p>
-          </div>
-        </label>
+        {/* Auto-run toggle - hidden for the paid mode so spend always
+            needs a manual click per batch, not an unattended loop. */}
+        {mode !== "google_photos" && (
+          <label className="flex items-center gap-2.5 cursor-pointer">
+            <div onClick={() => setAutoRun(a => !a)}
+              className={`w-10 h-6 rounded-full transition-colors ${autoRun ? "bg-[var(--navy)]" : "bg-[var(--line)]"}`}>
+              <div className={`w-4 h-4 bg-white rounded-full mt-1 transition-transform ${autoRun ? "translate-x-5" : "translate-x-1"}`} />
+            </div>
+            <div>
+              <p className="text-[13px] font-semibold text-[var(--ink)]">Auto-run</p>
+              <p className="text-[11.5px] text-[var(--ink-faint)]">Keep running batches of 30 automatically until done</p>
+            </div>
+          </label>
+        )}
 
         {/* Run button */}
         <div className="flex items-center gap-3">
           <button onClick={runBatch} disabled={running}
-            className="btn-primary px-6 py-3 flex items-center gap-2 text-[13.5px]">
+            className="btn-primary px-6 py-3 flex items-center gap-2 text-[13.5px]"
+            style={mode === "google_photos" ? { background: "#b45309" } : undefined}>
             {running
-              ? <><RefreshCw size={14} className="animate-spin" /> Scraping...</>
-              : <><Play size={14} /> Run batch of 30</>}
+              ? <><RefreshCw size={14} className="animate-spin" /> {mode === "google_photos" ? "Resolving..." : "Scraping..."}</>
+              : <><Play size={14} /> {mode === "google_photos" ? "Run batch of 30 (spends money)" : "Run batch of 30"}</>}
           </button>
           {runCount > 0 && (
             <span className="text-[12.5px] text-[var(--ink-faint)]">{runCount} batch{runCount !== 1 ? "es" : ""} run this session</span>
@@ -221,6 +255,13 @@ export default function AdminWebsiteScraper() {
               Details {showLog ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
             </button>
           </div>
+
+          {typeof result.estimatedCostUsd === "number" && (
+            <div className="flex items-center gap-2 text-[12.5px] text-amber-800 bg-amber-50 rounded-xl px-3 py-2">
+              <span className="font-bold">${result.estimatedCostUsd.toFixed(2)}</span>
+              spent this batch ({result.photoRequestsMade} Places Photo request{result.photoRequestsMade !== 1 ? "s" : ""} at ~$7/1,000)
+            </div>
+          )}
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
@@ -447,6 +488,7 @@ export default function AdminWebsiteScraper() {
           <p><strong>Blurb:</strong> Uses meta description or og:description. Shows on the directory listing card.</p>
           <p><strong>Services:</strong> Parses the site&apos;s own services list when there is one; falls back to matching a curated per-trade phrase list against the page text otherwise. Check the review table above to see which one produced each result.</p>
           <p><strong>Rate:</strong> 30 listings per batch, 8 second timeout per site, skips non-200 responses.</p>
+          <p><strong>Photos via Google Places (paid):</strong> Most listings still missing a photo have raw Google Place photo tokens sitting in the database from the original import - real references to real business photos Google already verified, they just were never resolved into actual images. This mode does that directly via the Places Photo API (~$7/1,000 requests, 1-4 requests per listing) instead of relying on the business's own website having something usable.</p>
         </div>
       </div>
     </div>
