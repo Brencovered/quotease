@@ -2,7 +2,7 @@ import Link from "next/link";
 import {
   Star, MapPin, Phone, Globe, Mail, Check, Shield,
   ShieldCheck, MessageSquare, ExternalLink, Wrench,
-  Building2, Users, Search, Link2,
+  Building2, Users, Search, Link2, ArrowRight,
 } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
@@ -318,6 +318,28 @@ export default async function TradieProfilePage({
           </div>
         </div>
       </section>
+
+      {/* UNCLAIMED LISTING BANNER - previously the only claim prompt on this
+          page was a small text link at the bottom of the Contact info card,
+          easy to miss entirely when scanning. This runs full-width directly
+          under the hero, the same spot a "claimed" badge would already be
+          visible, so an owner recognising their own business sees it
+          immediately rather than after scrolling past reviews/photos. */}
+      {CLAIMED_DIRECTORY_PAGES_ENABLED && !listing.is_claimed && (
+        <section className="bg-[#fff8e6] border-b border-[#ffe1a0]">
+          <div className="max-w-6xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-center">
+            <p className="text-[13.5px] font-semibold text-[#7a5200]">
+              Is this your business? Claiming it is free and takes about 2 minutes.
+            </p>
+            <Link
+              href={`/directory/claim?name=${encodeURIComponent(listing.business_name)}&suburb=${encodeURIComponent(listing.suburb ?? "")}&trade=${encodeURIComponent(primaryTrade ?? "")}`}
+              className="inline-flex items-center gap-1.5 bg-[#0a1722] text-white font-bold text-[13px] px-4 py-2 rounded-lg hover:opacity-90 transition-opacity whitespace-nowrap"
+            >
+              Claim this listing <ArrowRight size={13} />
+            </Link>
+          </div>
+        </section>
+      )}
 
       {/* INFO CARDS ROW */}
       <section className="border-b border-[var(--line)]">

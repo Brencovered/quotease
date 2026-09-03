@@ -286,7 +286,9 @@ export default function DirectoryCard({ listing, index = 0 }: { listing: Listing
           {/* Name + listing */}
           <div className="flex items-start gap-2 mb-1">
             <h2 className="font-bold text-[15px] text-gray-900 leading-snug flex-1">{listing.business_name}</h2>
-            <BadgeCheck size={16} className="text-blue-500 shrink-0 mt-0.5" />
+            {CLAIMED_DIRECTORY_PAGES_ENABLED && listing.is_claimed && (
+              <BadgeCheck size={16} className="text-blue-500 shrink-0 mt-0.5" />
+            )}
           </div>
           {CLAIMED_DIRECTORY_PAGES_ENABLED && listing.is_claimed && (
             <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full mb-2 w-fit">
@@ -362,6 +364,19 @@ export default function DirectoryCard({ listing, index = 0 }: { listing: Listing
                 </a>
               )}
             </div>
+
+            {/* Unclaimed listings get a direct, pre-filled claim prompt on
+                the card itself - previously the only claim entry point on
+                the whole /directory page was one small underlined text
+                link in the hero, easy to miss when scanning listings. */}
+            {CLAIMED_DIRECTORY_PAGES_ENABLED && !listing.is_claimed && (
+              <Link
+                href={`/directory/claim?name=${encodeURIComponent(listing.business_name)}${listing.suburb ? `&suburb=${encodeURIComponent(listing.suburb)}` : ""}${primaryTrade ? `&trade=${encodeURIComponent(primaryTrade)}` : ""}`}
+                className="flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[#c48a00] hover:text-[#a67200] bg-amber-50 hover:bg-amber-100 px-3 py-2 rounded-lg transition-colors w-full"
+              >
+                Is this your business? Claim it free
+              </Link>
+            )}
           </div>
         </div>
       </div>
