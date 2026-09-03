@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
   // need the specific field we're trying to fill
   let query = admin
     .from("directory_listing")
-    .select("id, business_name, website_url, logo_url, blurb, photo_references, services_offered, scraped_contact_phone", { count: "exact" })
+    .select("id, business_name, website_url, logo_url, blurb, photo_references, services_offered, scraped_contact_phone, trades", { count: "exact" })
     .not("website_url", "is", null)
     .eq("is_claimed", false);
 
@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
 
     // Services list
     if (mode === "all" && !(listing as {services_offered?: unknown}).services_offered) {
-      const services = extractServices(html);
+      const services = extractServices(html, listing.trades as string[] | null);
       if (services.length > 0) { updates.services_offered = services; updated.push(`services (${services.length})`); }
     }
 
@@ -166,7 +166,7 @@ export async function POST(req: NextRequest) {
     // Services from sub-pages (only in all mode - extra network call)
     if (mode === "all" && !(listing as {services_offered?: unknown}).services_offered) {
       const subs = await scrapeSubPages(html, url);
-      const svcs = [...extractServices(html)];
+      const svcs = [...extractServices(html, listing.trades as string[] | null)];
       if (subs.servicesText) svcs.push(...subs.servicesText.split("\n").filter(Boolean));
       const unique = [...new Set(svcs)].slice(0, 12);
       if (unique.length > 0) { updates.services_offered = unique; updated.push(`services (${unique.length})`); }

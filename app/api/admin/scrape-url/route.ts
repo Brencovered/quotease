@@ -375,9 +375,9 @@ export async function POST(req: NextRequest) {
   const socialLinks   = extractSocialLinks(html);
   const yearsExp      = extractYearsExperience(html);
   const licenses      = extractLicenses(html);
-  const services      = extractServices ? extractServices(html) : [];
-  const subPages      = await scrapeSubPages(html, siteUrl);
   const trades        = extractTrades(html, siteUrl);
+  const services      = extractServices ? extractServices(html, trades) : [];
+  const subPages      = await scrapeSubPages(html, siteUrl);
   const rawPhotos      = extractPhotos(html, siteUrl);
   const photoUrls      = filterPhotos(rawPhotos, logo).slice(0, 6);
 

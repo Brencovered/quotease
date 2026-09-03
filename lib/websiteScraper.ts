@@ -213,10 +213,129 @@ export function extractAbout(html: string): string | null {
 }
 
 /**
- * Extract services list from website HTML.
- * Returns array of service strings (max 10).
+ * Curated service vocabulary per trade, used as a keyword-match fallback
+ * in extractServices. Structural HTML parsing (a <div>/<section> with a
+ * "services" class containing an <li> list) only fires on sites that
+ * happen to use that specific markup pattern - checked against production
+ * data, that's roughly 7% of the ~4,900 listings with a scraped website,
+ * versus 91-96% success for logo/photo extraction which use much looser
+ * heuristics. Most real tradie sites (Wix, Squarespace, page builders,
+ * one-page sites) just don't structure services as a semantic list.
+ *
+ * This works completely differently: it doesn't care about markup at
+ * all, it matches known industry service phrases against the page's
+ * plain text. A one-line prose sentence ("we specialise in switchboard
+ * upgrades and safety switch installation") produces a clean result
+ * just as reliably as a proper <ul> would. Keyed on the same trade
+ * strings already used in directory_listing.trades (see the distinct
+ * values query run against production - electrician/plumber/roofer/
+ * carpenter/painter/plasterer/aircon/landscaper/concreter/fencer/tiler/
+ * handyman/builder cover effectively all listings).
  */
-export function extractServices(html: string): string[] {
+const TRADE_SERVICE_KEYWORDS: Record<string, string[]> = {
+  electrician: [
+    "switchboard upgrade", "safety switch", "smoke alarm installation", "ceiling fan installation",
+    "power point installation", "lighting installation", "electrical safety inspection",
+    "hot water system", "solar installation", "data cabling", "rewiring",
+    "commercial electrical", "emergency electrician", "led lighting upgrade", "ev charger installation",
+  ],
+  plumber: [
+    "blocked drain", "hot water system", "leak detection", "gas fitting", "burst pipe repair",
+    "toilet repair", "tap repair", "bathroom renovation", "backflow prevention", "stormwater drainage",
+    "sewer repair", "pipe relining", "emergency plumber", "roof plumbing",
+  ],
+  roofer: [
+    "roof repair", "roof restoration", "gutter cleaning", "gutter replacement", "roof leak repair",
+    "re-roofing", "roof painting", "colorbond roofing", "tile roof repair", "roof inspection",
+    "valley replacement", "downpipe installation",
+  ],
+  carpenter: [
+    "deck construction", "pergola construction", "kitchen renovation", "custom cabinetry",
+    "flooring installation", "door installation", "carpentry repairs", "built-in wardrobes",
+    "timber flooring", "home renovations", "home extensions", "framing",
+  ],
+  builder: [
+    "home renovations", "home extensions", "new home builds", "custom home builds",
+    "renovations and extensions", "granny flats", "second storey addition",
+  ],
+  painter: [
+    "interior painting", "exterior painting", "wallpaper removal", "ceiling repair",
+    "waterproofing", "colour consultation", "commercial painting", "roof painting",
+  ],
+  plasterer: [
+    "plastering", "cornice installation", "rendering", "ceiling repair", "wall repair",
+    "gyprock installation", "waterproofing",
+  ],
+  aircon: [
+    "split system installation", "ducted air conditioning", "air conditioning repair",
+    "air conditioning servicing", "refrigerant regas", "reverse cycle air conditioning",
+  ],
+  "air conditioning": [
+    "split system installation", "ducted air conditioning", "air conditioning repair",
+    "air conditioning servicing", "refrigerant regas", "reverse cycle air conditioning",
+  ],
+  landscaper: [
+    "garden design", "landscape design", "retaining wall", "turf installation", "irrigation",
+    "paving", "garden maintenance", "outdoor living areas", "artificial turf",
+  ],
+  concreter: [
+    "concrete driveway", "concrete slab", "exposed aggregate concrete", "concrete resurfacing",
+    "concrete paths", "concrete pool surrounds", "concrete kerbing",
+  ],
+  fencer: [
+    "colorbond fencing", "timber fencing", "pool fencing", "gate installation", "fence repairs",
+    "glass pool fencing", "retaining walls",
+  ],
+  tiler: [
+    "bathroom tiling", "floor tiling", "wall tiling", "tile regrouting", "outdoor tiling",
+    "waterproofing", "shower tiling",
+  ],
+  handyman: [
+    "general repairs", "furniture assembly", "shelving installation", "minor repairs",
+    "home maintenance", "flat pack assembly", "picture hanging",
+  ],
+  solar: [
+    "solar panel installation", "battery storage installation", "solar system upgrade",
+    "solar maintenance", "off-grid solar",
+  ],
+};
+
+/**
+ * Keyword-match fallback used when structural parsing finds nothing.
+ * Case-insensitive substring match against plain text; returns each
+ * matched keyword in its canonical (capitalised) form, deduped, capped.
+ */
+function extractServicesByKeyword(html: string, trades: string[] | null | undefined): string[] {
+  if (!trades || trades.length === 0) return [];
+  const plainText = stripChrome(html)
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+
+  const found = new Set<string>();
+  for (const trade of trades) {
+    const keywords = TRADE_SERVICE_KEYWORDS[trade.toLowerCase().trim()];
+    if (!keywords) continue;
+    for (const kw of keywords) {
+      if (plainText.includes(kw)) {
+        found.add(kw.replace(/\b\w/g, (c) => c.toUpperCase()));
+        if (found.size >= 10) return [...found];
+      }
+    }
+  }
+  return [...found];
+}
+
+/**
+ * Extract services list from website HTML.
+ * Returns array of service strings (max 10). Tries structural HTML
+ * parsing first (works when the site happens to use a semantic
+ * services list); falls back to keyword matching against the page's
+ * plain text when that yields fewer than 3 results, since a website
+ * that mentions two services in a sidebar list plus several more in
+ * prose deserves the fuller list, not whichever strategy ran first.
+ */
+export function extractServices(html: string, trades?: string[] | null): string[] {
   const services: string[] = [];
   const cleaned = stripChrome(html);
 
@@ -231,6 +350,16 @@ export function extractServices(html: string): string[] {
       const text = decodeHtmlEntities(m[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim());
       if (text.length >= 5 && text.length <= 80) {
         services.push(text);
+        if (services.length >= 10) break;
+      }
+    }
+  }
+
+  if (services.length < 3) {
+    const byKeyword = extractServicesByKeyword(html, trades);
+    for (const s of byKeyword) {
+      if (!services.some((existing) => existing.toLowerCase() === s.toLowerCase())) {
+        services.push(s);
         if (services.length >= 10) break;
       }
     }
