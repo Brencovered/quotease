@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   Globe, Image as ImageIcon, FileText, Briefcase, Play,
@@ -61,6 +61,10 @@ export default function AdminWebsiteScraper() {
   const [recentLoading, setRecentLoading] = useState(false);
   const [methodFilter, setMethodFilter] = useState<"all" | "structural" | "keyword">("all");
   const [completenessFilter, setCompletenessFilter] = useState<CompletenessFilter>("all");
+  const [spendCapUsd, setSpendCapUsd] = useState(20);
+  const [spentUsd,    setSpentUsd]    = useState(0);
+  const [capRunning,  setCapRunning]  = useState(false);
+  const stopRef = useRef(false);
 
   async function loadStats() {
     const res = await fetch("/api/admin/scrape-websites");
@@ -98,6 +102,49 @@ export default function AdminWebsiteScraper() {
     if (autoRun && data.remaining > 0) {
       setTimeout(runBatch, 2000);
     }
+    return data;
+  }
+
+  // Runs google_photos batches back-to-back, unattended, until either
+  // the backlog clears or the person's own dollar cap is hit - built
+  // because clearing a ~2,000-listing backlog at 30/batch is ~67 manual
+  // clicks otherwise, and "click Run batch 67 times" isn't a real
+  // workflow. Still requires an explicit cap set upfront and an
+  // explicit click to start, and can be stopped mid-run - this loops
+  // for convenience, it doesn't remove the requirement that spend is
+  // always something the person chose, not something that happens by
+  // default.
+  async function runUntilCapped() {
+    setCapRunning(true);
+    stopRef.current = false;
+    let cumulativeSpent = 0;
+
+    while (true) {
+      const res = await fetch("/api/admin/scrape-websites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "google_photos" }),
+      });
+      const data: RunResult = await res.json();
+      setResult(data);
+      setRunCount(c => c + 1);
+      cumulativeSpent += data.estimatedCostUsd ?? 0;
+      setSpentUsd(cumulativeSpent);
+      loadStats();
+      if (recent !== null) loadRecent();
+
+      if (stopRef.current) break;
+      if (data.remaining <= 0) break;
+      // Use this batch's actual cost as the estimate for the next one -
+      // stop *before* starting a batch that would likely push past the
+      // cap, rather than checking after (which could overshoot it).
+      const estimatedNextBatch = data.estimatedCostUsd ?? 0;
+      if (cumulativeSpent + estimatedNextBatch > spendCapUsd) break;
+
+      await new Promise(r => setTimeout(r, 1500));
+    }
+
+    setCapRunning(false);
   }
 
   const pct = (n: number) => stats ? Math.round((n / stats.total) * 100) : 0;
@@ -213,9 +260,10 @@ export default function AdminWebsiteScraper() {
           </button>
         </div>
 
-        {/* Auto-run toggle - hidden for the paid mode so spend always
-            needs a manual click per batch, not an unattended loop. */}
-        {mode !== "google_photos" && (
+        {/* Free modes: standard auto-run (unbounded, just keeps going until
+            the backlog clears - no cost concern). Paid mode: a dollar cap
+            instead, set explicitly before any spend happens. */}
+        {mode !== "google_photos" ? (
           <label className="flex items-center gap-2.5 cursor-pointer">
             <div onClick={() => setAutoRun(a => !a)}
               className={`w-10 h-6 rounded-full transition-colors ${autoRun ? "bg-[var(--navy)]" : "bg-[var(--line)]"}`}>
@@ -226,17 +274,65 @@ export default function AdminWebsiteScraper() {
               <p className="text-[11.5px] text-[var(--ink-faint)]">Keep running batches of 30 automatically until done</p>
             </div>
           </label>
+        ) : (
+          <div className="flex items-center gap-3 bg-amber-50 rounded-xl px-3 py-2.5">
+            <div className="flex-1">
+              <p className="text-[13px] font-semibold text-[var(--ink)] mb-1">Spend cap for this run</p>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[13px] font-bold text-[var(--ink-faint)]">$</span>
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={spendCapUsd}
+                  onChange={e => setSpendCapUsd(Math.max(1, Number(e.target.value) || 1))}
+                  disabled={capRunning}
+                  className="w-20 px-2 py-1 rounded-lg border border-[var(--line)] text-[13px] font-semibold"
+                />
+                <span className="text-[11.5px] text-[var(--ink-faint)]">stops before starting a batch that would go over this</span>
+              </div>
+            </div>
+            {capRunning && (
+              <div className="text-right">
+                <p className="text-[11px] font-bold uppercase text-amber-700">Running</p>
+                <p className="text-[13px] font-bold text-[var(--ink)]">${spentUsd.toFixed(2)} / ${spendCapUsd}</p>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Run button */}
         <div className="flex items-center gap-3">
-          <button onClick={runBatch} disabled={running}
-            className="btn-primary px-6 py-3 flex items-center gap-2 text-[13.5px]"
-            style={mode === "google_photos" ? { background: "#b45309" } : undefined}>
-            {running
-              ? <><RefreshCw size={14} className="animate-spin" /> {mode === "google_photos" ? "Resolving..." : "Scraping..."}</>
-              : <><Play size={14} /> {mode === "google_photos" ? "Run batch of 30 (spends money)" : "Run batch of 30"}</>}
-          </button>
+          {mode === "google_photos" ? (
+            <>
+              <button onClick={runBatch} disabled={running || capRunning}
+                className="btn-primary px-5 py-3 flex items-center gap-2 text-[13.5px]"
+                style={{ background: "#b45309" }}>
+                {running
+                  ? <><RefreshCw size={14} className="animate-spin" /> Resolving...</>
+                  : <><Play size={14} /> Run one batch of 30</>}
+              </button>
+              {!capRunning ? (
+                <button onClick={runUntilCapped} disabled={running}
+                  className="px-5 py-3 rounded-xl border-2 flex items-center gap-2 text-[13.5px] font-bold transition-colors"
+                  style={{ borderColor: "#b45309", color: "#b45309" }}>
+                  <Play size={14} /> Run until done or ${spendCapUsd} spent
+                </button>
+              ) : (
+                <button onClick={() => { stopRef.current = true; }}
+                  className="px-5 py-3 rounded-xl bg-[var(--ink)] text-white flex items-center gap-2 text-[13.5px] font-bold">
+                  Stop after this batch
+                </button>
+              )}
+            </>
+          ) : (
+            <button onClick={runBatch} disabled={running}
+              className="btn-primary px-6 py-3 flex items-center gap-2 text-[13.5px]">
+              {running
+                ? <><RefreshCw size={14} className="animate-spin" /> Scraping...</>
+                : <><Play size={14} /> Run batch of 30</>}
+            </button>
+          )}
           {runCount > 0 && (
             <span className="text-[12.5px] text-[var(--ink-faint)]">{runCount} batch{runCount !== 1 ? "es" : ""} run this session</span>
           )}
