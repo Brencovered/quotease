@@ -63,5 +63,7 @@ describe("MODELS aliases", () => {
     expect(textModelsFrom(0)[0]).toBe(MODELS.TEXT_PRIMARY);
     expect(textModelsFrom(1)[0]).toBe(MODELS.TEXT_FLASH);
     expect(textModelsFrom(2)[0]).toBe("amazon/nova-micro");
+    expect(textModelsFrom(0)).toContain("meta/llama-3.1-8b");
+    expect(textModelsFrom(0)).toContain("mistral/mistral-small");
   });
 });

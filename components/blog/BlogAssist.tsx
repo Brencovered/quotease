@@ -49,11 +49,15 @@ export interface BlogAssistProps {
 
 async function parseJsonBody(res: Response): Promise<{
   error?: string; plan?: Plan; text?: string; retryAfter?: number;
+  drafts?: { heading: string; text: string }[];
 }> {
   const raw = await res.text();
   if (!raw) return {};
   try {
-    return JSON.parse(raw) as { error?: string; plan?: Plan; text?: string; retryAfter?: number };
+    return JSON.parse(raw) as {
+      error?: string; plan?: Plan; text?: string; retryAfter?: number;
+      drafts?: { heading: string; text: string }[];
+    };
   } catch {
     throw new Error(`Request failed (${res.status}). The server did not return JSON.`);
   }
@@ -137,6 +141,56 @@ export default function BlogAssist({ postTitle, onUseOutline, onInsertSection }:
     return data.text;
   }
 
+  async function fetchBatchDraft(
+    sections: PlanSection[],
+    modelOffset: number,
+  ): Promise<{ heading: string; text: string }[]> {
+    if (!plan) throw new Error("No outline loaded");
+    const res = await fetch("/api/admin/blog/assist/draft", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        postTitle: postTitle || plan.title,
+        keyword: keyword.trim(),
+        sections: sections.map(s => ({ heading: s.heading, brief: s.brief })),
+        otherHeadings: plan.sections.map(s => s.heading),
+        modelOffset,
+      }),
+    });
+    const data = await parseJsonBody(res);
+    if (!res.ok) {
+      const gatewayWait = typeof data.retryAfter === "number" && data.retryAfter > 0 && data.retryAfter <= 60
+        ? data.retryAfter
+        : 0;
+      throw new DraftHttpError(data.error || `Request failed (${res.status})`, res.status, gatewayWait);
+    }
+    if (Array.isArray(data.drafts) && data.drafts.length > 0) return data.drafts;
+    throw new Error("Draft response was empty. Try again.");
+  }
+
+  async function fetchBatchDraftWithRetry(
+    sections: PlanSection[],
+    onWait: (msg: string) => void,
+  ): Promise<{ heading: string; text: string }[]> {
+    const maxAttempts = 4;
+    let lastErr: unknown;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await fetchBatchDraft(sections, attempt - 1);
+      } catch (err) {
+        lastErr = err;
+        if (err instanceof DraftHttpError && err.status === 429 && err.retryAfter > 0 && attempt < maxAttempts) {
+          const wait = err.retryAfter;
+          onWait(`Rate limited. Waiting ${wait}s, then retrying all remaining sections (attempt ${attempt + 1} of ${maxAttempts})...`);
+          await sleep(wait * 1000);
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw lastErr instanceof Error ? lastErr : new Error("Drafting failed");
+  }
+
   async function fetchSectionDraftWithRetry(
     section: PlanSection,
     startOffset: number,
@@ -179,35 +233,40 @@ export default function BlogAssist({ postTitle, onUseOutline, onInsertSection }:
 
   async function draftAllSections() {
     if (!plan) return;
-    setDraftingAll(true); setError(""); setStatus("");
-    const failures: string[] = [];
-    let lastErr = "";
-    for (let i = 0; i < plan.sections.length; i++) {
-      if (draftedIdx.has(i)) continue;
-      setDrafting(i);
-      try {
-        const text = await fetchSectionDraftWithRetry(plan.sections[i], i, setStatus);
-        onInsertSection(text);
-        setDraftedIdx(prev => new Set(prev).add(i));
-        setStatus("");
-      } catch (err) {
-        failures.push(plan.sections[i].heading);
-        lastErr = err instanceof Error ? err.message : "";
-        if (err instanceof DraftHttpError && err.status === 429 && err.retryAfter > 0) {
-          setStatus(`Rate limited after "${plan.sections[i].heading}". Waiting ${err.retryAfter}s before the next section...`);
-          await sleep(err.retryAfter * 1000);
-        }
-      }
-    }
-    setDrafting(null);
-    setDraftingAll(false);
-    setStatus("");
-    if (failures.length) {
-      setError(
-        lastErr
-          ? `Failed on: ${failures.join(", ")}. ${lastErr}`
-          : `Drafted the rest, but failed on: ${failures.join(", ")}. Try those individually.`
+    const pending = plan.sections
+      .map((section, i) => ({ section, i }))
+      .filter(({ i }) => !draftedIdx.has(i));
+    if (pending.length === 0) return;
+
+    setDraftingAll(true); setError(""); setStatus("Drafting all remaining sections in one pass...");
+    try {
+      const drafts = await fetchBatchDraftWithRetry(
+        pending.map(({ section }) => section),
+        setStatus,
       );
+      const byHeading = new Map(drafts.map(d => [d.heading.toLowerCase(), d.text]));
+      const missing: string[] = [];
+      const nextDrafted = new Set(draftedIdx);
+      for (const { section, i } of pending) {
+        const text = byHeading.get(section.heading.toLowerCase());
+        if (!text) {
+          missing.push(section.heading);
+          continue;
+        }
+        onInsertSection(text);
+        nextDrafted.add(i);
+      }
+      setDraftedIdx(nextDrafted);
+      setStatus("");
+      if (missing.length) {
+        setError(`Drafted most sections, but missed: ${missing.join(", ")}. Use Draft this on those.`);
+      }
+    } catch (err) {
+      setStatus("");
+      setError(err instanceof Error ? err.message : "Drafting failed");
+    } finally {
+      setDrafting(null);
+      setDraftingAll(false);
     }
   }
 
@@ -300,7 +359,7 @@ export default function BlogAssist({ postTitle, onUseOutline, onInsertSection }:
               className="btn-secondary text-[11.5px] py-1.5 px-3 flex items-center gap-1.5 shrink-0"
             >
               {draftingAll
-                ? <><Loader2 size={12} className="animate-spin" /> Drafting {(drafting ?? 0) + 1} of {plan.sections.length}...</>
+                ? <><Loader2 size={12} className="animate-spin" /> Drafting remaining sections...</>
                 : <><ListChecks size={12} /> Draft all sections</>
               }
             </button>
