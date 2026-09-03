@@ -98,7 +98,7 @@ function domainFromUrl(url: string): string | null {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * Resolves a URL slug to a listing row. Handles two shapes:
+ * Resolves a URL slug to a listing row. Handles three shapes:
  *  - The pretty slug buildDirectorySlug produces (business-suburb-uid6) -
  *    what the sitemap, SEO landing pages, and directory search cards all
  *    actually link to. Extracts the trailing 6-hex-char id suffix and
@@ -109,10 +109,20 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  *    and any already-indexed raw-UUID URLs keep working), flagged via
  *    isLegacyId so the caller can 308-redirect to the canonical pretty
  *    slug instead of serving duplicate content at two URLs.
+ *  - A pretty slug whose uid6 suffix no longer matches any row. This
+ *    happens when a scraped row is deleted and later recreated under a
+ *    new id (dedup cleanup, a re-scrape via a source that doesn't match
+ *    the original place_id) - the business is still listed, just under
+ *    a different id, and an already-Google-indexed URL for it would
+ *    otherwise 404 outright. Falls back to matching on the normalized
+ *    business name alone (ignoring the stale uid and suburb segments -
+ *    a legitimate suburb correction shouldn't break the link either),
+ *    flagged isLegacyId for the same redirect-to-canonical treatment.
  *
- * Two candidate rows back from the suffix lookup (an astronomically
- * unlikely 6-hex-char collision) is treated as not-found rather than
- * silently guessing which business the visitor meant.
+ * Two candidate rows back from either lookup (an astronomically
+ * unlikely 6-hex-char collision, or two businesses normalizing to the
+ * same name stem) is treated as not-found rather than silently
+ * guessing which business the visitor meant.
  */
 async function resolveListingBySlug(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -127,8 +137,14 @@ async function resolveListingBySlug(
   if (!/^[0-9a-f]{6}$/i.test(suffix)) return { listing: null, isLegacyId: false };
 
   const { data } = await supabase.rpc("resolve_directory_listing_by_uid_suffix", { p_suffix: suffix });
-  if (!data || data.length !== 1) return { listing: null, isLegacyId: false };
-  return { listing: data[0] as Listing, isLegacyId: false };
+  if (data && data.length === 1) return { listing: data[0] as Listing, isLegacyId: false };
+
+  const stem = slug.slice(0, -7); // drop the trailing "-XXXXXX"
+  if (!stem) return { listing: null, isLegacyId: false };
+  const { data: staleMatch } = await supabase.rpc("resolve_directory_listing_by_business_slug", { p_stem: stem });
+  if (staleMatch && staleMatch.length === 1) return { listing: staleMatch[0] as Listing, isLegacyId: true };
+
+  return { listing: null, isLegacyId: false };
 }
 
 export async function generateMetadata({
