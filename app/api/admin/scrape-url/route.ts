@@ -197,6 +197,7 @@ interface EditableFields {
   years_experience: number | null;
   licenses: { type: string; number: string }[];
   services_offered: string[];
+  services_extraction_method: "structural" | "keyword" | null;
   photo_urls: string[]; // raw source URLs at preview time; downloaded/stored only on confirm
 }
 
@@ -267,6 +268,7 @@ export async function POST(req: NextRequest) {
       years_experience:       fields.years_experience,
       licenses:               fields.licenses.length > 0 ? fields.licenses : null,
       services_offered:       fields.services_offered.length > 0 ? fields.services_offered : null,
+      services_extraction_method: fields.services_offered.length > 0 ? fields.services_extraction_method : null,
     };
 
     const clean: Record<string, unknown> = {};
@@ -376,7 +378,7 @@ export async function POST(req: NextRequest) {
   const yearsExp      = extractYearsExperience(html);
   const licenses      = extractLicenses(html);
   const trades        = extractTrades(html, siteUrl);
-  const services      = extractServices ? extractServices(html, trades) : [];
+  const { services, method: servicesMethod } = extractServices ? extractServices(html, trades) : { services: [], method: null };
   const subPages      = await scrapeSubPages(html, siteUrl);
   const rawPhotos      = extractPhotos(html, siteUrl);
   const photoUrls      = filterPhotos(rawPhotos, logo).slice(0, 6);
@@ -393,6 +395,7 @@ export async function POST(req: NextRequest) {
     ...services,
     ...(subPages.servicesText ? subPages.servicesText.split("\n").filter(Boolean) : []),
   ])].slice(0, 12);
+  const allServicesMethod = subPages.servicesText ? "structural" : servicesMethod;
 
   const fields: EditableFields = {
     business_name: businessName,
@@ -409,6 +412,7 @@ export async function POST(req: NextRequest) {
     years_experience: yearsExp,
     licenses,
     services_offered: allServices,
+    services_extraction_method: allServicesMethod,
     photo_urls: photoUrls,
   };
 

@@ -382,14 +382,24 @@ function extractServicesByKeyword(html: string, trades: string[] | null | undefi
 
 /**
  * Extract services list from website HTML.
- * Returns array of service strings (max 10). Tries structural HTML
- * parsing first (works when the site happens to use a semantic
- * services list); falls back to keyword matching against the page's
- * plain text when that yields fewer than 3 results, since a website
- * that mentions two services in a sidebar list plus several more in
- * prose deserves the fuller list, not whichever strategy ran first.
+ * Returns the services (max 10) plus which strategy produced them, so
+ * callers can record it (services_extraction_method) for later review -
+ * structural parsing found on the site's own markup carries more
+ * confidence than the keyword fallback, and that distinction matters
+ * when judging result quality, not just whether a result exists.
+ * Tries structural HTML parsing first (works when the site happens to
+ * use a semantic services list); falls back to keyword matching against
+ * the page's plain text when that yields fewer than 3 results, since a
+ * website that mentions two services in a sidebar list plus several
+ * more in prose deserves the fuller list, not whichever strategy ran
+ * first. If keyword matching supplements a non-empty structural result,
+ * method is still reported as "structural" - the site's own list is
+ * still the primary source.
  */
-export function extractServices(html: string, trades?: string[] | null): string[] {
+export function extractServices(
+  html: string,
+  trades?: string[] | null
+): { services: string[]; method: "structural" | "keyword" | null } {
   const services: string[] = [];
   const cleaned = stripChrome(html);
 
@@ -409,6 +419,8 @@ export function extractServices(html: string, trades?: string[] | null): string[
     }
   }
 
+  const structuralCount = services.length;
+
   if (services.length < 3) {
     const byKeyword = extractServicesByKeyword(html, trades);
     for (const s of byKeyword) {
@@ -419,7 +431,8 @@ export function extractServices(html: string, trades?: string[] | null): string[
     }
   }
 
-  return services;
+  if (services.length === 0) return { services, method: null };
+  return { services, method: structuralCount > 0 ? "structural" : "keyword" };
 }
 
 /**

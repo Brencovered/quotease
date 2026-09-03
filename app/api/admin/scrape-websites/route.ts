@@ -130,8 +130,12 @@ export async function POST(req: NextRequest) {
 
     // Services list
     if (mode === "all" && !(listing as {services_offered?: unknown}).services_offered) {
-      const services = extractServices(html, listing.trades as string[] | null);
-      if (services.length > 0) { updates.services_offered = services; updated.push(`services (${services.length})`); }
+      const { services, method } = extractServices(html, listing.trades as string[] | null);
+      if (services.length > 0) {
+        updates.services_offered = services;
+        updates.services_extraction_method = method;
+        updated.push(`services (${services.length}, ${method})`);
+      }
     }
 
     // Phone (if not already scraped)
@@ -166,10 +170,20 @@ export async function POST(req: NextRequest) {
     // Services from sub-pages (only in all mode - extra network call)
     if (mode === "all" && !(listing as {services_offered?: unknown}).services_offered) {
       const subs = await scrapeSubPages(html, url);
-      const svcs = [...extractServices(html, listing.trades as string[] | null)];
+      const { services: baseServices, method: baseMethod } = extractServices(html, listing.trades as string[] | null);
+      const svcs = [...baseServices];
+      const subPageAddedAny = !!subs.servicesText;
       if (subs.servicesText) svcs.push(...subs.servicesText.split("\n").filter(Boolean));
       const unique = [...new Set(svcs)].slice(0, 12);
-      if (unique.length > 0) { updates.services_offered = unique; updated.push(`services (${unique.length})`); }
+      if (unique.length > 0) {
+        updates.services_offered = unique;
+        // Real page text (sub-page scrape or structural parse) beats a
+        // pure keyword guess for confidence, so any contribution from
+        // either counts as "structural" here - only report "keyword"
+        // when nothing but the keyword fallback produced a result.
+        updates.services_extraction_method = (baseMethod === "structural" || subPageAddedAny) ? "structural" : baseMethod;
+        updated.push(`services (${unique.length}, ${updates.services_extraction_method})`);
+      }
       // Upgrade blurb with about sub-page if current blurb is short
       const currentBlurb = (listing as {blurb?: string | null}).blurb;
       if (subs.aboutText && (!currentBlurb || currentBlurb.length < 100)) {
@@ -224,7 +238,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(results);
 }
 
-export async function GET(_req: NextRequest) {
+export async function GET(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user || !isAdminEmail(user.email)) {
@@ -233,14 +247,31 @@ export async function GET(_req: NextRequest) {
 
   const admin = createAdminClient();
 
-  const [total, withWebsite, withPhotos, withLogo, withBlurb, noWebsite] = await Promise.all([
+  const [total, withWebsite, withPhotos, withLogo, withBlurb, withServices, noWebsite] = await Promise.all([
     admin.from("directory_listing").select("id", { count: "exact", head: true }).then(r => r.count ?? 0),
     admin.from("directory_listing").select("id", { count: "exact", head: true }).not("website_url", "is", null).then(r => r.count ?? 0),
     admin.from("directory_listing").select("id", { count: "exact", head: true }).not("photos_cached_at", "is", null).then(r => r.count ?? 0),
     admin.from("directory_listing").select("id", { count: "exact", head: true }).not("logo_url", "is", null).then(r => r.count ?? 0),
     admin.from("directory_listing").select("id", { count: "exact", head: true }).not("blurb", "is", null).then(r => r.count ?? 0),
+    admin.from("directory_listing").select("id", { count: "exact", head: true }).not("services_offered", "is", null).then(r => r.count ?? 0),
     admin.from("directory_listing").select("id", { count: "exact", head: true }).is("website_url", null).then(r => r.count ?? 0),
   ]);
 
-  return NextResponse.json({ total, withWebsite, withPhotos, withLogo, withBlurb, noWebsite });
+  const stats = { total, withWebsite, withPhotos, withLogo, withBlurb, withServices, noWebsite };
+
+  // Review list: most recently scraped listings that got a services
+  // result, newest first, so a just-run batch is at the top. Exists so
+  // quality can be checked against real results per business - not just
+  // aggregate counts - before trusting this at scale. Capped at 100.
+  if (new URL(req.url).searchParams.get("recent") === "1") {
+    const { data: recent } = await admin
+      .from("directory_listing")
+      .select("id, business_name, suburb, trades, website_url, services_offered, services_extraction_method, blurb, logo_url, website_scraped_at")
+      .not("services_offered", "is", null)
+      .order("website_scraped_at", { ascending: false, nullsFirst: false })
+      .limit(100);
+    return NextResponse.json({ ...stats, recent: recent ?? [] });
+  }
+
+  return NextResponse.json(stats);
 }

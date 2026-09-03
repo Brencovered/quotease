@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   Globe, Image as ImageIcon, FileText, Briefcase, Play,
-  RefreshCw, Check, AlertTriangle, ChevronDown, ChevronUp,
+  RefreshCw, Check, AlertTriangle, ChevronDown, ChevronUp, ExternalLink, ListChecks,
 } from "lucide-react";
+import { buildDirectorySlug } from "@/lib/seo/meta";
 
 interface Stats {
   total: number;
@@ -12,7 +14,21 @@ interface Stats {
   withPhotos: number;
   withLogo: number;
   withBlurb: number;
+  withServices: number;
   noWebsite: number;
+}
+
+interface RecentListing {
+  id: string;
+  business_name: string;
+  suburb: string | null;
+  trades: string[] | null;
+  website_url: string | null;
+  services_offered: string[] | null;
+  services_extraction_method: "structural" | "keyword" | null;
+  blurb: string | null;
+  logo_url: string | null;
+  website_scraped_at: string | null;
 }
 
 interface RunResult {
@@ -33,10 +49,24 @@ export default function AdminWebsiteScraper() {
   const [showLog,   setShowLog]   = useState(false);
   const [autoRun,   setAutoRun]   = useState(false);
   const [runCount,  setRunCount]  = useState(0);
+  const [recent,    setRecent]    = useState<RecentListing[] | null>(null);
+  const [recentLoading, setRecentLoading] = useState(false);
+  const [methodFilter, setMethodFilter] = useState<"all" | "structural" | "keyword">("all");
 
   async function loadStats() {
     const res = await fetch("/api/admin/scrape-websites");
     if (res.ok) setStats(await res.json());
+  }
+
+  async function loadRecent() {
+    setRecentLoading(true);
+    const res = await fetch("/api/admin/scrape-websites?recent=1");
+    if (res.ok) {
+      const data = await res.json();
+      setStats(data);
+      setRecent(data.recent ?? []);
+    }
+    setRecentLoading(false);
   }
 
   useEffect(() => { loadStats(); }, []);
@@ -53,6 +83,7 @@ export default function AdminWebsiteScraper() {
     setRunCount(c => c + 1);
     setRunning(false);
     loadStats();
+    if (recent !== null) loadRecent(); // keep the review table in sync if it's open
 
     // Auto-run if enabled and there's more to do
     if (autoRun && data.remaining > 0) {
@@ -80,6 +111,7 @@ export default function AdminWebsiteScraper() {
             { label: "Photos cached", val: stats.withPhotos,  icon: ImageIcon,  color: "text-green-600" },
             { label: "Have logo",     val: stats.withLogo,    icon: Briefcase,  color: "text-amber-600" },
             { label: "Have blurb",    val: stats.withBlurb,   icon: FileText,   color: "text-purple-600"},
+            { label: "Have services", val: stats.withServices,icon: ListChecks, color: "text-teal-600"  },
           { label: "No website",    val: stats.noWebsite,   icon: AlertTriangle, color: "text-red-500"},
           ].map(({ label, val, icon: Icon, color }) => (
             <div key={label} className="card">
@@ -205,6 +237,108 @@ export default function AdminWebsiteScraper() {
         </div>
       )}
 
+      {/* Review results - per-listing view so quality can actually be
+          judged, not just aggregate counts. Especially important for
+          the keyword-match fallback: "structural" means the site's own
+          markup produced it (higher confidence), "keyword" means it was
+          inferred from a curated per-trade phrase list matched against
+          plain text (worth spot-checking). */}
+      <div className="card space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="section-tag">Review results</p>
+            <p className="text-[12px] text-[var(--ink-faint)] mt-0.5">
+              Most recently scraped listings with services extracted, newest first
+            </p>
+          </div>
+          <button
+            onClick={loadRecent}
+            disabled={recentLoading}
+            className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--navy)] px-3 py-1.5 rounded-lg border border-[var(--line)] hover:bg-[var(--app-bg)] transition-colors"
+          >
+            {recentLoading
+              ? <><RefreshCw size={12} className="animate-spin" /> Loading...</>
+              : <>{recent === null ? "Load results" : "Refresh"}</>}
+          </button>
+        </div>
+
+        {recent !== null && recent.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            {(["all", "structural", "keyword"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setMethodFilter(f)}
+                className="px-2.5 py-1 rounded-full text-[11.5px] font-semibold transition-colors"
+                style={{
+                  background: methodFilter === f ? "var(--navy)" : "var(--app-bg)",
+                  color: methodFilter === f ? "white" : "var(--ink-faint)",
+                }}
+              >
+                {f === "all" ? "All" : f === "structural" ? "From site's own list" : "Keyword match"}
+                {f !== "all" && ` (${recent.filter(r => r.services_extraction_method === f).length})`}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {recent !== null && recent.length === 0 && !recentLoading && (
+          <p className="text-[12.5px] text-[var(--ink-faint)] py-4 text-center">
+            No listings with extracted services yet - run a batch above first.
+          </p>
+        )}
+
+        {recent !== null && recent.length > 0 && (
+          <div className="space-y-2 max-h-[560px] overflow-y-auto -mx-1 px-1">
+            {recent
+              .filter(r => methodFilter === "all" || r.services_extraction_method === methodFilter)
+              .map((r) => {
+                const slug = buildDirectorySlug({ id: r.id, business_name: r.business_name, suburb: r.suburb ?? "" });
+                return (
+                  <div key={r.id} className="flex items-start gap-3 bg-[var(--app-bg)] rounded-xl px-3 py-2.5">
+                    {r.logo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={r.logo_url} alt="" className="w-9 h-9 rounded-lg object-contain bg-white border border-[var(--line)] shrink-0" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-lg bg-white border border-[var(--line)] shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-[13px] text-[var(--ink)] truncate">{r.business_name}</p>
+                        <span
+                          className="shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full"
+                          style={{
+                            background: r.services_extraction_method === "structural" ? "rgba(16,185,129,.12)" : "rgba(217,119,6,.12)",
+                            color: r.services_extraction_method === "structural" ? "#059669" : "#b45309",
+                          }}
+                        >
+                          {r.services_extraction_method === "structural" ? "Site's own list" : "Keyword match"}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[var(--ink-faint)] mb-1">
+                        {r.suburb ? `${r.suburb} · ` : ""}{(r.trades ?? []).join(", ")}
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {(r.services_offered ?? []).map((s, i) => (
+                          <span key={i} className="text-[11px] bg-white border border-[var(--line)] rounded-full px-2 py-0.5 text-[var(--ink-soft)]">
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <Link
+                      href={`/directory/${slug}`}
+                      target="_blank"
+                      className="shrink-0 flex items-center gap-1 text-[11.5px] font-semibold text-[var(--navy)] px-2 py-1 rounded-lg hover:bg-white transition-colors"
+                    >
+                      View <ExternalLink size={11} />
+                    </Link>
+                  </div>
+                );
+              })}
+          </div>
+        )}
+      </div>
+
       {/* Yellow Pages Scraper */}
       <YellowPagesScraper />
 
@@ -215,6 +349,7 @@ export default function AdminWebsiteScraper() {
           <p><strong>Photos:</strong> Pulls og:image, Twitter card image, hero section images, and JSON-LD image data. Stores to Supabase Storage - no Google API calls.</p>
           <p><strong>Logo:</strong> Looks for img[alt*=logo], apple-touch-icon, then favicon. Better than Google&apos;s photo_references for brand marks.</p>
           <p><strong>Blurb:</strong> Uses meta description or og:description. Shows on the directory listing card.</p>
+          <p><strong>Services:</strong> Parses the site&apos;s own services list when there is one; falls back to matching a curated per-trade phrase list against the page text otherwise. Check the review table above to see which one produced each result.</p>
           <p><strong>Rate:</strong> 30 listings per batch, 8 second timeout per site, skips non-200 responses.</p>
         </div>
       </div>
