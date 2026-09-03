@@ -213,10 +213,193 @@ export function extractAbout(html: string): string | null {
 }
 
 /**
- * Extract services list from website HTML.
- * Returns array of service strings (max 10).
+ * Curated service vocabulary per trade, used as a keyword-match fallback
+ * in extractServices. Structural HTML parsing (a <div>/<section> with a
+ * "services" class containing an <li> list) only fires on sites that
+ * happen to use that specific markup pattern - checked against production
+ * data, that's roughly 7% of the ~4,900 listings with a scraped website,
+ * versus 91-96% success for logo/photo extraction which use much looser
+ * heuristics. Most real tradie sites (Wix, Squarespace, page builders,
+ * one-page sites) just don't structure services as a semantic list.
+ *
+ * This works completely differently: it doesn't care about markup at
+ * all, it matches known industry service phrases against the page's
+ * plain text. A one-line prose sentence ("we specialise in switchboard
+ * upgrades and safety switch installation") produces a clean result
+ * just as reliably as a proper <ul> would. Keyed on the same trade
+ * strings already used in directory_listing.trades (see the distinct
+ * values query run against production - electrician/plumber/roofer/
+ * carpenter/painter/plasterer/aircon/landscaper/concreter/fencer/tiler/
+ * handyman/builder cover effectively all listings).
  */
-export function extractServices(html: string): string[] {
+const TRADE_SERVICE_KEYWORDS: Record<string, [match: string, label: string][]> = {
+  electrician: [
+    ["switchboard", "Switchboard Upgrades"], ["safety switch", "Safety Switch Installation"],
+    ["smoke alarm", "Smoke Alarm Installation"], ["ceiling fan installation", "Ceiling Fan Installation"],
+    ["power point", "Power Point Installation"], ["lighting installation", "Lighting Installation"],
+    ["safety inspection", "Electrical Safety Inspections"], ["hot water system", "Hot Water Systems"],
+    ["solar installation", "Solar Installation"], ["data cabling", "Data Cabling"],
+    ["rewiring", "Rewiring"], ["commercial electrical", "Commercial Electrical"],
+    ["emergency electrician", "Emergency Electrician"], ["led lighting", "LED Lighting Upgrades"],
+    ["ev charger", "EV Charger Installation"], ["electrical repairs", "Electrical Repairs"],
+    ["electrical installation", "Electrical Installation"],
+  ],
+  plumber: [
+    ["blocked drain", "Blocked Drains"], ["hot water system", "Hot Water Systems"],
+    ["leak detection", "Leak Detection"], ["gas fitting", "Gas Fitting"],
+    ["burst pipe", "Burst Pipe Repairs"], ["toilet repair", "Toilet Repairs"],
+    ["tap repair", "Tap Repairs"], ["bathroom renovation", "Bathroom Renovations"],
+    ["backflow prevention", "Backflow Prevention"], ["stormwater", "Stormwater Drainage"],
+    ["sewer", "Sewer Repairs"], ["pipe relining", "Pipe Relining"],
+    ["emergency plumb", "Emergency Plumbing"], ["roof plumbing", "Roof Plumbing"],
+    ["drain clearing", "Drain Clearing"], ["plumbing repairs", "Plumbing Repairs"],
+    ["plumbing installation", "Plumbing Installation"],
+  ],
+  roofer: [
+    ["roof repair", "Roof Repairs"], ["roof restoration", "Roof Restoration"],
+    ["gutter clean", "Gutter Cleaning"], ["gutter replace", "Gutter Replacement"],
+    ["roof leak", "Roof Leak Repairs"], ["re-roofing", "Re-Roofing"], ["reroofing", "Re-Roofing"],
+    ["roof paint", "Roof Painting"], ["colorbond roof", "Colorbond Roofing"],
+    ["tile roof", "Tile Roof Repairs"], ["roof inspection", "Roof Inspections"],
+    ["valley replace", "Valley Replacement"], ["downpipe", "Downpipe Installation"],
+    ["metal roofing", "Metal Roofing"], ["roof maintenance", "Roof Maintenance"],
+  ],
+  carpenter: [
+    ["deck", "Decking"], ["pergola", "Pergolas"], ["kitchen renovation", "Kitchen Renovations"],
+    ["custom cabinetry", "Custom Cabinetry"], ["flooring installation", "Flooring Installation"],
+    ["door installation", "Door Installation"], ["carpentry repairs", "Carpentry Repairs"],
+    ["built-in wardrobe", "Built-In Wardrobes"], ["timber flooring", "Timber Flooring"],
+    ["renovation", "Renovations"], ["extension", "Home Extensions"], ["framing", "Framing"],
+    ["custom joinery", "Custom Joinery"],
+  ],
+  builder: [
+    ["renovation", "Renovations"], ["extension", "Home Extensions"],
+    ["new home build", "New Home Builds"], ["custom home", "Custom Home Builds"],
+    ["granny flat", "Granny Flats"], ["second storey", "Second Storey Additions"],
+    ["knockdown rebuild", "Knockdown Rebuilds"],
+  ],
+  painter: [
+    ["interior paint", "Interior Painting"], ["exterior paint", "Exterior Painting"],
+    ["wallpaper", "Wallpapering"], ["ceiling repair", "Ceiling Repairs"],
+    ["waterproofing", "Waterproofing"], ["colour consultation", "Colour Consultation"],
+    ["commercial paint", "Commercial Painting"], ["roof paint", "Roof Painting"],
+    ["repaint", "Repainting"],
+  ],
+  plasterer: [
+    ["plastering", "Plastering"], ["cornice", "Cornice Installation"], ["rendering", "Rendering"],
+    ["ceiling repair", "Ceiling Repairs"], ["wall repair", "Wall Repairs"],
+    ["gyprock", "Gyprock Installation"], ["waterproofing", "Waterproofing"],
+    ["skim coat", "Skim Coating"],
+  ],
+  aircon: [
+    ["split system", "Split System Installation"], ["ducted air conditioning", "Ducted Air Conditioning"],
+    ["air conditioning install", "Air Conditioning Installation"],
+    ["air conditioning repair", "Air Conditioning Repairs"],
+    ["air conditioning service", "Air Conditioning Servicing"],
+    ["air conditioning maintenance", "Air Conditioning Maintenance"],
+    ["refrigerant", "Refrigerant Regas"], ["reverse cycle", "Reverse Cycle Systems"],
+    ["hvac", "HVAC"], ["climate control", "Climate Control"],
+    ["aircon install", "Air Conditioning Installation"], ["aircon repair", "Air Conditioning Repairs"],
+    ["aircon service", "Air Conditioning Servicing"],
+  ],
+  "air conditioning": [
+    ["split system", "Split System Installation"], ["ducted air conditioning", "Ducted Air Conditioning"],
+    ["air conditioning install", "Air Conditioning Installation"],
+    ["air conditioning repair", "Air Conditioning Repairs"],
+    ["air conditioning service", "Air Conditioning Servicing"],
+    ["air conditioning maintenance", "Air Conditioning Maintenance"],
+    ["refrigerant", "Refrigerant Regas"], ["reverse cycle", "Reverse Cycle Systems"],
+    ["hvac", "HVAC"], ["climate control", "Climate Control"],
+  ],
+  landscaper: [
+    ["garden design", "Garden Design"], ["landscape design", "Landscape Design"],
+    ["retaining wall", "Retaining Walls"], ["turf", "Turf Installation"],
+    ["irrigation", "Irrigation"], ["paving", "Paving"], ["garden maintenance", "Garden Maintenance"],
+    ["outdoor living", "Outdoor Living Areas"], ["excavation", "Excavation"],
+  ],
+  concreter: [
+    ["concrete driveway", "Concrete Driveways"], ["concrete slab", "Concrete Slabs"],
+    ["exposed aggregate", "Exposed Aggregate Concrete"], ["concrete resurfacing", "Concrete Resurfacing"],
+    ["concrete path", "Concrete Paths"], ["concrete pool", "Concrete Pool Surrounds"],
+    ["concrete kerbing", "Concrete Kerbing"],
+  ],
+  fencer: [
+    ["colorbond fenc", "Colorbond Fencing"], ["timber fenc", "Timber Fencing"],
+    ["pool fenc", "Pool Fencing"], ["gate installation", "Gate Installation"],
+    ["fence repair", "Fence Repairs"], ["glass pool fenc", "Glass Pool Fencing"],
+    ["retaining wall", "Retaining Walls"],
+  ],
+  tiler: [
+    ["bathroom tiling", "Bathroom Tiling"], ["floor tiling", "Floor Tiling"],
+    ["wall tiling", "Wall Tiling"], ["tile regrout", "Tile Regrouting"],
+    ["outdoor tiling", "Outdoor Tiling"], ["waterproofing", "Waterproofing"],
+    ["shower tiling", "Shower Tiling"],
+  ],
+  handyman: [
+    ["general repairs", "General Repairs"], ["furniture assembly", "Furniture Assembly"],
+    ["shelving", "Shelving Installation"], ["minor repairs", "Minor Repairs"],
+    ["home maintenance", "Home Maintenance"], ["flat pack", "Flat Pack Assembly"],
+    ["picture hanging", "Picture Hanging"], ["odd jobs", "Odd Jobs"],
+  ],
+  solar: [
+    ["solar panel", "Solar Panel Installation"], ["battery storage", "Battery Storage"],
+    ["solar system", "Solar System Upgrades"], ["solar maintenance", "Solar Maintenance"],
+    ["off-grid solar", "Off-Grid Solar"],
+  ],
+};
+
+/**
+ * Keyword-match fallback used when structural parsing finds nothing.
+ * Case-insensitive substring match against plain text. Each entry is a
+ * [matchFragment, displayLabel] pair rather than one string doing both
+ * jobs - matching on short fragments ("air conditioning install") catches
+ * far more real phrasing variance ("...installation, service &
+ * maintenance...") than a rigid full phrase would, but showing that
+ * fragment as-is on the listing page reads like a typo, so it's matched
+ * loosely and displayed as a clean, complete label ("Air Conditioning
+ * Installation").
+ */
+function extractServicesByKeyword(html: string, trades: string[] | null | undefined): string[] {
+  if (!trades || trades.length === 0) return [];
+  const plainText = stripChrome(html)
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+
+  const found = new Set<string>();
+  for (const trade of trades) {
+    const keywords = TRADE_SERVICE_KEYWORDS[trade.toLowerCase().trim()];
+    if (!keywords) continue;
+    for (const [match, label] of keywords) {
+      if (plainText.includes(match)) {
+        found.add(label);
+        if (found.size >= 10) return [...found];
+      }
+    }
+  }
+  return [...found];
+}
+
+/**
+ * Extract services list from website HTML.
+ * Returns the services (max 10) plus which strategy produced them, so
+ * callers can record it (services_extraction_method) for later review -
+ * structural parsing found on the site's own markup carries more
+ * confidence than the keyword fallback, and that distinction matters
+ * when judging result quality, not just whether a result exists.
+ * Tries structural HTML parsing first (works when the site happens to
+ * use a semantic services list); falls back to keyword matching against
+ * the page's plain text when that yields fewer than 3 results, since a
+ * website that mentions two services in a sidebar list plus several
+ * more in prose deserves the fuller list, not whichever strategy ran
+ * first. If keyword matching supplements a non-empty structural result,
+ * method is still reported as "structural" - the site's own list is
+ * still the primary source.
+ */
+export function extractServices(
+  html: string,
+  trades?: string[] | null
+): { services: string[]; method: "structural" | "keyword" | null } {
   const services: string[] = [];
   const cleaned = stripChrome(html);
 
@@ -236,7 +419,20 @@ export function extractServices(html: string): string[] {
     }
   }
 
-  return services;
+  const structuralCount = services.length;
+
+  if (services.length < 3) {
+    const byKeyword = extractServicesByKeyword(html, trades);
+    for (const s of byKeyword) {
+      if (!services.some((existing) => existing.toLowerCase() === s.toLowerCase())) {
+        services.push(s);
+        if (services.length >= 10) break;
+      }
+    }
+  }
+
+  if (services.length === 0) return { services, method: null };
+  return { services, method: structuralCount > 0 ? "structural" : "keyword" };
 }
 
 /**
