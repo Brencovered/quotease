@@ -240,6 +240,31 @@ export function extractPhotos(html: string, baseUrl: string): string[] {
     for (const img of jsonLd.images.slice(0, 3)) add(img);
   }
 
+  // Fallback: the first substantial image on the page, regardless of
+  // its container's class name. Everything above assumes a hero image
+  // sits inside a div/section whose class actually says "hero" or
+  // "banner" - real WordPress page-builder themes (Divi, Elementor,
+  // WPBakery) routinely don't, they wrap images in generic builder
+  // class names like et_pb_image_wrap that have nothing to do with
+  // what the image actually is. Confirmed this against a real listing
+  // (sanelliconcreting.com.au, Divi theme): a plain <img> sits right
+  // after the H1, no hero/banner class anywhere on the page, no
+  // og:image meta tag either - every check above found nothing despite
+  // an obvious, ordinary hero image being right there. Only runs when
+  // nothing else has found anything, so it doesn't dilute the more
+  // targeted matches above with random content images when those
+  // already succeeded.
+  if (photos.length === 0) {
+    const stripped = stripChrome(html);
+    const firstImages = stripped.matchAll(/<img[^>]+src=[\"']([^\"']+)[\"'][^>]*>/gi);
+    let checked = 0;
+    for (const m of firstImages) {
+      add(m[1]);
+      checked++;
+      if (photos.length >= 2 || checked >= 8) break;
+    }
+  }
+
   return photos.slice(0, 6);
 }
 
