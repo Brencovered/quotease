@@ -65,5 +65,6 @@ describe("MODELS aliases", () => {
     expect(textModelsFrom(2)[0]).toBe("amazon/nova-micro");
     expect(textModelsFrom(0)).toContain("meta/llama-3.1-8b");
     expect(textModelsFrom(0)).toContain("mistral/mistral-small");
+    expect(textModelsFrom(0, ["openai/gpt-4o-mini", "mistral/mistral-small"])[0]).toBe("openai/gpt-4o-mini");
   });
 });

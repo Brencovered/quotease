@@ -33,3 +33,19 @@ export function splitDraftedSections(
     return { heading: item.heading, text: chunk };
   });
 }
+
+/** Words in the body, ignoring the first heading line. */
+export function sectionProseWordCount(markdown: string): number {
+  const body = markdown.replace(/^#{1,6}\s+[^\n]*\n?/, "").trim();
+  if (!body) return 0;
+  return body.split(/\s+/).filter(Boolean).length;
+}
+
+export const MIN_SECTION_PROSE_WORDS = 80;
+
+export function draftsWithProse(
+  drafts: { heading: string; text: string }[],
+  minWords = MIN_SECTION_PROSE_WORDS,
+): { heading: string; text: string }[] {
+  return drafts.filter((d) => sectionProseWordCount(d.text) >= minWords);
+}

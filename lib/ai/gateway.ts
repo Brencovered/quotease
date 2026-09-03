@@ -55,12 +55,22 @@ export const TEXT_MODELS = [
   TEXT_FALLBACK,
 ] as const;
 
-export function textModelsFrom(offset = 0): string[] {
-  const list = [...TEXT_MODELS];
-  const n = list.length;
-  if (n === 0) return list;
+/** Models that actually write section body copy. Nova Micro and Llama 3.1 8B
+ *  often return a list of ## headings with no prose, which "Draft all" then
+ *  inserted as empty stubs. Keep them off this list. */
+export const TEXT_PROSE_MODELS = [
+  TEXT_PRIMARY,
+  TEXT_FLASH,
+  TEXT_MISTRAL,
+  TEXT_FALLBACK,
+] as const;
+
+export function textModelsFrom(offset = 0, list: readonly string[] = TEXT_MODELS): string[] {
+  const models = [...list];
+  const n = models.length;
+  if (n === 0) return models;
   const i = ((offset % n) + n) % n;
-  return [...list.slice(i), ...list.slice(0, i)];
+  return [...models.slice(i), ...models.slice(0, i)];
 }
 
 function uniqueModels(...ids: Array<string | undefined>): string[] {
