@@ -197,6 +197,11 @@ export default function AdminBlogPanel({ posts: initialPosts }: { posts: Post[] 
     const skeleton =
       "Key Takeaways\n" + plan.takeaways.map(t => `- ${t}`).join("\n") + "\n\n" +
       plan.sections.map(s => `## ${s.heading}\n`).join("\n");
+    const keepBody = post.blocks.some((b) => {
+      if (["paragraph", "blockquote"].includes(b.type) && b.content.trim()) return true;
+      if (["bullet_list", "numbered_list"].includes(b.type) && b.items?.some((i) => i.trim())) return true;
+      return false;
+    });
     setPost(p => ({
       ...p,
       title: p.title || plan.title,
@@ -204,13 +209,25 @@ export default function AdminBlogPanel({ posts: initialPosts }: { posts: Post[] 
       excerpt: p.excerpt || plan.excerpt,
       category: plan.category || p.category,
       tags: p.tags.length ? p.tags : plan.tags,
-      blocks: parseBlocks(skeleton),
+      blocks: keepBody ? p.blocks : parseBlocks(skeleton),
     }));
-    toast("Outline added - headings and takeaways only");
+    toast(keepBody
+      ? "Title and metadata filled. Existing body copy was left as-is."
+      : "Outline added - headings and takeaways only");
   }
 
   function insertDraftedSection(markdown: string) {
     const draftBlocks = parseBlocks(markdown);
+    const hasProse = draftBlocks.some((b) => {
+      if (["h1", "h2", "h3", "hr"].includes(b.type)) return false;
+      if (b.content?.trim()) return true;
+      if (b.items?.some((i) => i.trim())) return true;
+      return false;
+    });
+    if (!hasProse) {
+      toast("That draft was headings only - not inserted. Try Draft this on the section.", false);
+      return;
+    }
     const heading = draftBlocks[0];
 
     setPost(p => {

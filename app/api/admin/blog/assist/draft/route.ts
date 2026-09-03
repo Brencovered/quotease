@@ -13,10 +13,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/admin";
-import { generateWithFallback, textModelsFrom } from "@/lib/ai/gateway";
-import { aiGatewayHttpStatus, formatAiGatewayError, gatewayRetryAfterSeconds } from "@/lib/ai/formatAiGatewayError";
+import { generateWithFallback, TEXT_PROSE_MODELS, textModelsFrom } from "@/lib/ai/gateway";
+import { aiGatewayHttpStatus, formatAiGatewayError, gatewayRetryAfterSeconds, isGatewayRateLimitError } from "@/lib/ai/formatAiGatewayError";
 import { checkRateLimit, rateLimitResponseInit } from "@/lib/rateLimit";
-import { splitDraftedSections } from "@/lib/blogDraftSections";
+import { draftsWithProse, splitDraftedSections } from "@/lib/blogDraftSections";
 
 export const maxDuration = 60;
 
@@ -138,38 +138,57 @@ async function draftBatch(opts: {
   batch: SectionIn[];
 }) {
   const listed = opts.batch
-    .map((s, i) => `${i + 1}. H2 exactly: "## ${s.heading}"\n   This section must argue: ${s.brief}`)
+    .map((s, i) => `${i + 1}. Heading (copy exactly as the H2): ${s.heading}\n   Notes for you to expand (not the finished section): ${s.brief}`)
     .join("\n");
   const headings = opts.batch.map((s) => s.heading);
 
   const prompt = `Post title: ${opts.postTitle || "(untitled)"}
 Target keyword: ${opts.keyword || "(none given)"}
-Outline headings (write every one, in this order, do not skip): ${headings.join(" | ")}
 
+Write the FULL article body for these ${opts.batch.length} sections, in this order:
 ${listed}
 
-Write ALL ${opts.batch.length} sections now. Each section starts with its "## " heading on its own line, then 150 to 300 words. Include at least one internal link per section. No preamble, no sign-off, no explanation of what you did.`;
+RULES:
+- After each "## heading" you MUST write 150 to 300 words of original prose before the next heading.
+- Do NOT output a table of contents, an outline, or heading-only stubs. That is a failed draft.
+- Do NOT copy the "Notes for you" line into the article. Expand those notes into real paragraphs.
+- Include at least one internal link per section.
+- No preamble, no sign-off, no explanation of what you did.`;
 
-  try {
-    const result = await generateWithFallback({
-      models: textModelsFrom(opts.modelOffset),
-      system: `You write SEO blog posts for Swiftscope, Australian trade business software.\n\n${FORMAT_NOTES}`,
-      prompt,
-      maxTokens: Math.min(700 * opts.batch.length, 4500),
-      // One successful call drafts the whole post, so try every RPM bucket.
-      maxRateLimitHops: textModelsFrom(0).length,
-    });
+  const models = textModelsFrom(opts.modelOffset, TEXT_PROSE_MODELS);
+  let lastErr: unknown = new Error("Drafting failed");
 
-    const drafts = splitDraftedSections(result.text, headings);
-    if (drafts.length === 0) {
-      return NextResponse.json(
-        { error: "The model returned prose but none of the section headings. Try Draft all again." },
-        { status: 500 },
+  for (const model of models) {
+    try {
+      const result = await generateWithFallback({
+        models: [model],
+        system: `You write SEO blog posts for Swiftscope, Australian trade business software.\n\n${FORMAT_NOTES}`,
+        prompt,
+        maxTokens: Math.min(700 * opts.batch.length, 4500),
+        maxRateLimitHops: 1,
+      });
+
+      const drafts = draftsWithProse(splitDraftedSections(result.text, headings));
+      if (drafts.length === opts.batch.length) {
+        return NextResponse.json({ drafts, model: result.model, text: result.text });
+      }
+      if (drafts.length > 0 && model === models[models.length - 1]) {
+        return NextResponse.json({ drafts, model: result.model, text: result.text });
+      }
+      console.warn(
+        `[blog-assist/draft] ${model} returned ${drafts.length}/${opts.batch.length} sections with body copy - trying next model`,
       );
+      lastErr = new Error("The model only returned headings. Trying another model.");
+    } catch (err) {
+      lastErr = err;
+      if (isGatewayRateLimitError(err)) continue;
+      if (model === models[models.length - 1]) return gatewayFail(err);
     }
-
-    return NextResponse.json({ drafts, model: result.model, text: result.text });
-  } catch (err) {
-    return gatewayFail(err);
   }
+
+  return gatewayFail(
+    lastErr instanceof Error && /only returned headings/i.test(lastErr.message)
+      ? new Error("The model only wrote section headings, not the body copy. Wait a minute and try Draft all again, or use Draft this on each section.")
+      : lastErr,
+  );
 }
