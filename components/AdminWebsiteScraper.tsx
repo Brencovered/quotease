@@ -488,7 +488,7 @@ export default function AdminWebsiteScraper() {
           <p><strong>Blurb:</strong> Uses meta description or og:description. Shows on the directory listing card.</p>
           <p><strong>Services:</strong> Parses the site&apos;s own services list when there is one; falls back to matching a curated per-trade phrase list against the page text otherwise. Check the review table above to see which one produced each result.</p>
           <p><strong>Rate:</strong> 30 listings per batch, 8 second timeout per site, skips non-200 responses.</p>
-          <p><strong>Photos via Google Places (paid):</strong> Most listings still missing a photo have raw Google Place photo tokens sitting in the database from the original import - real references to real business photos Google already verified, they just were never resolved into actual images. This mode does that directly via the Places Photo API (~$7/1,000 requests, 1-4 requests per listing) instead of relying on the business's own website having something usable.</p>
+          <p><strong>Photos via Google Places (paid):</strong> Most listings still missing a photo have raw Google Place photo tokens sitting in the database from the original import - real references to real business photos Google already verified, they just were never resolved into actual images. This mode does that directly via the Places Photo API (~$7/1,000 requests, 1-4 requests per listing) instead of relying on the business&apos;s own website having something usable.</p>
         </div>
       </div>
     </div>
