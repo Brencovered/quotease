@@ -28,6 +28,10 @@
     {
       "path": "/api/cron/cache-photos",
       "schedule": "0 5 * * 2"
+    },
+    {
+      "path": "/api/cron/expand-directory",
+      "schedule": "0 6 * * *"
     }
   ]
 }

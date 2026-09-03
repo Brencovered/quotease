@@ -7,6 +7,7 @@ import {
   RefreshCw, Check, AlertTriangle, ChevronDown, ChevronUp, ExternalLink, ListChecks,
 } from "lucide-react";
 import { buildDirectorySlug } from "@/lib/seo/meta";
+import { TRADES, LOCATIONS } from "@/lib/tradeLocationMatrix";
 
 interface Stats {
   total: number;
@@ -435,6 +436,9 @@ export default function AdminWebsiteScraper() {
         )}
       </div>
 
+      {/* Automated directory expansion sweep */}
+      <DirectoryExpansionSweepPanel />
+
       {/* Yellow Pages Scraper */}
       <YellowPagesScraper />
 
@@ -453,6 +457,100 @@ export default function AdminWebsiteScraper() {
   );
 }
 
+/**
+ * Automated growth of the directory itself - working through the full
+ * trade x location matrix via Yellow Pages so listings get added
+ * without anyone manually picking a combo and clicking "scrape" over
+ * and over (that's what the Yellow Pages Scraper panel below this one
+ * still does, for a specific one-off combo). Runs automatically once a
+ * day via cron; this panel shows progress and lets an admin run extra
+ * batches on demand.
+ */
+function DirectoryExpansionSweepPanel() {
+  const [stats, setStats] = useState<{ matrixSize: number; covered: number } | null>(null);
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState<{
+    combosProcessed: number; totalFound: number; totalInserted: number; totalSkipped: number;
+    combos: { trade: string; location: string; found: number; inserted: number }[];
+    remainingNeverScraped: number; matrixSize: number;
+  } | null>(null);
+
+  async function loadStats() {
+    const res = await fetch("/api/admin/expand-directory");
+    if (res.ok) setStats(await res.json());
+  }
+
+  useEffect(() => { loadStats(); }, []);
+
+  async function runBatch() {
+    setRunning(true);
+    const res = await fetch("/api/admin/expand-directory", { method: "POST" });
+    const data = await res.json();
+    setResult(data);
+    setRunning(false);
+    loadStats();
+  }
+
+  const pct = stats && stats.matrixSize > 0 ? Math.round((stats.covered / stats.matrixSize) * 100) : 0;
+
+  return (
+    <div className="card space-y-4">
+      <div>
+        <p className="section-tag">Directory expansion sweep</p>
+        <p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5">
+          Automatically works through every trade x location combination via Yellow Pages, so growing the directory
+          doesn&apos;t mean picking a combo and clicking scrape one at a time. Runs once a day on its own -
+          this is for running extra batches now.
+        </p>
+      </div>
+
+      {stats && (
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[11px] font-bold uppercase text-[var(--ink-faint)]">Coverage</p>
+            <p className="text-[12px] font-semibold text-[var(--ink)]">{stats.covered} / {stats.matrixSize} combos ({pct}%)</p>
+          </div>
+          <div className="h-1.5 bg-[var(--app-bg)] rounded-full overflow-hidden">
+            <div className="h-full rounded-full bg-[var(--navy)] transition-all" style={{ width: `${pct}%` }} />
+          </div>
+        </div>
+      )}
+
+      <button onClick={runBatch} disabled={running}
+        className="btn-primary px-6 py-3 flex items-center gap-2 text-[13.5px]">
+        {running
+          ? <><RefreshCw size={14} className="animate-spin" /> Sweeping...</>
+          : <><Play size={14} /> Run next batch now</>}
+      </button>
+
+      {result && (
+        <div className="bg-[var(--app-bg)] rounded-xl p-4 space-y-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              ["Combos", result.combosProcessed, "text-[var(--ink)]"],
+              ["Found", result.totalFound, "text-[var(--ink)]"],
+              ["Inserted", result.totalInserted, "text-green-600"],
+              ["Skipped", result.totalSkipped, "text-[var(--ink-faint)]"],
+            ].map(([label, val, color]) => (
+              <div key={label as string} className="bg-white rounded-xl px-3 py-2">
+                <p className="text-[10.5px] font-bold uppercase text-[var(--ink-faint)]">{label}</p>
+                <p className={`font-display text-[1.4rem] ${color}`}>{val}</p>
+              </div>
+            ))}
+          </div>
+          <div className="space-y-1">
+            {result.combos.map((c, i) => (
+              <p key={i} className="text-[11.5px] font-mono text-[var(--ink-soft)]">
+                {c.trade} · {c.location} — found {c.found}, inserted {c.inserted}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function YellowPagesScraper() {
   const [trade,    setTrade]    = useState("electrician");
   const [suburb,   setSuburb]   = useState("Melbourne VIC");
@@ -460,49 +558,6 @@ function YellowPagesScraper() {
   const [pages,    setPages]    = useState(3);
   const [running,  setRunning]  = useState(false);
   const [result,   setResult]   = useState<{found:number;inserted:number;skipped:number;pagesScraped:number}|null>(null);
-
-  const TRADES = [
-    "electrician","plumber","carpenter","roofer","painter",
-    "tiler","landscaper","builder","concreter","plasterer",
-    "airconditioning","solar","locksmith","glazier","fencer",
-  ];
-
-  // Major AU suburbs/cities with postcodes for targeted scraping
-  const LOCATIONS = [
-    // NSW
-    { label: "Sydney CBD, NSW",         suburb: "Sydney NSW",          postcode: "2000" },
-    { label: "Parramatta, NSW",          suburb: "Parramatta NSW",      postcode: "2150" },
-    { label: "Newcastle, NSW",           suburb: "Newcastle NSW",       postcode: "2300" },
-    { label: "Wollongong, NSW",          suburb: "Wollongong NSW",      postcode: "2500" },
-    { label: "Penrith, NSW",             suburb: "Penrith NSW",         postcode: "2750" },
-    { label: "Blacktown, NSW",           suburb: "Blacktown NSW",       postcode: "2148" },
-    // VIC
-    { label: "Melbourne CBD, VIC",       suburb: "Melbourne VIC",       postcode: "3000" },
-    { label: "Geelong, VIC",             suburb: "Geelong VIC",         postcode: "3220" },
-    { label: "Ballarat, VIC",            suburb: "Ballarat VIC",        postcode: "3350" },
-    { label: "Bendigo, VIC",             suburb: "Bendigo VIC",         postcode: "3550" },
-    { label: "Dandenong, VIC",           suburb: "Dandenong VIC",       postcode: "3175" },
-    // QLD
-    { label: "Brisbane CBD, QLD",        suburb: "Brisbane QLD",        postcode: "4000" },
-    { label: "Gold Coast, QLD",          suburb: "Gold Coast QLD",      postcode: "4217" },
-    { label: "Sunshine Coast, QLD",      suburb: "Sunshine Coast QLD",  postcode: "4557" },
-    { label: "Townsville, QLD",          suburb: "Townsville QLD",      postcode: "4810" },
-    { label: "Cairns, QLD",              suburb: "Cairns QLD",          postcode: "4870" },
-    { label: "Toowoomba, QLD",           suburb: "Toowoomba QLD",       postcode: "4350" },
-    // WA
-    { label: "Perth CBD, WA",            suburb: "Perth WA",            postcode: "6000" },
-    { label: "Fremantle, WA",            suburb: "Fremantle WA",        postcode: "6160" },
-    { label: "Mandurah, WA",             suburb: "Mandurah WA",         postcode: "6210" },
-    // SA
-    { label: "Adelaide CBD, SA",         suburb: "Adelaide SA",         postcode: "5000" },
-    { label: "Mount Gambier, SA",        suburb: "Mount Gambier SA",    postcode: "5290" },
-    // TAS
-    { label: "Hobart, TAS",              suburb: "Hobart TAS",          postcode: "7000" },
-    // NT
-    { label: "Darwin, NT",               suburb: "Darwin NT",           postcode: "0800" },
-    // ACT
-    { label: "Canberra, ACT",            suburb: "Canberra ACT",        postcode: "2600" },
-  ];
 
   function handleLocationChange(label: string) {
     const loc = LOCATIONS.find(l => l.label === label);
