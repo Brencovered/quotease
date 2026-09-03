@@ -130,3 +130,51 @@ export async function runDirectoryExpansionSweep(): Promise<SweepResult> {
 
   return result;
 }
+
+/**
+ * Scrapes one specific trade+suburb combo on demand (not picked
+ * automatically) and records it in the same coverage table the
+ * automatic sweep uses - so a manually-targeted combo still counts as
+ * covered and the automatic sweep won't redundantly re-pick it later.
+ * This is what closes the gap the original one-off manual Yellow
+ * Pages tool had: that one scrapes fine, but never told the coverage
+ * tracker anything happened, so the automated sweep had no way to
+ * know that combo was already done.
+ *
+ * location_label for a custom combo is just the suburb string itself
+ * (trimmed) - the predefined matrix's labels always look like "City,
+ * ST" (see lib/tradeLocationMatrix.ts), so a freeform suburb entry
+ * naturally won't collide with those, and if the exact same custom
+ * suburb is entered again later, it's correctly recognised as the
+ * same coverage row rather than creating a duplicate.
+ */
+export async function scrapeCustomCombo(
+  trade: string,
+  suburb: string,
+  postcode: string,
+  pages: number,
+  admin: ReturnType<typeof createAdminClient>
+): Promise<SweepResult> {
+  const locationLabel = suburb.trim();
+  const scraped = await scrapeYellowPagesCombo(trade, suburb, postcode, pages, admin);
+
+  await admin.from("directory_scrape_coverage").upsert({
+    trade,
+    location_label: locationLabel,
+    suburb,
+    postcode: postcode || null,
+    last_scraped_at: new Date().toISOString(),
+    last_found: scraped.found,
+    last_inserted: scraped.inserted,
+  }, { onConflict: "trade,location_label" });
+
+  return {
+    combosProcessed: 1,
+    totalFound: scraped.found,
+    totalInserted: scraped.inserted,
+    totalSkipped: scraped.skipped,
+    combos: [{ trade, location: locationLabel, found: scraped.found, inserted: scraped.inserted }],
+    remainingNeverScraped: -1, // not meaningful for a single custom run - see UI, this field is hidden for custom results
+    matrixSize: TRADES.length * LOCATIONS.length,
+  };
+}

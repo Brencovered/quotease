@@ -474,6 +474,9 @@ function DirectoryExpansionSweepPanel() {
     combos: { trade: string; location: string; found: number; inserted: number }[];
     remainingNeverScraped: number; matrixSize: number;
   } | null>(null);
+  const [customTrade, setCustomTrade] = useState("");
+  const [customSuburb, setCustomSuburb] = useState("");
+  const [customPostcode, setCustomPostcode] = useState("");
 
   async function loadStats() {
     const res = await fetch("/api/admin/expand-directory");
@@ -482,9 +485,19 @@ function DirectoryExpansionSweepPanel() {
 
   useEffect(() => { loadStats(); }, []);
 
+  const hasCustom = customTrade.trim() !== "" && customSuburb.trim() !== "";
+
   async function runBatch() {
     setRunning(true);
-    const res = await fetch("/api/admin/expand-directory", { method: "POST" });
+    const res = await fetch("/api/admin/expand-directory", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(
+        hasCustom
+          ? { trade: customTrade.trim(), suburb: customSuburb.trim(), postcode: customPostcode.trim() }
+          : {}
+      ),
+    });
     const data = await res.json();
     setResult(data);
     setRunning(false);
@@ -500,7 +513,7 @@ function DirectoryExpansionSweepPanel() {
         <p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5">
           Automatically works through every trade x location combination via Yellow Pages, so growing the directory
           doesn&apos;t mean picking a combo and clicking scrape one at a time. Runs once a day on its own -
-          this is for running extra batches now.
+          this is for running extra batches now, or targeting a specific trade and suburb.
         </p>
       </div>
 
@@ -516,10 +529,42 @@ function DirectoryExpansionSweepPanel() {
         </div>
       )}
 
+      {/* Optional: target a specific trade + suburb instead of letting the
+          sweep pick automatically. Still recorded in the same coverage
+          table (unlike the plain Yellow Pages Scraper panel below, which
+          scrapes fine but never tells the coverage tracker anything
+          happened) - so a manually-targeted combo counts as covered and
+          won't get redundantly re-picked by a later automatic run. */}
+      <div>
+        <p className="text-[11px] font-bold uppercase text-[var(--ink-faint)] mb-2">Target a specific trade + suburb (optional)</p>
+        <div className="grid sm:grid-cols-3 gap-2">
+          <input
+            value={customTrade}
+            onChange={e => setCustomTrade(e.target.value)}
+            placeholder="Trade, e.g. electrician"
+            className="app-field text-[13px]"
+          />
+          <input
+            value={customSuburb}
+            onChange={e => setCustomSuburb(e.target.value)}
+            placeholder="Suburb, e.g. Coburg VIC"
+            className="app-field text-[13px]"
+          />
+          <input
+            value={customPostcode}
+            onChange={e => setCustomPostcode(e.target.value)}
+            placeholder="Postcode (optional)"
+            className="app-field text-[13px]"
+          />
+        </div>
+      </div>
+
       <button onClick={runBatch} disabled={running}
         className="btn-primary px-6 py-3 flex items-center gap-2 text-[13.5px]">
         {running
           ? <><RefreshCw size={14} className="animate-spin" /> Sweeping...</>
+          : hasCustom
+          ? <><Play size={14} /> Scrape {customTrade.trim()} in {customSuburb.trim()}</>
           : <><Play size={14} /> Run next batch now</>}
       </button>
 
