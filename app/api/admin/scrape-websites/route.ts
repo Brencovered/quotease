@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdminEmail } from "@/lib/admin";
-import { fetchWebsiteHtml, extractLogoUrl, extractBlurb, extractPhotos, extractAbout, extractServices, extractPhone, extractSocialLinks, extractYearsExperience, extractLicenses, scrapeSubPages } from "@/lib/websiteScraper";
+import { fetchWebsiteHtml, extractLogoUrl, extractBlurb, extractPhotos, extractAbout, extractServices, extractPhone, extractSocialLinks, extractYearsExperience, extractLicenses, scrapeSubPages, scrapeGalleryPhotos, scrapeTestimonials } from "@/lib/websiteScraper";
 
 const BATCH = 30;
 
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
   type ListingRow = {
     id: string; business_name: string; website_url: string | null; logo_url: string | null;
     blurb: string | null; photo_references: string[] | null; services_offered: string[] | null;
-    scraped_contact_phone: string | null; trades: string[] | null;
+    scraped_contact_phone: string | null; trades: string[] | null; testimonials: unknown[] | null;
   };
 
   // google_photos resolves the raw Google Place photo tokens already
@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
   } else {
     let query = admin
       .from("directory_listing")
-      .select("id, business_name, website_url, logo_url, blurb, photo_references, services_offered, scraped_contact_phone, trades", { count: "exact" })
+      .select("id, business_name, website_url, logo_url, blurb, photo_references, services_offered, scraped_contact_phone, trades, testimonials", { count: "exact" })
       .not("website_url", "is", null)
       .eq("is_claimed", false);
 
@@ -263,6 +263,15 @@ export async function POST(req: NextRequest) {
       if (lics.length > 0) { updates.licenses = lics; updated.push(`${lics.length} licence(s)`); }
     }
 
+    // Testimonials - free, billing-independent complement to Google
+    // reviews (which require Places API billing, currently disabled on
+    // the Google Cloud project - confirmed via runtime logs, every
+    // review call is failing REQUEST_DENIED right now).
+    if (mode === "all" && !listing.testimonials) {
+      const testimonials = await scrapeTestimonials(html, url);
+      if (testimonials.length > 0) { updates.testimonials = testimonials; updated.push(`${testimonials.length} testimonial(s)`); }
+    }
+
     // Services from sub-pages (only in all mode - extra network call)
     if (mode === "all" && !(listing as {services_offered?: unknown}).services_offered) {
       const subs = await scrapeSubPages(html, url);
@@ -293,7 +302,13 @@ export async function POST(req: NextRequest) {
       const alreadyCached = existing.filter(r => r.startsWith("http"));
 
       if (alreadyCached.length < 2) {
-        const photoUrls = extractPhotos(html, url);
+        const photoUrls = [...extractPhotos(html, url)];
+        // Gallery page often has the best real job photos - homepage
+        // hero images are frequently stock imagery or generic banners.
+        const galleryPhotos = await scrapeGalleryPhotos(html, url);
+        for (const p of galleryPhotos) {
+          if (!photoUrls.includes(p)) photoUrls.push(p);
+        }
         const newPhotos: string[] = [...alreadyCached];
 
         for (let i = 0; i < photoUrls.length && newPhotos.length < 4; i++) {

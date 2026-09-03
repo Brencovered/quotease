@@ -61,6 +61,108 @@ export async function fetchWebsiteHtml(url: string): Promise<string | null> {
   }
 }
 
+/**
+ * Parses schema.org LocalBusiness (or Organization, or any of the many
+ * trade-specific subtypes - Electrician, Plumber, RoofingContractor,
+ * HomeAndConstructionBusiness, etc) JSON-LD embedded in a page, when
+ * present. This is free, structured data the business's own site
+ * already provides for search engines - reliable and markup-independent
+ * in a way regex never can be, since it doesn't matter how the page is
+ * laid out visually if the JSON-LD is there. Consolidates what used to
+ * be three separate, inconsistent inline JSON-LD parsers (one each in
+ * extractPhotos here, and a fourth copy of the address-only logic in
+ * scrape-url/route.ts) into a single source every extractor below
+ * checks first, before falling back to markup-dependent regex.
+ *
+ * Handles the common real-world JSON-LD shapes: a single object, a
+ * top-level array of objects, and the @graph wrapper pattern. Two-pass
+ * selection rather than "first item with a name" - a page's @graph
+ * commonly includes a WebSite entry (which also has its own "name")
+ * alongside the actual business entry, and picking whichever comes
+ * first would grab the site's name instead of the business's real
+ * telephone/address/photos. Pass one requires a strong signal
+ * (telephone or address) across every block; only if nothing in the
+ * whole page has that does pass two fall back to a bare name match.
+ */
+export interface JsonLdBusiness {
+  name?: string;
+  telephone?: string;
+  description?: string;
+  images: string[];
+  sameAs: string[];
+  addressLocality?: string;
+  addressRegion?: string;
+  postalCode?: string;
+  priceRange?: string;
+}
+
+export function extractJsonLdBusiness(html: string): JsonLdBusiness | null {
+  const blocks = html.match(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]+?)<\/script>/gi);
+  if (!blocks) return null;
+
+  function toBusiness(item: Record<string, unknown>): JsonLdBusiness {
+    const addr = (item.address as Record<string, unknown>) ?? {};
+    const images: string[] = [];
+    if (typeof item.image === "string") images.push(item.image);
+    else if (Array.isArray(item.image)) {
+      for (const i of item.image) if (typeof i === "string") images.push(i);
+    } else if (item.image && typeof item.image === "object" && typeof (item.image as Record<string, unknown>).url === "string") {
+      images.push((item.image as Record<string, unknown>).url as string);
+    }
+    const sameAs: string[] = Array.isArray(item.sameAs)
+      ? item.sameAs.filter((s): s is string => typeof s === "string")
+      : [];
+    return {
+      name: typeof item.name === "string" ? item.name : undefined,
+      telephone: typeof item.telephone === "string" ? item.telephone : undefined,
+      description: typeof item.description === "string" ? item.description : undefined,
+      images,
+      sameAs,
+      addressLocality: typeof addr.addressLocality === "string" ? addr.addressLocality : undefined,
+      addressRegion: typeof addr.addressRegion === "string" ? addr.addressRegion : undefined,
+      postalCode: typeof addr.postalCode === "string" ? addr.postalCode : undefined,
+      priceRange: typeof item.priceRange === "string" ? item.priceRange : undefined,
+    };
+  }
+
+  function parseAllItems(): Record<string, unknown>[] {
+    const all: Record<string, unknown>[] = [];
+    for (const block of blocks!) {
+      try {
+        const jsonText = block.replace(/^<script[^>]*>/i, "").replace(/<\/script>$/i, "");
+        const data = JSON.parse(jsonText);
+        const items: Record<string, unknown>[] = Array.isArray(data)
+          ? data
+          : Array.isArray((data as Record<string, unknown>)["@graph"])
+          ? (data as Record<string, unknown>)["@graph"] as Record<string, unknown>[]
+          : [data];
+        for (const item of items) if (item && typeof item === "object") all.push(item);
+      } catch {
+        // malformed JSON-LD on this block - skip it, keep checking the rest
+      }
+    }
+    return all;
+  }
+
+  const items = parseAllItems();
+
+  // Pass one: telephone or a real address - the strong signals that
+  // distinguish an actual business entry from a WebSite/Organization
+  // wrapper that merely shares the same page.
+  for (const item of items) {
+    const addr = (item.address as Record<string, unknown>) ?? {};
+    if (item.telephone || addr.addressLocality || addr.postalCode) return toBusiness(item);
+  }
+
+  // Pass two: nothing had a strong signal anywhere on the page - fall
+  // back to the first item with at least a name.
+  for (const item of items) {
+    if (item.name) return toBusiness(item);
+  }
+
+  return null;
+}
+
 export function extractLogoUrl(html: string, baseUrl: string): string | null {
   const logoImg = html.match(/<img[^>]+(?:src|alt)=[\"'][^\"']*logo[^\"']*[\"'][^>]*>/i);
   if (logoImg) {
@@ -76,6 +178,13 @@ export function extractLogoUrl(html: string, baseUrl: string): string | null {
 }
 
 export function extractBlurb(html: string): string | null {
+  // JSON-LD description first - it's the business's own words for
+  // exactly this purpose, more reliable than guessing which meta tag
+  // holds real copy versus boilerplate.
+  const jsonLd = extractJsonLdBusiness(html);
+  if (jsonLd?.description && jsonLd.description.length >= 20) {
+    return decodeHtmlEntities(jsonLd.description.trim());
+  }
   const desc = html.match(/<meta[^>]+name=[\"']description[\"'][^>]+content=[\"']([^\"']{20,300})[\"']/i)
     ?? html.match(/<meta[^>]+content=[\"']([^\"']{20,300})[\"'][^>]+name=[\"']description[\"']/i);
   if (desc) return decodeHtmlEntities(desc[1].trim());
@@ -112,16 +221,9 @@ export function extractPhotos(html: string, baseUrl: string): string[] {
     for (const m of imgMatches) add(m[1]);
   }
 
-  const jsonLd = html.match(/<script[^>]+type=[\"']application\/ld\+json[\"'][^>]*>([\s\S]+?)<\/script>/gi);
+  const jsonLd = extractJsonLdBusiness(html);
   if (jsonLd) {
-    for (const block of jsonLd) {
-      try {
-        const data = JSON.parse(block.replace(/<[^>]+>/g, ""));
-        const img = data.image ?? data["@graph"]?.[0]?.image;
-        if (typeof img === "string") add(img);
-        else if (Array.isArray(img)) img.slice(0, 3).forEach((i: string) => add(i));
-      } catch {}
-    }
+    for (const img of jsonLd.images.slice(0, 3)) add(img);
   }
 
   return photos.slice(0, 6);
@@ -443,8 +545,11 @@ export function extractPhone(html: string): string | null {
   const tel = html.match(/href=["']tel:([+\d\s\-().]{8,20})["']/i);
   if (tel) return tel[1].replace(/\s+/g, " ").trim();
 
+  const jsonLd = extractJsonLdBusiness(html);
+  if (jsonLd?.telephone) return jsonLd.telephone.trim();
+
   // AU mobile/landline patterns
-  const auPhone = html.match(/((?:04|04\d\d|\(0[2-8]\)|\d{2})\s*[\d\s\-]{6,10}\d)/);
+  const auPhone = html.match(/((?:04|04\d\d|\(0[2-8]\)|\d{2})\s*[\d\s\-]{6,10}\d)/);
   if (auPhone) return auPhone[1].trim();
 
   return null;
@@ -456,13 +561,29 @@ export function extractPhone(html: string): string | null {
 export function extractSocialLinks(html: string): { facebook: string | null; instagram: string | null } {
   const result = { facebook: null as string | null, instagram: null as string | null };
 
+  const jsonLd = extractJsonLdBusiness(html);
+  if (jsonLd) {
+    for (const link of jsonLd.sameAs) {
+      if (!result.facebook && /^https?:\/\/(www\.)?facebook\.com\//i.test(link)) {
+        result.facebook = link.split("?")[0].replace(/\/$/, "");
+      }
+      if (!result.instagram && /^https?:\/\/(www\.)?instagram\.com\//i.test(link)) {
+        result.instagram = link.split("?")[0].replace(/\/$/, "");
+      }
+    }
+  }
+
   // Facebook
-  const fb = html.match(/href=["\'](https?:\/\/(?:www\.)?facebook\.com\/(?!sharer|share|dialog)[a-zA-Z0-9._/-]{2,80})["\']/i);
-  if (fb) result.facebook = fb[1].split("?")[0].replace(/\/$/, "");
+  if (!result.facebook) {
+    const fb = html.match(/href=["\'](https?:\/\/(?:www\.)?facebook\.com\/(?!sharer|share|dialog)[a-zA-Z0-9._/-]{2,80})["\']/i);
+    if (fb) result.facebook = fb[1].split("?")[0].replace(/\/$/, "");
+  }
 
   // Instagram
-  const ig = html.match(/href=["\'](https?:\/\/(?:www\.)?instagram\.com\/[a-zA-Z0-9._]{2,60}(?:\/)?)["\']/i);
-  if (ig) result.instagram = ig[1].split("?")[0].replace(/\/$/, "");
+  if (!result.instagram) {
+    const ig = html.match(/href=["\'](https?:\/\/(?:www\.)?instagram\.com\/[a-zA-Z0-9._]{2,60}(?:\/)?)["\']/i);
+    if (ig) result.instagram = ig[1].split("?")[0].replace(/\/$/, "");
+  }
 
   return result;
 }
@@ -610,4 +731,120 @@ export async function scrapeSubPages(
   }
 
   return result;
+}
+
+/**
+ * Fetches a business's gallery/portfolio page (if linked from the
+ * homepage) and extracts photos from it. Kept separate from
+ * scrapeSubPages rather than folded in, since photo-only scraper runs
+ * shouldn't also pay for an about-page and services-page fetch they
+ * don't need - most tradie sites put their best, most representative
+ * job photos here rather than on the homepage hero (which is often
+ * stock imagery or a generic banner), so this directly targets photo
+ * coverage without depending on what else a given run is collecting.
+ */
+export async function scrapeGalleryPhotos(html: string, baseUrl: string): Promise<string[]> {
+  const galleryHref = html.match(/href=["\'](\/[^"\']*(?:gallery|portfolio|our-projects|recent-jobs|case-studies)[^"\']*)["\']/i);
+  if (!galleryHref) return [];
+
+  try {
+    const galleryUrl = new URL(galleryHref[1], baseUrl).href;
+    if (galleryUrl === baseUrl) return [];
+    const galleryHtml = await fetchWebsiteHtml(galleryUrl);
+    if (!galleryHtml) return [];
+    return extractPhotos(galleryHtml, galleryUrl);
+  } catch {
+    return [];
+  }
+}
+
+export interface Testimonial {
+  text: string;
+  author: string | null;
+}
+
+/**
+ * Extracts testimonial quotes directly from a page's HTML. Free,
+ * billing-independent alternative/complement to Google reviews (which
+ * require Places API billing to be enabled - not something this can
+ * substitute for entirely, since it's only ever what the business
+ * chose to publish about themselves, not independently verified
+ * feedback, but it's real customer words at zero ongoing cost).
+ *
+ * Two strategies: <blockquote> is the semantically correct HTML tag
+ * for a quoted testimonial and plenty of sites use it properly; class/
+ * id containing "testimonial" catches the sites that don't (deliberately
+ * not matching on "review" alone, since that word shows up constantly
+ * in unrelated content like "leave us a review" CTAs and would produce
+ * a lot of noise). For each quote, checks for a <cite> tag or a short
+ * bolded/name-shaped line immediately after as the likely author -
+ * best-effort, not always present, so author is nullable.
+ */
+export function extractTestimonials(html: string): Testimonial[] {
+  const cleaned = stripChrome(html);
+  const results: Testimonial[] = [];
+  const seen = new Set<string>();
+
+  function clean(text: string): string {
+    return decodeHtmlEntities(text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim());
+  }
+
+  function add(text: string, author: string | null) {
+    const t = clean(text).replace(/^["\u201c]|["\u201d]$/g, "").trim();
+    if (t.length < 20 || t.length > 500) return;
+    const key = t.toLowerCase().slice(0, 80);
+    if (seen.has(key)) return;
+    seen.add(key);
+    results.push({ text: t, author: author ? clean(author).replace(/^[-–—,\s]+/, "") : null });
+    return results.length >= 8;
+  }
+
+  // Strategy 1: <blockquote> - the correct tag for this, so highest confidence
+  const blockquotes = cleaned.matchAll(/<blockquote[^>]*>([\s\S]{0,800}?)<\/blockquote>/gi);
+  for (const m of blockquotes) {
+    const cite = m[1].match(/<cite[^>]*>([\s\S]{0,80}?)<\/cite>/i);
+    const withoutCite = cite ? m[1].replace(cite[0], "") : m[1];
+    if (add(withoutCite, cite ? cite[1] : null)) break;
+  }
+
+  // Strategy 2: containers explicitly classed as testimonials
+  if (results.length < 8) {
+    const containers = cleaned.matchAll(/<(?:div|section|article)[^>]*class=["\'][^"\']*testimonial[^"\']*["\'][^>]*>([\s\S]{0,600}?)<\/(?:div|section|article)>/gi);
+    for (const m of containers) {
+      const p = m[1].match(/<p[^>]*>([\s\S]{20,400}?)<\/p>/i);
+      if (!p) continue;
+      const rest = m[1].slice(m[1].indexOf(p[0]) + p[0].length);
+      const nameMatch = rest.match(/<(?:cite|strong|b|span|h[3-5])[^>]*>([\s\S]{2,60}?)<\/(?:cite|strong|b|span|h[3-5])>/i);
+      if (add(p[1], nameMatch ? nameMatch[1] : null)) break;
+    }
+  }
+
+  return results.slice(0, 8);
+}
+
+/**
+ * Fetches a business's testimonials/reviews page (if linked from the
+ * homepage) and extracts quotes from it, falling back to checking the
+ * homepage itself if there's no dedicated page - plenty of smaller
+ * sites just put a testimonials block near the bottom of the homepage
+ * rather than a separate page.
+ */
+export async function scrapeTestimonials(html: string, baseUrl: string): Promise<Testimonial[]> {
+  const fromHomepage = extractTestimonials(html);
+  if (fromHomepage.length >= 3) return fromHomepage;
+
+  const testimonialHref = html.match(/href=["\'](\/[^"\']*(?:testimonials?|reviews?|client-feedback|what-our-clients-say|success-stories)[^"\']*)["\']/i);
+  if (!testimonialHref) return fromHomepage;
+
+  try {
+    const url = new URL(testimonialHref[1], baseUrl).href;
+    if (url === baseUrl) return fromHomepage;
+    const pageHtml = await fetchWebsiteHtml(url);
+    if (!pageHtml) return fromHomepage;
+    const fromPage = extractTestimonials(pageHtml);
+    // Prefer the dedicated page's results when it actually found more
+    return fromPage.length > fromHomepage.length ? fromPage : fromHomepage;
+  } catch {
+    return fromHomepage;
+  }
 }
