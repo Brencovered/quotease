@@ -50,26 +50,48 @@ export async function POST(req: NextRequest) {
 
   const admin = createAdminClient();
 
-  // Build targeted query based on mode - only fetch listings that actually
-  // need the specific field we're trying to fill
-  let query = admin
-    .from("directory_listing")
-    .select("id, business_name, website_url, logo_url, blurb, photo_references, services_offered, scraped_contact_phone, trades", { count: "exact" })
-    .not("website_url", "is", null)
-    .eq("is_claimed", false);
+  type ListingRow = {
+    id: string; business_name: string; website_url: string | null; logo_url: string | null;
+    blurb: string | null; photo_references: string[] | null; services_offered: string[] | null;
+    scraped_contact_phone: string | null; trades: string[] | null;
+  };
+
+  let listings: ListingRow[] | null;
+  let count: number;
 
   if (mode === "photos" || mode === "all") {
-    // Listings where photo_references is empty OR all refs are Google tokens (not http)
-    query = query.or("photos_cached_at.is.null,photo_references.is.null,photo_references.eq.{}");
-  } else if (mode === "logo") {
-    query = query.is("logo_url", null);
-  } else if (mode === "blurb") {
-    query = query.is("blurb", null);
-  }
+    // photo_references IS NULL/empty misses the far more common real
+    // case: raw Google Place photo tokens sitting there from the
+    // original import, which the frontend correctly won't render (only
+    // http URLs get shown) but which the old .is()/.eq() filter treated
+    // as "has photos" since the column wasn't technically empty. Fixed
+    // via a proper Postgres function (see migration) that checks for at
+    // least one actually-renderable http entry, not just non-null.
+    const [{ data: rpcListings }, { data: rpcCount }] = await Promise.all([
+      admin.rpc("listings_needing_photo_recache", { p_limit: BATCH }),
+      admin.rpc("count_listings_needing_photo_recache"),
+    ]);
+    listings = (rpcListings ?? []) as ListingRow[];
+    count = (rpcCount as number | null) ?? 0;
+  } else {
+    let query = admin
+      .from("directory_listing")
+      .select("id, business_name, website_url, logo_url, blurb, photo_references, services_offered, scraped_contact_phone, trades", { count: "exact" })
+      .not("website_url", "is", null)
+      .eq("is_claimed", false);
 
-  const { data: listings, count } = await query
-    .order("website_scraped_at", { ascending: true, nullsFirst: true })
-    .limit(BATCH);
+    if (mode === "logo") {
+      query = query.is("logo_url", null);
+    } else if (mode === "blurb") {
+      query = query.is("blurb", null);
+    }
+
+    const res = await query
+      .order("website_scraped_at", { ascending: true, nullsFirst: true })
+      .limit(BATCH);
+    listings = res.data as ListingRow[] | null;
+    count = res.count ?? 0;
+  }
 
   // Further filter in code: skip listings that already have what we need
   const needsWork = (listings ?? []).filter(listing => {
@@ -250,7 +272,7 @@ export async function GET(req: NextRequest) {
   const [total, withWebsite, withPhotos, withLogo, withBlurb, withServices, noWebsite] = await Promise.all([
     admin.from("directory_listing").select("id", { count: "exact", head: true }).then(r => r.count ?? 0),
     admin.from("directory_listing").select("id", { count: "exact", head: true }).not("website_url", "is", null).then(r => r.count ?? 0),
-    admin.from("directory_listing").select("id", { count: "exact", head: true }).not("photos_cached_at", "is", null).then(r => r.count ?? 0),
+    admin.rpc("count_listings_with_renderable_photo").then(r => (r.data as number | null) ?? 0),
     admin.from("directory_listing").select("id", { count: "exact", head: true }).not("logo_url", "is", null).then(r => r.count ?? 0),
     admin.from("directory_listing").select("id", { count: "exact", head: true }).not("blurb", "is", null).then(r => r.count ?? 0),
     admin.from("directory_listing").select("id", { count: "exact", head: true }).not("services_offered", "is", null).then(r => r.count ?? 0),
@@ -259,18 +281,28 @@ export async function GET(req: NextRequest) {
 
   const stats = { total, withWebsite, withPhotos, withLogo, withBlurb, withServices, noWebsite };
 
-  // Review list: most recently scraped listings that got a services
-  // result, newest first, so a just-run batch is at the top. Exists so
-  // quality can be checked against real results per business - not just
-  // aggregate counts - before trusting this at scale. Capped at 100.
+  // Review list: most recently scraped listings, newest first, so a
+  // just-run batch is at the top. Shows the full picture per listing
+  // (photos, logo, blurb, services, phone, years, licences) rather than
+  // just services, since aggregate stats above can't tell you whether
+  // any *specific* business actually got enriched properly. Capped at
+  // 100. photo_references is filtered to real http entries here (not
+  // raw Google tokens) so the UI only ever shows photos that would
+  // actually render on the live listing page.
   if (new URL(req.url).searchParams.get("recent") === "1") {
-    const { data: recent } = await admin
+    const { data: recentRaw } = await admin
       .from("directory_listing")
-      .select("id, business_name, suburb, trades, website_url, services_offered, services_extraction_method, blurb, logo_url, website_scraped_at")
-      .not("services_offered", "is", null)
+      .select("id, business_name, suburb, trades, website_url, services_offered, services_extraction_method, blurb, logo_url, photo_references, years_experience, licenses, scraped_contact_phone, website_scraped_at")
+      .not("website_scraped_at", "is", null)
       .order("website_scraped_at", { ascending: false, nullsFirst: false })
       .limit(100);
-    return NextResponse.json({ ...stats, recent: recent ?? [] });
+
+    const recent = (recentRaw ?? []).map((r) => ({
+      ...r,
+      photo_references: (r.photo_references ?? []).filter((p: string) => p.startsWith("http")),
+    }));
+
+    return NextResponse.json({ ...stats, recent });
   }
 
   return NextResponse.json(stats);

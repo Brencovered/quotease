@@ -28,8 +28,14 @@ interface RecentListing {
   services_extraction_method: "structural" | "keyword" | null;
   blurb: string | null;
   logo_url: string | null;
+  photo_references: string[]; // pre-filtered server-side to real http entries only
+  years_experience: number | null;
+  licenses: { type: string; number: string }[] | null;
+  scraped_contact_phone: string | null;
   website_scraped_at: string | null;
 }
+
+type CompletenessFilter = "all" | "missing_photos" | "missing_services" | "fully_enriched";
 
 interface RunResult {
   processed: number;
@@ -52,6 +58,7 @@ export default function AdminWebsiteScraper() {
   const [recent,    setRecent]    = useState<RecentListing[] | null>(null);
   const [recentLoading, setRecentLoading] = useState(false);
   const [methodFilter, setMethodFilter] = useState<"all" | "structural" | "keyword">("all");
+  const [completenessFilter, setCompletenessFilter] = useState<CompletenessFilter>("all");
 
   async function loadStats() {
     const res = await fetch("/api/admin/scrape-websites");
@@ -92,6 +99,26 @@ export default function AdminWebsiteScraper() {
   }
 
   const pct = (n: number) => stats ? Math.round((n / stats.total) * 100) : 0;
+
+  function completeness(r: RecentListing) {
+    return {
+      logo: !!r.logo_url,
+      photos: r.photo_references.length > 0,
+      blurb: !!r.blurb,
+      services: !!(r.services_offered && r.services_offered.length > 0),
+      phone: !!r.scraped_contact_phone,
+      years: r.years_experience != null,
+      licenses: !!(r.licenses && r.licenses.length > 0),
+    };
+  }
+
+  function passesCompletenessFilter(r: RecentListing, filter: CompletenessFilter) {
+    const c = completeness(r);
+    if (filter === "missing_photos") return !c.photos;
+    if (filter === "missing_services") return !c.services;
+    if (filter === "fully_enriched") return c.logo && c.photos && c.blurb && c.services;
+    return true;
+  }
 
   return (
     <div className="space-y-5">
@@ -238,17 +265,21 @@ export default function AdminWebsiteScraper() {
       )}
 
       {/* Review results - per-listing view so quality can actually be
-          judged, not just aggregate counts. Especially important for
-          the keyword-match fallback: "structural" means the site's own
-          markup produced it (higher confidence), "keyword" means it was
-          inferred from a curated per-trade phrase list matched against
-          plain text (worth spot-checking). */}
+          judged, not just aggregate counts. Shows every enriched field,
+          not just services, with real photo thumbnails (already
+          filtered server-side to http entries, so what's shown here is
+          exactly what would render on the live listing page). Two
+          independent filters: completeness (what's missing) and, for
+          services specifically, extraction method - "structural" means
+          the site's own markup produced it (higher confidence),
+          "keyword" means it was inferred from a curated per-trade
+          phrase list matched against plain text (worth spot-checking). */}
       <div className="card space-y-3">
         <div className="flex items-center justify-between">
           <div>
             <p className="section-tag">Review results</p>
             <p className="text-[12px] text-[var(--ink-faint)] mt-0.5">
-              Most recently scraped listings with services extracted, newest first
+              Most recently scraped listings, newest first
             </p>
           </div>
           <button
@@ -263,75 +294,140 @@ export default function AdminWebsiteScraper() {
         </div>
 
         {recent !== null && recent.length > 0 && (
-          <div className="flex items-center gap-1.5">
-            {(["all", "structural", "keyword"] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setMethodFilter(f)}
-                className="px-2.5 py-1 rounded-full text-[11.5px] font-semibold transition-colors"
-                style={{
-                  background: methodFilter === f ? "var(--navy)" : "var(--app-bg)",
-                  color: methodFilter === f ? "white" : "var(--ink-faint)",
-                }}
-              >
-                {f === "all" ? "All" : f === "structural" ? "From site's own list" : "Keyword match"}
-                {f !== "all" && ` (${recent.filter(r => r.services_extraction_method === f).length})`}
-              </button>
-            ))}
-          </div>
+          <>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {([
+                ["all", "All"],
+                ["missing_photos", "Missing photos"],
+                ["missing_services", "Missing services"],
+                ["fully_enriched", "Fully enriched"],
+              ] as [CompletenessFilter, string][]).map(([f, label]) => (
+                <button
+                  key={f}
+                  onClick={() => setCompletenessFilter(f)}
+                  className="px-2.5 py-1 rounded-full text-[11.5px] font-semibold transition-colors"
+                  style={{
+                    background: completenessFilter === f ? "var(--navy)" : "var(--app-bg)",
+                    color: completenessFilter === f ? "white" : "var(--ink-faint)",
+                  }}
+                >
+                  {label}
+                  {f !== "all" && ` (${recent.filter(r => passesCompletenessFilter(r, f)).length})`}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] text-[var(--ink-faint)] mr-1">Services from:</span>
+              {(["all", "structural", "keyword"] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setMethodFilter(f)}
+                  className="px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors"
+                  style={{
+                    background: methodFilter === f ? "var(--ink)" : "var(--app-bg)",
+                    color: methodFilter === f ? "white" : "var(--ink-faint)",
+                  }}
+                >
+                  {f === "all" ? "Any" : f === "structural" ? "Site's own list" : "Keyword match"}
+                </button>
+              ))}
+            </div>
+          </>
         )}
 
         {recent !== null && recent.length === 0 && !recentLoading && (
           <p className="text-[12.5px] text-[var(--ink-faint)] py-4 text-center">
-            No listings with extracted services yet - run a batch above first.
+            No scraped listings yet - run a batch above first.
           </p>
         )}
 
         {recent !== null && recent.length > 0 && (
-          <div className="space-y-2 max-h-[560px] overflow-y-auto -mx-1 px-1">
+          <div className="space-y-2 max-h-[640px] overflow-y-auto -mx-1 px-1">
             {recent
+              .filter(r => passesCompletenessFilter(r, completenessFilter))
               .filter(r => methodFilter === "all" || r.services_extraction_method === methodFilter)
               .map((r) => {
                 const slug = buildDirectorySlug({ id: r.id, business_name: r.business_name, suburb: r.suburb ?? "" });
+                const c = completeness(r);
+                const fields: { key: keyof typeof c; label: string }[] = [
+                  { key: "logo", label: "Logo" },
+                  { key: "photos", label: "Photos" },
+                  { key: "blurb", label: "Blurb" },
+                  { key: "services", label: "Services" },
+                  { key: "phone", label: "Phone" },
+                  { key: "years", label: "Years exp" },
+                  { key: "licenses", label: "Licences" },
+                ];
                 return (
-                  <div key={r.id} className="flex items-start gap-3 bg-[var(--app-bg)] rounded-xl px-3 py-2.5">
-                    {r.logo_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={r.logo_url} alt="" className="w-9 h-9 rounded-lg object-contain bg-white border border-[var(--line)] shrink-0" />
-                    ) : (
-                      <div className="w-9 h-9 rounded-lg bg-white border border-[var(--line)] shrink-0" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-bold text-[13px] text-[var(--ink)] truncate">{r.business_name}</p>
-                        <span
-                          className="shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full"
-                          style={{
-                            background: r.services_extraction_method === "structural" ? "rgba(16,185,129,.12)" : "rgba(217,119,6,.12)",
-                            color: r.services_extraction_method === "structural" ? "#059669" : "#b45309",
-                          }}
-                        >
-                          {r.services_extraction_method === "structural" ? "Site's own list" : "Keyword match"}
-                        </span>
+                  <div key={r.id} className="bg-[var(--app-bg)] rounded-xl px-3 py-2.5 space-y-2">
+                    <div className="flex items-start gap-3">
+                      {/* Logo + up to 2 real photo thumbnails, exactly what the live page would show */}
+                      <div className="flex gap-1 shrink-0">
+                        {r.logo_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={r.logo_url} alt="" className="w-9 h-9 rounded-lg object-contain bg-white border border-[var(--line)]" />
+                        ) : (
+                          <div className="w-9 h-9 rounded-lg bg-white border border-dashed border-[var(--line)]" />
+                        )}
+                        {r.photo_references.slice(0, 2).map((p, i) => (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img key={i} src={p} alt="" className="w-9 h-9 rounded-lg object-cover bg-white border border-[var(--line)]" />
+                        ))}
+                        {r.photo_references.length === 0 && (
+                          <div className="w-9 h-9 rounded-lg bg-white border border-dashed border-[var(--line)] flex items-center justify-center">
+                            <ImageIcon size={13} className="text-[var(--ink-faint)]" />
+                          </div>
+                        )}
                       </div>
-                      <p className="text-[11px] text-[var(--ink-faint)] mb-1">
-                        {r.suburb ? `${r.suburb} · ` : ""}{(r.trades ?? []).join(", ")}
-                      </p>
-                      <div className="flex flex-wrap gap-1">
-                        {(r.services_offered ?? []).map((s, i) => (
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-[13px] text-[var(--ink)] truncate">{r.business_name}</p>
+                          {r.services_extraction_method && (
+                            <span
+                              className="shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full"
+                              style={{
+                                background: r.services_extraction_method === "structural" ? "rgba(16,185,129,.12)" : "rgba(217,119,6,.12)",
+                                color: r.services_extraction_method === "structural" ? "#059669" : "#b45309",
+                              }}
+                            >
+                              {r.services_extraction_method === "structural" ? "Site's own list" : "Keyword match"}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-[var(--ink-faint)] mb-1.5">
+                          {r.suburb ? `${r.suburb} · ` : ""}{(r.trades ?? []).join(", ")}
+                        </p>
+
+                        {/* Completeness checklist - every field at a glance */}
+                        <div className="flex flex-wrap gap-x-3 gap-y-1">
+                          {fields.map(({ key, label }) => (
+                            <span key={key} className="flex items-center gap-1 text-[11px]" style={{ color: c[key] ? "#059669" : "var(--ink-faint)" }}>
+                              {c[key] ? <Check size={11} /> : <span className="w-[11px] text-center">–</span>}
+                              {label}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <Link
+                        href={`/directory/${slug}`}
+                        target="_blank"
+                        className="shrink-0 flex items-center gap-1 text-[11.5px] font-semibold text-[var(--navy)] px-2 py-1 rounded-lg hover:bg-white transition-colors"
+                      >
+                        View <ExternalLink size={11} />
+                      </Link>
+                    </div>
+
+                    {r.services_offered && r.services_offered.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pl-[84px]">
+                        {r.services_offered.map((s, i) => (
                           <span key={i} className="text-[11px] bg-white border border-[var(--line)] rounded-full px-2 py-0.5 text-[var(--ink-soft)]">
                             {s}
                           </span>
                         ))}
                       </div>
-                    </div>
-                    <Link
-                      href={`/directory/${slug}`}
-                      target="_blank"
-                      className="shrink-0 flex items-center gap-1 text-[11.5px] font-semibold text-[var(--navy)] px-2 py-1 rounded-lg hover:bg-white transition-colors"
-                    >
-                      View <ExternalLink size={11} />
-                    </Link>
+                    )}
                   </div>
                 );
               })}
