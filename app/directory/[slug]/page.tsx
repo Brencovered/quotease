@@ -346,7 +346,7 @@ export default async function TradieProfilePage({
       {/* INFO CARDS ROW */}
       <section className="border-b border-[var(--line)]">
         <div className="max-w-6xl mx-auto px-6 py-6">
-          <div className="grid sm:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-3 gap-4 items-start">
             {/* Services */}
             <div className="bg-white rounded-xl border border-gray-100 p-5 reveal">
               <div className="flex items-center gap-2 mb-3">
