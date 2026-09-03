@@ -6,7 +6,7 @@ import {
   fetchWebsiteHtml, extractLogoUrl, extractBlurb,
   extractPhotos, extractAbout, extractPhone, filterPhotos,
   extractSocialLinks, extractYearsExperience, extractLicenses,
-  extractServices, scrapeSubPages,
+  extractServices, scrapeSubPages, scrapeGalleryPhotos, extractJsonLdBusiness, scrapeTestimonials,
 } from "@/lib/websiteScraper";
 
 function extractBusinessName(html: string, url: string): string | null {
@@ -36,25 +36,15 @@ function extractBusinessName(html: string, url: string): string | null {
 }
 
 function extractAddress(html: string): { suburb: string | null; postcode: string | null; state: string | null } {
-  // JSON-LD address
-  const jsonLd = html.match(/<script[^>]+type=[\"']application\/ld\+json[\"'][^>]*>([\s\S]+?)<\/script>/gi);
-  if (jsonLd) {
-    for (const block of jsonLd) {
-      try {
-        const data = JSON.parse(block.replace(/<[^>]+>/g, ""));
-        const items = Array.isArray(data) ? data : data["@graph"] ? data["@graph"] : [data];
-        for (const item of items) {
-          const addr = item.address ?? {};
-          if (addr.addressLocality || addr.postalCode) {
-            return {
-              suburb: addr.addressLocality ?? null,
-              postcode: addr.postalCode ?? null,
-              state: addr.addressRegion ?? null,
-            };
-          }
-        }
-      } catch {}
-    }
+  // JSON-LD address - now the shared parser used everywhere else, not
+  // a fourth separate inline copy of the same JSON-LD handling logic.
+  const jsonLd = extractJsonLdBusiness(html);
+  if (jsonLd?.addressLocality || jsonLd?.postalCode) {
+    return {
+      suburb: jsonLd.addressLocality ?? null,
+      postcode: jsonLd.postalCode ?? null,
+      state: jsonLd.addressRegion ?? null,
+    };
   }
 
   // AU postcode pattern in text
@@ -198,6 +188,7 @@ interface EditableFields {
   licenses: { type: string; number: string }[];
   services_offered: string[];
   services_extraction_method: "structural" | "keyword" | null;
+  testimonials: { text: string; author: string | null }[];
   photo_urls: string[]; // raw source URLs at preview time; downloaded/stored only on confirm
 }
 
@@ -269,6 +260,7 @@ export async function POST(req: NextRequest) {
       licenses:               fields.licenses.length > 0 ? fields.licenses : null,
       services_offered:       fields.services_offered.length > 0 ? fields.services_offered : null,
       services_extraction_method: fields.services_offered.length > 0 ? fields.services_extraction_method : null,
+      testimonials:           fields.testimonials.length > 0 ? fields.testimonials : null,
     };
 
     const clean: Record<string, unknown> = {};
@@ -380,7 +372,9 @@ export async function POST(req: NextRequest) {
   const trades        = extractTrades(html, siteUrl);
   const { services, method: servicesMethod } = extractServices ? extractServices(html, trades) : { services: [], method: null };
   const subPages      = await scrapeSubPages(html, siteUrl);
-  const rawPhotos      = extractPhotos(html, siteUrl);
+  const testimonials  = await scrapeTestimonials(html, siteUrl);
+  const galleryPhotos = await scrapeGalleryPhotos(html, siteUrl);
+  const rawPhotos      = [...extractPhotos(html, siteUrl), ...galleryPhotos];
   const photoUrls      = filterPhotos(rawPhotos, logo).slice(0, 6);
 
   const { data: existing } = await admin
@@ -413,6 +407,7 @@ export async function POST(req: NextRequest) {
     licenses,
     services_offered: allServices,
     services_extraction_method: allServicesMethod,
+    testimonials,
     photo_urls: photoUrls,
   };
 

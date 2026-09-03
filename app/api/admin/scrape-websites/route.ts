@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdminEmail } from "@/lib/admin";
-import { fetchWebsiteHtml, extractLogoUrl, extractBlurb, extractPhotos, extractAbout, extractServices, extractPhone, extractSocialLinks, extractYearsExperience, extractLicenses, scrapeSubPages } from "@/lib/websiteScraper";
+import { fetchWebsiteHtml, extractLogoUrl, extractBlurb, extractPhotos, extractAbout, extractServices, extractPhone, extractSocialLinks, extractYearsExperience, extractLicenses, scrapeSubPages, scrapeGalleryPhotos, scrapeTestimonials } from "@/lib/websiteScraper";
 
 const BATCH = 30;
 
@@ -10,7 +10,8 @@ async function downloadAndStore(
   photoUrl: string,
   listingId: string,
   idx: number,
-  admin: ReturnType<typeof createAdminClient>
+  admin: ReturnType<typeof createAdminClient>,
+  source: "website" | "google" = "website"
 ): Promise<string | null> {
   try {
     const controller = new AbortController();
@@ -26,7 +27,7 @@ async function downloadAndStore(
     const buffer = Buffer.from(await res.arrayBuffer());
     if (buffer.length < 5000) return null; // skip tiny icons
     const ext = contentType.includes("png") ? "png" : "jpg";
-    const path = `website/${listingId}/${idx}.${ext}`;
+    const path = `${source}/${listingId}/${idx}.${ext}`;
     const { error } = await admin.storage
       .from("directory-photos")
       .upload(path, buffer, { upsert: true, contentType });
@@ -50,26 +51,121 @@ export async function POST(req: NextRequest) {
 
   const admin = createAdminClient();
 
-  // Build targeted query based on mode - only fetch listings that actually
-  // need the specific field we're trying to fill
-  let query = admin
-    .from("directory_listing")
-    .select("id, business_name, website_url, logo_url, blurb, photo_references, services_offered, scraped_contact_phone, trades", { count: "exact" })
-    .not("website_url", "is", null)
-    .eq("is_claimed", false);
+  type ListingRow = {
+    id: string; business_name: string; website_url: string | null; logo_url: string | null;
+    blurb: string | null; photo_references: string[] | null; services_offered: string[] | null;
+    scraped_contact_phone: string | null; trades: string[] | null; testimonials: unknown[] | null;
+  };
 
-  if (mode === "photos" || mode === "all") {
-    // Listings where photo_references is empty OR all refs are Google tokens (not http)
-    query = query.or("photos_cached_at.is.null,photo_references.is.null,photo_references.eq.{}");
-  } else if (mode === "logo") {
-    query = query.is("logo_url", null);
-  } else if (mode === "blurb") {
-    query = query.is("blurb", null);
+  // google_photos resolves the raw Google Place photo tokens already
+  // sitting in photo_references (from the original import) into real,
+  // stored http images via the Places Photo API - the tokens are valid
+  // references to real business photos Google already verified, so
+  // this doesn't depend on a business's own website having anything
+  // usable. Verified this is necessary, not redundant with the "photos"
+  // mode above: ran that mode against production and checked the
+  // results directly - the eligibility fix correctly re-selected
+  // listings with no renderable photo, but extractPhotos() (pulling
+  // from the business's own site) still found nothing for nearly all
+  // of them, so they stayed imageless even after being "processed".
+  // Separate branch: doesn't touch fetchWebsiteHtml at all, and costs
+  // real money (~$7 per 1,000 Places Photo requests), so it's its own
+  // explicit mode rather than folded into "photos" - a person running
+  // this needs to know they're choosing to spend, not get it by default.
+  if (mode === "google_photos") {
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: "GOOGLE_PLACES_API_KEY not configured" }, { status: 500 });
+    }
+
+    const [{ data: rpcListings }, { data: rpcCount }] = await Promise.all([
+      admin.rpc("listings_needing_photo_recache", { p_limit: BATCH }),
+      admin.rpc("count_listings_needing_photo_recache"),
+    ]);
+    const googlePhotoListings = (rpcListings ?? []) as ListingRow[];
+
+    const results = {
+      processed: 0, updated: 0, skipped: 0, failed: 0,
+      remaining: Math.max(0, ((rpcCount as number | null) ?? 0) - BATCH),
+      detail: [] as string[],
+      skipReasons: {} as Record<string, number>,
+      photoRequestsMade: 0,
+      estimatedCostUsd: 0,
+    };
+
+    for (const listing of googlePhotoListings) {
+      results.processed++;
+      const refs = (listing.photo_references ?? []).filter(r => !r.startsWith("http")).slice(0, 4);
+      if (refs.length === 0) {
+        results.skipped++;
+        continue;
+      }
+
+      const stored: string[] = [];
+      for (let i = 0; i < refs.length; i++) {
+        results.photoRequestsMade++;
+        const photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1024&photo_reference=${encodeURIComponent(refs[i])}&key=${apiKey}`;
+        const url = await downloadAndStore(photoUrl, listing.id, i, admin, "google");
+        if (url) stored.push(url);
+      }
+
+      if (stored.length > 0) {
+        await admin.from("directory_listing")
+          .update({ photo_references: stored, photos_cached_at: new Date().toISOString() })
+          .eq("id", listing.id);
+        results.updated++;
+        results.detail.push(`✓ ${listing.business_name} (${stored.length} photo${stored.length !== 1 ? "s" : ""} resolved)`);
+      } else {
+        // Billing off, quota exceeded, or every referenced photo is gone -
+        // stamp anyway so this doesn't retry every batch indefinitely.
+        await admin.from("directory_listing")
+          .update({ photos_cached_at: new Date().toISOString() })
+          .eq("id", listing.id);
+        results.failed++;
+        results.skipReasons["Places Photo API returned nothing"] = (results.skipReasons["Places Photo API returned nothing"] ?? 0) + 1;
+      }
+    }
+
+    results.estimatedCostUsd = Math.round((results.photoRequestsMade / 1000) * 7 * 100) / 100;
+    return NextResponse.json(results);
   }
 
-  const { data: listings, count } = await query
-    .order("website_scraped_at", { ascending: true, nullsFirst: true })
-    .limit(BATCH);
+  let listings: ListingRow[] | null;
+  let count: number;
+
+  if (mode === "photos" || mode === "all") {
+    // photo_references IS NULL/empty misses the far more common real
+    // case: raw Google Place photo tokens sitting there from the
+    // original import, which the frontend correctly won't render (only
+    // http URLs get shown) but which the old .is()/.eq() filter treated
+    // as "has photos" since the column wasn't technically empty. Fixed
+    // via a proper Postgres function (see migration) that checks for at
+    // least one actually-renderable http entry, not just non-null.
+    const [{ data: rpcListings }, { data: rpcCount }] = await Promise.all([
+      admin.rpc("listings_needing_photo_recache", { p_limit: BATCH }),
+      admin.rpc("count_listings_needing_photo_recache"),
+    ]);
+    listings = (rpcListings ?? []) as ListingRow[];
+    count = (rpcCount as number | null) ?? 0;
+  } else {
+    let query = admin
+      .from("directory_listing")
+      .select("id, business_name, website_url, logo_url, blurb, photo_references, services_offered, scraped_contact_phone, trades, testimonials", { count: "exact" })
+      .not("website_url", "is", null)
+      .eq("is_claimed", false);
+
+    if (mode === "logo") {
+      query = query.is("logo_url", null);
+    } else if (mode === "blurb") {
+      query = query.is("blurb", null);
+    }
+
+    const res = await query
+      .order("website_scraped_at", { ascending: true, nullsFirst: true })
+      .limit(BATCH);
+    listings = res.data as ListingRow[] | null;
+    count = res.count ?? 0;
+  }
 
   // Further filter in code: skip listings that already have what we need
   const needsWork = (listings ?? []).filter(listing => {
@@ -167,6 +263,15 @@ export async function POST(req: NextRequest) {
       if (lics.length > 0) { updates.licenses = lics; updated.push(`${lics.length} licence(s)`); }
     }
 
+    // Testimonials - free, billing-independent complement to Google
+    // reviews (which require Places API billing, currently disabled on
+    // the Google Cloud project - confirmed via runtime logs, every
+    // review call is failing REQUEST_DENIED right now).
+    if (mode === "all" && !listing.testimonials) {
+      const testimonials = await scrapeTestimonials(html, url);
+      if (testimonials.length > 0) { updates.testimonials = testimonials; updated.push(`${testimonials.length} testimonial(s)`); }
+    }
+
     // Services from sub-pages (only in all mode - extra network call)
     if (mode === "all" && !(listing as {services_offered?: unknown}).services_offered) {
       const subs = await scrapeSubPages(html, url);
@@ -197,7 +302,13 @@ export async function POST(req: NextRequest) {
       const alreadyCached = existing.filter(r => r.startsWith("http"));
 
       if (alreadyCached.length < 2) {
-        const photoUrls = extractPhotos(html, url);
+        const photoUrls = [...extractPhotos(html, url)];
+        // Gallery page often has the best real job photos - homepage
+        // hero images are frequently stock imagery or generic banners.
+        const galleryPhotos = await scrapeGalleryPhotos(html, url);
+        for (const p of galleryPhotos) {
+          if (!photoUrls.includes(p)) photoUrls.push(p);
+        }
         const newPhotos: string[] = [...alreadyCached];
 
         for (let i = 0; i < photoUrls.length && newPhotos.length < 4; i++) {
@@ -250,7 +361,7 @@ export async function GET(req: NextRequest) {
   const [total, withWebsite, withPhotos, withLogo, withBlurb, withServices, noWebsite] = await Promise.all([
     admin.from("directory_listing").select("id", { count: "exact", head: true }).then(r => r.count ?? 0),
     admin.from("directory_listing").select("id", { count: "exact", head: true }).not("website_url", "is", null).then(r => r.count ?? 0),
-    admin.from("directory_listing").select("id", { count: "exact", head: true }).not("photos_cached_at", "is", null).then(r => r.count ?? 0),
+    admin.rpc("count_listings_with_renderable_photo").then(r => (r.data as number | null) ?? 0),
     admin.from("directory_listing").select("id", { count: "exact", head: true }).not("logo_url", "is", null).then(r => r.count ?? 0),
     admin.from("directory_listing").select("id", { count: "exact", head: true }).not("blurb", "is", null).then(r => r.count ?? 0),
     admin.from("directory_listing").select("id", { count: "exact", head: true }).not("services_offered", "is", null).then(r => r.count ?? 0),
@@ -259,18 +370,28 @@ export async function GET(req: NextRequest) {
 
   const stats = { total, withWebsite, withPhotos, withLogo, withBlurb, withServices, noWebsite };
 
-  // Review list: most recently scraped listings that got a services
-  // result, newest first, so a just-run batch is at the top. Exists so
-  // quality can be checked against real results per business - not just
-  // aggregate counts - before trusting this at scale. Capped at 100.
+  // Review list: most recently scraped listings, newest first, so a
+  // just-run batch is at the top. Shows the full picture per listing
+  // (photos, logo, blurb, services, phone, years, licences) rather than
+  // just services, since aggregate stats above can't tell you whether
+  // any *specific* business actually got enriched properly. Capped at
+  // 100. photo_references is filtered to real http entries here (not
+  // raw Google tokens) so the UI only ever shows photos that would
+  // actually render on the live listing page.
   if (new URL(req.url).searchParams.get("recent") === "1") {
-    const { data: recent } = await admin
+    const { data: recentRaw } = await admin
       .from("directory_listing")
-      .select("id, business_name, suburb, trades, website_url, services_offered, services_extraction_method, blurb, logo_url, website_scraped_at")
-      .not("services_offered", "is", null)
+      .select("id, business_name, suburb, trades, website_url, services_offered, services_extraction_method, blurb, logo_url, photo_references, years_experience, licenses, scraped_contact_phone, website_scraped_at")
+      .not("website_scraped_at", "is", null)
       .order("website_scraped_at", { ascending: false, nullsFirst: false })
       .limit(100);
-    return NextResponse.json({ ...stats, recent: recent ?? [] });
+
+    const recent = (recentRaw ?? []).map((r) => ({
+      ...r,
+      photo_references: (r.photo_references ?? []).filter((p: string) => p.startsWith("http")),
+    }));
+
+    return NextResponse.json({ ...stats, recent });
   }
 
   return NextResponse.json(stats);

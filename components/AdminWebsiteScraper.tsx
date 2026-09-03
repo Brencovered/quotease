@@ -28,8 +28,14 @@ interface RecentListing {
   services_extraction_method: "structural" | "keyword" | null;
   blurb: string | null;
   logo_url: string | null;
+  photo_references: string[]; // pre-filtered server-side to real http entries only
+  years_experience: number | null;
+  licenses: { type: string; number: string }[] | null;
+  scraped_contact_phone: string | null;
   website_scraped_at: string | null;
 }
+
+type CompletenessFilter = "all" | "missing_photos" | "missing_services" | "fully_enriched";
 
 interface RunResult {
   processed: number;
@@ -39,19 +45,22 @@ interface RunResult {
   remaining: number;
   detail: string[];
   skipReasons?: Record<string, number>;
+  photoRequestsMade?: number;
+  estimatedCostUsd?: number;
 }
 
 export default function AdminWebsiteScraper() {
   const [stats,     setStats]     = useState<Stats | null>(null);
   const [running,   setRunning]   = useState(false);
   const [result,    setResult]    = useState<RunResult | null>(null);
-  const [mode,      setMode]      = useState<"all" | "photos" | "logo" | "blurb">("all");
+  const [mode,      setMode]      = useState<"all" | "photos" | "logo" | "blurb" | "google_photos">("all");
   const [showLog,   setShowLog]   = useState(false);
   const [autoRun,   setAutoRun]   = useState(false);
   const [runCount,  setRunCount]  = useState(0);
   const [recent,    setRecent]    = useState<RecentListing[] | null>(null);
   const [recentLoading, setRecentLoading] = useState(false);
   const [methodFilter, setMethodFilter] = useState<"all" | "structural" | "keyword">("all");
+  const [completenessFilter, setCompletenessFilter] = useState<CompletenessFilter>("all");
 
   async function loadStats() {
     const res = await fetch("/api/admin/scrape-websites");
@@ -92,6 +101,26 @@ export default function AdminWebsiteScraper() {
   }
 
   const pct = (n: number) => stats ? Math.round((n / stats.total) * 100) : 0;
+
+  function completeness(r: RecentListing) {
+    return {
+      logo: !!r.logo_url,
+      photos: r.photo_references.length > 0,
+      blurb: !!r.blurb,
+      services: !!(r.services_offered && r.services_offered.length > 0),
+      phone: !!r.scraped_contact_phone,
+      years: r.years_experience != null,
+      licenses: !!(r.licenses && r.licenses.length > 0),
+    };
+  }
+
+  function passesCompletenessFilter(r: RecentListing, filter: CompletenessFilter) {
+    const c = completeness(r);
+    if (filter === "missing_photos") return !c.photos;
+    if (filter === "missing_services") return !c.services;
+    if (filter === "fully_enriched") return c.logo && c.photos && c.blurb && c.services;
+    return true;
+  }
 
   return (
     <div className="space-y-5">
@@ -154,27 +183,59 @@ export default function AdminWebsiteScraper() {
               </button>
             ))}
           </div>
+
+          {/* Separate, costed mode - kept visually distinct from the free
+              options above since it's the only one that spends real
+              money. Resolves the raw Google Place photo tokens already
+              sitting in photo_references (from the original import)
+              into real stored images via the Places Photo API, instead
+              of hoping a business's own website has usable photos -
+              confirmed against real production data that for most of
+              the ~2,000 listings still missing a renderable photo, it
+              doesn't. */}
+          <button
+            onClick={() => setMode("google_photos")}
+            className="w-full mt-2 flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 text-left transition-all"
+            style={{
+              borderColor: mode === "google_photos" ? "#b45309" : "var(--line)",
+              background:  mode === "google_photos" ? "rgba(217,119,6,.06)" : "white",
+            }}
+          >
+            <span className="shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800">
+              Paid
+            </span>
+            <span className="flex-1">
+              <span className="block font-bold text-[13px] text-[var(--ink)]">Photos via Google Places</span>
+              <span className="block text-[11px] text-[var(--ink-faint)]">
+                Resolves existing Google photo tokens into real images - ~$7 per 1,000 photo requests, roughly 1-4 requests per listing
+              </span>
+            </span>
+          </button>
         </div>
 
-        {/* Auto-run toggle */}
-        <label className="flex items-center gap-2.5 cursor-pointer">
-          <div onClick={() => setAutoRun(a => !a)}
-            className={`w-10 h-6 rounded-full transition-colors ${autoRun ? "bg-[var(--navy)]" : "bg-[var(--line)]"}`}>
-            <div className={`w-4 h-4 bg-white rounded-full mt-1 transition-transform ${autoRun ? "translate-x-5" : "translate-x-1"}`} />
-          </div>
-          <div>
-            <p className="text-[13px] font-semibold text-[var(--ink)]">Auto-run</p>
-            <p className="text-[11.5px] text-[var(--ink-faint)]">Keep running batches of 30 automatically until done</p>
-          </div>
-        </label>
+        {/* Auto-run toggle - hidden for the paid mode so spend always
+            needs a manual click per batch, not an unattended loop. */}
+        {mode !== "google_photos" && (
+          <label className="flex items-center gap-2.5 cursor-pointer">
+            <div onClick={() => setAutoRun(a => !a)}
+              className={`w-10 h-6 rounded-full transition-colors ${autoRun ? "bg-[var(--navy)]" : "bg-[var(--line)]"}`}>
+              <div className={`w-4 h-4 bg-white rounded-full mt-1 transition-transform ${autoRun ? "translate-x-5" : "translate-x-1"}`} />
+            </div>
+            <div>
+              <p className="text-[13px] font-semibold text-[var(--ink)]">Auto-run</p>
+              <p className="text-[11.5px] text-[var(--ink-faint)]">Keep running batches of 30 automatically until done</p>
+            </div>
+          </label>
+        )}
 
         {/* Run button */}
         <div className="flex items-center gap-3">
           <button onClick={runBatch} disabled={running}
-            className="btn-primary px-6 py-3 flex items-center gap-2 text-[13.5px]">
+            className="btn-primary px-6 py-3 flex items-center gap-2 text-[13.5px]"
+            style={mode === "google_photos" ? { background: "#b45309" } : undefined}>
             {running
-              ? <><RefreshCw size={14} className="animate-spin" /> Scraping...</>
-              : <><Play size={14} /> Run batch of 30</>}
+              ? <><RefreshCw size={14} className="animate-spin" /> {mode === "google_photos" ? "Resolving..." : "Scraping..."}</>
+              : <><Play size={14} /> {mode === "google_photos" ? "Run batch of 30 (spends money)" : "Run batch of 30"}</>}
           </button>
           {runCount > 0 && (
             <span className="text-[12.5px] text-[var(--ink-faint)]">{runCount} batch{runCount !== 1 ? "es" : ""} run this session</span>
@@ -194,6 +255,13 @@ export default function AdminWebsiteScraper() {
               Details {showLog ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
             </button>
           </div>
+
+          {typeof result.estimatedCostUsd === "number" && (
+            <div className="flex items-center gap-2 text-[12.5px] text-amber-800 bg-amber-50 rounded-xl px-3 py-2">
+              <span className="font-bold">${result.estimatedCostUsd.toFixed(2)}</span>
+              spent this batch ({result.photoRequestsMade} Places Photo request{result.photoRequestsMade !== 1 ? "s" : ""} at ~$7/1,000)
+            </div>
+          )}
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
@@ -238,17 +306,21 @@ export default function AdminWebsiteScraper() {
       )}
 
       {/* Review results - per-listing view so quality can actually be
-          judged, not just aggregate counts. Especially important for
-          the keyword-match fallback: "structural" means the site's own
-          markup produced it (higher confidence), "keyword" means it was
-          inferred from a curated per-trade phrase list matched against
-          plain text (worth spot-checking). */}
+          judged, not just aggregate counts. Shows every enriched field,
+          not just services, with real photo thumbnails (already
+          filtered server-side to http entries, so what's shown here is
+          exactly what would render on the live listing page). Two
+          independent filters: completeness (what's missing) and, for
+          services specifically, extraction method - "structural" means
+          the site's own markup produced it (higher confidence),
+          "keyword" means it was inferred from a curated per-trade
+          phrase list matched against plain text (worth spot-checking). */}
       <div className="card space-y-3">
         <div className="flex items-center justify-between">
           <div>
             <p className="section-tag">Review results</p>
             <p className="text-[12px] text-[var(--ink-faint)] mt-0.5">
-              Most recently scraped listings with services extracted, newest first
+              Most recently scraped listings, newest first
             </p>
           </div>
           <button
@@ -263,75 +335,140 @@ export default function AdminWebsiteScraper() {
         </div>
 
         {recent !== null && recent.length > 0 && (
-          <div className="flex items-center gap-1.5">
-            {(["all", "structural", "keyword"] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setMethodFilter(f)}
-                className="px-2.5 py-1 rounded-full text-[11.5px] font-semibold transition-colors"
-                style={{
-                  background: methodFilter === f ? "var(--navy)" : "var(--app-bg)",
-                  color: methodFilter === f ? "white" : "var(--ink-faint)",
-                }}
-              >
-                {f === "all" ? "All" : f === "structural" ? "From site's own list" : "Keyword match"}
-                {f !== "all" && ` (${recent.filter(r => r.services_extraction_method === f).length})`}
-              </button>
-            ))}
-          </div>
+          <>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {([
+                ["all", "All"],
+                ["missing_photos", "Missing photos"],
+                ["missing_services", "Missing services"],
+                ["fully_enriched", "Fully enriched"],
+              ] as [CompletenessFilter, string][]).map(([f, label]) => (
+                <button
+                  key={f}
+                  onClick={() => setCompletenessFilter(f)}
+                  className="px-2.5 py-1 rounded-full text-[11.5px] font-semibold transition-colors"
+                  style={{
+                    background: completenessFilter === f ? "var(--navy)" : "var(--app-bg)",
+                    color: completenessFilter === f ? "white" : "var(--ink-faint)",
+                  }}
+                >
+                  {label}
+                  {f !== "all" && ` (${recent.filter(r => passesCompletenessFilter(r, f)).length})`}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] text-[var(--ink-faint)] mr-1">Services from:</span>
+              {(["all", "structural", "keyword"] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setMethodFilter(f)}
+                  className="px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors"
+                  style={{
+                    background: methodFilter === f ? "var(--ink)" : "var(--app-bg)",
+                    color: methodFilter === f ? "white" : "var(--ink-faint)",
+                  }}
+                >
+                  {f === "all" ? "Any" : f === "structural" ? "Site's own list" : "Keyword match"}
+                </button>
+              ))}
+            </div>
+          </>
         )}
 
         {recent !== null && recent.length === 0 && !recentLoading && (
           <p className="text-[12.5px] text-[var(--ink-faint)] py-4 text-center">
-            No listings with extracted services yet - run a batch above first.
+            No scraped listings yet - run a batch above first.
           </p>
         )}
 
         {recent !== null && recent.length > 0 && (
-          <div className="space-y-2 max-h-[560px] overflow-y-auto -mx-1 px-1">
+          <div className="space-y-2 max-h-[640px] overflow-y-auto -mx-1 px-1">
             {recent
+              .filter(r => passesCompletenessFilter(r, completenessFilter))
               .filter(r => methodFilter === "all" || r.services_extraction_method === methodFilter)
               .map((r) => {
                 const slug = buildDirectorySlug({ id: r.id, business_name: r.business_name, suburb: r.suburb ?? "" });
+                const c = completeness(r);
+                const fields: { key: keyof typeof c; label: string }[] = [
+                  { key: "logo", label: "Logo" },
+                  { key: "photos", label: "Photos" },
+                  { key: "blurb", label: "Blurb" },
+                  { key: "services", label: "Services" },
+                  { key: "phone", label: "Phone" },
+                  { key: "years", label: "Years exp" },
+                  { key: "licenses", label: "Licences" },
+                ];
                 return (
-                  <div key={r.id} className="flex items-start gap-3 bg-[var(--app-bg)] rounded-xl px-3 py-2.5">
-                    {r.logo_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={r.logo_url} alt="" className="w-9 h-9 rounded-lg object-contain bg-white border border-[var(--line)] shrink-0" />
-                    ) : (
-                      <div className="w-9 h-9 rounded-lg bg-white border border-[var(--line)] shrink-0" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-bold text-[13px] text-[var(--ink)] truncate">{r.business_name}</p>
-                        <span
-                          className="shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full"
-                          style={{
-                            background: r.services_extraction_method === "structural" ? "rgba(16,185,129,.12)" : "rgba(217,119,6,.12)",
-                            color: r.services_extraction_method === "structural" ? "#059669" : "#b45309",
-                          }}
-                        >
-                          {r.services_extraction_method === "structural" ? "Site's own list" : "Keyword match"}
-                        </span>
+                  <div key={r.id} className="bg-[var(--app-bg)] rounded-xl px-3 py-2.5 space-y-2">
+                    <div className="flex items-start gap-3">
+                      {/* Logo + up to 2 real photo thumbnails, exactly what the live page would show */}
+                      <div className="flex gap-1 shrink-0">
+                        {r.logo_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={r.logo_url} alt="" className="w-9 h-9 rounded-lg object-contain bg-white border border-[var(--line)]" />
+                        ) : (
+                          <div className="w-9 h-9 rounded-lg bg-white border border-dashed border-[var(--line)]" />
+                        )}
+                        {r.photo_references.slice(0, 2).map((p, i) => (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img key={i} src={p} alt="" className="w-9 h-9 rounded-lg object-cover bg-white border border-[var(--line)]" />
+                        ))}
+                        {r.photo_references.length === 0 && (
+                          <div className="w-9 h-9 rounded-lg bg-white border border-dashed border-[var(--line)] flex items-center justify-center">
+                            <ImageIcon size={13} className="text-[var(--ink-faint)]" />
+                          </div>
+                        )}
                       </div>
-                      <p className="text-[11px] text-[var(--ink-faint)] mb-1">
-                        {r.suburb ? `${r.suburb} · ` : ""}{(r.trades ?? []).join(", ")}
-                      </p>
-                      <div className="flex flex-wrap gap-1">
-                        {(r.services_offered ?? []).map((s, i) => (
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-[13px] text-[var(--ink)] truncate">{r.business_name}</p>
+                          {r.services_extraction_method && (
+                            <span
+                              className="shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full"
+                              style={{
+                                background: r.services_extraction_method === "structural" ? "rgba(16,185,129,.12)" : "rgba(217,119,6,.12)",
+                                color: r.services_extraction_method === "structural" ? "#059669" : "#b45309",
+                              }}
+                            >
+                              {r.services_extraction_method === "structural" ? "Site's own list" : "Keyword match"}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-[var(--ink-faint)] mb-1.5">
+                          {r.suburb ? `${r.suburb} · ` : ""}{(r.trades ?? []).join(", ")}
+                        </p>
+
+                        {/* Completeness checklist - every field at a glance */}
+                        <div className="flex flex-wrap gap-x-3 gap-y-1">
+                          {fields.map(({ key, label }) => (
+                            <span key={key} className="flex items-center gap-1 text-[11px]" style={{ color: c[key] ? "#059669" : "var(--ink-faint)" }}>
+                              {c[key] ? <Check size={11} /> : <span className="w-[11px] text-center">–</span>}
+                              {label}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <Link
+                        href={`/directory/${slug}`}
+                        target="_blank"
+                        className="shrink-0 flex items-center gap-1 text-[11.5px] font-semibold text-[var(--navy)] px-2 py-1 rounded-lg hover:bg-white transition-colors"
+                      >
+                        View <ExternalLink size={11} />
+                      </Link>
+                    </div>
+
+                    {r.services_offered && r.services_offered.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pl-[84px]">
+                        {r.services_offered.map((s, i) => (
                           <span key={i} className="text-[11px] bg-white border border-[var(--line)] rounded-full px-2 py-0.5 text-[var(--ink-soft)]">
                             {s}
                           </span>
                         ))}
                       </div>
-                    </div>
-                    <Link
-                      href={`/directory/${slug}`}
-                      target="_blank"
-                      className="shrink-0 flex items-center gap-1 text-[11.5px] font-semibold text-[var(--navy)] px-2 py-1 rounded-lg hover:bg-white transition-colors"
-                    >
-                      View <ExternalLink size={11} />
-                    </Link>
+                    )}
                   </div>
                 );
               })}
@@ -351,6 +488,7 @@ export default function AdminWebsiteScraper() {
           <p><strong>Blurb:</strong> Uses meta description or og:description. Shows on the directory listing card.</p>
           <p><strong>Services:</strong> Parses the site&apos;s own services list when there is one; falls back to matching a curated per-trade phrase list against the page text otherwise. Check the review table above to see which one produced each result.</p>
           <p><strong>Rate:</strong> 30 listings per batch, 8 second timeout per site, skips non-200 responses.</p>
+          <p><strong>Photos via Google Places (paid):</strong> Most listings still missing a photo have raw Google Place photo tokens sitting in the database from the original import - real references to real business photos Google already verified, they just were never resolved into actual images. This mode does that directly via the Places Photo API (~$7/1,000 requests, 1-4 requests per listing) instead of relying on the business&apos;s own website having something usable.</p>
         </div>
       </div>
     </div>
