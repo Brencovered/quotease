@@ -17,6 +17,7 @@ import PhotoGallery from "./_components/PhotoGallery";
 import QuoteForm from "./_components/QuoteForm";
 import ListingLogo from "./_components/ListingLogo";
 import ReviewsSection from "./_components/ReviewsSection";
+import TestimonialsSection from "./_components/TestimonialsSection";
 import { getPlaceReviews } from "@/lib/googleReviews";
 import TradieSchema from "@/components/seo/TradieSchema";
 
@@ -62,6 +63,7 @@ type Listing = {
   instagram_url: string | null; facebook_url: string | null;
   services_offered: string[] | null; years_experience: number | null;
   licenses: { type: string; number: string }[] | null;
+  testimonials: { text: string; author: string | null }[] | null;
 };
 
 /* ------------------------------------------------------------------ */
@@ -465,31 +467,11 @@ export default async function TradieProfilePage({
               </div>
             )}
 
-            {cachedPhotos.length > 0
-              ? <PhotoGallery photos={cachedPhotos} name={listing.business_name} />
-              : (
-                <div className="reveal">
-                  <p className="text-[11.5px] font-semibold text-gray-500 uppercase tracking-wide mb-3">Photos</p>
-                  <div className="relative aspect-video rounded-xl overflow-hidden bg-[#0a1722] flex flex-col items-center justify-center"
-                    style={{ background: `linear-gradient(135deg, #0a1722 0%, #1a3a52 100%)` }}>
-                    <div className="absolute inset-0 opacity-20"
-                      style={{ backgroundImage: `radial-gradient(circle at 20% 30%, ${accent} 0%, transparent 50%), radial-gradient(circle at 80% 75%, ${accent} 0%, transparent 45%)` }} />
-                    <div className="absolute inset-0 opacity-[0.04]"
-                      style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.4) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.4) 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
-                    <div className="relative text-center">
-                      <p className="font-display text-[1.8rem] text-[#ffb400] tracking-wide mb-2">Swiftscope</p>
-                      {tradeLabel && (
-                        <span className="text-[11px] font-bold uppercase tracking-[.18em] px-3 py-1 rounded-full"
-                          style={{ background: accent + "30", color: accent }}>
-                          {tradeLabel}
-                        </span>
-                      )}
-                      <p className="text-white/30 text-[11px] mt-3">Photos coming soon</p>
-                    </div>
-                  </div>
-                </div>
-              )
-            }
+            {cachedPhotos.length > 0 && (
+              <PhotoGallery photos={cachedPhotos} name={listing.business_name} />
+            )}
+
+            <TestimonialsSection testimonials={listing.testimonials ?? []} />
 
             <ReviewsSection reviews={reviews} />
 
