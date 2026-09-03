@@ -24,13 +24,21 @@ import { TRADE_PAGES } from "@/lib/marketing/tradePages";
  * merge, which is the direct explanation for zero recorded sessions
  * entering through them despite the pages themselves being built weeks
  * earlier.
+ *
+ * The mid-nav "Directory" text link used to only be hidden on the
+ * homepage (via `compact`) - every other page rendered it alongside
+ * the near-identical "Find a tradie" button on the right, which is
+ * redundant (same destination) and was exactly what made the nav feel
+ * squashed on every non-homepage page: 8 primary links plus 2-3 pill
+ * buttons plus Log in/Sign up all fighting for one 1280px row. Removed
+ * outright rather than re-scoped to `compact`, since it added nothing
+ * "Find a tradie" doesn't already cover on any page.
  */
 export default function MarketingNav({
   transparent = false,
   compact = false,
 }: {
   transparent?: boolean;
-  /** Homepage: hide secondary mid-nav Directory link; keep Find a tradie / Manage listing. */
   compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -136,11 +144,6 @@ export default function MarketingNav({
             <Link href="/blog" className="text-white/75 hover:text-white font-semibold text-sm transition-colors">
               Blog
             </Link>
-            {!compact && (
-              <Link href="/directory" className="text-white/75 hover:text-white font-semibold text-sm transition-colors">
-                Directory
-              </Link>
-            )}
           </div>
 
           <div className="hidden lg:flex items-center gap-2.5">
