@@ -215,10 +215,24 @@ export function extractPhotos(html: string, baseUrl: string): string[] {
   const tw = html.match(/<meta[^>]+name=[\"']twitter:image[\"'][^>]+content=[\"']([^\"']+)[\"']/i);
   if (tw) add(tw[1]);
 
-  const heroSection = html.match(/<(?:section|div)[^>]*(?:hero|banner|gallery|slider|carousel)[^>]*>([\s\S]{0,3000})/i);
+  const heroSection = html.match(/<(?:section|div)([^>]*(?:hero|banner|gallery|slider|carousel|cover|showcase|featured|our-work)[^>]*)>([\s\S]{0,3000})/i);
   if (heroSection) {
-    const imgMatches = heroSection[1].matchAll(/<img[^>]+src=[\"']([^\"']+)[\"'][^>]*>/gi);
-    for (const m of imgMatches) add(m[1]);
+    // Group 1 is the container tag's own attributes, group 2 is its inner
+    // content - checking both matters because a lot of page-builder sites
+    // (Wix, Squarespace, Elementor) set background-image as an inline
+    // style on the hero container itself rather than nesting an <img>
+    // inside it, which only checking inner content would miss entirely.
+    const searchIn = [heroSection[1], heroSection[2]];
+    for (const chunk of searchIn) {
+      const imgMatches = chunk.matchAll(/<img[^>]+src=[\"']([^\"']+)[\"'][^>]*>/gi);
+      for (const m of imgMatches) add(m[1]);
+
+      const srcsetMatches = chunk.matchAll(/<source[^>]+srcset=[\"']([^\"'\s]+)/gi);
+      for (const m of srcsetMatches) add(m[1]);
+
+      const bgMatches = chunk.matchAll(/background-image\s*:\s*url\((?:['"]?)([^'")]+)(?:['"]?)\)/gi);
+      for (const m of bgMatches) add(m[1]);
+    }
   }
 
   const jsonLd = extractJsonLdBusiness(html);
