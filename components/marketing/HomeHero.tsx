@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Check, Send, Target } from "lucide-react";
+import { ArrowRight, Check, Send, Target, Wrench, Search } from "lucide-react";
 import TrialRiskReversal from "@/components/marketing/TrialRiskReversal";
 
 type Scene = {
@@ -124,11 +124,43 @@ export default function HomeHero() {
       />
 
       <div className="relative max-w-[1280px] mx-auto px-5 sm:px-6">
+        {/* Audience chooser - the very first thing anyone sees on landing.
+            SwiftScope serves two different people (trade businesses running
+            the platform, homeowners browsing the directory), and burying
+            that split inside CTA button copy further down the hero wasn't
+            doing the job - this makes it the first decision point, not a
+            footnote to the headline. */}
+        <div className="flex flex-col sm:flex-row gap-3 pt-2 pb-7 sm:pb-9 home-hero-copy">
+          <Link
+            href="/signup"
+            className="group flex-1 flex items-center gap-3 rounded-xl border-2 border-[#ffb400] bg-[#ffb400]/10 hover:bg-[#ffb400]/[0.18] px-4 sm:px-5 py-3.5 sm:py-4 transition-colors"
+          >
+            <span className="shrink-0 w-9 h-9 rounded-lg bg-[#ffb400] flex items-center justify-center">
+              <Wrench size={17} className="text-[#0a1722]" />
+            </span>
+            <span className="flex-1">
+              <span className="block font-extrabold text-white text-[14px] sm:text-[15px]">I run a trade business</span>
+              <span className="block text-[12px] sm:text-[12.5px] text-white/55">Quote, schedule &amp; invoice - free for 7 days</span>
+            </span>
+            <ArrowRight size={16} className="text-white/50 group-hover:text-white/80 group-hover:translate-x-0.5 transition-all shrink-0" />
+          </Link>
+          <Link
+            href="/directory"
+            className="group flex-1 flex items-center gap-3 rounded-xl border border-white/20 hover:border-white/40 hover:bg-white/[0.04] px-4 sm:px-5 py-3.5 sm:py-4 transition-colors"
+          >
+            <span className="shrink-0 w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center">
+              <Search size={17} className="text-white" />
+            </span>
+            <span className="flex-1">
+              <span className="block font-extrabold text-white text-[14px] sm:text-[15px]">I need a tradie</span>
+              <span className="block text-[12px] sm:text-[12.5px] text-white/55">Browse local trades - free, always</span>
+            </span>
+            <ArrowRight size={16} className="text-white/50 group-hover:text-white/80 group-hover:translate-x-0.5 transition-all shrink-0" />
+          </Link>
+        </div>
+
         <div className="grid lg:grid-cols-12 gap-5 lg:gap-10 mb-7 sm:mb-10 lg:mb-12 home-hero-copy">
           <div className="lg:col-span-7">
-            <p className="inline-flex items-center gap-2 rounded-full bg-white/[0.06] border border-white/15 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-[#ffb400] mb-4 sm:mb-5">
-              Quoting &amp; job software for trade businesses
-            </p>
             <p className="font-display text-[clamp(2.4rem,8vw,4.8rem)] leading-[0.88] tracking-wide text-white mb-3 sm:mb-5">
               SwiftScope
             </p>
@@ -162,13 +194,7 @@ export default function HomeHero() {
                 href="/signup"
                 className="inline-flex items-center justify-center bg-[#ffb400] text-[#050b11] font-extrabold text-[14px] sm:text-[15px] px-5 sm:px-6 py-3 sm:py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors"
               >
-                I&apos;m a tradie &middot; start free
-              </Link>
-              <Link
-                href="/directory"
-                className="inline-flex items-center gap-2 text-white font-bold text-[14px] sm:text-[15px] px-4 sm:px-5 py-3 sm:py-3.5 rounded-lg border border-white/25 hover:border-white/55 transition-colors"
-              >
-                I need a tradie <ArrowRight size={15} aria-hidden />
+                Start free for 7 days
               </Link>
             </div>
             <TrialRiskReversal tone="light" className="mb-3" />
