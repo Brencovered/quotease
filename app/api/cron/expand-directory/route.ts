@@ -1,6 +1,16 @@
 /**
  * GET /api/cron/expand-directory
  * --------------------------------
+ * PAUSED - removed from vercel.json's cron list. Confirmed via runtime
+ * logs that Yellow Pages blocks every request from Vercel's servers
+ * with a 403, immediately, on every attempt - a datacenter-IP block,
+ * not a bug in the scraper (the URL scheme, category slugs, and
+ * parser were all separately confirmed correct first). Fixing that
+ * needs a paid proxy/scraping service; decided not to take that on.
+ * Route and underlying logic left in place rather than deleted, since
+ * it's a real option to revisit - if re-enabled, add the cron entry
+ * back to vercel.json.
+ *
  * Scheduled automation (see vercel.json) that grows the directory
  * without anyone manually picking a trade+suburb combo and clicking
  * "scrape" in the admin UI. Each run covers a small batch of combos
