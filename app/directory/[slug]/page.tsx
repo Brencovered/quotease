@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {
-  Star, MapPin, Phone, Globe, Mail, Check, Shield,
+  Star, MapPin, Phone, Globe, Check, Shield,
   ShieldCheck, MessageSquare, ExternalLink, Wrench,
   Building2, Users, Search, Link2, ArrowRight,
 } from "lucide-react";
@@ -16,19 +16,11 @@ import { getGoogleReviewsUrl } from "@/lib/seo/gbp";
 import PhotoGallery from "./_components/PhotoGallery";
 import QuoteForm from "./_components/QuoteForm";
 import ListingLogo from "./_components/ListingLogo";
+import ListingStickyCta from "./_components/ListingStickyCta";
 import ReviewsSection from "./_components/ReviewsSection";
 import TestimonialsSection from "./_components/TestimonialsSection";
 import { getPlaceReviews } from "@/lib/googleReviews";
 import TradieSchema from "@/components/seo/TradieSchema";
-
-/**
- * Temporarily off: with few tradies in the directory yet, a homeowner
- * submitting a "request a quote" enquiry that never gets a response hurts
- * trust more than not offering it at all. Flip back to true once there's
- * enough directory coverage that a submitted enquiry reliably reaches a
- * real, responsive tradie. Nothing else needs to change to re-enable -
- * the form, API route, and DB table are untouched.
- */
 
 /* ------------------------------------------------------------------ */
 /*  Trade colour / label maps (synced with DirectoryCard)               */
@@ -234,8 +226,22 @@ export default async function TradieProfilePage({
     ownerEmail = ownerProfile?.contact_email ?? null;
   }
 
+  const prettySlug = buildDirectorySlug({
+    id: listing.id,
+    business_name: listing.business_name,
+    suburb: listing.suburb ?? "",
+  });
+  const quoteListing = {
+    id: listing.id,
+    business_name: listing.business_name,
+    scraped_contact_email: listing.scraped_contact_email,
+    is_claimed: listing.is_claimed ?? false,
+    owner_email: ownerEmail,
+    scraped_contact_phone: listing.scraped_contact_phone,
+  };
+
   return (
-    <main className="min-h-screen bg-[var(--app-bg)]">
+    <main className={`min-h-screen bg-[var(--app-bg)] ${QUOTE_REQUESTS_ENABLED ? "pb-20 lg:pb-0" : ""}`}>
       <MarketingNav />
 
       {/* HERO BANNER */}
@@ -300,6 +306,12 @@ export default async function TradieProfilePage({
                   )}
                 </div>
               )}
+
+              {QUOTE_REQUESTS_ENABLED && (
+                <p className="text-[14px] text-white/70 mt-5 max-w-lg leading-relaxed">
+                  Tell them the job. They come back with a price. No account needed.
+                </p>
+              )}
             </div>
 
             {/* Right CTAs */}
@@ -307,7 +319,7 @@ export default async function TradieProfilePage({
               {QUOTE_REQUESTS_ENABLED && (
                 <a href="#quote-form"
                   className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-8 py-3.5 rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2 whitespace-nowrap">
-                  <MessageSquare size={15} /> Request a quote
+                  <MessageSquare size={15} /> Get a quote
                 </a>
               )}
               {listing.scraped_contact_phone && (
@@ -384,6 +396,11 @@ export default async function TradieProfilePage({
                 <p className="text-[12px] font-bold text-gray-500 uppercase tracking-wide">Contact</p>
               </div>
               <div className="space-y-2">
+                {QUOTE_REQUESTS_ENABLED && (
+                  <a href="#quote-form" className="flex items-center gap-2 text-[13px] font-extrabold text-[#0a1722] hover:underline">
+                    <MessageSquare size={13} className="text-[#ffb400]" /> Get a quote
+                  </a>
+                )}
                 {listing.scraped_contact_phone && (
                   <a href={`tel:${listing.scraped_contact_phone}`} className="flex items-center gap-2 text-[13px] font-semibold text-gray-700 hover:text-[#0a1722] transition-colors">
                     <Phone size={13} className="text-gray-400" /> {listing.scraped_contact_phone}
@@ -407,10 +424,8 @@ export default async function TradieProfilePage({
                     <Link2 size={13} className="text-gray-400" /> Facebook <ExternalLink size={11} className="text-gray-300" />
                   </a>
                 )}
-                {!listing.scraped_contact_phone && !listing.website_url && (
-                  <p className="text-[12.5px] text-gray-400">
-                    {QUOTE_REQUESTS_ENABLED ? "No contact details on file. Request a quote above." : "No contact details on file."}
-                  </p>
+                {!QUOTE_REQUESTS_ENABLED && !listing.scraped_contact_phone && !listing.website_url && (
+                  <p className="text-[12.5px] text-gray-400">No contact details on file.</p>
                 )}
               </div>
               {CLAIMED_DIRECTORY_PAGES_ENABLED && !listing.is_claimed && (
@@ -426,11 +441,14 @@ export default async function TradieProfilePage({
         </div>
       </section>
 
-      {/* TWO-COLUMN LAYOUT */}
+      {/* TWO-COLUMN LAYOUT
+          Quote form lives in the rail so it stays on screen on desktop.
+          On mobile the rail is ordered first so the form sits above About,
+          photos and reviews instead of after them. */}
       <section className="max-w-6xl mx-auto px-6 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* LEFT COLUMN */}
-          <div className="flex-1 min-w-0 space-y-8">
+          <div className="flex-1 min-w-0 space-y-8 order-2 lg:order-1">
             {(listing.blurb || (listing.services_offered && listing.services_offered.length > 0) || listing.years_experience || (listing.licenses && listing.licenses.length > 0)) && (
               <div className="reveal">
                 <p className="text-[11.5px] font-semibold text-gray-500 uppercase tracking-wide mb-3">About</p>
@@ -474,20 +492,19 @@ export default async function TradieProfilePage({
             <TestimonialsSection testimonials={listing.testimonials ?? []} />
 
             <ReviewsSection reviews={reviews} />
-
-            {QUOTE_REQUESTS_ENABLED && (
-              <div id="quote-form">
-                <QuoteForm listing={{ id: listing.id, business_name: listing.business_name, scraped_contact_email: listing.scraped_contact_email, is_claimed: listing.is_claimed ?? false, owner_email: ownerEmail }} />
-              </div>
-            )}
           </div>
 
-          {/* RIGHT COLUMN (sticky) */}
-          <div className="w-full lg:w-80 shrink-0 space-y-5">
-            <div className="lg:sticky lg:top-6 space-y-5">
-              {/* Business Info Card */}
-              <div className="bg-white rounded-2xl border border-gray-100 p-5 reveal">
-                <div className="flex items-center justify-center h-24 bg-gray-50 rounded-xl mb-4 overflow-hidden">
+          {/* RIGHT COLUMN: quote form first, then quiet contact + trust.
+              Sticky offset clears the fixed marketing nav. */}
+          <aside className="w-full lg:w-[22rem] shrink-0 order-1 lg:order-2 space-y-5">
+              {QUOTE_REQUESTS_ENABLED && (
+                <div id="quote-form" className="scroll-mt-28 lg:sticky lg:top-24">
+                  <QuoteForm listing={quoteListing} compact />
+                </div>
+              )}
+
+              <div className="bg-white rounded-2xl border border-gray-100 p-5">
+                <div className="flex items-center justify-center h-20 bg-gray-50 rounded-xl mb-3 overflow-hidden">
                   <ListingLogo logoUrl={listing.logo_url} businessName={listing.business_name} accent={accent} />
                 </div>
                 <h3 className="font-bold text-[15px] text-gray-900 text-center mb-1">{listing.business_name}</h3>
@@ -500,47 +517,50 @@ export default async function TradieProfilePage({
                     )}
                   </div>
                 )}
-                {listing.trades && listing.trades.length > 0 && (
-                  <div className="flex flex-wrap justify-center gap-1 mb-4">
-                    {(listing.trades as string[]).map((t: string) => (
-                      <span key={t} className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-gray-50 text-gray-600 border border-gray-100 capitalize">
-                        {TRADE_LABELS[t] ?? t}
-                      </span>
-                    ))}
-                  </div>
-                )}
                 <div className="space-y-2">
                   {listing.scraped_contact_phone && (
-                    <a href={`tel:${listing.scraped_contact_phone}`} className="flex items-center justify-center gap-2 w-full bg-[#0a1722] text-white font-bold text-[13px] py-3 rounded-xl hover:opacity-90 transition-opacity">
-                      <Phone size={14} /> Call
+                    <a
+                      href={`tel:${listing.scraped_contact_phone}`}
+                      className={`flex items-center justify-center gap-2 w-full font-bold text-[13px] py-3 rounded-xl hover:opacity-90 transition-opacity ${
+                        QUOTE_REQUESTS_ENABLED
+                          ? "border-2 border-gray-200 text-gray-800"
+                          : "bg-[#0a1722] text-white"
+                      }`}
+                    >
+                      <Phone size={14} /> Call {listing.scraped_contact_phone}
                     </a>
                   )}
                   {listing.website_url && (
                     <a href={listing.website_url} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 w-full border-2 border-gray-200 text-gray-700 font-bold text-[13px] py-2.5 rounded-xl hover:border-gray-400 transition-colors">
-                      <Globe size={14} /> Visit website
+                      className="flex items-center justify-center gap-1.5 text-[12.5px] font-semibold text-gray-500 hover:text-[#0a1722]">
+                      <Globe size={13} /> {domain ?? "Visit website"} <ExternalLink size={11} />
                     </a>
                   )}
                   {listing.place_id && (
                     <a href={`https://maps.google.com/?place_id=${listing.place_id}`} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 w-full border-2 border-gray-200 text-gray-700 font-bold text-[13px] py-2.5 rounded-xl hover:border-gray-400 transition-colors">
-                      <MapPin size={14} /> View on Google Maps
+                      className="flex items-center justify-center gap-1.5 text-[12.5px] font-semibold text-gray-500 hover:text-[#0a1722]">
+                      <MapPin size={13} /> View on Google Maps
                     </a>
                   )}
                 </div>
               </div>
 
-              {/* Trust Card */}
-              <div className="bg-white rounded-2xl border border-gray-100 p-5 reveal" style={{ animationDelay: "80ms" }}>
-                <p className="text-[12px] font-bold text-gray-500 uppercase tracking-wide mb-3">Trust &amp; verification</p>
+              <div className="bg-white rounded-2xl border border-gray-100 p-5">
+                <p className="text-[12px] font-bold text-gray-500 uppercase tracking-wide mb-3">Why send a request here</p>
                 <div className="space-y-3">
                   <div className="flex items-start gap-3">
                     <div className="w-7 h-7 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
                       <Check size={14} className="text-emerald-600" />
                     </div>
                     <div>
-                      <p className="text-[13px] font-semibold text-gray-800">Curated business</p>
-                      <p className="text-[11.5px] text-gray-400">Contact details checked and confirmed</p>
+                      <p className="text-[13px] font-semibold text-gray-800">
+                        {listing.is_claimed ? "Goes to this tradie" : "We pass it on for you"}
+                      </p>
+                      <p className="text-[11.5px] text-gray-400">
+                        {listing.is_claimed
+                          ? "Your details go only to this business."
+                          : "Swiftscope forwards the job to this listing."}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -548,8 +568,16 @@ export default async function TradieProfilePage({
                       <Star size={14} className="text-blue-500" />
                     </div>
                     <div>
-                      <p className="text-[13px] font-semibold text-gray-800">Google reviews checked</p>
-                      <p className="text-[11.5px] text-gray-400">Ratings sourced directly from Google</p>
+                      <p className="text-[13px] font-semibold text-gray-800">
+                        {listing.google_rating
+                          ? `${listing.google_rating.toFixed(1)} on Google`
+                          : "Google reviews checked"}
+                      </p>
+                      <p className="text-[11.5px] text-gray-400">
+                        {listing.google_reviews_count != null
+                          ? `${listing.google_reviews_count.toLocaleString()} reviews sourced from Google`
+                          : "Ratings sourced directly from Google"}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -557,18 +585,64 @@ export default async function TradieProfilePage({
                       <Shield size={14} className="text-[#ffb400]" />
                     </div>
                     <div>
-                      <p className="text-[13px] font-semibold text-gray-800">Swiftscope curated</p>
-                      <p className="text-[11.5px] text-gray-400">Listed in our curated directory</p>
+                      <p className="text-[13px] font-semibold text-gray-800">
+                        {isVerifiedBadge ? "Verified business" : "Swiftscope curated"}
+                      </p>
+                      <p className="text-[11.5px] text-gray-400">
+                        {isVerifiedBadge
+                          ? "ABN checked for this claimed listing."
+                          : "Contact details checked before listing."}
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
+          </aside>
+        </div>
+      </section>
+
+      {/* CLOSE ON THIS TRADIE before offering alternatives */}
+      <section className="border-t border-[var(--line)]">
+        <div className="max-w-6xl mx-auto px-6 py-12">
+          <div className="bg-[#0a1722] rounded-2xl p-8 sm:p-10 flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div className="text-center sm:text-left">
+              <p className="font-display text-[1.6rem] text-white mb-1">
+                {QUOTE_REQUESTS_ENABLED
+                  ? `Get a quote from ${listing.business_name}`
+                  : "Need a different trade?"}
+              </p>
+              <p className="text-white/60 text-[14px] max-w-md">
+                {QUOTE_REQUESTS_ENABLED
+                  ? "Tell them the job. They come back with a price. No account needed."
+                  : "Browse our full directory of curated listings across Melbourne's south east."}
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 shrink-0">
+              {QUOTE_REQUESTS_ENABLED && (
+                <a href="#quote-form" className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-7 py-3.5 rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2 whitespace-nowrap">
+                  <MessageSquare size={15} /> Get a quote
+                </a>
+              )}
+              {QUOTE_REQUESTS_ENABLED && listing.scraped_contact_phone && (
+                <a href={`tel:${listing.scraped_contact_phone}`} className="bg-white/10 text-white font-bold text-[14px] px-6 py-3.5 rounded-xl hover:bg-white/20 transition-colors flex items-center justify-center gap-2 whitespace-nowrap">
+                  <Phone size={15} /> Call
+                </a>
+              )}
+              <Link
+                href="/directory"
+                className={`${QUOTE_REQUESTS_ENABLED ? "text-white/70 hover:text-white text-[13.5px] font-semibold underline underline-offset-4 text-center sm:self-center" : "bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-7 py-3.5 rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2 whitespace-nowrap"}`}
+              >
+                {QUOTE_REQUESTS_ENABLED ? (
+                  "Need a different trade? Browse the directory"
+                ) : (
+                  <><Search size={15} /> Browse full directory</>
+                )}
+              </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* SIMILAR TRADIES */}
       {similar && similar.length > 0 && (
         <section className="border-t border-[var(--line)] bg-[var(--app-bg)]">
           <div className="max-w-6xl mx-auto px-6 py-10">
@@ -587,22 +661,12 @@ export default async function TradieProfilePage({
         </section>
       )}
 
-      {/* BOTTOM CTA */}
-      <section className="border-t border-[var(--line)]">
-        <div className="max-w-6xl mx-auto px-6 py-12">
-          <div className="bg-[#0a1722] rounded-2xl p-8 sm:p-10 flex flex-col sm:flex-row items-center justify-between gap-6">
-            <div className="text-center sm:text-left">
-              <p className="font-display text-[1.6rem] text-white mb-1">Need a different trade?</p>
-              <p className="text-white/60 text-[14px] max-w-sm">Browse our full directory of curated listings across Melbourne&apos;s south east.</p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3 shrink-0">
-              <Link href="/directory" className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-7 py-3.5 rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2 whitespace-nowrap">
-                <Search size={15} /> Browse full directory
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+      {QUOTE_REQUESTS_ENABLED && (
+        <ListingStickyCta
+          phone={listing.scraped_contact_phone}
+          businessName={listing.business_name}
+        />
+      )}
 
       <TradieSchema
         businessName={listing.business_name}
@@ -616,7 +680,7 @@ export default async function TradieProfilePage({
         reviewCount={listing.google_reviews_count}
         lat={listing.latitude}
         lng={listing.longitude}
-        slug={listing.id}
+        slug={prettySlug}
         reviews={reviews}
       />
     </main>
