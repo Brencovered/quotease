@@ -160,11 +160,51 @@ function parseYPListings(html: string, trade: string): YPListing[] {
   return listings.filter(l => l.business_name.length > 2);
 }
 
+const STATE_ABBREVIATIONS = ["nsw", "vic", "qld", "wa", "sa", "tas", "nt", "act"];
+
+/**
+ * Australia Post postcode ranges by state, used as a fallback when a
+ * suburb string doesn't already include a state abbreviation. Real
+ * incident this fixes: a custom trade+suburb entry of "Seaford" /
+ * "3198" (state omitted) built the slug "seaford-3198" - missing the
+ * "-vic-" the real site's URL scheme requires (confirmed pattern:
+ * melbourne-vic-3000) - so the request 404'd and silently returned
+ * zero results. The predefined trade x location matrix always
+ * includes state in its suburb strings ("Melbourne VIC"), so this
+ * only matters for free-text custom entries, but it's a real gap
+ * worth closing rather than just telling people to type the state.
+ * Ranges aren't perfectly precise at the boundaries (a handful of
+ * postcodes are shared/contested between neighbouring states) but are
+ * correct for the overwhelming majority and only used as a fallback
+ * when the input didn't specify state anyway.
+ */
+function inferStateFromPostcode(postcode: string): string | null {
+  const pc = parseInt(postcode, 10);
+  if (isNaN(pc)) return null;
+  if ((pc >= 1000 && pc <= 2599) || (pc >= 2620 && pc <= 2899) || (pc >= 2921 && pc <= 2999)) return "nsw";
+  if (pc >= 200 && pc <= 299) return "act";
+  if ((pc >= 2600 && pc <= 2619) || (pc >= 2900 && pc <= 2920)) return "act";
+  if ((pc >= 3000 && pc <= 3999) || (pc >= 8000 && pc <= 8999)) return "vic";
+  if ((pc >= 4000 && pc <= 4999) || (pc >= 9000 && pc <= 9999)) return "qld";
+  if ((pc >= 5000 && pc <= 5999)) return "sa";
+  if ((pc >= 6000 && pc <= 6999)) return "wa";
+  if ((pc >= 7000 && pc <= 7999)) return "tas";
+  if ((pc >= 800 && pc <= 999)) return "nt";
+  return null;
+}
+
 function ypSearchUrl(trade: string, suburb: string, postcode: string, page = 1): string {
   const categorySlug = CATEGORY_SLUGS[trade.toLowerCase().trim()] ?? trade;
   // Real URL shape confirmed directly: /melbourne-vic-3000/electrical-contractors?page=2
-  const locationSlug = suburb.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
-    + (postcode ? `-${postcode.trim()}` : "");
+  let locationSlug = suburb.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
+  const hasState = STATE_ABBREVIATIONS.some(s => locationSlug.split("-").includes(s));
+  if (!hasState && postcode) {
+    const inferred = inferStateFromPostcode(postcode.trim());
+    if (inferred) locationSlug += `-${inferred}`;
+  }
+  if (postcode) locationSlug += `-${postcode.trim()}`;
+
   const pageParam = page > 1 ? `?page=${page}` : "";
   return `https://www.yellowpages.com.au/${locationSlug}/${categorySlug}${pageParam}`;
 }
