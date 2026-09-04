@@ -498,7 +498,7 @@ export default async function TradieProfilePage({
               Sticky offset clears the fixed marketing nav. */}
           <aside className="w-full lg:w-[22rem] shrink-0 order-1 lg:order-2 space-y-5">
               {QUOTE_REQUESTS_ENABLED && (
-                <div id="quote-form" className="scroll-mt-28 lg:sticky lg:top-24">
+                <div id="quote-form" className="scroll-mt-28 lg:sticky lg:top-24 lg:max-h-[calc(100svh-7rem)] lg:overflow-y-auto">
                   <QuoteForm listing={quoteListing} compact />
                 </div>
               )}
