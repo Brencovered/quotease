@@ -81,6 +81,11 @@ export type DirectoryLeadSummary = {
   job_description: string | null;
   budget: string | null;
   customer_type: string | null;
+  other_quotes: string | null;
+  notes: string | null;
+  site_suburb: string | null;
+  photo_paths: string[] | null;
+  photo_urls?: { path: string; url: string; name: string }[];
   business_name: string | null;
   is_claimed: boolean | null;
   profile_id: string | null;

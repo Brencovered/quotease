@@ -238,6 +238,7 @@ export default async function TradieProfilePage({
     is_claimed: listing.is_claimed ?? false,
     owner_email: ownerEmail,
     scraped_contact_phone: listing.scraped_contact_phone,
+    suburb: listing.suburb,
   };
 
   return (
