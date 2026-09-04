@@ -1,3 +1,8 @@
+/**
+ * POST /api/directory/enquire
+ * Accepts JSON or multipart so the listing form can attach photos and drawings.
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -5,12 +10,47 @@ import {
   buildDirectoryEnquiryAdminNotifyEmail,
   buildDirectoryEnquiryCustomerConfirmationEmail,
 } from "@/lib/email/templates";
+import {
+  ENQUIRY_PHOTO_BUCKET,
+  MAX_ENQUIRY_FILES,
+  enquiryFileStoragePath,
+  isAllowedEnquiryFile,
+  signEnquiryPhotoPaths,
+} from "@/lib/directoryEnquiryPhotos";
+
+export const maxDuration = 60;
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+function asTrimmed(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+async function readEnquiryBody(req: NextRequest): Promise<{
+  fields: Record<string, string>;
+  photos: File[];
+}> {
+  const contentType = req.headers.get("content-type") ?? "";
+  if (contentType.includes("multipart/form-data")) {
+    const form = await req.formData();
+    const fields: Record<string, string> = {};
+    for (const [key, value] of form.entries()) {
+      if (typeof value === "string") fields[key] = value;
+    }
+    const photos = form.getAll("photos").filter((f): f is File => f instanceof File && f.size > 0);
+    return { fields, photos };
+  }
+
+  const body = (await req.json()) as Record<string, unknown>;
+  const fields: Record<string, string> = {};
+  for (const [key, value] of Object.entries(body)) {
+    if (typeof value === "string" || typeof value === "boolean") fields[key] = String(value);
+  }
+  return { fields, photos: [] };
+}
+
 export async function POST(req: NextRequest) {
-  /* ── 1. Validate API key is configured ─────────────────────────── */
   if (!RESEND_API_KEY) {
     console.error("[directory/enquire] RESEND_API_KEY is not set");
     return NextResponse.json(
@@ -19,34 +59,28 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  /* ── 2. Parse & validate body ──────────────────────────────────── */
-  let body: Record<string, unknown>;
+  let fields: Record<string, string>;
+  let photos: File[];
   try {
-    body = await req.json();
+    ({ fields, photos } = await readEnquiryBody(req));
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const {
-    listing_id,
-    business_name,
-    to_email,
-    is_claimed,
-    name,
-    email,
-    phone,
-    jobType,
-    budget,
-    stage,
-    urgency,
-    customerType,
-    others,
-    message,
-  } = body;
-
-  const customerName = typeof name === "string" ? name.trim() : "";
-  const customerEmail = typeof email === "string" ? email.trim() : "";
-  const jobDesc = typeof jobType === "string" ? jobType.trim() : "";
+  const customerName = asTrimmed(fields.name);
+  const customerEmail = asTrimmed(fields.email);
+  const jobDesc = asTrimmed(fields.jobType);
+  const phone = asTrimmed(fields.phone);
+  const budget = asTrimmed(fields.budget);
+  const urgencyStr = asTrimmed(fields.urgency) || asTrimmed(fields.stage) || null;
+  const customerType = asTrimmed(fields.customerType);
+  const others = asTrimmed(fields.others);
+  const message = asTrimmed(fields.message);
+  const siteSuburb = asTrimmed(fields.site_suburb);
+  const listingId = asTrimmed(fields.listing_id);
+  const businessName = asTrimmed(fields.business_name);
+  const scrapedToEmail = asTrimmed(fields.to_email);
+  const isClaimed = fields.is_claimed === "true";
 
   if (!customerName || !customerEmail || !jobDesc) {
     return NextResponse.json(
@@ -56,41 +90,32 @@ export async function POST(req: NextRequest) {
   }
 
   if (!EMAIL_RE.test(customerEmail)) {
-    return NextResponse.json(
-      { error: "Please enter a valid email address." },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
   }
 
-  // Scraped business emails occasionally come through malformed (stray
-  // characters, multiple addresses concatenated, etc). Rather than let a
-  // bad address on file kill every quote request for that listing, fall
-  // back to Swiftscope's own inbox so the enquiry still gets somewhere.
-  const scrapedToEmail = typeof to_email === "string" ? to_email.trim() : "";
+  if (photos.length > MAX_ENQUIRY_FILES) {
+    return NextResponse.json({ error: `Please attach at most ${MAX_ENQUIRY_FILES} files.` }, { status: 400 });
+  }
+  for (const photo of photos) {
+    const problem = isAllowedEnquiryFile(photo);
+    if (problem) return NextResponse.json({ error: problem }, { status: 400 });
+  }
+
   const hasListingEmail = EMAIL_RE.test(scrapedToEmail);
   const toAddress = hasListingEmail ? scrapedToEmail : "team@swiftscope.com.au";
 
-  /* ── 3. Save enquiry to database (always persist) ──────────────── */
-  // Uses the admin (service-role) client rather than the session-scoped
-  // client: this insert is server-validated above and comes from anonymous
-  // homeowners with no session, so there's no meaningful RLS role to grant
-  // here. Previously this used the regular client, which failed on every
-  // submission - Supabase's insert().select() requires a SELECT policy for
-  // the RETURNING clause too, not just an INSERT policy, and anon had none.
   const admin = createAdminClient();
   let enquiryId: string | null = null;
 
   const { priorityFromUrgency, makeLeadCode } = await import("@/lib/directoryLeads");
-  const urgencyStr = typeof urgency === "string" ? urgency : typeof stage === "string" ? stage : null;
   const priority = priorityFromUrgency(urgencyStr);
 
-  // Resolve claimed listing → business profile so the owner sees it in /leads
   let profileId: string | null = null;
-  if (typeof listing_id === "string" && listing_id) {
+  if (listingId) {
     const { data: listing } = await admin
       .from("directory_listing")
       .select("profile_id")
-      .eq("id", listing_id)
+      .eq("id", listingId)
       .maybeSingle();
     profileId = listing?.profile_id ?? null;
   }
@@ -102,19 +127,22 @@ export async function POST(req: NextRequest) {
       .from("directory_enquiries")
       .insert({
         id: tempId,
-        listing_id: typeof listing_id === "string" ? listing_id : null,
-        business_name: typeof business_name === "string" ? business_name : null,
+        listing_id: listingId || null,
+        business_name: businessName || null,
         to_email: toAddress,
-        is_claimed: is_claimed === true || Boolean(profileId),
+        is_claimed: isClaimed || Boolean(profileId),
         customer_name: customerName,
         customer_email: customerEmail,
-        customer_phone: typeof phone === "string" ? phone.trim() || null : null,
+        customer_phone: phone || null,
         job_description: jobDesc,
-        budget: typeof budget === "string" ? budget || null : null,
+        budget: budget || null,
         stage: urgencyStr,
         urgency: urgencyStr,
         priority,
-        customer_type: typeof customerType === "string" ? customerType || null : null,
+        customer_type: customerType || null,
+        other_quotes: others || null,
+        notes: message || null,
+        site_suburb: siteSuburb || null,
         pipeline_status: "new",
         lead_code: leadCode,
         profile_id: profileId,
@@ -133,23 +161,43 @@ export async function POST(req: NextRequest) {
     console.error("[directory/enquire] DB exception:", dbErr);
   }
 
-  /* ── 4. Build email HTML ───────────────────────────────────────── */
-  const isClaimed = is_claimed === true;
+  const photoPaths: string[] = [];
+  if (enquiryId && photos.length > 0) {
+    for (const photo of photos) {
+      const path = enquiryFileStoragePath(enquiryId, photo.name);
+      const { error: uploadError } = await admin.storage.from(ENQUIRY_PHOTO_BUCKET).upload(path, photo, {
+        contentType: photo.type,
+      });
+      if (uploadError) {
+        console.error("[directory/enquire] photo upload error:", uploadError.message);
+        continue;
+      }
+      photoPaths.push(path);
+    }
+    if (photoPaths.length > 0) {
+      await admin.from("directory_enquiries").update({ photo_paths: photoPaths }).eq("id", enquiryId);
+    }
+  }
+
+  const photoLinks = enquiryId
+    ? await signEnquiryPhotoPaths(admin, photoPaths)
+    : [];
 
   const { subject, html } = buildDirectoryEnquiryEmail({
-    businessName: typeof business_name === "string" ? business_name : "",
+    businessName,
     isClaimed,
     customerName,
     customerEmail,
     jobDesc,
-    phone: typeof phone === "string" ? phone : undefined,
-    budget: typeof budget === "string" ? budget : undefined,
-    stage: typeof stage === "string" ? stage : undefined,
-    others: typeof others === "string" ? others : undefined,
-    message: typeof message === "string" ? message : undefined,
+    phone: phone || undefined,
+    budget: budget || undefined,
+    stage: urgencyStr ?? undefined,
+    others: others || undefined,
+    message: message || undefined,
+    siteSuburb: siteSuburb || undefined,
+    photos: photoLinks,
   });
 
-  /* ── 5. Send via Resend ────────────────────────────────────────── */
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -171,58 +219,39 @@ export async function POST(req: NextRequest) {
       try {
         const errData = await res.json();
         console.error("[directory/enquire] Resend error:", errData);
-        // Surface the actual Resend error message
-        if (errData?.message) {
-          errMsg = errData.message;
-        } else if (errData?.error) {
+        if (errData?.message) errMsg = errData.message;
+        else if (errData?.error) {
           errMsg = typeof errData.error === "string" ? errData.error : JSON.stringify(errData.error);
         }
       } catch {
         errMsg = `Email service returned ${res.status}`;
       }
 
-      // Update DB with error
       if (enquiryId) {
-        await admin
-          .from("directory_enquiries")
-          .update({ email_error: errMsg })
-          .eq("id", enquiryId);
+        await admin.from("directory_enquiries").update({ email_error: errMsg }).eq("id", enquiryId);
       }
-
-      return NextResponse.json(
-        { error: errMsg },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: errMsg }, { status: 500 });
     }
 
-    /* ── Success ─────────────────────────────────────────────────── */
     if (enquiryId) {
-      await admin
-        .from("directory_enquiries")
-        .update({ email_sent: true })
-        .eq("id", enquiryId);
+      await admin.from("directory_enquiries").update({ email_sent: true }).eq("id", enquiryId);
     }
 
-    // The listing had a real email on file (quote actually went to the
-    // tradie, not just Swiftscope's fallback inbox): also notify the team
-    // and reassure the customer their request was actually sent somewhere.
-    // Best-effort - failures here don't affect the main enquiry, which is
-    // already saved and sent.
     if (hasListingEmail) {
-      const businessNameStr = typeof business_name === "string" ? business_name : "";
-
       const adminEmail = buildDirectoryEnquiryAdminNotifyEmail({
-        businessName: businessNameStr,
+        businessName,
         toEmail: toAddress,
         isClaimed,
         customerName,
         customerEmail,
         jobDesc,
+        budget: budget || undefined,
+        others: others || undefined,
       });
 
       const customerEmailContent = buildDirectoryEnquiryCustomerConfirmationEmail({
         customerName,
-        businessName: businessNameStr,
+        businessName,
       });
 
       const [adminResult, customerResult] = await Promise.allSettled([
@@ -279,19 +308,14 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ ok: true, id: enquiryId });
-
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : "Network error contacting email service";
     console.error("[directory/enquire] Exception:", err);
 
     if (enquiryId) {
-      await admin
-        .from("directory_enquiries")
-        .update({ email_error: errMsg })
-        .eq("id", enquiryId);
+      await admin.from("directory_enquiries").update({ email_error: errMsg }).eq("id", enquiryId);
     }
 
     return NextResponse.json({ error: errMsg }, { status: 500 });
   }
 }
-
