@@ -248,13 +248,22 @@ export function buildDirectoryEnquiryEmail(vars: {
   stage?: string;
   others?: string;
   message?: string;
+  siteSuburb?: string;
+  photos?: { url: string; name: string }[];
 }) {
   const extraFields: string[] = [];
   if (vars.phone?.trim()) extraFields.push(`<p><strong>Phone:</strong> ${htmlEscape(vars.phone.trim())}</p>`);
+  if (vars.siteSuburb?.trim()) extraFields.push(`<p><strong>Job suburb:</strong> ${htmlEscape(vars.siteSuburb.trim())}</p>`);
   if (vars.budget?.trim()) extraFields.push(`<p><strong>Budget:</strong> ${htmlEscape(vars.budget)}</p>`);
   if (vars.stage?.trim()) extraFields.push(`<p><strong>Stage:</strong> ${htmlEscape(vars.stage)}</p>`);
   if (vars.others?.trim()) extraFields.push(`<p><strong>Other quotes:</strong> ${htmlEscape(vars.others)}</p>`);
   if (vars.message?.trim()) extraFields.push(`<p><strong>Notes:</strong> ${htmlEscape(vars.message)}</p>`);
+  if (vars.photos?.length) {
+    const links = vars.photos
+      .map((p) => `<li><a href="${htmlEscape(p.url)}">${htmlEscape(p.name)}</a></li>`)
+      .join("");
+    extraFields.push(`<p><strong>Photos / drawings:</strong></p><ul>${links}</ul>`);
+  }
 
   const claimNudge = vars.isClaimed
     ? ""
@@ -301,6 +310,8 @@ export function buildDirectoryEnquiryAdminNotifyEmail(vars: {
   customerName: string;
   customerEmail: string;
   jobDesc: string;
+  budget?: string;
+  others?: string;
 }) {
   return {
     subject: `[Directory] Quote request forwarded: ${vars.businessName}`,
@@ -311,6 +322,8 @@ export function buildDirectoryEnquiryAdminNotifyEmail(vars: {
       <hr/>
       <p><strong>Customer:</strong> ${htmlEscape(vars.customerName)} (${htmlEscape(vars.customerEmail)})</p>
       <p><strong>Job:</strong> ${htmlEscape(vars.jobDesc)}</p>
+      ${vars.budget ? `<p><strong>Budget:</strong> ${htmlEscape(vars.budget)}</p>` : ""}
+      ${vars.others ? `<p><strong>Other quotes:</strong> ${htmlEscape(vars.others)}</p>` : ""}
       <hr/>
       <p style="color:#888;font-size:12px">Automated copy - the tradie's copy was sent separately to the address above.</p>
     `,
@@ -514,6 +527,10 @@ export const EMAIL_TEMPLATES: EmailTemplateMeta[] = [
         phone: "0412 345 678",
         budget: "$1,000 - $2,000",
         stage: "Ready to book",
+        siteSuburb: "Frankston",
+        others: "I have one quote. They quoted $1,800.",
+        message: "Access via the side gate. Ceiling about 2.7m.",
+        photos: [{ url: "https://swiftscope.com.au/directory", name: "living-room.jpg" }],
       }),
   },
   {

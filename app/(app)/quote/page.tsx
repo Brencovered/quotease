@@ -376,7 +376,7 @@ export default async function NewQuotePage({
     const { data: lead } = await supabase
       .from("directory_enquiries")
       .select(
-        "id, lead_code, priority, urgency, budget, customer_type, customer_name, customer_email, customer_phone, job_description, pipeline_status, quote_id"
+        "id, lead_code, priority, urgency, budget, customer_type, customer_name, customer_email, customer_phone, job_description, other_quotes, notes, site_suburb, pipeline_status, quote_id"
       )
       .eq("id", enquiryId)
       .eq("profile_id", businessId)
@@ -388,7 +388,12 @@ export default async function NewQuotePage({
         clientName: lead.customer_name ?? "",
         clientEmail: lead.customer_email ?? "",
         clientPhone: lead.customer_phone ?? "",
-        jobNotes: lead.job_description ?? "",
+        jobNotes: [
+          lead.job_description,
+          lead.site_suburb ? `Suburb: ${lead.site_suburb}` : null,
+          lead.other_quotes ? `Other quotes: ${lead.other_quotes}` : null,
+          lead.notes,
+        ].filter(Boolean).join("\n\n"),
         leadCode: lead.lead_code,
         priority: lead.priority,
         urgency: lead.urgency,

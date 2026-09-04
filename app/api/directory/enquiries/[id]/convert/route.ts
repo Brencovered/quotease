@@ -69,7 +69,10 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
         urgency: lead.urgency,
         budget: lead.budget,
         customer_type: lead.customer_type,
-        notes: lead.job_description,
+        other_quotes: lead.other_quotes,
+        notes: lead.notes || lead.job_description,
+        site_suburb: lead.site_suburb,
+        photo_paths: lead.photo_paths,
       },
     })
     .select("id")
