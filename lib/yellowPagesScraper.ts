@@ -7,13 +7,49 @@
  * by lib/directoryExpansionSweep.ts (the automated sweep that works
  * through the full trade x location matrix on a schedule) without
  * duplicating it - one implementation, two callers.
+ *
+ * URL scheme and parsing rewritten after the original version returned
+ * zero results across every combo run in production. Investigated
+ * directly against the real site (not guessed): the original code hit
+ * `/search/listings?clue=X&locationClue=Y`, which doesn't match Yellow
+ * Pages' actual URL structure at all - real listing pages look like
+ * `/melbourne-vic-3000/electrical-contractors?page=2`, and the site
+ * doesn't embed LocalBusiness JSON-LD the way the original parser
+ * assumed either. Category slugs also aren't just the trade name -
+ * "electrician" is actually "electrical-contractors" on the real site.
+ * See CATEGORY_SLUGS below; 13 of 15 confirmed directly against real
+ * Yellow Pages URLs, painter and landscaper are reasonable inference
+ * (consistent with the confirmed naming pattern) but not directly
+ * verified - worth an early real-world check via the admin panel.
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getRandomUserAgent } from "@/lib/websiteScraper";
 
 const DELAY_MS = 1500; // be polite - don't hammer their servers
-const RESULTS_PER_PAGE = 20;
+const RESULTS_PER_PAGE = 30; // confirmed from a real page: "Showing 1-30 of 1438"
+
+/**
+ * Trade -> Yellow Pages category slug. Confirmed directly against real
+ * URLs (see comment above) except painter and landscaper, marked below.
+ */
+const CATEGORY_SLUGS: Record<string, string> = {
+  electrician:      "electrical-contractors",
+  plumber:          "plumbers-gasfitters",
+  carpenter:        "carpenters-joiners",
+  roofer:           "roofing-construction-services",
+  painter:          "painters-decorators",       // inferred, not directly confirmed
+  tiler:            "wall-floor-tilers",
+  landscaper:       "landscape-gardeners",         // inferred, not directly confirmed
+  builder:          "building-contractors",
+  concreter:        "concrete-contractors",
+  plasterer:        "plasterers",
+  airconditioning:  "air-conditioning",
+  solar:            "solar-energy",
+  locksmith:        "locksmiths",
+  glazier:          "glazier-glass-replacement-services",
+  fencer:           "fencing-contractors",
+};
 
 interface YPListing {
   business_name:     string;
@@ -65,71 +101,72 @@ async function fetchHtml(url: string): Promise<string | null> {
 
 function parseYPListings(html: string, trade: string): YPListing[] {
   const listings: YPListing[] = [];
+  const seenUrls = new Set<string>();
 
-  // YP listing cards - each has class "listing-item" or similar
-  // Extract JSON-LD structured data first (most reliable)
-  const jsonLdBlocks = html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]+?)<\/script>/gi);
-  for (const block of jsonLdBlocks) {
-    try {
-      const data = JSON.parse(block[1]);
-      const items = Array.isArray(data) ? data : data["@graph"] ? data["@graph"] : [data];
-      for (const item of items) {
-        if (!item["@type"]?.includes?.("LocalBusiness") && item["@type"] !== "LocalBusiness") continue;
-        const addr = item.address ?? {};
-        listings.push({
-          business_name: item.name ?? "",
-          phone: item.telephone ?? null,
-          address: item.streetAddress ?? addr.streetAddress ?? null,
-          suburb: addr.addressLocality ?? null,
-          postcode: addr.postalCode ?? null,
-          state: addr.addressRegion ?? null,
-          website_url: item.url ?? item.sameAs ?? null,
-          email: item.email ?? null,
-          trade,
-          source: "yellowpages",
-          google_rating: item.aggregateRating?.ratingValue ? parseFloat(item.aggregateRating.ratingValue) : null,
-          google_reviews_count: item.aggregateRating?.reviewCount ? parseInt(item.aggregateRating.reviewCount) : null,
-        });
-      }
-    } catch {}
-  }
+  // Anchor on the one distinctive, reliable marker every real listing
+  // has: a link to its business profile page, always shaped
+  // /{suburb-slug}/bpp/{business-slug}-{numericId}. Confirmed directly
+  // against real fetched pages - the business name is the link's own
+  // text (`## [Business Name](.../bpp/...)` in the page's rendered
+  // content), so no separate name-container regex is needed, and no
+  // JSON-LD or specific wrapper class name has to be guessed at. Every
+  // listing appears twice on a real page (once inline, once again in a
+  // "Sponsored" section at the bottom) - seenUrls dedupes that.
+  const profileLinks = html.matchAll(/<a[^>]+href=["']([^"']*\/bpp\/[a-z0-9-]+-\d+[^"']*)["'][^>]*>([\s\S]{2,120}?)<\/a>/gi);
 
-  // Fallback: parse HTML listing cards if JSON-LD yielded nothing
-  if (listings.length === 0) {
-    const cards = html.matchAll(/<(?:div|li)[^>]*class=["'][^"']*listing[^"']*["'][^>]*>([\s\S]{100,2000}?)<\/(?:div|li)>/gi);
-    for (const card of cards) {
-      const cardHtml = card[1];
+  for (const m of profileLinks) {
+    const url = m[1].split("?")[0];
+    if (seenUrls.has(url)) continue;
 
-      const nameMatch = cardHtml.match(/<(?:h[1-4]|strong)[^>]*>([\s\S]{2,100}?)<\/(?:h[1-4]|strong)>/i);
-      const phoneMatch = cardHtml.match(/href=["']tel:([+\d\s\-().]{8,20})["']/i);
-      const websiteMatch = cardHtml.match(/href=["'](https?:\/\/(?!(?:www\.)?yellowpages)[^"']{10,})["']/i);
-      const suburbMatch = cardHtml.match(/(?:suburb|locality)[^>]*>([^<]{3,40})<\//i);
+    const name = m[2].replace(/<[^>]+>/g, "").trim();
+    if (!name || name.length < 3 || name.length > 100) continue;
+    // The same /bpp/ link is also used for non-heading elements (e.g.
+    // wrapping a thumbnail image) - only the heading-text occurrence
+    // gives a real business name, image-wrapping ones produce empty or
+    // alt-text-only matches that this length/shape check filters out.
+    if (/^(?:directions|more info|visit website)$/i.test(name)) continue;
 
-      if (!nameMatch) continue;
-      const name = nameMatch[1].replace(/<[^>]+>/g, "").trim();
-      if (!name || name.length < 3) continue;
+    seenUrls.add(url);
 
-      listings.push({
-        business_name: name,
-        phone: phoneMatch ? phoneMatch[1].trim() : null,
-        address: null, suburb: suburbMatch ? suburbMatch[1].trim() : null,
-        postcode: null, state: null,
-        website_url: websiteMatch ? websiteMatch[1] : null,
-        email: null, trade, source: "yellowpages",
-        google_rating: null, google_reviews_count: null,
-      });
-    }
+    // Look at the window of text right after this listing's name for
+    // its phone/address/website - confirmed from real pages that these
+    // always appear in that order shortly after the name, regardless
+    // of which wrapper element contains them.
+    const afterIdx = m.index! + m[0].length;
+    const window = html.slice(afterIdx, afterIdx + 1500);
+
+    const phoneMatch = window.match(/href=["']tel:([^"']+)["']/i)
+      ?? window.match(/\b((?:\(0\d\)\s?\d{4}\s?\d{4})|(?:1?[38]00\s?\d{3}\s?\d{3})|(?:04\d{2}\s?\d{3}\s?\d{3}))\b/);
+    const websiteMatch = window.match(/href=["'](https?:\/\/(?!(?:www\.)?yellowpages)[^"']{10,})["'][^>]*>\s*(?:<[^>]+>\s*)*Visit Website/i);
+    const addressMatch = window.match(/>([^<]{3,60}),\s*(NSW|VIC|QLD|WA|SA|TAS|NT|ACT),?\s*(\d{4})\b/i);
+    const ratingMatch = window.match(/\b(\d\.\d)\s*\((\d+)\)/);
+
+    listings.push({
+      business_name: name,
+      phone: phoneMatch ? phoneMatch[1].trim() : null,
+      address: null,
+      suburb: addressMatch ? addressMatch[1].trim() : null,
+      postcode: addressMatch ? addressMatch[3] : null,
+      state: addressMatch ? addressMatch[2].toUpperCase() : null,
+      website_url: websiteMatch ? websiteMatch[1] : null,
+      email: null,
+      trade,
+      source: "yellowpages",
+      google_rating: ratingMatch ? parseFloat(ratingMatch[1]) : null,
+      google_reviews_count: ratingMatch ? parseInt(ratingMatch[2]) : null,
+    });
   }
 
   return listings.filter(l => l.business_name.length > 2);
 }
 
 function ypSearchUrl(trade: string, suburb: string, postcode: string, page = 1): string {
-  const q   = encodeURIComponent(trade);
-  // Postcode gives more precise results than suburb name
-  const loc = encodeURIComponent(postcode || suburb);
-  const start = (page - 1) * RESULTS_PER_PAGE;
-  return `https://www.yellowpages.com.au/search/listings?clue=${q}&locationClue=${loc}&start=${start}`;
+  const categorySlug = CATEGORY_SLUGS[trade.toLowerCase().trim()] ?? trade;
+  // Real URL shape confirmed directly: /melbourne-vic-3000/electrical-contractors?page=2
+  const locationSlug = suburb.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
+    + (postcode ? `-${postcode.trim()}` : "");
+  const pageParam = page > 1 ? `?page=${page}` : "";
+  return `https://www.yellowpages.com.au/${locationSlug}/${categorySlug}${pageParam}`;
 }
 
 export async function scrapeYellowPagesCombo(
