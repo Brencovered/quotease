@@ -468,7 +468,7 @@ export default function AdminWebsiteScraper() {
  */
 function DirectoryExpansionSweepPanel() {
   const [stats, setStats] = useState<{ matrixSize: number; covered: number } | null>(null);
-  const [running, setRunning] = useState(false);
+  const [_running, setRunning] = useState(false); // unused while paused - kept so runBatch (dead code path, button disabled) still typechecks if re-enabled later
   const [result, setResult] = useState<{
     combosProcessed: number; totalFound: number; totalInserted: number; totalSkipped: number;
     combos: { trade: string; location: string; found: number; inserted: number }[];
@@ -512,9 +512,32 @@ function DirectoryExpansionSweepPanel() {
         <p className="section-tag">Directory expansion sweep</p>
         <p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5">
           Automatically works through every trade x location combination via Yellow Pages, so growing the directory
-          doesn&apos;t mean picking a combo and clicking scrape one at a time. Runs once a day on its own -
-          this is for running extra batches now, or targeting a specific trade and suburb.
+          doesn&apos;t mean picking a combo and clicking scrape one at a time.
         </p>
+      </div>
+
+      {/* Paused, not removed - confirmed via runtime logs that Yellow
+          Pages blocks every request from Vercel's servers with a 403,
+          on the first attempt, every time (checked with the correct
+          URL scheme, correct category slugs, and correct state
+          handling all confirmed working - this isn't a code problem).
+          Fixing it needs a paid proxy/scraping service; decided not to
+          take that on for now. Left the working parts (coverage stats,
+          the underlying route, the daily cron entry) in place rather
+          than deleted, since it's a real option to revisit later, but
+          disabled the run controls so nobody spends more time clicking
+          a button that's confirmed to only ever return zero. */}
+      <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+        <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+        <div>
+          <p className="text-[13px] font-bold text-amber-900">Paused - Yellow Pages blocks requests from this server</p>
+          <p className="text-[12px] text-amber-700 mt-1">
+            Confirmed via logs: every request gets a 403, immediately, every time - a datacenter-IP block, not a bug in
+            the scraper itself (the URL scheme, category slugs, and parsing are all confirmed correct). Fixing it needs
+            a paid proxy service (~$49/mo) - decided not to take that on for now, so the daily cron is off and the
+            controls below are disabled. The coverage progress from before this was confirmed is still shown below.
+          </p>
+        </div>
       </div>
 
       {stats && (
@@ -535,7 +558,7 @@ function DirectoryExpansionSweepPanel() {
           scrapes fine but never tells the coverage tracker anything
           happened) - so a manually-targeted combo counts as covered and
           won't get redundantly re-picked by a later automatic run. */}
-      <div>
+      <div className="opacity-50 pointer-events-none">
         <p className="text-[11px] font-bold uppercase text-[var(--ink-faint)] mb-2">Target a specific trade + suburb (optional)</p>
         <div className="grid sm:grid-cols-3 gap-2">
           <input
@@ -543,29 +566,28 @@ function DirectoryExpansionSweepPanel() {
             onChange={e => setCustomTrade(e.target.value)}
             placeholder="Trade, e.g. electrician"
             className="app-field text-[13px]"
+            disabled
           />
           <input
             value={customSuburb}
             onChange={e => setCustomSuburb(e.target.value)}
             placeholder="Suburb, e.g. Coburg VIC"
             className="app-field text-[13px]"
+            disabled
           />
           <input
             value={customPostcode}
             onChange={e => setCustomPostcode(e.target.value)}
             placeholder="Postcode (optional)"
             className="app-field text-[13px]"
+            disabled
           />
         </div>
       </div>
 
-      <button onClick={runBatch} disabled={running}
-        className="btn-primary px-6 py-3 flex items-center gap-2 text-[13.5px]">
-        {running
-          ? <><RefreshCw size={14} className="animate-spin" /> Sweeping...</>
-          : hasCustom
-          ? <><Play size={14} /> Scrape {customTrade.trim()} in {customSuburb.trim()}</>
-          : <><Play size={14} /> Run next batch now</>}
+      <button onClick={runBatch} disabled
+        className="btn-primary px-6 py-3 flex items-center gap-2 text-[13.5px] opacity-50 cursor-not-allowed">
+        <Play size={14} /> Paused - see note above
       </button>
 
       {result && (
