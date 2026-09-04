@@ -91,10 +91,25 @@ async function fetchHtml(url: string): Promise<string | null> {
       signal: controller.signal,
     });
     clearTimeout(t);
-    if (!res.ok) return null;
-    return await res.text();
-  } catch {
+    if (!res.ok) {
+      // Every prior "not working" report traced back to a real, fixable
+      // cause once actually investigated (wrong URL scheme, missing
+      // state) - but this function swallowed every failure completely
+      // silently, so if the *next* failure is something else (bot
+      // detection, a redirect, a block), there'd be no way to tell
+      // without guessing again. Logging the real status/URL here means
+      // Vercel runtime logs show exactly what happened next time.
+      console.error(`[yellowPagesScraper] fetch failed: ${res.status} ${res.statusText} for ${url}`);
+      return null;
+    }
+    const text = await res.text();
+    if (text.length < 500) {
+      console.error(`[yellowPagesScraper] suspiciously short response (${text.length} chars) for ${url}`);
+    }
+    return text;
+  } catch (err) {
     clearTimeout(t);
+    console.error(`[yellowPagesScraper] fetch threw for ${url}:`, err instanceof Error ? err.message : err);
     return null;
   }
 }
@@ -222,9 +237,20 @@ export async function scrapeYellowPagesCombo(
   for (let page = 1; page <= Math.min(pages, 5); page++) {
     const url = ypSearchUrl(trade, suburb, postcode, page);
     const html = await fetchHtml(url);
-    if (!html) break;
+    if (!html) {
+      console.error(`[yellowPagesScraper] no HTML returned for ${url} - see fetch error above`);
+      break;
+    }
 
     const found = parseYPListings(html, trade);
+    if (found.length === 0) {
+      // Distinguishes "the network request failed" (logged above, in
+      // fetchHtml) from "the page loaded fine but the parser found
+      // nothing in it" - genuinely different problems needing
+      // different fixes, and the only way to tell them apart from
+      // outside is a log like this one.
+      console.error(`[yellowPagesScraper] fetched ${html.length} chars from ${url} but parsed 0 listings - has /bpp/ link: ${html.includes("/bpp/")}`);
+    }
     allListings.push(...found);
     pagesScraped++;
 
