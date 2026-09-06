@@ -335,6 +335,14 @@ export default async function TradieProfilePage({
             </p>
             <Link
               href={`/directory/claim?name=${encodeURIComponent(listing.business_name)}&suburb=${encodeURIComponent(listing.suburb ?? "")}&trade=${encodeURIComponent(primaryTrade ?? "")}`}
+              // nofollow: this link (and the one in the Contact card
+              // below) exists on every unclaimed listing page, each
+              // with different prefill params, giving Googlebot a
+              // crawlable path to a distinct URL per listing - all
+              // rendering the same form. The claim page is noindexed
+              // via app/directory/claim/layout.tsx; this stops new
+              // param variants being discovered in the first place.
+              rel="nofollow"
               className="inline-flex items-center gap-1.5 bg-[#0a1722] text-white font-bold text-[13px] px-4 py-2 rounded-lg hover:opacity-90 transition-opacity whitespace-nowrap"
             >
               Claim this listing <ArrowRight size={13} />
@@ -416,6 +424,7 @@ export default async function TradieProfilePage({
               {CLAIMED_DIRECTORY_PAGES_ENABLED && !listing.is_claimed && (
                 <Link
                   href={`/directory/claim?name=${encodeURIComponent(listing.business_name)}&suburb=${encodeURIComponent(listing.suburb ?? "")}&trade=${encodeURIComponent(primaryTrade ?? "")}`}
+                  rel="nofollow"
                   className="block mt-4 pt-3 border-t border-gray-100 text-[12.5px] font-semibold text-[#0a1722] hover:underline"
                 >
                   Is this your business? Claim this free listing →
