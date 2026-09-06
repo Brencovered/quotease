@@ -372,6 +372,13 @@ export default function DirectoryCard({ listing, index = 0 }: { listing: Listing
             {CLAIMED_DIRECTORY_PAGES_ENABLED && !listing.is_claimed && (
               <Link
                 href={`/directory/claim?name=${encodeURIComponent(listing.business_name)}${listing.suburb ? `&suburb=${encodeURIComponent(listing.suburb)}` : ""}${primaryTrade ? `&trade=${encodeURIComponent(primaryTrade)}` : ""}`}
+                // nofollow: renders once per unclaimed card across every
+                // /directory search results page - the biggest source of
+                // distinct crawlable claim-URL variants on the site, same
+                // issue as the listing-page claim links (see
+                // app/directory/[slug]/page.tsx and
+                // app/directory/claim/layout.tsx for the full picture).
+                rel="nofollow"
                 className="flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[#c48a00] hover:text-[#a67200] bg-amber-50 hover:bg-amber-100 px-3 py-2 rounded-lg transition-colors w-full"
               >
                 Is this your business? Claim it free
