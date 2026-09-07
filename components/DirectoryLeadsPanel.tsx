@@ -208,8 +208,28 @@ export default function DirectoryLeadsPanel({
                     <p className="text-[13px] text-[var(--ink-soft)] mt-0.5 line-clamp-2">
                       {r.job_description}
                     </p>
+                    {(r.other_quotes || r.notes || r.site_suburb) && (
+                      <p className="text-[12px] text-[var(--ink-soft)] mt-1 line-clamp-2">
+                        {[r.site_suburb, r.other_quotes, r.notes].filter(Boolean).join(" · ")}
+                      </p>
+                    )}
+                    {r.photo_urls && r.photo_urls.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {r.photo_urls.map((photo) => (
+                          <a
+                            key={photo.path}
+                            href={photo.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[11.5px] font-semibold text-[var(--navy)] underline underline-offset-2"
+                          >
+                            {photo.name}
+                          </a>
+                        ))}
+                      </div>
+                    )}
                     <p className="text-[11.5px] text-[var(--ink-faint)] mt-1">
-                      {[r.customer_type, r.budget, fmtDate(r.created_at)].filter(Boolean).join(" · ")}
+                      {[r.customer_type, r.budget, r.photo_urls?.length ? `${r.photo_urls.length} file${r.photo_urls.length === 1 ? "" : "s"}` : null, fmtDate(r.created_at)].filter(Boolean).join(" · ")}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2 shrink-0">
