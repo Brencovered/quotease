@@ -439,6 +439,12 @@ export default function AdminWebsiteScraper() {
       {/* Automated directory expansion sweep */}
       <DirectoryExpansionSweepPanel />
 
+      {/* ABN Bulk Extract directory growth - free, no IP-blocking risk
+          (government open data, published for bulk use), the path
+          picked after Yellow Pages got blocked and Brendan decided
+          not to pay for a proxy to get past it. */}
+      <AbnDirectoryPanel />
+
       {/* Yellow Pages Scraper */}
       <YellowPagesScraper />
 
@@ -612,6 +618,138 @@ function DirectoryExpansionSweepPanel() {
               </p>
             ))}
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Two-phase ABN Bulk Extract pipeline - the free, government-data
+ * path to new listings after Yellow Pages turned out to be IP-blocked
+ * and the decision was made not to pay for a proxy to get past it.
+ * Phase 1 downloads/filters the ABN register into a candidate queue
+ * (large file, resumable across many runs); phase 2 processes that
+ * queue 50 at a time, guessing and verifying a website for each via
+ * free domain-guessing (validated against 5 real businesses earlier -
+ * 3/5 hit rate - before being wired in here).
+ */
+function AbnDirectoryPanel() {
+  const [stats, setStats] = useState<{
+    totalCandidates: number; unprocessed: number; listingsCreated: number;
+    ingestCursor: { split_file_index: number; records_processed_in_file: number } | null;
+  } | null>(null);
+  const [ingesting, setIngesting] = useState(false);
+  const [enriching, setEnriching] = useState(false);
+  const [ingestResult, setIngestResult] = useState<{
+    splitFileIndex: number; recordsScanned: number; tradeMatches: number;
+    candidatesInserted: number; finishedAllFiles: boolean; error?: string;
+  } | null>(null);
+  const [enrichResult, setEnrichResult] = useState<{
+    processed: number; websitesFound: number; listingsCreated: number;
+    remaining: number; detail: string[];
+  } | null>(null);
+
+  async function loadStats() {
+    const res = await fetch("/api/admin/abn-directory");
+    if (res.ok) setStats(await res.json());
+  }
+
+  useEffect(() => { loadStats(); }, []);
+
+  async function runIngest() {
+    setIngesting(true);
+    const res = await fetch("/api/admin/abn-directory", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phase: "ingest" }),
+    });
+    setIngestResult(await res.json());
+    setIngesting(false);
+    loadStats();
+  }
+
+  async function runEnrich() {
+    setEnriching(true);
+    const res = await fetch("/api/admin/abn-directory", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phase: "enrich" }),
+    });
+    setEnrichResult(await res.json());
+    setEnriching(false);
+    loadStats();
+  }
+
+  return (
+    <div className="card space-y-4">
+      <div>
+        <p className="section-tag">ABN directory growth</p>
+        <p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5">
+          Free, no IP-blocking risk - pulls trade businesses from the Australian Business Register&apos;s public bulk
+          data, then guesses their website from their name (validated ~60% hit rate on real businesses) rather than
+          paying for a search API. Two phases: pull candidates from the ABN file, then try to find + verify a
+          website for 50 of them at a time.
+        </p>
+      </div>
+
+      {stats && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-[var(--app-bg)] rounded-xl px-3 py-2">
+            <p className="text-[10.5px] font-bold uppercase text-[var(--ink-faint)]">Candidates queued</p>
+            <p className="font-display text-[1.4rem] text-[var(--ink)]">{stats.totalCandidates}</p>
+          </div>
+          <div className="bg-[var(--app-bg)] rounded-xl px-3 py-2">
+            <p className="text-[10.5px] font-bold uppercase text-[var(--ink-faint)]">Awaiting phase 2</p>
+            <p className="font-display text-[1.4rem] text-amber-600">{stats.unprocessed}</p>
+          </div>
+          <div className="bg-[var(--app-bg)] rounded-xl px-3 py-2">
+            <p className="text-[10.5px] font-bold uppercase text-[var(--ink-faint)]">Listings created</p>
+            <p className="font-display text-[1.4rem] text-green-600">{stats.listingsCreated}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="grid sm:grid-cols-2 gap-3">
+        <div className="border border-[var(--line)] rounded-xl p-3">
+          <p className="text-[12px] font-bold text-[var(--ink)] mb-1">Phase 1: pull from ABN file</p>
+          <p className="text-[11px] text-[var(--ink-faint)] mb-2">
+            {stats?.ingestCursor
+              ? `File ${stats.ingestCursor.split_file_index}, record ${stats.ingestCursor.records_processed_in_file}`
+              : "Not started"}
+          </p>
+          <button onClick={runIngest} disabled={ingesting}
+            className="w-full flex items-center justify-center gap-1.5 text-[12.5px] font-bold text-white bg-[var(--navy)] px-3 py-2 rounded-lg">
+            {ingesting ? <><RefreshCw size={12} className="animate-spin" /> Pulling...</> : <><Play size={12} /> Pull next chunk</>}
+          </button>
+          {ingestResult && (
+            <p className="text-[11px] text-[var(--ink-faint)] mt-2 font-mono">
+              scanned {ingestResult.recordsScanned}, matched {ingestResult.tradeMatches}, queued {ingestResult.candidatesInserted}
+              {ingestResult.error && <span className="text-red-600"> — {ingestResult.error}</span>}
+            </p>
+          )}
+        </div>
+
+        <div className="border border-[var(--line)] rounded-xl p-3">
+          <p className="text-[12px] font-bold text-[var(--ink)] mb-1">Phase 2: guess + verify websites</p>
+          <p className="text-[11px] text-[var(--ink-faint)] mb-2">Processes 50 queued candidates per run</p>
+          <button onClick={runEnrich} disabled={enriching}
+            className="w-full flex items-center justify-center gap-1.5 text-[12.5px] font-bold text-white bg-[#ffb400] px-3 py-2 rounded-lg">
+            {enriching ? <><RefreshCw size={12} className="animate-spin" /> Processing...</> : <><Play size={12} /> Process next 50</>}
+          </button>
+          {enrichResult && (
+            <p className="text-[11px] text-[var(--ink-faint)] mt-2 font-mono">
+              processed {enrichResult.processed}, found {enrichResult.websitesFound}, created {enrichResult.listingsCreated}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {enrichResult && enrichResult.detail.length > 0 && (
+        <div className="bg-[var(--app-bg)] rounded-xl p-3 max-h-48 overflow-y-auto space-y-1">
+          {enrichResult.detail.map((line, i) => (
+            <p key={i} className="text-[11px] font-mono text-[var(--ink-soft)]">{line}</p>
+          ))}
         </div>
       )}
     </div>
