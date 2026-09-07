@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import {
   Star, MapPin, Phone, Globe, Mail, Check, Shield,
@@ -16,9 +17,8 @@ import { getGoogleReviewsUrl } from "@/lib/seo/gbp";
 import PhotoGallery from "./_components/PhotoGallery";
 import QuoteForm from "./_components/QuoteForm";
 import ListingLogo from "./_components/ListingLogo";
-import ReviewsSection from "./_components/ReviewsSection";
+import ReviewsSectionAsync from "./_components/ReviewsSectionAsync";
 import TestimonialsSection from "./_components/TestimonialsSection";
-import { getPlaceReviews } from "@/lib/googleReviews";
 import TradieSchema from "@/components/seo/TradieSchema";
 
 /**
@@ -213,7 +213,6 @@ export default async function TradieProfilePage({
   const domain    = listing.website_url ? domainFromUrl(listing.website_url) : null;
   const photos       = listing.photo_references?.filter(Boolean) ?? [];
   const cachedPhotos = photos.filter(p => p.startsWith("http"));
-  const reviews   = listing.place_id ? await getPlaceReviews(listing.place_id) : [];
 
   // The verified badge is a claimed-page addition (gated behind its own
   // flag). The owner's real contact_email is fetched here too whenever
@@ -473,7 +472,9 @@ export default async function TradieProfilePage({
 
             <TestimonialsSection testimonials={listing.testimonials ?? []} />
 
-            <ReviewsSection reviews={reviews} />
+            <Suspense fallback={null}>
+              <ReviewsSectionAsync placeId={listing.place_id} />
+            </Suspense>
 
             {QUOTE_REQUESTS_ENABLED && (
               <div id="quote-form">
@@ -617,7 +618,6 @@ export default async function TradieProfilePage({
         lat={listing.latitude}
         lng={listing.longitude}
         slug={listing.id}
-        reviews={reviews}
       />
     </main>
   );

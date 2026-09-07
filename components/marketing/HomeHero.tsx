@@ -91,11 +91,25 @@ export default function HomeHero() {
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
+  // Only the first scene's images mount on initial paint - the other
+  // two mount ~1.2s later, well before the first auto-rotation at
+  // 5.6s. Without this, all 3 background images (plus the phone
+  // mockup) load immediately just to sit at opacity:0, competing with
+  // the priority image for bandwidth right when LCP is measured.
+  // Confirmed still live in production: real session data (Aug 23 -
+  // Sep 1) showed 56% bounce on direct homepage entries with a ~7s
+  // median session, the worst of any entry page on the site.
+  const [deferredScenesMounted, setDeferredScenesMounted] = useState(false);
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setReduceMotion(true);
     }
+  }, []);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setDeferredScenesMounted(true), 1200);
+    return () => window.clearTimeout(t);
   }, []);
 
   useEffect(() => {
@@ -177,30 +191,38 @@ export default function HomeHero() {
 
         <div className="relative">
           <div className="relative aspect-[5/6] sm:aspect-[16/10] lg:aspect-[2.15/1] overflow-hidden rounded-2xl sm:rounded-3xl bg-[#0e2030] home-media-stage">
-            {SCENES.map((s, i) => (
-              <div
-                key={s.key}
-                className={[
-                  "absolute inset-0 transition-opacity duration-700 ease-out",
-                  i === active ? "opacity-100" : "opacity-0",
-                ].join(" ")}
-                aria-hidden={i !== active}
-              >
-                <Image
-                  src={s.image}
-                  alt={s.alt}
-                  fill
-                  sizes="(max-width: 1280px) 100vw, 1280px"
-                  priority={i === 0}
-                  quality={90}
+            {SCENES.map((s, i) => {
+              // First scene always mounts immediately (priority image).
+              // The other two wait for the deferred-mount timer, unless
+              // the carousel has already rotated onto one of them first
+              // (e.g. a very slow first paint) - always render whichever
+              // scene is actually active so nothing goes blank.
+              if (i !== 0 && i !== active && !deferredScenesMounted) return null;
+              return (
+                <div
+                  key={s.key}
                   className={[
-                    "object-cover",
-                    s.objectPos,
-                    i === active && !reduceMotion ? "home-hero-kenburns" : "",
+                    "absolute inset-0 transition-opacity duration-700 ease-out",
+                    i === active ? "opacity-100" : "opacity-0",
                   ].join(" ")}
-                />
-              </div>
-            ))}
+                  aria-hidden={i !== active}
+                >
+                  <Image
+                    src={s.image}
+                    alt={s.alt}
+                    fill
+                    sizes="(max-width: 1280px) 100vw, 1280px"
+                    priority={i === 0}
+                    quality={i === 0 ? 90 : 75}
+                    className={[
+                      "object-cover",
+                      s.objectPos,
+                      i === active && !reduceMotion ? "home-hero-kenburns" : "",
+                    ].join(" ")}
+                  />
+                </div>
+              );
+            })}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/25" />
             <div className="absolute inset-0 bg-gradient-to-l from-black/50 via-black/10 to-transparent" />
 
@@ -255,14 +277,17 @@ export default function HomeHero() {
                   !reduceMotion ? "home-phone-float" : "",
                 ].join(" ")}
               >
-                <Image
-                  src={scene.phone}
-                  alt={scene.phoneAlt}
-                  fill
-                  sizes="(max-width: 640px) 130px, 200px"
-                  quality={90}
-                  className="object-contain"
-                />
+                {(active === 0 || deferredScenesMounted) && (
+                  <Image
+                    src={scene.phone}
+                    alt={scene.phoneAlt}
+                    fill
+                    sizes="(max-width: 640px) 130px, 200px"
+                    priority={active === 0}
+                    quality={active === 0 ? 90 : 75}
+                    className="object-contain"
+                  />
+                )}
               </div>
             </div>
           </div>
