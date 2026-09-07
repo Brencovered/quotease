@@ -31,11 +31,9 @@
  * persistent" layer, since this only needs to run occasionally, not
  * continuously.
  *
- * Each call processes as many internal files as it can within a wall-
- * clock time budget (see TIME_BUDGET_MS) before returning, rather than
- * a fixed record count - since the dominant cost turned out to be the
- * one-time download, not per-record parsing, a fixed record cap alone
- * wouldn't have prevented the original timeout.
+ * Each call processes exactly one internal XML file, not a time-
+ * budgeted "as many as fit" loop - see the memory note further down
+ * for why.
  *
  * XML schema below is the standard public ABR bulk extract format
  * (stable, long-documented) - not independently verified against a
@@ -59,10 +57,8 @@ import { TRADE_NAME_KEYWORDS } from "@/lib/tradeNameKeywords";
 const RESOURCE_LIST_URL = "https://data.gov.au/data/dataset/5bd7fcab-e315-42cb-8daf-50b7efc2027e/resource/469c8c2c-0be5-45b2-90d7-c42f637f3323/download/abn-bulk-extract-resources.csv";
 
 // Leaves buffer under the route's 300s maxDuration for the download
-// itself (which the timeout showed can be slow) plus final DB writes -
-// stops starting new internal files once this much wall-clock time
-// has elapsed, rather than letting Vercel kill the function mid-write.
-const TIME_BUDGET_MS = 260_000;
+// itself (which turned out to be the slow part - a real ~500MB zip).
+
 
 
 interface ParsedAbnRecord {
@@ -150,7 +146,6 @@ export interface AbnIngestResult {
 }
 
 export async function ingestNextChunk(): Promise<AbnIngestResult> {
-  const startTime = Date.now();
   const admin = createAdminClient();
 
   const { data: cursorRow } = await admin.from("abn_ingest_cursor").select("*").eq("id", 1).single();
@@ -190,57 +185,61 @@ export async function ingestNextChunk(): Promise<AbnIngestResult> {
     return { splitFileIndex: cursor.split_file_index, recordsScanned: 0, tradeMatches: 0, candidatesInserted: 0, finishedAllFiles: false, error: err instanceof Error ? err.message : "unzip failed" };
   }
 
+  // Processes exactly ONE internal file per call now, not "as many as
+  // fit in the time budget" - a real production run OOM'd (Vercel:
+  // "instance was killed because it ran out of available memory")
+  // after the 497MB zip downloaded and unzipped successfully, while
+  // working through its internal files. The raw zip buffer alone
+  // (JSZip needs it held in memory for the whole duration to lazily
+  // decompress any file on demand) plus one decompressed XML file's
+  // text was apparently already enough to hit the ceiling - looping
+  // through multiple files in the same call, as the previous version
+  // did, only made that worse. This does mean re-downloading the same
+  // 497MB zip on every subsequent call needed to work through its
+  // other internal files - a second, real cost on top of the
+  // resume-partway-through-a-zip cost already documented above, both
+  // accepted for the same reason: this runs occasionally, not
+  // continuously, and getting real progress without crashing matters
+  // more than minimizing bandwidth here.
+  const xmlFile = xmlFiles[cursor.internal_file_index];
+  const xml = await xmlFile.async("text");
+  const records = parseAbrRecords(xml);
+  if (records.length === 0) {
+    console.error(`[abnBulkIngest] parsed 0 records from internal file "${xmlFile.name}" (${xml.length} chars) - schema may not match what this parser expects, see parseAbrRecords()`);
+  } else {
+    console.log(`[abnBulkIngest] internal file "${xmlFile.name}": ${records.length} records`);
+  }
+
   let totalScanned = 0;
   let totalTradeMatches = 0;
   let totalInserted = 0;
-  let internalFileIndex = cursor.internal_file_index;
-  let stoppedOnTimeBudget = false;
 
-  while (internalFileIndex < xmlFiles.length) {
-    if (Date.now() - startTime > TIME_BUDGET_MS) {
-      stoppedOnTimeBudget = true;
-      console.log(`[abnBulkIngest] time budget reached after internal file ${internalFileIndex} - stopping here, will resume same zip next call`);
-      break;
+  for (const record of records) {
+    totalScanned++;
+    const trade = matchTrade(record);
+    if (!trade) continue;
+    totalTradeMatches++;
+
+    const { error } = await admin.from("abn_trade_candidates").insert({
+      abn: record.abn,
+      legal_name: record.legalName,
+      trading_name: record.tradingName,
+      matched_trade: trade,
+      state: record.state,
+      postcode: record.postcode,
+      entity_type: record.entityType,
+    });
+    // Unique constraint on abn means a re-run naturally skips dupes -
+    // any other error is worth knowing about, a duplicate-key error is not.
+    if (!error) totalInserted++;
+    else if (!error.message.includes("duplicate key")) {
+      console.error(`[abnBulkIngest] insert failed for ABN ${record.abn}:`, error.message);
     }
-
-    const xmlFile = xmlFiles[internalFileIndex];
-    const xml = await xmlFile.async("text");
-    const records = parseAbrRecords(xml);
-    if (records.length === 0) {
-      console.error(`[abnBulkIngest] parsed 0 records from internal file "${xmlFile.name}" (${xml.length} chars) - schema may not match what this parser expects, see parseAbrRecords()`);
-    } else {
-      console.log(`[abnBulkIngest] internal file "${xmlFile.name}": ${records.length} records`);
-    }
-
-    for (const record of records) {
-      totalScanned++;
-      const trade = matchTrade(record);
-      if (!trade) continue;
-      totalTradeMatches++;
-
-      const { error } = await admin.from("abn_trade_candidates").insert({
-        abn: record.abn,
-        legal_name: record.legalName,
-        trading_name: record.tradingName,
-        matched_trade: trade,
-        state: record.state,
-        postcode: record.postcode,
-        entity_type: record.entityType,
-      });
-      // Unique constraint on abn means a re-run naturally skips dupes -
-      // any other error is worth knowing about, a duplicate-key error is not.
-      if (!error) totalInserted++;
-      else if (!error.message.includes("duplicate key")) {
-        console.error(`[abnBulkIngest] insert failed for ABN ${record.abn}:`, error.message);
-      }
-    }
-
-    internalFileIndex++;
   }
 
-  const finishedThisZip = internalFileIndex >= xmlFiles.length;
+  const finishedThisZip = cursor.internal_file_index + 1 >= xmlFiles.length;
   const nextFileIndex = finishedThisZip ? cursor.split_file_index + 1 : cursor.split_file_index;
-  const nextInternalFileIndex = finishedThisZip ? 0 : internalFileIndex;
+  const nextInternalFileIndex = finishedThisZip ? 0 : cursor.internal_file_index + 1;
 
   await admin.from("abn_ingest_cursor").upsert({
     id: 1,
@@ -249,10 +248,6 @@ export async function ingestNextChunk(): Promise<AbnIngestResult> {
     records_processed_in_file: 0,
     last_run_at: new Date().toISOString(),
   });
-
-  if (stoppedOnTimeBudget) {
-    console.log(`[abnBulkIngest] stopped on time budget with ${xmlFiles.length - internalFileIndex} internal file(s) remaining in this zip - next call re-downloads the same zip and resumes at internal file ${nextInternalFileIndex}`);
-  }
 
   return {
     splitFileIndex: cursor.split_file_index,
