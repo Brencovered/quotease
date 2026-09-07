@@ -5,14 +5,18 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { ingestNextChunk } from "@/lib/abnBulkIngest";
 import { runAbnEnrichmentBatch } from "@/lib/abnDirectoryEnrichment";
 
-// Phase 2 processes candidates in concurrent chunks of 10 (see
-// lib/abnDirectoryEnrichment.ts) sized to fit comfortably inside this -
-// worst case ~5 sequential rounds x ~8s per round. Phase 1's cost is
-// mostly the download+unzip of one ~government split file; not
-// independently verified against real file sizes yet (see
-// lib/abnBulkIngest.ts header) - if that turns out to need longer,
-// this is the number to revisit first.
-export const maxDuration = 60;
+// Phase 1's real bottleneck turned out to be the download+unzip of one
+// government zip file (confirmed via a production timeout - each zip
+// bundles multiple internal XML files together, and is large enough
+// that download+unzip alone exceeded the original 60s limit before a
+// single record was parsed). 300s is the Vercel Pro standard function
+// ceiling without enabling Fluid Compute - lib/abnBulkIngest.ts stops
+// itself at a 260s internal budget, leaving buffer for the download
+// and final DB writes. Phase 2 only needs ~40s worst case (see
+// lib/abnDirectoryEnrichment.ts) - fine to share this higher limit,
+// it just means phase 2 could run longer if it ever needed to, not
+// that it will.
+export const maxDuration = 300;
 
 /**
  * POST body { phase: "ingest" } runs phase 1 (download/filter the next
