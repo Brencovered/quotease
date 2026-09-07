@@ -536,8 +536,12 @@ export default async function DirectoryPage({
             count={count ?? 0}
           />
 
-          {/* Main Content Area */}
-          <div className="max-w-6xl mx-auto px-6 py-8">
+          {/* Main Content Area - also the #listings scroll target for
+              the bottom "Browse directory" CTA further down this same
+              branch, so it scrolls back up to the results rather than
+              doing nothing (same missing-anchor bug as the search-mode
+              branch above). */}
+          <div id="listings" className="max-w-6xl mx-auto px-6 py-8">
             {error && (
               <div className="text-[13px] px-4 py-3 rounded-xl mb-6 font-semibold" style={{ background: "var(--red-bg)", color: "var(--red)" }}>
                 Could not load directory: {error.message}
@@ -679,8 +683,15 @@ export default async function DirectoryPage({
             SEARCH MODE: Hero search + how it works + social proof
         ═══════════════════════════════════════════ */
         <>
-          {/* Hero search form */}
-          <FindTradieHeroSearch count={count ?? 196} />
+          {/* Hero search form - id="listings" is the scroll target for
+              the "Browse directory" buttons above and in the bottom CTA
+              (both link to #listings). That target never existed
+              anywhere on the page, so clicking either button did
+              nothing at all - confirmed by checking, no element with
+              this id was present before this fix. */}
+          <div id="listings">
+            <FindTradieHeroSearch count={count ?? 196} />
+          </div>
 
           {/* How it works section */}
           <section className="bg-white border-b" style={{ borderColor: "var(--line)" }}>
