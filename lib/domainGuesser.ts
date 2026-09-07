@@ -72,13 +72,25 @@ export interface DomainGuessResult {
 }
 
 /**
- * Tries each guessed domain in turn, verifying the fetched page
- * actually mentions the business's own name before accepting it.
- * Requires at least half of the business name's significant words to
- * appear on the page - not an exact-phrase match, since real sites
- * often render the name with different spacing/formatting than the
- * ABN register's legal name, but not a single-word match either,
- * since that would accept almost anything.
+ * Checks every guessed domain+scheme combo concurrently rather than
+ * one at a time, verifying the fetched page actually mentions the
+ * business's own name before accepting it. Requires at least half of
+ * the business name's significant words to appear on the page - not
+ * an exact-phrase match, since real sites often render the name with
+ * different spacing/formatting than the ABN register's legal name,
+ * but not a single-word match either, since that would accept almost
+ * anything.
+ *
+ * Originally sequential (one fetch at a time, up to 16 attempts per
+ * business) - worked in isolated testing but the math doesn't hold up
+ * at real batch scale: 16 sequential attempts x up to an 8s timeout
+ * each is a 128s worst case for ONE business, and phase 2 processes
+ * 50 of them - a batch could take up to two hours and almost
+ * certainly exceed any serverless function's execution limit long
+ * before finishing. Caught this before it shipped a broken "run a
+ * batch and it just times out" experience: checking every candidate
+ * concurrently bounds one business's lookup to roughly the slowest
+ * single attempt (~8s worst case) instead of the sum of all of them.
  */
 export async function findWebsiteByGuessing(businessName: string): Promise<DomainGuessResult> {
   const candidates = guessDomains(businessName);
@@ -87,32 +99,36 @@ export async function findWebsiteByGuessing(businessName: string): Promise<Domai
     return { url: null, candidatesTried: 0 };
   }
 
-  let tried = 0;
+  const attempts: string[] = [];
   for (const domain of candidates) {
-    tried++;
-    for (const scheme of ["https://www.", "https://"]) {
-      const url = `${scheme}${domain}`;
-      try {
-        const controller = new AbortController();
-        const t = setTimeout(() => controller.abort(), 8000);
-        const res = await fetch(url, {
-          headers: { "User-Agent": getRandomUserAgent() },
-          signal: controller.signal,
-          redirect: "follow",
-        });
-        clearTimeout(t);
-        if (!res.ok) continue;
+    for (const scheme of ["https://www.", "https://"]) attempts.push(`${scheme}${domain}`);
+  }
 
-        const html = (await res.text()).toLowerCase();
-        const matchedWords = nameWords.filter(w => html.includes(w));
-        if (matchedWords.length >= Math.ceil(nameWords.length / 2)) {
-          return { url: res.url || url, candidatesTried: tried };
-        }
-      } catch {
-        // this candidate/scheme didn't resolve or timed out - try the next
+  async function tryOne(url: string): Promise<string | null> {
+    try {
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch(url, {
+        headers: { "User-Agent": getRandomUserAgent() },
+        signal: controller.signal,
+        redirect: "follow",
+      });
+      clearTimeout(t);
+      if (!res.ok) return null;
+
+      const html = (await res.text()).toLowerCase();
+      const matchedWords = nameWords.filter(w => html.includes(w));
+      if (matchedWords.length >= Math.ceil(nameWords.length / 2)) {
+        return res.url || url;
       }
+      return null;
+    } catch {
+      return null;
     }
   }
 
-  return { url: null, candidatesTried: tried };
+  const results = await Promise.allSettled(attempts.map(tryOne));
+  const hit = results.find((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled" && r.value !== null);
+
+  return { url: hit ? hit.value : null, candidatesTried: attempts.length };
 }
