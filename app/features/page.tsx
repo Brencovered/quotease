@@ -75,7 +75,7 @@ export default function FeaturesPage() {
           <div id="pricing" className="bg-[#1a242c] rounded-3xl p-8 md:p-10 scroll-mt-[88px]">
             <div className="grid md:grid-cols-2 gap-8 items-center">
               <div>
-                <h3 className="font-display text-[2rem] text-white mb-2">What you might be paying now</h3>
+                <h2 className="font-display text-[2rem] text-white mb-2">What you might be paying now</h2>
                 <p className="text-[#8aa4b4] text-[14px] mb-6">Approximate costs for a typical sole trader or small trade business.</p>
                 <div className="space-y-2">
                   {[
