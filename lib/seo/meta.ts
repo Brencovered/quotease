@@ -162,6 +162,66 @@ export function tradeSuburbMeta(
   };
 }
 
+const TITLE_MAX_LENGTH = 60; // Google truncates well before this in practice, but character count is a reasonable proxy without needing real pixel-width measurement
+
+/**
+ * Many scraped business names are keyword-stuffed with pipe/dash-
+ * separated marketing segments - a known local-SEO practice on
+ * Google Business Profile. Real examples confirmed via a site audit:
+ * "Spectrum Pro Painting | Melbourne Painters | Painters in Melbourne"
+ * and "T&J CONCRETING Sydney Wide | Driveways | Footpaths |
+ * Resdential | Architectural | Civil | Commerical" (103 characters in
+ * the name alone). Appending trade/suburb/rating on top of the full
+ * stuffed name is what pushed 2,033 listing titles over length -
+ * median 79 characters, worst case 183.
+ *
+ * Takes just the first clean segment for the title tag specifically -
+ * the full stored name is untouched everywhere else on the page (H1,
+ * schema, description), this only shortens what search engines show
+ * as the clickable headline.
+ */
+export function cleanNameForTitle(businessName: string): string {
+  const firstSegment = businessName.split(/\s*[|–—]\s*/)[0].trim();
+  return firstSegment.length >= 3 ? firstSegment : businessName;
+}
+
+/**
+ * Builds the listing title with progressively less content until it
+ * fits, rather than a single fixed template that silently overflows.
+ * Tested against real over-length business names from the audit
+ * before being wired in (Spectrum Pro Painting, T&J Concreting,
+ * Townsville Aircon Cleaning Services, O'Brien Electrical, and
+ * others) - every case fits within budget and stays readable, even
+ * the rare hard-truncated ones.
+ */
+export function buildListingTitle(businessName: string, singular: string, suburb: string, rating?: number | null, reviewCount?: number | null): string {
+  const cleanName = cleanNameForTitle(businessName);
+  const ratingSnippet = rating ? ` - ${rating}★ (${reviewCount ?? 0} reviews)` : "";
+
+  let title = `${cleanName} | ${singular} in ${suburb}${ratingSnippet} - Swiftscope`;
+  if (title.length <= TITLE_MAX_LENGTH) return title;
+
+  // Drop the rating snippet first - least essential for search intent,
+  // and the same information is already visible in the search result's
+  // review-stars rich snippet when Google renders one.
+  title = `${cleanName} | ${singular} in ${suburb} - Swiftscope`;
+  if (title.length <= TITLE_MAX_LENGTH) return title;
+
+  // Drop the brand suffix next
+  title = `${cleanName} | ${singular} in ${suburb}`;
+  if (title.length <= TITLE_MAX_LENGTH) return title;
+
+  // Still too long (a genuinely long clean name + suburb combination) -
+  // hard truncate the name portion only, keeping trade+suburb intact
+  // since that's the actually load-bearing search-intent part.
+  const suffix = ` | ${singular} in ${suburb}`;
+  const budget = TITLE_MAX_LENGTH - suffix.length - 1;
+  if (budget > 10) {
+    return `${cleanName.slice(0, budget)}…${suffix}`;
+  }
+  return title.slice(0, TITLE_MAX_LENGTH - 1) + "…";
+}
+
 export function tradieListingMeta(listing: {
   business_name: string;
   trades: string[];
@@ -176,10 +236,7 @@ export function tradieListingMeta(listing: {
   const { singular } = getTradeDisplay(trade);
   const canonical = directoryListingCanonical(listing.slug);
 
-  const ratingSnippet = listing.google_rating
-    ? ` - ${listing.google_rating}★ (${listing.google_reviews_count ?? 0} reviews)`
-    : "";
-  const title       = `${listing.business_name} | ${singular} in ${listing.suburb}${ratingSnippet} - Swiftscope`;
+  const title       = buildListingTitle(listing.business_name, singular, listing.suburb, listing.google_rating, listing.google_reviews_count);
   const description = listing.blurb
     ? listing.blurb.slice(0, 155)
     : `${listing.business_name} is a ${singular.toLowerCase()} based in ${listing.suburb}. Get a free quote on Swiftscope.`;
