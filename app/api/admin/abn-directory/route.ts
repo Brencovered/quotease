@@ -5,6 +5,15 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { ingestNextChunk } from "@/lib/abnBulkIngest";
 import { runAbnEnrichmentBatch } from "@/lib/abnDirectoryEnrichment";
 
+// Phase 2 processes candidates in concurrent chunks of 10 (see
+// lib/abnDirectoryEnrichment.ts) sized to fit comfortably inside this -
+// worst case ~5 sequential rounds x ~8s per round. Phase 1's cost is
+// mostly the download+unzip of one ~government split file; not
+// independently verified against real file sizes yet (see
+// lib/abnBulkIngest.ts header) - if that turns out to need longer,
+// this is the number to revisit first.
+export const maxDuration = 60;
+
 /**
  * POST body { phase: "ingest" } runs phase 1 (download/filter the next
  * chunk of the ABN Bulk Extract into the candidate queue).
