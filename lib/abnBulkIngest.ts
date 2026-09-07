@@ -9,17 +9,33 @@
  * no IP-blocking risk (unlike Yellow Pages, this is meant to be
  * downloaded wholesale).
  *
- * The public extract is published as ~20 split ZIP files
- * (public_split_1_10.zip through public_split_11_20.zip and similar -
- * see abr.business.gov.au/Tools/BulkExtract), each containing XML
- * for a chunk of the national register - collectively representing
- * every ABN in the country, easily gigabytes total. That's too large
- * to download and parse in a single serverless invocation (the same
- * ~60s execution constraint every other batch job in this codebase
- * respects), so this is resumable: abn_ingest_cursor tracks which
- * split file and how far into it the last run got to, and each call
- * to ingestNextChunk() processes one bounded chunk of records before
- * returning, picking up next time from where it left off.
+ * A real run revealed the actual file structure differs from what the
+ * published documentation suggested: there are only 2 top-level zip
+ * URLs (not ~20), because each one bundles multiple internal XML files
+ * together - "public_split_1_10.zip" contains parts 1 through 10 as
+ * separate files inside it, not one file named that. Each zip is large
+ * enough that the download+unzip alone exceeded the original 60s
+ * function limit before a single record was parsed - confirmed via
+ * Vercel logs, not assumed.
+ *
+ * Resumable across two axes now: abn_ingest_cursor tracks which
+ * top-level zip (split_file_index) AND which internal file within it
+ * (internal_file_index) the last run reached. A real, accepted
+ * inefficiency worth being upfront about: each call that needs to
+ * continue partway through a zip's internal files re-downloads the
+ * whole zip (there's no persistent memory between separate serverless
+ * invocations to cache it in), so a large zip does get fetched
+ * multiple times across the calls needed to work through all its
+ * internal files. That's real wasted bandwidth, not free - accepted
+ * for now rather than adding a "cache the extracted files somewhere
+ * persistent" layer, since this only needs to run occasionally, not
+ * continuously.
+ *
+ * Each call processes as many internal files as it can within a wall-
+ * clock time budget (see TIME_BUDGET_MS) before returning, rather than
+ * a fixed record count - since the dominant cost turned out to be the
+ * one-time download, not per-record parsing, a fixed record cap alone
+ * wouldn't have prevented the original timeout.
  *
  * XML schema below is the standard public ABR bulk extract format
  * (stable, long-documented) - not independently verified against a
@@ -42,7 +58,12 @@ import { TRADE_NAME_KEYWORDS } from "@/lib/tradeNameKeywords";
 // names/counts between extract refreshes.
 const RESOURCE_LIST_URL = "https://data.gov.au/data/dataset/5bd7fcab-e315-42cb-8daf-50b7efc2027e/resource/469c8c2c-0be5-45b2-90d7-c42f637f3323/download/abn-bulk-extract-resources.csv";
 
-const RECORDS_PER_RUN = 2000; // bounded chunk per invocation, independent of the phase-2 "batches of 50"
+// Leaves buffer under the route's 300s maxDuration for the download
+// itself (which the timeout showed can be slow) plus final DB writes -
+// stops starting new internal files once this much wall-clock time
+// has elapsed, rather than letting Vercel kill the function mid-write.
+const TIME_BUDGET_MS = 260_000;
+
 
 interface ParsedAbnRecord {
   abn: string;
@@ -129,10 +150,11 @@ export interface AbnIngestResult {
 }
 
 export async function ingestNextChunk(): Promise<AbnIngestResult> {
+  const startTime = Date.now();
   const admin = createAdminClient();
 
   const { data: cursorRow } = await admin.from("abn_ingest_cursor").select("*").eq("id", 1).single();
-  const cursor = cursorRow ?? { split_file_index: 1, records_processed_in_file: 0 };
+  const cursor = cursorRow ?? { split_file_index: 1, records_processed_in_file: 0, internal_file_index: 0 };
 
   const urls = await fetchDownloadUrls();
   if (urls.length === 0) {
@@ -145,9 +167,9 @@ export async function ingestNextChunk(): Promise<AbnIngestResult> {
   }
 
   const fileUrl = urls[cursor.split_file_index - 1];
-  console.log(`[abnBulkIngest] processing split file ${cursor.split_file_index}/${urls.length}: ${fileUrl}, resuming at record ${cursor.records_processed_in_file}`);
+  console.log(`[abnBulkIngest] processing split file ${cursor.split_file_index}/${urls.length}: ${fileUrl}, resuming at internal file ${cursor.internal_file_index}`);
 
-  let xml: string;
+  let xmlFiles: JSZip.JSZipObject[];
   try {
     const res = await fetch(fileUrl);
     if (!res.ok) {
@@ -155,67 +177,88 @@ export async function ingestNextChunk(): Promise<AbnIngestResult> {
       return { splitFileIndex: cursor.split_file_index, recordsScanned: 0, tradeMatches: 0, candidatesInserted: 0, finishedAllFiles: false, error: `fetch failed: ${res.status}` };
     }
     const zipBuffer = await res.arrayBuffer();
+    console.log(`[abnBulkIngest] downloaded ${(zipBuffer.byteLength / 1_000_000).toFixed(1)}MB, unzipping...`);
     const zip = await JSZip.loadAsync(zipBuffer);
-    const xmlFiles = Object.values(zip.files).filter(f => f.name.toLowerCase().endsWith(".xml") && !f.dir);
+    xmlFiles = Object.values(zip.files).filter(f => f.name.toLowerCase().endsWith(".xml") && !f.dir);
     if (xmlFiles.length === 0) {
       console.error(`[abnBulkIngest] no XML files found inside zip ${fileUrl} - entries: ${Object.keys(zip.files).join(", ")}`);
       return { splitFileIndex: cursor.split_file_index, recordsScanned: 0, tradeMatches: 0, candidatesInserted: 0, finishedAllFiles: false, error: "no XML in zip - see logs" };
     }
-    xml = await xmlFiles[0].async("text");
+    console.log(`[abnBulkIngest] zip contains ${xmlFiles.length} internal XML file(s), resuming at index ${cursor.internal_file_index}`);
   } catch (err) {
     console.error(`[abnBulkIngest] download/unzip threw for ${fileUrl}:`, err instanceof Error ? err.message : err);
     return { splitFileIndex: cursor.split_file_index, recordsScanned: 0, tradeMatches: 0, candidatesInserted: 0, finishedAllFiles: false, error: err instanceof Error ? err.message : "unzip failed" };
   }
 
-  const allRecords = parseAbrRecords(xml);
-  if (allRecords.length === 0) {
-    console.error(`[abnBulkIngest] parsed 0 records from ${fileUrl} (${xml.length} chars) - schema may not match what this parser expects, see lib/abnBulkIngest.ts parseAbrRecords()`);
-  }
+  let totalScanned = 0;
+  let totalTradeMatches = 0;
+  let totalInserted = 0;
+  let internalFileIndex = cursor.internal_file_index;
+  let stoppedOnTimeBudget = false;
 
-  const startAt = cursor.records_processed_in_file;
-  const chunk = allRecords.slice(startAt, startAt + RECORDS_PER_RUN);
-  const reachedEndOfFile = startAt + chunk.length >= allRecords.length;
-
-  let tradeMatches = 0;
-  let inserted = 0;
-
-  for (const record of chunk) {
-    const trade = matchTrade(record);
-    if (!trade) continue;
-    tradeMatches++;
-
-    const { error } = await admin.from("abn_trade_candidates").insert({
-      abn: record.abn,
-      legal_name: record.legalName,
-      trading_name: record.tradingName,
-      matched_trade: trade,
-      state: record.state,
-      postcode: record.postcode,
-      entity_type: record.entityType,
-    });
-    // Unique constraint on abn means a re-run naturally skips dupes -
-    // any other error is worth knowing about, a duplicate-key error is not.
-    if (!error) inserted++;
-    else if (!error.message.includes("duplicate key")) {
-      console.error(`[abnBulkIngest] insert failed for ABN ${record.abn}:`, error.message);
+  while (internalFileIndex < xmlFiles.length) {
+    if (Date.now() - startTime > TIME_BUDGET_MS) {
+      stoppedOnTimeBudget = true;
+      console.log(`[abnBulkIngest] time budget reached after internal file ${internalFileIndex} - stopping here, will resume same zip next call`);
+      break;
     }
+
+    const xmlFile = xmlFiles[internalFileIndex];
+    const xml = await xmlFile.async("text");
+    const records = parseAbrRecords(xml);
+    if (records.length === 0) {
+      console.error(`[abnBulkIngest] parsed 0 records from internal file "${xmlFile.name}" (${xml.length} chars) - schema may not match what this parser expects, see parseAbrRecords()`);
+    } else {
+      console.log(`[abnBulkIngest] internal file "${xmlFile.name}": ${records.length} records`);
+    }
+
+    for (const record of records) {
+      totalScanned++;
+      const trade = matchTrade(record);
+      if (!trade) continue;
+      totalTradeMatches++;
+
+      const { error } = await admin.from("abn_trade_candidates").insert({
+        abn: record.abn,
+        legal_name: record.legalName,
+        trading_name: record.tradingName,
+        matched_trade: trade,
+        state: record.state,
+        postcode: record.postcode,
+        entity_type: record.entityType,
+      });
+      // Unique constraint on abn means a re-run naturally skips dupes -
+      // any other error is worth knowing about, a duplicate-key error is not.
+      if (!error) totalInserted++;
+      else if (!error.message.includes("duplicate key")) {
+        console.error(`[abnBulkIngest] insert failed for ABN ${record.abn}:`, error.message);
+      }
+    }
+
+    internalFileIndex++;
   }
 
-  const nextFileIndex = reachedEndOfFile ? cursor.split_file_index + 1 : cursor.split_file_index;
-  const nextRecordOffset = reachedEndOfFile ? 0 : startAt + chunk.length;
+  const finishedThisZip = internalFileIndex >= xmlFiles.length;
+  const nextFileIndex = finishedThisZip ? cursor.split_file_index + 1 : cursor.split_file_index;
+  const nextInternalFileIndex = finishedThisZip ? 0 : internalFileIndex;
 
   await admin.from("abn_ingest_cursor").upsert({
     id: 1,
     split_file_index: nextFileIndex,
-    records_processed_in_file: nextRecordOffset,
+    internal_file_index: nextInternalFileIndex,
+    records_processed_in_file: 0,
     last_run_at: new Date().toISOString(),
   });
 
+  if (stoppedOnTimeBudget) {
+    console.log(`[abnBulkIngest] stopped on time budget with ${xmlFiles.length - internalFileIndex} internal file(s) remaining in this zip - next call re-downloads the same zip and resumes at internal file ${nextInternalFileIndex}`);
+  }
+
   return {
     splitFileIndex: cursor.split_file_index,
-    recordsScanned: chunk.length,
-    tradeMatches,
-    candidatesInserted: inserted,
-    finishedAllFiles: reachedEndOfFile && nextFileIndex > urls.length,
+    recordsScanned: totalScanned,
+    tradeMatches: totalTradeMatches,
+    candidatesInserted: totalInserted,
+    finishedAllFiles: finishedThisZip && nextFileIndex > urls.length,
   };
 }
