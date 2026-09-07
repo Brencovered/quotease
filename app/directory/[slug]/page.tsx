@@ -491,7 +491,14 @@ export default async function TradieProfilePage({
                 <div className="flex items-center justify-center h-24 bg-gray-50 rounded-xl mb-4 overflow-hidden">
                   <ListingLogo logoUrl={listing.logo_url} businessName={listing.business_name} accent={accent} />
                 </div>
-                <h3 className="font-bold text-[15px] text-gray-900 text-center mb-1">{listing.business_name}</h3>
+                {/* Was an <h3>, but it's just re-displaying the business
+                    name already in the page's <h1> above - not a new
+                    content section, so not heading-worthy. That created
+                    a real h1 -> h3 skip (no h2 in between), confirmed via
+                    a site audit as the dominant cause of "Heading levels
+                    skip" - 2,075 of 2,077 occurrences were listing pages,
+                    every one hitting this exact stray tag. */}
+                <p className="font-bold text-[15px] text-gray-900 text-center mb-1">{listing.business_name}</p>
                 {listing.google_rating && (
                   <div className="flex items-center justify-center gap-2 mb-3">
                     <Stars rating={listing.google_rating} />
