@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import SettingsPanel from "@/components/SettingsPanel";
 import XeroConnectPanel from "@/components/XeroConnectPanel";
 import DirectoryPanel from "@/components/DirectoryPanel";
+import DirectoryTrafficData from "@/components/DirectoryTrafficData";
 import AccountDangerZone from "@/components/AccountDangerZone";
 import AppHeader from "@/components/AppHeader";
 import PushNotificationToggle from "@/components/PushNotificationToggle";
@@ -148,6 +149,19 @@ async function SettingsData() {
         <div className="page-wrap-narrow pb-0 pt-0">
           <DirectoryPanel profile={profile as never} />
         </div>
+
+        {/* Traffic on the tradie's own listing - only renders anything
+            once they've claimed a listing and the nightly PostHog sync
+            has real data (see components/DirectoryTrafficData.tsx).
+            Suspense-isolated so a slow or failed lookup here never
+            blocks the rest of Settings. */}
+        {profile?.id && (
+          <div className="page-wrap-narrow pb-0 pt-0">
+            <Suspense fallback={null}>
+              <DirectoryTrafficData profileId={profile.id} />
+            </Suspense>
+          </div>
+        )}
 
         <XeroConnectPanel
           connected={xeroConnected}
