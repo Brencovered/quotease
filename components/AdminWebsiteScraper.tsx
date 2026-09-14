@@ -445,6 +445,15 @@ export default function AdminWebsiteScraper() {
           not to pay for a proxy to get past it. */}
       <AbnDirectoryPanel />
 
+      {/* Tradie listing traffic sync - manual trigger for testing the
+          PostHog integration today rather than waiting on the daily
+          cron. Pulls "yesterday's" numbers even when run manually
+          (same sync logic as the cron, deliberately not "today" - see
+          lib/directoryTrafficSync.ts), so a manual run right now is a
+          real test of the whole pipeline (auth, query, matching, DB
+          write) even though it won't show today's live traffic yet. */}
+      <TrafficSyncPanel />
+
       {/* Yellow Pages Scraper */}
       <YellowPagesScraper />
 
@@ -750,6 +759,65 @@ function AbnDirectoryPanel() {
           {enrichResult.detail.map((line, i) => (
             <p key={i} className="text-[11px] font-mono text-[var(--ink-soft)]">{line}</p>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TrafficSyncPanel() {
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState<{
+    listingsChecked: number; listingsSynced: number; listingsSkipped: number;
+  } | null>(null);
+
+  async function runSync() {
+    setRunning(true);
+    const res = await fetch("/api/admin/sync-directory-traffic", { method: "POST" });
+    setResult(await res.json());
+    setRunning(false);
+  }
+
+  return (
+    <div className="card space-y-4">
+      <div>
+        <p className="section-tag">Tradie listing traffic sync</p>
+        <p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5">
+          Manual test run of the nightly PostHog sync that powers each tradie&apos;s traffic panel in Settings.
+          Pulls yesterday&apos;s numbers, same as the scheduled cron - a real test of the whole pipeline
+          (PostHog auth, query, listing matching, DB write) even run on demand.
+        </p>
+      </div>
+
+      <button onClick={runSync} disabled={running}
+        className="btn-primary px-6 py-3 flex items-center gap-2 text-[13.5px]">
+        {running ? <><RefreshCw size={14} className="animate-spin" /> Syncing...</> : <><Play size={14} /> Run sync now</>}
+      </button>
+
+      {result && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-[var(--app-bg)] rounded-xl px-3 py-2">
+            <p className="text-[10.5px] font-bold uppercase text-[var(--ink-faint)]">Checked</p>
+            <p className="font-display text-[1.4rem] text-[var(--ink)]">{result.listingsChecked}</p>
+          </div>
+          <div className="bg-[var(--app-bg)] rounded-xl px-3 py-2">
+            <p className="text-[10.5px] font-bold uppercase text-[var(--ink-faint)]">Synced</p>
+            <p className="font-display text-[1.4rem] text-green-600">{result.listingsSynced}</p>
+          </div>
+          <div className="bg-[var(--app-bg)] rounded-xl px-3 py-2">
+            <p className="text-[10.5px] font-bold uppercase text-[var(--ink-faint)]">Skipped</p>
+            <p className="font-display text-[1.4rem] text-amber-600">{result.listingsSkipped}</p>
+          </div>
+        </div>
+      )}
+
+      {result && result.listingsChecked > 0 && result.listingsSynced === 0 && (
+        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+          <AlertTriangle size={14} className="text-amber-600 shrink-0 mt-0.5" />
+          <p className="text-[12px] text-amber-800">
+            All listings were skipped - check Vercel logs for [posthogQuery] or [directoryTrafficSync] errors.
+            Most likely cause: POSTHOG_PERSONAL_API_KEY or POSTHOG_PROJECT_ID isn&apos;t set correctly.
+          </p>
         </div>
       )}
     </div>
