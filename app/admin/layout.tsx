@@ -30,6 +30,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             Swiftscope <span className="text-[var(--amber)]">Admin</span>
           </Link>
           <nav className="flex items-center gap-5 text-[13px] font-semibold">
+            <Link href="/admin/overview" className="text-[var(--steel-1)] hover:text-white">Overview</Link>
             <Link href="/admin/tradies" className="text-[var(--steel-1)] hover:text-white">Tradie accounts</Link>
             <Link href="/admin/directory" className="text-[var(--steel-1)] hover:text-white">Directory</Link>
             <Link href="/admin/directory/coverage" className="text-[var(--steel-1)] hover:text-white">Coverage</Link>
