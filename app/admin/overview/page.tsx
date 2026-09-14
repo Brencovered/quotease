@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runHogQLQuery } from "@/lib/posthogQuery";
-import { TrendingUp, Users, FileText, AlertTriangle, Phone, Mail, Globe } from "lucide-react";
+import { TrendingUp, Users, FileText, AlertTriangle, Phone, Mail, Globe, Search } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -241,6 +241,84 @@ async function getOutreachCandidates(lookup: Map<string, ListingRecord>): Promis
     .slice(0, 10);
 }
 
+function safeDecodeSearchTerm(raw: string): string {
+  try {
+    return decodeURIComponent(raw.replace(/\+/g, " "));
+  } catch {
+    // malformed URL encoding (e.g. a lone "%") shouldn't take down the
+    // whole page render - fall back to the raw value
+    return raw.replace(/\+/g, " ");
+  }
+}
+
+interface TopSearches {
+  postcodes: { postcode: string; searches: number }[];
+  trades: { trade: string; searches: number }[];
+  recentTerms: string[];
+}
+
+/**
+ * What people are actually searching for on /directory - postcodes,
+ * trades, and free-text terms. Uses ClickHouse's extractURLParameter()
+ * directly on $current_url rather than a dedicated search event,
+ * since the search form updates the URL via client-side routing and
+ * every route change already fires a $pageview with the full query
+ * string (confirmed real data before building this - see commit
+ * message).
+ *
+ * recentTerms is deliberately NOT ranked as "top" the way postcodes/
+ * trades are: the free-text search box fires a URL update on every
+ * keystroke (confirmed in real data - "Lime", "Lime+p", "Lime+pl",
+ * "Lime+plu"... all appear as separate entries for one person typing
+ * one query), so ranking fragments by count would be misleading.
+ * Shown as a simple recent list instead, decoded from URL encoding.
+ */
+async function getTopSearches(): Promise<TopSearches | null> {
+  const [postcodes, trades, terms] = await Promise.all([
+    runHogQLQuery(`
+      SELECT extractURLParameter(properties.$current_url, 'postcode') AS postcode, count() AS searches
+      FROM events
+      WHERE event = '$pageview' AND properties.$pathname = '/directory'
+        AND properties.$current_url LIKE '%postcode=%'
+        AND timestamp >= now() - INTERVAL 30 DAY
+      GROUP BY postcode
+      HAVING postcode != ''
+      ORDER BY searches DESC
+      LIMIT 15
+    `),
+    runHogQLQuery(`
+      SELECT extractURLParameter(properties.$current_url, 'trade') AS trade, count() AS searches
+      FROM events
+      WHERE event = '$pageview' AND properties.$pathname = '/directory'
+        AND properties.$current_url LIKE '%trade=%'
+        AND timestamp >= now() - INTERVAL 30 DAY
+      GROUP BY trade
+      HAVING trade != ''
+      ORDER BY searches DESC
+      LIMIT 15
+    `),
+    runHogQLQuery(`
+      SELECT extractURLParameter(properties.$current_url, 'search') AS term, max(timestamp) AS last_seen
+      FROM events
+      WHERE event = '$pageview' AND properties.$pathname = '/directory'
+        AND properties.$current_url LIKE '%search=%'
+        AND timestamp >= now() - INTERVAL 30 DAY
+      GROUP BY term
+      HAVING term != ''
+      ORDER BY last_seen DESC
+      LIMIT 15
+    `),
+  ]);
+
+  if (!postcodes || !trades || !terms) return null;
+
+  return {
+    postcodes: postcodes.results.map(r => ({ postcode: String(r[0]), searches: Number(r[1]) })),
+    trades: trades.results.map(r => ({ trade: String(r[0]), searches: Number(r[1]) })),
+    recentTerms: terms.results.map(r => safeDecodeSearchTerm(String(r[0]))),
+  };
+}
+
 interface DirectoryActivity {
   totalListings: number;
   claimedListings: number;
@@ -312,10 +390,11 @@ async function getDirectoryActivity(): Promise<DirectoryActivity> {
 
 export default async function AdminOverviewPage() {
   const lookup = await getListingLookup();
-  const [traffic, topListings, outreachCandidates, directory] = await Promise.all([
+  const [traffic, topListings, outreachCandidates, topSearches, directory] = await Promise.all([
     getSiteTraffic(),
     getTopDirectoryListings(lookup),
     getOutreachCandidates(lookup),
+    getTopSearches(),
     getDirectoryActivity(),
   ]);
 
@@ -524,6 +603,66 @@ export default async function AdminOverviewPage() {
           )}
         </div>
       </section>
+
+      {/* Top searches - what people are actually typing into the
+          directory search form, not just which pages they land on.
+          Extracted directly from the search form's URL query params
+          via ClickHouse's extractURLParameter() (confirmed real data
+          before building this - see commit message) rather than a
+          dedicated search-tracking event, since the search form
+          already updates the URL on every change and each of those
+          already fires a $pageview. Postcodes with real search
+          volume but thin listing coverage are a concrete expansion-
+          priority signal, separate from the outreach-priority list
+          above (which is about existing listings, not coverage gaps). */}
+      {topSearches && (
+        <section className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Search size={18} className="text-[var(--amber)]" />
+            <h2 className="font-display text-[1.3rem] text-[var(--ink)]">Top searches</h2>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-4">
+            <div className="card">
+              <p className="section-tag mb-3">Postcodes (30d)</p>
+              <div className="space-y-1.5">
+                {topSearches.postcodes.map((p) => (
+                  <div key={p.postcode} className="flex items-center justify-between text-[12.5px]">
+                    <span className="text-[var(--ink-soft)] font-mono">{p.postcode}</span>
+                    <span className="font-bold text-[var(--ink)]">{p.searches}</span>
+                  </div>
+                ))}
+                {topSearches.postcodes.length === 0 && <p className="text-[12px] text-[var(--ink-faint)]">No data</p>}
+              </div>
+            </div>
+
+            <div className="card">
+              <p className="section-tag mb-3">Trades (30d)</p>
+              <div className="space-y-1.5">
+                {topSearches.trades.map((t) => (
+                  <div key={t.trade} className="flex items-center justify-between text-[12.5px]">
+                    <span className="text-[var(--ink-soft)] capitalize">{t.trade}</span>
+                    <span className="font-bold text-[var(--ink)]">{t.searches}</span>
+                  </div>
+                ))}
+                {topSearches.trades.length === 0 && <p className="text-[12px] text-[var(--ink-faint)]">No data</p>}
+              </div>
+            </div>
+
+            <div className="card">
+              <p className="section-tag mb-3">Recent search terms</p>
+              <div className="space-y-1.5">
+                {topSearches.recentTerms.map((term, i) => (
+                  <p key={i} className="text-[12.5px] text-[var(--ink-soft)] truncate">{term}</p>
+                ))}
+                {topSearches.recentTerms.length === 0 && <p className="text-[12px] text-[var(--ink-faint)]">No data</p>}
+              </div>
+              <p className="text-[10.5px] text-[var(--ink-faint)] mt-2">
+                Recent, not ranked - the search box updates on every keystroke
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Directory growth */}
       <section className="space-y-4">
