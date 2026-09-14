@@ -23,7 +23,7 @@ interface SiteTrafficStats {
   sessions: number;
   bounceRate: number;
   pageviews: number;
-  topPages: { path: string; sessions: number }[];
+  topPages: { path: string; sessions: number; bounceRate: number }[];
   channels: { channel: string; sessions: number }[];
 }
 
@@ -35,12 +35,12 @@ async function getSiteTraffic(): Promise<SiteTrafficStats | null> {
       WHERE $start_timestamp >= now() - INTERVAL 7 DAY
     `),
     runHogQLQuery(`
-      SELECT $entry_pathname AS path, count() AS sessions
+      SELECT $entry_pathname AS path, count() AS sessions, avg($is_bounce) AS bounce_rate
       FROM sessions
       WHERE $start_timestamp >= now() - INTERVAL 7 DAY AND $entry_pathname IS NOT NULL
       GROUP BY path
       ORDER BY sessions DESC
-      LIMIT 10
+      LIMIT 15
     `),
     runHogQLQuery(`
       SELECT $channel_type AS channel, count() AS sessions
@@ -60,9 +60,89 @@ async function getSiteTraffic(): Promise<SiteTrafficStats | null> {
     sessions: Number(sessions) || 0,
     bounceRate: Number(bounceRate) || 0,
     pageviews: Number(pageviews) || 0,
-    topPages: topPages.results.map(r => ({ path: String(r[0]), sessions: Number(r[1]) })),
+    topPages: topPages.results.map(r => ({ path: String(r[0]), sessions: Number(r[1]), bounceRate: Number(r[2]) || 0 })),
     channels: channels.results.map(r => ({ channel: String(r[0] ?? "Unknown"), sessions: Number(r[1]) })),
   };
+}
+
+interface TopDirectoryListing {
+  path: string;
+  sessions: number;
+  bounceRate: number;
+  businessName: string | null;
+  suburb: string | null;
+  isClaimed: boolean | null;
+}
+
+/**
+ * Every listing's slug ends in a stable 6-char hex suffix derived
+ * from its own UUID (see lib/directoryTrafficSync.ts for the same
+ * pattern used elsewhere) - matching on that instead of the full
+ * business-name-based slug means this keeps working even if a
+ * business edits their listed name later.
+ */
+async function getTopDirectoryListings(): Promise<TopDirectoryListing[]> {
+  const result = await runHogQLQuery(`
+    SELECT $entry_pathname AS path, count() AS sessions, avg($is_bounce) AS bounce_rate
+    FROM sessions
+    WHERE $start_timestamp >= now() - INTERVAL 7 DAY
+      AND $entry_pathname LIKE '/directory/%'
+      AND $entry_pathname != '/directory/claim'
+      AND $entry_pathname != '/directory'
+    GROUP BY path
+    ORDER BY sessions DESC
+    LIMIT 20
+  `);
+
+  if (!result) return [];
+
+  const rows = result.results.map(r => ({
+    path: String(r[0]),
+    sessions: Number(r[1]),
+    bounceRate: Number(r[2]) || 0,
+  }));
+
+  const suffixByPath = new Map<string, string>();
+  for (const row of rows) {
+    const match = row.path.match(/^\/directory\/.+-([0-9a-f]{6})$/);
+    if (match) suffixByPath.set(row.path, match[1]);
+  }
+
+  if (suffixByPath.size === 0) return rows.map(r => ({ ...r, businessName: null, suburb: null, isClaimed: null }));
+
+  const admin = createAdminClient();
+
+  // Matching a hex suffix against the `id` column (a uuid type) via
+  // PostgREST's raw .or() LIKE filter has real casting risk that
+  // can't be verified without a live deployment to test against - a
+  // LIKE match on a non-text column may need an explicit cast
+  // PostgREST's simple filter builder doesn't expose. Safer, equally
+  // fast in practice: fetch just the lightweight identity columns for
+  // every listing (id, business_name, suburb, is_claimed - a small
+  // payload even across ~4,900 rows, and this page loads occasionally,
+  // not at scale) and match suffixes in JS instead, where there's no
+  // ambiguity about how the comparison behaves.
+  const { data: allListings } = await admin
+    .from("directory_listing")
+    .select("id, business_name, suburb, is_claimed")
+    .limit(10000); // explicit - Supabase's default row cap (commonly 1000) would otherwise silently truncate this well below the real ~4,900 total
+
+  const listingBySuffix = new Map<string, { business_name: string; suburb: string | null; is_claimed: boolean }>();
+  for (const l of allListings ?? []) {
+    const suffix = (l.id as string).replace(/-/g, "").slice(-6);
+    listingBySuffix.set(suffix, l as { business_name: string; suburb: string | null; is_claimed: boolean });
+  }
+
+  return rows.map((row) => {
+    const suffix = suffixByPath.get(row.path);
+    const match = suffix ? listingBySuffix.get(suffix) : undefined;
+    return {
+      ...row,
+      businessName: match?.business_name ?? null,
+      suburb: match?.suburb ?? null,
+      isClaimed: match?.is_claimed ?? null,
+    };
+  });
 }
 
 interface DirectoryActivity {
@@ -135,8 +215,9 @@ async function getDirectoryActivity(): Promise<DirectoryActivity> {
 }
 
 export default async function AdminOverviewPage() {
-  const [traffic, directory] = await Promise.all([
+  const [traffic, topListings, directory] = await Promise.all([
     getSiteTraffic(),
+    getTopDirectoryListings(),
     getDirectoryActivity(),
   ]);
 
@@ -186,7 +267,10 @@ export default async function AdminOverviewPage() {
                   {traffic.topPages.map((p) => (
                     <div key={p.path} className="flex items-center justify-between text-[12.5px]">
                       <span className="text-[var(--ink-soft)] font-mono truncate mr-3">{p.path}</span>
-                      <span className="font-bold text-[var(--ink)] shrink-0">{p.sessions}</span>
+                      <span className="flex items-center gap-2 shrink-0">
+                        <span className="text-[11px] text-[var(--ink-faint)]">{(p.bounceRate * 100).toFixed(0)}% bounce</span>
+                        <span className="font-bold text-[var(--ink)]">{p.sessions}</span>
+                      </span>
                     </div>
                   ))}
                   {traffic.topPages.length === 0 && <p className="text-[12px] text-[var(--ink-faint)]">No data</p>}
@@ -209,6 +293,54 @@ export default async function AdminOverviewPage() {
           </>
         )}
       </section>
+
+      {/* Top directory listings - which specific businesses are getting
+          traffic, resolved to real names/suburbs/claim status rather
+          than raw slugs. Directly actionable: an unclaimed listing
+          getting real traffic is an outreach target (see the
+          website-scraper admin page's ABN/expansion panels for the
+          growth side of this); a claimed listing with a high bounce
+          rate is worth a look at the listing itself. */}
+      {traffic && (
+        <section className="space-y-4">
+          <div className="flex items-center gap-2">
+            <TrendingUp size={18} className="text-[var(--amber)]" />
+            <h2 className="font-display text-[1.3rem] text-[var(--ink)]">Top directory listings</h2>
+          </div>
+          <div className="card">
+            {topListings.length === 0 ? (
+              <p className="text-[12.5px] text-[var(--ink-faint)]">No listing traffic in the last 7 days</p>
+            ) : (
+              <div className="space-y-2">
+                {topListings.map((l) => (
+                  <div key={l.path} className="flex items-center justify-between gap-3 text-[12.5px] py-1 border-b border-[var(--line)] last:border-0">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-[var(--ink)] truncate">{l.businessName ?? l.path}</span>
+                        {l.isClaimed === false && (
+                          <span className="shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                            Unclaimed
+                          </span>
+                        )}
+                        {l.isClaimed === true && (
+                          <span className="shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-green-100 text-green-800">
+                            Claimed
+                          </span>
+                        )}
+                      </div>
+                      {l.suburb && <p className="text-[11px] text-[var(--ink-faint)]">{l.suburb}</p>}
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-[11px] text-[var(--ink-faint)]">{(l.bounceRate * 100).toFixed(0)}% bounce</span>
+                      <span className="font-bold text-[var(--ink)]">{l.sessions}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Directory growth */}
       <section className="space-y-4">
