@@ -39,6 +39,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "RESEND_API_KEY not configured" }, { status: 500 });
   }
   const FROM = process.env.RESEND_FROM_EMAIL ?? "team@swiftscope.com.au";
+  // Real ask: this should read as coming from Brendan personally, not
+  // a branded "Swiftscope" sender - but the technical From address has
+  // to stay on the verified swiftscope.com.au domain (Resend can't
+  // send as an arbitrary personal Gmail address without it being
+  // verified, which isn't possible for a domain you don't own). Reply-
+  // To is where a genuine personal inbox can go instead, so a reply
+  // actually reaches Brendan rather than a shared team@ box. Best
+  // guess pulled from this codebase's own ADMIN_EMAILS example
+  // (lib/admin.ts) rather than confirmed directly - overridable via
+  // OUTREACH_REPLY_TO if wrong.
+  const REPLY_TO = process.env.OUTREACH_REPLY_TO ?? "bren.norris360@gmail.com";
 
   const admin = createAdminClient();
   const { data: listings, error } = await admin
@@ -61,7 +72,7 @@ export async function POST(req: NextRequest) {
     const claimUrl = `https://swiftscope.com.au/directory/claim?name=${encodeURIComponent(listing.business_name)}&suburb=${encodeURIComponent(listing.suburb ?? "")}&trade=${encodeURIComponent(trade)}`;
     const listingUrl = `https://swiftscope.com.au/directory/${buildDirectorySlug({ id: listing.id, business_name: listing.business_name, suburb: listing.suburb ?? "" })}`;
 
-    const { subject, html } = buildDirectoryClaimInviteEmail({
+    const { subject, text } = buildDirectoryClaimInviteEmail({
       businessName: listing.business_name,
       claimUrl,
       listingUrl,
@@ -71,7 +82,7 @@ export async function POST(req: NextRequest) {
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_KEY}` },
-        body: JSON.stringify({ from: `Swiftscope <${FROM}>`, to: toEmail, subject, html }),
+        body: JSON.stringify({ from: `Brendan <${FROM}>`, to: toEmail, reply_to: REPLY_TO, subject, text }),
       });
       if (res.ok) {
         results.sent++;

@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     const claimUrl = `https://swiftscope.com.au/directory/claim?name=${encodeURIComponent(listing.business_name)}&suburb=${encodeURIComponent(listing.suburb ?? "")}&trade=${encodeURIComponent(trade)}`;
     const listingUrl = `https://swiftscope.com.au/directory/${buildDirectorySlug({ id: listing.id, business_name: listing.business_name, suburb: listing.suburb ?? "" })}`;
 
-    const { subject, html } = buildDirectoryClaimInviteEmail({
+    const { subject, text } = buildDirectoryClaimInviteEmail({
       businessName: listing.business_name,
       claimUrl,
       listingUrl,
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
       toEmail: toEmail || null,
       isClaimed: listing.is_claimed,
       subject,
-      html,
+      text,
     };
   });
 
