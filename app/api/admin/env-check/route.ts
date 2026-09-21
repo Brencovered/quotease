@@ -55,6 +55,29 @@ export async function GET() {
           : undefined
       ),
     },
+    outreach_email: {
+      // Deliberately separate from RESEND_FROM_EMAIL above - real risk
+      // flagged and acted on: sending cold outreach from the same
+      // domain as genuine transactional email (quotes, invoices,
+      // dockets) means a spam-complaint hit on outreach can damage the
+      // whole domain's sending reputation, including the transactional
+      // stream customers actually depend on. Needs its own verified
+      // domain in Resend (see .env.example for the exact setup steps -
+      // that part has to happen in Resend's dashboard and your DNS
+      // provider, neither of which is reachable from here). Falls back
+      // to RESEND_FROM_EMAIL if unset so sending doesn't break while
+      // the subdomain is being set up, but that fallback means the
+      // separation isn't actually in effect yet - this check exists so
+      // that's visible instead of silently assumed done.
+      OUTREACH_FROM_EMAIL: (() => {
+        const c = config("OUTREACH_FROM_EMAIL");
+        return c.set ? c : {
+          ...c,
+          warning: "Not set - outreach emails are still sending from the same domain/address as quotes and invoices (RESEND_FROM_EMAIL), so a spam complaint on outreach could affect that transactional stream too. Set up a dedicated subdomain in Resend and put its verified address here - see .env.example for the exact steps.",
+        };
+      })(),
+      OUTREACH_REPLY_TO: config("OUTREACH_REPLY_TO"),
+    },
     billing: {
       STRIPE_SECRET_KEY: secret("STRIPE_SECRET_KEY"),
       STRIPE_WEBHOOK_SECRET: secret("STRIPE_WEBHOOK_SECRET"),
