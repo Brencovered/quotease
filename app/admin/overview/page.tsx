@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runHogQLQuery } from "@/lib/posthogQuery";
-import { TrendingUp, Users, FileText, AlertTriangle, Phone, Mail, Globe, Search } from "lucide-react";
+import { TrendingUp, Users, FileText, AlertTriangle, Mail, Search } from "lucide-react";
+import OutreachPriorityPanel from "@/components/admin/OutreachPriorityPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ export const dynamic = "force-dynamic";
  */
 
 interface ListingRecord {
+  id: string;
   businessName: string;
   suburb: string | null;
   isClaimed: boolean;
@@ -43,22 +45,29 @@ async function getListingLookup(): Promise<Map<string, ListingRecord>> {
   // once and matching in JS avoids that ambiguity entirely. Explicit
   // .limit() because Supabase's default row cap (commonly 1000) would
   // otherwise silently truncate this well below the real ~4,900 total.
+  //
+  // email is the coalesced value send-claim-invite itself checks
+  // (scraped_contact_email || private_email) - fetched here too so the
+  // dashboard can tell in advance which candidates are actually
+  // emailable, rather than offering to send and having some silently
+  // no-op via that route's own skippedNoEmail path.
   const { data } = await admin
     .from("directory_listing")
-    .select("id, business_name, suburb, is_claimed, google_rating, google_reviews_count, scraped_contact_phone, private_email, website_url")
+    .select("id, business_name, suburb, is_claimed, google_rating, google_reviews_count, scraped_contact_phone, scraped_contact_email, private_email, website_url")
     .limit(10000);
 
   const bySuffix = new Map<string, ListingRecord>();
   for (const l of data ?? []) {
     const suffix = (l.id as string).replace(/-/g, "").slice(-6);
     bySuffix.set(suffix, {
+      id: l.id as string,
       businessName: l.business_name as string,
       suburb: l.suburb as string | null,
       isClaimed: l.is_claimed as boolean,
       googleRating: l.google_rating as number | null,
       googleReviewsCount: l.google_reviews_count as number | null,
       phone: l.scraped_contact_phone as string | null,
-      email: l.private_email as string | null,
+      email: (l.scraped_contact_email as string | null) ?? (l.private_email as string | null),
       websiteUrl: l.website_url as string | null,
     });
   }
@@ -176,6 +185,7 @@ async function getTopDirectoryListings(lookup: Map<string, ListingRecord>): Prom
 }
 
 interface OutreachCandidate {
+  id: string;
   businessName: string;
   suburb: string | null;
   sessions: number;
@@ -225,6 +235,7 @@ async function getOutreachCandidates(lookup: Map<string, ListingRecord>): Promis
     const listing = lookup.get(suffix);
     if (!listing || listing.isClaimed || !listing.googleReviewsCount) continue;
     candidates.push({
+      id: listing.id,
       businessName: listing.businessName,
       suburb: listing.suburb,
       sessions,
@@ -560,7 +571,16 @@ export default async function AdminOverviewPage() {
           by review count (the same signal used for manual outreach
           prioritisation earlier), with contact details right here so
           this list is directly actionable rather than needing a
-          separate lookup before reaching out. */}
+          separate lookup before reaching out.
+          Client component (OutreachPriorityPanel) so it can wire
+          directly to the existing /api/admin/directory/send-claim-
+          invite endpoint - one click sends real, personalised, tracked
+          claim invites to this specific high-value segment instead of
+          a manual CSV export -> HubSpot import round trip. Deliberately
+          keeps that click as a real, manual trigger rather than
+          sending automatically - this sends real email to real
+          businesses, worth a person deciding each time, not something
+          to run unattended. */}
       <section className="space-y-4">
         <div className="flex items-center gap-2">
           <Mail size={18} className="text-[var(--amber)]" />
@@ -569,39 +589,7 @@ export default async function AdminOverviewPage() {
         <p className="text-[12.5px] text-[var(--ink-faint)] -mt-2">
           Unclaimed listings with real Google reviews getting traffic in the last 30 days, most-reviewed first
         </p>
-        <div className="card">
-          {outreachCandidates.length === 0 ? (
-            <p className="text-[12.5px] text-[var(--ink-faint)]">No qualifying candidates right now</p>
-          ) : (
-            <div className="space-y-3">
-              {outreachCandidates.map((c, i) => (
-                <div key={i} className="flex items-start justify-between gap-3 py-2 border-b border-[var(--line)] last:border-0">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-[13px] text-[var(--ink)]">{c.businessName}</span>
-                      {c.suburb && <span className="text-[11.5px] text-[var(--ink-faint)]">{c.suburb}</span>}
-                      {c.googleRating != null && (
-                        <span className="text-[11px] font-bold text-amber-700">
-                          {c.googleRating}★ ({c.googleReviewsCount})
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 mt-1 text-[11.5px] text-[var(--ink-soft)]">
-                      {c.phone && <span className="flex items-center gap-1"><Phone size={11} /> {c.phone}</span>}
-                      {c.email && <span className="flex items-center gap-1"><Mail size={11} /> {c.email}</span>}
-                      {c.websiteUrl && (
-                        <a href={c.websiteUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-[var(--navy)]">
-                          <Globe size={11} /> Website
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                  <span className="shrink-0 text-[11px] font-bold text-[var(--ink-faint)] whitespace-nowrap">{c.sessions} views</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <OutreachPriorityPanel candidates={outreachCandidates} />
       </section>
 
       {/* Top searches - what people are actually typing into the
