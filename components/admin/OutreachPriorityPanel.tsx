@@ -29,7 +29,7 @@ interface EmailPreview {
   toEmail: string | null;
   isClaimed: boolean;
   subject: string;
-  html: string;
+  text: string;
 }
 
 /**
@@ -160,7 +160,7 @@ export default function OutreachPriorityPanel({ candidates: initialCandidates }:
               </button>
               {expandedPreviewId === p.id && (
                 <div className="bg-[var(--app-bg)] rounded-lg p-3 mt-1">
-                  <div className="bg-white rounded border border-[var(--line)] p-3" dangerouslySetInnerHTML={{ __html: p.html }} />
+                  <pre className="bg-white rounded border border-[var(--line)] p-3 text-[12.5px] text-[var(--ink)] whitespace-pre-wrap font-sans">{p.text}</pre>
                 </div>
               )}
             </div>

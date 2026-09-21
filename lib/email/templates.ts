@@ -221,16 +221,27 @@ export function buildDirectoryClaimInviteEmail(vars: {
 }) {
   return {
     subject: `${vars.businessName} - your free Swiftscope directory page is ready`,
-    html: `
-      <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; color: #0a1722;">
-        <p>Hi,</p>
-        <p>We've set up a free directory page for <strong>${htmlEscape(vars.businessName)}</strong> on Swiftscope, an Australian directory for trade businesses, built for homeowners searching for a tradie in your area.</p>
-        <p>You can see it here: <a href="${vars.listingUrl}">${vars.listingUrl}</a></p>
-        <p>It's free to claim, no credit card, no catch. Once you claim it you can add photos, your licence details, services you offer, and start receiving quote requests directly.</p>
-        <p><a href="${vars.claimUrl}" style="display:inline-block;background:#ffb400;color:#0a1722;font-weight:700;padding:12px 24px;border-radius:8px;text-decoration:none;">Claim your free listing</a></p>
-        <p style="color:#5a6b78;font-size:13px;">If this isn't your business, you can ignore this email.</p>
-      </div>
-    `,
+    // Plain text on purpose, not HTML - this is one-to-one outreach to
+    // a business owner, not a branded transactional email. A styled
+    // button and boxed layout reads as a mass-sent marketing email and
+    // hurts response rates on exactly this kind of first-contact
+    // message; plain text reads like something a person actually
+    // wrote. Other templates in this file stay HTML deliberately -
+    // they're genuine transactional documents (quotes, invoices,
+    // dockets), not outreach.
+    text: `Hi,
+
+We've set up a free directory page for ${vars.businessName} on Swiftscope, an Australian directory for trade businesses, built for homeowners searching for a tradie in your area.
+
+You can see it here: ${vars.listingUrl}
+
+It's free to claim, no credit card, no catch. Once you claim it you can add photos, your licence details, services you offer, and start receiving quote requests directly.
+
+Claim it here: ${vars.claimUrl}
+
+If this isn't your business, you can ignore this email.
+
+Brendan`,
   };
 }
 
@@ -422,7 +433,11 @@ export type EmailTemplateMeta = {
   trigger: string;
   from: string;
   routeFile: string;
-  preview: () => { subject: string; html: string };
+  // Plain-text templates (directory-claim-invite - see the function
+  // itself for why) return { subject, text } instead of
+  // { subject, html } - both shapes allowed here rather than forcing
+  // every template through the same html-only contract.
+  preview: () => { subject: string; html: string } | { subject: string; text: string };
 };
 
 export const EMAIL_TEMPLATES: EmailTemplateMeta[] = [
@@ -489,7 +504,7 @@ export const EMAIL_TEMPLATES: EmailTemplateMeta[] = [
     id: "directory-claim-invite",
     name: "Directory: claim your listing invite",
     trigger: "Admin manually triggers per-listing from /admin/directory",
-    from: "Swiftscope <team@swiftscope.com.au> (or RESEND_FROM_EMAIL if set)",
+    from: "Brendan <team@swiftscope.com.au> (or RESEND_FROM_EMAIL if set), reply-to set to Brendan's real inbox",
     routeFile: "app/api/admin/directory/send-claim-invite/route.ts",
     preview: () =>
       buildDirectoryClaimInviteEmail({

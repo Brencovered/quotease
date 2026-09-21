@@ -10,7 +10,8 @@ type Template = {
   from: string;
   routeFile: string;
   subject: string;
-  html: string;
+  html?: string;
+  text?: string;
 };
 
 export default function EmailTemplatesViewer({ templates }: { templates: Template[] }) {
@@ -56,24 +57,31 @@ export default function EmailTemplatesViewer({ templates }: { templates: Templat
                 </p>
                 <p className="text-[11.5px] text-[var(--ink-faint)] mt-1.5 font-mono">{selected.routeFile}</p>
               </div>
-              <div className="flex gap-1 shrink-0 bg-[var(--line-subtle)] rounded-lg p-1">
-                <button
-                  onClick={() => setView("preview")}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12.5px] font-bold transition-colors ${
-                    view === "preview" ? "bg-white shadow-sm text-[var(--ink)]" : "text-[var(--ink-soft)]"
-                  }`}
-                >
-                  <Eye size={13} /> Preview
-                </button>
-                <button
-                  onClick={() => setView("source")}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12.5px] font-bold transition-colors ${
-                    view === "source" ? "bg-white shadow-sm text-[var(--ink)]" : "text-[var(--ink-soft)]"
-                  }`}
-                >
-                  <Code2 size={13} /> HTML source
-                </button>
-              </div>
+              {/* Plain-text templates (currently just directory-claim-
+                  invite - see lib/email/templates.ts for why) have no
+                  html/source distinction to toggle between, so this
+                  toggle only renders for templates that actually have
+                  html. */}
+              {selected.html && (
+                <div className="flex gap-1 shrink-0 bg-[var(--line-subtle)] rounded-lg p-1">
+                  <button
+                    onClick={() => setView("preview")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12.5px] font-bold transition-colors ${
+                      view === "preview" ? "bg-white shadow-sm text-[var(--ink)]" : "text-[var(--ink-soft)]"
+                    }`}
+                  >
+                    <Eye size={13} /> Preview
+                  </button>
+                  <button
+                    onClick={() => setView("source")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12.5px] font-bold transition-colors ${
+                      view === "source" ? "bg-white shadow-sm text-[var(--ink)]" : "text-[var(--ink-soft)]"
+                    }`}
+                  >
+                    <Code2 size={13} /> HTML source
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="p-5">
@@ -82,18 +90,24 @@ export default function EmailTemplatesViewer({ templates }: { templates: Templat
                 Rendered with sample data - real sends use the actual business name, job details, etc.
               </div>
 
-              {view === "preview" ? (
-                <iframe
-                  key={selected.id}
-                  title={`${selected.name} preview`}
-                  srcDoc={selected.html}
-                  sandbox=""
-                  className="w-full rounded-xl border border-[var(--line)] bg-white"
-                  style={{ height: "640px" }}
-                />
+              {selected.html ? (
+                view === "preview" ? (
+                  <iframe
+                    key={selected.id}
+                    title={`${selected.name} preview`}
+                    srcDoc={selected.html}
+                    sandbox=""
+                    className="w-full rounded-xl border border-[var(--line)] bg-white"
+                    style={{ height: "640px" }}
+                  />
+                ) : (
+                  <pre className="w-full max-h-[640px] overflow-auto text-[11.5px] leading-relaxed bg-[var(--navy)] text-[#c8d8e4] rounded-xl p-4 font-mono whitespace-pre-wrap break-words">
+                    {selected.html}
+                  </pre>
+                )
               ) : (
-                <pre className="w-full max-h-[640px] overflow-auto text-[11.5px] leading-relaxed bg-[var(--navy)] text-[#c8d8e4] rounded-xl p-4 font-mono whitespace-pre-wrap break-words">
-                  {selected.html}
+                <pre className="w-full max-h-[640px] overflow-auto text-[13px] leading-relaxed bg-white border border-[var(--line)] text-[var(--ink)] rounded-xl p-5 font-sans whitespace-pre-wrap">
+                  {selected.text}
                 </pre>
               )}
             </div>

@@ -6,15 +6,16 @@ export const dynamic = "force-dynamic";
 
 export default function AdminEmailsPage() {
   const templates = EMAIL_TEMPLATES.map((t) => {
-    const { subject, html } = t.preview();
+    const rendered = t.preview() as { subject: string; html?: string; text?: string };
     return {
       id: t.id,
       name: t.name,
       trigger: t.trigger,
       from: t.from,
       routeFile: t.routeFile,
-      subject,
-      html,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
     };
   });
 
