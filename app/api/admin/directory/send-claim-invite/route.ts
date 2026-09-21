@@ -38,17 +38,27 @@ export async function POST(req: NextRequest) {
   if (!RESEND_KEY) {
     return NextResponse.json({ error: "RESEND_API_KEY not configured" }, { status: 500 });
   }
-  const FROM = process.env.RESEND_FROM_EMAIL ?? "team@swiftscope.com.au";
+  // Deliberately its own env var, not RESEND_FROM_EMAIL (used for
+  // quotes/invoices/dockets) - real risk identified and acted on:
+  // sending cold outreach from the same domain as genuine
+  // transactional email means a spam-complaint hit on outreach can
+  // damage the whole domain's sending reputation, including the
+  // transactional stream customers actually depend on. Needs a
+  // dedicated verified domain in Resend - see .env.example for the
+  // exact setup steps, and /api/admin/env-check to confirm this is
+  // actually configured rather than silently still sharing the
+  // transactional domain via the fallback below.
+  const FROM = process.env.OUTREACH_FROM_EMAIL ?? process.env.RESEND_FROM_EMAIL ?? "team@swiftscope.com.au";
   // Real ask: this should read as coming from Brendan personally, not
   // a branded "Swiftscope" sender - but the technical From address has
-  // to stay on the verified swiftscope.com.au domain (Resend can't
-  // send as an arbitrary personal Gmail address without it being
-  // verified, which isn't possible for a domain you don't own). Reply-
-  // To is where a genuine personal inbox can go instead, so a reply
-  // actually reaches Brendan rather than a shared team@ box. Best
-  // guess pulled from this codebase's own ADMIN_EMAILS example
-  // (lib/admin.ts) rather than confirmed directly - overridable via
-  // OUTREACH_REPLY_TO if wrong.
+  // to stay on a domain verified in Resend (can't send as an arbitrary
+  // personal Gmail address without it being verified, which isn't
+  // possible for a domain you don't own). Reply-To is where a genuine
+  // personal inbox can go instead, so a reply actually reaches
+  // Brendan rather than a shared team@ box. Best guess pulled from
+  // this codebase's own ADMIN_EMAILS example (lib/admin.ts) rather
+  // than confirmed directly - overridable via OUTREACH_REPLY_TO if
+  // wrong.
   const REPLY_TO = process.env.OUTREACH_REPLY_TO ?? "bren.norris360@gmail.com";
 
   const admin = createAdminClient();
