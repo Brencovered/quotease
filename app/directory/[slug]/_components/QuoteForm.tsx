@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePostHog } from "posthog-js/react";
 import { Camera, Check, FileText, MessageSquare, Phone, Send, X } from "lucide-react";
 import {
   isAllowedEnquiryFile,
@@ -40,6 +41,7 @@ export default function QuoteForm({
   listing: Listing;
   compact?: boolean;
 }) {
+  const posthogClient = usePostHog();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -127,6 +129,7 @@ export default function QuoteForm({
     setSending(false);
     if (res.ok) {
       setSent(true);
+      posthogClient?.capture("quote_submit", { listing_id: listing.id, is_claimed: !!listing.is_claimed, compact });
     } else {
       const d = await res.json().catch(() => ({}));
       setError(typeof d.error === "string" ? d.error : "Could not send. Try again, or email team@swiftscope.com.au.");
