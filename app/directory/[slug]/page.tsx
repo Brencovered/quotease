@@ -17,6 +17,7 @@ import { getGoogleReviewsUrl } from "@/lib/seo/gbp";
 import PhotoGallery from "./_components/PhotoGallery";
 import QuoteForm from "./_components/QuoteForm";
 import ListingLogo from "./_components/ListingLogo";
+import TrackedContactLink from "./_components/TrackedContactLink";
 import ListingStickyCta from "./_components/ListingStickyCta";
 import ReviewsSectionAsync from "./_components/ReviewsSectionAsync";
 import TestimonialsSection from "./_components/TestimonialsSection";
@@ -335,10 +336,11 @@ export default async function TradieProfilePage({
                 </a>
               )}
               {listing.scraped_contact_phone && (
-                <a href={`tel:${listing.scraped_contact_phone}`}
+                <TrackedContactLink event="call_click" listingId={listing.id} isClaimed={listing.is_claimed ?? false}
+                  href={`tel:${listing.scraped_contact_phone}`}
                   className={`${showQuoteFlow ? "bg-white/10 text-white hover:bg-white/20" : "bg-[#ffb400] text-[#0a1722] hover:opacity-90"} font-bold text-[14px] px-6 py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2 whitespace-nowrap`}>
                   <Phone size={15} /> Call now
-                </a>
+                </TrackedContactLink>
               )}
             </div>
           </div>
@@ -414,15 +416,17 @@ export default async function TradieProfilePage({
                   </a>
                 )}
                 {listing.scraped_contact_phone && (
-                  <a href={`tel:${listing.scraped_contact_phone}`} className="flex items-center gap-2 text-[13px] font-semibold text-gray-700 hover:text-[#0a1722] transition-colors">
+                  <TrackedContactLink event="call_click" listingId={listing.id} isClaimed={listing.is_claimed ?? false}
+                    href={`tel:${listing.scraped_contact_phone}`} className="flex items-center gap-2 text-[13px] font-semibold text-gray-700 hover:text-[#0a1722] transition-colors">
                     <Phone size={13} className="text-gray-400" /> {listing.scraped_contact_phone}
-                  </a>
+                  </TrackedContactLink>
                 )}
                 {listing.website_url && domain && (
-                  <a href={listing.website_url} target="_blank" rel="noopener noreferrer"
+                  <TrackedContactLink event="website_click" listingId={listing.id} isClaimed={listing.is_claimed ?? false}
+                    href={listing.website_url} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-2 text-[13px] font-semibold text-gray-700 hover:text-[#0a1722] transition-colors">
                     <Globe size={13} className="text-gray-400" /> {domain} <ExternalLink size={11} className="text-gray-300" />
-                  </a>
+                  </TrackedContactLink>
                 )}
                 {listing.instagram_url && (
                   <a href={listing.instagram_url} target="_blank" rel="noopener noreferrer"
@@ -540,7 +544,7 @@ export default async function TradieProfilePage({
                 )}
                 <div className="space-y-2">
                   {listing.scraped_contact_phone && (
-                    <a
+                    <TrackedContactLink event="call_click" listingId={listing.id} isClaimed={listing.is_claimed ?? false}
                       href={`tel:${listing.scraped_contact_phone}`}
                       className={`flex items-center justify-center gap-2 w-full font-bold text-[13px] py-3 rounded-xl hover:opacity-90 transition-opacity ${
                         showQuoteFlow
@@ -549,13 +553,14 @@ export default async function TradieProfilePage({
                       }`}
                     >
                       <Phone size={14} /> Call {listing.scraped_contact_phone}
-                    </a>
+                    </TrackedContactLink>
                   )}
                   {listing.website_url && (
-                    <a href={listing.website_url} target="_blank" rel="noopener noreferrer"
+                    <TrackedContactLink event="website_click" listingId={listing.id} isClaimed={listing.is_claimed ?? false}
+                      href={listing.website_url} target="_blank" rel="noopener noreferrer"
                       className="flex items-center justify-center gap-1.5 text-[12.5px] font-semibold text-gray-500 hover:text-[#0a1722]">
                       <Globe size={13} /> {domain ?? "Visit website"} <ExternalLink size={11} />
-                    </a>
+                    </TrackedContactLink>
                   )}
                   {listing.place_id && (
                     <a href={`https://maps.google.com/?place_id=${listing.place_id}`} target="_blank" rel="noopener noreferrer"
@@ -645,9 +650,10 @@ export default async function TradieProfilePage({
                 </a>
               )}
               {showQuoteFlow && listing.scraped_contact_phone && (
-                <a href={`tel:${listing.scraped_contact_phone}`} className="bg-white/10 text-white font-bold text-[14px] px-6 py-3.5 rounded-xl hover:bg-white/20 transition-colors flex items-center justify-center gap-2 whitespace-nowrap">
+                <TrackedContactLink event="call_click" listingId={listing.id} isClaimed={listing.is_claimed ?? false}
+                  href={`tel:${listing.scraped_contact_phone}`} className="bg-white/10 text-white font-bold text-[14px] px-6 py-3.5 rounded-xl hover:bg-white/20 transition-colors flex items-center justify-center gap-2 whitespace-nowrap">
                   <Phone size={15} /> Call
-                </a>
+                </TrackedContactLink>
               )}
               <Link
                 href="/directory"

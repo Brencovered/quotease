@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runHogQLQuery } from "@/lib/posthogQuery";
-import { TrendingUp, Users, FileText, AlertTriangle, Mail, Search } from "lucide-react";
+import { TrendingUp, Users, FileText, AlertTriangle, Mail, Search, Phone, Globe, Send } from "lucide-react";
 import OutreachPriorityPanel from "@/components/admin/OutreachPriorityPanel";
 
 export const dynamic = "force-dynamic";
@@ -77,6 +77,64 @@ async function getListingLookup(): Promise<Map<string, ListingRecord>> {
 function suffixFromPath(path: string): string | null {
   const match = path.match(/^\/directory\/.+-([0-9a-f]{6})$/);
   return match ? match[1] : null;
+}
+
+interface ConversionEvents {
+  quoteSubmitClaimed: number;
+  quoteSubmitUnclaimed: number;
+  callClickClaimed: number;
+  callClickUnclaimed: number;
+  websiteClickClaimed: number;
+  websiteClickUnclaimed: number;
+}
+
+/**
+ * "Without [quote_submit/call_click/website_click events] you cannot
+ * tell if #105 worked, or if people just rang the number." Split by
+ * claimed vs unclaimed, matching the audit's exact ask - a real,
+ * numeric answer to "did any of this actually move anything" for
+ * priorities 2 and 3, instead of eyeballing it.
+ *
+ * Not independently validated against real PostHog data the way every
+ * other query on this page was before being wired in - these three
+ * events didn't exist anywhere until the same change that added this
+ * query, so there was nothing real to test the query shape against
+ * yet. Same GROUP BY pattern already validated multiple times
+ * elsewhere on this page (top searches, channels, referrers) - high
+ * confidence in the syntax, first real numbers will be the actual
+ * test.
+ */
+async function getConversionEvents(): Promise<ConversionEvents | null> {
+  const result = await runHogQLQuery(`
+    SELECT event, properties.is_claimed AS is_claimed, count() AS n
+    FROM events
+    WHERE event IN ('quote_submit', 'call_click', 'website_click')
+      AND timestamp >= now() - INTERVAL 7 DAY
+    GROUP BY event, is_claimed
+  `);
+
+  if (!result) return null;
+
+  const counts: ConversionEvents = {
+    quoteSubmitClaimed: 0, quoteSubmitUnclaimed: 0,
+    callClickClaimed: 0, callClickUnclaimed: 0,
+    websiteClickClaimed: 0, websiteClickUnclaimed: 0,
+  };
+
+  for (const row of result.results) {
+    const event = String(row[0]);
+    const isClaimed = row[1] === true || row[1] === "true";
+    const n = Number(row[2]) || 0;
+    if (event === "quote_submit") {
+      if (isClaimed) counts.quoteSubmitClaimed += n; else counts.quoteSubmitUnclaimed += n;
+    } else if (event === "call_click") {
+      if (isClaimed) counts.callClickClaimed += n; else counts.callClickUnclaimed += n;
+    } else if (event === "website_click") {
+      if (isClaimed) counts.websiteClickClaimed += n; else counts.websiteClickUnclaimed += n;
+    }
+  }
+
+  return counts;
 }
 
 interface SiteTrafficStats {
@@ -401,11 +459,12 @@ async function getDirectoryActivity(): Promise<DirectoryActivity> {
 
 export default async function AdminOverviewPage() {
   const lookup = await getListingLookup();
-  const [traffic, topListings, outreachCandidates, topSearches, directory] = await Promise.all([
+  const [traffic, topListings, outreachCandidates, topSearches, conversionEvents, directory] = await Promise.all([
     getSiteTraffic(),
     getTopDirectoryListings(lookup),
     getOutreachCandidates(lookup),
     getTopSearches(),
+    getConversionEvents(),
     getDirectoryActivity(),
   ]);
 
@@ -516,6 +575,61 @@ export default async function AdminOverviewPage() {
           </>
         )}
       </section>
+
+      {/* Conversion funnel - the actual "did any of this work" answer
+          for priorities 2 and 3 (gating Get a quote to reachable
+          listings, cleaning up card CTAs). Split by claimed vs
+          unclaimed per the audit's exact ask - if call_click dwarfs
+          quote_submit even on claimed listings, that's a real signal
+          people are still just ringing the number instead of using
+          the form, worth knowing rather than assuming the form
+          changes worked just because they shipped. */}
+      {conversionEvents && (
+        <section className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Send size={18} className="text-[var(--amber)]" />
+            <h2 className="font-display text-[1.3rem] text-[var(--ink)]">Conversion funnel (7d)</h2>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-4">
+            <div className="card">
+              <div className="flex items-center gap-2 mb-2">
+                <Mail size={14} className="text-[var(--ink-faint)]" />
+                <p className="text-[11px] font-bold uppercase text-[var(--ink-faint)]">Quote submitted</p>
+              </div>
+              <p className="font-display text-[1.8rem] text-[var(--ink)]">
+                {conversionEvents.quoteSubmitClaimed + conversionEvents.quoteSubmitUnclaimed}
+              </p>
+              <p className="text-[11.5px] text-[var(--ink-faint)] mt-1">
+                {conversionEvents.quoteSubmitClaimed} claimed · {conversionEvents.quoteSubmitUnclaimed} unclaimed
+              </p>
+            </div>
+            <div className="card">
+              <div className="flex items-center gap-2 mb-2">
+                <Phone size={14} className="text-[var(--ink-faint)]" />
+                <p className="text-[11px] font-bold uppercase text-[var(--ink-faint)]">Call clicked</p>
+              </div>
+              <p className="font-display text-[1.8rem] text-[var(--ink)]">
+                {conversionEvents.callClickClaimed + conversionEvents.callClickUnclaimed}
+              </p>
+              <p className="text-[11.5px] text-[var(--ink-faint)] mt-1">
+                {conversionEvents.callClickClaimed} claimed · {conversionEvents.callClickUnclaimed} unclaimed
+              </p>
+            </div>
+            <div className="card">
+              <div className="flex items-center gap-2 mb-2">
+                <Globe size={14} className="text-[var(--ink-faint)]" />
+                <p className="text-[11px] font-bold uppercase text-[var(--ink-faint)]">Website clicked</p>
+              </div>
+              <p className="font-display text-[1.8rem] text-[var(--ink)]">
+                {conversionEvents.websiteClickClaimed + conversionEvents.websiteClickUnclaimed}
+              </p>
+              <p className="text-[11.5px] text-[var(--ink-faint)] mt-1">
+                {conversionEvents.websiteClickClaimed} claimed · {conversionEvents.websiteClickUnclaimed} unclaimed
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Top directory listings - which specific businesses are getting
           traffic, resolved to real names/suburbs/claim status rather

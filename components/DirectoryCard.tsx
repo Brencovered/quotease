@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { usePostHog } from "posthog-js/react";
 import Link from "next/link";
 import { MapPin, Star, Phone, Mail, ChevronLeft, ChevronRight, Check, BadgeCheck, ArrowRight } from "lucide-react";
 import { getGoogleReviewsUrl } from "@/lib/seo/gbp";
@@ -265,6 +266,7 @@ export default function DirectoryCard({ listing, index = 0 }: { listing: Listing
   const canReceiveQuote = Boolean(listing.is_claimed || listing.scraped_contact_email || listing.private_email);
   const showQuoteFlow = QUOTE_REQUESTS_ENABLED && canReceiveQuote;
   const profileHref = `/directory/${listing.suburb ? buildDirectorySlug(listing as { id: string; business_name: string; suburb: string }) : listing.id}`;
+  const posthogClient = usePostHog();
 
   return (
     <>
@@ -367,6 +369,7 @@ export default function DirectoryCard({ listing, index = 0 }: { listing: Listing
               )}
               {listing.scraped_contact_phone && (
                 <a href={`tel:${listing.scraped_contact_phone}`}
+                  onClick={() => posthogClient?.capture("call_click", { listing_id: listing.id, is_claimed: !!listing.is_claimed })}
                   className="flex items-center gap-1.5 text-[12px] font-semibold text-gray-600 hover:text-gray-900 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
                   <Phone size={12} /> Call
                 </a>
