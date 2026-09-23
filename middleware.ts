@@ -115,6 +115,23 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   // Google Analytics 4 + gtag hit regional collect hosts, GTM, and (unless
   // ads signals are off) DoubleClick pixels. Vercel Analytics / Speed Insights
   // load from va.vercel-scripts.com and report to vitals.vercel-insights.com.
+  //
+  // Trust the actually-configured Supabase endpoint. In production this is a
+  // *.supabase.co host already covered by the wildcards below, so this is a
+  // no-op there. For local dev or a self-hosted Supabase the origin can be an
+  // http host (e.g. http://127.0.0.1:54321) that the wildcards would not match
+  // and that upgrade-insecure-requests would rewrite to https and break.
+  let supabaseOrigin = "";
+  try {
+    const u = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (u) supabaseOrigin = new URL(u).origin;
+  } catch {
+    supabaseOrigin = "";
+  }
+  const supabaseIsHttp = supabaseOrigin.startsWith("http://");
+  const supabaseConnectSrc = supabaseOrigin
+    ? ` ${supabaseOrigin} ${supabaseOrigin.replace(/^http/, "ws")}`
+    : "";
   const csp = [
     "default-src 'self'",
     "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://*.googletagmanager.com https://va.vercel-scripts.com https://*.posthog.com",
@@ -143,12 +160,14 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
     // replay recorder runs in. PostHog's own CSP docs call this out
     // explicitly: https://posthog.com/docs/libraries/js.
     "worker-src 'self' blob: data:",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com https://api.anthropic.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://www.google.com https://www.googletagmanager.com https://*.googletagmanager.com https://stats.g.doubleclick.net https://api.stripe.com https://*.stripe.com https://js.stripe.com https://api.xero.com https://identity.xero.com https://va.vercel-scripts.com https://vitals.vercel-insights.com https://*.vercel-insights.com https://*.posthog.com",
+    `connect-src 'self'${supabaseConnectSrc} https://*.supabase.co wss://*.supabase.co https://api.openai.com https://api.anthropic.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://www.google.com https://www.googletagmanager.com https://*.googletagmanager.com https://stats.g.doubleclick.net https://api.stripe.com https://*.stripe.com https://js.stripe.com https://api.xero.com https://identity.xero.com https://va.vercel-scripts.com https://vitals.vercel-insights.com https://*.vercel-insights.com https://*.posthog.com`,
     "manifest-src 'self'",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self' https://checkout.stripe.com",
-    "upgrade-insecure-requests",
+    // Skip only when the configured Supabase endpoint is http (local dev /
+    // self-hosted); production stays on https and keeps the upgrade.
+    ...(supabaseIsHttp ? [] : ["upgrade-insecure-requests"]),
   ].join("; ");
   response.headers.set("Content-Security-Policy", csp);
 
