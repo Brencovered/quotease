@@ -16,3 +16,17 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- profiles columns that the app reads/writes but that no tracked SQL creates
+-- (added to production via untracked migrations). Without them, onboarding,
+-- billing access checks and the quote builder fail with "column ... not found".
+-- Types are best-effort but functionally correct for local dev.
+alter table public.profiles add column if not exists team_size integer;
+alter table public.profiles add column if not exists comp_access boolean not null default false;
+alter table public.profiles add column if not exists default_deposit_pct numeric;
+alter table public.profiles add column if not exists default_expiry_days integer;
+alter table public.profiles add column if not exists archetype_defaults jsonb not null default '{}'::jsonb;
+alter table public.profiles add column if not exists cancel_at_period_end boolean not null default false;
+
+-- Make PostgREST pick up the new columns without a restart.
+notify pgrst, 'reload schema';
