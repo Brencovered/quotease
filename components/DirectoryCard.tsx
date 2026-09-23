@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { MapPin, Star, Phone, Globe, Mail, ChevronLeft, ChevronRight, Check, BadgeCheck, ArrowRight } from "lucide-react";
+import { MapPin, Star, Phone, Mail, ChevronLeft, ChevronRight, Check, BadgeCheck, ArrowRight } from "lucide-react";
 import { getGoogleReviewsUrl } from "@/lib/seo/gbp";
 import { buildDirectorySlug } from "@/lib/seo/meta";
-import { CLAIMED_DIRECTORY_PAGES_ENABLED } from "@/lib/featureFlags";
+import { CLAIMED_DIRECTORY_PAGES_ENABLED, QUOTE_REQUESTS_ENABLED } from "@/lib/featureFlags";
 
 // Temporarily off (kept in sync with app/directory/[slug]/page.tsx): with few
 // tradies in the directory yet, a homeowner submitting an enquiry that never
@@ -33,6 +33,7 @@ type Listing = {
   id: string; business_name: string; trades: string[] | null;
   suburb: string | null; scraped_contact_phone: string | null;
   website_url: string | null; scraped_contact_email: string | null;
+  private_email?: string | null;
   google_rating: number | null; google_reviews_count: number | null;
   photo_references: string[] | null; place_id: string | null;
   blurb: string | null; logo_url: string | null;
@@ -255,6 +256,15 @@ function LogoHero({ listing }: { listing: Listing }) {
 export default function DirectoryCard({ listing, index = 0 }: { listing: Listing; index?: number }) {
   const primaryTrade = listing.trades?.[0];
   const accent = (primaryTrade && TRADE_COLORS[primaryTrade]) || "#0a1722";
+  // Kept in sync with app/directory/[slug]/page.tsx's own showQuoteFlow -
+  // "Get a quote" only appears (here, as a card-level shortcut straight
+  // to the listing's quote form) when this listing can actually receive
+  // one: claimed, or has a real email on file (scraped, or the
+  // 2,644-row private_email column). An unanswered request is worse
+  // than no form at all.
+  const canReceiveQuote = Boolean(listing.is_claimed || listing.scraped_contact_email || listing.private_email);
+  const showQuoteFlow = QUOTE_REQUESTS_ENABLED && canReceiveQuote;
+  const profileHref = `/directory/${listing.suburb ? buildDirectorySlug(listing as { id: string; business_name: string; suburb: string }) : listing.id}`;
 
   return (
     <>
@@ -333,34 +343,32 @@ export default function DirectoryCard({ listing, index = 0 }: { listing: Listing
           {/* Actions */}
           <div className="mt-auto space-y-2 pt-3 border-t border-gray-50">
             <Link
-              href={`/directory/${listing.suburb ? buildDirectorySlug(listing as { id: string; business_name: string; suburb: string }) : listing.id}`}
+              href={profileHref}
               className="group w-full bg-[#0a1722] text-white font-bold text-[13.5px] py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#132538] active:scale-[0.98] transition-all">
               View profile <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
             </Link>
 
+            {/* Search results are the highest-traffic surface on the
+                site - most people never open a profile at all. Website
+                and Maps used to sit here as competing exits (a click
+                that leaves the site without converting on anything),
+                and Email duplicated what "Get a quote" now does
+                properly via a tracked form instead of a raw mailto -
+                Website/Maps/Email all moved to the profile page only.
+                Call stays - a quick, low-friction action worth keeping
+                at this stage, matching the "phone-first is honest"
+                principle used on the listing page itself. */}
             <div className="flex gap-2 justify-center flex-wrap">
+              {showQuoteFlow && (
+                <Link href={`${profileHref}#quote-form`}
+                  className="flex items-center gap-1.5 text-[12px] font-bold text-[#0a1722] px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 transition-colors">
+                  <Mail size={12} /> Get a quote
+                </Link>
+              )}
               {listing.scraped_contact_phone && (
                 <a href={`tel:${listing.scraped_contact_phone}`}
                   className="flex items-center gap-1.5 text-[12px] font-semibold text-gray-600 hover:text-gray-900 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
                   <Phone size={12} /> Call
-                </a>
-              )}
-              {listing.website_url && (
-                <a href={listing.website_url} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-[12px] font-semibold text-gray-600 hover:text-gray-900 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Globe size={12} /> Website
-                </a>
-              )}
-              {listing.scraped_contact_email && (
-                <a href={`mailto:${listing.scraped_contact_email}`}
-                  className="flex items-center gap-1.5 text-[12px] font-semibold text-gray-600 hover:text-gray-900 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Mail size={12} /> Email
-                </a>
-              )}
-              {listing.place_id && (
-                <a href={`https://maps.google.com/?place_id=${listing.place_id}`} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-[12px] font-semibold text-gray-600 hover:text-gray-900 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
-                  Maps
                 </a>
               )}
             </div>
