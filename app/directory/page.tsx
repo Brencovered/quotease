@@ -36,13 +36,23 @@ const getDirectoryHeroStats = unstable_cache(
       const admin = createAdminClient();
       const [totalListingsRes, suburbRowsRes] = await Promise.all([
         admin.from("directory_listing").select("*", { count: "exact", head: true }),
-        admin.from("directory_listing").select("suburb"),
+        admin.from("directory_listing").select("suburb, google_reviews_count"),
       ]);
       const totalListings = totalListingsRes.count ?? 0;
       const suburbsCovered = new Set(
         (suburbRowsRes.data ?? []).map((r) => r.suburb?.trim().toLowerCase()).filter(Boolean)
       ).size;
-      return { totalListings, suburbsCovered };
+      // Replaces the old "100s+ quotes sent" hero stat - that number
+      // was invented (the code comment above it admitted as much: chose
+      // a vague "100s+" specifically to avoid showing either a fake
+      // precise figure or the real, much smaller one). This is a real
+      // aggregate of real data instead - the actual sum of Google
+      // review counts already scraped for every listing (323,891 as of
+      // this fix), computed here the same way suburbsCovered already
+      // is (sum client-side over the same full select, not an
+      // untested PostgREST aggregate query).
+      const totalReviews = (suburbRowsRes.data ?? []).reduce((sum, r) => sum + (r.google_reviews_count ?? 0), 0);
+      return { totalListings, suburbsCovered, totalReviews };
     } catch (err) {
       // This is decorative hero copy, not the source of truth for listing
       // data - a transient env/config issue during background revalidation
@@ -50,7 +60,7 @@ const getDirectoryHeroStats = unstable_cache(
       // to 0s here, not take down the entire /directory page for every
       // visitor until the next successful revalidation.
       console.error("[directory] hero stats fetch failed:", err);
-      return { totalListings: 0, suburbsCovered: 0 };
+      return { totalListings: 0, suburbsCovered: 0, totalReviews: 0 };
     }
   },
   ["directory-hero-stats"],
@@ -102,36 +112,6 @@ type Listing = {
   blurb: string | null;
   logo_url: string | null;
 };
-
-/* ------------------------------------------------------------------ */
-/*  Mock review data for the social-proof section                      */
-/* ------------------------------------------------------------------ */
-const HOMEOWNER_REVIEWS = [
-  {
-    name: "Sarah M.",
-    suburb: "Frankston",
-    trade: "Electrician",
-    rating: 5,
-    quote:
-      "Posted my job on Monday, had 3 quotes by Tuesday afternoon. The electrician we hired was fantastic - punctual, professional and fairly priced.",
-  },
-  {
-    name: "David K.",
-    suburb: "Mount Eliza",
-    trade: "Plumber",
-    rating: 5,
-    quote:
-      "After a nightmare experience with a random Gumtree tradie, Swiftscope was a breath of fresh air. Every listing is hand-picked with real reviews.",
-  },
-  {
-    name: "Jenny T.",
-    suburb: "Mornington",
-    trade: "Landscaper",
-    rating: 5,
-    quote:
-      "We needed our backyard redone before Christmas. Got matched with an amazing landscaper who delivered ahead of schedule. Could not recommend more highly.",
-  },
-];
 
 export const metadata: Metadata = directoryMeta();
 
@@ -392,7 +372,7 @@ export default async function DirectoryPage({
   // this point the cached lookup has almost always already resolved
   // concurrently with the search query work above, so this await rarely
   // costs anything.
-  const { totalListings, suburbsCovered } = await heroStatsPromise;
+  const { totalListings, suburbsCovered, totalReviews } = await heroStatsPromise;
 
   // No search applied - the listings query above was skipped entirely, so
   // use the cached sitewide total for the hero's count display instead
@@ -470,33 +450,22 @@ export default async function DirectoryPage({
           </h1>
 
           <p className="reveal text-[15px] sm:text-[16px] max-w-xl mb-10 leading-relaxed text-[#8b96a1]">
-            A curated directory of local tradies with real Google reviews. Browse listings across Australia, or post your job and get up to 3 quotes.
+            A directory of local tradies with real Google reviews. Browse listings across Australia and contact one directly.
           </p>
 
           <div
             className="reveal grid grid-cols-3 gap-6 sm:gap-10 max-w-lg mb-10 p-5 sm:p-6 rounded-2xl"
             style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
           >
-            <AnimatedCounter target={totalListings} suffix="+" label="Curated listings" />
+            <AnimatedCounter target={totalListings} suffix="+" label="Tradie listings" />
             <AnimatedCounter target={suburbsCovered} suffix="+" label="Suburbs covered" delay={150} />
-            {/* Not an exact live count (real directory-specific quote-request
-                volume is still low while the directory grows) - shown as a
-                qualitative "100s+" rather than animating up to either a
-                fake precise number or a discouragingly small real one. */}
-            <div className="text-center">
-              <div className="font-display text-[2.5rem] sm:text-[3rem] text-white leading-none tracking-tight">
-                100s<span className="text-[#ffb400]">+</span>
-              </div>
-              <p className="text-[13px] font-semibold text-[#8b96a1] mt-2 uppercase tracking-wider">
-                Quotes sent
-              </p>
-            </div>
+            <AnimatedCounter target={totalReviews} suffix="+" label="Google reviews" delay={300} />
           </div>
 
           <div className="reveal flex flex-wrap gap-4 sm:gap-6 mb-12">
             {[
               { icon: Star, text: "Real Google ratings" },
-              { icon: Shield, text: "Curated listings" },
+              { icon: Shield, text: "Direct contact details" },
               { icon: Lock, text: "No spam guarantee" },
               { icon: Check, text: "Free for homeowners" },
             ].map(({ icon: Icon, text }) => (
@@ -625,37 +594,6 @@ export default async function DirectoryPage({
               </div>
             )}
 
-            {/* Social proof */}
-            <section className="mt-20 sm:mt-24">
-              <div className="text-center mb-10">
-                <h2 className="font-display text-[1.8rem] sm:text-[2.2rem] mb-3" style={{ color: "var(--ink)" }}>What homeowners say</h2>
-                <p className="text-[14px] sm:text-[15px] max-w-md mx-auto" style={{ color: "var(--ink-soft)" }}>
-                  Real stories from homeowners who found their tradie through Swiftscope.
-                </p>
-              </div>
-              <div className="grid sm:grid-cols-3 gap-5">
-                {HOMEOWNER_REVIEWS.map((review, i) => (
-                  <div key={review.name} className="reveal p-6 rounded-2xl border transition-all duration-200 hover:-translate-y-1 hover:shadow-md" style={{ background: "var(--surface)", borderColor: "var(--line)", animationDelay: `${i * 100}ms` }}>
-                    <div className="flex items-center gap-0.5 mb-4">
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <Star key={s} size={14} className={s <= review.rating ? "fill-[#f59e0b] text-[#f59e0b]" : "text-gray-200 fill-gray-200"} />
-                      ))}
-                    </div>
-                    <p className="text-[13.5px] leading-relaxed mb-5 italic" style={{ color: "var(--ink-soft)" }}>&ldquo;{review.quote}&rdquo;</p>
-                    <div className="flex items-center gap-3 pt-4 border-t" style={{ borderColor: "var(--line-subtle)" }}>
-                      <div className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-bold text-white" style={{ background: "var(--navy)" }}>
-                        {review.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="text-[13px] font-bold" style={{ color: "var(--ink)" }}>{review.name}</p>
-                        <p className="text-[11.5px] font-semibold" style={{ color: "var(--ink-faint)" }}>{review.suburb} - Hired a {review.trade}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
             {/* Bottom CTA */}
             <section className="mt-20 sm:mt-24">
               <div className="relative overflow-hidden rounded-3xl p-10 sm:p-14 text-center" style={{ background: "var(--navy)" }}>
@@ -663,7 +601,7 @@ export default async function DirectoryPage({
                 <div className="relative">
                   <h2 className="font-display text-[2rem] sm:text-[2.6rem] text-white mb-3">Ready to find the right tradie?</h2>
                   <p className="text-[14px] sm:text-[15px] max-w-lg mx-auto mb-8 text-[#8b96a1]">
-                    Browse curated tradie profiles with real Google ratings. Free, always.
+                    Browse tradie profiles with real Google ratings. Free, always.
                   </p>
                   <div className="flex flex-wrap justify-center gap-3">
                     <Link href="#listings" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-8 py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors">
@@ -727,47 +665,15 @@ export default async function DirectoryPage({
             </div>
           </section>
 
-          {/* Social proof + Bottom CTA */}
+          {/* Bottom CTA */}
           <div className="max-w-6xl mx-auto px-6 py-8">
-            {/* Social proof */}
-            <section className="mt-20 sm:mt-24">
-              <div className="text-center mb-10">
-                <h2 className="font-display text-[1.8rem] sm:text-[2.2rem] mb-3" style={{ color: "var(--ink)" }}>What homeowners say</h2>
-                <p className="text-[14px] sm:text-[15px] max-w-md mx-auto" style={{ color: "var(--ink-soft)" }}>
-                  Real stories from homeowners who found their tradie through Swiftscope.
-                </p>
-              </div>
-              <div className="grid sm:grid-cols-3 gap-5">
-                {HOMEOWNER_REVIEWS.map((review, i) => (
-                  <div key={review.name} className="reveal p-6 rounded-2xl border transition-all duration-200 hover:-translate-y-1 hover:shadow-md" style={{ background: "var(--surface)", borderColor: "var(--line)", animationDelay: `${i * 100}ms` }}>
-                    <div className="flex items-center gap-0.5 mb-4">
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <Star key={s} size={14} className={s <= review.rating ? "fill-[#f59e0b] text-[#f59e0b]" : "text-gray-200 fill-gray-200"} />
-                      ))}
-                    </div>
-                    <p className="text-[13.5px] leading-relaxed mb-5 italic" style={{ color: "var(--ink-soft)" }}>&ldquo;{review.quote}&rdquo;</p>
-                    <div className="flex items-center gap-3 pt-4 border-t" style={{ borderColor: "var(--line-subtle)" }}>
-                      <div className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-bold text-white" style={{ background: "var(--navy)" }}>
-                        {review.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="text-[13px] font-bold" style={{ color: "var(--ink)" }}>{review.name}</p>
-                        <p className="text-[11.5px] font-semibold" style={{ color: "var(--ink-faint)" }}>{review.suburb} - Hired a {review.trade}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            {/* Bottom CTA */}
             <section className="mt-20 sm:mt-24">
               <div className="relative overflow-hidden rounded-3xl p-10 sm:p-14 text-center" style={{ background: "var(--navy)" }}>
                 <div className="absolute w-[300px] h-[300px] rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(255,180,0,0.15) 0%, transparent 60%)", top: "-30%", right: "10%" }} />
                 <div className="relative">
                   <h2 className="font-display text-[2rem] sm:text-[2.6rem] text-white mb-3">Ready to find the right tradie?</h2>
                   <p className="text-[14px] sm:text-[15px] max-w-lg mx-auto mb-8 text-[#8b96a1]">
-                    Browse curated tradie profiles with real Google ratings. Free, always.
+                    Browse tradie profiles with real Google ratings. Free, always.
                   </p>
                   <div className="flex flex-wrap justify-center gap-3">
                     <Link href="#listings" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-8 py-3.5 rounded-xl hover:bg-[#e89e00] transition-colors">

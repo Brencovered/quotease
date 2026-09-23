@@ -223,8 +223,8 @@ export default function FeaturesPage() {
                   },
                   {
                     feature:"Homeowner directory",
-                    detail:"Swiftscope includes a public tradie directory with real Google ratings, photo galleries, and a quote request system - built into the same platform tradies use to run their business. HiPages has a larger network, but tradies on Swiftscope are active users of the platform, not just passive listings.",
-                    us:"Verified + active", c1:"Large network", c2:"Not included", c3:"Not included", c4:"Not included", c5:"Not included", usBest:false,
+                    detail:"Swiftscope includes a public tradie directory with real Google ratings, photo galleries, and a quote request system - built into the same platform tradies use to run their business. HiPages has a larger network; Swiftscope's directory is newer and growing, but a tradie who claims their listing gets the directory and the quoting tool in one place, which HiPages doesn't offer.",
+                    us:"Included", c1:"Large network", c2:"Not included", c3:"Not included", c4:"Not included", c5:"Not included", usBest:false,
                   },
                   {
                     feature:"Pricing",
