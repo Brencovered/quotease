@@ -11,6 +11,7 @@ type Listing = {
   id: string;
   business_name: string;
   scraped_contact_email: string | null;
+  private_email?: string | null;
   is_claimed?: boolean;
   owner_email?: string | null;
   scraped_contact_phone?: string | null;
@@ -92,7 +93,16 @@ export default function QuoteForm({
     }
     setSending(true);
     setError("");
-    const toEmail = listing.is_claimed && listing.owner_email ? listing.owner_email : listing.scraped_contact_email;
+    // Fallback order: the claimed owner's real account email first, then
+    // whatever contact email the scraper found on the business's own
+    // website, then a manually-added/outreach-sourced private_email -
+    // the last of these didn't used to be considered at all here, which
+    // meant a listing could pass the page's "can this listing actually
+    // receive a quote" check (private_email present) and still have its
+    // request silently fall through to the team@ inbox fallback anyway.
+    const toEmail = listing.is_claimed && listing.owner_email
+      ? listing.owner_email
+      : (listing.scraped_contact_email || listing.private_email);
     const othersLabel = OTHER_QUOTES.find((o) => o.id === otherQuotes)?.label ?? "";
     const others = [othersLabel, otherQuoteNotes.trim()].filter(Boolean).join(". ");
 

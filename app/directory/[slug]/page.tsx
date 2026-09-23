@@ -48,6 +48,7 @@ type Listing = {
   latitude: number | null; longitude: number | null;
   scraped_contact_phone: string | null;
   website_url: string | null; scraped_contact_email: string | null;
+  private_email: string | null;
   google_rating: number | null; google_reviews_count: number | null;
   photo_references: string[] | null; place_id: string | null;
   blurb: string | null; logo_url: string | null;
@@ -234,14 +235,25 @@ export default async function TradieProfilePage({
     id: listing.id,
     business_name: listing.business_name,
     scraped_contact_email: listing.scraped_contact_email,
+    private_email: listing.private_email,
     is_claimed: listing.is_claimed ?? false,
     owner_email: ownerEmail,
     scraped_contact_phone: listing.scraped_contact_phone,
     suburb: listing.suburb,
   };
 
+  // A listing with no real destination for a submitted request - not
+  // claimed (no owner account to notify), and no email at all (neither
+  // the scraper-found one nor a manually-added one) - has nowhere for
+  // "Get a quote" to actually go except a shared team@ inbox fallback.
+  // An unanswered "quote request sent" is worse than no form at all,
+  // so the whole quote flow (form, sticky bar, every CTA that points
+  // at it) only shows when this listing can actually receive one.
+  const canReceiveQuote = Boolean(listing.is_claimed || listing.scraped_contact_email || listing.private_email);
+  const showQuoteFlow = QUOTE_REQUESTS_ENABLED && canReceiveQuote;
+
   return (
-    <main className={`min-h-screen bg-[var(--app-bg)] ${QUOTE_REQUESTS_ENABLED ? "pb-20 lg:pb-0" : ""}`}>
+    <main className={`min-h-screen bg-[var(--app-bg)] ${showQuoteFlow ? "pb-20 lg:pb-0" : ""}`}>
       <MarketingNav />
 
       {/* HERO BANNER */}
@@ -307,7 +319,7 @@ export default async function TradieProfilePage({
                 </div>
               )}
 
-              {QUOTE_REQUESTS_ENABLED && (
+              {showQuoteFlow && (
                 <p className="text-[14px] text-white/70 mt-5 max-w-lg leading-relaxed">
                   Tell them the job. They come back with a price. No account needed.
                 </p>
@@ -316,7 +328,7 @@ export default async function TradieProfilePage({
 
             {/* Right CTAs */}
             <div className="flex flex-col sm:flex-row gap-3 shrink-0">
-              {QUOTE_REQUESTS_ENABLED && (
+              {showQuoteFlow && (
                 <a href="#quote-form"
                   className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-8 py-3.5 rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2 whitespace-nowrap">
                   <MessageSquare size={15} /> Get a quote
@@ -324,7 +336,7 @@ export default async function TradieProfilePage({
               )}
               {listing.scraped_contact_phone && (
                 <a href={`tel:${listing.scraped_contact_phone}`}
-                  className={`${QUOTE_REQUESTS_ENABLED ? "bg-white/10 text-white hover:bg-white/20" : "bg-[#ffb400] text-[#0a1722] hover:opacity-90"} font-bold text-[14px] px-6 py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2 whitespace-nowrap`}>
+                  className={`${showQuoteFlow ? "bg-white/10 text-white hover:bg-white/20" : "bg-[#ffb400] text-[#0a1722] hover:opacity-90"} font-bold text-[14px] px-6 py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2 whitespace-nowrap`}>
                   <Phone size={15} /> Call now
                 </a>
               )}
@@ -396,7 +408,7 @@ export default async function TradieProfilePage({
                 <p className="text-[12px] font-bold text-gray-500 uppercase tracking-wide">Contact</p>
               </div>
               <div className="space-y-2">
-                {QUOTE_REQUESTS_ENABLED && (
+                {showQuoteFlow && (
                   <a href="#quote-form" className="flex items-center gap-2 text-[13px] font-extrabold text-[#0a1722] hover:underline">
                     <MessageSquare size={13} className="text-[#ffb400]" /> Get a quote
                   </a>
@@ -424,7 +436,7 @@ export default async function TradieProfilePage({
                     <Link2 size={13} className="text-gray-400" /> Facebook <ExternalLink size={11} className="text-gray-300" />
                   </a>
                 )}
-                {!QUOTE_REQUESTS_ENABLED && !listing.scraped_contact_phone && !listing.website_url && (
+                {!showQuoteFlow && !listing.scraped_contact_phone && !listing.website_url && (
                   <p className="text-[12.5px] text-gray-400">No contact details on file.</p>
                 )}
               </div>
@@ -499,7 +511,7 @@ export default async function TradieProfilePage({
           {/* RIGHT COLUMN: quote form first, then quiet contact + trust.
               Sticky offset clears the fixed marketing nav. */}
           <aside className="w-full lg:w-[22rem] shrink-0 order-1 lg:order-2 space-y-5">
-              {QUOTE_REQUESTS_ENABLED && (
+              {showQuoteFlow && (
                 <div id="quote-form" className="scroll-mt-28 lg:sticky lg:top-24 lg:max-h-[calc(100svh-7rem)] lg:overflow-y-auto">
                   <QuoteForm listing={quoteListing} compact />
                 </div>
@@ -531,7 +543,7 @@ export default async function TradieProfilePage({
                     <a
                       href={`tel:${listing.scraped_contact_phone}`}
                       className={`flex items-center justify-center gap-2 w-full font-bold text-[13px] py-3 rounded-xl hover:opacity-90 transition-opacity ${
-                        QUOTE_REQUESTS_ENABLED
+                        showQuoteFlow
                           ? "border-2 border-gray-200 text-gray-800"
                           : "bg-[#0a1722] text-white"
                       }`}
@@ -616,32 +628,32 @@ export default async function TradieProfilePage({
           <div className="bg-[#0a1722] rounded-2xl p-8 sm:p-10 flex flex-col sm:flex-row items-center justify-between gap-6">
             <div className="text-center sm:text-left">
               <p className="font-display text-[1.6rem] text-white mb-1">
-                {QUOTE_REQUESTS_ENABLED
+                {showQuoteFlow
                   ? `Get a quote from ${listing.business_name}`
                   : "Need a different trade?"}
               </p>
               <p className="text-white/60 text-[14px] max-w-md">
-                {QUOTE_REQUESTS_ENABLED
+                {showQuoteFlow
                   ? "Tell them the job. They come back with a price. No account needed."
                   : "Browse our full directory of curated listings across Melbourne's south east."}
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 shrink-0">
-              {QUOTE_REQUESTS_ENABLED && (
+              {showQuoteFlow && (
                 <a href="#quote-form" className="bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-7 py-3.5 rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2 whitespace-nowrap">
                   <MessageSquare size={15} /> Get a quote
                 </a>
               )}
-              {QUOTE_REQUESTS_ENABLED && listing.scraped_contact_phone && (
+              {showQuoteFlow && listing.scraped_contact_phone && (
                 <a href={`tel:${listing.scraped_contact_phone}`} className="bg-white/10 text-white font-bold text-[14px] px-6 py-3.5 rounded-xl hover:bg-white/20 transition-colors flex items-center justify-center gap-2 whitespace-nowrap">
                   <Phone size={15} /> Call
                 </a>
               )}
               <Link
                 href="/directory"
-                className={`${QUOTE_REQUESTS_ENABLED ? "text-white/70 hover:text-white text-[13.5px] font-semibold underline underline-offset-4 text-center sm:self-center" : "bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-7 py-3.5 rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2 whitespace-nowrap"}`}
+                className={`${showQuoteFlow ? "text-white/70 hover:text-white text-[13.5px] font-semibold underline underline-offset-4 text-center sm:self-center" : "bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-7 py-3.5 rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2 whitespace-nowrap"}`}
               >
-                {QUOTE_REQUESTS_ENABLED ? (
+                {showQuoteFlow ? (
                   "Need a different trade? Browse the directory"
                 ) : (
                   <><Search size={15} /> Browse full directory</>
@@ -670,7 +682,7 @@ export default async function TradieProfilePage({
         </section>
       )}
 
-      {QUOTE_REQUESTS_ENABLED && (
+      {showQuoteFlow && (
         <ListingStickyCta
           phone={listing.scraped_contact_phone}
           businessName={listing.business_name}
