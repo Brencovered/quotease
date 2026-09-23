@@ -31,7 +31,7 @@ for _ in $(seq 1 60); do
 done
 
 # 6. Local env file.
-[ -f .env.local ] || scripts/gen-env-local.sh
+[ -f .env.local ] || bash scripts/gen-env-local.sh
 
 # 7. Bootstrap the schema once (detected via a core table).
 if [ "$(docker exec supabase_db_workspace psql -U postgres -d postgres -tAc "select to_regclass('public.profiles')" 2>/dev/null)" != "profiles" ]; then
