@@ -37,9 +37,11 @@ for pass in 1 2; do
   done
 done
 
-# Recreate untracked-but-required production objects for local dev.
-echo "=== applying local-dev supplement ==="
-supp_errs=$(psql_file "$REPO_ROOT/scripts/db-local-supplement.sql" | grep -c '^ERROR:')
-echo "  db-local-supplement.sql: $supp_errs error(s)"
+# Backfill objects that exist in production but are absent from tracked SQL
+# (~25 tables, ~23 functions, enums, an auth.users trigger and columns).
+# Reconstructed from the live schema; idempotent. See the file header.
+echo "=== applying production schema backfill ==="
+supp_errs=$(psql_file "$REPO_ROOT/supabase/prod_schema_backfill.sql" | grep -c '^ERROR:')
+echo "  prod_schema_backfill.sql: $supp_errs error(s)"
 
 echo "Database bootstrap complete (best-effort from tracked SQL)."
