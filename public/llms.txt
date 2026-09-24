@@ -1,27 +1,47 @@
 # Swiftscope
 
-> Swiftscope (https://www.swiftscope.com.au) is quoting and job management
-> software for Australian trade businesses -- electricians, plumbers,
-> carpenters, roofers and other trades. Tradies build and send professional
-> quotes from their phone in under 4 minutes, mark up plans and drawings,
-> manage jobs, and export to Xero. Pricing is $45/month flat with a 3-day
-> free trial. Swiftscope also runs a public directory where homeowners can
-> find verified local tradies and request quotes for free.
+> Swiftscope (https://swiftscope.com.au) has two sides. (1) Quoting and job
+> management software for Australian trade businesses -- electricians,
+> plumbers, carpenters, roofers, builders and other trades: build and send
+> professional quotes from your phone in minutes, mark up plans and
+> drawings, manage jobs, and push draft invoices to Xero. Pricing is AUD
+> $45/month flat with a 7-day free trial (no credit card). (2) A free public
+> directory where homeowners find verified local tradies -- searchable by
+> trade and suburb, with real Google ratings -- and request quotes for free.
 
 ## Key pages
 
-- [Home](https://www.swiftscope.com.au/): product overview for tradies
-- [Features](https://www.swiftscope.com.au/features): quoting, plan markup, AI drawing analysis, job management, Xero export
-- [How it works](https://www.swiftscope.com.au/how-it-works): the quote-on-site workflow explained
-- [Get quotes](https://www.swiftscope.com.au/get-quotes): homeowners describe a job and receive quotes from local tradies
-- [Directory](https://www.swiftscope.com.au/directory): browse verified local trade businesses
-- [Sign up](https://www.swiftscope.com.au/signup): start a 3-day free trial
-- [Log in](https://www.swiftscope.com.au/login): existing account sign-in
+- [Home](https://swiftscope.com.au/): product overview for tradies
+- [Features](https://swiftscope.com.au/features): quoting, plan markup, AI drawing analysis, job management, Xero export
+- [How it works](https://swiftscope.com.au/how-it-works): the quote-on-site workflow explained
+- [Quoting software by trade](https://swiftscope.com.au/quoting-software): per-trade landing pages
+- [Get quotes](https://swiftscope.com.au/get-quotes): homeowners describe a job and receive quotes from local tradies
+- [Directory](https://swiftscope.com.au/directory): browse verified local trade businesses
+- [Blog](https://swiftscope.com.au/blog): guides on quoting, pricing and running a trade business
+- [Sign up](https://swiftscope.com.au/signup): start a 7-day free trial
+- [Log in](https://swiftscope.com.au/login): existing account sign-in
+
+## Directory URL patterns
+
+- Trade in a suburb: `https://swiftscope.com.au/{trade-plural}-{suburb}-{state}` (e.g. `/electricians-seaford-vic`)
+- All trades in a suburb: `https://swiftscope.com.au/tradies-in/{suburb}-{state}`
+- A single business listing: `https://swiftscope.com.au/directory/{business-slug}`
+- Full URL index: [sitemap](https://swiftscope.com.au/sitemap.xml)
+
+## Free tools
+
+- [Charge-out rate calculator](https://swiftscope.com.au/tools/charge-out-rate)
+- [Margin & markup calculator](https://swiftscope.com.au/tools/margin-markup)
+- [Ballpark job cost](https://swiftscope.com.au/tools/ballpark-cost)
+- [Quote PDF generator](https://swiftscope.com.au/tools/quote-pdf)
+- [Vehicle running cost](https://swiftscope.com.au/tools/vehicle-cost)
+- [DIY materials estimator](https://swiftscope.com.au/tools/diy-materials)
 
 ## For homeowners
 
-Requesting quotes through Swiftscope is free. Describe the job, and local
-tradies on the platform respond with quotes.
+Requesting quotes through Swiftscope is free. Browse the directory by trade
+and suburb, compare Google ratings, then contact tradies directly or request
+quotes.
 
 ## For trade businesses
 

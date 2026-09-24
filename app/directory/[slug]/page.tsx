@@ -12,7 +12,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { CLAIMED_DIRECTORY_PAGES_ENABLED, QUOTE_REQUESTS_ENABLED } from "@/lib/featureFlags";
 import MarketingNav from "@/components/MarketingNav";
 import DirectoryCard from "@/components/DirectoryCard";
-import { tradieListingMeta, buildDirectorySlug, getTradeVariants } from "@/lib/seo/meta";
+import { tradieListingMeta, buildDirectorySlug, getTradeVariants, getTradeDisplay, tradeToSlug, suburbToSlug, postcodeToState } from "@/lib/seo/meta";
+import { BreadcrumbSchema, type Crumb } from "@/components/seo/StructuredData";
 import { getGoogleReviewsUrl } from "@/lib/seo/gbp";
 import PhotoGallery from "./_components/PhotoGallery";
 import QuoteForm from "./_components/QuoteForm";
@@ -708,6 +709,24 @@ export default async function TradieProfilePage({
         lat={listing.latitude}
         lng={listing.longitude}
         slug={prettySlug}
+      />
+      <BreadcrumbSchema
+        items={((): Crumb[] => {
+          const crumbs: Crumb[] = [
+            { name: "Home", url: "/" },
+            { name: "Directory", url: "/directory" },
+          ];
+          if (listing.suburb && primaryTrade) {
+            const st = postcodeToState(listing.postcode);
+            const { plural } = getTradeDisplay(primaryTrade);
+            crumbs.push({
+              name: `${plural} in ${listing.suburb}`,
+              url: `/${tradeToSlug(primaryTrade)}-${suburbToSlug(listing.suburb)}-${st}`,
+            });
+          }
+          crumbs.push({ name: listing.business_name, url: `/directory/${prettySlug}` });
+          return crumbs;
+        })()}
       />
     </main>
   );

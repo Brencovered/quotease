@@ -29,6 +29,8 @@ export default function OrganizationSchema() {
     url: BASE_URL,
     logo: `${BASE_URL}/logo.png`,
     description: "Quoting and job management platform for Australian trade businesses, plus a public directory of curated local tradies.",
+    slogan: "Scope it. Quote it. Win it on site.",
+    areaServed: { "@type": "Country", name: "Australia" },
   };
 
   return (
