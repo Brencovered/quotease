@@ -73,7 +73,7 @@ export default function PlanMarkupQuickAdd({
 
   return (
     <div className="card">
-      <p className="section-tag mb-1">Or mark up a plan</p>
+      <p className="section-tag mb-1">Drawing / plan markup</p>
       <p className="font-semibold text-[var(--ink)] text-[17px] mb-1">Trace over a floor plan</p>
       <p className="text-[13px] text-[var(--ink-faint)] mb-4">Upload a plan and draw directly on it to measure and price runs, rooms, or fixtures - the marked-up items go straight into this quote.</p>
 
