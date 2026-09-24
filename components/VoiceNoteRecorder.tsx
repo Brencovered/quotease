@@ -195,7 +195,8 @@ export default function VoiceNoteRecorder({
       <div className="flex items-start gap-3 mb-3">
         <Mic size={18} className="text-[var(--amber-deep)] mt-0.5 shrink-0" />
         <div>
-          <p className="font-semibold text-[var(--ink)]">Voice note</p>
+          <p className="section-tag mb-1">AI voice quote</p>
+          <p className="font-semibold text-[var(--ink)]">Describe the job out loud</p>
           <p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5">
             Walk the site and describe the job out loud. AI turns it into a draft quote you review before saving.
           </p>

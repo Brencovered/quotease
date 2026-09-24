@@ -669,9 +669,35 @@ function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions
 }) {
   return (
     <div className="space-y-4">
+      {/* Reordered to match the actual flow a tradie uses on site: mark
+          up what you can see live first, trace over a plan if you have
+          one, describe anything left by voice, then upload the
+          drawing/photos themselves as the final, optional record-
+          keeping step - rather than leading with a file upload before
+          any of the actual quote-building tools. */}
+      <p className="section-tag">Step 1 · Live site markup</p>
       <LiveSiteAnnotation trade={trade} lib={lib} archetypeDefaults={archetypeDefaults} onSaveDefault={onSaveArchetypeDefault} onSaveDraft={onSaveDraft} onAnnotationMeta={onAnnotationMeta} onAddLineItems={onAddLiveItems} />
+
+      <p className="section-tag pt-2">Step 2 · Drawing / plan markup</p>
+      <PlanMarkupQuickAdd
+        lib={lib}
+        marginPct={marginPct}
+        trade={trade}
+        onAddItems={onAddMarkupItems}
+        onFileReady={onMarkupFileReady}
+      />
+
+      <p className="section-tag pt-2">Step 3 · AI voice quote</p>
+      <VoiceNoteRecorder
+        onTranscriptReady={onVoiceTranscript}
+        analyzing={analyzing}
+        analysisError={analysisError}
+        analysisResult={analysisResult}
+        usageLimitReached={usageLimitReached}
+      />
+
+      <p className="section-tag pt-2">Step 4 · Upload drawing</p>
       <div className="card">
-        <p className="section-tag mb-1">Step 1</p>
         <p className="font-semibold text-[var(--ink)] text-[17px] mb-1">Upload drawings</p>
         <p className="text-[13px] text-[var(--ink-faint)] mb-4">Floor plans, site photos, electrical drawings - uploaded now, saved to the job. AI reading is optional.</p>
         <label className="flex items-center justify-center gap-2 border-2 border-dashed border-[var(--line)] rounded-xl py-8 cursor-pointer hover:border-[var(--amber)] transition-colors bg-[var(--app-bg)]">
@@ -694,20 +720,6 @@ function StepDrawing({ drawingFiles, drawingInstructions, setDrawingInstructions
           </div>
         )}
       </div>
-      <PlanMarkupQuickAdd
-        lib={lib}
-        marginPct={marginPct}
-        trade={trade}
-        onAddItems={onAddMarkupItems}
-        onFileReady={onMarkupFileReady}
-      />
-      <VoiceNoteRecorder
-        onTranscriptReady={onVoiceTranscript}
-        analyzing={analyzing}
-        analysisError={analysisError}
-        analysisResult={analysisResult}
-        usageLimitReached={usageLimitReached}
-      />
       {drawingFiles.length > 0 && (
         <div className="card border-2 border-[var(--amber-light)]">
           <div className="flex items-start gap-3 mb-3">
