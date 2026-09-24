@@ -7,6 +7,7 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 import { PostHogProvider } from "@/components/PostHogProvider";
 import OrganizationSchema from "@/components/seo/OrganizationSchema";
+import { WebSiteSchema } from "@/components/seo/StructuredData";
 
 // next/font/google self-hosts files (no runtime Google Fonts request) and
 // generates preload + font-display: swap automatically.
@@ -70,6 +71,7 @@ export default function RootLayout({
         <meta name="msapplication-TileColor" content="#1a242c" />
         <meta name="msapplication-config" content="/browserconfig.xml" />
         <OrganizationSchema />
+        <WebSiteSchema />
       </head>
       <body className="min-h-full flex flex-col">
         <PostHogProvider>

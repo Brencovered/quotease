@@ -34,6 +34,7 @@ import type { Metadata } from "next";
 import { Star, MapPin, ArrowRight, Shield } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parseSuburbSlug, suburbLandingCanonical, getTradeDisplay, tradeToSlug } from "@/lib/seo/meta";
+import { BreadcrumbSchema } from "@/components/seo/StructuredData";
 import MarketingNav from "@/components/MarketingNav";
 import { buildDirectorySlug } from "@/lib/seo/meta";
 
@@ -296,6 +297,13 @@ export default async function SuburbLandingPage({ params }: PageProps) {
           </div>
         </div>
       )}
+      <BreadcrumbSchema
+        items={[
+          { name: "Home", url: "/" },
+          { name: "Directory", url: "/directory" },
+          { name: `Tradies in ${suburb} ${state.toUpperCase()}`, url: suburbLandingCanonical(parsed.suburbSlug, parsed.state) },
+        ]}
+      />
     </main>
   );
 }

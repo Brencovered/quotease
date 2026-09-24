@@ -31,6 +31,7 @@ import { parseTradeSuburbSlug, suburbToSlug, tradeToSlug, tradeSuburbMeta, postc
 import { generateTradeSuburbContent } from "@/lib/seo/generateTradeSuburbContent";
 import FaqSchema from "@/components/seo/FaqSchema";
 import { DirectoryPageSchema } from "@/components/seo/TradieSchema";
+import { BreadcrumbSchema } from "@/components/seo/StructuredData";
 import MarketingNav from "@/components/MarketingNav";
 
 export const revalidate = 604800; // 1 week, per brief
@@ -238,6 +239,14 @@ export default async function TradeSuburbPage({ params }: PageProps) {
       </div>
 
       <FaqSchema faqs={faqs} />
+      <BreadcrumbSchema
+        items={[
+          { name: "Home", url: "/" },
+          { name: "Directory", url: "/directory" },
+          { name: suburb, url: `/tradies-in/${suburbToSlug(suburb)}-${parsed.state}` },
+          { name: `${tradePlural} in ${suburb} ${state}`, url: `/${tradeToSlug(parsed.trade)}-${suburbToSlug(suburb)}-${parsed.state}` },
+        ]}
+      />
       {topListings.length > 0 && (
         <DirectoryPageSchema
           trade={parsed.trade}

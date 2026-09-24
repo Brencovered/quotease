@@ -16,15 +16,20 @@
  *   deterministic slug from business_name + suburb + id-suffix to guarantee
  *   uniqueness. Once a `slug` column is added to the table, replace
  *   `buildSlug(row)` with `row.slug`.
- * - Trade×suburb pages don't exist as Next.js routes yet (built in Prompt 2).
- *   Their URLs are included now so Google starts crawling before the pages
- *   are live - this is intentional pre-submission, not an error.
+ * - Trade×suburb pages (app/[tradeSuburb]) and suburb hubs
+ *   (app/tradies-in/[suburbState]) are live routes; their URLs are emitted
+ *   from trade_suburb_pages, gated by MIN_LISTINGS_FOR_INDEX.
  * - `lastModified` for directory listings uses `updated_at` if available,
  *   falls back to `created_at`.
  *
  * Revalidation: set to 1 day (86400s). Google re-fetches sitemaps at its
  * own pace (typically weekly), but keeping this fresh means new listings
  * appear quickly.
+ *
+ * Scale note: this returns a single sitemap document. Google's limit is
+ * 50,000 URLs / 50MB per file; current volume (listings + trade×suburb +
+ * suburb hubs + blog) is comfortably under that. If it approaches the
+ * limit, split via Next's generateSitemaps() into a sitemap index.
  */
 
 import { MetadataRoute } from "next";

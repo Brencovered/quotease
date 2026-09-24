@@ -1,11 +1,53 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import MarketingNav from "@/components/MarketingNav";
 import { ArrowLeft, Calendar, Tag, Clock, BookOpen, Quote, CheckCircle, ArrowRight, BarChart3 } from "lucide-react";
+import { ArticleSchema, BreadcrumbSchema } from "@/components/seo/StructuredData";
 
 export const dynamic = "force-dynamic";
+
+const BASE_URL = "https://swiftscope.com.au";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const admin = createAdminClient();
+  const { data: post } = await admin
+    .from("blog_posts")
+    .select("title, excerpt, cover_url, published, published_at, updated_at, category")
+    .eq("slug", slug)
+    .eq("published", true)
+    .single();
+
+  if (!post) {
+    return { title: "Article not found | Swiftscope", robots: { index: false, follow: true } };
+  }
+
+  const canonical = `${BASE_URL}/blog/${slug}`;
+  const title = `${post.title} | Swiftscope Blog`;
+  const description = (post.excerpt || `${post.title} - insights for Australian trade businesses from Swiftscope.`).slice(0, 155);
+  const image = post.cover_url || `${BASE_URL}/og-default-image`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      title: post.title,
+      description,
+      url: canonical,
+      siteName: "Swiftscope",
+      type: "article",
+      images: [{ url: image }],
+      publishedTime: post.published_at ?? undefined,
+      modifiedTime: post.updated_at ?? post.published_at ?? undefined,
+    },
+    twitter: { card: "summary_large_image", title: post.title, description, images: [image] },
+    robots: { index: true, follow: true },
+  };
+}
 
 /* ------------------------------------------------------------------ */
 /*  Enhanced markdown parser                                          */
@@ -620,6 +662,22 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
   return (
     <main className="bg-white text-[#0a1722] min-h-screen">
+      <ArticleSchema
+        title={post.title}
+        description={post.excerpt}
+        slug={post.slug}
+        imageUrl={post.cover_url}
+        authorName={post.author_name}
+        publishedAt={post.published_at}
+        updatedAt={post.updated_at}
+      />
+      <BreadcrumbSchema
+        items={[
+          { name: "Home", url: "/" },
+          { name: "Blog", url: "/blog" },
+          { name: post.title, url: `/blog/${post.slug}` },
+        ]}
+      />
       <ReadingProgressBar />
       <MarketingNav />
 
