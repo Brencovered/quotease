@@ -487,6 +487,14 @@ export default function GenericQuoteBuilder({
       {stepId === "drawing" && (
         <div className="space-y-4">
           <PackagePicker trade={tradeKey} onSelect={(items) => setSiteItems((prev) => [...prev, ...items])} />
+          {/* These four are independent, parallel ways to capture a job -
+              not a mandatory sequence a tradie has to move through in
+              order. Ordered by how commonly they'd be reached for on
+              site (live markup first, upload last as the fallback/
+              record-keeping option), but deliberately not numbered as
+              "Step 1/2/3/4" - that framing wrongly implied moving to
+              the next page was "step 2", when these all live on this
+              same screen and can be used in any combination. */}
           <LiveSiteAnnotation
             trade={tradeKey}
             lib={lib}
@@ -533,16 +541,6 @@ export default function GenericQuoteBuilder({
             }}
           />
 
-          <div className="card">
-            <p className="section-tag mb-1">Step 1</p>
-            <p className="font-semibold text-[17px] mb-4">Upload drawings or site photos</p>
-            <label className="flex items-center justify-center gap-2 border-2 border-dashed border-[var(--line)] rounded-xl py-8 cursor-pointer hover:border-[var(--amber)] bg-[var(--app-bg)]">
-              <Paperclip size={18} className="text-[var(--ink-faint)]"/><span className="text-[14px] font-semibold text-[var(--ink-soft)]">Add files</span>
-              <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={(e) => { const f = Array.from(e.target.files??[]); setDrawingFiles((p) => [...p, ...f.filter((x) => !p.some((y) => y.name===x.name))]); e.target.value=""; }} />
-            </label>
-            {drawingFiles.map((f) => <div key={f.name} className="flex items-center gap-3 bg-[var(--app-bg)] rounded-lg px-3 py-2.5 mt-2"><Paperclip size={14} className="text-[var(--ink-faint)] shrink-0"/><span className="text-[13.5px] flex-1 truncate">{f.name}</span><button onClick={() => setDrawingFiles((p) => p.filter((x) => x.name!==f.name))}><X size={14} className="text-[var(--ink-faint)]"/></button></div>)}
-          </div>
-
           <PlanMarkupQuickAdd
             lib={lib}
             marginPct={effectiveMargin}
@@ -572,6 +570,15 @@ export default function GenericQuoteBuilder({
             analysisResult={analysisResult}
             usageLimitReached={usageLimitReached}
           />
+
+          <div className="card">
+            <p className="font-semibold text-[17px] mb-4">Upload drawings or site photos</p>
+            <label className="flex items-center justify-center gap-2 border-2 border-dashed border-[var(--line)] rounded-xl py-8 cursor-pointer hover:border-[var(--amber)] bg-[var(--app-bg)]">
+              <Paperclip size={18} className="text-[var(--ink-faint)]"/><span className="text-[14px] font-semibold text-[var(--ink-soft)]">Add files</span>
+              <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={(e) => { const f = Array.from(e.target.files??[]); setDrawingFiles((p) => [...p, ...f.filter((x) => !p.some((y) => y.name===x.name))]); e.target.value=""; }} />
+            </label>
+            {drawingFiles.map((f) => <div key={f.name} className="flex items-center gap-3 bg-[var(--app-bg)] rounded-lg px-3 py-2.5 mt-2"><Paperclip size={14} className="text-[var(--ink-faint)] shrink-0"/><span className="text-[13.5px] flex-1 truncate">{f.name}</span><button onClick={() => setDrawingFiles((p) => p.filter((x) => x.name!==f.name))}><X size={14} className="text-[var(--ink-faint)]"/></button></div>)}
+          </div>
 
           {drawingFiles.length > 0 && (
             <div className="card border-2 border-[var(--amber-light)]">
