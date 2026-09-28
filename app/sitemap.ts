@@ -111,15 +111,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const admin = createAdminClient();
 
   // ── 2. Individual listing pages ───────────────────────────────────────
-  const { data: listings, error: listingsErr } = await admin
-    .from("directory_listing")
-    .select("id, business_name, suburb, updated_at, created_at")
-    .not("business_name", "is", null)
-    .not("suburb", "is", null);
+  // Page through every listing. A single .select() is capped by PostgREST's
+  // default max-rows (1000), which silently truncated the sitemap to the
+  // first 1000 of ~4,900 listings - the other ~3,900 listing pages were
+  // absent from the sitemap entirely, so Google never had a discovery path
+  // to them and left them unindexed. Range-paginate until a short page.
+  const LISTING_PAGE_SIZE = 1000;
+  const listingRows: Array<{ id: string; business_name: string; suburb: string; updated_at: string | null; created_at: string }> = [];
+  for (let from = 0; ; from += LISTING_PAGE_SIZE) {
+    const { data: page, error: listingsErr } = await admin
+      .from("directory_listing")
+      .select("id, business_name, suburb, updated_at, created_at")
+      .not("business_name", "is", null)
+      .not("suburb", "is", null)
+      .order("created_at", { ascending: true })
+      .range(from, from + LISTING_PAGE_SIZE - 1);
+    if (listingsErr) {
+      console.error("[sitemap] listings fetch failed:", listingsErr.message);
+      break;
+    }
+    if (!page || page.length === 0) break;
+    listingRows.push(...page);
+    if (page.length < LISTING_PAGE_SIZE) break;
+  }
 
-  if (listingsErr) console.error("[sitemap] listings fetch failed:", listingsErr.message);
-
-  const listingPages: MetadataRoute.Sitemap = (listings ?? []).map((row) => ({
+  const listingPages: MetadataRoute.Sitemap = listingRows.map((row) => ({
     url: `${BASE_URL}/directory/${buildSlug(row)}`,
     lastModified: new Date(row.updated_at ?? row.created_at),
     changeFrequency: "weekly" as const,

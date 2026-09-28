@@ -95,10 +95,10 @@ async function getAccessToken(): Promise<string> {
 
 // Domain property, not a URL-prefix one: covers www / non-www / http / https
 // in one property, so it doesn't matter which host variant actually served a
-// given request. (An earlier version of this pointed at the bare non-www
-// URL-prefix property, https://swiftscope.com.au/ - which is a 301 redirect
-// to the real www host, so Search Console only ever had one page to report
-// on for it: the redirect itself.)
+// given request. NOTE: the canonical host is the bare apex
+// (https://swiftscope.com.au); www 308-redirects to it (verified live, and
+// enforced in middleware.ts + sitemap.ts). A URL-prefix property on the www
+// host would therefore only ever see redirects - use the domain property.
 const SITE_URL = "sc-domain:swiftscope.com.au";
 const SC_API = "https://www.googleapis.com/webmasters/v3/sites";
 
