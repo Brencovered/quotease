@@ -77,6 +77,23 @@ export async function purgeAccount(profileId: string): Promise<{ error?: string 
 
   await cancelStripeSubscriptions(profileId);
 
+  // directory_listing.profile_id and .claim_pending_profile_id are both
+  // ON DELETE SET NULL, not CASCADE - a profile purge alone would leave
+  // any listing this account created behind, orphaned rather than gone.
+  // Harmless for a genuine scraped listing (it correctly reverts to
+  // unclaimed, available for the real business to claim later) but wrong
+  // for a source='manual' listing - that data has no existence outside
+  // this account, it was typed in by whoever just got purged, usually
+  // because it was fabricated in the first place (every fake signup this
+  // session went through exactly this path). Delete those explicitly
+  // before the SET NULL would otherwise leave them sitting in the
+  // directory looking like an ordinary unclaimed listing.
+  await admin
+    .from("directory_listing")
+    .delete()
+    .eq("source", "manual")
+    .or(`profile_id.eq.${profileId},claim_pending_profile_id.eq.${profileId}`);
+
   // team_members.member_user_id has no FK/cascade (it can point to a user
   // under a *different* owner's business), so if this account was a team
   // member elsewhere that row needs cleaning up explicitly or it's left

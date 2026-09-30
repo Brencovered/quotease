@@ -8,7 +8,7 @@ import MarketingNav from "@/components/MarketingNav";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
 import {
   Search, Loader2, CheckCircle2, ArrowRight, Star,
-  MapPin, ShieldCheck, AlertCircle, Mail, Lock, ImagePlus,
+  MapPin, ShieldCheck, AlertCircle, Mail, Lock, ImagePlus, Clock,
 } from "lucide-react";
 
 const TRADES = [
@@ -106,7 +106,7 @@ function ClaimDirectoryListingInner() {
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [resultSlug, setResultSlug] = useState<string | null>(null);
-  const [resultOutcome, setResultOutcome] = useState<"claimed" | "created_new" | null>(null);
+  const [resultOutcome, setResultOutcome] = useState<"claimed" | "created_new" | "pending_review" | null>(null);
   const [resultVerified, setResultVerified] = useState(false);
 
   // Returning tradie who already claimed a listing shouldn't have to search
@@ -983,12 +983,20 @@ function ClaimDirectoryListingInner() {
 
         {step === "done" && (
           <div className="card p-8 rounded-2xl bg-white text-center">
-            <CheckCircle2 size={40} className="text-emerald-500 mx-auto mb-4" />
+            {resultOutcome === "pending_review" ? (
+              <Clock size={40} className="text-amber-500 mx-auto mb-4" />
+            ) : (
+              <CheckCircle2 size={40} className="text-emerald-500 mx-auto mb-4" />
+            )}
             <h2 className="font-display text-[1.6rem] text-[#0a1722] mb-2">
-              {resultOutcome === "claimed" ? "Your page is claimed!" : "Your page is live!"}
+              {resultOutcome === "pending_review"
+                ? "Your claim is being reviewed"
+                : resultOutcome === "claimed" ? "Your page is claimed!" : "Your page is live!"}
             </h2>
             <p className="text-[14px] text-[#5a6b78] mb-2">
-              Homeowners searching for a {trade} in {suburb} can now find you.
+              {resultOutcome === "pending_review"
+                ? `We check every claim before it goes live - you'll get an email once this is approved, usually within a day. Homeowners can't see you as claimed until then.`
+                : `Homeowners searching for a ${trade} in ${suburb} can now find you.`}
             </p>
             {abn && (
               <p className={`text-[13px] mb-6 ${resultVerified ? "text-emerald-600" : "text-[#8a97a1]"}`}>

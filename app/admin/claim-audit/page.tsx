@@ -50,12 +50,21 @@ export default async function ClaimAuditPage() {
     .select("ip_address, reason, blocked_by, created_at")
     .order("created_at", { ascending: false });
 
+  // Pending claims - the new state this page exists to surface. Each one
+  // blocks on a human decision now instead of activating on submission.
+  const pendingAttempts = rows.filter((r) => r.outcome === "pending_review" && r.matched_listing_id && r.attempted_by_profile_id);
+  const profileIds = [...new Set(pendingAttempts.map((r) => r.attempted_by_profile_id as string))];
+  const { data: pendingProfiles } = profileIds.length
+    ? await admin.from("profiles").select("id, business_name, contact_email").in("id", profileIds)
+    : { data: [] };
+  const profileById = new Map((pendingProfiles ?? []).map((p) => [p.id, p]));
+
   return (
     <div className="max-w-6xl mx-auto px-5 py-8">
       <div className="mb-6">
         <h1 className="font-display text-[1.8rem] text-[var(--ink)]">Claim & signup verification</h1>
         <p className="text-[13.5px] text-[var(--ink-faint)] mt-1">
-          Forensics for directory claims and account creation - reports, doesn&apos;t block automatically
+          Directory claims require approval - nothing goes live until you say so
         </p>
       </div>
       <ClaimAuditPanel
@@ -67,6 +76,18 @@ export default async function ClaimAuditPage() {
           disputed: rows.filter((r) => r.outcome === "disputed").length,
           missingIp: rows.filter((r) => !r.ip_address).length,
         }}
+        pending={pendingAttempts.map((r) => ({
+          attemptId: r.id,
+          business: r.attempted_business_name,
+          suburb: r.suburb,
+          trade: r.trade,
+          listingId: r.matched_listing_id as string,
+          profileId: r.attempted_by_profile_id as string,
+          accountEmail: profileById.get(r.attempted_by_profile_id as string)?.contact_email ?? null,
+          ip: r.ip_address,
+          verifiedViaEmail: r.verified_via_email,
+          at: r.created_at,
+        }))}
         sharedIps={sharedIps}
         unverifiedClaims={claimedScraped
           .filter((r) => !r.verified_via_email)

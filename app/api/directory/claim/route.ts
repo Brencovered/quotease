@@ -130,11 +130,13 @@ export async function POST(req: NextRequest) {
 
   // One claimed listing per business in v1 - a business wanting to add a
   // second trade/suburb combination extends their existing listing rather
-  // than claiming a second one.
+  // than claiming a second one. Also catches a listing this business
+  // already has pending review - without this, someone could submit a
+  // second claim/creation while their first is still awaiting approval.
   const { data: existingClaim } = await admin
     .from("directory_listing")
-    .select("id, business_name, suburb")
-    .eq("profile_id", businessId)
+    .select("id, business_name, suburb, is_claimed")
+    .or(`profile_id.eq.${businessId},claim_pending_profile_id.eq.${businessId}`)
     .maybeSingle();
 
   if (existingClaim) {
@@ -145,7 +147,9 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json(
       {
-        error: `This account already manages a different claimed listing (${existingClaim.business_name}). Only one claimed listing is allowed per account in this version.`,
+        error: existingClaim.is_claimed
+          ? `This account already manages a different claimed listing (${existingClaim.business_name}). Only one claimed listing is allowed per account in this version.`
+          : `This account already has a claim pending review for ${existingClaim.business_name}. Wait for that to be resolved before submitting another.`,
         existingBusinessName: existingClaim.business_name,
         existingSlug,
       },
@@ -196,8 +200,10 @@ export async function POST(req: NextRequest) {
     // Ownership check. Claiming a scraped listing is the case that can
     // actually harm someone: the business did not sign up, has no idea the
     // page exists, and a competitor taking it over would be invisible to
-    // them. Creating a brand new listing carries no such risk, which is why
-    // this gate applies only here.
+    // them. Creating a brand new listing carries no such risk in the same
+    // way, which is why email-match matters most here - though as of this
+    // change neither path activates without a human looking at it either
+    // way, this signal is what the admin approval screen leads with.
     //
     // The test is whether the signed-in address matches the contact address
     // already on the listing, which came from the business's own public
@@ -210,21 +216,48 @@ export async function POST(req: NextRequest) {
     const claimantEmail = (user.email ?? "").toLowerCase().trim();
     const verifiedViaEmail = knownContact && knownContact === claimantEmail ? claimantEmail : null;
 
-    const { error: updateErr } = await admin
+    // Real ask, directly following a run of fake signups this same day:
+    // no claim goes live on submission anymore, regardless of the email-
+    // match outcome above. is_claimed stays false and profile_id stays
+    // unset - only claim_pending_profile_id records the request - until
+    // an admin approves it via /api/admin/directory/resolve-claim. The
+    // logo backfill still happens now since it's harmless either way
+    // (it only ever fills a gap, never overwrites).
+    const { data: updated, error: updateErr } = await admin
       .from("directory_listing")
       .update({
-        is_claimed: true,
-        profile_id: businessId,
-        // Only fill in a logo if the scraped listing doesn't already have
-        // one - never overwrite an existing (e.g. Google-sourced) logo
-        // with nothing just because the tradie skipped this step.
+        claim_pending_profile_id: businessId,
         ...(logoUrl && !listing.logo_url ? { logo_url: logoUrl } : {}),
       })
       .eq("id", listingId)
-      .eq("is_claimed", false); // belt-and-braces against a race between two concurrent claims
+      .eq("is_claimed", false)
+      .is("claim_pending_profile_id", null) // belt-and-braces against a race between two concurrent claims
+      .select("id");
 
     if (updateErr) {
-      return NextResponse.json({ error: "Failed to claim listing" }, { status: 500 });
+      return NextResponse.json({ error: "Failed to submit claim" }, { status: 500 });
+    }
+    if (!updated || updated.length === 0) {
+      // The two .eq()/.is() guards above matched zero rows - someone else's
+      // claim or approval landed between the earlier fetch and this update.
+      // Supabase's update() returns no error for a zero-row match by
+      // default, only .select() surfaces that here - without checking
+      // this, a second concurrent claimant would get a false "submitted"
+      // response while their claim silently did nothing.
+      await admin.from("directory_claim_attempts").insert({
+        attempted_business_name: businessName,
+        suburb,
+        trade,
+        matched_listing_id: listingId,
+        attempted_by_profile_id: businessId,
+        outcome: "disputed",
+        ip_address: ipAddress,
+        user_agent: userAgent,
+      });
+      return NextResponse.json(
+        { error: "This listing already has a claim in progress. Contact support if you believe this is a mistake." },
+        { status: 409 }
+      );
     }
 
     await admin.from("directory_claim_attempts").insert({
@@ -233,14 +266,14 @@ export async function POST(req: NextRequest) {
       trade,
       matched_listing_id: listingId,
       attempted_by_profile_id: businessId,
-      outcome: "claimed",
+      outcome: "pending_review",
       ip_address: ipAddress,
       user_agent: userAgent,
       verified_via_email: verifiedViaEmail,
     });
 
     const slug = buildDirectorySlug({ id: listing.id, business_name: listing.business_name, suburb: listing.suburb ?? "" });
-    return NextResponse.json({ listingId, outcome: "claimed", slug, verifiedBadge, ownershipVerified: verifiedViaEmail !== null });
+    return NextResponse.json({ listingId, outcome: "pending_review", slug, verifiedBadge, ownershipVerified: verifiedViaEmail !== null });
   }
 
   // Rate limit new listing creation per IP. 103.78.46.30 created three
@@ -264,7 +297,12 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // No match - create a brand new listing, owned and verified from day one.
+  // No match - create a brand new listing, pending review rather than
+  // live from day one. Every fake signup this session (BetaBoard,
+  // Temporary Fencing, Electrical...) came through exactly this path -
+  // a fabricated business name with no scraped provenance behind it at
+  // all, which is why this branch needed the change more than the
+  // claim-existing one above, not less.
   const { data: created, error: createErr } = await admin
     .from("directory_listing")
     .insert({
@@ -275,8 +313,8 @@ export async function POST(req: NextRequest) {
       logo_url: logoUrl || null,
       street_address: streetAddress,
       contact_phone: phoneDigits,
-      profile_id: businessId,
-      is_claimed: true,
+      claim_pending_profile_id: businessId,
+      is_claimed: false,
       source: "manual",
     })
     .select("id")
@@ -306,11 +344,11 @@ export async function POST(req: NextRequest) {
     trade,
     matched_listing_id: created.id,
     attempted_by_profile_id: businessId,
-    outcome: "created_new",
+    outcome: "pending_review",
     ip_address: ipAddress,
     user_agent: userAgent,
   });
 
   const slug = buildDirectorySlug({ id: created.id, business_name: businessName, suburb });
-  return NextResponse.json({ listingId: created.id, outcome: "created_new", slug, verifiedBadge });
+  return NextResponse.json({ listingId: created.id, outcome: "pending_review", slug, verifiedBadge });
 }
