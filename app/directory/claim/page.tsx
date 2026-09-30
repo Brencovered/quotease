@@ -335,6 +335,13 @@ function ClaimDirectoryListingInner() {
         });
         if (signUpError) { setError(signUpError.message); return; }
         if (data.session) {
+          // Best-effort, same as app/signup/page.tsx - this path also
+          // bypasses /auth/callback's inline logging. The claim
+          // submission moments later already captures an IP too, but a
+          // dedicated signup_attempts row keeps every signup consistent
+          // regardless of which path was taken, rather than some only
+          // getting logged indirectly via a later claim attempt.
+          fetch("/api/account/log-signup-ip", { method: "POST" }).catch(() => {});
           // No email confirmation required for this project/config -
           // straight to submitting the claim they already filled in,
           // rather than back through resolveEntryStep (which would send

@@ -394,8 +394,14 @@ function DeleteAccountZone({ profile }: { profile: ProfileRow }) {
   const [busy, setBusy] = useState<"soft_delete" | "purge_now" | "restore" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const expected = (profile.business_name ?? "").trim();
-  const matches = confirmText.trim().toLowerCase() === expected.toLowerCase() && expected.length > 0;
+  // A fake/junk account (exactly the kind admins actually need to delete
+  // in a hurry) often has no business_name at all - the previous version
+  // required typing the empty string AND checked expected.length > 0,
+  // which made the confirmation permanently unsatisfiable for those
+  // accounts specifically. Falls back to a fixed confirmation word so
+  // there's always something completable to type.
+  const expected = (profile.business_name ?? "").trim() || "DELETE";
+  const matches = confirmText.trim().toLowerCase() === expected.toLowerCase();
 
   async function callDeleteRoute(action: "soft_delete" | "purge_now") {
     setBusy(action); setError(null);

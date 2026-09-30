@@ -51,6 +51,15 @@ interface AttemptRow {
   created_at: string;
 }
 
+interface SignupRow {
+  id: string;
+  profileId: string | null;
+  business: string | null;
+  method: string | null;
+  ip: string | null;
+  at: string;
+}
+
 interface BlockedIp {
   ip_address: string;
   reason: string;
@@ -97,7 +106,7 @@ function DeleteAccountButton({ profileId, label }: { profileId: string; label?: 
 }
 
 export default function ClaimAuditPanel({
-  summary, pending, sharedIps, unverifiedClaims, disputed, recent, blocklist,
+  summary, pending, sharedIps, unverifiedClaims, disputed, recent, recentSignups, blocklist,
 }: {
   summary: Summary;
   pending: PendingClaim[];
@@ -105,6 +114,7 @@ export default function ClaimAuditPanel({
   unverifiedClaims: UnverifiedClaim[];
   disputed: { business: string; listingId: string; profileId: string; ip: string | null; at: string }[];
   recent: AttemptRow[];
+  recentSignups: SignupRow[];
   blocklist: BlockedIp[];
 }) {
   const [blockedNow, setBlockedNow] = useState<Set<string>>(new Set(blocklist.map(b => b.ip_address)));
@@ -128,6 +138,28 @@ export default function ClaimAuditPanel({
     const res = await fetch(`/api/admin/ip-blocklist?ip=${encodeURIComponent(ip)}`, { method: "DELETE" });
     if (res.ok) setBlockedNow((prev) => { const next = new Set(prev); next.delete(ip); return next; });
     setIpPending(null);
+  }
+
+  // Small, reused wherever a single IP needs a block/unblock affordance
+  // (the Recent attempts and Recent signups tables both list an IP per
+  // row with no other context needed - the dedicated sections above
+  // have their own richer version with more context in the reason).
+  function BlockIpCell({ ip, reason }: { ip: string | null; reason: string }) {
+    if (!ip) return <span className="text-[11.5px] text-[var(--ink-faint)]">—</span>;
+    if (blockedNow.has(ip)) {
+      return (
+        <button onClick={() => unblockIp(ip)} disabled={ipPending === ip}
+          className="text-[10.5px] font-bold text-green-700 hover:underline">
+          Blocked
+        </button>
+      );
+    }
+    return (
+      <button onClick={() => blockIp(ip, reason)} disabled={ipPending === ip}
+        className="flex items-center gap-1 text-[10.5px] font-bold text-red-600 hover:underline">
+        {ipPending === ip ? <RefreshCw size={10} className="animate-spin" /> : <Ban size={10} />} Block
+      </button>
+    );
   }
 
   async function resolveClaim(attemptId: string, decision: "approve" | "reject") {
@@ -321,7 +353,7 @@ export default function ClaimAuditPanel({
       </section>
 
       <section className="space-y-3">
-        <h2 className="font-display text-[1.15rem] text-[var(--ink)]">Recent attempts</h2>
+        <h2 className="font-display text-[1.15rem] text-[var(--ink)]">Recent attempts (directory claims)</h2>
         <div className="card overflow-x-auto">
           <table className="w-full text-[12.5px]">
             <thead>
@@ -330,6 +362,7 @@ export default function ClaimAuditPanel({
                 <th className="pb-2 pr-3">Outcome</th>
                 <th className="pb-2 pr-3">Verified</th>
                 <th className="pb-2 pr-3">IP</th>
+                <th className="pb-2 pr-3"></th>
                 <th className="pb-2">When</th>
               </tr>
             </thead>
@@ -340,9 +373,48 @@ export default function ClaimAuditPanel({
                   <td className="py-1.5 pr-3">{r.outcome}</td>
                   <td className="py-1.5 pr-3">{r.verified_via_email ? "✓" : "—"}</td>
                   <td className="py-1.5 pr-3 font-mono text-[11.5px]">{r.ip_address ?? "—"}</td>
+                  <td className="py-1.5 pr-3">
+                    <BlockIpCell ip={r.ip_address} reason={`Claim attempt by ${r.attempted_business_name} - reviewed on /admin/claim-audit`} />
+                  </td>
                   <td className="py-1.5 text-[var(--ink-faint)]">{new Date(r.created_at).toLocaleString()}</td>
                 </tr>
               ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="font-display text-[1.15rem] text-[var(--ink)]">Recent signups (account creation)</h2>
+        <p className="text-[12px] text-[var(--ink-faint)] -mt-2">
+          Captured at the account itself, not just the directory claim - catches anyone who signed up without ever touching the claim flow
+        </p>
+        <div className="card overflow-x-auto">
+          <table className="w-full text-[12.5px]">
+            <thead>
+              <tr className="text-left text-[10.5px] font-bold uppercase text-[var(--ink-faint)] border-b border-[var(--line)]">
+                <th className="pb-2 pr-3">Business</th>
+                <th className="pb-2 pr-3">Method</th>
+                <th className="pb-2 pr-3">IP</th>
+                <th className="pb-2 pr-3"></th>
+                <th className="pb-2">When</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentSignups.map((s) => (
+                <tr key={s.id} className="border-b border-[var(--line)] last:border-0">
+                  <td className="py-1.5 pr-3">{s.business ?? "—"}</td>
+                  <td className="py-1.5 pr-3">{s.method ?? "—"}</td>
+                  <td className="py-1.5 pr-3 font-mono text-[11.5px]">{s.ip ?? "—"}</td>
+                  <td className="py-1.5 pr-3">
+                    <BlockIpCell ip={s.ip} reason={`Signup${s.business ? ` by ${s.business}` : ""} - reviewed on /admin/claim-audit`} />
+                  </td>
+                  <td className="py-1.5 text-[var(--ink-faint)]">{new Date(s.at).toLocaleString()}</td>
+                </tr>
+              ))}
+              {recentSignups.length === 0 && (
+                <tr><td colSpan={5} className="py-3 text-[12.5px] text-[var(--ink-faint)]">None recorded yet</td></tr>
+              )}
             </tbody>
           </table>
         </div>

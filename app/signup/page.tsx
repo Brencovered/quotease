@@ -172,6 +172,13 @@ function SignupForm() {
           suburb: suburb.trim() || null,
           trades: [trade],
         }).eq("id", data.session.user.id);
+        // Best-effort - this signup path never redirects through
+        // /auth/callback (which logs it inline for OAuth/email-confirm
+        // signups instead), so this is the only place this particular
+        // path gets captured. Not awaited for the error case - a
+        // logging failure should never block someone from finishing
+        // signup.
+        fetch("/api/account/log-signup-ip", { method: "POST" }).catch(() => {});
         // Full navigation (not router.push) so the session cookie set by
         // signUp is guaranteed present when middleware checks it on the
         // very next request - same fix as the login page.
