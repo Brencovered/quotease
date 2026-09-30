@@ -264,7 +264,17 @@ export default async function DirectoryPage({
     // Normal (non-radius, or unresolvable-location) search path.
     let query = supabase
       .from("directory_listing")
-      .select("*", { count: "exact" });
+      .select("*", { count: "exact" })
+      // A self-created listing with no scraped provenance shouldn't be
+      // publicly visible while its claim is still pending review - it
+      // would look like an ordinary unclaimed listing when it's actually
+      // unverified, fabricated-until-proven-otherwise data. A rejected
+      // one gets deleted outright (see resolve-claim), so this only ever
+      // filters out listings genuinely awaiting a decision. Doesn't
+      // affect existing scraped listings with a pending claim on them -
+      // those stay visible exactly as they were before anyone tried to
+      // claim them.
+      .or("source.neq.manual,is_claimed.eq.true");
 
     // A trade keyword detected in the free-text search (e.g. "urgent
     // plumber" -> plumber) only applies if the user hasn't already picked
