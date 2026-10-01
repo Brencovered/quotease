@@ -50,6 +50,7 @@ interface MaterialsTabProps {
 }
 
 export default function MaterialsCatalog({
+  accountTrade,
   materials,
   loading,
   error,
@@ -71,7 +72,7 @@ export default function MaterialsCatalog({
   onDeleteMaterial,
   onOpenCsvUpload,
   pricingTiers,
-}: MaterialsTabProps) {
+}: MaterialsTabProps & { accountTrade: string | null }) {
   const firstTier = pricingTiers[0];
   const tierMarkup = firstTier?.markup_pct ?? 0;
   const tierName = firstTier?.name ?? "default";
