@@ -237,6 +237,19 @@ export const TOOLS: ToolMeta[] = [
     accessLabel: "No login required",
   },
   {
+    slug: "house-plan-takeoff",
+    href: "/tools/house-plan-takeoff",
+    title: "House plan takeoff: trace a floor plan, get every quantity",
+    shortTitle: "House plan takeoff",
+    description:
+      "Upload a floor plan, set the scale, trace the walls and rooms. Get room areas, framing, plasterboard, flooring, tiling, waterproofing, electrical points, plumbing fixtures and paint, with a 3D view.",
+    audience: "tradie",
+    hook: "In Swiftscope, AI drafts the trace for you, your own prices fill in, and the takeoff turns into a quote in one tap.",
+    hookCta: "Quote from a plan free",
+    hookHref: "/signup",
+    accessLabel: "No login required",
+  },
+  {
     slug: "ballpark-cost",
     href: "/tools/ballpark-cost",
     title: "Ballpark renovation and job cost estimator",
@@ -291,6 +304,21 @@ export const SHED_PLANNER_FAQS = [
   {
     q: "How is the labour estimate worked out?",
     a: "Each stage (set out, floor, framing, roofing, cladding, doors and finishing) starts from the size of the build and the number of framing pieces. They are starting points only. Set each stage to how your crew actually works.",
+  },
+];
+
+export const HOUSE_TAKEOFF_FAQS = [
+  {
+    q: "How accurate is a traced takeoff?",
+    a: "As accurate as the scale and the trace. Set the scale on a dimension you trust, like a labelled room, and check a couple of rooms against their labels. Room areas allow for wall thickness, so expect them within a few percent of the plan.",
+  },
+  {
+    q: "Can it read the plan for me?",
+    a: "In Swiftscope, AI draft traces the outline, walls, rooms and openings and works out the scale from the labelled room sizes. It is a first pass you check and drag onto the drawing, not a final answer.",
+  },
+  {
+    q: "Which trades does it cover?",
+    a: "Framing, cladding, roof, slab, insulation and plasterboard, floor and wall finishes, waterproofing, electrical points, plumbing fixtures and painting. Pick the sections you quote and the rest drop out of the totals.",
   },
 ];
 

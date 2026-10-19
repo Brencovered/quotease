@@ -29,6 +29,8 @@ interface Props {
   initialClientId: string | null;
   linkedQuoteId: string | null;
   plan: Record<string, unknown> | null;
+  kind: "build" | "house";
+  underlayUrl: string | null;
   lastPrices: Record<string, number> | null;
   clients: ClientOption[];
   openQuotes: QuoteOption[];
@@ -37,7 +39,7 @@ interface Props {
 
 type SaveState = "idle" | "pending" | "saving" | "saved" | "error";
 
-const PLANNER_SRC = "/planner/build-planner.html?embed=1";
+const PLANNER_SRC = { build: "/planner/build-planner.html?embed=1", house: "/planner/plan-trace.html?embed=1" } as const;
 const SAVE_DELAY_MS = 1200;
 const money = (v: number) => "$" + Math.round(v).toLocaleString("en-AU");
 
@@ -146,6 +148,7 @@ export default function StructureEditor(props: Props) {
         post({
           type: "load",
           plan: props.plan,
+          underlayUrl: props.underlayUrl,
           prices: props.lastPrices,
           meta,
           settings: { hourlyRate: business.hourlyRate },
@@ -157,6 +160,16 @@ export default function StructureEditor(props: Props) {
       }
       if (d.type === "save-template") {
         void saveTemplate(d as { name?: unknown; plan?: unknown; summary?: unknown });
+        return;
+      }
+      if (d.type === "underlay-upload") {
+        void uploadUnderlay(d as { dataUrl?: unknown }).then((path) =>
+          post(path ? { type: "underlay-saved", path } : { type: "underlay-failed" })
+        );
+        return;
+      }
+      if (d.type === "switch-to-trace") {
+        void switchToTrace(d as { image?: unknown; w?: unknown; h?: unknown });
         return;
       }
       if (d.type === "suggest-name") {
@@ -207,6 +220,38 @@ export default function StructureEditor(props: Props) {
       if (latest.current) void save();
     };
   }, [save]);
+
+  // Plan drawings for trace mode live in storage, not in the plan JSON.
+  async function uploadUnderlay(d: { dataUrl?: unknown }): Promise<string | null> {
+    const dataUrl = typeof d.dataUrl === "string" ? d.dataUrl : "";
+    if (!dataUrl.startsWith("data:image/")) return null;
+    try {
+      const blob = await (await fetch(dataUrl)).blob();
+      const path = `${props.businessId}/structures/${id}/${Date.now()}.jpg`;
+      const supabase = createClient();
+      const { error } = await supabase.storage.from("job-files").upload(path, blob, { contentType: blob.type || "image/jpeg", upsert: true });
+      return error ? null : path;
+    } catch {
+      return null;
+    }
+  }
+
+  async function switchToTrace(d: { image?: unknown; w?: unknown; h?: unknown }) {
+    setMsg("Opening the plan in trace mode...");
+    const path = await uploadUnderlay({ dataUrl: d.image });
+    const supabase = createClient();
+    const underlay = { path, src: path ? null : d.image, w: Number(d.w) || 0, h: Number(d.h) || 0, opacity: 0.55 };
+    const { error } = await supabase
+      .from("structure_plans")
+      .update({ plan: { kind: "house", underlay }, summary: {}, materials_total: 0, labour_hours: 0 })
+      .eq("id", id);
+    if (error) {
+      setMsg("Could not switch to trace mode. Try again.");
+      return;
+    }
+    latest.current = null;
+    window.location.reload();
+  }
 
   async function saveTemplate(d: { name?: unknown; plan?: unknown; summary?: unknown }) {
     const tplName = typeof d.name === "string" ? d.name.trim().slice(0, 80) : "";
@@ -404,7 +449,7 @@ export default function StructureEditor(props: Props) {
         {mounted && (
           <iframe
             ref={frameRef}
-            src={PLANNER_SRC}
+            src={PLANNER_SRC[props.kind]}
             title="Build planner"
             allow="microphone"
             className="w-full h-full border-0 block"

@@ -23,7 +23,9 @@ export default async function StructureEditorPage({ params }: { params: Promise<
   if (!row) notFound();
 
   const plan = (row.plan ?? {}) as Record<string, unknown>;
-  const isNew = !plan || !("shed" in plan);
+  const kind: "build" | "house" = plan.kind === "house" ? "house" : "build";
+  const isNew = kind === "build" && !("shed" in plan);
+  const underlayPath = kind === "house" ? ((plan.underlay as { path?: string } | undefined)?.path ?? null) : null;
 
   const [{ data: clients }, { data: openQuotes }, { data: profile }, lastPricesRes, { data: templateRows }, { data: priceBook }] = await Promise.all([
     supabase.from("clients").select("id, name, billing_address").eq("profile_id", businessId).order("name").range(0, 999),
@@ -68,6 +70,12 @@ export default async function StructureEditorPage({ params }: { params: Promise<
       .range(0, 1999),
   ]);
 
+  let underlayUrl: string | null = null;
+  if (underlayPath) {
+    const { data: signed } = await supabase.storage.from("job-files").createSignedUrl(underlayPath, 3600 * 12);
+    underlayUrl = signed?.signedUrl ?? null;
+  }
+
   const lastPrices = (lastPricesRes.data as { prices?: Record<string, number> } | null)?.prices ?? null;
 
   return (
@@ -83,6 +91,8 @@ export default async function StructureEditorPage({ params }: { params: Promise<
         initialClientId={row.client_id}
         linkedQuoteId={row.quote_id}
         plan={isNew ? null : plan}
+        kind={kind}
+        underlayUrl={underlayUrl}
         lastPrices={lastPrices && typeof lastPrices === "object" ? lastPrices : null}
         clients={clients ?? []}
         openQuotes={openQuotes ?? []}

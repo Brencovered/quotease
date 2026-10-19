@@ -18,6 +18,8 @@
 .descmsg ul{margin:4px 0 0;padding-left:18px;}
 .descmsg a{color:inherit;font-weight:700;}
 .upl{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.traceoffer{margin-top:10px;padding:10px 12px;border:1px solid var(--accent);border-radius:10px;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--text);font-size:13px;}
+.traceoffer .primary{display:block;margin-top:8px;}
 .upl .note{margin:0;flex:1;min-width:160px;}
 .savetpl{display:flex;gap:8px;margin-top:8px;}
 .card.trade{margin-top:10px;}
@@ -1000,7 +1002,10 @@ async function runDescribe(){
     if(!r.ok){descState={busy:false,err:true,warn:[],msg:b.signup?'signup':(b.error||'Could not build that one. Try rewording it.')};renderDescMsg();return;}
     descDraft='';plan.planRooms=[];applyGenerated(b.plan);descState={busy:false,err:false,msg:'Done. Check the model, then tap any part to adjust it.',warn:b.plan.warnings||[]};renderDescMsg();
   }catch(e){descState={busy:false,err:true,warn:[],msg:'No connection. Try again.'};renderDescMsg();}}
-let planState={busy:false,msg:'',err:false,warn:[],rooms:[]};
+let planState={busy:false,msg:'',err:false,warn:[],rooms:[]};let lastPlanImage=null;
+async function toTrace(){if(!lastPlanImage)return;const im=new Image();await new Promise(r=>{im.onload=r;im.onerror=r;im.src=lastPlanImage;});
+  if(EMBED){try{window.parent.postMessage({source:'ss-planner',type:'switch-to-trace',image:lastPlanImage,w:im.naturalWidth,h:im.naturalHeight},location.origin);}catch(e){}return;}
+  try{sessionStorage.setItem('trace-underlay',lastPlanImage);}catch(e){}location.href='/planner/plan-trace.html';}
 function loadPdfjs(){return new Promise((res,rej)=>{if(window.pdfjsLib)return res(window.pdfjsLib);const s=document.createElement('script');s.src='/planner/vendor/pdf.min.js';s.onload=()=>{try{window.pdfjsLib.GlobalWorkerOptions.workerSrc='/planner/vendor/pdf.worker.min.js';res(window.pdfjsLib);}catch(e){rej(e);}};s.onerror=rej;document.head.appendChild(s);});}
 async function fileToImage(file){const MAX=2200;let src,w,hh;
   if(file.type==='application/pdf'||/\.pdf$/i.test(file.name)){const lib=await loadPdfjs();const pdf=await lib.getDocument({data:await file.arrayBuffer()}).promise;const pg=await pdf.getPage(1);const v1=pg.getViewport({scale:1});const sc=Math.min(4,MAX/Math.max(v1.width,v1.height));const vp=pg.getViewport({scale:sc});
@@ -1012,17 +1017,17 @@ async function fileToImage(file){const MAX=2200;let src,w,hh;
 async function runPlan(file){if(!file||planState.busy)return;
   if(file.size>25*1024*1024){planState={busy:false,err:true,msg:'That file is over 25 MB. Export one page or take a smaller photo.',warn:[],rooms:[]};renderPlanMsg();return;}
   planState={busy:true,err:false,msg:'Reading the plan. This takes about 20 seconds...',warn:[],rooms:[]};renderPlanMsg();
-  try{const image=await fileToImage(file);
+  try{const image=await fileToImage(file);lastPlanImage=image;
     const r=await fetch('/api/structures/from-plan',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({image,notes:(descDraft||'').trim()})});
     const b=await r.json().catch(()=>({}));
     if(!r.ok){planState={busy:false,err:true,warn:[],rooms:[],msg:b.signup?'signup':(b.error||'Could not read that plan.')};renderPlanMsg();return;}
     plan.planRooms=b.plan.rooms||[];applyGenerated(b.plan);
     const conf={high:'',medium:' Some sizes were hard to read, so check them against the drawing.',low:' The dimensions were hard to read. Check every size before you price it.'}[b.plan.confidence]||'';
-    planState={busy:false,err:b.plan.confidence==='low',msg:`Built from ${file.name}.${conf}`,warn:b.plan.warnings||[],rooms:b.plan.rooms||[]};renderPlanMsg();
+    planState={busy:false,err:b.plan.confidence==='low',msg:`Built from ${file.name}.${conf}`,warn:b.plan.warnings||[],rooms:b.plan.rooms||[],house:b.plan.footprint!=='rectangle'||(b.plan.rooms||[]).length>=4};renderPlanMsg();
   }catch(e){planState={busy:false,err:true,warn:[],rooms:[],msg:'Could not open that file. Try a JPG or PNG.'};renderPlanMsg();}}
 function renderPlanMsg(){const el=$('#planMsg');if(!el)return;const s=planState;const b=$('#planPick');if(b){b.disabled=s.busy;b.textContent=s.busy?'Reading...':'Upload a plan';}
   if(s.msg==='signup'){el.className='descmsg';el.innerHTML='Building from a plan is part of Swiftscope. <a href="/signup" target="_top">Start a free trial</a> to use it.';return;}
-  el.className='descmsg'+(s.err?' err':'');el.innerHTML=esc(s.msg||'')+(s.warn.length?`<ul>${s.warn.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>`:'')+(s.rooms.length?`<p style="margin:6px 0 0">Rooms on the plan: ${s.rooms.map(r=>esc(r.name)+(r.width&&r.length?` ${fm(r.width/1000,1)} × ${fm(r.length/1000,1)} m`:'')).join(', ')}</p>`:'');}
+  el.className='descmsg'+(s.err?' err':'');el.innerHTML=esc(s.msg||'')+(s.warn.length?`<ul>${s.warn.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>`:'')+(s.house?`<div class="traceoffer"><b>This looks like a house.</b> The 3D planner builds one rectangle. Trace mode follows every wall and room on the drawing and prices it room by room.<button class="primary" id="toTrace" type="button">Trace it as a house</button></div>`:'')+(s.rooms.length?`<p style="margin:6px 0 0">Rooms on the plan: ${s.rooms.map(r=>esc(r.name)+(r.width&&r.length?` ${fm(r.width/1000,1)} × ${fm(r.length/1000,1)} m`:'')).join(', ')}</p>`:'');}
 function renderDescMsg(){const el=$('#descMsg');if(!el)return;const s=descState;const go=$('#descGo');if(go){go.disabled=s.busy;go.textContent=s.busy?'Building...':'Build it';}
   if(s.msg==='signup'){el.className='descmsg';el.innerHTML='Describe-to-build is part of Swiftscope. <a href="/signup" target="_top">Start a free trial</a> to use it, or start from a template below.';return;}
   el.className='descmsg'+(s.err?' err':'');el.innerHTML=esc(s.msg||'')+(s.warn&&s.warn.length?`<ul>${s.warn.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>`:'');}
@@ -1080,6 +1085,7 @@ $('#tab-shed').addEventListener('click',e=>{
   if(e.target.id==='descGo'){runDescribe();return;}
   if(e.target.id==='descMic'){toggleMic(e.target);return;}
   if(e.target.id==='planPick'){$('#planFile').click();return;}
+  if(e.target.id==='toTrace'){toTrace();return;}
   if(e.target.id==='tplSave'){const n=($('#tplName').value||'').trim();if(!n){$('#tplName').focus();return;}
     try{window.parent.postMessage({source:'ss-planner',type:'save-template',name:n,plan:Object.assign({},clone(plan),{selected:null}),summary:summary()},location.origin);}catch(_){}
     tplMsg='Saving template...';renderShedTab();return;}

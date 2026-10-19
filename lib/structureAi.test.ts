@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeGeneratedPlan, normalizePlanRead, type GeneratedPlan } from "./structureAi";
+import { normalizeGeneratedPlan, normalizePlanRead, normalizeTraceDraft, type GeneratedPlan } from "./structureAi";
 
 const base: GeneratedPlan = {
   name: "Test",
@@ -91,5 +91,21 @@ describe("structure types", () => {
   it("keeps open rafters only on pergolas and forces verandahs to skillion", () => {
     const n = normalizeGeneratedPlan({ ...base, shed: { ...base.shed, type: "verandah", roof: "gable", roofMat: "none" } });
     expect(n.shed).toMatchObject({ roof: "skillion", roofMat: "corr" });
+  });
+});
+
+describe("normalizeTraceDraft", () => {
+  it("clamps coordinates, drops junk walls and short outlines", () => {
+    const n = normalizeTraceDraft({
+      outline: [[-5, 10], [1200, 10], [1200, 900], [0, 900]],
+      walls: [[100, 100, 100, 101], [100, 100, 100, 500]],
+      rooms: [{ name: "Bed 1", width: 3500, length: 3000, x: 50, y: 60 }],
+      openings: [{ type: "door", x: 10, y: 20 }],
+    });
+    expect(n.outline[0]).toEqual([0, 10]);
+    expect(n.outline[1]).toEqual([1000, 10]);
+    expect(n.walls).toEqual([[100, 100, 100, 500]]);
+    expect(n.rooms[0]).toMatchObject({ name: "Bed 1", width: 3500 });
+    expect(normalizeTraceDraft({ outline: [[1, 1]], walls: [], rooms: [], openings: [] }).outline).toEqual([]);
   });
 });
