@@ -196,3 +196,40 @@ export function normalizeGeneratedPlan(p: GeneratedPlan): NormalizedPlan {
     warnings: (p.warnings ?? []).filter((w) => typeof w === "string" && w.trim()).slice(0, 6).map((w) => w.slice(0, 240)),
   };
 }
+
+/* ---------- read a plan drawing ---------- */
+
+export const PlanReadSchema = GeneratedPlanSchema.extend({
+  footprint: z.enum(["rectangle", "l_shape", "irregular"]).describe("Overall shape of the outside walls"),
+  rooms: z
+    .array(z.object({ name: z.string(), width: z.number().describe("mm"), length: z.number().describe("mm") }))
+    .describe("Rooms or zones with their sizes in mm, as labelled on the plan"),
+  confidence: z.enum(["high", "medium", "low"]).describe("How sure you are about the overall dimensions"),
+});
+
+export type PlanRead = z.infer<typeof PlanReadSchema>;
+
+export const PLAN_READ_PROMPT = `${STRUCTURE_SYSTEM_PROMPT}
+
+You are reading an uploaded drawing: a floor plan, site plan, shed kit drawing or a hand sketch.
+- Use the written dimension strings, not pixel measurements. Australian plans are in millimetres unless marked otherwise ("6000" = 6 m).
+- Width = the external dimension of the front wall. The front is the side with the street, the main entry or the garage or roller door. Length = external dimension front to back.
+- If the outline is L-shaped or irregular, use the bounding rectangle of the main enclosed area for width and length, and say so in warnings.
+- Read wall height and roof pitch from elevations, sections or notes if shown. Otherwise use the defaults.
+- Place every external door, window and roller door on the right wall. Window codes like "1218" usually mean 1200 high x 1810 wide, and "0909" 900 x 900. Measure each opening's offset from the middle of its wall using the dimension chains.
+- List the rooms you can read with their sizes. Do not place internal walls.
+- Set confidence to low if there are no readable dimensions or the image is unclear, and say what is missing in warnings.`;
+
+export function normalizePlanRead(p: PlanRead) {
+  const base = normalizeGeneratedPlan(p);
+  const rooms = (p.rooms ?? []).slice(0, 30).map((r) => ({
+    name: String(r.name || "Room").slice(0, 40),
+    width: Math.round(clamp(r.width, 0, 50000, 0) / 10) * 10,
+    length: Math.round(clamp(r.length, 0, 50000, 0) / 10) * 10,
+  }));
+  const warnings = [...base.warnings];
+  if (p.footprint !== "rectangle" && !warnings.some((w) => /shape|rectang/i.test(w))) {
+    warnings.unshift(`The plan is ${p.footprint === "l_shape" ? "L-shaped" : "an irregular shape"}. The planner built the overall rectangle for now.`);
+  }
+  return { ...base, warnings: warnings.slice(0, 6), rooms, footprint: p.footprint, confidence: p.confidence };
+}

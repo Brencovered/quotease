@@ -17,6 +17,8 @@
 .descmsg.err{color:var(--bad);}
 .descmsg ul{margin:4px 0 0;padding-left:18px;}
 .descmsg a{color:inherit;font-weight:700;}
+.upl{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.upl .note{margin:0;flex:1;min-width:160px;}
 .savetpl{display:flex;gap:8px;margin-top:8px;}
 .card.trade{margin-top:10px;}
 .card.trade .row{padding:6px 0;}
@@ -434,7 +436,7 @@ function defaultPlan(){
     layers:{slab:true,frame:true,clad:true,roof:true,openings:true,services:true,items:true,dims:true}
   };
 }
-function migrate(p){const d=defaultPlan();if(p.shed&&!p.shed.floor)p.shed.floor=p.shed.slab===false?'none':'slab';return Object.assign({},d,p,{shed:Object.assign({},d.shed,p.shed||{}),layers:Object.assign({},d.layers,p.layers||{}),openings:Array.isArray(p.openings)?p.openings:[],items:Array.isArray(p.items)?p.items:[],prices:p.prices||{},extra:p.extra||{},labour:p.labour||{},trades:p.trades||{},scope:p.scope||null});}
+function migrate(p){const d=defaultPlan();if(p.shed&&!p.shed.floor)p.shed.floor=p.shed.slab===false?'none':'slab';return Object.assign({},d,p,{shed:Object.assign({},d.shed,p.shed||{}),layers:Object.assign({},d.layers,p.layers||{}),openings:Array.isArray(p.openings)?p.openings:[],items:Array.isArray(p.items)?p.items:[],prices:p.prices||{},extra:p.extra||{},labour:p.labour||{},trades:p.trades||{},scope:p.scope||null,planRooms:Array.isArray(p.planRooms)?p.planRooms:[]});}
 function load(){if(EMBED)return null;try{const r=localStorage.getItem(STORE);if(!r)return null;return migrate(JSON.parse(r));}catch(e){return null;}}
 let plan=load()||defaultPlan();
 let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{if(EMBED){postPlan();return;}try{localStorage.setItem(STORE,JSON.stringify(plan));}catch(e){}},300);}
@@ -922,8 +924,31 @@ async function runDescribe(){
   try{const r=await fetch('/api/structures/generate',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({description:txt,current:{shed:plan.shed,openings:plan.openings,items:plan.items}})});
     const b=await r.json().catch(()=>({}));
     if(!r.ok){descState={busy:false,err:true,warn:[],msg:b.signup?'signup':(b.error||'Could not build that one. Try rewording it.')};renderDescMsg();return;}
-    descDraft='';applyGenerated(b.plan);descState={busy:false,err:false,msg:'Done. Check the model, then tap any part to adjust it.',warn:b.plan.warnings||[]};renderDescMsg();
+    descDraft='';plan.planRooms=[];applyGenerated(b.plan);descState={busy:false,err:false,msg:'Done. Check the model, then tap any part to adjust it.',warn:b.plan.warnings||[]};renderDescMsg();
   }catch(e){descState={busy:false,err:true,warn:[],msg:'No connection. Try again.'};renderDescMsg();}}
+let planState={busy:false,msg:'',err:false,warn:[],rooms:[]};
+function loadPdfjs(){return new Promise((res,rej)=>{if(window.pdfjsLib)return res(window.pdfjsLib);const s=document.createElement('script');s.src='/planner/vendor/pdf.min.js';s.onload=()=>{try{window.pdfjsLib.GlobalWorkerOptions.workerSrc='/planner/vendor/pdf.worker.min.js';res(window.pdfjsLib);}catch(e){rej(e);}};s.onerror=rej;document.head.appendChild(s);});}
+async function fileToImage(file){const MAX=2200;let src,w,hh;
+  if(file.type==='application/pdf'||/\.pdf$/i.test(file.name)){const lib=await loadPdfjs();const pdf=await lib.getDocument({data:await file.arrayBuffer()}).promise;const pg=await pdf.getPage(1);const v1=pg.getViewport({scale:1});const sc=Math.min(4,MAX/Math.max(v1.width,v1.height));const vp=pg.getViewport({scale:sc});
+    const c=document.createElement('canvas');c.width=Math.round(vp.width);c.height=Math.round(vp.height);const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);await pg.render({canvasContext:g,viewport:vp}).promise;src=c;w=c.width;hh=c.height;}
+  else{const url=URL.createObjectURL(file);try{src=await new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=url;});}finally{setTimeout(()=>URL.revokeObjectURL(url),1000);}w=src.naturalWidth;hh=src.naturalHeight;}
+  let scale=Math.min(1,MAX/Math.max(w,hh)),q=0.85,out='';
+  for(let i=0;i<5;i++){const c=document.createElement('canvas');c.width=Math.round(w*scale);c.height=Math.round(hh*scale);const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(src,0,0,c.width,c.height);out=c.toDataURL('image/jpeg',q);if(out.length<3800000)break;scale*=0.8;q=Math.max(0.6,q-0.08);}
+  return out;}
+async function runPlan(file){if(!file||planState.busy)return;
+  if(file.size>25*1024*1024){planState={busy:false,err:true,msg:'That file is over 25 MB. Export one page or take a smaller photo.',warn:[],rooms:[]};renderPlanMsg();return;}
+  planState={busy:true,err:false,msg:'Reading the plan. This takes about 20 seconds...',warn:[],rooms:[]};renderPlanMsg();
+  try{const image=await fileToImage(file);
+    const r=await fetch('/api/structures/from-plan',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({image,notes:(descDraft||'').trim()})});
+    const b=await r.json().catch(()=>({}));
+    if(!r.ok){planState={busy:false,err:true,warn:[],rooms:[],msg:b.signup?'signup':(b.error||'Could not read that plan.')};renderPlanMsg();return;}
+    plan.planRooms=b.plan.rooms||[];applyGenerated(b.plan);
+    const conf={high:'',medium:' Some sizes were hard to read, so check them against the drawing.',low:' The dimensions were hard to read. Check every size before you price it.'}[b.plan.confidence]||'';
+    planState={busy:false,err:b.plan.confidence==='low',msg:`Built from ${file.name}.${conf}`,warn:b.plan.warnings||[],rooms:b.plan.rooms||[]};renderPlanMsg();
+  }catch(e){planState={busy:false,err:true,warn:[],rooms:[],msg:'Could not open that file. Try a JPG or PNG.'};renderPlanMsg();}}
+function renderPlanMsg(){const el=$('#planMsg');if(!el)return;const s=planState;const b=$('#planPick');if(b){b.disabled=s.busy;b.textContent=s.busy?'Reading...':'Upload a plan';}
+  if(s.msg==='signup'){el.className='descmsg';el.innerHTML='Building from a plan is part of Swiftscope. <a href="/signup" target="_top">Start a free trial</a> to use it.';return;}
+  el.className='descmsg'+(s.err?' err':'');el.innerHTML=esc(s.msg||'')+(s.warn.length?`<ul>${s.warn.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>`:'')+(s.rooms.length?`<p style="margin:6px 0 0">Rooms on the plan: ${s.rooms.map(r=>esc(r.name)+(r.width&&r.length?` ${fm(r.width/1000,1)} × ${fm(r.length/1000,1)} m`:'')).join(', ')}</p>`:'');}
 function renderDescMsg(){const el=$('#descMsg');if(!el)return;const s=descState;const go=$('#descGo');if(go){go.disabled=s.busy;go.textContent=s.busy?'Building...':'Build it';}
   if(s.msg==='signup'){el.className='descmsg';el.innerHTML='Describe-to-build is part of Swiftscope. <a href="/signup" target="_top">Start a free trial</a> to use it, or start from a template below.';return;}
   el.className='descmsg'+(s.err?' err':'');el.innerHTML=esc(s.msg||'')+(s.warn&&s.warn.length?`<ul>${s.warn.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>`:'');}
@@ -941,6 +966,7 @@ function startHTML(){
   const opts=`<option value="" selected>Choose a template</option>`+(BIZ_TEMPLATES.length?`<optgroup label="Your templates">${BIZ_TEMPLATES.map(t=>`<option value="b:${esc(t.id)}">${esc(t.name)}</option>`).join('')}</optgroup>`:'')+`<optgroup label="Starter templates">${Object.entries(TEMPLATES).map(([k,v])=>`<option value="s:${k}">${v.n}</option>`).join('')}</optgroup>`;
   return `<div class="desc"><h3>Describe the build</h3><textarea id="descIn" placeholder="e.g. 6 x 9 m Colorbond workshop, 3 m walls, 3 m wide roller door at the front, two windows on the left, 125 mm slab. Or describe a change: make it 1 m longer and add a door on the right." aria-label="Describe the build">${esc(descDraft)}</textarea>
   <div class="btns"><button class="primary" id="descGo">Build it</button>${micSupported()?'<button class="btn" id="descMic" type="button">Speak</button>':''}</div><div class="descmsg" id="descMsg"></div></div>
+  <h3>Or build from a plan</h3><div class="upl"><input type="file" id="planFile" accept="image/*,application/pdf" hidden><button class="btn" id="planPick" type="button">Upload a plan</button><span class="note">PDF, JPG or PNG. Floor plans, kit drawings or a photo of a sketch with dimensions. Anything typed above is sent as notes.</span></div><div class="descmsg" id="planMsg"></div>
   <h3>Or start from a template</h3><div class="tpl"><select id="tplSel" aria-label="Template">${opts}</select><button class="btn" id="tplApply">Apply</button></div><p class="note" style="margin-top:0">${tplMsg?esc(tplMsg):'Replaces the size, roof, floor, walls and openings. Your prices stay.'}</p>
   ${EMBED?`<div class="savetpl"><input id="tplName" placeholder="Name this design" aria-label="Template name"><button class="btn" id="tplSave">Save as template</button></div><p class="note" style="margin-top:4px">Saved templates show up for everyone in your business.</p>`:''}`;}
 function renderShedTab(){
@@ -958,7 +984,7 @@ function renderShedTab(){
     h+='</label>';
   });
   h+=`<div class="summary" id="shedSummary"></div><p class="note">Sizes are external frame dimensions. Colours are approximate Colorbond shades.</p>`;
-  $('#tab-shed').innerHTML=h;updateShedTabState();renderDescMsg();
+  $('#tab-shed').innerHTML=h;updateShedTabState();renderDescMsg();renderPlanMsg();
 }
 function updateShedTabState(){
   const pi=$('#tab-shed [data-k="pitch"]');if(pi)pi.disabled=plan.shed.roof==='flat';
@@ -979,6 +1005,7 @@ let tplArmed=0;
 $('#tab-shed').addEventListener('click',e=>{
   if(e.target.id==='descGo'){runDescribe();return;}
   if(e.target.id==='descMic'){toggleMic(e.target);return;}
+  if(e.target.id==='planPick'){$('#planFile').click();return;}
   if(e.target.id==='tplSave'){const n=($('#tplName').value||'').trim();if(!n){$('#tplName').focus();return;}
     try{window.parent.postMessage({source:'ss-planner',type:'save-template',name:n,plan:Object.assign({},clone(plan),{selected:null}),summary:summary()},location.origin);}catch(_){}
     tplMsg='Saving template...';renderShedTab();return;}
@@ -987,6 +1014,7 @@ $('#tab-shed').addEventListener('click',e=>{
   if(Date.now()-tplArmed>4000){tplArmed=Date.now();e.target.textContent='Tap to confirm';return;}
   tplArmed=0;tplMsg='';applyTemplate(v);});
 $('#tab-shed').addEventListener('input',e=>{if(e.target.id==='descIn')descDraft=e.target.value;});
+$('#tab-shed').addEventListener('change',e=>{if(e.target.id==='planFile'){const f=e.target.files&&e.target.files[0];e.target.value='';runPlan(f);}});
 $('#tab-shed').addEventListener('keydown',e=>{if(e.target.id==='descIn'&&e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();runDescribe();}});
 $('#tab-shed').addEventListener('input',onShedInput);$('#tab-shed').addEventListener('change',onShedInput);
 function onShedChanged(){rebuildShed();renderPick();updateSelHelper();updateShedTabState();updateOpeningWarnings();renderItemList();scheduleMaterials();save();}
@@ -1393,7 +1421,7 @@ function plansHTML(){
   <tr><th>Walls</th><td>${WM.n}${S.wallMat==='ply'?'':', '+S.wallColor}</td></tr>
   <tr><th>Wall frame</th><td>${S.studSize} studs at ${S.studSpacing/10} cm centres</td></tr>
   <tr><th>Roof frame</th><td>${S.rafterSize} rafters at up to ${S.rafterSpacing/10} cm centres, 70 x 35 battens at up to ${S.battenSpacing/10} cm</td></tr>
-  <tr><th>Floor</th><td>${floorDesc()}</td></tr></table>
+  <tr><th>Floor</th><td>${floorDesc()}</td></tr>${(plan.planRooms||[]).length?`<tr><th>Rooms on the uploaded plan</th><td>${plan.planRooms.map(r=>esc(r.name)+(r.width&&r.length?` ${r.width/10} × ${r.length/10}`:'')).join(', ')}</td></tr>`:''}</table>
   <p class="warnbox">These are guide drawings made from the model, not engineered plans. Before building, check with council whether a permit is needed and how far the structure must sit from boundaries, confirm your wind region, and follow AS 1684 and the manufacturers’ instructions for bracing, tie-downs and fixings. Lodge a free Before You Dig Australia enquiry (byda.com.au) before digging.</p></section>`;
   h+=`<section class="sheet"><h2>1. Floor plan</h2>${floorPlanSVG(codes)}<h3 class="eh">Door and window schedule</h3>${scheduleHTML(codes)}</section>`;
   h+=`<section class="sheet"><h2>2. ${S.floor==='timber'?'Floor framing plan':S.floor==='slab'?'Slab plan':'Base plan'}</h2>${floorBaseSVG()}</section>`;
