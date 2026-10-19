@@ -299,7 +299,7 @@ export const SHED_PLANNER_FAQS = [
   },
   {
     q: "Where do the material quantities come from?",
-    a: "Every stud, plate, rafter, batten and sheet is counted from the model, then rounded up to common stock lengths. Change the size, roof, floor or openings and the list updates. Prices start from Bunnings online prices and you can replace any of them with your supplier's.",
+    a: "Every stud, plate, rafter, batten and sheet is counted from the model, then rounded up to common stock lengths. Change the size, roof, floor or openings and the list updates. Each line prices itself from your own material price list, and you can link any line to a different item or type a one-off price.",
   },
   {
     q: "How is the labour estimate worked out?",

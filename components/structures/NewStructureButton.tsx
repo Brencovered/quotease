@@ -118,7 +118,7 @@ export default function NewStructureButton({ clients, templates = [] }: { client
                 </option>
               ))}
             </select>
-            <p className="text-[12px] text-[var(--ink-faint)] mb-4">You can link a client later. Prices from your last build carry over.</p>
+            <p className="text-[12px] text-[var(--ink-faint)] mb-4">You can link a client later. Materials price from your own price list.</p>
             {templates.length > 0 && kind === "build" && (
               <>
                 <label className="block text-[12.5px] font-bold text-[var(--ink-soft)] mb-1">Start from</label>

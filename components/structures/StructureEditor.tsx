@@ -24,7 +24,7 @@ interface Props {
   businessId: string;
   isTemplate: boolean;
   templates: TemplateOption[];
-  priceBook: Array<{ label: string; unit_cost: number }>;
+  priceBook: Array<{ id: string; label: string; unit_cost: number; trade: string; supplier: string }>;
   initialName: string;
   initialClientId: string | null;
   linkedQuoteId: string | null;
