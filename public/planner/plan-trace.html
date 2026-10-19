@@ -1260,7 +1260,21 @@ function planBox(c0){const w=c0.width,h=c0.height;const px=c0.getContext('2d').g
   const X0=Math.max(0,Math.floor(x0-pad)),Y0=Math.max(0,Math.floor(y0-pad)),X1=Math.min(w,Math.ceil(x1+pad)),Y1=Math.min(h,Math.ceil(y1+pad));return {x:X0,y:Y0,w:X1-X0,h:Y1-Y0};}
 /* A sheet with more than one floor plan on it (ground and first floor side by side): split the thick wall ink into separate drawings.
    Each drawing's walls join up into one blob; blobs well apart are separate floors. Small blobs (a site plan inset, a detail) are left out. */
-function planBoxes(c0){planBox.M=null;planBox.T=0;const one=planBox(c0);const M=planBox.M;const w=c0.width,h=c0.height;if(!M)return [one];
+function planBoxes(c0){planBox.M=null;planBox.T=0;const one=planBox(c0);const M=planBox.M;const w=c0.width,h=c0.height;
+  // windows and doors break the wall ink into pieces: pieces closer than about three metres (eleven outside wall thicknesses) are one drawing
+  let got=M?splitBlobs(M,w,h,Math.max(Math.round(Math.min(w,h)/150)*3,(planBox.T||4)*11)):null;
+  // thin line plans (no filled walls) and blurry screenshots: split where a clean white gutter runs between two drawings
+  if(!got)got=gutterSplit(c0);
+  return got||[one];}
+function gutterSplit(c0){const w=c0.width,h=c0.height;const px=c0.getContext('2d').getImageData(0,0,w,h).data;const ink=new Uint8Array(w*h);for(let i=0,j=0;i<w*h;i++,j+=4)ink[i]=(0.3*px[j]+0.59*px[j+1]+0.11*px[j+2])<200?1:0;
+  const cut=(n,m,at)=>{const cnt=new Uint32Array(n);for(let a=0;a<n;a++){let c=0;for(let b=0;b<m;b++)c+=at(a,b);cnt[a]=c;}const tol=Math.max(0,Math.floor(m*0.002));let lo=0,hi=n-1;while(lo<n&&cnt[lo]<=tol)lo++;while(hi>lo&&cnt[hi]<=tol)hi--;if(hi-lo<20)return null;
+    const minGap=Math.max(3,Math.round((hi-lo)*0.015));const parts=[];let s0=lo,run=0;for(let a=lo;a<=hi+1;a++){const blank=a>hi||cnt[a]<=tol;if(blank)run++;else{if(run>=minGap&&a-run>s0){parts.push([s0,a-run]);s0=a;}else if(run>=minGap)s0=a;run=0;}}parts.push([s0,hi+1]);
+    const mass=parts.map(([p,q])=>{let t=0;for(let a=p;a<q;a++)t+=cnt[a];return t;});const big=Math.max(...mass);const keep=parts.filter((p,i)=>mass[i]>=big*0.3&&(p[1]-p[0])>=(hi-lo)*0.15);return keep.length>=2&&keep.length<=6?keep:null;};
+  const box=(x0,x1,y0,y1)=>{let a=y1,b=y0,c=x1,d=x0;for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++)if(ink[y*w+x]){if(y<a)a=y;if(y>b)b=y;if(x<c)c=x;if(x>d)d=x;}const pw=Math.round((d-c)*0.06),ph=Math.round((b-a)*0.06);return {x:Math.max(x0,c-pw),y:Math.max(0,a-ph),w:Math.min(x1,d+pw+1)-Math.max(x0,c-pw),h:Math.min(h,b+ph+1)-Math.max(0,a-ph)};};
+  const cols=cut(w,h,(x,y)=>ink[y*w+x]);if(cols)return cols.map(([p,q])=>{const b=box(p,q,0,h);return b;});
+  const rows=cut(h,w,(y,x)=>ink[y*w+x]);if(rows)return rows.map(([p,q])=>{let a=w,b=0;for(let y=p;y<q;y++)for(let x=0;x<w;x++)if(ink[y*w+x]){if(x<a)a=x;if(x>b)b=x;}const ph=Math.round((q-p)*0.06),pw=Math.round((b-a)*0.06);return {x:Math.max(0,a-pw),y:Math.max(0,p-ph),w:Math.min(w,b+pw+1)-Math.max(0,a-pw),h:Math.min(h,q+ph)-Math.max(0,p-ph)};});
+  return null;}
+function splitBlobs(M,w,h,gapMax){
   const g=Math.max(4,Math.round(Math.min(w,h)/150));const gw=Math.ceil(w/g),gh=Math.ceil(h/g);const occ=new Uint32Array(gw*gh);
   for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(M[y*w+x])occ[((y/g)|0)*gw+((x/g)|0)]++;
   const on=new Uint8Array(gw*gh);const R=2;for(let y=0;y<gh;y++)for(let x=0;x<gw;x++)if(occ[y*gw+x])for(let dy=-R;dy<=R;dy++)for(let dx=-R;dx<=R;dx++){const X=x+dx,Y=y+dy;if(X>=0&&Y>=0&&X<gw&&Y<gh)on[Y*gw+X]=1;}
@@ -1269,28 +1283,31 @@ function planBoxes(c0){planBox.M=null;planBox.T=0;const one=planBox(c0);const M=
     while(st.length){const j=st.pop();const x=j%gw,y=(j-x)/gw;m+=occ[j];if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;
       const nb=[x>0?j-1:-1,x<gw-1?j+1:-1,y>0?j-gw:-1,y<gh-1?j+gw:-1];for(const k of nb)if(k>=0&&on[k]&&!lab[k]){lab[k]=id;st.push(k);}}
     comps.push({m,x0:x0*g,x1:(x1+1)*g,y0:y0*g,y1:(y1+1)*g});}
-  // windows and doors break the wall ink into pieces: pieces closer than about three metres (eleven outside wall thicknesses) are one drawing
-  const gapMax=Math.max(g*3,(planBox.T||4)*11);let merged=true;while(merged&&comps.length>1){merged=false;
+  let merged=true;while(merged&&comps.length>1){merged=false;
     for(let i=0;i<comps.length&&!merged;i++)for(let j=i+1;j<comps.length;j++){const a=comps[i],b=comps[j];const dx=Math.max(0,a.x0-b.x1,b.x0-a.x1),dy=Math.max(0,a.y0-b.y1,b.y0-a.y1);
       if(Math.max(dx,dy)<gapMax){comps[i]={m:a.m+b.m,x0:Math.min(a.x0,b.x0),x1:Math.max(a.x1,b.x1),y0:Math.min(a.y0,b.y0),y1:Math.max(a.y1,b.y1)};comps.splice(j,1);merged=true;break;}}}
-  if(comps.length<2)return [one];const big=Math.max(...comps.map(c=>c.m));
-  const keep=comps.filter(c=>c.m>=big*0.3&&Math.min(c.x1-c.x0,c.y1-c.y0)>=Math.min(w,h)*0.08);if(keep.length<2||keep.length>6)return [one];
+  if(comps.length<2)return null;const big=Math.max(...comps.map(c=>c.m));
+  const keep=comps.filter(c=>c.m>=big*0.3&&Math.min(c.x1-c.x0,c.y1-c.y0)>=Math.min(w,h)*0.08);if(keep.length<2||keep.length>6)return null;
   // a drawing may not hold its own floor plan: a wall blob inside another's box belongs to that drawing
-  if(keep.some((a,i)=>keep.some((b,j)=>i!==j&&a.x0<b.x1&&b.x0<a.x1&&a.y0<b.y1&&b.y0<a.y1)))return [one];
+  if(keep.some((a,i)=>keep.some((b,j)=>i!==j&&a.x0<b.x1&&b.x0<a.x1&&a.y0<b.y1&&b.y0<a.y1)))return null;
   return keep.map(c=>{const bw=c.x1-c.x0,bh=c.y1-c.y0;const pad=Math.max(bw,bh)*0.12;let X0=c.x0-pad,X1=c.x1+pad,Y0=c.y0-pad,Y1=c.y1+pad;
     // stop the padding short of the next drawing
     keep.forEach(o=>{if(o===c)return;const ovY=o.y0<Y1&&o.y1>Y0,ovX=o.x0<X1&&o.x1>X0;if(ovY){if(o.x0>=c.x1)X1=Math.min(X1,(c.x1+o.x0)/2);if(o.x1<=c.x0)X0=Math.max(X0,(c.x0+o.x1)/2);}if(ovX){if(o.y0>=c.y1)Y1=Math.min(Y1,(c.y1+o.y0)/2);if(o.y1<=c.y0)Y0=Math.max(Y0,(c.y0+o.y1)/2);}});
     X0=Math.max(0,Math.floor(X0));Y0=Math.max(0,Math.floor(Y0));X1=Math.min(w,Math.ceil(X1));Y1=Math.min(h,Math.ceil(Y1));return {x:X0,y:Y0,w:X1-X0,h:Y1-Y0,m:c.m};});}
 /* Every floor plan on the sheet, ground floor first. */
-async function detectPlans(){const U=doc.underlay;if(!U.src)return null;const c0=await srcToCanvas(U.src,2600);const boxes=planBoxes(c0);
+async function detectPlans(){const U=doc.underlay;if(!U.src)return null;let c0=await srcToCanvas(U.src,2600);
+  // a small image (a screenshot or a thumbnail) is blown up first, so a wall a couple of pixels thick still reads as a wall
+  const lg=Math.max(c0.width,c0.height);if(lg<1400){const f=Math.min(8,1600/lg);const cu=document.createElement('canvas');cu.width=Math.round(c0.width*f);cu.height=Math.round(c0.height*f);const g=cu.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,cu.width,cu.height);g.imageSmoothingQuality='high';g.drawImage(c0,0,0,cu.width,cu.height);c0=cu;}const boxes=planBoxes(c0);
   if(boxes.length<2){const r=await detectPlan(c0,boxes[0]);return r?[r]:null;}
-  const out=[];for(const B of boxes){const r=await detectPlan(c0,B,true);if(r&&r.outline.length>=3){r.box=B;out.push(r);}}
-  if(!out.length)return null;if(out.length===1)return out;
-  // ground floor: the biggest footprint (it carries the garage and the living areas); the rest in reading order, left to right then down
-  const area=r=>Math.abs(polyArea(r.outline));out.sort((a,b)=>area(b)-area(a));const g0=out.shift();
+  const k0=(U.w||c0.width)/c0.width,k1=(U.h||c0.height)/c0.height;
+  // keep every drawing, traced or not: a floor the walls could not be read on still gets its own floor to trace by hand
+  const out=[];for(const B of boxes){let r=null;try{r=await detectPlan(c0,B,true);}catch(e){r=null;}if(!r||r.outline.length<3)r={outline:[],walls:[],ops:[],areas:[],failed:true};r.box=B;r.ubox={x0:B.x*k0,x1:(B.x+B.w)*k0,y0:B.y*k1,y1:(B.y+B.h)*k1};out.push(r);}
+  if(!out.some(r=>!r.failed))return null;
+  // ground floor: the biggest drawing (it carries the garage and the living areas); the rest in reading order, left to right then down
+  const size=r=>r.box.w*r.box.h;out.sort((a,b)=>size(b)-size(a));const g0=out.shift();
   out.sort((a,b)=>{const ay=a.box.y+a.box.h/2,by=b.box.y+b.box.h/2;if(Math.abs(ay-by)>Math.min(a.box.h,b.box.h)/2)return ay-by;return a.box.x-b.box.x;});
-  // the floors on one sheet share one scale: the ground floor's
-  out.forEach(r=>{r.mmPerPx=g0.mmPerPx;});
+  // the floors on one sheet share one scale
+  const sc=(g0.failed?out.find(r=>!r.failed):g0).mmPerPx;out.concat([g0]).forEach(r=>{r.mmPerPx=sc;});
   return [g0].concat(out);}
 async function detectPlan(c0,B,many){const U=doc.underlay;
   // work on the drawing at 1500 to 2600 px on its long side, whatever size it was printed or scanned at
@@ -1395,33 +1412,34 @@ function labelLevel(r,labs){const W=doc.underlay.w,H=doc.underlay.h;doc.rooms=la
     doc.areas.push({id:uid(),type,name:lab.name,a:P[0],b:P[2],h:type==='deck'?600:null,board:'merbau',roof:'colorbond',t:100,bal:null});});}
 function finishOpenings(){doc.openings.forEach(o=>{if(o.wpx){o.width=Math.max(500,Math.round(o.wpx*doc.scale/10)*10);delete o.wpx;}});}
 async function autoTrace(manual){if(!doc.underlay.src){flash('Upload a plan first.');return;}if(aiBusy)return;aiBusy=true;renderPlanTab();flash('Finding the walls on your plan...');
-  try{const list=await detectPlans();const r=list&&list[0];const haveGeo=r&&r.outline.length>=3;const many=!!(list&&list.length>1);
+  try{const list=await detectPlans();const many=!!(list&&list.length>1);const r=list&&(list.find(x=>!x.failed)||list[0]);const haveGeo=r&&r.outline.length>=3;
     if(haveGeo){snapshot();doc.scale=r.mmPerPx;
       if(many){ensureLevels();const old=doc.levels;doc.levels=list.map((_,i)=>({id:(old[i]&&old[i].id)||uid(),name:(old[i]&&old[i].name)||LEVEL_NAMES[i]||('Level '+(i+1)),h:old[i]?old[i].h:null,shift:[0,0],data:levelData({})}));doc.level=0;loadLevelData(0);doc.site=null;
-        list.forEach((x,i)=>withLevel(i,()=>applyGeo(x,true)));}
+        list.forEach((x,i)=>{if(!x.failed)withLevel(i,()=>applyGeo(x,true));});}
       else applyGeo(r,doc.level>0);}
     let labels=null,signup=false;
     try{let image=doc.underlay.src;if(!/^data:image\/jpeg/.test(image)||image.length>3500000){const c=await srcToCanvas(image,2200);image=canvasToJpeg(c,3500000).url;}
       const res=await fetch('/api/structures/trace-draft',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({image})});const b=await res.json().catch(()=>({}));if(res.ok)labels=b.draft;else signup=!!b.signup;}catch(e){}
     if(!haveGeo){if(labels){applyDraft(labels);return;}flash(signup?'Could not find clear walls. Trace it with the Outline and Wall tools, or sign in to use AI.':'Could not find clear walls on this plan. Trace it with the Outline and Wall tools.');return;}
     let scaleNote='Scale estimated from the wall thickness. Set it on a labelled room for an exact takeoff.';
+    const UW=doc.underlay.w||0,UH=doc.underlay.h||0;const lowRes=UW&&Math.max(UW,UH)<900?`Your plan image is only ${UW} × ${UH} px, so thin walls get lost. Upload the PDF or a full size image for a sharper trace. `:'';
     if(labels&&labels.rooms){
       if(many){// each label goes to the drawing it sits in, or the nearest one
-        const W=doc.underlay.w,H=doc.underlay.h;const bxs=list.map(x=>bbox(x.outline));const per=list.map(()=>[]);
+        const W=doc.underlay.w,H=doc.underlay.h;const bxs=list.map(x=>x.failed?x.ubox:bbox(x.outline));const per=list.map(()=>[]);
         labels.rooms.forEach(rm=>{const p=[rm.x/1000*W,rm.y/1000*H];let bi=0,bd=Infinity;bxs.forEach((b,i)=>{const dx=Math.max(b.x0-p[0],0,p[0]-b.x1),dy=Math.max(b.y0-p[1],0,p[1]-b.y1);const d=Math.hypot(dx,dy);if(d<bd){bd=d;bi=i;}});per[bi].push(rm);});
-        list.forEach((x,i)=>withLevel(i,()=>labelLevel(x,per[i])));
-        const s=withLevel(0,()=>autoScale());if(s&&s/doc.scale>0.6&&s/doc.scale<1.6){doc.scale=s;scaleNote=`Scale set from the room sizes on the plan (1 m = ${fm(1000/s,0)} px).`;}}
+        list.forEach((x,i)=>{if(!x.failed)withLevel(i,()=>labelLevel(x,per[i]));});
+        const s=withLevel(list.findIndex(x=>!x.failed),()=>autoScale());if(s&&s/doc.scale>0.6&&s/doc.scale<1.6){doc.scale=s;scaleNote=`Scale set from the room sizes on the plan (1 m = ${fm(1000/s,0)} px).`;}}
       else{labelLevel(r,labels.rooms);const s=autoScale();if(s&&s/doc.scale>0.6&&s/doc.scale<1.6){doc.scale=s;scaleNote=`Scale set from the room sizes on the plan (1 m = ${fm(1000/s,0)} px).`;}}}
-    if(many){list.forEach((_,i)=>withLevel(i,finishOpenings));
+    if(many){list.forEach((x,i)=>{if(!x.failed)withLevel(i,finishOpenings);});
       // stack each floor over the one below it
-      let fits=[];for(let i=1;i<list.length;i++){const al=alignLevel(i);if(al){doc.levels[i].shift=al.shift;fits.push(al.fit);}}
-      const per=eachLevel(()=>({n:rooms().length,A:outlineArea(),w:doc.walls.length,o:doc.openings.length}));invalidate();changed(true);renderViews();setTool('select');
-      const weak=fits.some(f=>f<0.5);
-      flash(`Found ${list.length} floors on your plan: ${per.map((p,i)=>`${levelName(i).toLowerCase()} ${fm(p.A,0)} m², ${p.n} rooms`).join('; ')}. ${weak?'The upper floor did not line up cleanly over the one below. Switch to it and use Auto align or the nudge arrows.':'Upper floors are lined up over the floor below.'} ${scaleNote} Switch floors with the chips at the top.`);
+      let fits=[];for(let i=1;i<list.length;i++){if(list[i].failed||list[i-1].failed)continue;const al=alignLevel(i);if(al){doc.levels[i].shift=al.shift;fits.push(al.fit);}}
+      const per=eachLevel(()=>({n:doc.outline.length>=3?rooms().length:0,A:doc.outline.length>=3?outlineArea():0}));const lost=list.map((x,i)=>x.failed?levelName(i).toLowerCase():null).filter(Boolean);invalidate();changed(true);renderViews();setTool('select');
+      const weak=fits.some(f=>f<0.5);const lined=fits.length?(weak?null:'Upper floors are lined up over the floor below.'):'Once each floor is traced, use Auto align on the upper floor to stack it.';
+      flash(`${lowRes}Found ${list.length} floors on your plan: ${per.map((p,i)=>list[i].failed?`${levelName(i).toLowerCase()} not readable`:`${levelName(i).toLowerCase()} ${fm(p.A,0)} m², ${p.n} rooms`).join('; ')}. ${lost.length?`The walls on the ${lost.join(' and ')} were too faint or small to read: switch to it and trace it with Outline and Wall, or upload a sharper copy of the plan. `:''}${weak?'The upper floor did not line up cleanly over the one below. Switch to it and use Auto align or the nudge arrows.':lined} ${scaleNote} Switch floors with the chips at the top.`);
       return;}
     finishOpenings();
     invalidate();changed(true);setTool('select');const R=rooms();
-    flash(`Traced from your plan: ${R.length} rooms, ${doc.walls.length} internal walls, ${doc.openings.length} doors and windows${doc.areas.length?`, ${doc.areas.length} outdoor ${doc.areas.length===1?'area':'areas'}`:''}${doc.site?', the property boundary':''}. ${scaleNote} Check the room sizes in Rooms.`);}
+    flash(`${lowRes}Traced from your plan: ${R.length} rooms, ${doc.walls.length} internal walls, ${doc.openings.length} doors and windows${doc.areas.length?`, ${doc.areas.length} outdoor ${doc.areas.length===1?'area':'areas'}`:''}${doc.site?', the property boundary':''}. ${scaleNote} Check the room sizes in Rooms.`);}
   catch(e){console.error(e);flash('Auto trace failed on this file. Trace it with the Outline and Wall tools.');}
   finally{aiBusy=false;renderPlanTab();}}
 
