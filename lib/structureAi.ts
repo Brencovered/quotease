@@ -212,13 +212,15 @@ export type PlanRead = z.infer<typeof PlanReadSchema>;
 export const PLAN_READ_PROMPT = `${STRUCTURE_SYSTEM_PROMPT}
 
 You are reading an uploaded drawing: a floor plan, site plan, shed kit drawing or a hand sketch.
-- Use the written dimension strings, not pixel measurements. Australian plans are in millimetres unless marked otherwise ("6000" = 6 m).
-- Width = the external dimension of the front wall. The front is the side with the street, the main entry or the garage or roller door. Length = external dimension front to back.
+- Use the written numbers, not pixel measurements. Whole numbers like "6000" or "3220 X 4640" are millimetres. Numbers with decimals like "3.3 x 3.2" are metres; convert them to millimetres.
+- Many plans, especially sales and real estate plans, only label room sizes and have no overall dimension chains. That is enough: work out the overall size by adding up the rooms along each row and column of the plan. Room sizes are internal, so add about 90 mm for each internal wall and about 250 mm for each external wall (brick veneer) or 120 mm (lightweight cladding). Include the garage, laundry, robes and any unlabelled hallway in the footprint, estimating unlabelled areas from their size relative to labelled rooms.
+- Ignore decks, alfresco areas, porches, driveways, sheds, trees and boundary lines outside the main enclosed building, and mention them in warnings.
+- Width = the external dimension of the front wall. The front is the side with the street, the main entry, porch or garage door. Length = external dimension front to back.
 - If the outline is L-shaped or irregular, use the bounding rectangle of the main enclosed area for width and length, and say so in warnings.
 - Read wall height and roof pitch from elevations, sections or notes if shown. Otherwise use the defaults.
 - Place every external door, window and roller door on the right wall. Window codes like "1218" usually mean 1200 high x 1810 wide, and "0909" 900 x 900. Measure each opening's offset from the middle of its wall using the dimension chains.
 - List the rooms you can read with their sizes. Do not place internal walls.
-- Set confidence to low if there are no readable dimensions or the image is unclear, and say what is missing in warnings.`;
+- Set confidence to "medium" when the overall size came from adding up room sizes, "high" only when overall dimension chains are shown, and "low" only when there are no readable numbers at all. Always return your best estimate of the building, never an empty answer.`;
 
 export function normalizePlanRead(p: PlanRead) {
   const base = normalizeGeneratedPlan(p);

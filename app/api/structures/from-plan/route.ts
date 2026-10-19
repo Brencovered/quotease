@@ -49,8 +49,9 @@ export async function POST(req: NextRequest) {
         model,
         schema: PlanReadSchema,
         maxRetries: 0,
+        // AI SDK 7 rejects role "system" inside messages; the prompt goes in instructions.
+        instructions: PLAN_READ_PROMPT,
         messages: [
-          { role: "system", content: PLAN_READ_PROMPT },
           {
             role: "user",
             content: [
