@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeGeneratedPlan, type GeneratedPlan } from "./structureAi";
+import { normalizeGeneratedPlan, normalizePlanRead, type GeneratedPlan } from "./structureAi";
 
 const base: GeneratedPlan = {
   name: "Test",
@@ -52,5 +52,20 @@ describe("normalizeGeneratedPlan", () => {
   it("snaps item rotation and keeps items on the floor", () => {
     const n = normalizeGeneratedPlan({ ...base, items: [{ name: "Car", w: 4600, d: 1850, h: 1500, x: 99999, z: 0, rot: 100 }] });
     expect(n.items[0]).toMatchObject({ x: 3000, rot: 90, y: 0 });
+  });
+});
+
+describe("normalizePlanRead", () => {
+  it("keeps rooms, flags non-rectangular footprints, clamps rooms", () => {
+    const n = normalizePlanRead({
+      ...base,
+      footprint: "l_shape",
+      confidence: "medium",
+      rooms: [{ name: "Bed 1", width: 3600, length: 3000 }, { name: "", width: -5, length: 999999 }],
+    });
+    expect(n.rooms[0]).toEqual({ name: "Bed 1", width: 3600, length: 3000 });
+    expect(n.rooms[1]).toEqual({ name: "Room", width: 0, length: 50000 });
+    expect(n.warnings[0]).toMatch(/L-shaped/);
+    expect(n.confidence).toBe("medium");
   });
 });
