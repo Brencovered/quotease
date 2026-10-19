@@ -375,6 +375,12 @@ dialog::backdrop{background:rgba(10,15,20,.5);}
 .tray .tn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .tray .tp{font-variant-numeric:tabular-nums;font-weight:700;font-size:12.5px;}.tray .tp.none{font-weight:500;color:var(--muted);font-size:11.5px;}
 .tray .tsub{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:8px 8px 2px;}
+
+#ed .run{fill:none;stroke-linecap:round;stroke-linejoin:round;}
+#ed .run.on{filter:drop-shadow(0 0 3px #f2b705);}
+#ed .runpt{fill:#fff;stroke:#1f2a33;}
+#ed .runlab{font-weight:700;paint-order:stroke;stroke:#fff;stroke-width:3px;}
+.tray .tchk{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;margin-left:4px;}
 </style>
 </head>
 <body>
@@ -469,6 +475,19 @@ const ITEM_T={
   tap:{n:'Garden tap',c:'GT',sec:'plumb',m:'wall',h:500,match:['garden tap','hose tap','hose cock']},
   fw:{n:'Floor waste',c:'FW',sec:'plumb',m:'floor',match:['floor waste']}};
 /* The takeoff line a placed kind counts into, and what it prices at: the line's own link if the tradie set one, else a strict name match. */
+/* Cable and pipe runs a tradie draws along the model. h: the takeoff line a run measures; route: where it runs by default. */
+const RUN_T={
+  tps25:{n:'Power cable 2.5 mm²',sec:'elec',col:0xd23b2f,route:'ceil',match:['2.5mm','2.5 mm']},
+  tps15:{n:'Lighting cable 1.5 mm²',sec:'elec',col:0xf2a705,route:'ceil',match:['1.5mm','1.5 mm']},
+  cat6:{n:'Data cable Cat 6',sec:'elec',col:0x2f6fb0,route:'ceil',match:['cat6','cat 6','data cable']},
+  conduit:{n:'Conduit',sec:'elec',col:0x8d969e,route:'wall',match:['conduit']},
+  pex:{n:'Water pipe',sec:'plumb',col:0x2f9fd0,route:'floor',match:['pex','water pipe','copper pipe']},
+  dwv:{n:'Sewer and waste pipe',sec:'plumb',col:0x6b7c3a,route:'floor',match:['dwv','sewer pipe','waste pipe','pvc pipe']},
+  gas:{n:'Gas pipe',sec:'plumb',col:0xe0a800,route:'floor',match:['gas pipe']}};
+const RUN_GROUPS=[['elec','Electrical',['tps25','tps15','cat6','conduit']],['plumb','Plumbing',['pex','dwv','gas']]];
+function runDef(r){if(r.kind==='pb')return {n:r.n||'Price list item',sec:r.sec||'build',col:0x7a5cc2};return RUN_T[r.kind]||{n:r.kind,sec:'build',col:0x5b6770};}
+function runLen(r){let L=0;for(let i=1;i<r.pts.length;i++){const a=r.pts[i-1],b=r.pts[i];L+=Math.hypot(toM(b[0]-a[0]),toM(b[1]-a[1]),((b[2]||0)-(a[2]||0))/1000);}return L;}
+function runPrice(k){const d=RUN_T[k];if(!d)return null;const L=doc.links[`h:${d.sec}:${k}`];return L===undefined?PB.match({item:d.n,size:'',match:d.match,unit:'m',sec:d.sec,strict:true}):(L?PB.byId(L):null);}
 const kindKey=k=>`h:${ITEM_T[k].sec}:${k}`;
 function kindPrice(k){const d=ITEM_T[k];if(!d)return null;const L=doc.links[kindKey(k)];return L===undefined?PB.match({item:d.n,size:'',match:d.match,unit:'ea',sec:d.sec,strict:true}):(L?PB.byId(L):null);}
 /* A price list item placed on the plan looks like the closest built-in item, if its name says what it is. */
@@ -484,7 +503,7 @@ const SECTIONS={build:'Structure',floor:'Slab and floor',roof:'Roofing',line:'In
 function guessType(name){const n=String(name||'').toLowerCase();if(/ens/.test(n))return 'ens';if(/bath/.test(n))return 'bath';if(/\bwc\b|toilet|powder/.test(n))return 'wc';if(/laund|ldry/.test(n))return 'laundry';if(/kitch|meals/.test(n))return 'kitchen';if(/bed|master/.test(n))return 'bed';if(/garage|carport/.test(n))return 'garage';if(/robe|wir\b|store|pantry|ptry|linen/.test(n))return 'robe';if(/hall|entry|foyer|passage/.test(n))return 'hall';if(/study|office/.test(n))return 'study';if(/living|family|lounge|dining|rumpus|theatre|meals/.test(n))return 'living';return 'other';}
 
 /* ---------- document ---------- */
-function defaultDoc(){return {kind:'house',v:1,underlay:{src:null,path:null,w:0,h:0,opacity:0.55},scale:null,outline:[],walls:[],openings:[],rooms:[],site:null,photos:[],photoRead:null,
+function defaultDoc(){return {kind:'house',v:1,underlay:{src:null,path:null,w:0,h:0,opacity:0.55},scale:null,outline:[],walls:[],openings:[],rooms:[],site:null,photos:[],photoRead:null,runs:[],
   settings:{wallH:2400,extThk:250,intThk:90,extStud:'90x45',intStud:'90x35',studSp:450,extClad:'brick',roofType:'hip',pitch:22.5,eave:450,roofMat:'tiles',floor:'slab',slabT:100,lineGarage:false},
   prices:{},links:{},items:[],areas:[],waste:10,labour:{},labourRate:null,scope:null,draft:false};}
 function migrate(p){const d=defaultDoc();p=p||{};return Object.assign({},d,p,{kind:'house',underlay:Object.assign({},d.underlay,p.underlay||{}),settings:Object.assign({},d.settings,p.settings||{}),
@@ -555,7 +574,13 @@ function roomAt(p){return rooms().find(r=>pip(p,r.f.poly))||null;}
 /* ---------- 2D editor ---------- */
 const svg=$('#ed');const NS='http://www.w3.org/2000/svg';
 let view={x:0,y:0,k:1};let tool='select';let draft=[];let hover=null;let sel=null;let calibPts=[];let drag=null;
-const TOOLS=[['select','Select'],['outline','Outline'],['wall','Wall'],['door','Door'],['window','Window'],['slider','Slider'],['garage','Garage door'],['room','Name room'],['place','Place item'],['area','Deck or area'],['scale','Scale'],['erase','Erase']];
+const TOOLS=[['select','Select'],['outline','Outline'],['wall','Wall'],['door','Door'],['window','Window'],['slider','Slider'],['garage','Garage door'],['room','Name room'],['place','Place item'],['run','Run cable or pipe'],['area','Deck or area'],['scale','Scale'],['erase','Erase']];
+/* the run being drawn: points are [x, y, height mm] in plan units */
+let runKind='tps25',runPb=null,runMode=null,runDrops=true,runDraft=[],runHover=null;
+const runRoute=()=>runMode||(runPb?'wall':RUN_T[runKind].route);
+const runH=(hit)=>{const m=runRoute();return m==='ceil'?doc.settings.wallH:m==='floor'?0:(hit!=null?hit:300);};
+function finishRun(){if(runDraft.length<2){runDraft=[];return false;}let pts=runDraft.map(p=>p.slice());if(runRoute()==='ceil'&&runDrops){pts=[[pts[0][0],pts[0][1],300]].concat(pts,[[pts[pts.length-1][0],pts[pts.length-1][1],300]]);}
+  snapshot();const r=runPb?{id:uid(),kind:'pb',pb:runPb.id,n:runPb.n,sec:runPb.sec,pts}:{id:uid(),kind:runKind,pts};doc.runs.push(r);runDraft=[];changed(false);renderPlanTab();flash(`${runDef(r).n}: ${fm(runLen(r),1)} m run added. Tap to start the next run.`);return true;}
 let placeKind='gpo',placePb=null,areaType='deck';
 function fitView(){const r=svg.getBoundingClientRect();if(!r.width)return;const W=canvasW(),H=canvasH();let b={x0:0,y0:0,x1:W,y1:H};if(!doc.underlay.src&&doc.outline.length>=3){const bb=bbox(doc.outline);b={x0:bb.x0-60,y0:bb.y0-60,x1:bb.x1+60,y1:bb.y1+60};}
   const top=92,bot=r.width<820?150:110,side=16;const aw=r.width-2*side,ah=Math.max(120,r.height-top-bot);const k=Math.min(aw/(b.x1-b.x0),ah/(b.y1-b.y0));view={k,x:b.x0-(side+(aw-(b.x1-b.x0)*k)/2)/k,y:b.y0-(top+(ah-(b.y1-b.y0)*k)/2)/k};}
@@ -576,7 +601,7 @@ function snap(p,from,opts){opts=opts||{};const tol=12/view.k;let best=null;
 function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);(parent||svg).appendChild(e);return e;}
 function lenLabel(a,b){const sm=scaleMM();if(!sm)return '';const m=toM(dist(a,b));return m>=0.3?fm(m,2)+' m':'';}
 /* Stack the item palette and the hint above the toolbar, however many rows it wraps to. */
-function layoutOverlays(){const t=$('#tools'),pal=$('#palette'),hint=$('#hint');if(!t)return;if(hint)hint.style.visibility=tool==='place'?'hidden':'';const base=parseFloat(getComputedStyle(t).bottom)||12;let y=base+t.offsetHeight+8;if(pal&&!pal.hidden){pal.style.bottom=y+'px';y+=pal.offsetHeight+8;}if(hint)hint.style.bottom=y+'px';}
+function layoutOverlays(){const t=$('#tools'),pal=$('#palette'),hint=$('#hint');if(!t)return;if(hint)hint.style.visibility=tool==='place'||tool==='run'?'hidden':'';const base=parseFloat(getComputedStyle(t).bottom)||12;let y=base+t.offsetHeight+8;if(pal&&!pal.hidden){pal.style.bottom=y+'px';y+=pal.offsetHeight+8;}if(hint)hint.style.bottom=y+'px';}
 function draw(){layoutOverlays();const r=svg.getBoundingClientRect();svg.setAttribute('viewBox',`${view.x} ${view.y} ${r.width/view.k} ${r.height/view.k}`);svg.innerHTML='';const k=view.k;const sw=v=>v/k;
   const U=doc.underlay;if(U.src)el('image',{href:U.src,x:0,y:0,width:U.w,height:U.h,opacity:U.opacity,preserveAspectRatio:'none'});
   else{const g=el('g',{class:'grid'});const step=scaleMM()?1000/scaleMM():100;const x0=Math.floor(view.x/step)*step,y0=Math.floor(view.y/step)*step;for(let x=x0;x<view.x+r.width/k;x+=step)el('line',{x1:x,y1:view.y,x2:x,y2:view.y+r.height/k},g);for(let y=y0;y<view.y+r.height/k;y+=step)el('line',{x1:view.x,y1:y,x2:view.x+r.width/k,y2:y},g);}
@@ -600,6 +625,9 @@ function draw(){layoutOverlays();const r=svg.getBoundingClientRect();svg.setAttr
   R.forEach(rm=>{const c=rm.lab?rm.lab.pt:rm.centroid;const t=el('text',{x:c[0],y:c[1],class:'rlab','font-size':sw(13),'text-anchor':'middle'});t.textContent=rm.name;
     if(sm){const t2=el('text',{x:c[0],y:c[1]+sw(15),class:'rarea','font-size':sw(11),'text-anchor':'middle'});t2.textContent=fm(rm.area,1)+' m²'+(rm.expect?` (plan ${fm(rm.expect,1)})`:'');}});
   doc.rooms.filter(r=>!R.some(x=>x.lab===r)).forEach(r=>{const t=el('text',{x:r.pt[0],y:r.pt[1],class:'rlab orphan','font-size':sw(12),'text-anchor':'middle'});t.textContent=r.name+' (not in a room)';});
+  (doc.runs||[]).forEach(r=>{const d=runDef(r);const on=sel&&sel.kind==='run'&&sel.id===r.id;const col='#'+d.col.toString(16).padStart(6,'0');el('polyline',{points:r.pts.map(p=>p[0]+','+p[1]).join(' '),class:'run'+(on?' on':''),style:`stroke:${col}`,'stroke-width':sw(on?5:3.5)});
+    if(sm){const m=r.pts[Math.floor((r.pts.length-1)/2)],m2=r.pts[Math.ceil((r.pts.length-1)/2)];const t=el('text',{x:(m[0]+m2[0])/2,y:(m[1]+m2[1])/2-sw(6),class:'runlab','font-size':sw(11),'text-anchor':'middle',style:`fill:${col}`});t.textContent=`${fm(runLen(r),1)} m`;}});
+  if(tool==='run'&&runDraft.length){const pts=runDraft.concat(hover?[[hover[0],hover[1]]]:[]);const d=runPb?{col:0x7a5cc2}:RUN_T[runKind];el('polyline',{points:pts.map(p=>p[0]+','+p[1]).join(' '),class:'run draft',style:`stroke:#${d.col.toString(16).padStart(6,'0')}`,'stroke-width':sw(3.5),'stroke-dasharray':`${sw(8)} ${sw(5)}`});runDraft.forEach(p=>el('circle',{cx:p[0],cy:p[1],r:sw(4),class:'runpt'}));}
   doc.items.forEach(it=>{const d=itemDef(it);const on=sel&&sel.kind==='item'&&sel.id===it.id;const g=el('g',{class:'pit '+d.sec+(on?' on':'')});el('circle',{cx:it.pt[0],cy:it.pt[1],r:sw(10)},g);const t=el('text',{x:it.pt[0],y:it.pt[1]+sw(3.6),'font-size':sw(9.5),'text-anchor':'middle'},g);t.textContent=d.c;});
   // draft + handles
   if(draft.length){const pts=hover?[...draft,hover]:draft;el('polyline',{points:pts.map(p=>p.join(',')).join(' '),class:'draft','stroke-width':sw(2.5)});
@@ -620,6 +648,7 @@ function renderHint(){const h=$('#hint');if(!h)return;const sm=scaleMM();const m
   scale:calibPts.length<2?'Tap both ends of something with a known size, like the width of a labelled room.':'Type the real length below.',erase:'Tap a wall, door, window, room name or corner to remove it.'}[tool]||'';
   h.innerHTML=(!sm?'<b>Set the scale first.</b> ':'')+esc(m);}
 function hitTest(p){const tol=10/view.k;
+  for(let i=(doc.runs||[]).length-1;i>=0;i--){const r=doc.runs[i];for(let j=1;j<r.pts.length;j++){const a=r.pts[j-1],b=r.pts[j];const q=lerp(a,b,projT(p,a,b));if(dist(p,q)<tol*0.8)return {kind:'run',id:r.id};}}
   for(let i=doc.items.length-1;i>=0;i--){const it=doc.items[i];if(dist(p,it.pt)<tol*1.2)return {kind:'item',id:it.id};}
   const sa=sel&&sel.kind==='area'?doc.areas.find(a=>a.id===sel.id):null;if(sa){const P=areaPoly(sa);for(let i=0;i<4;i++)if(dist(p,P[i])<tol*1.2)return {kind:'acorner',id:sa.id,i};}
   for(const o of doc.openings){const h=hostOf(o);const c=h?lerp(h.s.a,h.s.b,h.t):o.pt;if(dist(p,c)<Math.max(tol,(o.width/(scaleMM()||10))/2))return {kind:'op',id:o.id};}
@@ -642,6 +671,7 @@ svg.addEventListener('pointerdown',ev=>{svg.setPointerCapture(ev.pointerId);poin
   if(tool==='wall'){const s=snap(p,draft[draft.length-1],{free:ev.shiftKey});if(draft.length&&dist(s,draft[draft.length-1])<4/view.k){draft=[];draw();return;}if(draft.length){snapshot();doc.walls.push({id:uid(),a:draft[draft.length-1].slice(),b:s.slice()});draft=[s];changed(false);}else draft=[s];draw();return;}
   if(OPEN_T[tool]){addOpening(tool,p);return;}
   if(tool==='place'){snapshot();const it=placePb?{id:uid(),kind:'pb',pb:placePb.id,n:placePb.n,sec:placePb.sec,pt:p}:{id:uid(),kind:placeKind,pt:p};doc.items.push(it);sel={kind:'item',id:it.id};changed(false);renderPlanTab();return;}
+  if(tool==='run'){if(!scaleMM()){flash('Set the scale first.');return;}const s=snap(p,runDraft.length?runDraft[runDraft.length-1]:null,{free:ev.shiftKey});if(runDraft.length&&dist(s,runDraft[runDraft.length-1])<6/view.k){finishRun();return;}runDraft.push([s[0],s[1],runH()]);renderPalette();draw();return;}
   if(tool==='area'){if(!scaleMM()){flash('Set the scale first.');return;}const s=snap(p,null,{free:true});drag={newArea:{a:s.slice(),b:s.slice()}};draw();return;}
   if(tool==='scale'){const s=snap(p,calibPts[0],{free:ev.shiftKey});if(calibPts.length>=2)calibPts=[];calibPts.push(s);if(calibPts.length===2)showCalib();draw();return;}
   if(tool==='room'){const rm=rooms().find(r=>pip(p,r.f.poly));if(!rm){flash('Tap inside a room. Draw the outline and walls first.');return;}
@@ -675,13 +705,14 @@ svg.addEventListener('pointermove',ev=>{if(pointers.has(ev.pointerId))pointers.s
   if(drag&&drag.newArea){drag.newArea.b=snap(p,null,{free:true});draw();return;}
   if(drag&&drag.acorner){const q=snap(p,null,{free:true});drag.acorner.a=drag.fixed.slice();drag.acorner.b=q;draw();return;}
   if(drag&&drag.amove){const dx=p[0]-drag.start[0],dy=p[1]-drag.start[1];drag.amove.a=[drag.a0[0]+dx,drag.a0[1]+dy];drag.amove.b=[drag.b0[0]+dx,drag.b0[1]+dy];draw();return;}
+  if(tool==='run'){hover=snap(p,runDraft.length?runDraft[runDraft.length-1]:null,{free:ev.shiftKey});draw();return;}
   if(tool==='place'||tool==='area'){hover=tool==='area'?snap(p,null,{free:true}):p;draw();return;}
   if(['outline','wall','scale'].includes(tool)||OPEN_T[tool]||tool==='room'){hover=tool==='scale'?snap(p,calibPts[0],{free:ev.shiftKey}):(tool==='outline'||tool==='wall')?snap(p,draft[draft.length-1],{free:ev.shiftKey}):p;draw();}});
 function endPointer(ev){pointers.delete(ev.pointerId);if(pointers.size<2)pinch=null;
   if(drag&&drag.newArea){const P=areaPoly(drag.newArea);const ok=toM(P[1][0]-P[0][0])>=0.6&&toM(P[2][1]-P[1][1])>=0.6;if(ok){snapshot();const ar={id:uid(),type:areaType,a:P[0],b:P[2],h:areaType==='deck'?600:null,board:'merbau',roof:'colorbond',t:100,bal:null};doc.areas.push(ar);sel={kind:'area',id:ar.id};drag=null;setTool('select');changed(true);switchTab('plan');return;}drag=null;flash('Drag from one corner to the opposite corner.');draw();return;}
   if(drag&&(drag.pts||drag.op||drag.label||drag.item||drag.acorner||drag.amove)){changed(true);}drag=null;}
 svg.addEventListener('pointerup',endPointer);svg.addEventListener('pointercancel',endPointer);
-svg.addEventListener('dblclick',ev=>{if(tool==='outline'&&draft.length>=3)closeOutline();else if(tool==='wall'){draft=[];draw();}});
+svg.addEventListener('dblclick',ev=>{if(tool==='run'){finishRun();renderPalette();draw();return;}if(tool==='outline'&&draft.length>=3)closeOutline();else if(tool==='wall'){draft=[];draw();}});
 svg.addEventListener('contextmenu',ev=>{ev.preventDefault();if(tool==='wall'||tool==='outline'){draft=[];draw();}});
 svg.addEventListener('wheel',ev=>{ev.preventDefault();const r=svg.getBoundingClientRect();const cx=ev.clientX-r.left,cy=ev.clientY-r.top;const wx=view.x+cx/view.k,wy=view.y+cy/view.k;const k=Math.max(0.05,Math.min(40,view.k*Math.exp(-ev.deltaY*0.0015)));view={k,x:wx-cx/k,y:wy-cy/k};draw();},{passive:false});
 let spaceDown=false;
@@ -689,14 +720,14 @@ document.addEventListener('keydown',e=>{const ae=document.activeElement;if(ae&&/
   if(e.key===' '){spaceDown=true;return;}
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo();return;}
   if(e.key==='Escape'){draft=[];calibPts=[];hideCalib();sel=null;draw();renderPlanTab();return;}
-  if(e.key==='Enter'&&tool==='outline'){closeOutline();return;}
+  if(e.key==='Enter'&&tool==='outline'){closeOutline();return;}if(e.key==='Enter'&&tool==='run'){finishRun();renderPalette();draw();return;}if(e.key==='Escape'&&tool==='run'&&runDraft.length){runDraft=[];renderPalette();draw();if(VIEW==='3d')build3D();return;}
   if((e.key==='Delete'||e.key==='Backspace')&&sel){e.preventDefault();deleteSel();}});
 document.addEventListener('keyup',e=>{if(e.key===' ')spaceDown=false;});
-function deleteSel(){if(!sel)return;snapshot();if(sel.kind==='item')doc.items=doc.items.filter(x=>x.id!==sel.id);else if(sel.kind==='area')doc.areas=doc.areas.filter(x=>x.id!==sel.id);else if(sel.kind==='op')doc.openings=doc.openings.filter(o=>o.id!==sel.id);else if(sel.kind==='wall')doc.walls=doc.walls.filter(w=>w.id!==sel.id);else if(sel.kind==='room')doc.rooms=doc.rooms.filter(r=>r.id!==sel.id);sel=null;changed(true);}
+function deleteSel(){if(!sel)return;snapshot();if(sel.kind==='item')doc.items=doc.items.filter(x=>x.id!==sel.id);else if(sel.kind==='area')doc.areas=doc.areas.filter(x=>x.id!==sel.id);else if(sel.kind==='run')doc.runs=doc.runs.filter(x=>x.id!==sel.id);else if(sel.kind==='op')doc.openings=doc.openings.filter(o=>o.id!==sel.id);else if(sel.kind==='wall')doc.walls=doc.walls.filter(w=>w.id!==sel.id);else if(sel.kind==='room')doc.rooms=doc.rooms.filter(r=>r.id!==sel.id);sel=null;changed(true);}
 function confirmReplace(){if(confirmReplace.armed&&Date.now()-confirmReplace.armed<4000){confirmReplace.armed=0;return true;}confirmReplace.armed=Date.now();flash('There is already an outline. Tap again to start a new one, or use Select to adjust it.');return false;}
 let flashT;function flash(msg){const f=$('#flash');f.textContent=msg;f.hidden=false;clearTimeout(flashT);flashT=setTimeout(()=>{f.hidden=true;},Math.min(14000,Math.max(3500,msg.length*55)));}
-function setTool(t){tool=t;draft=[];calibPts=[];hideCalib();hover=null;document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===t));svg.style.cursor=t==='select'?'grab':'crosshair';if(VIEW==='3d'){$('#hint').hidden=false;renderHint();if(three&&three.ghost&&t!=='place')three.ghost.visible=false;if(three)three.renderer.domElement.style.cursor=t==='place'?'crosshair':'';}renderPalette();draw();}
-let VIEW='2d';const TOOLS3D=[['select','Look around'],['place','Place item']];
+function setTool(t){if(tool==='run'&&t!=='run'&&runDraft.length>1)finishRun();runDraft=[];tool=t;draft=[];calibPts=[];hideCalib();hover=null;document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===t));svg.style.cursor=t==='select'?'grab':'crosshair';if(VIEW==='3d'){$('#hint').hidden=false;renderHint();if(three&&three.ghost&&t!=='place')three.ghost.visible=false;if(three)three.renderer.domElement.style.cursor=t==='place'?'crosshair':'';}renderPalette();draw();}
+let VIEW='2d';const TOOLS3D=[['select','Look around'],['place','Place item'],['run','Run cable or pipe']];
 function renderToolbar(){$('#tools').innerHTML=(VIEW==='3d'?TOOLS3D:TOOLS).map(([k,n])=>`<button class="chip ${k===tool?'on':''}" data-tool="${k}">${n}</button>`).join('')+`<button class="chip" id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>`;}
 $('#tools').addEventListener('click',e=>{const b=e.target.closest('[data-tool]');if(b){setTool(b.dataset.tool);return;}if(e.target.id==='undoBtn')undo();});
 /* scale */
@@ -715,12 +746,13 @@ let trayTab=null,trayQ='',trayOpen=true;
 const SEC_LABEL={elec:'Electrical',plumb:'Plumbing'};
 function trayRow(k){const d=ITEM_T[k];const pb=kindPrice(k);const on=!placePb&&k===placeKind;return `<button class="trow ${on?'on':''}" data-pk="${k}"><i class="pit-i ${d.sec}">${d.c}</i><span class="tn">${esc(d.n)}</span><span class="tp ${pb?'':'none'}">${pb?money(pb.p):'Not in your list'}</span></button>`;}
 function pbRow(it){const on=placePb&&placePb.id===it.id;const sec=TRADE_SEC[it.t]||'build';return `<button class="trow ${on?'on':''}" data-pbid="${esc(it.id)}"><i class="pit-i ${sec}">$</i><span class="tn">${esc(it.n)}</span><span class="tp">${money(it.p)}</span></button>`;}
-function fillPalette(){const pal=$('#palette');if(!pal)return;if(tool!=='place'&&tool!=='area'){pal.hidden=true;return;}pal.hidden=false;
+function fillPalette(){const pal=$('#palette');if(!pal)return;if(tool!=='place'&&tool!=='area'&&tool!=='run'){pal.hidden=true;return;}pal.hidden=false;
   if(tool==='area'){pal.className='palette';pal.innerHTML=`<span class="pg">Draw a</span>`+Object.entries(AREA_T).map(([k,v])=>`<button class="chip ${k===areaType?'on':''}" data-atype="${k}">${v.n}</button>`).join('');return;}
+  if(tool==='run'){fillRunTray(pal);return;}
   pal.className='palette tray';const groups=paletteGroups();if(!trayTab)trayTab=groups[0][0];
   const cur=placePb?{c:'$',n:placePb.n,sec:placePb.sec,p:(PB.byId(placePb.id)||{}).p}:Object.assign({},ITEM_T[placeKind],{p:(kindPrice(placeKind)||{}).p});
   const where=placePb?'where it goes':ITEM_T[placeKind].m==='wall'?'the wall where it goes':ITEM_T[placeKind].m==='ceil'?(VIEW==='3d'?'the floor under where it hangs':'where it goes on the ceiling'):'the floor where it goes';
-  let h=`<div class="tcur"><i class="pit-i ${cur.sec}">${esc(cur.c)}</i><div><b>${esc(cur.n)}</b><small>${cur.p!=null?money(cur.p)+' from your price list. ':''}Tap ${where}.</small></div><button class="btn tdone" data-ttog="1">${trayOpen?'Hide list':'Change item'}</button><button class="btn tdone" data-tdone="1">Done</button></div>`;if(!trayOpen){pal.innerHTML=h;return;}
+  let h=`<div class="tcur"><i class="pit-i ${cur.sec}">${esc(cur.c)}</i><div><b>${esc(cur.n)}</b><small>${cur.p!=null?money(cur.p)+' from your price list. ':''}Tap ${where}.</small></div><button class="btn tdone" data-ttog="1">${trayOpen?'Hide list':'Change item'}</button></div>`;if(!trayOpen){pal.innerHTML=h;return;}
   h+=`<input type="search" class="tsearch" placeholder="Search items${PB.has()?' and your price list':''}" value="${esc(trayQ)}" aria-label="Search items">`;
   const q=trayQ.trim().toLowerCase();
   if(q){const ws=q.split(/\s+/);const kinds=Object.keys(ITEM_T).filter(k=>ws.every(w=>ITEM_T[k].n.toLowerCase().includes(w)));const pbs=PB.has()?PB.search(q,it=>it.u==='ea',30):[];
@@ -729,8 +761,25 @@ function fillPalette(){const pal=$('#palette');if(!pal)return;if(tool!=='place'&
     if(trayTab==='pb')h+=`<div class="tlist">${PB.search('',it=>it.u==='ea'&&(!USER_TRADES.length||USER_TRADES.includes(it.t)),80).map(pbRow).join('')||'<p class="note" style="padding:8px">Search to find items from other trades.</p>'}</div>`;
     else{const g=groups.find(x=>x[0]===trayTab)||groups[0];h+=`<div class="tlist">${g[2].map(trayRow).join('')}</div>`;}}
   pal.innerHTML=h;const inp=pal.querySelector('.tsearch');if(inp&&trayQ&&document.activeElement!==inp&&pal.dataset.focus==='1'){inp.focus();inp.setSelectionRange(trayQ.length,trayQ.length);}}
+function runRow(k){const d=RUN_T[k];const pb=runPrice(k);const on=!runPb&&k===runKind;return `<button class="trow ${on?'on':''}" data-rk="${k}"><i class="pit-i ${d.sec}" style="background:#${d.col.toString(16).padStart(6,'0')};color:#fff">—</i><span class="tn">${esc(d.n)}</span><span class="tp ${pb?'':'none'}">${pb?money(pb.p)+(pb.pack?` / ${pb.pack} m`:' / m'):'Not in your list'}</span></button>`;}
+function fillRunTray(pal){pal.className='palette tray';const pref=USER_TRADES.map(t=>TRADE_SEC[t]).filter(Boolean);const groups=RUN_GROUPS.slice().sort((a,b)=>(pref.includes(b[0])?1:0)-(pref.includes(a[0])?1:0));if(!trayTab||!(trayTab==='pb'||groups.some(g=>g[0]===trayTab)))trayTab=groups[0][0];
+  const d=runPb?{n:runPb.n,sec:runPb.sec,col:0x7a5cc2}:RUN_T[runKind];const pb=runPb?PB.byId(runPb.id):runPrice(runKind);const L=runDraft.length>1?runLen({pts:runDraft}):0;const route=runRoute();
+  let h=`<div class="tcur"><i class="pit-i ${d.sec}" style="background:#${d.col.toString(16).padStart(6,'0')};color:#fff">—</i><div><b>${esc(d.n)}</b><small>${pb?money(pb.p)+(pb.pack?` per ${pb.pack} m roll`:' per m')+' from your price list. ':''}${runDraft.length?`${fm(L,1)} m so far. Tap the next bend, tap the last point again to finish.`:'Tap where the run starts, then each bend.'}</small></div><button class="btn tdone" data-ttog="1">${trayOpen?'Hide list':'Change'}</button></div>`;
+  h+=`<div class="ttabs">${[['ceil','In the ceiling'],['wall','On the wall'],['floor','Under the floor']].map(([k,n])=>`<button class="ttab ${route===k?'on':''}" data-rmode="${k}">${n}</button>`).join('')}${route==='ceil'?`<label class="tchk"><input type="checkbox" data-rdrops="1" ${runDrops?'checked':''}> Drops at each end</label>`:''}</div>`;
+  if(runDraft.length)h+=`<div class="upl">${runDraft.length>1?'<button class="primary" data-rfin="1">Finish run</button>':''}<button class="btn" data-rundo="1">Undo point</button><button class="btn" data-rcancel="1">Cancel</button></div>`;
+  if(trayOpen){h+=`<div class="ttabs">${groups.map(([sec,name])=>`<button class="ttab ${trayTab===sec?'on':''}" data-ttab="${sec}">${name}</button>`).join('')}${PB.has()?`<button class="ttab ${trayTab==='pb'?'on':''}" data-ttab="pb">Your price list</button>`:''}</div>`;
+    if(trayTab==='pb')h+=`<input type="search" class="tsearch" placeholder="Search your cable and pipe" value="${esc(trayQ)}"><div class="tlist">${PB.search(trayQ,it=>it.u==='m',60).map(it=>`<button class="trow ${runPb&&runPb.id===it.id?'on':''}" data-rpb="${esc(it.id)}"><i class="pit-i ${TRADE_SEC[it.t]||'build'}">$</i><span class="tn">${esc(it.n)}</span><span class="tp">${money(it.p)}${it.pack?` / ${it.pack} m`:' / m'}</span></button>`).join('')||'<p class="note" style="padding:8px">No cable or pipe sold by the metre or roll in your list.</p>'}</div>`;
+    else{const g=groups.find(x=>x[0]===trayTab)||groups[0];h+=`<div class="tlist">${g[2].map(runRow).join('')}</div>`;}}
+  pal.innerHTML=h;}
+$('#palette').addEventListener('change',e=>{if(e.target.dataset.rdrops){runDrops=e.target.checked;}});
 $('#palette').addEventListener('input',e=>{if(e.target.classList.contains('tsearch')){trayQ=e.target.value;$('#palette').dataset.focus='1';renderPalette();const inp=$('#palette .tsearch');if(inp){inp.focus();inp.setSelectionRange(trayQ.length,trayQ.length);}}});
 $('#palette').addEventListener('click',e=>{const a=e.target.closest('[data-atype]');if(a){areaType=a.dataset.atype;renderPalette();return;}
+  const rk=e.target.closest('[data-rk]');if(rk){runKind=rk.dataset.rk;runPb=null;runMode=null;trayOpen=false;renderPalette();return;}
+  const rp=e.target.closest('[data-rpb]');if(rp){const it=PB.byId(rp.dataset.rpb);if(it){runPb={id:it.id,n:it.n,sec:TRADE_SEC[it.t]||'build'};trayOpen=false;renderPalette();}return;}
+  const rm=e.target.closest('[data-rmode]');if(rm){runMode=rm.dataset.rmode;runDraft.forEach(p=>{p[2]=runH(p[2]);});renderPalette();if(VIEW==='3d')build3D();return;}
+  if(e.target.closest('[data-rfin]')){finishRun();renderPalette();draw();if(VIEW==='3d')build3D();return;}
+  if(e.target.closest('[data-rundo]')){runDraft.pop();renderPalette();draw();if(VIEW==='3d')build3D();return;}
+  if(e.target.closest('[data-rcancel]')){runDraft=[];renderPalette();draw();if(VIEW==='3d')build3D();return;}
   if(e.target.closest('[data-tdone]')){trayOpen=true;setTool('select');return;}if(e.target.closest('[data-ttog]')){trayOpen=!trayOpen;renderPalette();return;}
   const tb=e.target.closest('[data-ttab]');if(tb){trayTab=tb.dataset.ttab;renderPalette();return;}
   const b=e.target.closest('[data-pk]');if(b){placeKind=b.dataset.pk;placePb=null;trayOpen=false;renderPalette();renderHint();return;}
@@ -832,8 +881,12 @@ function computeRows(){const rows=[],stages=[];if(!scaleMM()||doc.outline.length
   add('elec','Electrical','sw','Light switches','',why('sw',`${sw} switch plates`),sw,'ea',ITEM_T.sw.match);
   ['gpo1','usb','gpow','pend','xl','cfan','data','tv','ac','ev'].forEach(k=>add('elec','Electrical',k,ITEM_T[k].n,'',`${xk(k)} placed on the plan`,xk(k),'ea',ITEM_T[k].match));
   if(anyElec)add('elec','Electrical','board','Switchboard','With RCBOs and main switch','',1,'ea',['switchboard']);
-  add('elec','Electrical','tps25','Power cable','2.5 mm² TPS','About 8 m per point',Math.ceil(powerPts*8+xk('ac')*12),'m',['2.5mm','2.5 mm']);add('elec','Electrical','tps15','Lighting cable','1.5 mm² TPS','About 5 m per point',Math.ceil(lightPts*5),'m',['1.5mm','1.5 mm']);
-  add('elec','Electrical','cat6','Data and TV cable','Cat 6 and RG6','About 15 m per point',Math.ceil(dataPts*15),'m',['cat6','rg6','data cable']);
+  /* runs drawn on the model are measured; they replace the per-point estimate for that cable or pipe */
+  const rl={},rn={};(doc.runs||[]).forEach(r=>{if(r.kind==='pb')return;rl[r.kind]=(rl[r.kind]||0)+runLen(r);rn[r.kind]=(rn[r.kind]||0)+1;});
+  const runQ=(k,est)=>rl[k]!=null?Math.ceil(rl[k]*1.1):est;const runWhy=(k,estTxt)=>rl[k]!=null?`Measured on the model: ${rn[k]} ${rn[k]===1?'run':'runs'}, ${fm(rl[k],1)} m plus 10% for terminations`:estTxt;
+  add('elec','Electrical','tps25','Power cable','2.5 mm² TPS',runWhy('tps25','About 8 m per point'),runQ('tps25',Math.ceil(powerPts*8+xk('ac')*12)),'m',RUN_T.tps25.match);add('elec','Electrical','tps15','Lighting cable','1.5 mm² TPS',runWhy('tps15','About 5 m per point'),runQ('tps15',Math.ceil(lightPts*5)),'m',RUN_T.tps15.match);
+  add('elec','Electrical','conduit','Conduit','',runWhy('conduit',''),runQ('conduit',0),'m',RUN_T.conduit.match);
+  add('elec','Electrical','cat6','Data and TV cable','Cat 6 and RG6',runWhy('cat6','About 15 m per point'),runQ('cat6',Math.ceil(dataPts*15)),'m',['cat6','rg6','data cable']);
   add('elec','Electrical','cook','Cooktop and oven circuits','6 mm² and isolators','',R.some(r=>r.type==='kitchen')?1:0,'lot',['6mm']);
   stage('elec','h-erough','Electrical rough-in',pts?0.5*pts+2:0,'');stage('elec','h-efit','Electrical fit-off, test and certificate',pts?0.3*pts+(anyElec?9:0)+xk('ac')*3+xk('ev')*2:0,'Includes switchboard');
   /* plumbing */
@@ -841,8 +894,9 @@ function computeRows(){const rows=[],stages=[];if(!scaleMM()||doc.outline.length
   Object.entries(fx).forEach(([f,n])=>add('plumb','Fixtures',f,FIX_N[f],'',why(f,'Supply and fit, from the room types'),n,'ea',ITEM_T[f]?ITEM_T[f].match:[f]));
   add('plumb','Fixtures','tap','Garden taps','',`${xk('tap')} placed on the plan`,xk('tap'),'ea',ITEM_T.tap.match);
   add('plumb','Hot and cold','hws','Hot water unit','Heat pump or instantaneous gas',why('hws',''),cnt.hws!=null?cnt.hws:(nfx?1:0),'ea',ITEM_T.hws.match);
-  add('plumb','Hot and cold','pex','Water pipe and fittings','PEX or copper',`About 12 m per fixture`,Math.ceil(nfx*12),'m',['pex','water pipe']);
-  add('plumb','Drainage','dwv','Sewer and waste pipe','100 mm and 50 mm PVC DWV',`About 6 m per fixture`,Math.ceil(nfx*6),'m',['dwv','sewer pipe','pvc pipe']);
+  add('plumb','Hot and cold','pex','Water pipe and fittings','PEX or copper',runWhy('pex','About 12 m per fixture'),runQ('pex',Math.ceil(nfx*12)),'m',['pex','water pipe']);
+  add('plumb','Hot and cold','gas','Gas pipe','',runWhy('gas',''),runQ('gas',0),'m',RUN_T.gas.match);
+  add('plumb','Drainage','dwv','Sewer and waste pipe','100 mm and 50 mm PVC DWV',runWhy('dwv','About 6 m per fixture'),runQ('dwv',Math.ceil(nfx*6)),'m',['dwv','sewer pipe','pvc pipe']);
   add('plumb','Drainage','fw','Floor wastes','',why('fw','One per wet room'),pl('fw',wetR.length),'ea',ITEM_T.fw.match);
   stage('plumb','h-prough','Plumbing rough-in',nfx?4*nfx+4:0,'Under slab and in walls');stage('plumb','h-pfit','Plumbing fit-off',nfx?2*nfx+4:0,'Fixtures and hot water');
   /* paint */
@@ -879,13 +933,18 @@ function computeRows(){const rows=[],stages=[];if(!scaleMM()||doc.outline.length
       stage('outdoor','h-'+id,nm,0.9*G.A,'Excavate, base, lay and compact');}
     else if(ar.type==='slab'){const t=(+ar.t||100)/1000;add('outdoor',grp,id+'conc','Concrete','25 MPa',`${fm(G.A,1)} m² at ${t*1000} mm plus edges`,Math.ceil(G.A*(t+0.02)*10)/10,'m³',['concrete']);add('outdoor',grp,id+'mesh','Reinforcing mesh','SL72, 6.0 x 2.4 m','Includes laps',Math.ceil(G.A/(6*2.4*0.85)),'ea',['sl72','mesh']);
       add('outdoor',grp,id+'form','Edge formwork','',`${fm(G.per,1)} m`,Math.ceil(G.per),'m',['formwork']);stage('outdoor','h-'+id,nm,0.6*G.A+2,'Set out, form, mesh, pour, finish');}});
+  /* runs of a price list item */
+  const prl={};(doc.runs||[]).forEach(r=>{if(r.kind==='pb'&&r.pb){const e=prl[r.pb]||(prl[r.pb]={n:r.n,sec:r.sec||'build',L:0,c:0});e.L+=runLen(r);e.c++;}});
+  Object.entries(prl).forEach(([id,e])=>{const pb=PB.byId(id);rows.push({key:'r:'+id,sec:SECTIONS[e.sec]?e.sec:'build',group:'Runs from your price list',item:pb?pb.n:e.n,size:'',detail:`Measured on the model: ${e.c} ${e.c===1?'run':'runs'}, ${fm(e.L,1)} m plus 10%`,qty:Math.ceil(e.L*1.1),unit:'m',pu:'$/m',match:[],fixed:id});});
   /* items from the price list placed on the plan */
   const pbc={};doc.items.forEach(it=>{if(it.kind==='pb'&&it.pb){const e=pbc[it.pb]||(pbc[it.pb]={n:it.n,sec:it.sec||'build',q:0});e.q++;}});
   Object.entries(pbc).forEach(([id,e])=>{const pb=PB.byId(id);rows.push({key:'p:'+id,sec:SECTIONS[e.sec]?e.sec:'build',group:'Placed from your price list',item:pb?pb.n:e.n,size:'',detail:`${e.q} placed on the plan`,qty:e.q,unit:'ea',pu:'$ ea',match:[],fixed:id});});
-  rows.forEach(r=>{const m=/^h:(elec|plumb):(\w+)$/.exec(r.key);if(m&&ITEM_T[m[2]])r.strict=true;});
+  rows.forEach(r=>{const m=/^h:(elec|plumb):(\w+)$/.exec(r.key);if(m&&(ITEM_T[m[2]]||RUN_T[m[2]]))r.strict=true;});
   rows.forEach(r=>{const L=doc.links[r.key];r.auto=L===undefined&&!r.fixed;r.pb=r.fixed?(L===undefined?PB.byId(r.fixed):(L?PB.byId(L):null)):(L===undefined?PB.match(r):(L?PB.byId(L):null));r.order=`${r.qty} ${r.unit}`;
     // a price list item sold by a different unit prices the line in that unit (tiles per m² rather than each)
-    if(r.pb&&r.pb.u&&r.pb.u!==PB.baseUnit(r.unit)){if(r.alt&&r.alt[r.pb.u]!=null){r.order=`${r.order}, priced as ${r.alt[r.pb.u]} ${r.pb.u}`;r.qty=r.alt[r.pb.u];r.unit=r.pb.u;r.pu={'m':'$/m','m²':'$/m²','m³':'$/m³'}[r.unit];}else r.unitWarn=`Your item is sold per ${r.pb.u}, this line is counted in ${r.unit}.`;}});
+    if(r.pb&&r.pb.u&&r.pb.u!==PB.baseUnit(r.unit)){if(r.alt&&r.alt[r.pb.u]!=null){r.order=`${r.order}, priced as ${r.alt[r.pb.u]} ${r.pb.u}`;r.qty=r.alt[r.pb.u];r.unit=r.pb.u;r.pu={'m':'$/m','m²':'$/m²','m³':'$/m³'}[r.unit];}else r.unitWarn=`Your item is sold per ${r.pb.u}, this line is counted in ${r.unit}.`;}
+    // cable and pipe sold by the roll or coil: buy whole rolls
+    if(r.pb&&r.pb.pack&&r.unit==='m'){const n=Math.ceil(r.qty/r.pb.pack);r.order=`${r.qty} m, priced as ${n} × ${r.pb.pack} m ${/coil/i.test(r.pb.n)?'coil':'roll'}`;r.qty=n;r.unit='roll';r.pu='$ ea';}});
   return {rows,stages};}
 function norm2(s){return String(s||'').toLowerCase().replace(/ decking$/,'');}
 function priceOf(r){const v=doc.prices[r.key];if(v!==undefined&&v!==null&&v!==''&&isFinite(v))return +v;return r.pb?r.pb.p:0;}
@@ -951,6 +1010,7 @@ function renderPlanTab(){const U=doc.underlay;const sm=scaleMM();let h='';
   if(sel&&sel.kind==='op'){const o=doc.openings.find(x=>x.id===sel.id);if(o){h+=`<div class="card"><div class="cardh"><b>${OPEN_T[o.type].n}</b><button class="x" data-del="1" aria-label="Remove">✕</button></div><label class="row"><span>Type</span><select data-op="type">${Object.entries(OPEN_T).map(([k,v])=>`<option value="${k}" ${k===o.type?'selected':''}>${v.n}</option>`).join('')}</select></label><div class="grid2"><label>Width<span class="inp"><input type="number" data-op="width" value="${o.width}" step="10"><em>mm</em></span></label><label>Height<span class="inp"><input type="number" data-op="height" value="${o.height}" step="10"><em>mm</em></span></label>${o.type==='window'?`<label>Sill<span class="inp"><input type="number" data-op="sill" value="${o.sill}" step="10"><em>mm</em></span></label>`:''}</div>${hostOf(o)?'':'<p class="warn">Not on a wall. Drag it onto a wall.</p>'}</div>`;}}
   if(sel&&sel.kind==='item'){const it=doc.items.find(x=>x.id===sel.id);if(it){const d=itemDef(it);const rm=roomAt(it.pt);const grp=ITEM_GROUPS.find(g=>g[2].includes(it.kind));
     h+=`<div class="card"><div class="cardh"><b><i class="pit-i ${d.sec}">${d.c}</i> ${esc(d.n)}</b><button class="x" data-del="1" aria-label="Remove">✕</button></div><p class="note" style="margin:2px 0 6px">${rm?'In '+esc(rm.name):'Outside the rooms'}. Drag it on the plan to move it.</p>${grp?`<label class="row"><span>Item</span><select data-it="kind">${grp[2].map(k=>`<option value="${k}" ${k===it.kind?'selected':''}>${esc(ITEM_T[k].n)}</option>`).join('')}</select></label>`:''}<p class="note" style="margin:6px 0 0">Priced in Materials from your price list.</p></div>`;}}
+  if(sel&&sel.kind==='run'){const r=doc.runs.find(x=>x.id===sel.id);if(r){const d=runDef(r);h+=`<div class="card"><div class="cardh"><b>${esc(d.n)}</b><button class="x" data-del="1" aria-label="Remove">✕</button></div><p class="note" style="margin:2px 0 0">${sm?fm(runLen(r),1)+' m run':''}. Priced in Materials from your price list.</p></div>`;}}
   if(sel&&sel.kind==='area'){const ar=doc.areas.find(x=>x.id===sel.id);if(ar){const G=areaGeo(ar);const T=AREA_T[ar.type]||AREA_T.deck;
     h+=`<div class="card"><div class="cardh"><b>${esc(T.n)}${sm?`, ${fm(G.Lx,1)} × ${fm(G.Ly,1)} m`:''}</b><button class="x" data-del="1" aria-label="Remove">✕</button></div><p class="note" style="margin:2px 0 6px">${sm?`${fm(G.A,1)} m²${G.att>0.5?`, ${fm(G.att,1)} m along the house`:', free standing'}. `:''}Drag the green corners to size it.</p>
     <label class="row"><span>Type</span><select data-ar="type">${Object.entries(AREA_T).map(([k,v])=>`<option value="${k}" ${k===ar.type?'selected':''}>${v.n}</option>`).join('')}</select></label>`;
@@ -1283,13 +1343,21 @@ function backToWall(q,P,segsAll){let best=null;const pt=q;segsAll.forEach(sg=>{c
   if(!best||best.d<1e-4)return null;const nx=(pt[0]-best.pr[0])/best.d,nz=(pt[1]-best.pr[1])/best.d;const thk=(best.sg.ext?doc.settings.extThk:doc.settings.intThk)/1000;const face=best.sg.ext?0.02:thk/2+0.005;
   return {x:best.pr[0]+nx*face,z:best.pr[1]+nz*face,ang:Math.atan2(nx,nz)};}
 /* ---------- tap an item in Look around to see what it is ---------- */
+function ensurePop(){let pop=$('#v3pop');if(!pop){pop=document.createElement('div');pop.id='v3pop';pop.className='v3pop';$('#v3').appendChild(pop);
+    pop.addEventListener('click',e=>{if(e.target.closest('[data-pclose]')){pop.hidden=true;sel=null;build3D();return;}if(e.target.closest('[data-plink]')){const it2=doc.items.find(x=>x.id===pop.dataset.id);if(!it2||it2.kind==='pb')return;const d2=ITEM_T[it2.kind];const cur=kindPrice(it2.kind);PB.pick({title:d2.n,query:d2.match[0]||d2.n,sec:d2.sec,current:cur?cur.id:null,allowClear:true,filter:x=>x.u==='ea',onPick:x=>{snapshot();doc.links[kindKey(it2.kind)]=x?x.id:null;changed(false);const r=$('#v3').getBoundingClientRect();itemInfo(it2,{clientX:r.left+parseFloat(pop.style.left)-14,clientY:r.top+parseFloat(pop.style.top)+20});}});return;}if(e.target.closest('[data-pdel]')){const id=pop.dataset.id;snapshot();doc.items=doc.items.filter(x=>x.id!==id);sel=null;pop.hidden=true;changed(false);renderPlanTab();flash('Removed. Undo puts it back.');}});}return pop;}
+
 function itemInfo(it,ev){const d=itemDef(it);const rm=roomAt(it.pt);const pb=it.kind==='pb'?PB.byId(it.pb):kindPrice(it.kind);
-  let pop=$('#v3pop');if(!pop){pop=document.createElement('div');pop.id='v3pop';pop.className='v3pop';$('#v3').appendChild(pop);
-    pop.addEventListener('click',e=>{if(e.target.closest('[data-pclose]')){pop.hidden=true;sel=null;build3D();return;}if(e.target.closest('[data-plink]')){const it2=doc.items.find(x=>x.id===pop.dataset.id);if(!it2||it2.kind==='pb')return;const d2=ITEM_T[it2.kind];const cur=kindPrice(it2.kind);PB.pick({title:d2.n,query:d2.match[0]||d2.n,sec:d2.sec,current:cur?cur.id:null,allowClear:true,filter:x=>x.u==='ea',onPick:x=>{snapshot();doc.links[kindKey(it2.kind)]=x?x.id:null;changed(false);const r=$('#v3').getBoundingClientRect();itemInfo(it2,{clientX:r.left+parseFloat(pop.style.left)-14,clientY:r.top+parseFloat(pop.style.top)+20});}});return;}if(e.target.closest('[data-pdel]')){const id=pop.dataset.id;snapshot();doc.items=doc.items.filter(x=>x.id!==id);sel=null;pop.hidden=true;changed(false);renderPlanTab();flash('Removed. Undo puts it back.');}});}
+  const pop=ensurePop();
   const host=$('#v3').getBoundingClientRect();const x=Math.min(host.width-270,Math.max(10,ev.clientX-host.left+14)),y=Math.min(host.height-170,Math.max(60,ev.clientY-host.top-20));
   const how=d.m==='wall'?`On the wall at ${it.h||d.h||300} mm`:d.m==='ceil'?'On the ceiling':'On the floor';
   pop.innerHTML=`<div class="cardh"><b><i class="pit-i ${d.sec}">${esc(d.c)}</i> ${esc(d.n)}</b><button class="x" data-pclose="1" aria-label="Close">✕</button></div><p class="note" style="margin:2px 0 4px">${rm?'In '+esc(rm.name):'Outside the rooms'}. ${how}.</p>${pb?`<p class="note" style="margin:0 0 8px">Priced at <b>${money(pb.p)}</b>: ${esc(pb.n)}</p>`:`<p class="note" style="margin:0 0 8px">No price yet. Pick the item from your price list.</p>`}<div class="upl">${it.kind!=='pb'&&PB.has()?`<button class="btn" data-plink="1">${pb?'Change price':'Pick price'}</button>`:''}<button class="btn" data-pdel="1">Remove</button></div>`;
   pop.dataset.id=it.id;pop.style.left=x+'px';pop.style.top=y+'px';pop.hidden=false;sel={kind:'item',id:it.id};renderPlanTab();build3D();}
+
+function runInfo(r,ev){const d=runDef(r);const L=runLen(r);const pb=r.kind==='pb'?PB.byId(r.pb):runPrice(r.kind);const pop=ensurePop();
+  const host=$('#v3').getBoundingClientRect();const x=Math.min(host.width-270,Math.max(10,ev.clientX-host.left+14)),y=Math.min(host.height-170,Math.max(60,ev.clientY-host.top-20));
+  pop.innerHTML=`<div class="cardh"><b>${esc(d.n)}</b><button class="x" data-pclose="1" aria-label="Close">✕</button></div><p class="note" style="margin:2px 0 4px">${fm(L,1)} m run, ${r.pts.length-1} ${r.pts.length===2?'leg':'legs'}. The takeoff adds 10% for terminations.</p>${pb?`<p class="note" style="margin:0 0 8px">Priced at <b>${money(pb.p)}${pb.pack?` per ${pb.pack} m roll`:' per m'}</b>: ${esc(pb.n)}</p>`:`<p class="note" style="margin:0 0 8px">No price yet. Link it in Materials.</p>`}<div class="upl"><button class="btn" data-rdel="1">Remove</button></div>`;
+  pop.dataset.id=r.id;pop.style.left=x+'px';pop.style.top=y+'px';pop.hidden=false;sel={kind:'run',id:r.id};renderPlanTab();build3D();
+  pop.querySelector('[data-rdel]').onclick=()=>{snapshot();doc.runs=doc.runs.filter(z=>z.id!==r.id);sel=null;pop.hidden=true;changed(false);renderPlanTab();flash('Run removed. Undo puts it back.');};}
 
 /* ---------- 3D ---------- */
 let three=null;
@@ -1307,12 +1375,16 @@ function aim3D(ev){const T=three;if(!T||!scaleMM())return null;const r=T.rendere
   const n=hit.face?hit.face.normal.clone().transformDirection(hit.object.matrixWorld):new THREE.Vector3(0,1,0);const q=hit.point.clone().add(n.clone().multiplyScalar(0.06));const k=1000/scaleMM();
   const d=placePb?itemDef({kind:'pb',n:placePb.n,sec:placePb.sec}):ITEM_T[placeKind];const onWall=hit.object.userData.pick==='wall';
   return {hit,n,d,onWall,pt:[(q.x+T.cx)*k,(q.z+T.cz)*k],h:onWall&&d.m==='wall'?Math.round(Math.max(150,Math.min(T.H*1000-100,hit.point.y*1000))/10)*10:null};}
+function runTap3D(ev){const A=aim3D(ev);if(!A){flash('Tap a wall, floor or the ground.');return;}const h=runRoute()==='wall'?Math.round(Math.max(0,A.hit.point.y*1000)/10)*10:runH();const p=[A.pt[0],A.pt[1],h];
+  if(runDraft.length){const last=runDraft[runDraft.length-1];if(Math.hypot(toM(p[0]-last[0]),toM(p[1]-last[1]))<0.15){finishRun();renderPalette();build3D();return;}}runDraft.push(p);renderPalette();build3D();}
 function pick3D(ev){if(tool!=='place')return;const A=aim3D(ev);if(!A){flash('Tap a wall, floor or the ground near the house.');return;}
   if(A.d.m==='wall'&&!A.onWall){flash(`${A.d.n} goes on a wall. Tap the wall where it goes.`);return;}
   snapshot();const it=placePb?{id:uid(),kind:'pb',pb:placePb.id,n:placePb.n,sec:placePb.sec,pt:A.pt}:{id:uid(),kind:placeKind,pt:A.pt};if(A.h)it.h=A.h;
   doc.items.push(it);changed(false);renderPlanTab();flash(`${A.d.n} placed${it.h?` at ${it.h} mm`:''}. Tap again to place another, Undo to take it back.`);}
 /* A see-through copy of the item follows the pointer, so you can see where it will go before you tap. */
 let ghostKey=null;
+function runGhost3D(ev){const T=three;if(!T)return;if(T.rg){T.scene.remove(T.rg);T.rg.geometry.dispose();T.rg=null;}if(tool!=='run'||!ev||!runDraft.length)return;const A=aim3D(ev);if(!A)return;const last=runDraft[runDraft.length-1];const lq=T.P(last);
+  const h=runRoute()==='wall'?Math.max(0,A.hit.point.y):runH()/1000;const g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(lq[0],(last[2]||0)/1000+0.02,lq[1]),new THREE.Vector3(A.hit.point.x,h+0.02,A.hit.point.z)]);const ln=new THREE.Line(g,new THREE.LineDashedMaterial({color:0x1f2a33,dashSize:0.12,gapSize:0.08}));ln.computeLineDistances();T.rg=ln;T.scene.add(ln);}
 function ghost3D(ev){const T=three;if(!T)return;const A=tool==='place'&&ev?aim3D(ev):null;const key=placePb?'pb:'+placePb.id:placeKind;
   if(!A){if(T.ghost)T.ghost.visible=false;T.renderer.domElement.style.cursor=tool==='place'?'crosshair':'';return;}
   if(!T.ghost||ghostKey!==key){if(T.ghost)T.scene.remove(T.ghost);const g=itemModel(placePb?{id:'ghost',kind:'pb',n:placePb.n}:{id:'ghost',kind:placeKind});const gm=new THREE.MeshStandardMaterial({color:0xf2b705,transparent:true,opacity:0.6,emissive:0x664400});g.traverse(o=>{if(o.isMesh){o.material=gm;o.castShadow=false;o.userData={};}});g.userData={};T.ghost=g;ghostKey=key;T.scene.add(g);}
@@ -1323,11 +1395,12 @@ function ghost3D(ev){const T=three;if(!T)return;const A=tool==='place'&&ev?aim3D
   else{const w=T.P?backToWall([A.hit.point.x,A.hit.point.z],T.P,segs()):null;if(w){g.position.set(w.x,0,w.z);g.rotation.set(0,w.ang,0);}else{g.position.set(A.hit.point.x,0,A.hit.point.z);g.rotation.set(0,0,0);}}
   T.renderer.domElement.style.cursor=bad?'not-allowed':'crosshair';}
 let down3=null;
-function hook3D(){const T=three;if(!T||T.hooked)return;T.hooked=true;const el=T.renderer.domElement;el.addEventListener('pointerdown',e=>{down3=[e.clientX,e.clientY];});el.addEventListener('pointerup',e=>{if(down3&&Math.hypot(e.clientX-down3[0],e.clientY-down3[1])<6){if(tool==='place')pick3D(e);else identify3D(e);}down3=null;});
-  el.addEventListener('pointermove',e=>{if(e.buttons)return;ghost3D(e);});el.addEventListener('pointerleave',()=>ghost3D(null));}
+function hook3D(){const T=three;if(!T||T.hooked)return;T.hooked=true;const el=T.renderer.domElement;el.addEventListener('pointerdown',e=>{down3=[e.clientX,e.clientY];});el.addEventListener('pointerup',e=>{if(down3&&Math.hypot(e.clientX-down3[0],e.clientY-down3[1])<6){if(tool==='place')pick3D(e);else if(tool==='run')runTap3D(e);else identify3D(e);}down3=null;});
+  el.addEventListener('pointermove',e=>{if(e.buttons)return;ghost3D(e);runGhost3D(e);});el.addEventListener('pointerleave',()=>ghost3D(null));}
 /* Look around: tap an item to see what it is. */
 function identify3D(ev){const T=three;if(!T)return;const r=T.renderer.domElement.getBoundingClientRect();const v=new THREE.Vector2(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1);const rc=new THREE.Raycaster();rc.setFromCamera(v,T.camera);
-  const hit=rc.intersectObjects(T.root.children,true).find(h=>h.object.userData.itemId);const pop=$('#v3pop');
+  const any=rc.intersectObjects(T.root.children,true).find(h=>h.object.userData.itemId||h.object.userData.runId);if(any&&any.object.userData.runId){const r=doc.runs.find(x=>x.id===any.object.userData.runId);if(r)runInfo(r,ev);return;}
+  const hit=any;const pop=$('#v3pop');
   if(!hit){if(pop&&!pop.hidden){pop.hidden=true;if(sel&&sel.kind==='item'){sel=null;build3D();}}return;}const it=doc.items.find(x=>x.id===hit.object.userData.itemId);if(it)itemInfo(it,ev);}
 function build3D(){const T=init3D();if(!T)return;hook3D();const root=T.root;root.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose();});while(root.children.length)root.remove(root.children[0]);
   if(!scaleMM()||doc.outline.length<3)return;const S=doc.settings,H=S.wallH/1000;const b=bbox(doc.outline);const cx=toM((b.x0+b.x1)/2),cz=toM((b.y0+b.y1)/2);const P=p=>[toM(p[0])-cx,toM(p[1])-cz];
@@ -1356,6 +1429,11 @@ function build3D(){const T=init3D();if(!T)return;hook3D();const root=T.root;root
     else box(cx2,0.02,cz2,w,0.04,d,0,ar.type==='paving'?pave:conc);});
   /* property boundary */
   if(doc.site&&doc.site.length>=3){const lm=new THREE.MeshStandardMaterial({color:0x2e7d4f,roughness:0.8});const ps=doc.site.map(P);for(let i=0;i<ps.length;i++){const a=ps[i],c=ps[(i+1)%ps.length];const L=Math.hypot(c[0]-a[0],c[1]-a[1]);if(L<0.05)continue;box((a[0]+c[0])/2,0.06,(a[1]+c[1])/2,L,0.12,0.06,-Math.atan2(c[1]-a[1],c[0]-a[0]),lm);}}
+  /* cable and pipe runs */
+  const tube=(a,b,col,id,op)=>{const A=new THREE.Vector3(a[0],a[1],a[2]),B=new THREE.Vector3(b[0],b[1],b[2]);const L=A.distanceTo(B);if(L<0.01)return;const m=new THREE.Mesh(new THREE.CylinderGeometry(0.014,0.014,L,8),new THREE.MeshStandardMaterial({color:col,roughness:0.5,transparent:!!op,opacity:op||1}));m.position.copy(A).add(B).multiplyScalar(0.5);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),B.clone().sub(A).normalize());if(id)m.userData.runId=id;root.add(m);};
+  const W3=p=>{const q=P(p);return [q[0],(p[2]||0)/1000+0.02,q[1]];};
+  (doc.runs||[]).forEach(r=>{const d=runDef(r);const on=sel&&sel.kind==='run'&&sel.id===r.id;for(let i=1;i<r.pts.length;i++)tube(W3(r.pts[i-1]),W3(r.pts[i]),on?0xf2b705:d.col,r.id);});
+  if(tool==='run'&&runDraft.length){const d=runPb?{col:0x7a5cc2}:RUN_T[runKind];for(let i=1;i<runDraft.length;i++)tube(W3(runDraft[i-1]),W3(runDraft[i]),d.col,null,0.75);runDraft.forEach(p=>{const s=new THREE.Mesh(new THREE.SphereGeometry(0.035,12,8),new THREE.MeshStandardMaterial({color:0xffffff}));const w=W3(p);s.position.set(w[0],w[1],w[2]);root.add(s);});}
   /* placed items, as look-alike models */
   const segsAll=segs();
   doc.items.forEach(it=>{const d=itemDef(it);const q=P(it.pt);const g=itemModel(it);

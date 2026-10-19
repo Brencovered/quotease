@@ -13,7 +13,9 @@ const SEC_TRADES={build:['carpenter','builder'],floor:['concreter','builder'],ro
 function unitOf(label){const l=String(label||'').toLowerCase();if(/(per|\/)\s*(sqm|sq\.?\s?m|m2|m²|square met)/.test(l)||/\(per sqm\)/.test(l))return 'm²';if(/(per|\/)\s*(m3|m³|cubic)/.test(l))return 'm³';if(/(per|\/)\s*(lm|l\.m\.|lin(eal|ear)? ?m|metre|meter|m\b)/.test(l))return 'm';return 'ea';}
 /* Measured lines (m, m², m³) only take items sold the same way; counted lines (each, packs, bags) take items sold each. */
 function baseUnit(u){return /^(m|m²|m³)$/.test(u)?u:'ea';}
-function set(list){injectCss();ITEMS=(Array.isArray(list)?list:[]).map(x=>({id:String(x.id||x.label||''),n:String(x.label||''),l:norm(x.label),t:String(x.trade||''),s:String(x.supplier||''),p:+x.unit_cost||0,u:unitOf(x.label)})).filter(x=>x.n&&x.p>0&&!/^\[coming soon\]/i.test(x.n));ITEMS.forEach(x=>{x.tk=new Set(toks(x.n));});}
+/* Cable and pipe sold as a roll or coil: the length in the pack ("100m roll", "coil 50 m"). */
+function packOf(label){const l=String(label||'').toLowerCase();let m=/(\d+(?:\.\d+)?)\s?m(?:etre|etres|eter)?\b[^a-z0-9]{0,6}(?:roll|coil|reel|drum|box|pack|length)/.exec(l)||/\b(?:roll|coil|reel|drum)\b[^0-9]{0,12}(\d+(?:\.\d+)?)\s?m\b/.exec(l);return m?+m[1]:0;}
+function set(list){injectCss();ITEMS=(Array.isArray(list)?list:[]).map(x=>({id:String(x.id||x.label||''),n:String(x.label||''),l:norm(x.label),t:String(x.trade||''),s:String(x.supplier||''),p:+x.unit_cost||0,u:packOf(x.label)?'m':unitOf(x.label),pack:packOf(x.label)})).filter(x=>x.n&&x.p>0&&!/^\[coming soon\]/i.test(x.n));ITEMS.forEach(x=>{x.tk=new Set(toks(x.n));});}
 function has(){return ITEMS.length>0;}
 function byId(id){return id?ITEMS.find(x=>x.id===id)||null:null;}
 function tradesFor(sec){return SEC_TRADES[sec]||[];}
