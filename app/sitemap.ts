@@ -90,6 +90,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       "vehicle-cost",
       "ballpark-cost",
       "diy-materials",
+      "shed-planner",
     ].map((slug) => ({
       url: `${BASE_URL}/tools/${slug}`,
       changeFrequency: "monthly" as const,

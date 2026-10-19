@@ -55,6 +55,7 @@ export default function GenericQuoteBuilder({
   preClientId,
   preMarkupMaterials,
   preMarkupSource,
+  structureId,
   pricingTiers,
   jobSizeTiers,
   siteConditions,
@@ -66,7 +67,8 @@ export default function GenericQuoteBuilder({
   materials?: { item_key: string; label: string; unit_cost: number }[];
   preClientId?: string;
   preMarkupMaterials?: Array<{ label: string; quantity: number; unit: string; unitCost: number; totalCost: number; labourHrs?: number }>;
-  preMarkupSource?: "package" | "plan markup" | "material bundle";
+  preMarkupSource?: "package" | "plan markup" | "material bundle" | "build planner";
+  structureId?: string;
   pricingTiers?: Array<{ id: string; name: string; markup_pct: number; sort_order: number }>;
   jobSizeTiers?: Array<{ id: string; name: string; max_days: number | null; markup_pct: number; sort_order: number }>;
   siteConditions?: SiteConditionTemplateRow[];
@@ -372,6 +374,11 @@ export default function GenericQuoteBuilder({
     }).select().single();
 
     if (error) { setSaveMessage(error.message); setSaving(false); return; }
+
+    // Link the build planner design this quote was started from.
+    if (structureId) {
+      await supabase.from("structure_plans").update({ quote_id: quote.id }).eq("id", structureId).eq("profile_id", businessId);
+    }
 
     if (leadPrefill?.enquiryId) {
       await supabase

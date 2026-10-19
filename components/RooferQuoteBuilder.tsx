@@ -103,7 +103,7 @@ interface RooferQuoteBuilderProps {
   materials: { item_key: string; label: string; unit_cost: number }[];
   preClientId?: string;
   preMarkupMaterials?: { label: string; quantity: number; unit: string; unitCost: number; totalCost: number; labourHrs?: number }[];
-  preMarkupSource?: "package" | "plan markup" | "material bundle";
+  preMarkupSource?: "package" | "plan markup" | "material bundle" | "build planner";
   pricingTiers?: Array<{ id: string; name: string; markup_pct: number; sort_order: number }>;
   jobSizeTiers?: Array<{ id: string; name: string; max_days: number | null; markup_pct: number; sort_order: number }>;
   siteConditions?: SiteConditionTemplateRow[];

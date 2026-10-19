@@ -82,9 +82,9 @@ export function siteItemsChargeTotal(items: SiteItem[], rate: number, effectiveM
  */
 export function markupMaterialsToScopeItems(
   items: MarkupMaterial[] | undefined,
-  source: "package" | "plan markup" | "material bundle"
+  source: "package" | "plan markup" | "material bundle" | "build planner"
 ): Array<{ id: string; label: string; qty: number; unit: string; note: string; materialsCost: number; labourHrs: number; source: "package" | "plan_markup" | "material_bundle" }> {
-  const structuredSource = source === "plan markup" ? "plan_markup" : source === "material bundle" ? "material_bundle" : "package";
+  const structuredSource = source === "plan markup" || source === "build planner" ? "plan_markup" : source === "material bundle" ? "material_bundle" : "package";
   return (items ?? [])
     .filter((i) => i.label)
     .map((i) => ({
