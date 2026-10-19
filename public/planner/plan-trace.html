@@ -386,6 +386,9 @@ dialog::backdrop{background:rgba(10,15,20,.5);}
 .v3pop .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px 8px;margin-bottom:8px;}.v3pop .pgrid.one{grid-template-columns:1fr;}.v3pop .pgrid label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted);}
 .v3pop .pgrid input[type=text],.v3pop .pgrid select{border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:13px;background:var(--field);color:var(--text);}
 .v3pop{width:280px;}
+.lvghost{fill:color-mix(in srgb,#7a5cc2 7%,transparent);stroke:#7a5cc2;opacity:.75;pointer-events:none;}.lvghost.w{fill:none;opacity:.5;}
+.lvcard{border-color:#7a5cc2;}.nudge{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:13px;}.nudge .btn{padding:4px 10px;}.nudge em{color:var(--muted);font-style:normal;font-size:12px;}
+.tbar.views .chip.lv{padding-left:10px;padding-right:10px;}
 .tbar.views .vsep{width:1px;background:var(--line);margin:0 2px;}
 </style>
 </head>
@@ -523,9 +526,29 @@ function migrate(p){const d=defaultDoc();p=p||{};return Object.assign({},d,p,{ki
 function load(){if(EMBED)return null;try{const r=localStorage.getItem(STORE);if(r)return migrate(JSON.parse(r));}catch(e){}
   try{const u=sessionStorage.getItem('trace-underlay');if(u){sessionStorage.removeItem('trace-underlay');const d=defaultDoc();d.underlay.src=u;return d;}}catch(e){}return null;}
 let doc=load()||defaultDoc();
-const undoStack=[];function snapshot(){undoStack.push(JSON.stringify(Object.assign({},doc,{underlay:Object.assign({},doc.underlay,{src:null})})));if(undoStack.length>60)undoStack.shift();}
-function undo(){const s=undoStack.pop();if(!s)return;const src=doc.underlay.src;doc=migrate(JSON.parse(s));doc.underlay.src=src;changed(true);}
-let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{if(EMBED){postPlan();return;}try{localStorage.setItem(STORE,JSON.stringify(doc));}catch(e){try{localStorage.setItem(STORE,JSON.stringify(Object.assign({},doc,{underlay:Object.assign({},doc.underlay,{src:null})})));}catch(_){}}},350);}
+const undoStack=[];function snapshot(){if(Array.isArray(doc.levels))syncLevel();undoStack.push(JSON.stringify(Object.assign({},doc,{underlay:Object.assign({},doc.underlay,{src:null})})));if(undoStack.length>60)undoStack.shift();}
+function undo(){const s=undoStack.pop();if(!s)return;const src=doc.underlay.src;doc=migrate(JSON.parse(s));ensureLevels();doc.underlay.src=src;changed(true);}
+let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{syncLevel();if(EMBED){postPlan();return;}try{localStorage.setItem(STORE,JSON.stringify(doc));}catch(e){try{localStorage.setItem(STORE,JSON.stringify(Object.assign({},doc,{underlay:Object.assign({},doc.underlay,{src:null})})));}catch(_){}}},350);}
+
+/* ---------- levels: each floor keeps its own outline, walls, openings, rooms, items, runs and decks. The active floor's lie on doc. ---------- */
+const PER=['outline','walls','openings','rooms','items','runs','areas','draft'];
+const LEVEL_NAMES=['Ground floor','First floor','Second floor','Third floor','Fourth floor','Fifth floor'];
+function levelData(src){const o={};PER.forEach(k=>{o[k]=src&&src[k]!=null?src[k]:(k==='draft'?false:[]);});return o;}
+function ensureLevels(){if(!Array.isArray(doc.levels)||!doc.levels.length){doc.levels=[{id:uid(),name:LEVEL_NAMES[0],h:null,shift:[0,0],data:null}];doc.level=0;}if(!(doc.level>=0&&doc.level<doc.levels.length))doc.level=0;}
+function multi(){return Array.isArray(doc.levels)&&doc.levels.length>1;}
+function syncLevel(){ensureLevels();doc.levels[doc.level].data=levelData(doc);}
+function loadLevelData(i){const d=levelData(doc.levels[i].data);PER.forEach(k=>{doc[k]=d[k];});invalidate();}
+function setLevel(i){ensureLevels();if(i===doc.level||!doc.levels[i])return;syncLevel();doc.level=i;loadLevelData(i);if(typeof sel!=='undefined')sel=null;}
+/* Run fn with floor i laid on doc, then put the active floor back. */
+function withLevel(i,fn){ensureLevels();if(i===doc.level)return fn();syncLevel();const cur=doc.level;doc.level=i;loadLevelData(i);try{return fn();}finally{syncLevel();doc.level=cur;loadLevelData(cur);}}
+/* Floor to floor height, and how high each floor's slab sits. */
+function levelH(i){const lv=doc.levels&&doc.levels[i];return ((lv&&lv.h)||((+doc.settings.wallH||2400)+350))/1000;}
+function levelY(i){let y=0;for(let j=0;j<i;j++)y+=levelH(j);return y;}
+function levelName(i){const lv=doc.levels&&doc.levels[i];return (lv&&lv.name)||LEVEL_NAMES[i]||('Level '+(i+1));}
+function levelShort(i){return levelName(i).replace(/ floor$/i,'');}
+function eachLevel(fn){ensureLevels();return doc.levels.map((_,i)=>withLevel(i,()=>fn(i)));}
+function levelShift(i){const lv=doc.levels&&doc.levels[i];return lv&&lv.shift?lv.shift:[0,0];}
+ensureLevels();
 
 /* ---------- geometry ---------- */
 const canvasW=()=>doc.underlay.w||2400,canvasH=()=>doc.underlay.h||1600;
@@ -618,6 +641,8 @@ function draw(){layoutOverlays();const r=svg.getBoundingClientRect();svg.setAttr
   const U=doc.underlay;if(U.src)el('image',{href:U.src,x:0,y:0,width:U.w,height:U.h,opacity:U.opacity,preserveAspectRatio:'none'});
   else{const g=el('g',{class:'grid'});const step=scaleMM()?1000/scaleMM():100;const x0=Math.floor(view.x/step)*step,y0=Math.floor(view.y/step)*step;for(let x=x0;x<view.x+r.width/k;x+=step)el('line',{x1:x,y1:view.y,x2:x,y2:view.y+r.height/k},g);for(let y=y0;y<view.y+r.height/k;y+=step)el('line',{x1:view.x,y1:y,x2:view.x+r.width/k,y2:y},g);}
   const R=rooms();const sm=scaleMM();
+  /* the floor below, faint, so this floor can be lined up over it */
+  const gl=lowerGhost();if(gl){el('polygon',{points:gl.out.map(p=>p.join(',')).join(' '),class:'lvghost','stroke-width':sw(2.5),'stroke-dasharray':`${sw(8)} ${sw(5)}`});gl.walls.forEach(w=>el('line',{x1:w[0][0],y1:w[0][1],x2:w[1][0],y2:w[1][1],class:'lvghost w','stroke-width':sw(1.5)}));}
   R.forEach(rm=>{el('polygon',{points:rm.f.poly.map(p=>p.join(',')).join(' '),class:'face'+(WET.has(rm.type)?' wet':'')+(sel&&sel.kind==='room'&&sel.id===rm.id&&rm.id?' on':'')});});
   doc.areas.forEach(ar=>{const P=areaPoly(ar);const T=AREA_T[ar.type]||AREA_T.deck;const on=sel&&sel.kind==='area'&&sel.id===ar.id;el('polygon',{points:P.map(p=>p.join(',')).join(' '),class:'area '+ar.type+(on?' on':''),style:`fill:${T.col}`,'stroke-width':sw(on?3:2)});
     if(sm){const G=areaGeo(ar);const c=[(P[0][0]+P[2][0])/2,(P[0][1]+P[2][1])/2];const t=el('text',{x:c[0],y:c[1],class:'rlab','font-size':sw(12),'text-anchor':'middle'});t.textContent=ar.name||T.n;const t2=el('text',{x:c[0],y:c[1]+sw(14),class:'rarea','font-size':sw(11),'text-anchor':'middle'});t2.textContent=`${fm(G.Lx,1)} × ${fm(G.Ly,1)} m`;}
@@ -810,10 +835,13 @@ function geoAll(){const S=doc.settings,H=S.wallH/1000;const sg=segs();const R=ro
   const extL=sg.filter(s=>s.ext).reduce((a,s)=>a+toM(dist(s.a,s.b)),0),intL=sg.filter(s=>!s.ext).reduce((a,s)=>a+toM(dist(s.a,s.b)),0);
   const opA=(f)=>ops.filter(f).reduce((a,x)=>a+x.o.width*x.o.height/1e6,0);
   const extOps=ops.filter(x=>x.h.s.ext),intOps=ops.filter(x=>!x.h.s.ext);
-  const A=outlineArea(),P=outlinePer();const e=S.eave/1000;const cn=corners();const planA=A+P*e+(cn.convex-cn.concave)*e*e;const pitch=S.pitch*Math.PI/180;const roofA=planA/Math.cos(pitch);
+  const A=outlineArea(),P=outlinePer();const e=S.eave/1000;const cn=corners();const planA=A+P*e+(cn.convex-cn.concave)*e*e;const pitch=S.pitch*Math.PI/180;const roofA=planA*roofFracNow()/Math.cos(pitch);
   const bb=doc.outline.length>=3?bbox(doc.outline):{x0:0,y0:0,x1:0,y1:0};const bw=toM(bb.x1-bb.x0),bl=toM(bb.y1-bb.y0);
   return {S,H,R,ops,extOps,intOps,extL,intL,extWall:Math.max(0,extL*H-opA(x=>x.h.s.ext)),intWall:Math.max(0,intL*H-opA(x=>!x.h.s.ext)),A,P,planA,roofA,bw,bl,pitch,e};}
-function computeRows(){const rows=[],stages=[];if(!scaleMM()||doc.outline.length<3)return {rows,stages};const g=geoAll();const S=g.S,H=g.H;
+let ROOF_FRAC=null;
+/* On a floor with another floor above, roof only covers the part the floor above does not sit on. */
+function roofFracNow(){if(ROOF_FRAC!=null)return ROOF_FRAC;if(!multi()||doc.level>=doc.levels.length-1||doc.outline.length<3)return 1;const up=doc.levels[doc.level+1].data;const o=up&&up.outline||[];if(o.length<3)return 1;return Math.max(0,1-Math.abs(polyArea(o))/Math.abs(polyArea(doc.outline)));}
+function computeRowsLevel(LV){LV=LV||{i:0};const rows=[],stages=[];if(!scaleMM()||doc.outline.length<3)return {rows,stages};const g=geoAll();const S=g.S,H=g.H;
   const add=(sec,group,id,item,size,detail,qty,unit,match,alt)=>{if(!(qty>0))return;const pu={'m':'$/m','m²':'$/m²','m³':'$/m³'}[unit]||'$ ea';rows.push({key:`h:${sec}:${id}`,sec,group,item,size:size||'',detail:detail||'',qty:Math.round(qty*100)/100,unit,pu,match:match||[],alt:alt||null});};
   const stage=(sec,k,n,h,note)=>{if(h>0.01)stages.push({k,n,v:h,sec,note});};
   const len6=m=>Math.ceil(m/6);const R=g.R;const habitable=R.filter(r=>r.type!=='garage'||S.lineGarage);
@@ -842,7 +870,8 @@ function computeRows(){const rows=[],stages=[];if(!scaleMM()||doc.outline.length
   add('build','Doors and windows','arch','Architraves','Primed MDF',`Both sides of internal doors, inside of windows`,Math.ceil((intD.length*2*5.2+ext.length*5.2+wins.reduce((a,x)=>a+2*(x.o.width+x.o.height)/1000,0))*1.1),'m',['architrave']);
   stage('build','h-frame','Wall framing',0.9*g.extL+0.6*g.intL,'Frames, stand, brace');stage('build','h-clad',C.n,C.rate*g.extWall,'External cladding');
   stage('build','h-open','Doors and windows',2*wins.length+2.5*(ext.length+sl.length)+1.5*intD.length+5*gar.length,'Fit and trim');
-  /* roof */
+  /* roof: on a lower floor only the part the floor above does not cover */
+  if(roofFracNow()>0.05){
   const RM=ROOFM[S.roofMat]||ROOFM.tiles;const trusses=Math.ceil(Math.max(g.bw,g.bl)/0.6)+1;const gut=g.P+8*g.e;
   add('roof','Roof framing','truss','Roof trusses',`${S.roofType==='hip'?'Hip':'Gable'} roof, ${S.pitch}° pitch`,`About ${trusses} at 600 centres. Get a truss plant quote`,trusses,'ea',['truss']);
   if(S.roofMat==='tiles'){add('roof','Roof cover','tiles','Concrete roof tiles','',`${fm(g.roofA,1)} m² at 10.5 per m² plus 5%`,Math.ceil(g.roofA*10.5*1.05),'ea',['roof tile','concrete tile','tile'],{'m²':Math.ceil(g.roofA*1.05)});add('roof','Roof cover','tbat','Tile battens','38 x 50',`${fm(g.roofA,1)} m² at 330 mm gauge`,Math.ceil(g.roofA/0.33),'m',['tile batten','38 x 50']);}
@@ -855,8 +884,10 @@ function computeRows(){const rows=[],stages=[];if(!scaleMM()||doc.outline.length
   const dps=dpPlaced||Math.max(2,Math.ceil(gut/10));add('roof','Gutters','dp','Downpipes','90 mm',dpPlaced?`${dpPlaced} placed on the model`:`${dps} drops`,dps,'ea',['downpipe']);
   ['sky','whirly','solar','flue','aerial'].forEach(k=>{const n=rcount(k);if(n)add('roof','Roof items',k,ITEM_T[k].n,'',`${n} placed on the roof`,n,'ea',ITEM_T[k].match);});add('roof','Gutters','eavelin','Eave lining','4.5 mm FC',`${fm(gut*g.e,1)} m²`,Math.ceil(gut*g.e*1.1),'m²',['eave lining','eave sheet']);
   stage('roof','h-truss','Roof trusses and battens',0.25*g.planA,'Stand, brace, batten');stage('roof','h-roof',RM.n,RM.rate*g.roofA,'Lay roof cover and capping');stage('roof','h-gut','Gutters, fascia and eaves',0.3*gut+0.4*gut*g.e,'');
+  }
   /* slab */
-  if(S.floor==='slab'){const v=g.A*(S.slabT/1000+0.03);add('floor','Slab','conc','Concrete','25 MPa',`${fm(g.A,1)} m² footprint, ${S.slabT/10} cm slab plus edge beams`,Math.ceil(v*10)/10,'m³',['concrete']);
+  if(LV.i>0){add('floor','Upper floor framing','ujoist','Floor joists','LVL or I-joists, per span tables',`${fm(g.A,1)} m² ${LV.name||'upper floor'}`,Math.ceil(g.A*2.2),'m',['floor joist','i-joist','lvl joist','joist']);add('floor','Upper floor framing','yt','Yellow tongue flooring','19 mm, 3600 x 800',`${fm(g.A,1)} m² plus 5%`,Math.ceil(g.A*1.05/2.88),'ea',['yellow tongue','particleboard'],{'m²':Math.ceil(g.A*1.05)});add('build','Stairs','stairs','Staircase','',`To the ${(LV.name||'upper floor').toLowerCase()}`,1,'set',['staircase','stair']);stage('floor','h-ufloor','Upper floor frame and sheet',0.9*g.A,'Joists, blocking, sheet');stage('build','h-stairs','Stairs',16,'Install the staircase and balustrade');}
+  else if(S.floor==='slab'){const v=g.A*(S.slabT/1000+0.03);add('floor','Slab','conc','Concrete','25 MPa',`${fm(g.A,1)} m² footprint, ${S.slabT/10} cm slab plus edge beams`,Math.ceil(v*10)/10,'m³',['concrete']);
     add('floor','Slab','mesh','Reinforcing mesh','SL82, 6.0 x 2.4 m','Includes laps',Math.ceil(g.A/(6*2.4*0.85)),'ea',['sl82','mesh'],{'m²':Math.ceil(g.A*1.15)});add('floor','Slab','vb','Vapour barrier','200 µm',`${fm(g.A,1)} m² plus laps`,Math.ceil(g.A*1.15),'m²',['vapour barrier','builders film']);
     add('floor','Slab','form','Edge formwork','',`Perimeter ${fm(g.P,1)} m`,Math.ceil(g.P+1),'m',['formwork']);stage('floor','h-slab','Slab',0.8*g.A,'Set out, form, mesh, pour, finish');}
   else{add('floor','Floor framing','bearer','Bearers and joists','Per span tables',`${fm(g.A,1)} m² floor`,Math.ceil(g.A*2.6),'m',['bearer','joist']);add('floor','Floor framing','yt','Yellow tongue flooring','19 mm, 3600 x 800',`${fm(g.A,1)} m² plus 5%`,Math.ceil(g.A*1.05/2.88),'ea',['yellow tongue','particleboard'],{'m²':Math.ceil(g.A*1.05)});stage('floor','h-floor','Floor framing',1.0*g.A,'Stumps, bearers, joists, sheet');}
@@ -955,21 +986,36 @@ function computeRows(){const rows=[],stages=[];if(!scaleMM()||doc.outline.length
   /* items from the price list placed on the plan */
   const pbc={};doc.items.forEach(it=>{if(it.kind==='pb'&&it.pb){const e=pbc[it.pb]||(pbc[it.pb]={n:it.n,sec:it.sec||'build',q:0});e.q++;}});
   Object.entries(pbc).forEach(([id,e])=>{const pb=PB.byId(id);rows.push({key:'p:'+id,sec:SECTIONS[e.sec]?e.sec:'build',group:'Placed from your price list',item:pb?pb.n:e.n,size:'',detail:`${e.q} placed on the plan`,qty:e.q,unit:'ea',pu:'$ ea',match:[],fixed:id});});
+  return {rows,stages};}
+/* Link each line to the price list and convert units, once the floors are added up. */
+function finalizeRows(rows){
   rows.forEach(r=>{const m=/^h:(elec|plumb):(\w+)$/.exec(r.key);if(m&&(ITEM_T[m[2]]||RUN_T[m[2]]))r.strict=true;});
   rows.forEach(r=>{const L=doc.links[r.key];r.auto=L===undefined&&!r.fixed;r.pb=r.fixed?(L===undefined?PB.byId(r.fixed):(L?PB.byId(L):null)):(L===undefined?PB.match(r):(L?PB.byId(L):null));r.order=`${r.qty} ${r.unit}`;
     // a price list item sold by a different unit prices the line in that unit (tiles per m² rather than each)
     if(r.pb&&r.pb.u&&r.pb.u!==PB.baseUnit(r.unit)){if(r.alt&&r.alt[r.pb.u]!=null){r.order=`${r.order}, priced as ${r.alt[r.pb.u]} ${r.pb.u}`;r.qty=r.alt[r.pb.u];r.unit=r.pb.u;r.pu={'m':'$/m','m²':'$/m²','m³':'$/m³'}[r.unit];}else r.unitWarn=`Your item is sold per ${r.pb.u}, this line is counted in ${r.unit}.`;}
     // cable and pipe sold by the roll or coil: buy whole rolls
     if(r.pb&&r.pb.pack&&r.unit==='m'){const n=Math.ceil(r.qty/r.pb.pack);r.order=`${r.qty} m, priced as ${n} × ${r.pb.pack} m ${/coil/i.test(r.pb.n)?'coil':'roll'}`;r.qty=n;r.unit='roll';r.pu='$ ea';}});
-  return {rows,stages};}
+}
+/* All floors: each floor's lines and labour, added up line by line. */
+function computeRows(){ensureLevels();if(!multi()){const R=computeRowsLevel({i:0});finalizeRows(R.rows);return R;}
+  syncLevel();const all={},order=[],st={},stOrder=[];const S0=doc.settings;const n=doc.levels.length;
+  const areaOf=i=>withLevel(i,()=>doc.outline.length>=3?outlineArea():0);const areas=doc.levels.map((_,i)=>areaOf(i));
+  doc.levels.forEach((lv,i)=>{const name=lv.name||LEVEL_NAMES[i]||('Level '+(i+1));ROOF_FRAC=i<n-1&&areas[i]>0?Math.max(0,1-areas[i+1]/areas[i]):1;
+    if(i>0)doc.settings=Object.assign({},S0,{floor:'timber'});
+    try{const R=withLevel(i,()=>computeRowsLevel({i,name}));
+      R.rows.forEach(r=>{const e=all[r.key];if(!e){all[r.key]=Object.assign({},r,{detail:`${name}: ${r.detail||r.qty+' '+r.unit}`,alt:r.alt?Object.assign({},r.alt):null});order.push(r.key);}
+        else{e.qty=Math.round((e.qty+r.qty)*100)/100;if(e.alt&&r.alt)Object.keys(r.alt).forEach(k=>{e.alt[k]=(e.alt[k]||0)+r.alt[k];});e.detail+=`; ${name}: ${r.detail||r.qty+' '+r.unit}`;}});
+      R.stages.forEach(s=>{const e=st[s.k];if(!e){st[s.k]=Object.assign({},s);stOrder.push(s.k);}else e.v+=s.v;});}
+    finally{doc.settings=S0;ROOF_FRAC=null;}});
+  const rows=order.map(k=>all[k]);finalizeRows(rows);return {rows,stages:stOrder.map(k=>st[k])};}
 function norm2(s){return String(s||'').toLowerCase().replace(/ decking$/,'');}
 function priceOf(r){const v=doc.prices[r.key];if(v!==undefined&&v!==null&&v!==''&&isFinite(v))return +v;return r.pb?r.pb.p:0;}
 function labourRate(){const r=+doc.labourRate;return isFinite(r)&&r>0?r:(+SETTINGS.hourlyRate||95);}
 function stagesOut(all){const {stages}=computeRows();return stages.filter(s=>all||inScope(s.sec)).map(s=>{const est=Math.max(0.5,Math.round(s.v*2)/2);const ov=doc.labour[s.k];const hrs=(ov!=null&&isFinite(ov))?+ov:est;return Object.assign({},s,{est,hrs,ov:ov!=null});});}
 function quoteLines(){const {rows}=computeRows();const out=[];let sub=0;rows.filter(r=>inScope(r.sec)).forEach(r=>{const p=priceOf(r);const tot=Math.round(p*r.qty*100)/100;sub+=tot;out.push({key:r.key,group:r.group,label:r.pb&&doc.prices[r.key]==null?r.pb.n:[r.item,r.size].filter(Boolean).join(', '),quantity:r.qty,unit:r.unit.replace(/^×\s*/,'× '),unitCost:Math.round(p*100)/100,totalCost:tot});});
   const w=+doc.waste||0;if(w>0&&sub>0)out.push({key:'waste',group:'Allowances',label:`Waste and fixings allowance (${w}%)`,quantity:1,unit:'lot',unitCost:Math.round(sub*w)/100,totalCost:Math.round(sub*w)/100});return out;}
-function summary(){const lines=quoteLines();const st=stagesOut(false);const mat=lines.reduce((a,l)=>a+l.totalCost,0);const hrs=st.reduce((a,s)=>a+s.hrs,0);const R=rooms();
-  return {kind:'house',area:Math.round(outlineArea()*10)/10,rooms:R.length,description:scaleMM()&&doc.outline.length>=3?`House plan, ${fm(outlineArea(),0)} m² footprint, ${R.length} rooms`:'House plan, not traced yet',
+function summary(){const lines=quoteLines();const st=stagesOut(false);const mat=lines.reduce((a,l)=>a+l.totalCost,0);const hrs=st.reduce((a,s)=>a+s.hrs,0);const per=eachLevel(()=>({A:doc.outline.length>=3?outlineArea():0,n:doc.outline.length>=3?rooms().length:0}));const FA=per.reduce((a,p)=>a+p.A,0),NR=per.reduce((a,p)=>a+p.n,0);const ML=per.length>1;
+  return {kind:'house',area:Math.round(FA*10)/10,rooms:NR,levels:per.length,description:scaleMM()&&FA>0?(ML?`${per.length} storey house plan, ${fm(FA,0)} m² floor area, ${NR} rooms`:`House plan, ${fm(FA,0)} m² footprint, ${NR} rooms`):'House plan, not traced yet',
     materialsTotal:Math.round(mat*100)/100,labourHours:hrs,labourRate:labourRate(),unpriced:lines.filter(l=>!l.unitCost).length,sections:Object.keys(SECTIONS).filter(inScope).map(s=>SECTIONS[s]),
     labour:st.map(s=>({key:s.k,label:s.n,hours:s.hrs})),lines};}
 
@@ -1018,7 +1064,14 @@ function autoScale(){const S=doc.settings;const cands=[];
 /* ---------- tabs ---------- */
 const SET_FIELDS=[['wallH','Ceiling height','num','mm',[2100,3600,50]],['extThk','External wall thickness','num','mm',[90,400,10]],['intThk','Internal wall thickness','num','mm',[70,200,5]],['extStud','External studs','sel',[['90x45','90 x 45'],['90x35','90 x 35']]],['intStud','Internal studs','sel',[['90x35','90 x 35'],['70x35','70 x 35'],['90x45','90 x 45']]],['studSp','External stud spacing','sel',[[450,'45 cm'],[600,'60 cm']]],
   ['extClad','Outside walls','sel',Object.entries(CLAD).map(([k,v])=>[k,v.n])],['roofType','Roof shape','sel',[['hip','Hip'],['gable','Gable']]],['pitch','Roof pitch','num','°',[5,45,0.5]],['eave','Eaves','num','mm',[0,900,50]],['roofMat','Roof cover','sel',Object.entries(ROOFM).map(([k,v])=>[k,v.n])],['floor','Floor','sel',[['slab','Concrete slab'],['timber','Timber floor']]],['slabT','Slab thickness','num','mm',[85,200,5]],['lineGarage','Line and paint the garage','chk']];
-function renderPlanTab(){const U=doc.underlay;const sm=scaleMM();let h='';
+function levelCard(){if(!multi())return '';const i=doc.level,lv=doc.levels[i];const sm=scaleMM();
+  let h=`<div class="card lvcard"><div class="cardh"><b>${esc(levelName(i))}</b>${i>0?`<button class="x" data-lvdel="1" aria-label="Remove this floor">✕</button>`:''}</div>
+  <label class="row"><span>Name</span><input type="text" data-lv="name" value="${esc(levelName(i))}"></label>
+  <label class="row"><span>Floor to floor</span><span class="inp"><input type="number" data-lv="h" value="${Math.round(levelH(i)*1000)}" min="2000" max="5000" step="50"><em>mm</em></span></label>`;
+  if(i>0){h+=`<p class="note" style="margin:4px 0">${doc.outline.length>=3?'The faint outline is the floor below. Line this floor up over it.':'Trace this floor, or start from the outside walls of the floor below.'}</p><div class="upl">${doc.outline.length<3?'<button class="btn" data-lvcopy="1">Copy outside walls from below</button>':''}${doc.outline.length>=3&&sm?'<button class="btn" data-lvalign="1">Auto align</button>':''}</div>`;
+    if(doc.outline.length>=3)h+=`<div class="nudge"><span>Nudge</span><button class="btn" data-lvn="0,-1" aria-label="Up">↑</button><button class="btn" data-lvn="0,1" aria-label="Down">↓</button><button class="btn" data-lvn="-1,0" aria-label="Left">←</button><button class="btn" data-lvn="1,0" aria-label="Right">→</button><em>100 mm a tap</em></div>`;}
+  return h+`</div>`;}
+function renderPlanTab(){const U=doc.underlay;const sm=scaleMM();let h=levelCard();
   h+=`<h3>1. The plan</h3><div class="upl"><input type="file" id="ulFile" accept="image/*,application/pdf" hidden><button class="btn" id="ulPick">${U.src?'Replace plan':'Upload a plan'}</button><button class="primary" id="aiBtn" ${U.src&&!aiBusy?'':'disabled'}>${aiBusy?'Tracing...':'Auto trace'}</button></div>`;
   h+=U.src?`<label class="row"><span>Plan visibility</span><input type="range" id="ulOp" min="0.1" max="1" step="0.05" value="${U.opacity}"></label>`:'<p class="note">PDF, JPG or PNG of the floor plan. No plan? Draw straight onto the grid, where each square is 1 m.</p>';
   h+=`${doc.site&&doc.site.length>=3?`<p class="note">Property boundary found: ${sm?fm(siteArea(),0)+' m² site':'set the scale to size it'}. <button class="btn" id="siteDel" style="padding:3px 8px">Remove it</button></p>`:''}<h3>2. Scale</h3><p class="note" style="margin-top:0">${sm?(doc.scale?`Set: 1 m is ${fm(1000/doc.scale,0)} px on the plan. Check a labelled room measures right.`:'Grid: each square is 1 m.'):'<b>Not set.</b> Use the Scale tool and tap across something with a known size, like a labelled room.'}</p><button class="btn" data-settool="scale">Set the scale</button>`;
@@ -1086,6 +1139,12 @@ $('#tab-materials').addEventListener('click',async e=>{const pk=e.target.closest
   if(e.target.id!=='copyCsv')return;const q=v=>'"'+String(v).replace(/"/g,'""')+'"';const lines=[['Group','Item','Size','Detail','Quantity','Unit price','Cost'].map(q).join(',')];quoteLines().forEach(l=>lines.push([l.group,l.label,'','',l.quantity+' '+l.unit,l.unitCost.toFixed(2),l.totalCost.toFixed(2)].map(q).join(',')));stagesOut(false).forEach(s=>lines.push(['Labour',s.n,'','',s.hrs+' h',labourRate().toFixed(2),(s.hrs*labourRate()).toFixed(2)].map(q).join(',')));
   let ok=false;try{await navigator.clipboard.writeText(lines.join('\n'));ok=true;}catch(_){}$('#csvMsg').textContent=ok?'Copied. Paste it into a spreadsheet.':'Copy is blocked here.';});
 /* plans */
+function plansHTMLMulti(){const per=eachLevel(i=>({i,name:levelName(i),svg:planSVG(),g:doc.outline.length>=3&&scaleMM()?geoAll():null,R:doc.outline.length>=3?rooms().map(r=>({name:r.name,type:r.type,area:r.area,per:r.per,finish:r.finish,gpo:r.gpo,lights:r.lights})):[]}));
+  const FA=per.reduce((a,p)=>a+(p.g?p.g.A:0),0),NR=per.reduce((a,p)=>a+p.R.length,0);
+  let h=`<section class="sheet"><h2>${esc(META.planName||'House plan takeoff')}</h2>${META.businessName?`<p class="sm2"><b>${esc(META.businessName)}</b>${META.businessContact?' · '+esc(META.businessContact):''}</p>`:''}${META.clientName?`<p class="sm2">Prepared for ${esc(META.clientName)}${META.siteAddress?', '+esc(META.siteAddress):''}</p>`:''}<p class="sm2">Traced ${new Date().toLocaleDateString('en-AU')} in the Swiftscope build planner. ${per.length} floors, ${fm(FA,1)} m² floor area in all, ${NR} rooms.</p></section>`;
+  per.forEach(p=>{h+=`<section class="sheet"><h2>${esc(p.name)}</h2>${p.g?`<p class="sm2">${fm(p.g.A,1)} m², ${p.R.length} rooms, ${fm(p.g.extL,1)} m outside walls, ${fm(p.g.intL,1)} m internal walls.</p>`:'<p class="sm2">Not traced yet.</p>'}${p.svg}</section>`;});
+  h+=`<section class="sheet"><h2>Room schedule</h2><div class="tblwrap"><table class="tbl"><tr><th>Floor</th><th>Room</th><th>Type</th><th>Floor m²</th><th>Perimeter m</th><th>Floor finish</th><th>Power points</th><th>Lights</th></tr>${per.map(p=>p.R.map(r=>`<tr><td>${esc(levelShort(p.i))}</td><td>${esc(r.name)}</td><td>${ROOM_TYPES[r.type]}</td><td>${fm(r.area,1)}</td><td>${fm(r.per,1)}</td><td>${FINISHES[r.finish]||''}</td><td>${r.gpo}</td><td>${r.lights}</td></tr>`).join('')).join('')}</table></div></section>`;
+  return h+plansRest();}
 function planSVG(){const o=doc.outline;if(o.length<3)return '';const b=bbox(o.concat(...doc.areas.map(areaPoly)));const pad=60;const W=b.x1-b.x0+2*pad,H=b.y1-b.y0+2*pad;const k=Math.min(900/W,620/H);const X=p=>((p[0]-b.x0+pad)*k).toFixed(1)+','+((p[1]-b.y0+pad)*k).toFixed(1);const sm=scaleMM();
   let g=doc.areas.map(ar=>`<polygon points="${areaPoly(ar).map(X).join(' ')}" class="pa" style="fill:${(AREA_T[ar.type]||AREA_T.deck).col}"/>`).join('');g+=rooms().map(r=>`<polygon points="${r.f.poly.map(X).join(' ')}" class="pf${WET.has(r.type)?' wet':''}"/>`).join('');g+=`<polygon points="${o.map(X).join(' ')}" class="po"/>`;
   g+=doc.walls.map(w=>`<polyline points="${X(w.a)} ${X(w.b)}" class="pw"/>`).join('');
@@ -1095,9 +1154,11 @@ function planSVG(){const o=doc.outline;if(o.length<3)return '';const b=bbox(o.co
   doc.areas.forEach(ar=>{const P=areaPoly(ar);const [x,y]=X([(P[0][0]+P[2][0])/2,(P[0][1]+P[2][1])/2]).split(',');const G=areaGeo(ar);g+=`<text x="${x}" y="${y}" text-anchor="middle" class="rn">${esc((AREA_T[ar.type]||AREA_T.deck).n)}</text><text x="${x}" y="${(+y+13).toFixed(1)}" text-anchor="middle" class="sm">${fm(G.Lx,1)} × ${fm(G.Ly,1)} m</text>`;});
   const ic={elec:'#f2b705',plumb:'#2f6fb0'};doc.items.forEach(it=>{const d=itemDef(it);const [x,y]=X(it.pt).split(',');g+=`<g class="pi ${d.sec}"><circle cx="${x}" cy="${y}" r="7" fill="${ic[d.sec]||'#5b6770'}"/><text x="${x}" y="${(+y+2.5).toFixed(1)}" text-anchor="middle">${esc(d.c)}</text></g>`;});
   return `<div class="tblwrap"><svg class="dwg" viewBox="0 0 ${(W*k).toFixed(0)} ${(H*k).toFixed(0)}" style="max-width:${(W*k*1.1).toFixed(0)}px;margin:6px auto 0">${g}</svg></div>`;}
-function plansHTML(){const g=geoAll();const R=g.R;const tb=[META.planName,META.clientName,META.siteAddress].filter(Boolean);
+function plansHTML(){if(multi())return plansHTMLMulti();const g=geoAll();const R=g.R;const tb=[META.planName,META.clientName,META.siteAddress].filter(Boolean);
   let h=`<section class="sheet"><h2>${esc(META.planName||'House plan takeoff')}</h2>${META.businessName?`<p class="sm2"><b>${esc(META.businessName)}</b>${META.businessContact?' · '+esc(META.businessContact):''}</p>`:''}${META.clientName?`<p class="sm2">Prepared for ${esc(META.clientName)}${META.siteAddress?', '+esc(META.siteAddress):''}</p>`:''}<p class="sm2">Traced ${new Date().toLocaleDateString('en-AU')} in the Swiftscope build planner. Footprint ${fm(g.A,1)} m², ${R.length} rooms, ${fm(g.extL,1)} m outside walls, ${fm(g.intL,1)} m internal walls, roof about ${fm(g.roofA,1)} m².</p>${planSVG()}</section>`;void tb;
   h+=`<section class="sheet"><h2>Room schedule</h2><div class="tblwrap"><table class="tbl"><tr><th>Room</th><th>Type</th><th>Floor m²</th><th>Perimeter m</th><th>Floor finish</th><th>Power points</th><th>Lights</th></tr>${R.map(r=>`<tr><td>${esc(r.name)}</td><td>${ROOM_TYPES[r.type]}</td><td>${fm(r.area,1)}</td><td>${fm(r.per,1)}</td><td>${FINISHES[r.finish]||''}</td><td>${r.gpo}</td><td>${r.lights}</td></tr>`).join('')}</table></div></section>`;
+  return h+plansRest();}
+function plansRest(){let h='';
   const {rows}=computeRows();h+=`<section class="sheet"><h2>Quantities</h2>${Object.keys(SECTIONS).filter(s=>inScope(s)&&rows.some(r=>r.sec===s)).map(s=>`<h3 class="eh">${SECTIONS[s]}</h3><div class="tblwrap"><table class="tbl"><tr><th>Item</th><th>Size</th><th>Quantity</th><th>Notes</th></tr>${rows.filter(r=>r.sec===s).map(r=>`<tr><td>${esc(r.item)}</td><td>${esc(r.size)}</td><td>${esc(r.order)}</td><td>${esc(r.detail)}</td></tr>`).join('')}</table></div>`).join('')}
   <p class="warnbox">Quantities come from a traced plan and are estimates for pricing. Check against the working drawings, engineering and council requirements before ordering or building.</p></section>`;
   if((doc.photos||[]).length)h+=`<section class="sheet"><h2>Photos of the house</h2><div class="phgrid pr">${doc.photos.map((p,i)=>`<figure><img src="${p.thumb}" alt="House photo ${i+1}"></figure>`).join('')}</div>${doc.photoRead&&doc.photoRead.notes&&doc.photoRead.notes.length?`<ul class="phnotes">${doc.photoRead.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>`:''}</section>`;return h;}
@@ -1192,17 +1253,52 @@ function findSite(c0,HB){const w=c0.width,h=c0.height;const px=c0.getContext('2d
 function planBox(c0){const w=c0.width,h=c0.height;const px=c0.getContext('2d').getImageData(0,0,w,h).data;const dark=new Uint8Array(w*h);for(let i=0,j=0;i<w*h;i++,j+=4)dark[i]=(0.3*px[j]+0.59*px[j+1]+0.11*px[j+2])<115?1:0;
   const lim=Math.max(5,Math.round(Math.min(w,h)/12));const runs=[];for(let x=0;x<w;x+=3){let r=0;for(let y=0;y<=h;y++){if(y<h&&dark[y*w+x])r++;else{if(r>=2&&r<=lim)runs.push(r);r=0;}}}
   if(runs.length<40)return {x:0,y:0,w,h};runs.sort((a,b)=>a-b);const T=runs[Math.floor(runs.length*0.95)];const kt=Math.max(2,Math.round(T*0.55));const M=boxFilter(boxFilter(dark,w,h,kt,'min'),w,h,kt,'max');
+  planBox.M=M;planBox.T=T;
   const cx=new Float64Array(w),cy=new Float64Array(h);let tot=0;for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(M[y*w+x]){cx[x]++;cy[y]++;tot++;}if(tot<50)return {x:0,y:0,w,h};
   const span=(arr)=>{let a=0,acc=0;while(a<arr.length-1&&acc+arr[a]<tot*0.01){acc+=arr[a];a++;}let b=arr.length-1;acc=0;while(b>0&&acc+arr[b]<tot*0.01){acc+=arr[b];b--;}return [a,b];};
   const [x0,x1]=span(cx),[y0,y1]=span(cy);const bw=x1-x0,bh=y1-y0;if(bw<20||bh<20)return {x:0,y:0,w,h};const pad=Math.max(bw,bh)*0.3;
   const X0=Math.max(0,Math.floor(x0-pad)),Y0=Math.max(0,Math.floor(y0-pad)),X1=Math.min(w,Math.ceil(x1+pad)),Y1=Math.min(h,Math.ceil(y1+pad));return {x:X0,y:Y0,w:X1-X0,h:Y1-Y0};}
-async function detectPlan(){const U=doc.underlay;if(!U.src)return null;const c0=await srcToCanvas(U.src,2600);const B=planBox(c0);
+/* A sheet with more than one floor plan on it (ground and first floor side by side): split the thick wall ink into separate drawings.
+   Each drawing's walls join up into one blob; blobs well apart are separate floors. Small blobs (a site plan inset, a detail) are left out. */
+function planBoxes(c0){planBox.M=null;planBox.T=0;const one=planBox(c0);const M=planBox.M;const w=c0.width,h=c0.height;if(!M)return [one];
+  const g=Math.max(4,Math.round(Math.min(w,h)/150));const gw=Math.ceil(w/g),gh=Math.ceil(h/g);const occ=new Uint32Array(gw*gh);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(M[y*w+x])occ[((y/g)|0)*gw+((x/g)|0)]++;
+  const on=new Uint8Array(gw*gh);const R=2;for(let y=0;y<gh;y++)for(let x=0;x<gw;x++)if(occ[y*gw+x])for(let dy=-R;dy<=R;dy++)for(let dx=-R;dx<=R;dx++){const X=x+dx,Y=y+dy;if(X>=0&&Y>=0&&X<gw&&Y<gh)on[Y*gw+X]=1;}
+  const lab=new Int32Array(gw*gh);const comps=[];let id=0;const st=[];
+  for(let i=0;i<gw*gh;i++){if(!on[i]||lab[i])continue;id++;let m=0,x0=gw,x1=0,y0=gh,y1=0;st.push(i);lab[i]=id;
+    while(st.length){const j=st.pop();const x=j%gw,y=(j-x)/gw;m+=occ[j];if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;
+      const nb=[x>0?j-1:-1,x<gw-1?j+1:-1,y>0?j-gw:-1,y<gh-1?j+gw:-1];for(const k of nb)if(k>=0&&on[k]&&!lab[k]){lab[k]=id;st.push(k);}}
+    comps.push({m,x0:x0*g,x1:(x1+1)*g,y0:y0*g,y1:(y1+1)*g});}
+  // windows and doors break the wall ink into pieces: pieces closer than about three metres (eleven outside wall thicknesses) are one drawing
+  const gapMax=Math.max(g*3,(planBox.T||4)*11);let merged=true;while(merged&&comps.length>1){merged=false;
+    for(let i=0;i<comps.length&&!merged;i++)for(let j=i+1;j<comps.length;j++){const a=comps[i],b=comps[j];const dx=Math.max(0,a.x0-b.x1,b.x0-a.x1),dy=Math.max(0,a.y0-b.y1,b.y0-a.y1);
+      if(Math.max(dx,dy)<gapMax){comps[i]={m:a.m+b.m,x0:Math.min(a.x0,b.x0),x1:Math.max(a.x1,b.x1),y0:Math.min(a.y0,b.y0),y1:Math.max(a.y1,b.y1)};comps.splice(j,1);merged=true;break;}}}
+  if(comps.length<2)return [one];const big=Math.max(...comps.map(c=>c.m));
+  const keep=comps.filter(c=>c.m>=big*0.3&&Math.min(c.x1-c.x0,c.y1-c.y0)>=Math.min(w,h)*0.08);if(keep.length<2||keep.length>6)return [one];
+  // a drawing may not hold its own floor plan: a wall blob inside another's box belongs to that drawing
+  if(keep.some((a,i)=>keep.some((b,j)=>i!==j&&a.x0<b.x1&&b.x0<a.x1&&a.y0<b.y1&&b.y0<a.y1)))return [one];
+  return keep.map(c=>{const bw=c.x1-c.x0,bh=c.y1-c.y0;const pad=Math.max(bw,bh)*0.12;let X0=c.x0-pad,X1=c.x1+pad,Y0=c.y0-pad,Y1=c.y1+pad;
+    // stop the padding short of the next drawing
+    keep.forEach(o=>{if(o===c)return;const ovY=o.y0<Y1&&o.y1>Y0,ovX=o.x0<X1&&o.x1>X0;if(ovY){if(o.x0>=c.x1)X1=Math.min(X1,(c.x1+o.x0)/2);if(o.x1<=c.x0)X0=Math.max(X0,(c.x0+o.x1)/2);}if(ovX){if(o.y0>=c.y1)Y1=Math.min(Y1,(c.y1+o.y0)/2);if(o.y1<=c.y0)Y0=Math.max(Y0,(c.y0+o.y1)/2);}});
+    X0=Math.max(0,Math.floor(X0));Y0=Math.max(0,Math.floor(Y0));X1=Math.min(w,Math.ceil(X1));Y1=Math.min(h,Math.ceil(Y1));return {x:X0,y:Y0,w:X1-X0,h:Y1-Y0,m:c.m};});}
+/* Every floor plan on the sheet, ground floor first. */
+async function detectPlans(){const U=doc.underlay;if(!U.src)return null;const c0=await srcToCanvas(U.src,2600);const boxes=planBoxes(c0);
+  if(boxes.length<2){const r=await detectPlan(c0,boxes[0]);return r?[r]:null;}
+  const out=[];for(const B of boxes){const r=await detectPlan(c0,B,true);if(r&&r.outline.length>=3){r.box=B;out.push(r);}}
+  if(!out.length)return null;if(out.length===1)return out;
+  // ground floor: the biggest footprint (it carries the garage and the living areas); the rest in reading order, left to right then down
+  const area=r=>Math.abs(polyArea(r.outline));out.sort((a,b)=>area(b)-area(a));const g0=out.shift();
+  out.sort((a,b)=>{const ay=a.box.y+a.box.h/2,by=b.box.y+b.box.h/2;if(Math.abs(ay-by)>Math.min(a.box.h,b.box.h)/2)return ay-by;return a.box.x-b.box.x;});
+  // the floors on one sheet share one scale: the ground floor's
+  out.forEach(r=>{r.mmPerPx=g0.mmPerPx;});
+  return [g0].concat(out);}
+async function detectPlan(c0,B,many){const U=doc.underlay;
   // work on the drawing at 1500 to 2600 px on its long side, whatever size it was printed or scanned at
   const up=Math.min(3,Math.max(1,1500/Math.max(B.w,B.h)),2600/Math.max(B.w,B.h));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(B.w*up));c.height=Math.max(1,Math.round(B.h*up));const cg=c.getContext('2d');cg.fillStyle='#fff';cg.fillRect(0,0,c.width,c.height);cg.imageSmoothingQuality='high';cg.drawImage(c0,B.x,B.y,B.w,B.h,0,0,c.width,c.height);
   const w=c.width,h=c.height;const k0=(U.w||c0.width)/c0.width,k1=(U.h||c0.height)/c0.height;const sx=k0*B.w/w,sy=k1*B.h/h;const ox=B.x*k0,oy=B.y*k1;
   const res=detectIn(c,w,h,sx,sy);if(!res)return null;const sh=p=>[p[0]+ox,p[1]+oy];res.outline=res.outline.map(sh);res.walls.forEach(wl=>{wl.a=sh(wl.a);wl.b=sh(wl.b);});res.ops.forEach(o=>{o.mid=sh(o.mid);});
   res.areas=(res.areas||[]).map(a=>({a:sh(a.a),b:sh(a.b)}));
-  try{const hb=bbox(res.outline);const site=findSite(c0,{x0:hb.x0/k0,x1:hb.x1/k0,y0:hb.y0/k1,y1:hb.y1/k1});if(site)res.site=site.map(p=>[p[0]*k0,p[1]*k1]);}catch(e){}
+  if(!many)try{const hb=bbox(res.outline);const site=findSite(c0,{x0:hb.x0/k0,x1:hb.x1/k0,y0:hb.y0/k1,y1:hb.y1/k1});if(site)res.site=site.map(p=>[p[0]*k0,p[1]*k1]);}catch(e){}
   return res;}
 function detectIn(c,w,h,sx,sy){
   const px=c.getContext('2d').getImageData(0,0,w,h).data;const dark=new Uint8Array(w*h),ink=new Uint8Array(w*h);for(let i=0,j=0;i<w*h;i++,j+=4){const l=0.3*px[j]+0.59*px[j+1]+0.11*px[j+2];dark[i]=l<115?1:0;ink[i]=l<200?1:0;}
@@ -1220,7 +1316,7 @@ function detectIn(c,w,h,sx,sy){
   S.sort((p,q)=>p.axis<q.axis?-1:p.axis>q.axis?1:p.c-q.c||p.a-q.a);
   for(let i=0;i<S.length;i++)for(let j=i+1;j<S.length;j++){const p=S[i],q=S[j];if(!p||!q||!same(p,q))continue;if(Math.min(p.b,q.b)-Math.max(p.a,q.a)>-1){p.a=Math.min(p.a,q.a);p.b=Math.max(p.b,q.b);p.t=Math.max(p.t,q.t);S[j]=null;}}
   S=S.filter(Boolean);
-  const maxLen=Math.max(...S.map(s=>s.b-s.a));const tk=S.filter(s=>s.b-s.a>=0.45*maxLen).map(s=>s.t).sort((a,b)=>a-b);const Text=tk[Math.floor(tk.length/2)]||T95;
+  const maxLen=Math.max(...S.map(s=>s.b-s.a));const tk=S.filter(s=>s.b-s.a>=0.45*maxLen).map(s=>s.t).sort((a,b)=>a-b);const Text=tk[Math.floor(tk.length*0.7)]||T95;
   return {S,Text,Lmin,k};};
   // Site features (trees, text, hatching) inflate the dark-run estimate, so redo the clean-up at the wall thickness actually found.
   // The first pass's thickness is the outside wall; a second pass at that thickness keeps thin internal walls and short corner stubs.
@@ -1288,25 +1384,45 @@ function placeLabels(){const outdoor=doc.rooms.filter(r=>OUTDOOR_RE.test(r.name)
 // Open plan spaces (family, kitchen, meals) share one face with no wall between them: one room, combined name and plan area.
 function mergeOpenPlan(){faces().forEach(f=>{const L=doc.rooms.filter(r=>pip(r.pt,f.poly));if(L.length<2)return;const keep=L[0];keep.name=L.map(r=>r.name).join(' / ');keep.expect=L.every(r=>r.expect)?L.reduce((t,r)=>t+r.expect,0):null;keep.dims=null;doc.rooms=doc.rooms.filter(r=>r===keep||!L.includes(r));});invalidate();}
 let outdoorLabels=[];
+/* Put one traced drawing on the floor you are on. */
+function applyGeo(r,keepSite){doc.outline=r.outline;doc.walls=r.walls;doc.rooms=[];doc.areas=[];doc.items=doc.items||[];doc.openings=r.ops.map(o=>({id:uid(),type:o.type,pt:o.mid,wpx:o.wpx,width:OPEN_T[o.type].w,height:OPEN_T[o.type].h,sill:OPEN_T[o.type].sill}));doc.draft=true;if(!keepSite)doc.site=r.site||null;invalidate();doc.openings=doc.openings.filter(o=>hostOf(o));}
+/* Room labels onto this floor's rooms, and its outdoor areas named from the plan. */
+function labelLevel(r,labs){const W=doc.underlay.w,H=doc.underlay.h;doc.rooms=labs.map(rm=>({id:uid(),name:rm.name||'Room',type:guessType(rm.name),pt:[rm.x/1000*W,rm.y/1000*H],expect:(rm.width>0&&rm.length>0)?rm.width*rm.length/1e6:null,dims:(rm.width>0&&rm.length>0)?[rm.width,rm.length]:null}));
+  invalidate();outdoorLabels=placeLabels();
+  // outdoor areas drawn against the house become decks, verandahs or paving when the plan names them
+  (r.areas||[]).forEach(a=>{const P=areaPoly(a);const c=[(P[0][0]+P[2][0])/2,(P[0][1]+P[2][1])/2];const big=Math.max(P[2][0]-P[0][0],P[2][1]-P[0][1]);let lab=outdoorLabels.find(l=>pip(l.pt,P));if(!lab){const near=outdoorLabels.map(l=>({l,d:dist(l.pt,c)})).sort((x,y)=>x.d-y.d)[0];if(near&&near.d<big)lab=near.l;}if(!lab)return;outdoorLabels=outdoorLabels.filter(l=>l!==lab);
+    const n=lab.name.toLowerCase();const type=/verand/.test(n)?'verandah':/pergola/.test(n)?'pergola':/deck|alfresco|balcony/.test(n)?'deck':/drive|patio|pav|porch|court|terrace/.test(n)?'paving':'deck';
+    doc.areas.push({id:uid(),type,name:lab.name,a:P[0],b:P[2],h:type==='deck'?600:null,board:'merbau',roof:'colorbond',t:100,bal:null});});}
+function finishOpenings(){doc.openings.forEach(o=>{if(o.wpx){o.width=Math.max(500,Math.round(o.wpx*doc.scale/10)*10);delete o.wpx;}});}
 async function autoTrace(manual){if(!doc.underlay.src){flash('Upload a plan first.');return;}if(aiBusy)return;aiBusy=true;renderPlanTab();flash('Finding the walls on your plan...');
-  try{const r=await detectPlan();const haveGeo=r&&r.outline.length>=3;
-    if(haveGeo){snapshot();doc.outline=r.outline;doc.walls=r.walls;doc.rooms=[];doc.site=r.site||null;doc.areas=[];doc.openings=r.ops.map(o=>({id:uid(),type:o.type,pt:o.mid,wpx:o.wpx,width:OPEN_T[o.type].w,height:OPEN_T[o.type].h,sill:OPEN_T[o.type].sill}));doc.scale=r.mmPerPx;doc.draft=true;invalidate();
-      doc.openings=doc.openings.filter(o=>hostOf(o));}
+  try{const list=await detectPlans();const r=list&&list[0];const haveGeo=r&&r.outline.length>=3;const many=!!(list&&list.length>1);
+    if(haveGeo){snapshot();doc.scale=r.mmPerPx;
+      if(many){ensureLevels();const old=doc.levels;doc.levels=list.map((_,i)=>({id:(old[i]&&old[i].id)||uid(),name:(old[i]&&old[i].name)||LEVEL_NAMES[i]||('Level '+(i+1)),h:old[i]?old[i].h:null,shift:[0,0],data:levelData({})}));doc.level=0;loadLevelData(0);doc.site=null;
+        list.forEach((x,i)=>withLevel(i,()=>applyGeo(x,true)));}
+      else applyGeo(r,doc.level>0);}
     let labels=null,signup=false;
     try{let image=doc.underlay.src;if(!/^data:image\/jpeg/.test(image)||image.length>3500000){const c=await srcToCanvas(image,2200);image=canvasToJpeg(c,3500000).url;}
       const res=await fetch('/api/structures/trace-draft',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({image})});const b=await res.json().catch(()=>({}));if(res.ok)labels=b.draft;else signup=!!b.signup;}catch(e){}
     if(!haveGeo){if(labels){applyDraft(labels);return;}flash(signup?'Could not find clear walls. Trace it with the Outline and Wall tools, or sign in to use AI.':'Could not find clear walls on this plan. Trace it with the Outline and Wall tools.');return;}
     let scaleNote='Scale estimated from the wall thickness. Set it on a labelled room for an exact takeoff.';
-    if(labels&&labels.rooms){const W=doc.underlay.w,H=doc.underlay.h;doc.rooms=labels.rooms.map(rm=>({id:uid(),name:rm.name||'Room',type:guessType(rm.name),pt:[rm.x/1000*W,rm.y/1000*H],expect:(rm.width>0&&rm.length>0)?rm.width*rm.length/1e6:null,dims:(rm.width>0&&rm.length>0)?[rm.width,rm.length]:null}));
-      invalidate();outdoorLabels=placeLabels();
-      // outdoor areas drawn against the house become decks, verandahs or paving when the plan names them
-      (r.areas||[]).forEach(a=>{const P=areaPoly(a);const c=[(P[0][0]+P[2][0])/2,(P[0][1]+P[2][1])/2];const big=Math.max(P[2][0]-P[0][0],P[2][1]-P[0][1]);let lab=outdoorLabels.find(l=>pip(l.pt,P));if(!lab){const near=outdoorLabels.map(l=>({l,d:dist(l.pt,c)})).sort((x,y)=>x.d-y.d)[0];if(near&&near.d<big)lab=near.l;}if(!lab)return;outdoorLabels=outdoorLabels.filter(l=>l!==lab);
-        const n=lab.name.toLowerCase();const type=/verand/.test(n)?'verandah':/pergola/.test(n)?'pergola':/deck|alfresco/.test(n)?'deck':/drive|patio|pav|porch|court|terrace/.test(n)?'paving':'deck';
-        doc.areas.push({id:uid(),type,name:lab.name,a:P[0],b:P[2],h:type==='deck'?600:null,board:'merbau',roof:'colorbond',t:100,bal:null});});const s=autoScale();if(s&&s/doc.scale>0.6&&s/doc.scale<1.6){doc.scale=s;scaleNote=`Scale set from the room sizes on the plan (1 m = ${fm(1000/s,0)} px).`;}}
-    doc.openings.forEach(o=>{if(o.wpx){o.width=Math.max(500,Math.round(o.wpx*doc.scale/10)*10);delete o.wpx;}});
+    if(labels&&labels.rooms){
+      if(many){// each label goes to the drawing it sits in, or the nearest one
+        const W=doc.underlay.w,H=doc.underlay.h;const bxs=list.map(x=>bbox(x.outline));const per=list.map(()=>[]);
+        labels.rooms.forEach(rm=>{const p=[rm.x/1000*W,rm.y/1000*H];let bi=0,bd=Infinity;bxs.forEach((b,i)=>{const dx=Math.max(b.x0-p[0],0,p[0]-b.x1),dy=Math.max(b.y0-p[1],0,p[1]-b.y1);const d=Math.hypot(dx,dy);if(d<bd){bd=d;bi=i;}});per[bi].push(rm);});
+        list.forEach((x,i)=>withLevel(i,()=>labelLevel(x,per[i])));
+        const s=withLevel(0,()=>autoScale());if(s&&s/doc.scale>0.6&&s/doc.scale<1.6){doc.scale=s;scaleNote=`Scale set from the room sizes on the plan (1 m = ${fm(1000/s,0)} px).`;}}
+      else{labelLevel(r,labels.rooms);const s=autoScale();if(s&&s/doc.scale>0.6&&s/doc.scale<1.6){doc.scale=s;scaleNote=`Scale set from the room sizes on the plan (1 m = ${fm(1000/s,0)} px).`;}}}
+    if(many){list.forEach((_,i)=>withLevel(i,finishOpenings));
+      // stack each floor over the one below it
+      let fits=[];for(let i=1;i<list.length;i++){const al=alignLevel(i);if(al){doc.levels[i].shift=al.shift;fits.push(al.fit);}}
+      const per=eachLevel(()=>({n:rooms().length,A:outlineArea(),w:doc.walls.length,o:doc.openings.length}));invalidate();changed(true);renderViews();setTool('select');
+      const weak=fits.some(f=>f<0.5);
+      flash(`Found ${list.length} floors on your plan: ${per.map((p,i)=>`${levelName(i).toLowerCase()} ${fm(p.A,0)} m², ${p.n} rooms`).join('; ')}. ${weak?'The upper floor did not line up cleanly over the one below. Switch to it and use Auto align or the nudge arrows.':'Upper floors are lined up over the floor below.'} ${scaleNote} Switch floors with the chips at the top.`);
+      return;}
+    finishOpenings();
     invalidate();changed(true);setTool('select');const R=rooms();
     flash(`Traced from your plan: ${R.length} rooms, ${doc.walls.length} internal walls, ${doc.openings.length} doors and windows${doc.areas.length?`, ${doc.areas.length} outdoor ${doc.areas.length===1?'area':'areas'}`:''}${doc.site?', the property boundary':''}. ${scaleNote} Check the room sizes in Rooms.`);}
-  catch(e){flash('Auto trace failed on this file. Trace it with the Outline and Wall tools.');}
+  catch(e){console.error(e);flash('Auto trace failed on this file. Trace it with the Outline and Wall tools.');}
   finally{aiBusy=false;renderPlanTab();}}
 
 /* ---------- look-alike 3D models for placed items ----------
@@ -1384,7 +1500,7 @@ function runInfo(r,ev){const d=runDef(r);const L=runLen(r);const pb=r.kind==='pb
 /* ---------- roof: the surface rises from the eaves at the roof pitch. For a hip roof the height is the distance in from the eave line
    (the straight skeleton of the plan), with eave lines run on past inside corners so valleys come out straight. For a gable roof only the
    eave lines along the length count, so the ends rise to gables. ---------- */
-function roofModel(P,S,H){const sm=scaleMM();if(!sm||doc.outline.length<3)return null;const eave=(+S.eave||0)/1000,t=Math.tan((+S.pitch||22.5)*Math.PI/180);
+function roofModel(P,S,H,cover){const sm=scaleMM();if(!sm||doc.outline.length<3)return null;const eave=(+S.eave||0)/1000,t=Math.tan((+S.pitch||22.5)*Math.PI/180);
   const E=offsetOut(doc.outline,eave*1000/sm).map(P);const n=E.length;if(n<3)return null;const area=E.reduce((a,p,i)=>{const q=E[(i+1)%n];return a+p[0]*q[1]-q[0]*p[1];},0);const sgn=Math.sign(area)||1;
   const b={x0:Infinity,x1:-Infinity,z0:Infinity,z1:-Infinity};E.forEach(p=>{b.x0=Math.min(b.x0,p[0]);b.x1=Math.max(b.x1,p[0]);b.z0=Math.min(b.z0,p[1]);b.z1=Math.max(b.z1,p[1]);});const longX=(b.x1-b.x0)>=(b.z1-b.z0);
   // Square plans: cover the plan with overlapping rectangles, give each its own hip (or gable along its length), and take the highest
@@ -1399,6 +1515,8 @@ function roofModel(P,S,H){const sm=scaleMM();if(!sm||doc.outline.length<3)return
     rects=rects.map(([i0,i1,j0,j1])=>({x0:xs[i0],x1:xs[i1+1],z0:zs[j0],z1:zs[j1+1]}));}
   const dseg=(x,z,a,c)=>{const dx=c[0]-a[0],dz=c[1]-a[1];const L2=dx*dx+dz*dz||1;let u=((x-a[0])*dx+(z-a[1])*dz)/L2;u=Math.max(0,Math.min(1,u));return Math.hypot(x-a[0]-u*dx,z-a[1]-u*dz);};
   const base=H-eave*t;const gable=S.roofType==='gable';
+  // where a floor above sits on these walls there is no roof, only the part that sticks out gets one
+  const inCover=(x,z)=>{const C=cover;let c=false;for(let i=0,j=C.length-1;i<C.length;j=i++){const [xi,zi]=C[i],[xj,zj]=C[j];if(((zi>z)!==(zj>z))&&(x<(xj-xi)*(z-zi)/((zj-zi)||1e-9)+xi))c=!c;}return c;};
   const height=(x,z)=>{let d=0;if(rects){for(const r of rects){if(x<r.x0-1e-6||x>r.x1+1e-6||z<r.z0-1e-6||z>r.z1+1e-6)continue;const along=(r.x1-r.x0)>=(r.z1-r.z0);const dd=gable?(along?Math.min(z-r.z0,r.z1-z):Math.min(x-r.x0,r.x1-x)):Math.min(x-r.x0,r.x1-x,z-r.z0,r.z1-z);if(dd>d)d=dd;}}
     else{d=Infinity;for(let i=0;i<n;i++)d=Math.min(d,dseg(x,z,E[i],E[(i+1)%n]));if(!isFinite(d))d=0;}return base+t*Math.max(0,d);};
   // clip the eave outline into small squares and lift every corner to the roof surface
@@ -1407,12 +1525,12 @@ function roofModel(P,S,H){const sm=scaleMM();if(!sm||doc.outline.length<3)return
     const lerpX=(p,q,x)=>[x,p[1]+(q[1]-p[1])*(x-p[0])/((q[0]-p[0])||1e-9)],lerpZ=(p,q,z)=>[p[0]+(q[0]-p[0])*(z-p[1])/((q[1]-p[1])||1e-9),z];
     edge(p=>p[0]>=x0,(p,q)=>lerpX(p,q,x0));if(out.length)edge(p=>p[0]<=x1,(p,q)=>lerpX(p,q,x1));if(out.length)edge(p=>p[1]>=z0,(p,q)=>lerpZ(p,q,z0));if(out.length)edge(p=>p[1]<=z1,(p,q)=>lerpZ(p,q,z1));return out;};
   for(let x=b.x0;x<b.x1;x+=cell)for(let z=b.z0;z<b.z1;z+=cell){const pc=clip(E,x,x+cell,z,z+cell);if(pc.length<3)continue;let tri;try{tri=THREE.ShapeUtils.triangulateShape(pc.map(p=>new THREE.Vector2(p[0],p[1])),[]);}catch(e){continue;}
-    tri.forEach(f=>f.forEach(k=>{const p=pc[k];pos.push(p[0],height(p[0],p[1]),p[1]);}));}
+    tri.forEach(f=>{if(cover){const mx=(pc[f[0]][0]+pc[f[1]][0]+pc[f[2]][0])/3,mz=(pc[f[0]][1]+pc[f[1]][1]+pc[f[2]][1])/3;if(inCover(mx,mz))return;}f.forEach(k=>{const p=pc[k];pos.push(p[0],height(p[0],p[1]),p[1]);});});}
   if(!pos.length)return null;const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));geo.computeVertexNormals();
   const col=S.roofMat==='tiles'?0x8f5a46:0x4c5359;const mesh=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:col,roughness:S.roofMat==='tiles'?0.85:0.45,metalness:S.roofMat==='tiles'?0:0.3,side:THREE.DoubleSide,flatShading:true}));
   mesh.castShadow=true;mesh.receiveShadow=true;mesh.userData.pick='roof';mesh.userData.roof=true;
   // gutters along the eave line
-  const gut=new THREE.Group();const gm=new THREE.MeshStandardMaterial({color:0xd8d4cb,roughness:0.5});for(let i=0;i<n;i++){const a=E[i],c=E[(i+1)%n];const L=Math.hypot(c[0]-a[0],c[1]-a[1]);if(L<0.05)continue;const ya=height(a[0],a[1]),yc=height(c[0],c[1]);if(Math.abs(ya-base)>0.05&&Math.abs(yc-base)>0.05)continue;
+  const gut=new THREE.Group();const gm=new THREE.MeshStandardMaterial({color:0xd8d4cb,roughness:0.5});for(let i=0;i<n;i++){const a=E[i],c=E[(i+1)%n];const L=Math.hypot(c[0]-a[0],c[1]-a[1]);if(L<0.05)continue;const ya=height(a[0],a[1]),yc=height(c[0],c[1]);if(Math.abs(ya-base)>0.05&&Math.abs(yc-base)>0.05)continue;if(cover&&inCover((a[0]+c[0])/2,(a[1]+c[1])/2))continue;
     const g=new THREE.Mesh(new THREE.BoxGeometry(L,0.12,0.12),gm);g.position.set((a[0]+c[0])/2,base-0.04,(a[1]+c[1])/2);g.rotation.y=-Math.atan2(c[1]-a[1],c[0]-a[0]);g.userData.roof=true;g.userData.pick='roof';gut.add(g);}
   return {mesh,gut,height,base,t};}
 /* ---------- frame: what the carpenter builds, from the takeoff settings ---------- */
@@ -1445,7 +1563,8 @@ function openingModel(o,cx,cz,ang,thk,box,setUd){const w=o.b-o.a,ux=Math.cos(-an
 /* ---------- layers: roof and frame, per build ---------- */
 function layers3d(){if(!doc.layers3d)doc.layers3d={roof:USER_TRADES.includes('roofer'),frame:USER_TRADES.includes('carpenter')&&!USER_TRADES.includes('roofer')};return doc.layers3d;}
 const L3now=layers3d;
-function renderViews(){const L=layers3d();$('#views').innerHTML=`<button class="chip ${VIEW==='2d'?'on':''}" data-view="2d">Plan</button><button class="chip ${VIEW==='3d'?'on':''}" data-view="3d">3D</button>`+(VIEW==='3d'?`<span class="vsep"></span><button class="chip ${L.roof?'on':''}" data-layer="roof" aria-pressed="${L.roof}">Roof</button><button class="chip ${L.frame?'on':''}" data-layer="frame" aria-pressed="${L.frame}">Frame</button>`:'');}
+function renderViews(){const L=layers3d();ensureLevels();const LVS=`<span class="vsep"></span>`+(multi()?doc.levels.map((lv,i)=>`<button class="chip lv ${i===doc.level?'on':''}" data-level="${i}" aria-pressed="${i===doc.level}">${esc(levelShort(i))}</button>`).join(''):'')+`<button class="chip lv" data-addlevel="1" title="Add a floor">+ Floor</button>`;
+  $('#views').innerHTML=`<button class="chip ${VIEW==='2d'?'on':''}" data-view="2d">Plan</button><button class="chip ${VIEW==='3d'?'on':''}" data-view="3d">3D</button>`+LVS+(VIEW==='3d'?`<span class="vsep"></span><button class="chip ${L.roof?'on':''}" data-layer="roof" aria-pressed="${L.roof}">Roof</button><button class="chip ${L.frame?'on':''}" data-layer="frame" aria-pressed="${L.frame}">Frame</button>`:'');}
 /* ---------- tap anything in Look around to change it ---------- */
 function popAt(ev){const pop=ensurePop();pop.onclick=null;pop.onchange=null;const host=$('#v3').getBoundingClientRect();const x=Math.min(host.width-290,Math.max(10,ev.clientX-host.left+14)),y=Math.min(host.height-260,Math.max(60,ev.clientY-host.top-20));pop.style.left=x+'px';pop.style.top=y+'px';pop.hidden=false;return pop;}
 const OPEN_NAMES={door:'Door',window:'Window',slider:'Sliding door',garage:'Garage door'};
@@ -1477,6 +1596,34 @@ function areaInfo(ar,ev){sel={kind:'area',id:ar.id};switchTab('plan');renderPlan
   pop.innerHTML=`<div class="cardh"><b>${esc(ar.name||(AREA_T[ar.type]||AREA_T.deck).n)}, ${fm(G.Lx,1)} × ${fm(G.Ly,1)} m</b><button class="x" data-pclose="1" aria-label="Close">✕</button></div><div class="pbtns">${Object.entries(AREA_T).map(([k,v])=>`<button class="chip ${ar.type===k?'on':''}" data-atype2="${k}">${v.n}</button>`).join('')}</div><p class="note" style="margin:6px 0 0">Height, boards and balustrade are in the panel on the left.</p><div class="upl"><button class="btn" data-adel="1">Remove</button></div>`;
   pop.onclick=e=>{if(e.target.closest('[data-pclose]')){pop.hidden=true;return;}const b=e.target.closest('[data-atype2]');if(b){snapshot();ar.type=b.dataset.atype2;if(ar.type==='deck'&&!ar.h)ar.h=600;changed(true);areaInfo(ar,ev);return;}if(e.target.closest('[data-adel]')){snapshot();doc.areas=doc.areas.filter(x=>x!==ar);sel=null;pop.hidden=true;changed(true);}};pop.onchange=null;}
 
+/* ---------- floors ---------- */
+function lowerGhost(){if(!multi()||doc.level<1)return null;const lo=doc.levels[doc.level-1];const d=lo&&lo.data;if(!d||!d.outline||d.outline.length<3)return null;const a=levelShift(doc.level-1),b=levelShift(doc.level);const dx=a[0]-b[0],dy=a[1]-b[1];const mv=p=>[p[0]+dx,p[1]+dy];
+  return {out:d.outline.map(mv),walls:(d.walls||[]).map(w=>[mv(w.a),mv(w.b)])};}
+function goLevel(i){if(!doc.levels[i])return;const dy=levelY(i)-levelY(doc.level);setLevel(i);sel=null;const pp=$('#v3pop');if(pp)pp.hidden=true;if(three&&dy){three.camera.position.y+=dy;three.controls.target.y+=dy;}renderViews();changed(true);}
+function addLevel(){snapshot();ensureLevels();syncLevel();const n=doc.levels.length;const sh=levelShift(n-1);doc.levels.push({id:uid(),name:LEVEL_NAMES[n]||('Level '+(n+1)),h:null,shift:[sh[0],sh[1]],data:levelData({})});goLevel(n);
+  flash(`${levelName(n)} added. Trace it on the plan, or copy the outside walls from the floor below.`);}
+function removeLevel(){const i=doc.level;if(i<1)return;snapshot();doc.levels.splice(i,1);doc.level=i-1;loadLevelData(i-1);sel=null;renderViews();changed(true);flash('Floor removed. Undo puts it back.');}
+/* Line an upper floor up over the one below: slide it until its outside walls sit on the walls below, as they do on a real house. */
+function alignLevel(i){if(i<1||!scaleMM())return null;const lo=withLevel(i-1,()=>({segs:segs().map(s=>[s.a,s.b]),out:doc.outline.slice()}));const up=withLevel(i,()=>({segs:segs().filter(s=>s.ext).map(s=>[s.a,s.b]),out:doc.outline.slice()}));
+  if(lo.out.length<3||up.out.length<3)return null;const c=100/scaleMM();const lb=bbox(lo.out),ub=bbox(up.out);const pad=4;const gx0=lb.x0-pad*c,gy0=lb.y0-pad*c;const W=Math.ceil((lb.x1-lb.x0)/c)+pad*2+1,H=Math.ceil((lb.y1-lb.y0)/c)+pad*2+1;
+  const wall=new Uint8Array(W*H),ins=new Uint8Array(W*H);const mark=(x,y)=>{for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const X=x+dx,Y=y+dy;if(X>=0&&Y>=0&&X<W&&Y<H)wall[Y*W+X]=1;}};
+  lo.segs.forEach(([a,b])=>{const L=dist(a,b);const n=Math.max(1,Math.ceil(L/(c*0.5)));for(let k=0;k<=n;k++){const p=lerp(a,b,k/n);mark(Math.round((p[0]-gx0)/c),Math.round((p[1]-gy0)/c));}});
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(pip([gx0+x*c,gy0+y*c],lo.out))ins[y*W+x]=1;
+  const pts=[];up.segs.forEach(([a,b])=>{const L=dist(a,b);const n=Math.max(1,Math.ceil(L/c));for(let k=0;k<=n;k++)pts.push(lerp(a,b,k/n));});if(!pts.length)return null;
+  const score=(dx,dy)=>{let s=0;for(const p of pts){const X=Math.round((p[0]+dx-gx0)/c),Y=Math.round((p[1]+dy-gy0)/c);if(X<0||Y<0||X>=W||Y>=H)continue;const j=Y*W+X;if(wall[j])s+=1;else if(ins[j])s+=0.25;}return s;};
+  // start from the upper floor centred over the lower one, then look everywhere it could sit, coarse then fine
+  const g0=[(lb.x0+lb.x1)/2-(ub.x0+ub.x1)/2,(lb.y0+lb.y1)/2-(ub.y0+ub.y1)/2];const rx=Math.max(lb.x1-lb.x0,ub.x1-ub.x0)/2+2*c,ry=Math.max(lb.y1-lb.y0,ub.y1-ub.y0)/2+2*c;
+  let best=null;const tryAt=(dx,dy)=>{const s=score(dx,dy)-Math.hypot(dx-g0[0],dy-g0[1])/c*0.002;if(!best||s>best.s)best={s,dx,dy};};
+  for(let dx=-rx;dx<=rx;dx+=c*2.5)for(let dy=-ry;dy<=ry;dy+=c*2.5)tryAt(g0[0]+dx,g0[1]+dy);
+  for(const st of [c,c*0.4]){const b0=best;for(let dx=-st*3;dx<=st*3+1e-9;dx+=st)for(let dy=-st*3;dy<=st*3+1e-9;dy+=st)tryAt(b0.dx+dx,b0.dy+dy);}
+  const sl=levelShift(i-1);return {shift:[sl[0]+best.dx,sl[1]+best.dy],fit:Math.min(1,score(best.dx,best.dy)/pts.length)};}
+function doAlign(){const i=doc.level;const r=alignLevel(i);if(!r){flash('Trace this floor and the one below first.');return;}snapshot();doc.levels[i].shift=r.shift;changed(true);flash(r.fit>0.5?`Lined up over the ${levelName(i-1).toLowerCase()}. Nudge it if it is out.`:`Best fit found, but only ${Math.round(r.fit*100)}% of the walls line up. Check it and nudge it into place.`);}
+$('#views').addEventListener('click',e=>{const lb=e.target.closest('[data-level]');if(lb){goLevel(+lb.dataset.level);return;}if(e.target.closest('[data-addlevel]'))addLevel();});
+$('#tab-plan').addEventListener('click',e=>{if(e.target.closest('[data-lvdel]')){removeLevel();return;}if(e.target.closest('[data-lvalign]')){doAlign();return;}
+  if(e.target.closest('[data-lvcopy]')){const i=doc.level;if(i<1)return;const lo=doc.levels[i-1].data;if(!lo||!lo.outline||lo.outline.length<3){flash('The floor below has no outline yet.');return;}snapshot();doc.outline=lo.outline.map(p=>p.slice());doc.levels[i].shift=levelShift(i-1).slice();changed(true);flash('Outside walls copied. Move the corners to match this floor.');return;}
+  const nb=e.target.closest('[data-lvn]');if(nb&&scaleMM()){const [x,y]=nb.dataset.lvn.split(',').map(Number);const st=100/scaleMM();snapshot();const sh=doc.levels[doc.level].shift=levelShift(doc.level).slice();sh[0]+=x*st;sh[1]+=y*st;changed(false);}});
+$('#tab-plan').addEventListener('change',e=>{const k=e.target.dataset.lv;if(!k)return;snapshot();const lv=doc.levels[doc.level];if(k==='name'){lv.name=e.target.value.trim()||LEVEL_NAMES[doc.level];renderViews();}else{const v=parseFloat(e.target.value);if(isFinite(v))lv.h=Math.max(2000,Math.min(5000,Math.round(v)));}changed(true);});
+
 /* ---------- 3D ---------- */
 let three=null;
 function init3D(){if(three||!window.THREE)return three;const host=$('#v3');const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));renderer.shadowMap.enabled=true;host.appendChild(renderer.domElement);
@@ -1489,11 +1636,11 @@ function init3D(){if(three||!window.THREE)return three;const host=$('#v3');const
 /* Tap the model to drop an item: walls, floors and the ground take it; wall items keep the height they were tapped at. */
 /* Where a tap or the pointer lands on the model, and what would go there. */
 function aim3D(ev){const T=three;if(!T||!scaleMM())return null;const r=T.renderer.domElement.getBoundingClientRect();const v=new THREE.Vector2(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1);
-  const rc=new THREE.Raycaster();rc.setFromCamera(v,T.camera);const dd=placePb?null:ITEM_T[placeKind];const wantRoof=tool==='place'&&dd&&dd.m==='roof';const hits=rc.intersectObjects(T.root.children.concat([T.ground]),true).filter(h=>h.object.userData.pick&&!h.object.userData.itemId&&!h.object.userData.runId);const hit=hits.find(h=>wantRoof?true:h.object.userData.pick!=='roof');if(!hit)return null;
-  const n=hit.face?hit.face.normal.clone().transformDirection(hit.object.matrixWorld):new THREE.Vector3(0,1,0);const q=hit.point.clone().add(n.clone().multiplyScalar(0.06));const k=1000/scaleMM();
+  const rc=new THREE.Raycaster();rc.setFromCamera(v,T.camera);const dd=placePb?null:ITEM_T[placeKind];const wantRoof=tool==='place'&&dd&&dd.m==='roof';const hits=rc.intersectObjects(T.root.children.concat([T.ground]),true).filter(h=>h.object.userData.pick&&!h.object.userData.itemId&&!h.object.userData.runId&&onLevel3D(h.object));const hit=hits.find(h=>wantRoof?true:h.object.userData.pick!=='roof');if(!hit)return null;
+  const n=hit.face?hit.face.normal.clone().transformDirection(hit.object.matrixWorld):new THREE.Vector3(0,1,0);const o=lvOff3D();hit.lp=hit.point.clone().sub(o);const q=hit.lp.clone().add(n.clone().multiplyScalar(0.06));const k=1000/scaleMM();
   const d=placePb?itemDef({kind:'pb',n:placePb.n,sec:placePb.sec}):ITEM_T[placeKind];const onWall=hit.object.userData.pick==='wall';
-  return {hit,n,d,onWall,onRoof:hit.object.userData.pick==='roof',host:hit.object.userData.host||null,pt:[(q.x+T.cx)*k,(q.z+T.cz)*k],h:onWall&&d.m==='wall'&&d.h!==0?Math.round(Math.max(150,Math.min(T.H*1000-100,hit.point.y*1000))/10)*10:null};}
-function runTap3D(ev){const A=aim3D(ev);if(!A){flash('Tap a wall, floor or the ground.');return;}const h=runRoute()==='wall'?Math.round(Math.max(0,A.hit.point.y*1000)/10)*10:runH();const p=[A.pt[0],A.pt[1],h];
+  return {hit,n,d,o,onWall,onRoof:hit.object.userData.pick==='roof',host:hit.object.userData.host||null,pt:[(q.x+T.cx)*k,(q.z+T.cz)*k],h:onWall&&d.m==='wall'&&d.h!==0?Math.round(Math.max(150,Math.min(T.H*1000-100,hit.lp.y*1000))/10)*10:null};}
+function runTap3D(ev){const A=aim3D(ev);if(!A){flash('Tap a wall, floor or the ground.');return;}const h=runRoute()==='wall'?Math.round(Math.max(0,A.hit.lp.y*1000)/10)*10:runH();const p=[A.pt[0],A.pt[1],h];
   if(runDraft.length){const last=runDraft[runDraft.length-1];if(Math.hypot(toM(p[0]-last[0]),toM(p[1]-last[1]))<0.15){finishRun();renderPalette();build3D();return;}}runDraft.push(p);renderPalette();build3D();}
 function pick3D(ev){if(tool!=='place')return;const A=aim3D(ev);if(!A){flash('Tap a wall, floor or the ground near the house.');return;}
   if(A.d.m==='wall'&&!A.onWall){flash(`${A.d.n} goes on a wall. Tap the wall where it goes.`);return;}
@@ -1502,16 +1649,16 @@ function pick3D(ev){if(tool!=='place')return;const A=aim3D(ev);if(!A){flash('Tap
   doc.items.push(it);changed(false);renderPlanTab();flash(`${A.d.n} placed${it.h?` at ${it.h} mm`:''}. Tap again to place another, Undo to take it back.`);}
 /* A see-through copy of the item follows the pointer, so you can see where it will go before you tap. */
 let ghostKey=null;
-function runGhost3D(ev){const T=three;if(!T)return;if(T.rg){T.scene.remove(T.rg);T.rg.geometry.dispose();T.rg=null;}if(tool!=='run'||!ev||!runDraft.length)return;const A=aim3D(ev);if(!A)return;const last=runDraft[runDraft.length-1];const lq=T.P(last);
-  const h=runRoute()==='wall'?Math.max(0,A.hit.point.y):runH()/1000;const g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(lq[0],(last[2]||0)/1000+0.02,lq[1]),new THREE.Vector3(A.hit.point.x,h+0.02,A.hit.point.z)]);const ln=new THREE.Line(g,new THREE.LineDashedMaterial({color:0x1f2a33,dashSize:0.12,gapSize:0.08}));ln.computeLineDistances();T.rg=ln;T.scene.add(ln);}
+function runGhost3D(ev){const T=three;if(!T)return;if(T.rg){if(T.rg.parent)T.rg.parent.remove(T.rg);T.rg.geometry.dispose();T.rg=null;}if(tool!=='run'||!ev||!runDraft.length)return;const A=aim3D(ev);if(!A)return;const last=runDraft[runDraft.length-1];const lq=T.P(last);
+  const h=runRoute()==='wall'?Math.max(0,A.hit.lp.y):runH()/1000;const g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(lq[0],(last[2]||0)/1000+0.02,lq[1]),new THREE.Vector3(A.hit.lp.x,h+0.02,A.hit.lp.z)]);const ln=new THREE.Line(g,new THREE.LineDashedMaterial({color:0x1f2a33,dashSize:0.12,gapSize:0.08}));ln.computeLineDistances();T.rg=ln;(lvGroup3D()||T.scene).add(ln);}
 function ghost3D(ev){const T=three;if(!T)return;const A=tool==='place'&&ev?aim3D(ev):null;const key=placePb?'pb:'+placePb.id:placeKind;
   if(!A){if(T.ghost)T.ghost.visible=false;T.renderer.domElement.style.cursor=tool==='place'?'crosshair':'';return;}
   if(!T.ghost||ghostKey!==key){if(T.ghost)T.scene.remove(T.ghost);const g=itemModel(placePb?{id:'ghost',kind:'pb',n:placePb.n}:{id:'ghost',kind:placeKind});const gm=new THREE.MeshStandardMaterial({color:0xf2b705,transparent:true,opacity:0.6,emissive:0x664400});g.traverse(o=>{if(o.isMesh){o.material=gm;o.castShadow=false;o.userData={};}});g.userData={};T.ghost=g;ghostKey=key;T.scene.add(g);}
   const g=T.ghost;g.visible=true;const d=A.d;const bad=d.m==='wall'&&!A.onWall;g.traverse(o=>{if(o.isMesh)o.material.color.setHex(bad?0xd23b2f:0xf2b705);});
   if(d.m==='wall'&&A.onWall){g.position.copy(A.hit.point);g.rotation.set(0,Math.atan2(A.n.x,A.n.z),0);}
-  else if(d.m==='ceil'){g.position.set(A.hit.point.x,T.H,A.hit.point.z);g.rotation.set(0,0,0);}
-  else if(d.m==='wall'){g.position.set(A.hit.point.x,(d.h||300)/1000,A.hit.point.z);g.rotation.set(0,0,0);}
-  else{const w=T.P?backToWall([A.hit.point.x,A.hit.point.z],T.P,segs()):null;if(w){g.position.set(w.x,0,w.z);g.rotation.set(0,w.ang,0);}else{g.position.set(A.hit.point.x,0,A.hit.point.z);g.rotation.set(0,0,0);}}
+  else if(d.m==='ceil'){g.position.set(A.hit.point.x,T.H+A.o.y,A.hit.point.z);g.rotation.set(0,0,0);}
+  else if(d.m==='wall'){g.position.set(A.hit.point.x,(d.h||300)/1000+A.o.y,A.hit.point.z);g.rotation.set(0,0,0);}
+  else{const w=T.P?backToWall([A.hit.lp.x,A.hit.lp.z],T.P,segs()):null;if(w){g.position.set(w.x+A.o.x,A.o.y,w.z+A.o.z);g.rotation.set(0,w.ang,0);}else{g.position.set(A.hit.point.x,A.o.y,A.hit.point.z);g.rotation.set(0,0,0);}}
   T.renderer.domElement.style.cursor=bad?'not-allowed':'crosshair';}
 let down3=null;
 function hook3D(){const T=three;if(!T||T.hooked)return;T.hooked=true;const el=T.renderer.domElement;el.addEventListener('pointerdown',e=>{down3=[e.clientX,e.clientY];});el.addEventListener('pointerup',e=>{if(down3&&Math.hypot(e.clientX-down3[0],e.clientY-down3[1])<6){if(tool==='place')pick3D(e);else if(tool==='run')runTap3D(e);else if(tool==='opening')openingTap3D(e);else identify3D(e);}down3=null;});
@@ -1519,7 +1666,8 @@ function hook3D(){const T=three;if(!T||T.hooked)return;T.hooked=true;const el=T.
 /* Look around: tap an item to see what it is. */
 function identify3D(ev){const T=three;if(!T)return;const r=T.renderer.domElement.getBoundingClientRect();const v=new THREE.Vector2(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1);const rc=new THREE.Raycaster();rc.setFromCamera(v,T.camera);
   const hit=rc.intersectObjects(T.root.children,true).find(h=>{const u=h.object.userData;return u.itemId||u.runId||u.opId||u.areaId||u.roof||u.host||u.pick==='floor';});const pop=$('#v3pop');
-  if(!hit){if(pop&&!pop.hidden){pop.hidden=true;if(sel){sel=null;build3D();renderPlanTab();}}return;}const u=hit.object.userData;const k=1000/scaleMM();const pt=[(hit.point.x+T.cx)*k,(hit.point.z+T.cz)*k];
+  if(hit&&!onLevel3D(hit.object)){const lv=lvOfObj3D(hit.object);flash(`That is on the ${(doc.levels[lv]||{}).name||'other floor'}. Switch to it at the top to change it.`);return;}
+  if(!hit){if(pop&&!pop.hidden){pop.hidden=true;if(sel){sel=null;build3D();renderPlanTab();}}return;}const u=hit.object.userData;const k=1000/scaleMM();const lp=hit.point.clone().sub(lvOff3D());const pt=[(lp.x+T.cx)*k,(lp.z+T.cz)*k];
   if(u.itemId){const it=doc.items.find(x=>x.id===u.itemId);if(it)itemInfo(it,ev);return;}
   if(u.runId){const rr=doc.runs.find(x=>x.id===u.runId);if(rr)runInfo(rr,ev);return;}
   if(u.opId){const op=doc.openings.find(x=>x.id===u.opId);if(op)openingInfo(op,ev);return;}
@@ -1529,14 +1677,27 @@ function identify3D(ev){const T=three;if(!T)return;const r=T.renderer.domElement
   if(u.pick==='floor'){roomInfo(pt,ev);return;}}
 let openType='door';
 function openingTap3D(ev){const A=aim3D(ev);if(A&&A.hit.object.userData.opId){flash('There is an opening there already. Tap it in Look around to change it.');return;}if(!A||!A.host){flash('Tap a wall where the opening goes.');return;}const s=segs().find(x=>x.host===A.host);if(!s)return;const q=lerp(s.a,s.b,projT(A.pt,s.a,s.b));const n0=doc.openings.length;addOpening(openType,q);if(doc.openings.length>n0)flash(`${OPEN_NAMES[openType]} added. Tap it in Look around to size it.`);}
-function build3D(){const T=init3D();if(!T)return;hook3D();const root=T.root;root.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose();});while(root.children.length)root.remove(root.children[0]);
-  if(!scaleMM()||doc.outline.length<3)return;const S=doc.settings,H=S.wallH/1000;const b=bbox(doc.outline);const cx=toM((b.x0+b.x1)/2),cz=toM((b.y0+b.y1)/2);const P=p=>[toM(p[0])-cx,toM(p[1])-cz];
+/* Each floor is its own group, lifted to its height and slid by its alignment. Floors above the one you are on are left off,
+   so you can see in and work on it. */
+function lvGroup3D(){const T=three;return T&&T.levelG?T.levelG[doc.level]:null;}
+function lvOff3D(){const g=lvGroup3D();return g?g.position.clone():new THREE.Vector3();}
+function lvOfObj3D(o){while(o){if(o.userData&&o.userData.level!=null)return o.userData.level;o=o.parent;}return null;}
+function onLevel3D(o){const T=three;if(T&&o===T.ground)return doc.level===0;const lv=lvOfObj3D(o);return lv==null||lv===doc.level;}
+function build3D(){const T=init3D();if(!T)return;hook3D();const root=T.root;root.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material&&!o.material.userData.keep)o.material.dispose();});while(root.children.length)root.remove(root.children[0]);T.levelG=[];T.roof=null;
+  ensureLevels();if(!scaleMM())return;const n=doc.levels.length,act=doc.level;
+  const outs=doc.levels.map((_,j)=>withLevel(j,()=>doc.outline.slice()));const base=outs.findIndex(o=>o.length>=3);if(base<0)return;
+  const b=bbox(outs[base]);const cx=toM((b.x0+b.x1)/2),cz=toM((b.y0+b.y1)/2);const P=p=>[toM(p[0])-cx,toM(p[1])-cz];T.cx=cx;T.cz=cz;T.P=P;T.H=doc.settings.wallH/1000;
+  for(let i=0;i<=act;i++){const g=new THREE.Group();g.userData.level=i;const sh=levelShift(i);g.position.set(toM(sh[0]),levelY(i),toM(sh[1]));root.add(g);T.levelG[i]=g;
+    let cover=null;if(i<n-1&&outs[i+1].length>=3){const s1=levelShift(i+1);const dx=toM(s1[0]-sh[0]),dz=toM(s1[1]-sh[1]);cover=outs[i+1].map(p=>{const q=P(p);return [q[0]+dx,q[1]+dz];});}
+    withLevel(i,()=>{if(doc.outline.length>=3)build3DLevel(T,g,i,P,cover);});}
+  if(!T.fitted){const span=Math.max(toM(b.x1-b.x0),toM(b.y1-b.y0));T.camera.position.set(span*0.8,span*1.05+levelY(act),span*1.15);T.controls.target.set(0,0.8+levelY(act),0);T.fitted=true;}}
+function build3DLevel(T,root,LI,P,cover){const S=doc.settings,H=S.wallH/1000;
   const extM=new THREE.MeshStandardMaterial({color:S.extClad==='brick'?0xb5755a:0xe8e4da,roughness:0.85}),intM=new THREE.MeshStandardMaterial({color:0xf2f0ea,roughness:0.9}),glass=new THREE.MeshStandardMaterial({color:0x9fc7e0,transparent:true,opacity:0.45}),doorM=new THREE.MeshStandardMaterial({color:0x8a6a4a,roughness:0.6});
   const finCol={tiles:0xd9d6cf,carpet:0x9aa0a6,hybrid:0xc9a77c,timber:0xb07c4f,epoxy:0x8f9aa3,none:0xbdb9b1};
   const sgn=Math.sign(polyArea(doc.outline))||1;
   let pickTag=null,ud=null;const box=(x,y,z,sx,sy,sz,ang,m)=>{const me=new THREE.Mesh(new THREE.BoxGeometry(Math.max(sx,0.01),Math.max(sy,0.01),Math.max(sz,0.01)),m);me.position.set(x,y,z);me.rotation.y=ang;me.castShadow=true;me.receiveShadow=true;if(pickTag)me.userData.pick=pickTag;if(ud)Object.assign(me.userData,ud);root.add(me);return me;};
   const L3=layers3d();
-  T.cx=cx;T.cz=cz;T.H=H;T.P=P;pickTag='wall';
+  pickTag='wall';
   segs().forEach(s=>{const a=P(s.a),c=P(s.b);const L=Math.hypot(c[0]-a[0],c[1]-a[1]);if(L<0.05)return;const ux=(c[0]-a[0])/L,uz=(c[1]-a[1])/L;const thk=(s.ext?S.extThk:S.intThk)/1000;
     let nx=-uz,nz=ux;if(s.ext){nx*=sgn;nz*=sgn;}const off=s.ext?thk/2:0;const ang=-Math.atan2(uz,ux);const m=s.ext?extM:intM;
     const ops=doc.openings.map(o=>({o,h:hostOf(o)})).filter(x=>x.h&&x.h.s.host===s.host).map(x=>{const c0=x.h.t*L,w=x.o.width/1000;return {a:Math.max(0,c0-w/2),b:Math.min(L,c0+w/2),sill:x.o.type==='window'?x.o.sill/1000:0,h:Math.min(H-0.05,x.o.height/1000),t:x.o.type,id:x.o.id};}).sort((p,q)=>p.a-q.a);
@@ -1544,6 +1705,7 @@ function build3D(){const T=init3D();if(!T)return;hook3D();const root=T.root;root
     let cur=0;ops.forEach(o=>{piece(cur,o.a,0,H);piece(o.a,o.b,0,o.sill);piece(o.a,o.b,o.sill+o.h,H);const mid=(o.a+o.b)/2;const cxo=a[0]+ux*mid+nx*off,czo=a[1]+uz*mid+nz*off;openingModel(o,cxo,czo,ang,thk,box,(v)=>{ud=v;});cur=Math.max(cur,o.b);});piece(cur,L,0,H);});
   if(L3.frame){const F=frameModel(P,S,H);root.add(F);}
   pickTag=null;
+  if(LI>0){const sh=new THREE.Shape(doc.outline.map(p=>{const q=P(p);return new THREE.Vector2(q[0],-q[1]);}));const sl=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:0.3,bevelEnabled:false}),new THREE.MeshStandardMaterial({color:0xd6d2c8,roughness:0.9}));sl.rotation.x=-Math.PI/2;sl.position.y=-0.31;sl.castShadow=true;sl.receiveShadow=true;root.add(sl);}
   rooms().forEach(r=>{const sh=new THREE.Shape(r.f.poly.map(p=>{const q=P(p);return new THREE.Vector2(q[0],-q[1]);}));const m=new THREE.Mesh(new THREE.ShapeGeometry(sh),new THREE.MeshStandardMaterial({color:finCol[r.finish]||0xcccccc,roughness:0.9}));m.rotation.x=-Math.PI/2;m.position.y=0.01;m.receiveShadow=true;m.userData.pick='floor';root.add(m);});
   /* outdoor areas */
   const wood=new THREE.MeshStandardMaterial({color:0xa8754a,roughness:0.8}),post=new THREE.MeshStandardMaterial({color:0x6e6258,roughness:0.8}),pave=new THREE.MeshStandardMaterial({color:0xb9b2a6,roughness:1}),conc=new THREE.MeshStandardMaterial({color:0xa4a9ad,roughness:1}),sheet=new THREE.MeshStandardMaterial({color:0x8b9aa6,roughness:0.6,side:THREE.DoubleSide}),polyM=new THREE.MeshStandardMaterial({color:0xcfe3ee,transparent:true,opacity:0.45,side:THREE.DoubleSide}),rail=new THREE.MeshStandardMaterial({color:0x40464c,roughness:0.6});
@@ -1558,18 +1720,18 @@ function build3D(){const T=init3D();if(!T)return;hook3D();const root=T.root;root
     else box(cx2,0.02,cz2,w,0.04,d,0,ar.type==='paving'?pave:conc);});
   ud=null;
   /* property boundary */
-  if(doc.site&&doc.site.length>=3){const lm=new THREE.MeshStandardMaterial({color:0x2e7d4f,roughness:0.8});const ps=doc.site.map(P);for(let i=0;i<ps.length;i++){const a=ps[i],c=ps[(i+1)%ps.length];const L=Math.hypot(c[0]-a[0],c[1]-a[1]);if(L<0.05)continue;box((a[0]+c[0])/2,0.06,(a[1]+c[1])/2,L,0.12,0.06,-Math.atan2(c[1]-a[1],c[0]-a[0]),lm);}}
+  if(LI===0&&doc.site&&doc.site.length>=3){const lm=new THREE.MeshStandardMaterial({color:0x2e7d4f,roughness:0.8});const ps=doc.site.map(P);for(let i=0;i<ps.length;i++){const a=ps[i],c=ps[(i+1)%ps.length];const L=Math.hypot(c[0]-a[0],c[1]-a[1]);if(L<0.05)continue;box((a[0]+c[0])/2,0.06,(a[1]+c[1])/2,L,0.12,0.06,-Math.atan2(c[1]-a[1],c[0]-a[0]),lm);}}
   /* cable and pipe runs */
   const tube=(a,b,col,id,op)=>{const A=new THREE.Vector3(a[0],a[1],a[2]),B=new THREE.Vector3(b[0],b[1],b[2]);const L=A.distanceTo(B);if(L<0.01)return;const m=new THREE.Mesh(new THREE.CylinderGeometry(0.014,0.014,L,8),new THREE.MeshStandardMaterial({color:col,roughness:0.5,transparent:!!op,opacity:op||1}));m.position.copy(A).add(B).multiplyScalar(0.5);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),B.clone().sub(A).normalize());if(id)m.userData.runId=id;root.add(m);};
   const W3=p=>{const q=P(p);return [q[0],(p[2]||0)/1000+0.02,q[1]];};
   (doc.runs||[]).forEach(r=>{const d=runDef(r);const on=sel&&sel.kind==='run'&&sel.id===r.id;for(let i=1;i<r.pts.length;i++)tube(W3(r.pts[i-1]),W3(r.pts[i]),on?0xf2b705:d.col,r.id);});
   if(tool==='run'&&runDraft.length){const d=runPb?{col:0x7a5cc2}:RUN_T[runKind];for(let i=1;i<runDraft.length;i++)tube(W3(runDraft[i-1]),W3(runDraft[i]),d.col,null,0.75);runDraft.forEach(p=>{const s=new THREE.Mesh(new THREE.SphereGeometry(0.035,12,8),new THREE.MeshStandardMaterial({color:0xffffff}));const w=W3(p);s.position.set(w[0],w[1],w[2]);root.add(s);});}
   /* roof */
-  T.roof=null;if(L3.roof||L3.frame){const R=roofModel(P,S,H);if(R){T.roof=R;if(L3.roof){if(L3.frame){R.mesh.material.transparent=true;R.mesh.material.opacity=0.35;R.mesh.material.depthWrite=false;}root.add(R.mesh);root.add(R.gut);}if(L3.frame)root.add(trussModel(R,P,S,H));}}
+  let LR=null;if(L3.roof||L3.frame){const R=roofModel(P,S,H,cover);if(R){LR=R;if(LI===doc.level)T.roof=R;if(L3.roof){if(L3.frame){R.mesh.material.transparent=true;R.mesh.material.opacity=0.35;R.mesh.material.depthWrite=false;}root.add(R.mesh);root.add(R.gut);}if(L3.frame)root.add(trussModel(R,P,S,H));}}
   /* placed items, as look-alike models */
   const segsAll=segs();
   doc.items.forEach(it=>{const d=itemDef(it);const q=P(it.pt);const g=itemModel(it);
-    if(d.m==='roof'){if(!T.roof||!L3.roof)return;const R=T.roof,e=0.05;const y=R.height(q[0],q[1]);const hx=(R.height(q[0]+e,q[1])-R.height(q[0]-e,q[1]))/(2*e),hz=(R.height(q[0],q[1]+e)-R.height(q[0],q[1]-e))/(2*e);g.position.set(q[0],y,q[1]);g.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(-hx,1,-hz).normalize());}
+    if(d.m==='roof'){if(!LR||!L3.roof)return;const R=LR,e=0.05;const y=R.height(q[0],q[1]);const hx=(R.height(q[0]+e,q[1])-R.height(q[0]-e,q[1]))/(2*e),hz=(R.height(q[0],q[1]+e)-R.height(q[0],q[1]-e))/(2*e);g.position.set(q[0],y,q[1]);g.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(-hx,1,-hz).normalize());}
     else if(d.m==='ceil'){g.position.set(q[0],H,q[1]);}
     else if(d.m==='wall'){let best=null,bd=1e9;segsAll.forEach(sg=>{const t=projT(it.pt,sg.a,sg.b);const pr=lerp(sg.a,sg.b,t);const dd=dist(it.pt,pr);if(dd<bd){bd=dd;best={sg,pr};}});
       const y=(it.h!=null?it.h:(d.h!=null?d.h:300))/1000;
@@ -1579,7 +1741,7 @@ function build3D(){const T=init3D();if(!T)return;hook3D();const root=T.root;root
     else{const w=backToWall(q,P,segsAll);if(w){g.position.set(w.x,0,w.z);g.rotation.y=w.ang;}else g.position.set(q[0],0,q[1]);}
     root.add(g);
     if(sel&&sel.kind==='item'&&sel.id===it.id){const hl=new THREE.BoxHelper(g,0xf2b705);root.add(hl);}});
-  if(!T.fitted){const span=Math.max(toM(b.x1-b.x0),toM(b.y1-b.y0));T.camera.position.set(span*0.8,span*1.05,span*1.15);T.controls.target.set(0,0.8,0);T.fitted=true;}}
+}
 function setView(v){VIEW=v;renderViews();if(v==='3d'&&!TOOLS3D.some(t=>t[0]===tool))tool='select';renderToolbar();$('#svgwrap').hidden=v!=='2d';$('#v3').hidden=v!=='3d';$('#hint').hidden=false;const pp=$('#v3pop');if(pp)pp.hidden=true;renderHint();renderPalette();document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===v));if(v==='3d')build3D();else{fitIfNeeded();draw();}}
 $('#views').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b){setView(b.dataset.view);return;}const l=e.target.closest('[data-layer]');if(l){const L=layers3d();L[l.dataset.layer]=!L[l.dataset.layer];renderViews();build3D();save();}});
 let fitted=false;function fitIfNeeded(){if(!fitted){fitView();fitted=true;}}
@@ -1589,11 +1751,11 @@ function updateStats(){const sm=scaleMM();const el=$('#stats');if(!sm){el.innerH
   const R=rooms();el.innerHTML=`<b>${fm(outlineArea(),1)} m² footprint</b>${R.length} rooms, ${fm(outlinePer(),1)} m outside walls${doc.site&&doc.site.length>=3?`, ${fm(siteArea(),0)} m² site`:''}<span class="hint">${doc.draft?'AI draft: check it against the plan':'Tap a room to edit it'}</span>`;}
 function changed(full){invalidate();draw();updateStats();if(full){renderPlanTab();renderRooms();}else{renderPlanTab();if($('#tab-rooms').classList.contains('on'))renderRooms();}scheduleMaterials();if(!$('#v3').hidden)build3D();save();}
 /* ---------- Swiftscope bridge ---------- */
-function postPlan(){try{const plan=JSON.parse(JSON.stringify(doc));if(plan.underlay&&plan.underlay.path)plan.underlay.src=null;window.parent.postMessage({source:'ss-planner',type:'change',plan,summary:summary()},location.origin);}catch(e){}}
+function postPlan(){try{syncLevel();const plan=JSON.parse(JSON.stringify(doc));if(plan.underlay&&plan.underlay.path)plan.underlay.src=null;window.parent.postMessage({source:'ss-planner',type:'change',plan,summary:summary()},location.origin);}catch(e){}}
 function ensureDims(cb){const U=doc.underlay;if(!U.src||(U.w&&U.h)){cb();return;}const im=new Image();im.onload=()=>{U.w=im.naturalWidth;U.h=im.naturalHeight;cb();};im.onerror=cb;im.src=U.src;}
 if(EMBED){window.addEventListener('message',e=>{if(e.origin!==location.origin||e.source!==window.parent)return;const d=e.data||{};if(d.target!=='ss-planner')return;
   if(d.type==='load'){if(d.meta)META=d.meta;if(d.settings)SETTINGS=Object.assign(SETTINGS,d.settings);PB.set(d.pricebook);USER_TRADES=Array.isArray(d.trades)?d.trades:[];
-    const isNew=!d.plan||!Array.isArray(d.plan.outline);doc=migrate(d.plan||{});if(isNew)applyTradeScope(d.trades);if(d.underlayUrl)doc.underlay.src=d.underlayUrl;
+    const isNew=!d.plan||!Array.isArray(d.plan.outline);doc=migrate(d.plan||{});ensureLevels();if(isNew)applyTradeScope(d.trades);if(d.underlayUrl)doc.underlay.src=d.underlayUrl;
     ensureDims(()=>{fitted=false;invalidate();fitIfNeeded();changed(true);setTool(doc.underlay.src&&!doc.scale&&doc.outline.length<3?'scale':doc.outline.length<3?'outline':'select');if(isNew)postPlan();});}
   if(d.type==='meta')META=Object.assign(META,d.meta||{});
   if(d.type==='print'){openPlans();setTimeout(()=>{try{window.print();}catch(_){}},150);}
