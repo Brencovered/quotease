@@ -25,7 +25,7 @@ export default async function StructureEditorPage({ params }: { params: Promise<
   const plan = (row.plan ?? {}) as Record<string, unknown>;
   const isNew = !plan || !("shed" in plan);
 
-  const [{ data: clients }, { data: openQuotes }, { data: profile }, lastPricesRes, { data: templateRows }] = await Promise.all([
+  const [{ data: clients }, { data: openQuotes }, { data: profile }, lastPricesRes, { data: templateRows }, { data: priceBook }] = await Promise.all([
     supabase.from("clients").select("id, name, billing_address").eq("profile_id", businessId).order("name").range(0, 999),
     supabase
       .from("quotes")
@@ -59,6 +59,13 @@ export default async function StructureEditorPage({ params }: { params: Promise<
       .neq("id", id)
       .order("name")
       .range(0, 99),
+    // The business's own material prices, matched by name to trade takeoff rows.
+    supabase
+      .from("material_items")
+      .select("label, unit_cost")
+      .eq("profile_id", businessId)
+      .gt("unit_cost", 0)
+      .range(0, 1999),
   ]);
 
   const lastPrices = (lastPricesRes.data as { prices?: Record<string, number> } | null)?.prices ?? null;
@@ -70,6 +77,7 @@ export default async function StructureEditorPage({ params }: { params: Promise<
         id={row.id}
         businessId={businessId}
         isTemplate={Boolean(row.is_template)}
+        priceBook={(priceBook ?? []).map((p) => ({ label: String(p.label ?? ""), unit_cost: Number(p.unit_cost) || 0 }))}
         templates={(templateRows ?? []).map((t) => ({ id: t.id as string, name: t.name as string, plan: t.plan }))}
         initialName={row.name}
         initialClientId={row.client_id}
@@ -84,6 +92,7 @@ export default async function StructureEditorPage({ params }: { params: Promise<
           hourlyRate: Number(profile?.hourly_rate) || 95,
           marginPct: Number(profile?.materials_margin_pct ?? 20),
           trade: structureTrade(profile?.trades as string[] | null),
+          trades: (profile?.trades as string[] | null) ?? [],
         }}
       />
     </>

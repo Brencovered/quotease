@@ -24,6 +24,7 @@ interface Props {
   businessId: string;
   isTemplate: boolean;
   templates: TemplateOption[];
+  priceBook: Array<{ label: string; unit_cost: number }>;
   initialName: string;
   initialClientId: string | null;
   linkedQuoteId: string | null;
@@ -31,7 +32,7 @@ interface Props {
   lastPrices: Record<string, number> | null;
   clients: ClientOption[];
   openQuotes: QuoteOption[];
-  business: { name: string; contact: string; hourlyRate: number; marginPct: number; trade: string };
+  business: { name: string; contact: string; hourlyRate: number; marginPct: number; trade: string; trades: string[] };
 }
 
 type SaveState = "idle" | "pending" | "saving" | "saved" | "error";
@@ -149,6 +150,8 @@ export default function StructureEditor(props: Props) {
           meta,
           settings: { hourlyRate: business.hourlyRate },
           templates: templatesRef.current,
+          trades: business.trades,
+          pricebook: props.priceBook,
         });
         return;
       }
