@@ -346,6 +346,18 @@ dialog::backdrop{background:rgba(10,15,20,.5);}
 
 #ed .site{fill:none;stroke:#2e7d4f;opacity:.9;}
 #ed .sitelab{fill:#2e7d4f;font-weight:700;paint-order:stroke;stroke:#fff;stroke-width:3px;}
+
+.v3pop{position:absolute;z-index:4;width:250px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.18);font-size:13px;}
+.v3pop .cardh{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.v3pop .x{border:0;background:none;cursor:pointer;font-size:14px;color:var(--muted);}
+
+.phgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:6px 0 8px;}
+.phgrid figure{margin:0;position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid var(--line);}
+.phgrid img{width:100%;height:100%;object-fit:cover;display:block;}
+.phgrid .x{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:999px;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:11px;cursor:pointer;}
+.phread{margin-top:8px;}
+.phnotes{margin:6px 0 0;padding-left:18px;font-size:12.5px;color:var(--muted);}
+.phgrid.pr{grid-template-columns:repeat(3,1fr);}
 </style>
 </head>
 <body>
@@ -450,7 +462,7 @@ const SECTIONS={build:'Structure',floor:'Slab and floor',roof:'Roofing',line:'In
 function guessType(name){const n=String(name||'').toLowerCase();if(/ens/.test(n))return 'ens';if(/bath/.test(n))return 'bath';if(/\bwc\b|toilet|powder/.test(n))return 'wc';if(/laund|ldry/.test(n))return 'laundry';if(/kitch|meals/.test(n))return 'kitchen';if(/bed|master/.test(n))return 'bed';if(/garage|carport/.test(n))return 'garage';if(/robe|wir\b|store|pantry|ptry|linen/.test(n))return 'robe';if(/hall|entry|foyer|passage/.test(n))return 'hall';if(/study|office/.test(n))return 'study';if(/living|family|lounge|dining|rumpus|theatre|meals/.test(n))return 'living';return 'other';}
 
 /* ---------- document ---------- */
-function defaultDoc(){return {kind:'house',v:1,underlay:{src:null,path:null,w:0,h:0,opacity:0.55},scale:null,outline:[],walls:[],openings:[],rooms:[],site:null,
+function defaultDoc(){return {kind:'house',v:1,underlay:{src:null,path:null,w:0,h:0,opacity:0.55},scale:null,outline:[],walls:[],openings:[],rooms:[],site:null,photos:[],photoRead:null,
   settings:{wallH:2400,extThk:250,intThk:90,extStud:'90x45',intStud:'90x35',studSp:450,extClad:'brick',roofType:'hip',pitch:22.5,eave:450,roofMat:'tiles',floor:'slab',slabT:100,lineGarage:false},
   prices:{},links:{},items:[],areas:[],waste:10,labour:{},labourRate:null,scope:null,draft:false};}
 function migrate(p){const d=defaultDoc();p=p||{};return Object.assign({},d,p,{kind:'house',underlay:Object.assign({},d.underlay,p.underlay||{}),settings:Object.assign({},d.settings,p.settings||{}),
@@ -579,6 +591,7 @@ function draw(){layoutOverlays();const r=svg.getBoundingClientRect();svg.setAttr
   renderHint();}
 function renderHint(){const h=$('#hint');if(!h)return;const sm=scaleMM();const m={select:'Drag corners and wall ends. Tap a wall edge midpoint dot to add a corner. Drag empty space to pan, scroll or pinch to zoom.',
   outline:'Tap each outside corner of the house. Tap the first corner again to close it. Lines snap square.',wall:'Tap the start and end of each internal wall. Keep tapping to chain walls. Esc or double tap to stop.',
+  select:VIEW==='3d'?'Drag to turn the model. Tap any item to see what it is.':'Drag corners and wall ends. Tap a wall edge midpoint dot to add a corner. Drag empty space to pan, scroll or pinch to zoom.',
   place:VIEW==='3d'?'Pick an item below, then tap the wall, floor or ceiling where it goes. Drag to turn the model.':'Pick an item below, then tap the plan to drop it where it goes. Drag it with Select to move it.',
   look:'',area:'Drag out a deck, verandah or paved area against the house. Set its type and height on the left.',
   door:'Tap a wall to add a door.',window:'Tap a wall to add a window.',slider:'Tap an outside wall to add a sliding door.',garage:'Tap the garage wall to add a garage door.',room:'Tap inside a room to name it.',
@@ -660,7 +673,7 @@ document.addEventListener('keyup',e=>{if(e.key===' ')spaceDown=false;});
 function deleteSel(){if(!sel)return;snapshot();if(sel.kind==='item')doc.items=doc.items.filter(x=>x.id!==sel.id);else if(sel.kind==='area')doc.areas=doc.areas.filter(x=>x.id!==sel.id);else if(sel.kind==='op')doc.openings=doc.openings.filter(o=>o.id!==sel.id);else if(sel.kind==='wall')doc.walls=doc.walls.filter(w=>w.id!==sel.id);else if(sel.kind==='room')doc.rooms=doc.rooms.filter(r=>r.id!==sel.id);sel=null;changed(true);}
 function confirmReplace(){if(confirmReplace.armed&&Date.now()-confirmReplace.armed<4000){confirmReplace.armed=0;return true;}confirmReplace.armed=Date.now();flash('There is already an outline. Tap again to start a new one, or use Select to adjust it.');return false;}
 let flashT;function flash(msg){const f=$('#flash');f.textContent=msg;f.hidden=false;clearTimeout(flashT);flashT=setTimeout(()=>{f.hidden=true;},Math.min(14000,Math.max(3500,msg.length*55)));}
-function setTool(t){tool=t;draft=[];calibPts=[];hideCalib();hover=null;document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===t));svg.style.cursor=t==='select'?'grab':'crosshair';if(VIEW==='3d'){$('#hint').hidden=t!=='place';renderHint();if(three)three.renderer.domElement.style.cursor=t==='place'?'crosshair':'';}renderPalette();draw();}
+function setTool(t){tool=t;draft=[];calibPts=[];hideCalib();hover=null;document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===t));svg.style.cursor=t==='select'?'grab':'crosshair';if(VIEW==='3d'){$('#hint').hidden=false;renderHint();if(three)three.renderer.domElement.style.cursor=t==='place'?'crosshair':'';}renderPalette();draw();}
 let VIEW='2d';const TOOLS3D=[['select','Look around'],['place','Place item']];
 function renderToolbar(){$('#tools').innerHTML=(VIEW==='3d'?TOOLS3D:TOOLS).map(([k,n])=>`<button class="chip ${k===tool?'on':''}" data-tool="${k}">${n}</button>`).join('')+`<button class="chip" id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>`;}
 $('#tools').addEventListener('click',e=>{const b=e.target.closest('[data-tool]');if(b){setTool(b.dataset.tool);return;}if(e.target.id==='undoBtn')undo();});
@@ -908,11 +921,12 @@ function renderPlanTab(){const U=doc.underlay;const sm=scaleMM();let h='';
     h+=`</div>`;}}
   if(sel&&sel.kind==='wall'){const w=doc.walls.find(x=>x.id===sel.id);if(w)h+=`<div class="card"><div class="cardh"><b>Internal wall${sm?', '+fm(toM(dist(w.a,w.b)),2)+' m':''}</b><button class="x" data-del="1" aria-label="Remove">✕</button></div></div>`;}
   if(sm&&doc.outline.length>=3){const g=geoAll();h+=`<div class="summary"><span>Footprint</span><b>${fm(g.A,1)} m²</b><span>Outside walls</span><b>${fm(g.extL,1)} m</b><span>Internal walls</span><b>${fm(g.intL,1)} m</b><span>Rooms</span><b>${g.R.length}</b><span>Roof area</span><b>${fm(g.roofA,1)} m²</b></div>`;}
+  h+=photosHTML();
   h+=`<h3>Construction</h3>`+SET_FIELDS.map(([k,l,t,u,o])=>{const v=doc.settings[k];if(t==='num')return `<label class="row"><span>${l}</span><span class="inp"><input type="number" data-set="${k}" value="${v}" min="${o[0]}" max="${o[1]}" step="${o[2]}"><em>${u}</em></span></label>`;if(t==='chk')return `<label class="row"><span>${l}</span><input type="checkbox" data-set="${k}" ${v?'checked':''}></label>`;return `<label class="row"><span>${l}</span><select data-set="${k}">${u.map(([ov,ol])=>`<option value="${ov}" ${String(v)===String(ov)?'selected':''}>${ol}</option>`).join('')}</select></label>`;}).join('');
   h+=`<p class="note">Trace the outside face of the external walls and the middle of internal walls. Room areas allow for wall thickness.</p>`;
   $('#tab-plan').innerHTML=h;}
-$('#tab-plan').addEventListener('click',e=>{if(e.target.id==='ulPick'){$('#ulFile').click();return;}if(e.target.id==='aiBtn'){autoTrace(true);return;}if(e.target.id==='siteDel'){snapshot();doc.site=null;changed(true);return;}const st=e.target.closest('[data-settool]');if(st){setTool(st.dataset.settool);return;}if(e.target.closest('[data-del]'))deleteSel();});
-$('#tab-plan').addEventListener('change',e=>{const t=e.target;if(t.id==='ulFile'){const f=t.files&&t.files[0];t.value='';onUpload(f);return;}
+$('#tab-plan').addEventListener('click',e=>{if(e.target.id==='ulPick'){$('#ulFile').click();return;}if(e.target.id==='aiBtn'){autoTrace(true);return;}if(e.target.id==='phPick'){$('#phFile').click();return;}if(e.target.id==='phRead'){readPhotos(null);return;}const pd=e.target.closest('[data-phdel]');if(pd){snapshot();doc.photos=doc.photos.filter(p=>p.id!==pd.dataset.phdel);changed(true);return;}if(e.target.id==='siteDel'){snapshot();doc.site=null;changed(true);return;}const st=e.target.closest('[data-settool]');if(st){setTool(st.dataset.settool);return;}if(e.target.closest('[data-del]'))deleteSel();});
+$('#tab-plan').addEventListener('change',e=>{const t=e.target;if(t.id==='ulFile'){const f=t.files&&t.files[0];t.value='';onUpload(f);return;}if(t.id==='phFile'){const fs=[...(t.files||[])];t.value='';addPhotos(fs);return;}
   if(t.dataset.set){const k=t.dataset.set;const f=SET_FIELDS.find(x=>x[0]===k);let v;if(f[2]==='num'){v=parseFloat(t.value);if(!isFinite(v))return;v=Math.min(f[4][1],Math.max(f[4][0],v));}else if(f[2]==='chk')v=t.checked;else{v=t.value;if(typeof doc.settings[k]==='number')v=Number(v);}doc.settings[k]=v;changed(false);renderPlanTab();return;}
   if(t.dataset.it&&sel&&sel.kind==='item'){const it=doc.items.find(x=>x.id===sel.id);if(!it)return;snapshot();it.kind=t.value;placeKind=t.value;changed(false);renderPlanTab();return;}
   if(t.dataset.ar&&sel&&sel.kind==='area'){const ar=doc.areas.find(x=>x.id===sel.id);if(!ar)return;snapshot();const k=t.dataset.ar;if(k==='type'){ar.type=t.value;if(ar.type==='deck'&&!ar.h)ar.h=600;}else if(k==='bal')ar.bal=t.value===''?null:t.value==='1';else if(k==='h'||k==='t'){const v=parseFloat(t.value);if(isFinite(v)&&v>0)ar[k]=Math.round(v);}else ar[k]=t.value;changed(true);renderPlanTab();return;}
@@ -970,13 +984,41 @@ function plansHTML(){const g=geoAll();const R=g.R;const tb=[META.planName,META.c
   let h=`<section class="sheet"><h2>${esc(META.planName||'House plan takeoff')}</h2>${META.businessName?`<p class="sm2"><b>${esc(META.businessName)}</b>${META.businessContact?' · '+esc(META.businessContact):''}</p>`:''}${META.clientName?`<p class="sm2">Prepared for ${esc(META.clientName)}${META.siteAddress?', '+esc(META.siteAddress):''}</p>`:''}<p class="sm2">Traced ${new Date().toLocaleDateString('en-AU')} in the Swiftscope build planner. Footprint ${fm(g.A,1)} m², ${R.length} rooms, ${fm(g.extL,1)} m outside walls, ${fm(g.intL,1)} m internal walls, roof about ${fm(g.roofA,1)} m².</p>${planSVG()}</section>`;void tb;
   h+=`<section class="sheet"><h2>Room schedule</h2><div class="tblwrap"><table class="tbl"><tr><th>Room</th><th>Type</th><th>Floor m²</th><th>Perimeter m</th><th>Floor finish</th><th>Power points</th><th>Lights</th></tr>${R.map(r=>`<tr><td>${esc(r.name)}</td><td>${ROOM_TYPES[r.type]}</td><td>${fm(r.area,1)}</td><td>${fm(r.per,1)}</td><td>${FINISHES[r.finish]||''}</td><td>${r.gpo}</td><td>${r.lights}</td></tr>`).join('')}</table></div></section>`;
   const {rows}=computeRows();h+=`<section class="sheet"><h2>Quantities</h2>${Object.keys(SECTIONS).filter(s=>inScope(s)&&rows.some(r=>r.sec===s)).map(s=>`<h3 class="eh">${SECTIONS[s]}</h3><div class="tblwrap"><table class="tbl"><tr><th>Item</th><th>Size</th><th>Quantity</th><th>Notes</th></tr>${rows.filter(r=>r.sec===s).map(r=>`<tr><td>${esc(r.item)}</td><td>${esc(r.size)}</td><td>${esc(r.order)}</td><td>${esc(r.detail)}</td></tr>`).join('')}</table></div>`).join('')}
-  <p class="warnbox">Quantities come from a traced plan and are estimates for pricing. Check against the working drawings, engineering and council requirements before ordering or building.</p></section>`;return h;}
+  <p class="warnbox">Quantities come from a traced plan and are estimates for pricing. Check against the working drawings, engineering and council requirements before ordering or building.</p></section>`;
+  if((doc.photos||[]).length)h+=`<section class="sheet"><h2>Photos of the house</h2><div class="phgrid pr">${doc.photos.map((p,i)=>`<figure><img src="${p.thumb}" alt="House photo ${i+1}"></figure>`).join('')}</div>${doc.photoRead&&doc.photoRead.notes&&doc.photoRead.notes.length?`<ul class="phnotes">${doc.photoRead.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>`:''}</section>`;return h;}
 function openPlans(){$('#plansDoc').innerHTML=plansHTML();$('#plansOv').hidden=false;}
 $('#closePlans').addEventListener('click',()=>{$('#plansOv').hidden=true;});$('#printPlans').addEventListener('click',()=>{try{window.print();}catch(e){}});
 $('#tab-plans').innerHTML=`<h3>Plans and takeoff</h3><p class="note" style="margin-top:0">A clean floor plan with room areas, the room schedule and every quantity, with your business details on top.</p><button class="primary" id="openPlans" style="margin-top:12px">Open plans</button>`;
 $('#tab-plans').addEventListener('click',e=>{if(e.target.id==='openPlans')openPlans();});
 function switchTab(name){document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===name));document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+name));if(name==='materials')renderMaterials();if(name==='rooms')renderRooms(true);if(name==='plan')renderPlanTab();}
 $('.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b)switchTab(b.dataset.tab);});
+/* ---------- photos of the house ---------- */
+let phBusy=false,phFresh=[];
+const scaleTo=(c,MAX)=>{const k=Math.min(1,MAX/Math.max(c.width,c.height));if(k>=1)return c;const n=document.createElement('canvas');n.width=Math.round(c.width*k);n.height=Math.round(c.height*k);const g=n.getContext('2d');g.imageSmoothingQuality='high';g.drawImage(c,0,0,n.width,n.height);return n;};
+function photosHTML(){const P=doc.photos||[];const R=doc.photoRead;let h=`<h3>Photos of the house</h3><input type="file" id="phFile" accept="image/*" multiple hidden>`;
+  if(P.length)h+=`<div class="phgrid">${P.map((p,i)=>`<figure><img src="${p.thumb}" alt="House photo ${i+1}"><button class="x" data-phdel="${p.id}" aria-label="Remove photo">✕</button></figure>`).join('')}</div>`;
+  h+=`<div class="upl"><button class="btn" id="phPick" ${P.length>=8?'disabled':''}>${P.length?'Add more photos':'Add photos of the house'}</button>${P.length?`<button class="btn" id="phRead" ${phBusy?'disabled':''}>${phBusy?'Reading...':'Read them again'}</button>`:''}</div>`;
+  if(R){const parts=[];const CL={brick:'Brick veneer walls',weatherboard:'Weatherboard walls',fc:'Fibre cement walls',colorbond:'Metal clad walls',render:'Rendered walls'};const RM={tiles:'tiles',colorbond:'Colorbond sheeting'};
+    if(R.cladding!=='unknown')parts.push(CL[R.cladding]);if(R.roofShape!=='unknown')parts.push(`${R.roofShape} roof${R.roofMaterial!=='unknown'?' in '+RM[R.roofMaterial]:''}${R.roofPitch?' at about '+R.roofPitch+'°':''}`);else if(R.roofMaterial!=='unknown')parts.push('Roof in '+RM[R.roofMaterial]);
+    if(R.eavesMm)parts.push(`${R.eavesMm} mm eaves`);if(R.storeys)parts.push(R.storeys===1?'single storey':R.storeys+' storeys');
+    h+=`<div class="card phread"><b>Read from your photos</b><p class="note" style="margin:4px 0">${esc(parts.join(', ')||'Nothing clear enough to set.')}.${parts.length?' Set in Construction below.':''}</p>${[['Gutters',R.gutter],['Windows',R.windows],['Colours',R.colours]].filter(x=>x[1]).map(([k,v])=>`<p class="note" style="margin:2px 0"><b>${k}:</b> ${esc(v)}</p>`).join('')}${R.notes&&R.notes.length?`<ul class="phnotes">${R.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>`:''}</div>`;}
+  else h+=`<p class="note">Front, back and sides. The roof, walls and eaves are set from what the photos show, and they go in the plans pack.</p>`;
+  return h;}
+async function addPhotos(files){files=files.filter(f=>/^image\//.test(f.type)||/\.(jpe?g|png|webp|heic)$/i.test(f.name)).slice(0,Math.max(0,8-(doc.photos||[]).length));if(!files.length)return;flash('Adding photos...');phFresh=[];
+  for(const f of files){try{const c=await fileToCanvas(f);const big=canvasToJpeg(scaleTo(c,1280),900000).url;const thumb=canvasToJpeg(scaleTo(c,480),90000).url;const ph={id:uid(),thumb,path:null};doc.photos.push(ph);phFresh.push(big);
+      if(EMBED){try{window.parent.postMessage({source:'ss-planner',type:'photo-upload',id:ph.id,dataUrl:canvasToJpeg(scaleTo(c,2000),2500000).url},location.origin);}catch(e){}}}catch(e){flash('One photo could not be opened. Use JPG or PNG.');}}
+  changed(true);readPhotos(phFresh.slice(0,4));}
+async function readPhotos(images){images=images&&images.length?images:(doc.photos||[]).slice(0,4).map(p=>p.thumb);if(!images.length||phBusy)return;phBusy=true;renderPlanTab();
+  try{const res=await fetch('/api/structures/photo-read',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({images})});const b=await res.json().catch(()=>({}));
+    if(!res.ok){flash(b.signup?'Sign in to Swiftscope to read photos. They are kept with the build.':(b.error||'The photos could not be read.'));return;}
+    const R=b.read;snapshot();doc.photoRead=R;const S=doc.settings;const set=[];
+    if(R.cladding&&R.cladding!=='unknown'&&CLAD[R.cladding]){S.extClad=R.cladding;set.push(CLAD[R.cladding].n.toLowerCase());}
+    if(R.roofShape==='hip'||R.roofShape==='gable'){S.roofType=R.roofShape;set.push(R.roofShape+' roof');}
+    if(R.roofMaterial&&R.roofMaterial!=='unknown'&&ROOFM[R.roofMaterial]){S.roofMat=R.roofMaterial;set.push(ROOFM[R.roofMaterial].n.toLowerCase());}
+    if(R.roofPitch>0){S.pitch=R.roofPitch;set.push(R.roofPitch+'° pitch');}if(R.eavesMm>0){S.eave=R.eavesMm;set.push(R.eavesMm+' mm eaves');}
+    changed(true);flash(set.length?`From your photos: ${set.join(', ')}. Check them in Construction.`:'The photos did not show the roof or walls clearly. Set them in Construction.');}
+  catch(e){flash('The photos could not be read. Check your connection.');}
+  finally{phBusy=false;renderPlanTab();}}
 
 /* ---------- auto trace from the drawing's pixels ---------- */
 function boxFilter(src,w,h,k,mode){const r0=Math.floor((k-1)/2),r1=k-1-r0;const tmp=new Uint8Array(w*h),out=new Uint8Array(w*h);const ps=new Int32Array(Math.max(w,h)+1);
@@ -1152,24 +1194,86 @@ async function autoTrace(manual){if(!doc.underlay.src){flash('Upload a plan firs
   catch(e){flash('Auto trace failed on this file. Trace it with the Outline and Wall tools.');}
   finally{aiBusy=false;renderPlanTab();}}
 
+/* ---------- look-alike 3D models for placed items ----------
+   Each model is built around its mounting point:
+   wall items: origin on the wall face at mounting height, +z points out of the wall;
+   ceiling items: origin on the ceiling, hanging down -y;
+   floor items: origin on the floor, back against the wall at -z. */
+const M3={};
+function m3(key,color,o){if(!M3[key])M3[key]=new THREE.MeshStandardMaterial(Object.assign({color,roughness:0.5},o||{}));return M3[key];}
+function part(g,geo,mat,x,y,z,rx,ry,rz){const m=new THREE.Mesh(geo,mat);m.position.set(x||0,y||0,z||0);if(rx)m.rotation.x=rx;if(ry)m.rotation.y=ry;if(rz)m.rotation.z=rz;m.castShadow=true;m.receiveShadow=true;g.add(m);return m;}
+const BX=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
+const CY=(r1,r2,h,n)=>new THREE.CylinderGeometry(r1,r2,h,n||24);
+function itemModel(it){const g=new THREE.Group();const k=it.kind;
+  const white=m3('white',0xf7f7f4,{roughness:0.35}),slot=m3('slot',0x2b2f33,{roughness:0.8}),chrome=m3('chrome',0xc9ced3,{roughness:0.15,metalness:0.8}),steel=m3('steel',0xb8bec4,{roughness:0.25,metalness:0.6}),
+    glow=m3('glow',0xfff6d8,{emissive:0xffe9a8,emissiveIntensity:0.9}),dark=m3('dark',0x3a4046,{roughness:0.6}),timber=m3('timber',0x9b7350,{roughness:0.7}),glass=m3('glass3',0xbfe3f2,{transparent:true,opacity:0.35,roughness:0.05}),
+    red=m3('red',0xd23b2f,{emissive:0x661010}),green=m3('greenled',0x2fbf5a,{emissive:0x0f4f20}),porcelain=m3('porc',0xfbfbfb,{roughness:0.2}),bench=m3('bench',0xe3ded6,{roughness:0.4}),grey=m3('grey',0x8d969e,{roughness:0.6});
+  const plate=(w,h)=>part(g,BX(w,h,0.01),white,0,0,0.005);
+  const socket=(x)=>{part(g,BX(0.004,0.011,0.004),slot,x-0.008,0.006,0.011,0,0,0.5);part(g,BX(0.004,0.011,0.004),slot,x+0.008,0.006,0.011,0,0,-0.5);part(g,BX(0.004,0.01,0.004),slot,x,-0.01,0.011);part(g,BX(0.012,0.008,0.006),white,x+0.017,0.022,0.012);};
+  switch(k){
+    case 'gpo':plate(0.118,0.074);socket(-0.03);socket(0.03);break;
+    case 'gpo1':plate(0.074,0.118);socket(0);break;
+    case 'usb':plate(0.118,0.074);socket(-0.032);socket(0.018);part(g,BX(0.009,0.004,0.004),slot,0.045,0.01,0.011);part(g,BX(0.009,0.004,0.004),slot,0.045,-0.008,0.011);break;
+    case 'gpow':part(g,BX(0.11,0.15,0.05),grey,0,0,0.025);part(g,BX(0.1,0.12,0.012),m3('lid',0x9fa8b0,{transparent:true,opacity:0.85}),0,0,0.056);break;
+    case 'sw':plate(0.074,0.118);part(g,BX(0.024,0.04,0.008),white,0,0,0.014);break;
+    case 'data':case 'tv':plate(0.074,0.118);part(g,k==='tv'?CY(0.008,0.008,0.012,16):BX(0.016,0.014,0.006),slot,0,0,0.012,k==='tv'?Math.PI/2:0);break;
+    case 'xl':part(g,BX(0.1,0.18,0.06),dark,0,0,0.03);part(g,BX(0.07,0.12,0.02),glow,0,0,0.065);break;
+    case 'ac':part(g,BX(0.85,0.29,0.2),white,0,0,0.1);part(g,BX(0.78,0.04,0.02),slot,0,-0.1,0.2);part(g,BX(0.1,0.02,0.005),green,0.3,0.06,0.2);break;
+    case 'ev':part(g,BX(0.24,0.34,0.11),dark,0,0,0.055);part(g,BX(0.14,0.06,0.01),green,0,0.08,0.112);part(g,new THREE.TorusGeometry(0.09,0.012,8,24),slot,0,-0.08,0.13);break;
+    case 'washer':part(g,BX(0.22,0.12,0.03),white,0,0,0.015);part(g,CY(0.012,0.012,0.06),chrome,-0.05,0,0.05,Math.PI/2);part(g,CY(0.012,0.012,0.06),chrome,0.05,0,0.05,Math.PI/2);part(g,CY(0.018,0.018,0.012),m3('blueT',0x2f6fb0),-0.05,0,0.085,Math.PI/2);part(g,CY(0.018,0.018,0.012),red,0.05,0,0.085,Math.PI/2);break;
+    case 'tap':part(g,CY(0.012,0.012,0.08),chrome,0,0,0.04,Math.PI/2);part(g,CY(0.01,0.01,0.05),chrome,0,-0.025,0.08);part(g,CY(0.022,0.022,0.01),red,0,0.025,0.06);break;
+    case 'dl':part(g,CY(0.05,0.05,0.008,28),white,0,-0.004,0);part(g,CY(0.038,0.038,0.006,28),glow,0,-0.009,0);break;
+    case 'pend':part(g,CY(0.003,0.003,0.6,6),slot,0,-0.3,0);part(g,CY(0.03,0.17,0.16,28,1,true),dark,0,-0.66,0);part(g,new THREE.SphereGeometry(0.04,16,12),glow,0,-0.7,0);part(g,CY(0.05,0.05,0.02),white,0,-0.01,0);break;
+    case 'smoke':part(g,CY(0.06,0.065,0.04,28),white,0,-0.02,0);part(g,CY(0.006,0.006,0.004,10),red,0.03,-0.042,0);break;
+    case 'fan':part(g,BX(0.27,0.02,0.27),white,0,-0.01,0);for(let i=-3;i<=3;i++)part(g,BX(0.22,0.008,0.012),slot,0,-0.021,i*0.03);break;
+    case 'cfan':part(g,CY(0.012,0.012,0.3,8),white,0,-0.15,0);part(g,CY(0.08,0.07,0.1,24),white,0,-0.33,0);for(let i=0;i<3;i++){const b=part(g,BX(0.6,0.01,0.12),timber,0,-0.36,0);b.rotation.y=i*Math.PI*2/3;b.geometry.translate(0.33,0,0);}part(g,new THREE.SphereGeometry(0.06,16,10),glow,0,-0.4,0);break;
+    case 'wc':part(g,BX(0.4,0.38,0.17),porcelain,0,0.58,0.085);part(g,BX(0.12,0.02,0.04),chrome,0,0.78,0.09);part(g,CY(0.15,0.12,0.4,28),porcelain,0,0.2,0.4);const seat=part(g,CY(0.19,0.19,0.03,28),white,0,0.41,0.42);seat.scale.set(1,1,1.25);part(g,BX(0.3,0.36,0.24),porcelain,0,0.18,0.2);break;
+    case 'basin':part(g,BX(0.6,0.72,0.45),timber,0,0.36,0.225);part(g,BX(0.62,0.04,0.47),bench,0,0.74,0.235);part(g,CY(0.18,0.15,0.1,28),porcelain,0,0.79,0.26);part(g,CY(0.015,0.015,0.2),chrome,0,0.9,0.08);part(g,CY(0.01,0.01,0.12),chrome,0,0.99,0.13,Math.PI/2);part(g,BX(0.55,0.75,0.02),m3('mirror',0xdfeef5,{roughness:0.05,metalness:0.4}),0,1.45,0.01);break;
+    case 'shower':part(g,BX(0.9,0.05,0.9),porcelain,0,0.025,0.45);part(g,BX(0.9,2,0.01),glass,0,1.05,0.9);part(g,BX(0.01,2,0.9),glass,0.45,1.05,0.45);part(g,CY(0.012,0.012,0.35),chrome,0,1.9,0.17,Math.PI/2);part(g,CY(0.1,0.1,0.02,24),chrome,0,1.87,0.34);part(g,CY(0.03,0.03,0.06),chrome,0,1.1,0.03,Math.PI/2);part(g,CY(0.04,0.04,0.004,16),dark,0,0.052,0.45);break;
+    case 'bath':part(g,BX(1.6,0.55,0.75),porcelain,0,0.275,0.375);part(g,BX(1.4,0.06,0.55),m3('water',0xd8eef6,{roughness:0.1}),0,0.53,0.375);part(g,CY(0.015,0.015,0.18),chrome,-0.55,0.65,0.05,Math.PI/2);break;
+    case 'sink':part(g,BX(0.9,0.86,0.6),m3('cab',0xe9e6e0),0,0.43,0.3);part(g,BX(0.92,0.04,0.62),bench,0,0.88,0.31);part(g,BX(0.7,0.02,0.42),steel,0,0.905,0.32);part(g,BX(0.3,0.01,0.36),dark,-0.16,0.912,0.32);part(g,BX(0.3,0.01,0.36),dark,0.16,0.912,0.32);part(g,CY(0.015,0.015,0.38),chrome,0,1.09,0.07);part(g,new THREE.TorusGeometry(0.1,0.012,8,20,Math.PI),chrome,0,1.28,0.17,0,Math.PI/2);break;
+    case 'tub':part(g,BX(0.6,0.85,0.5),m3('cab',0xe9e6e0),0,0.425,0.25);part(g,BX(0.56,0.06,0.46),steel,0,0.88,0.26);part(g,BX(0.46,0.02,0.36),dark,0,0.9,0.27);part(g,CY(0.014,0.014,0.3),chrome,0,1.05,0.05);break;
+    case 'dishwasher':part(g,BX(0.6,0.82,0.6),steel,0,0.41,0.3);part(g,BX(0.45,0.02,0.03),chrome,0,0.74,0.62);part(g,BX(0.6,0.06,0.02),dark,0,0.79,0.6);break;
+    case 'hws':part(g,CY(0.27,0.27,1.5,32),white,0,0.75,0.3);part(g,CY(0.27,0.24,0.06,32),white,0,1.53,0.3);part(g,CY(0.02,0.02,0.4),chrome,0.12,1.7,0.3);part(g,BX(0.1,0.14,0.02),grey,0,1.05,0.58);break;
+    case 'fw':part(g,BX(0.12,0.006,0.12),chrome,0,0.004,0);for(let i=-2;i<=2;i++)part(g,BX(0.1,0.004,0.008),dark,0,0.008,i*0.02);break;
+    default:{const d=itemDef(it);part(g,BX(0.3,0.3,0.3),m3('crate',0xc8a46a,{roughness:0.8}),0,0.15,0.15);const c=document.createElement('canvas');c.width=256;c.height=64;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,256,64);x.fillStyle='#1f2a33';x.font='bold 22px sans-serif';x.fillText(String(d.n).slice(0,20),8,40);const tex=new THREE.CanvasTexture(c);part(g,new THREE.PlaneGeometry(0.28,0.07),new THREE.MeshBasicMaterial({map:tex}),0,0.2,0.302);}
+  }
+  g.traverse(o=>{o.userData.itemId=it.id;});g.userData.itemId=it.id;return g;}
+/* Floor items stand with their back to the nearest wall, if there is one close by. */
+function backToWall(q,P,segsAll){let best=null;const pt=q;segsAll.forEach(sg=>{const a=P(sg.a),b=P(sg.b);const L=Math.hypot(b[0]-a[0],b[1]-a[1]);if(L<0.2)return;const t=Math.max(0,Math.min(1,((pt[0]-a[0])*(b[0]-a[0])+(pt[1]-a[1])*(b[1]-a[1]))/(L*L)));const pr=[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];const d=Math.hypot(pt[0]-pr[0],pt[1]-pr[1]);if(d<1.3&&(!best||d<best.d))best={d,pr,sg};});
+  if(!best||best.d<1e-4)return null;const nx=(pt[0]-best.pr[0])/best.d,nz=(pt[1]-best.pr[1])/best.d;const thk=(best.sg.ext?doc.settings.extThk:doc.settings.intThk)/1000;const face=best.sg.ext?0.02:thk/2+0.005;
+  return {x:best.pr[0]+nx*face,z:best.pr[1]+nz*face,ang:Math.atan2(nx,nz)};}
+/* ---------- tap an item in Look around to see what it is ---------- */
+function itemInfo(it,ev){const d=itemDef(it);const rm=roomAt(it.pt);const pb=it.kind==='pb'?PB.byId(it.pb):PB.match({item:d.n,size:'',match:d.match||[],unit:'ea',sec:d.sec});
+  let pop=$('#v3pop');if(!pop){pop=document.createElement('div');pop.id='v3pop';pop.className='v3pop';$('#v3').appendChild(pop);
+    pop.addEventListener('click',e=>{if(e.target.closest('[data-pclose]')){pop.hidden=true;sel=null;build3D();return;}if(e.target.closest('[data-pdel]')){const id=pop.dataset.id;snapshot();doc.items=doc.items.filter(x=>x.id!==id);sel=null;pop.hidden=true;changed(false);renderPlanTab();flash('Removed. Undo puts it back.');}});}
+  const host=$('#v3').getBoundingClientRect();const x=Math.min(host.width-270,Math.max(10,ev.clientX-host.left+14)),y=Math.min(host.height-170,Math.max(60,ev.clientY-host.top-20));
+  const how=d.m==='wall'?`On the wall at ${it.h||d.h||300} mm`:d.m==='ceil'?'On the ceiling':'On the floor';
+  pop.innerHTML=`<div class="cardh"><b><i class="pit-i ${d.sec}">${esc(d.c)}</i> ${esc(d.n)}</b><button class="x" data-pclose="1" aria-label="Close">✕</button></div><p class="note" style="margin:2px 0 4px">${rm?'In '+esc(rm.name):'Outside the rooms'}. ${how}.</p>${pb?`<p class="note" style="margin:0 0 8px">Your price list: <b>${esc(pb.n)}</b> ${money(pb.p)}</p>`:`<p class="note" style="margin:0 0 8px">Not linked to your price list yet. Link it in Materials.</p>`}<button class="btn" data-pdel="1">Remove</button>`;
+  pop.dataset.id=it.id;pop.style.left=x+'px';pop.style.top=y+'px';pop.hidden=false;sel={kind:'item',id:it.id};renderPlanTab();build3D();}
+
 /* ---------- 3D ---------- */
 let three=null;
 function init3D(){if(three||!window.THREE)return three;const host=$('#v3');const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));renderer.shadowMap.enabled=true;host.appendChild(renderer.domElement);
   const scene=new THREE.Scene();scene.background=new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue('--scene-bg').trim()||'#dce4e8');
   const camera=new THREE.PerspectiveCamera(40,1,0.1,500);const controls=new THREE.OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.maxPolarAngle=Math.PI*0.495;
   scene.add(new THREE.HemisphereLight(0xffffff,0x556655,0.7));const sun=new THREE.DirectionalLight(0xffffff,0.8);sun.position.set(10,18,8);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);const sc=sun.shadow.camera;sc.left=-25;sc.right=25;sc.top=25;sc.bottom=-25;scene.add(sun);
-  const ground=new THREE.Mesh(new THREE.PlaneGeometry(300,300),new THREE.MeshStandardMaterial({color:0x9aa58c,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-0.02;ground.receiveShadow=true;scene.add(ground);
-  const root=new THREE.Group();scene.add(root);three={renderer,scene,camera,controls,root,host,fitted:false};
+  const ground=new THREE.Mesh(new THREE.PlaneGeometry(300,300),new THREE.MeshStandardMaterial({color:0x9aa58c,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-0.02;ground.receiveShadow=true;ground.userData.pick='ground';scene.add(ground);
+  const root=new THREE.Group();scene.add(root);three={renderer,scene,camera,controls,root,host,ground,fitted:false};
   const loop=()=>{requestAnimationFrame(loop);if($('#v3').hidden)return;const w=host.clientWidth,h=host.clientHeight;if(w&&h&&(renderer.domElement.width!==Math.round(w*renderer.getPixelRatio())||renderer.domElement.height!==Math.round(h*renderer.getPixelRatio()))){renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}controls.update();renderer.render(scene,camera);};loop();return three;}
 /* Tap the model to drop an item: walls, floors and the ground take it; wall items keep the height they were tapped at. */
 function pick3D(ev){const T=three;if(!T||tool!=='place'||!scaleMM())return;const r=T.renderer.domElement.getBoundingClientRect();const v=new THREE.Vector2(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1);
-  const rc=new THREE.Raycaster();rc.setFromCamera(v,T.camera);const hits=rc.intersectObjects(T.root.children,false).filter(h=>h.object.userData.pick);const hit=hits[0];if(!hit){flash('Tap a wall, floor or the ground near the house.');return;}
+  const rc=new THREE.Raycaster();rc.setFromCamera(v,T.camera);const hits=rc.intersectObjects(T.root.children.concat([T.ground]),false).filter(h=>h.object.userData.pick);const hit=hits[0];if(!hit){flash('Tap a wall, floor or the ground near the house.');return;}
   const n=hit.face?hit.face.normal.clone().transformDirection(hit.object.matrixWorld):new THREE.Vector3(0,1,0);const q=hit.point.clone().add(n.multiplyScalar(0.06));const k=1000/scaleMM();const pt=[(q.x+T.cx)*k,(q.z+T.cz)*k];
   const d=placePb?{m:'floor'}:ITEM_T[placeKind];snapshot();const it=placePb?{id:uid(),kind:'pb',pb:placePb.id,n:placePb.n,sec:placePb.sec,pt}:{id:uid(),kind:placeKind,pt};
   if(hit.object.userData.pick==='wall'&&d&&d.m==='wall')it.h=Math.round(Math.max(150,Math.min(T.H*1000-100,hit.point.y*1000))/10)*10;
   doc.items.push(it);sel={kind:'item',id:it.id};changed(false);renderPlanTab();flash(`${placePb?placePb.n:ITEM_T[placeKind].n} placed${it.h?` at ${it.h} mm`:''}. Undo removes it.`);}
 let down3=null;
-function hook3D(){const T=three;if(!T||T.hooked)return;T.hooked=true;const el=T.renderer.domElement;el.addEventListener('pointerdown',e=>{down3=[e.clientX,e.clientY];});el.addEventListener('pointerup',e=>{if(down3&&Math.hypot(e.clientX-down3[0],e.clientY-down3[1])<6)pick3D(e);down3=null;});}
+function hook3D(){const T=three;if(!T||T.hooked)return;T.hooked=true;const el=T.renderer.domElement;el.addEventListener('pointerdown',e=>{down3=[e.clientX,e.clientY];});el.addEventListener('pointerup',e=>{if(down3&&Math.hypot(e.clientX-down3[0],e.clientY-down3[1])<6){if(tool==='place')pick3D(e);else identify3D(e);}down3=null;});}
+/* Look around: tap an item to see what it is. */
+function identify3D(ev){const T=three;if(!T)return;const r=T.renderer.domElement.getBoundingClientRect();const v=new THREE.Vector2(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1);const rc=new THREE.Raycaster();rc.setFromCamera(v,T.camera);
+  const hit=rc.intersectObjects(T.root.children,true).find(h=>h.object.userData.itemId);const pop=$('#v3pop');
+  if(!hit){if(pop&&!pop.hidden){pop.hidden=true;if(sel&&sel.kind==='item'){sel=null;build3D();}}return;}const it=doc.items.find(x=>x.id===hit.object.userData.itemId);if(it)itemInfo(it,ev);}
 function build3D(){const T=init3D();if(!T)return;hook3D();const root=T.root;root.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose();});while(root.children.length)root.remove(root.children[0]);
   if(!scaleMM()||doc.outline.length<3)return;const S=doc.settings,H=S.wallH/1000;const b=bbox(doc.outline);const cx=toM((b.x0+b.x1)/2),cz=toM((b.y0+b.y1)/2);const P=p=>[toM(p[0])-cx,toM(p[1])-cz];
   const extM=new THREE.MeshStandardMaterial({color:S.extClad==='brick'?0xb5755a:0xe8e4da,roughness:0.85}),intM=new THREE.MeshStandardMaterial({color:0xf2f0ea,roughness:0.9}),glass=new THREE.MeshStandardMaterial({color:0x9fc7e0,transparent:true,opacity:0.45}),doorM=new THREE.MeshStandardMaterial({color:0x8a6a4a,roughness:0.6});
@@ -1197,18 +1301,20 @@ function build3D(){const T=init3D();if(!T)return;hook3D();const root=T.root;root
     else box(cx2,0.02,cz2,w,0.04,d,0,ar.type==='paving'?pave:conc);});
   /* property boundary */
   if(doc.site&&doc.site.length>=3){const lm=new THREE.MeshStandardMaterial({color:0x2e7d4f,roughness:0.8});const ps=doc.site.map(P);for(let i=0;i<ps.length;i++){const a=ps[i],c=ps[(i+1)%ps.length];const L=Math.hypot(c[0]-a[0],c[1]-a[1]);if(L<0.05)continue;box((a[0]+c[0])/2,0.06,(a[1]+c[1])/2,L,0.12,0.06,-Math.atan2(c[1]-a[1],c[0]-a[0]),lm);}}
-  /* placed items */
-  const segsAll=segs();const itemCol={elec:0xf2b705,plumb:0x2f6fb0};
-  doc.items.forEach(it=>{const d=itemDef(it);const q=P(it.pt);const mat=new THREE.MeshStandardMaterial({color:itemCol[d.sec]||0x5b6770,roughness:0.5,emissive:d.sec==='elec'?0x332200:0x000000});
-    if(d.m==='ceil'){const m=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,0.03,20),mat);m.position.set(q[0],H-0.03,q[1]);root.add(m);return;}
-    if(d.m==='wall'){let best=null,bd=1e9;segsAll.forEach(sg=>{const t=projT(it.pt,sg.a,sg.b);const pr=lerp(sg.a,sg.b,t);const dd=dist(it.pt,pr);if(dd<bd){bd=dd;best={sg,pr};}});
-      if(best&&toM(bd)<0.8){const a=P(best.sg.a),b=P(best.sg.b),pr=P(best.pr);const L=Math.hypot(b[0]-a[0],b[1]-a[1])||1;const ux=(b[0]-a[0])/L,uz=(b[1]-a[1])/L;let nx=-uz,nz=ux;const side=Math.sign((q[0]-pr[0])*nx+(q[1]-pr[1])*nz)||1;nx*=side;nz*=side;
-        const thk=(best.sg.ext?S.extThk:S.intThk)/1000;const off=best.sg.ext?(side===(Math.sign(polyArea(doc.outline))||1)?thk+0.012:0.012):thk/2+0.012;box(pr[0]+nx*off,(it.h||d.h||300)/1000,pr[1]+nz*off,0.14,0.1,0.025,-Math.atan2(uz,ux),mat);return;}
-      box(q[0],(it.h||d.h||300)/1000,q[1],0.14,0.1,0.14,0,mat);return;}
-    const fs={wc:[0.4,0.75,0.65],basin:[0.6,0.85,0.45],bath:[1.6,0.55,0.75],shower:[0.9,0.05,0.9],sink:[0.8,0.9,0.6],tub:[0.6,0.9,0.5],dishwasher:[0.6,0.85,0.6],hws:[0.55,1.5,0.55],fw:[0.15,0.02,0.15]}[it.kind]||[0.3,0.3,0.3];
-    box(q[0],fs[1]/2,q[1],fs[0],fs[1],fs[2],0,new THREE.MeshStandardMaterial({color:d.sec==='plumb'?0xf4f6f8:0x8a949c,roughness:0.4}));});
+  /* placed items, as look-alike models */
+  const segsAll=segs();
+  doc.items.forEach(it=>{const d=itemDef(it);const q=P(it.pt);const g=itemModel(it);
+    if(d.m==='ceil'){g.position.set(q[0],H,q[1]);}
+    else if(d.m==='wall'){let best=null,bd=1e9;segsAll.forEach(sg=>{const t=projT(it.pt,sg.a,sg.b);const pr=lerp(sg.a,sg.b,t);const dd=dist(it.pt,pr);if(dd<bd){bd=dd;best={sg,pr};}});
+      const y=(it.h||d.h||300)/1000;
+      if(best&&toM(bd)<0.8){const a=P(best.sg.a),b2=P(best.sg.b),pr=P(best.pr);const L=Math.hypot(b2[0]-a[0],b2[1]-a[1])||1;const ux=(b2[0]-a[0])/L,uz=(b2[1]-a[1])/L;let nx=-uz,nz=ux;const side=Math.sign((q[0]-pr[0])*nx+(q[1]-pr[1])*nz)||1;nx*=side;nz*=side;
+        const thk=(best.sg.ext?S.extThk:S.intThk)/1000;const off=best.sg.ext?(side===(Math.sign(polyArea(doc.outline))||1)?thk:0):thk/2;g.position.set(pr[0]+nx*off,y,pr[1]+nz*off);g.rotation.y=Math.atan2(nx,nz);}
+      else g.position.set(q[0],y,q[1]);}
+    else{const w=backToWall(q,P,segsAll);if(w){g.position.set(w.x,0,w.z);g.rotation.y=w.ang;}else g.position.set(q[0],0,q[1]);}
+    root.add(g);
+    if(sel&&sel.kind==='item'&&sel.id===it.id){const hl=new THREE.BoxHelper(g,0xf2b705);root.add(hl);}});
   if(!T.fitted){const span=Math.max(toM(b.x1-b.x0),toM(b.y1-b.y0));T.camera.position.set(span*0.8,span*1.05,span*1.15);T.controls.target.set(0,0.8,0);T.fitted=true;}}
-function setView(v){VIEW=v;if(v==='3d'&&!TOOLS3D.some(t=>t[0]===tool))tool='select';renderToolbar();$('#svgwrap').hidden=v!=='2d';$('#v3').hidden=v!=='3d';$('#hint').hidden=v!=='2d'&&tool!=='place';renderHint();renderPalette();document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===v));if(v==='3d')build3D();else{fitIfNeeded();draw();}}
+function setView(v){VIEW=v;if(v==='3d'&&!TOOLS3D.some(t=>t[0]===tool))tool='select';renderToolbar();$('#svgwrap').hidden=v!=='2d';$('#v3').hidden=v!=='3d';$('#hint').hidden=false;const pp=$('#v3pop');if(pp)pp.hidden=true;renderHint();renderPalette();document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===v));if(v==='3d')build3D();else{fitIfNeeded();draw();}}
 $('#views').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)setView(b.dataset.view);});
 let fitted=false;function fitIfNeeded(){if(!fitted){fitView();fitted=true;}}
 /* ---------- change pipeline ---------- */
@@ -1227,6 +1333,7 @@ if(EMBED){window.addEventListener('message',e=>{if(e.origin!==location.origin||e
   if(d.type==='print'){openPlans();setTimeout(()=>{try{window.print();}catch(_){}},150);}
   if(d.type==='flush'){clearTimeout(saveT);postPlan();}
   if(d.type==='underlay-saved'&&d.path){doc.underlay.path=d.path;save();}
+  if(d.type==='photo-saved'&&d.id&&d.path){const ph=(doc.photos||[]).find(p=>p.id===d.id);if(ph){ph.path=d.path;save();}}
   if(d.type==='underlay-failed'){flash('The plan image could not be saved to your account. It is kept with this build instead.');}});}
 /* ---------- start ---------- */
 renderToolbar();renderPlanTab();renderRooms();

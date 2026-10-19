@@ -330,3 +330,44 @@ export function normalizeTraceDraft(d: TraceDraft) {
   const openings = (d.openings ?? []).slice(0, 80).map((o) => ({ type: o.type, x: c1000(o.x), y: c1000(o.y) }));
   return { outline: outline.length >= 3 ? outline : [], walls, rooms, openings };
 }
+
+/* ---------- house photos: what the plan does not show ---------- */
+
+export const PhotoReadSchema = z.object({
+  storeys: z.number().describe("Storeys above ground, 1 to 3. 0 if you cannot tell"),
+  roofShape: z.enum(["hip", "gable", "skillion", "flat", "unknown"]),
+  roofMaterial: z.enum(["tiles", "colorbond", "unknown"]).describe("Concrete or terracotta tiles, or metal sheeting such as Colorbond or Zincalume"),
+  roofPitch: z.number().describe("Roof pitch in degrees, 0 if you cannot judge it"),
+  cladding: z.enum(["brick", "weatherboard", "fc", "colorbond", "render", "unknown"]).describe("Main external wall finish: brick veneer, timber or composite weatherboard, fibre cement sheet, metal cladding, or render"),
+  eavesMm: z.number().describe("Eave overhang in mm, 0 for none or if you cannot judge it"),
+  gutter: z.string().describe("Gutter and fascia type and colour, short"),
+  windows: z.string().describe("Window frame material and colour, short"),
+  colours: z.string().describe("Roof, wall and trim colours, short"),
+  notes: z.array(z.string()).describe("Up to 6 short things a tradie quoting work here should know: condition, damage, access, existing services visible"),
+});
+export type PhotoRead = z.infer<typeof PhotoReadSchema>;
+
+export const PHOTO_READ_PROMPT = `You look at photos of an Australian house for a tradie who is quoting work on it.
+Report only what you can see. Use "unknown" or 0 when the photos do not show it; a wrong guess costs the tradie money.
+Brick veneer shows mortar joints. Weatherboards are horizontal boards with shadow lines. Fibre cement is flat sheet with joints or battens. Render is smooth or textured painted masonry.
+Keep text fields short, in plain Australian English, with no dashes as punctuation.`;
+
+export function normalizePhotoRead(d: PhotoRead) {
+  const num = (v: unknown, lo: number, hi: number) => {
+    const n = typeof v === "number" && Number.isFinite(v) ? v : 0;
+    return n <= 0 ? 0 : Math.min(hi, Math.max(lo, n));
+  };
+  const txt = (v: unknown, n: number) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
+  return {
+    storeys: Math.round(num(d.storeys, 1, 3)),
+    roofShape: d.roofShape,
+    roofMaterial: d.roofMaterial,
+    roofPitch: Math.round(num(d.roofPitch, 2, 45) * 2) / 2,
+    cladding: d.cladding,
+    eavesMm: Math.round(num(d.eavesMm, 100, 900) / 50) * 50,
+    gutter: txt(d.gutter, 80),
+    windows: txt(d.windows, 80),
+    colours: txt(d.colours, 120),
+    notes: (d.notes ?? []).map((n) => txt(n, 160)).filter(Boolean).slice(0, 6),
+  };
+}

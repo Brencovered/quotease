@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeGeneratedPlan, normalizePlanRead, normalizeTraceDraft, type GeneratedPlan } from "./structureAi";
+import { normalizeGeneratedPlan, normalizePhotoRead, normalizePlanRead, normalizeTraceDraft, type GeneratedPlan } from "./structureAi";
 
 const base: GeneratedPlan = {
   name: "Test",
@@ -107,5 +107,32 @@ describe("normalizeTraceDraft", () => {
     expect(n.walls).toEqual([[100, 100, 100, 500]]);
     expect(n.rooms[0]).toMatchObject({ name: "Bed 1", width: 3500 });
     expect(normalizeTraceDraft({ outline: [[1, 1]], walls: [], rooms: [], openings: [] }).outline).toEqual([]);
+  });
+});
+
+describe("normalizePhotoRead", () => {
+  it("clamps numbers, keeps unknowns at zero and trims text", () => {
+    const n = normalizePhotoRead({
+      storeys: 7,
+      roofShape: "hip",
+      roofMaterial: "tiles",
+      roofPitch: 22.3,
+      cladding: "brick",
+      eavesMm: 470,
+      gutter: "  Quad   gutter, Monument ",
+      windows: "Aluminium",
+      colours: "x".repeat(300),
+      notes: ["a", "", "b", "c", "d", "e", "f", "g"],
+    });
+    expect(n.storeys).toBe(3);
+    expect(n.roofPitch).toBe(22.5);
+    expect(n.eavesMm).toBe(450);
+    expect(n.gutter).toBe("Quad gutter, Monument");
+    expect(n.colours.length).toBe(120);
+    expect(n.notes).toEqual(["a", "b", "c", "d", "e", "f"]);
+    const u = normalizePhotoRead({ storeys: 0, roofShape: "unknown", roofMaterial: "unknown", roofPitch: 0, cladding: "unknown", eavesMm: 0, gutter: "", windows: "", colours: "", notes: [] });
+    expect(u.storeys).toBe(0);
+    expect(u.roofPitch).toBe(0);
+    expect(u.eavesMm).toBe(0);
   });
 });

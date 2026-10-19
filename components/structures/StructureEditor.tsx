@@ -162,6 +162,13 @@ export default function StructureEditor(props: Props) {
         void saveTemplate(d as { name?: unknown; plan?: unknown; summary?: unknown });
         return;
       }
+      if (d.type === "photo-upload") {
+        const pid = typeof (d as { id?: unknown }).id === "string" ? String((d as { id: string }).id) : "";
+        void uploadUnderlay(d as { dataUrl?: unknown }, "photos/").then((path) => {
+          if (path && pid) post({ type: "photo-saved", id: pid, path });
+        });
+        return;
+      }
       if (d.type === "underlay-upload") {
         void uploadUnderlay(d as { dataUrl?: unknown }).then((path) =>
           post(path ? { type: "underlay-saved", path } : { type: "underlay-failed" })
@@ -222,7 +229,7 @@ export default function StructureEditor(props: Props) {
   }, [save]);
 
   // Plan drawings for trace mode live in storage, not in the plan JSON.
-  async function uploadUnderlay(d: { dataUrl?: unknown }): Promise<string | null> {
+  async function uploadUnderlay(d: { dataUrl?: unknown }, sub = ""): Promise<string | null> {
     const dataUrl = typeof d.dataUrl === "string" ? d.dataUrl : "";
     if (!dataUrl.startsWith("data:image/")) return null;
     try {
@@ -233,7 +240,7 @@ export default function StructureEditor(props: Props) {
       const bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
       const blob = new Blob([bytes], { type: mime });
-      const path = `${props.businessId}/structures/${id}/${Date.now()}.${mime === "image/png" ? "png" : "jpg"}`;
+      const path = `${props.businessId}/structures/${id}/${sub}${Date.now()}.${mime === "image/png" ? "png" : "jpg"}`;
       const supabase = createClient();
       const { error } = await supabase.storage.from("job-files").upload(path, blob, { contentType: mime, upsert: false });
       return error ? null : path;
