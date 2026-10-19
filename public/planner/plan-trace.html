@@ -381,6 +381,12 @@ dialog::backdrop{background:rgba(10,15,20,.5);}
 #ed .runpt{fill:#fff;stroke:#1f2a33;}
 #ed .runlab{font-weight:700;paint-order:stroke;stroke:#fff;stroke-width:3px;}
 .tray .tchk{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;margin-left:4px;}
+
+.v3pop .pbtns{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px;}.v3pop .pbtns .chip{padding:5px 10px;font-size:12.5px;}.v3pop .pbtns .chip.on{background:var(--chip-on);color:var(--chip-on-ink);}.v3pop .pbtns .chip:disabled{opacity:.4;cursor:not-allowed;}
+.v3pop .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px 8px;margin-bottom:8px;}.v3pop .pgrid.one{grid-template-columns:1fr;}.v3pop .pgrid label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted);}
+.v3pop .pgrid input[type=text],.v3pop .pgrid select{border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:13px;background:var(--field);color:var(--text);}
+.v3pop{width:280px;}
+.tbar.views .vsep{width:1px;background:var(--line);margin:0 2px;}
 </style>
 </head>
 <body>
@@ -473,7 +479,13 @@ const ITEM_T={
   washer:{n:'Washing machine taps',c:'WM',sec:'plumb',m:'wall',h:1000,match:['washing machine']},
   hws:{n:'Hot water unit',c:'HW',sec:'plumb',m:'floor',match:['hot water']},
   tap:{n:'Garden tap',c:'GT',sec:'plumb',m:'wall',h:500,match:['garden tap','hose tap','hose cock']},
-  fw:{n:'Floor waste',c:'FW',sec:'plumb',m:'floor',match:['floor waste']}};
+  fw:{n:'Floor waste',c:'FW',sec:'plumb',m:'floor',match:['floor waste']},
+  dp:{n:'Downpipe',c:'DP',sec:'roof',m:'wall',h:0,match:['downpipe','down pipe']},
+  sky:{n:'Skylight',c:'SK',sec:'roof',m:'roof',match:['skylight','roof window']},
+  whirly:{n:'Whirlybird roof vent',c:'WB',sec:'roof',m:'roof',match:['whirlybird','roof vent','ventilator']},
+  solar:{n:'Solar panel',c:'PV',sec:'roof',m:'roof',match:['solar panel','pv panel']},
+  flue:{n:'Flue or pipe penetration',c:'FL',sec:'roof',m:'roof',match:['flue','dektite','pipe flashing']},
+  aerial:{n:'TV antenna',c:'TA',sec:'roof',m:'roof',match:['antenna']}};
 /* The takeoff line a placed kind counts into, and what it prices at: the line's own link if the tradie set one, else a strict name match. */
 /* Cable and pipe runs a tradie draws along the model. h: the takeoff line a run measures; route: where it runs by default. */
 const RUN_T={
@@ -492,7 +504,7 @@ const kindKey=k=>`h:${ITEM_T[k].sec}:${k}`;
 function kindPrice(k){const d=ITEM_T[k];if(!d)return null;const L=doc.links[kindKey(k)];return L===undefined?PB.match({item:d.n,size:'',match:d.match,unit:'ea',sec:d.sec,strict:true}):(L?PB.byId(L):null);}
 /* A price list item placed on the plan looks like the closest built-in item, if its name says what it is. */
 function modelKindFor(name){const n=String(name||'').toLowerCase();for(const [re,k] of [[/ceiling fan/,'cfan'],[/exhaust/,'fan'],[/downlight/,'dl'],[/pendant/,'pend'],[/smoke/,'smoke'],[/usb/,'usb'],[/weatherproof|ip5\d|ip6\d/,'gpow'],[/single.*(power|gpo|outlet)/,'gpo1'],[/power point|gpo|power outlet|socket/,'gpo'],[/switch(?!board)/,'sw'],[/split system|air ?con/,'ac'],[/ev charg/,'ev'],[/data|cat ?6/,'data'],[/tv |antenna/,'tv'],[/wall light|outdoor light|sensor light/,'xl'],[/toilet/,'wc'],[/basin|vanity/,'basin'],[/shower/,'shower'],[/\bbath\b/,'bath'],[/sink/,'sink'],[/laundry|trough/,'tub'],[/dishwasher/,'dishwasher'],[/hot water/,'hws'],[/tap/,'tap'],[/floor waste/,'fw']])if(re.test(n))return k;return null;}
-const ITEM_GROUPS=[['elec','Electrical',['gpo','gpo1','usb','gpow','sw','dl','pend','xl','smoke','fan','cfan','data','tv','ac','ev']],['plumb','Plumbing',['wc','basin','shower','bath','sink','tub','dishwasher','washer','hws','tap','fw']]];
+const ITEM_GROUPS=[['roof','Roofing',['dp','sky','whirly','solar','flue','aerial']],['elec','Electrical',['gpo','gpo1','usb','gpow','sw','dl','pend','xl','smoke','fan','cfan','data','tv','ac','ev']],['plumb','Plumbing',['wc','basin','shower','bath','sink','tub','dishwasher','washer','hws','tap','fw']]];
 const TRADE_SEC={electrician:'elec',plumber:'plumb',roofer:'roof',carpenter:'build',builder:'build',tiler:'finish',painter:'paint',concreter:'floor',plasterer:'line',landscaper:'outdoor',fencer:'outdoor'};
 /* Outdoor areas drawn against the house. */
 const AREA_T={deck:{n:'Deck',col:'#b07c4f'},verandah:{n:'Verandah roof',col:'#7d8f9c'},pergola:{n:'Pergola',col:'#9c8a6a'},paving:{n:'Paving',col:'#a9a39a'},slab:{n:'Concrete slab',col:'#9aa0a6'}};
@@ -641,7 +653,7 @@ function draw(){layoutOverlays();const r=svg.getBoundingClientRect();svg.setAttr
   renderHint();}
 function renderHint(){const h=$('#hint');if(!h)return;const sm=scaleMM();const m={select:'Drag corners and wall ends. Tap a wall edge midpoint dot to add a corner. Drag empty space to pan, scroll or pinch to zoom.',
   outline:'Tap each outside corner of the house. Tap the first corner again to close it. Lines snap square.',wall:'Tap the start and end of each internal wall. Keep tapping to chain walls. Esc or double tap to stop.',
-  select:VIEW==='3d'?'Drag to turn the model. Tap any item to see what it is.':'Drag corners and wall ends. Tap a wall edge midpoint dot to add a corner. Drag empty space to pan, scroll or pinch to zoom.',
+  select:VIEW==='3d'?'Drag to turn the model. Tap anything (a door, window, wall, room, roof or item) to see it or change it.':'Drag corners and wall ends. Tap a wall edge midpoint dot to add a corner. Drag empty space to pan, scroll or pinch to zoom.',
   place:VIEW==='3d'?'Pick an item below, then tap the wall, floor or ceiling where it goes. Drag to turn the model.':'Pick an item below, then tap the plan to drop it where it goes. Drag it with Select to move it.',
   look:'',area:'Drag out a deck, verandah or paved area against the house. Set its type and height on the left.',
   door:'Tap a wall to add a door.',window:'Tap a wall to add a window.',slider:'Tap an outside wall to add a sliding door.',garage:'Tap the garage wall to add a garage door.',room:'Tap inside a room to name it.',
@@ -727,7 +739,7 @@ function deleteSel(){if(!sel)return;snapshot();if(sel.kind==='item')doc.items=do
 function confirmReplace(){if(confirmReplace.armed&&Date.now()-confirmReplace.armed<4000){confirmReplace.armed=0;return true;}confirmReplace.armed=Date.now();flash('There is already an outline. Tap again to start a new one, or use Select to adjust it.');return false;}
 let flashT;function flash(msg){const f=$('#flash');f.textContent=msg;f.hidden=false;clearTimeout(flashT);flashT=setTimeout(()=>{f.hidden=true;},Math.min(14000,Math.max(3500,msg.length*55)));}
 function setTool(t){if(tool==='run'&&t!=='run'&&runDraft.length>1)finishRun();runDraft=[];tool=t;draft=[];calibPts=[];hideCalib();hover=null;document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===t));svg.style.cursor=t==='select'?'grab':'crosshair';if(VIEW==='3d'){$('#hint').hidden=false;renderHint();if(three&&three.ghost&&t!=='place')three.ghost.visible=false;if(three)three.renderer.domElement.style.cursor=t==='place'?'crosshair':'';}renderPalette();draw();}
-let VIEW='2d';const TOOLS3D=[['select','Look around'],['place','Place item'],['run','Run cable or pipe']];
+let VIEW='2d';const TOOLS3D=[['select','Look around'],['place','Place item'],['run','Run cable or pipe'],['opening','Door or window']];
 function renderToolbar(){$('#tools').innerHTML=(VIEW==='3d'?TOOLS3D:TOOLS).map(([k,n])=>`<button class="chip ${k===tool?'on':''}" data-tool="${k}">${n}</button>`).join('')+`<button class="chip" id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>`;}
 $('#tools').addEventListener('click',e=>{const b=e.target.closest('[data-tool]');if(b){setTool(b.dataset.tool);return;}if(e.target.id==='undoBtn')undo();});
 /* scale */
@@ -746,12 +758,13 @@ let trayTab=null,trayQ='',trayOpen=true;
 const SEC_LABEL={elec:'Electrical',plumb:'Plumbing'};
 function trayRow(k){const d=ITEM_T[k];const pb=kindPrice(k);const on=!placePb&&k===placeKind;return `<button class="trow ${on?'on':''}" data-pk="${k}"><i class="pit-i ${d.sec}">${d.c}</i><span class="tn">${esc(d.n)}</span><span class="tp ${pb?'':'none'}">${pb?money(pb.p):'Not in your list'}</span></button>`;}
 function pbRow(it){const on=placePb&&placePb.id===it.id;const sec=TRADE_SEC[it.t]||'build';return `<button class="trow ${on?'on':''}" data-pbid="${esc(it.id)}"><i class="pit-i ${sec}">$</i><span class="tn">${esc(it.n)}</span><span class="tp">${money(it.p)}</span></button>`;}
-function fillPalette(){const pal=$('#palette');if(!pal)return;if(tool!=='place'&&tool!=='area'&&tool!=='run'){pal.hidden=true;return;}pal.hidden=false;
+function fillPalette(){const pal=$('#palette');if(!pal)return;if(tool!=='place'&&tool!=='area'&&tool!=='run'&&tool!=='opening'){pal.hidden=true;return;}pal.hidden=false;
+  if(tool==='opening'){pal.className='palette';pal.innerHTML=`<span class="pg">Tap a wall to add a</span>`+Object.entries(OPEN_NAMES).map(([k,n])=>`<button class="chip ${k===openType?'on':''}" data-opt="${k}">${n}</button>`).join('');return;}
   if(tool==='area'){pal.className='palette';pal.innerHTML=`<span class="pg">Draw a</span>`+Object.entries(AREA_T).map(([k,v])=>`<button class="chip ${k===areaType?'on':''}" data-atype="${k}">${v.n}</button>`).join('');return;}
   if(tool==='run'){fillRunTray(pal);return;}
   pal.className='palette tray';const groups=paletteGroups();if(!trayTab)trayTab=groups[0][0];
   const cur=placePb?{c:'$',n:placePb.n,sec:placePb.sec,p:(PB.byId(placePb.id)||{}).p}:Object.assign({},ITEM_T[placeKind],{p:(kindPrice(placeKind)||{}).p});
-  const where=placePb?'where it goes':ITEM_T[placeKind].m==='wall'?'the wall where it goes':ITEM_T[placeKind].m==='ceil'?(VIEW==='3d'?'the floor under where it hangs':'where it goes on the ceiling'):'the floor where it goes';
+  const where=placePb?'where it goes':ITEM_T[placeKind].m==='roof'?(layers3d().roof||VIEW!=='3d'?'the roof where it goes':'the roof where it goes (turn on Roof, top right)'):ITEM_T[placeKind].m==='wall'?'the wall where it goes':ITEM_T[placeKind].m==='ceil'?(VIEW==='3d'?'the floor under where it hangs':'where it goes on the ceiling'):'the floor where it goes';
   let h=`<div class="tcur"><i class="pit-i ${cur.sec}">${esc(cur.c)}</i><div><b>${esc(cur.n)}</b><small>${cur.p!=null?money(cur.p)+' from your price list. ':''}Tap ${where}.</small></div><button class="btn tdone" data-ttog="1">${trayOpen?'Hide list':'Change item'}</button></div>`;if(!trayOpen){pal.innerHTML=h;return;}
   h+=`<input type="search" class="tsearch" placeholder="Search items${PB.has()?' and your price list':''}" value="${esc(trayQ)}" aria-label="Search items">`;
   const q=trayQ.trim().toLowerCase();
@@ -774,6 +787,7 @@ function fillRunTray(pal){pal.className='palette tray';const pref=USER_TRADES.ma
 $('#palette').addEventListener('change',e=>{if(e.target.dataset.rdrops){runDrops=e.target.checked;}});
 $('#palette').addEventListener('input',e=>{if(e.target.classList.contains('tsearch')){trayQ=e.target.value;$('#palette').dataset.focus='1';renderPalette();const inp=$('#palette .tsearch');if(inp){inp.focus();inp.setSelectionRange(trayQ.length,trayQ.length);}}});
 $('#palette').addEventListener('click',e=>{const a=e.target.closest('[data-atype]');if(a){areaType=a.dataset.atype;renderPalette();return;}
+  const ot=e.target.closest('[data-opt]');if(ot){openType=ot.dataset.opt;renderPalette();return;}
   const rk=e.target.closest('[data-rk]');if(rk){runKind=rk.dataset.rk;runPb=null;runMode=null;trayOpen=false;renderPalette();return;}
   const rp=e.target.closest('[data-rpb]');if(rp){const it=PB.byId(rp.dataset.rpb);if(it){runPb={id:it.id,n:it.n,sec:TRADE_SEC[it.t]||'build'};trayOpen=false;renderPalette();}return;}
   const rm=e.target.closest('[data-rmode]');if(rm){runMode=rm.dataset.rmode;runDraft.forEach(p=>{p[2]=runH(p[2]);});renderPalette();if(VIEW==='3d')build3D();return;}
@@ -837,7 +851,9 @@ function computeRows(){const rows=[],stages=[];if(!scaleMM()||doc.outline.length
   const hips=S.roofType==='hip'?2*Math.min(g.bw,g.bl)*1.2+Math.abs(g.bw-g.bl):Math.max(g.bw,g.bl);
   add('roof','Roof cover','ridge',S.roofType==='hip'?'Ridge and hip capping':'Ridge capping','',`About ${fm(hips,1)} m, from the overall size`,Math.ceil(hips),'m',['ridge','capping']);
   add('roof','Gutters','gutter','Gutter','Colorbond quad',`Eaves line ${fm(gut,1)} m`,Math.ceil(gut),'m',['gutter']);add('roof','Gutters','fascia','Fascia','Colorbond',`${fm(gut,1)} m`,Math.ceil(gut),'m',['fascia']);
-  const dps=Math.max(2,Math.ceil(gut/10));add('roof','Gutters','dp','Downpipes','90 mm',`${dps} drops`,dps,'ea',['downpipe']);add('roof','Gutters','eavelin','Eave lining','4.5 mm FC',`${fm(gut*g.e,1)} m²`,Math.ceil(gut*g.e*1.1),'m²',['eave lining','eave sheet']);
+  const rcount=k=>doc.items.filter(i=>i.kind===k).length;const dpPlaced=rcount('dp');
+  const dps=dpPlaced||Math.max(2,Math.ceil(gut/10));add('roof','Gutters','dp','Downpipes','90 mm',dpPlaced?`${dpPlaced} placed on the model`:`${dps} drops`,dps,'ea',['downpipe']);
+  ['sky','whirly','solar','flue','aerial'].forEach(k=>{const n=rcount(k);if(n)add('roof','Roof items',k,ITEM_T[k].n,'',`${n} placed on the roof`,n,'ea',ITEM_T[k].match);});add('roof','Gutters','eavelin','Eave lining','4.5 mm FC',`${fm(gut*g.e,1)} m²`,Math.ceil(gut*g.e*1.1),'m²',['eave lining','eave sheet']);
   stage('roof','h-truss','Roof trusses and battens',0.25*g.planA,'Stand, brace, batten');stage('roof','h-roof',RM.n,RM.rate*g.roofA,'Lay roof cover and capping');stage('roof','h-gut','Gutters, fascia and eaves',0.3*gut+0.4*gut*g.e,'');
   /* slab */
   if(S.floor==='slab'){const v=g.A*(S.slabT/1000+0.03);add('floor','Slab','conc','Concrete','25 MPa',`${fm(g.A,1)} m² footprint, ${S.slabT/10} cm slab plus edge beams`,Math.ceil(v*10)/10,'m³',['concrete']);
@@ -1334,6 +1350,12 @@ function itemModel(it){const g=new THREE.Group();const k=it.kind==='pb'?(modelKi
     case 'tub':part(g,BX(0.6,0.85,0.5),m3('cab',0xe9e6e0),0,0.425,0.25);part(g,BX(0.56,0.06,0.46),steel,0,0.88,0.26);part(g,BX(0.46,0.02,0.36),dark,0,0.9,0.27);part(g,CY(0.014,0.014,0.3),chrome,0,1.05,0.05);break;
     case 'dishwasher':part(g,BX(0.6,0.82,0.6),steel,0,0.41,0.3);part(g,BX(0.45,0.02,0.03),chrome,0,0.74,0.62);part(g,BX(0.6,0.06,0.02),dark,0,0.79,0.6);break;
     case 'hws':part(g,CY(0.27,0.27,1.5,32),white,0,0.75,0.3);part(g,CY(0.27,0.24,0.06,32),white,0,1.53,0.3);part(g,CY(0.02,0.02,0.4),chrome,0.12,1.7,0.3);part(g,BX(0.1,0.14,0.02),grey,0,1.05,0.58);break;
+    case 'dp':part(g,CY(0.045,0.045,2.6,16),m3('dpipe',0xe8e4da,{roughness:0.5}),0,1.3,0.06);part(g,CY(0.045,0.045,0.25,16),m3('dpipe',0xe8e4da),0,0.05,0.16,Math.PI/2);for(let y=0.6;y<2.6;y+=0.9)part(g,BX(0.12,0.03,0.1),grey,0,y,0.05);break;
+    case 'sky':part(g,BX(0.62,0.12,1.02),m3('skyf',0xeeeeee),0,0.06,0);part(g,BX(0.56,0.02,0.96),glass,0,0.13,0);break;
+    case 'whirly':part(g,CY(0.15,0.15,0.18,20),steel,0,0.09,0);part(g,new THREE.SphereGeometry(0.17,20,10,0,Math.PI*2,0,Math.PI/2),steel,0,0.2,0);part(g,BX(0.5,0.02,0.5),steel,0,0.01,0);break;
+    case 'solar':part(g,BX(1.0,0.04,1.7),m3('pv',0x1d2c4a,{roughness:0.25,metalness:0.3}),0,0.08,0);part(g,BX(1.02,0.03,1.72),chrome,0,0.05,0);for(let i=1;i<6;i++)part(g,BX(1.0,0.002,0.004),m3('pvl',0x8fa3c4),0,0.101,-0.85+i*0.283);break;
+    case 'flue':part(g,CY(0.06,0.06,0.9,16),steel,0,0.45,0);part(g,CY(0.11,0.11,0.12,16),steel,0,0.9,0);part(g,BX(0.35,0.01,0.35),dark,0,0.005,0);break;
+    case 'aerial':part(g,CY(0.02,0.02,1.4,8),steel,0,0.7,0);part(g,BX(1.2,0.02,0.02),steel,0,1.3,0);for(let i=0;i<6;i++)part(g,BX(0.02,0.02,0.5),steel,-0.5+i*0.2,1.3,0);break;
     case 'fw':part(g,BX(0.12,0.006,0.12),chrome,0,0.004,0);for(let i=-2;i<=2;i++)part(g,BX(0.1,0.004,0.008),dark,0,0.008,i*0.02);break;
     default:{part(g,CY(0.004,0.004,0.5,6),grey,0,0.25,0);part(g,new THREE.SphereGeometry(0.05,16,12),m3('pin',0xf2b705,{emissive:0x553300}),0,0.52,0);part(g,CY(0.06,0.06,0.006,20),grey,0,0.003,0);}
   }
@@ -1347,17 +1369,113 @@ function ensurePop(){let pop=$('#v3pop');if(!pop){pop=document.createElement('di
     pop.addEventListener('click',e=>{if(e.target.closest('[data-pclose]')){pop.hidden=true;sel=null;build3D();return;}if(e.target.closest('[data-plink]')){const it2=doc.items.find(x=>x.id===pop.dataset.id);if(!it2||it2.kind==='pb')return;const d2=ITEM_T[it2.kind];const cur=kindPrice(it2.kind);PB.pick({title:d2.n,query:d2.match[0]||d2.n,sec:d2.sec,current:cur?cur.id:null,allowClear:true,filter:x=>x.u==='ea',onPick:x=>{snapshot();doc.links[kindKey(it2.kind)]=x?x.id:null;changed(false);const r=$('#v3').getBoundingClientRect();itemInfo(it2,{clientX:r.left+parseFloat(pop.style.left)-14,clientY:r.top+parseFloat(pop.style.top)+20});}});return;}if(e.target.closest('[data-pdel]')){const id=pop.dataset.id;snapshot();doc.items=doc.items.filter(x=>x.id!==id);sel=null;pop.hidden=true;changed(false);renderPlanTab();flash('Removed. Undo puts it back.');}});}return pop;}
 
 function itemInfo(it,ev){const d=itemDef(it);const rm=roomAt(it.pt);const pb=it.kind==='pb'?PB.byId(it.pb):kindPrice(it.kind);
-  const pop=ensurePop();
+  const pop=ensurePop();pop.onclick=null;pop.onchange=null;
   const host=$('#v3').getBoundingClientRect();const x=Math.min(host.width-270,Math.max(10,ev.clientX-host.left+14)),y=Math.min(host.height-170,Math.max(60,ev.clientY-host.top-20));
   const how=d.m==='wall'?`On the wall at ${it.h||d.h||300} mm`:d.m==='ceil'?'On the ceiling':'On the floor';
   pop.innerHTML=`<div class="cardh"><b><i class="pit-i ${d.sec}">${esc(d.c)}</i> ${esc(d.n)}</b><button class="x" data-pclose="1" aria-label="Close">✕</button></div><p class="note" style="margin:2px 0 4px">${rm?'In '+esc(rm.name):'Outside the rooms'}. ${how}.</p>${pb?`<p class="note" style="margin:0 0 8px">Priced at <b>${money(pb.p)}</b>: ${esc(pb.n)}</p>`:`<p class="note" style="margin:0 0 8px">No price yet. Pick the item from your price list.</p>`}<div class="upl">${it.kind!=='pb'&&PB.has()?`<button class="btn" data-plink="1">${pb?'Change price':'Pick price'}</button>`:''}<button class="btn" data-pdel="1">Remove</button></div>`;
   pop.dataset.id=it.id;pop.style.left=x+'px';pop.style.top=y+'px';pop.hidden=false;sel={kind:'item',id:it.id};renderPlanTab();build3D();}
 
-function runInfo(r,ev){const d=runDef(r);const L=runLen(r);const pb=r.kind==='pb'?PB.byId(r.pb):runPrice(r.kind);const pop=ensurePop();
+function runInfo(r,ev){const d=runDef(r);const L=runLen(r);const pb=r.kind==='pb'?PB.byId(r.pb):runPrice(r.kind);const pop=ensurePop();pop.onclick=null;pop.onchange=null;
   const host=$('#v3').getBoundingClientRect();const x=Math.min(host.width-270,Math.max(10,ev.clientX-host.left+14)),y=Math.min(host.height-170,Math.max(60,ev.clientY-host.top-20));
   pop.innerHTML=`<div class="cardh"><b>${esc(d.n)}</b><button class="x" data-pclose="1" aria-label="Close">✕</button></div><p class="note" style="margin:2px 0 4px">${fm(L,1)} m run, ${r.pts.length-1} ${r.pts.length===2?'leg':'legs'}. The takeoff adds 10% for terminations.</p>${pb?`<p class="note" style="margin:0 0 8px">Priced at <b>${money(pb.p)}${pb.pack?` per ${pb.pack} m roll`:' per m'}</b>: ${esc(pb.n)}</p>`:`<p class="note" style="margin:0 0 8px">No price yet. Link it in Materials.</p>`}<div class="upl"><button class="btn" data-rdel="1">Remove</button></div>`;
   pop.dataset.id=r.id;pop.style.left=x+'px';pop.style.top=y+'px';pop.hidden=false;sel={kind:'run',id:r.id};renderPlanTab();build3D();
   pop.querySelector('[data-rdel]').onclick=()=>{snapshot();doc.runs=doc.runs.filter(z=>z.id!==r.id);sel=null;pop.hidden=true;changed(false);renderPlanTab();flash('Run removed. Undo puts it back.');};}
+
+/* ---------- roof: the surface rises from the eaves at the roof pitch. For a hip roof the height is the distance in from the eave line
+   (the straight skeleton of the plan), with eave lines run on past inside corners so valleys come out straight. For a gable roof only the
+   eave lines along the length count, so the ends rise to gables. ---------- */
+function roofModel(P,S,H){const sm=scaleMM();if(!sm||doc.outline.length<3)return null;const eave=(+S.eave||0)/1000,t=Math.tan((+S.pitch||22.5)*Math.PI/180);
+  const E=offsetOut(doc.outline,eave*1000/sm).map(P);const n=E.length;if(n<3)return null;const area=E.reduce((a,p,i)=>{const q=E[(i+1)%n];return a+p[0]*q[1]-q[0]*p[1];},0);const sgn=Math.sign(area)||1;
+  const b={x0:Infinity,x1:-Infinity,z0:Infinity,z1:-Infinity};E.forEach(p=>{b.x0=Math.min(b.x0,p[0]);b.x1=Math.max(b.x1,p[0]);b.z0=Math.min(b.z0,p[1]);b.z1=Math.max(b.z1,p[1]);});const longX=(b.x1-b.x0)>=(b.z1-b.z0);
+  // Square plans: cover the plan with overlapping rectangles, give each its own hip (or gable along its length), and take the highest
+  // surface at every point. That is how intersecting roofs meet, valleys and all. Other shapes rise with the distance in from the eaves.
+  const ortho=E.every((p,i)=>{const q=E[(i+1)%n];return Math.abs(p[0]-q[0])<0.02||Math.abs(p[1]-q[1])<0.02;});let rects=null;
+  const inPoly=(x,z)=>{let c=false;for(let i=0,j=n-1;i<n;j=i++){const [xi,zi]=E[i],[xj,zj]=E[j];if(((zi>z)!==(zj>z))&&(x<(xj-xi)*(z-zi)/((zj-zi)||1e-9)+xi))c=!c;}return c;};
+  if(ortho){const uniq=v=>{v.sort((p,q)=>p-q);const o=[];v.forEach(x=>{if(!o.length||x-o[o.length-1]>0.02)o.push(x);});return o;};const xs=uniq(E.map(p=>p[0])),zs=uniq(E.map(p=>p[1]));const NI=xs.length-1,NJ=zs.length-1;
+    const inside=[];for(let i=0;i<NI;i++){inside.push([]);for(let j=0;j<NJ;j++)inside[i].push(inPoly((xs[i]+xs[i+1])/2,(zs[j]+zs[j+1])/2));}
+    const ok=(i0,i1,j0,j1)=>{for(let i=i0;i<=i1;i++)for(let j=j0;j<=j1;j++)if(!inside[i][j])return false;return true;};const got=[];
+    for(let i=0;i<NI;i++)for(let j=0;j<NJ;j++){if(!inside[i][j])continue;for(const xFirst of [true,false]){let i0=i,i1=i,j0=j,j1=j;const gx=()=>{while(i0>0&&ok(i0-1,i0-1,j0,j1))i0--;while(i1<NI-1&&ok(i1+1,i1+1,j0,j1))i1++;},gz=()=>{while(j0>0&&ok(i0,i1,j0-1,j0-1))j0--;while(j1<NJ-1&&ok(i0,i1,j1+1,j1+1))j1++;};if(xFirst){gx();gz();}else{gz();gx();}got.push([i0,i1,j0,j1]);}}
+    rects=[];got.forEach(r=>{if(rects.some(q=>q[0]<=r[0]&&q[1]>=r[1]&&q[2]<=r[2]&&q[3]>=r[3]))return;rects=rects.filter(q=>!(r[0]<=q[0]&&r[1]>=q[1]&&r[2]<=q[2]&&r[3]>=q[3]));rects.push(r);});
+    rects=rects.map(([i0,i1,j0,j1])=>({x0:xs[i0],x1:xs[i1+1],z0:zs[j0],z1:zs[j1+1]}));}
+  const dseg=(x,z,a,c)=>{const dx=c[0]-a[0],dz=c[1]-a[1];const L2=dx*dx+dz*dz||1;let u=((x-a[0])*dx+(z-a[1])*dz)/L2;u=Math.max(0,Math.min(1,u));return Math.hypot(x-a[0]-u*dx,z-a[1]-u*dz);};
+  const base=H-eave*t;const gable=S.roofType==='gable';
+  const height=(x,z)=>{let d=0;if(rects){for(const r of rects){if(x<r.x0-1e-6||x>r.x1+1e-6||z<r.z0-1e-6||z>r.z1+1e-6)continue;const along=(r.x1-r.x0)>=(r.z1-r.z0);const dd=gable?(along?Math.min(z-r.z0,r.z1-z):Math.min(x-r.x0,r.x1-x)):Math.min(x-r.x0,r.x1-x,z-r.z0,r.z1-z);if(dd>d)d=dd;}}
+    else{d=Infinity;for(let i=0;i<n;i++)d=Math.min(d,dseg(x,z,E[i],E[(i+1)%n]));if(!isFinite(d))d=0;}return base+t*Math.max(0,d);};
+  // clip the eave outline into small squares and lift every corner to the roof surface
+  const cell=Math.max(0.18,Math.max(b.x1-b.x0,b.z1-b.z0)/110);const pos=[];
+  const clip=(poly,x0,x1,z0,z1)=>{let out=poly;const edge=(inside,inter)=>{const res=[];for(let i=0;i<out.length;i++){const p=out[i],q=out[(i+1)%out.length];const pi=inside(p),qi=inside(q);if(pi)res.push(p);if(pi!==qi)res.push(inter(p,q));}out=res;};
+    const lerpX=(p,q,x)=>[x,p[1]+(q[1]-p[1])*(x-p[0])/((q[0]-p[0])||1e-9)],lerpZ=(p,q,z)=>[p[0]+(q[0]-p[0])*(z-p[1])/((q[1]-p[1])||1e-9),z];
+    edge(p=>p[0]>=x0,(p,q)=>lerpX(p,q,x0));if(out.length)edge(p=>p[0]<=x1,(p,q)=>lerpX(p,q,x1));if(out.length)edge(p=>p[1]>=z0,(p,q)=>lerpZ(p,q,z0));if(out.length)edge(p=>p[1]<=z1,(p,q)=>lerpZ(p,q,z1));return out;};
+  for(let x=b.x0;x<b.x1;x+=cell)for(let z=b.z0;z<b.z1;z+=cell){const pc=clip(E,x,x+cell,z,z+cell);if(pc.length<3)continue;let tri;try{tri=THREE.ShapeUtils.triangulateShape(pc.map(p=>new THREE.Vector2(p[0],p[1])),[]);}catch(e){continue;}
+    tri.forEach(f=>f.forEach(k=>{const p=pc[k];pos.push(p[0],height(p[0],p[1]),p[1]);}));}
+  if(!pos.length)return null;const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));geo.computeVertexNormals();
+  const col=S.roofMat==='tiles'?0x8f5a46:0x4c5359;const mesh=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:col,roughness:S.roofMat==='tiles'?0.85:0.45,metalness:S.roofMat==='tiles'?0:0.3,side:THREE.DoubleSide,flatShading:true}));
+  mesh.castShadow=true;mesh.receiveShadow=true;mesh.userData.pick='roof';mesh.userData.roof=true;
+  // gutters along the eave line
+  const gut=new THREE.Group();const gm=new THREE.MeshStandardMaterial({color:0xd8d4cb,roughness:0.5});for(let i=0;i<n;i++){const a=E[i],c=E[(i+1)%n];const L=Math.hypot(c[0]-a[0],c[1]-a[1]);if(L<0.05)continue;const ya=height(a[0],a[1]),yc=height(c[0],c[1]);if(Math.abs(ya-base)>0.05&&Math.abs(yc-base)>0.05)continue;
+    const g=new THREE.Mesh(new THREE.BoxGeometry(L,0.12,0.12),gm);g.position.set((a[0]+c[0])/2,base-0.04,(a[1]+c[1])/2);g.rotation.y=-Math.atan2(c[1]-a[1],c[0]-a[0]);g.userData.roof=true;g.userData.pick='roof';gut.add(g);}
+  return {mesh,gut,height,base,t};}
+/* ---------- frame: what the carpenter builds, from the takeoff settings ---------- */
+function frameModel(P,S,H){const g=new THREE.Group();const pine=new THREE.MeshStandardMaterial({color:0xd8b77e,roughness:0.8}),lvl=new THREE.MeshStandardMaterial({color:0xc29a5b,roughness:0.8});const sgn=Math.sign(polyArea(doc.outline))||1;
+  const bx=(x,y,z,sx,sy,sz,ang,m,ud)=>{const me=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),m);me.position.set(x,y,z);me.rotation.y=ang;me.castShadow=true;if(ud)Object.assign(me.userData,ud);g.add(me);};
+  segs().forEach(s=>{const a=P(s.a),c=P(s.b);const L=Math.hypot(c[0]-a[0],c[1]-a[1]);if(L<0.1)return;const ux=(c[0]-a[0])/L,uz=(c[1]-a[1])/L;let nx=-uz,nz=ux;if(s.ext){nx*=sgn;nz*=sgn;}const thk=(s.ext?S.extThk:S.intThk)/1000;const off=s.ext?thk-0.05:0;const ang=-Math.atan2(uz,ux);
+    const sp=(s.ext?+S.studSp:600)/1000,dep=0.09,w=0.045;const at=(d,y,sx,sy,m)=>bx(a[0]+ux*d+nx*off,y,a[1]+uz*d+nz*off,sx,sy,dep,ang,m||pine,{pick:'wall',host:s.host});
+    const ops=doc.openings.map(o=>({o,h:hostOf(o)})).filter(x=>x.h&&x.h.s.host===s.host).map(x=>{const c0=x.h.t*L,ww=x.o.width/1000;return {a:c0-ww/2,b:c0+ww/2,sill:x.o.type==='window'?x.o.sill/1000:0,top:Math.min(H-0.2,(x.o.sill+x.o.height)/1000)};});
+    at(L/2,0.0225,L,w);at(L/2,H-0.0225,L,w);at(L/2,H-0.0675,L,w);
+    for(let d=0;d<=L+1e-6;d+=sp){if(ops.some(o=>d>o.a-0.02&&d<o.b+0.02))continue;at(Math.min(L-w/2,Math.max(w/2,d)),H/2,w,H-0.09);}
+    ops.forEach(o=>{[o.a-w/2,o.b+w/2].forEach(d=>{at(d,H/2,w,H-0.09);at(d+(d<o.a?w:-w),o.top/2,w,o.top);});at((o.a+o.b)/2,o.top+0.1,o.b-o.a+w*2,0.19,lvl);if(o.sill>0)at((o.a+o.b)/2,o.sill-0.0225,o.b-o.a,w);});
+    if(L>1.2){const segsN=[];let cur=0;ops.forEach(o=>{segsN.push([cur,o.a]);cur=o.b;});segsN.push([cur,L]);segsN.forEach(([p,q])=>{if(q-p>0.2)at((p+q)/2,H/2,q-p,w);});}});
+  return g;}
+function trussModel(R,P,S,H){const g=new THREE.Group();if(!R)return g;const pts=[];const E=offsetOut(doc.outline,(+S.eave||0)/scaleMM()).map(P);const b={x0:Infinity,x1:-Infinity,z0:Infinity,z1:-Infinity};E.forEach(p=>{b.x0=Math.min(b.x0,p[0]);b.x1=Math.max(b.x1,p[0]);b.z0=Math.min(b.z0,p[1]);b.z1=Math.max(b.z1,p[1]);});const longX=(b.x1-b.x0)>=(b.z1-b.z0);
+  const O=doc.outline.map(P);const inside=(x,z)=>{let c=false;for(let i=0,j=O.length-1;i<O.length;j=i++){const [xi,zi]=O[i],[xj,zj]=O[j];if(((zi>z)!==(zj>z))&&(x<(xj-xi)*(z-zi)/((zj-zi)||1e-9)+xi))c=!c;}return c;};
+  const A0=longX?b.x0:b.z0,A1=longX?b.x1:b.z1,B0=longX?b.z0:b.x0,B1=longX?b.z1:b.x1;const XY=(u,v)=>longX?[u,v]:[v,u];
+  for(let u=A0+0.3;u<A1;u+=0.6){let prev=null;for(let v=B0;v<=B1+1e-6;v+=0.12){const [x,z]=XY(u,v);if(!inside(x,z)){prev=null;continue;}const y=R.height(x,z);if(prev){pts.push(prev[0],prev[1],prev[2],x,y,z);pts.push(prev[0],H,prev[2],x,H,z);}prev=[x,y,z];}}
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));g.add(new THREE.LineSegments(geo,new THREE.LineBasicMaterial({color:0xa9773f})));return g;}
+
+/* ---------- doors and windows that look like what they are ---------- */
+function openingModel(o,cx,cz,ang,thk,box,setUd){const w=o.b-o.a,ux=Math.cos(-ang),uz=Math.sin(-ang);const at=(du,y,sx,sy,sz,m)=>box(cx+ux*du,y,cz+uz*du,sx,sy,sz,ang,m);setUd({opId:o.id,pick:'wall'});
+  const frame=m3('frameW',0xeceae4,{roughness:0.5}),glassM=m3('glassO',0x9fc7e0,{transparent:true,opacity:0.45,roughness:0.05}),door=m3('doorO',0x8a6a4a,{roughness:0.6}),handle=m3('handleO',0xc9ced3,{metalness:0.8,roughness:0.2}),gd=m3('gdoor',0xd9d6cf,{roughness:0.5}),groove=m3('groove',0x9a9890);
+  const y0=o.sill,y1=o.sill+o.h,fw=0.05;
+  if(o.t==='window'||o.t==='slider'){at(0,y1-fw/2,w,fw,thk*0.6,frame);at(0,y0+fw/2,w,fw,thk*0.6,frame);at(-w/2+fw/2,(y0+y1)/2,fw,o.h,thk*0.6,frame);at(w/2-fw/2,(y0+y1)/2,fw,o.h,thk*0.6,frame);at(0,(y0+y1)/2,w-fw*2,o.h-fw*2,0.02,glassM);
+    at(0,(y0+y1)/2,0.04,o.h,thk*0.5,frame);if(o.t==='slider')at(w*0.25,(y0+y1)/2-0.05,0.02,0.12,thk*0.7,handle);}
+  else if(o.t==='garage'){at(0,o.h/2,w,o.h,0.06,gd);for(let y=0.45;y<o.h-0.1;y+=0.45)at(0,y,w-0.04,0.025,0.08,groove);at(0,0.35,0.3,0.04,0.09,handle);}
+  else{at(0,o.h/2,w-0.02,o.h,0.045,door);at(w/2-0.12,1.0,0.12,0.03,0.09,handle);at(0,o.h+0.03,w+0.08,0.06,thk*0.7,frame);}
+  setUd(null);}
+
+/* ---------- layers: roof and frame, per build ---------- */
+function layers3d(){if(!doc.layers3d)doc.layers3d={roof:USER_TRADES.includes('roofer'),frame:USER_TRADES.includes('carpenter')&&!USER_TRADES.includes('roofer')};return doc.layers3d;}
+const L3now=layers3d;
+function renderViews(){const L=layers3d();$('#views').innerHTML=`<button class="chip ${VIEW==='2d'?'on':''}" data-view="2d">Plan</button><button class="chip ${VIEW==='3d'?'on':''}" data-view="3d">3D</button>`+(VIEW==='3d'?`<span class="vsep"></span><button class="chip ${L.roof?'on':''}" data-layer="roof" aria-pressed="${L.roof}">Roof</button><button class="chip ${L.frame?'on':''}" data-layer="frame" aria-pressed="${L.frame}">Frame</button>`:'');}
+/* ---------- tap anything in Look around to change it ---------- */
+function popAt(ev){const pop=ensurePop();pop.onclick=null;pop.onchange=null;const host=$('#v3').getBoundingClientRect();const x=Math.min(host.width-290,Math.max(10,ev.clientX-host.left+14)),y=Math.min(host.height-260,Math.max(60,ev.clientY-host.top-20));pop.style.left=x+'px';pop.style.top=y+'px';pop.hidden=false;return pop;}
+const OPEN_NAMES={door:'Door',window:'Window',slider:'Sliding door',garage:'Garage door'};
+function openingInfo(op,ev){const pop=popAt(ev);const h=hostOf(op);const ext=h&&h.s.ext;
+  pop.innerHTML=`<div class="cardh"><b>${OPEN_NAMES[op.type]||'Opening'}, ${op.width} × ${op.height}</b><button class="x" data-pclose="1" aria-label="Close">✕</button></div><p class="note" style="margin:2px 0 6px">${ext?'Outside wall':'Inside wall'}. Change it to what the plan shows.</p>
+  <div class="pbtns">${Object.entries(OPEN_NAMES).map(([k,n])=>`<button class="chip ${op.type===k?'on':''}" data-otype="${k}" ${(k==='slider'||k==='garage')&&!ext?'disabled':''}>${n}</button>`).join('')}</div>
+  <div class="pgrid"><label>Width<span class="inp sm"><input type="number" data-ofld="width" value="${op.width}" min="300" max="6000" step="10"><em>mm</em></span></label><label>Height<span class="inp sm"><input type="number" data-ofld="height" value="${op.height}" min="300" max="3000" step="10"><em>mm</em></span></label>${op.type==='window'?`<label>Sill<span class="inp sm"><input type="number" data-ofld="sill" value="${op.sill}" min="0" max="2000" step="10"><em>mm</em></span></label>`:''}</div>
+  <div class="upl"><button class="btn" data-odel="1">Remove</button></div>`;
+  pop.onclick=e=>{if(e.target.closest('[data-pclose]')){pop.hidden=true;return;}const t=e.target.closest('[data-otype]');if(t&&!t.disabled){snapshot();const k=t.dataset.otype;op.type=k;op.height=OPEN_T[k].h;op.sill=OPEN_T[k].sill;if(k==='garage'&&op.width<2000)op.width=OPEN_T.garage.w;if(k==='slider'&&op.width<1500)op.width=OPEN_T.slider.w;if(k==='door'&&op.width>1200)op.width=OPEN_T.door.w;changed(false);openingInfo(op,ev);return;}
+    if(e.target.closest('[data-odel]')){snapshot();doc.openings=doc.openings.filter(x=>x.id!==op.id);pop.hidden=true;changed(false);flash('Removed. Undo puts it back.');}};
+  pop.onchange=e=>{const f=e.target.dataset.ofld;if(!f)return;const v=parseFloat(e.target.value);if(!isFinite(v))return;snapshot();op[f]=Math.round(v);changed(false);openingInfo(op,ev);};}
+function wallInfo(host,pt,ev){const s=segs().find(x=>x.host===host);if(!s)return;const pop=popAt(ev);const q=lerp(s.a,s.b,projT(pt,s.a,s.b));const L=toM(dist(s.a,s.b));const w=host.startsWith('w:')||!s.ext?doc.walls.find(x=>'w:'+x.id===host||x.id===host.replace(/^w:/,'')):null;
+  pop.innerHTML=`<div class="cardh"><b>${s.ext?'Outside wall':'Inside wall'}, ${fm(L,2)} m</b><button class="x" data-pclose="1" aria-label="Close">✕</button></div><p class="note" style="margin:2px 0 6px">Add an opening where you tapped.</p><div class="pbtns">${Object.entries(OPEN_NAMES).filter(([k])=>s.ext||k==='door'||k==='window').map(([k,n])=>`<button class="chip" data-oadd="${k}">${n}</button>`).join('')}</div>${!s.ext&&w?'<div class="upl"><button class="btn" data-wdel="1">Remove this wall</button></div>':''}`;
+  pop.onclick=e=>{if(e.target.closest('[data-pclose]')){pop.hidden=true;return;}const a=e.target.closest('[data-oadd]');if(a){const n0=doc.openings.length;addOpening(a.dataset.oadd,q);if(doc.openings.length>n0){const op=doc.openings[doc.openings.length-1];openingInfo(op,ev);}return;}
+    if(e.target.closest('[data-wdel]')&&w){snapshot();doc.walls=doc.walls.filter(x=>x!==w);pop.hidden=true;changed(true);flash('Wall removed. Undo puts it back.');}};pop.onchange=null;}
+function roomInfo(pt,ev){const R=rooms();const i=R.findIndex(r=>pip(pt,r.f.poly));if(i<0)return false;const r=R[i];const pop=popAt(ev);
+  pop.innerHTML=`<div class="cardh"><b>${esc(r.name)}, ${fm(r.area,1)} m²</b><button class="x" data-pclose="1" aria-label="Close">✕</button></div>
+  <div class="pgrid one"><label>Name<input type="text" data-rf="name" value="${esc(r.name)}"></label><label>Type<select data-rf="type">${Object.entries(ROOM_TYPES).map(([k,v])=>`<option value="${k}" ${k===r.type?'selected':''}>${v}</option>`).join('')}</select></label><label>Floor<select data-rf="finish">${Object.entries(FINISHES).map(([k,v])=>`<option value="${k}" ${k===r.finish?'selected':''}>${v}</option>`).join('')}</select></label></div>`;
+  pop.onclick=e=>{if(e.target.closest('[data-pclose]'))pop.hidden=true;};
+  pop.onchange=e=>{const k=e.target.dataset.rf;if(!k)return;snapshot();const lab=roomLabelFor(i,true);if(k==='name'){lab.name=e.target.value.trim()||'Room';if(lab.type==='other'||!lab.typeSet)lab.type=guessType(lab.name);}else if(k==='type'){lab.type=e.target.value;lab.typeSet=true;}else lab.finish=e.target.value;changed(true);roomInfo(pt,ev);};return true;}
+function roofInfo(ev){const S=doc.settings;const g=geoAll();const pop=popAt(ev);
+  pop.innerHTML=`<div class="cardh"><b>Roof, ${fm(g.roofA,1)} m²</b><button class="x" data-pclose="1" aria-label="Close">✕</button></div><p class="note" style="margin:2px 0 6px">${fm(g.planA||0,1)} m² on plan, eaves line ${fm(outlinePer()+0,1)} m around the walls.</p>
+  <div class="pbtns"><button class="chip ${S.roofType==='hip'?'on':''}" data-rset="roofType" data-v="hip">Hip</button><button class="chip ${S.roofType==='gable'?'on':''}" data-rset="roofType" data-v="gable">Gable</button><button class="chip ${S.roofMat==='tiles'?'on':''}" data-rset="roofMat" data-v="tiles">Tiles</button><button class="chip ${S.roofMat==='colorbond'?'on':''}" data-rset="roofMat" data-v="colorbond">Colorbond</button></div>
+  <div class="pgrid"><label>Pitch<span class="inp sm"><input type="number" data-rnum="pitch" value="${S.pitch}" min="2" max="45" step="0.5"><em>°</em></span></label><label>Eaves<span class="inp sm"><input type="number" data-rnum="eave" value="${S.eave}" min="0" max="900" step="50"><em>mm</em></span></label></div>
+  <p class="note" style="margin:6px 0 0">Place skylights, whirlybirds, solar panels and downpipes with Place item.</p>`;
+  pop.onclick=e=>{if(e.target.closest('[data-pclose]')){pop.hidden=true;return;}const b=e.target.closest('[data-rset]');if(b){snapshot();S[b.dataset.rset]=b.dataset.v;changed(true);roofInfo(ev);}};
+  pop.onchange=e=>{const k=e.target.dataset.rnum;if(!k)return;const v=parseFloat(e.target.value);if(!isFinite(v))return;snapshot();S[k]=v;changed(true);roofInfo(ev);};}
+function areaInfo(ar,ev){sel={kind:'area',id:ar.id};switchTab('plan');renderPlanTab();const G=areaGeo(ar);const pop=popAt(ev);
+  pop.innerHTML=`<div class="cardh"><b>${esc(ar.name||(AREA_T[ar.type]||AREA_T.deck).n)}, ${fm(G.Lx,1)} × ${fm(G.Ly,1)} m</b><button class="x" data-pclose="1" aria-label="Close">✕</button></div><div class="pbtns">${Object.entries(AREA_T).map(([k,v])=>`<button class="chip ${ar.type===k?'on':''}" data-atype2="${k}">${v.n}</button>`).join('')}</div><p class="note" style="margin:6px 0 0">Height, boards and balustrade are in the panel on the left.</p><div class="upl"><button class="btn" data-adel="1">Remove</button></div>`;
+  pop.onclick=e=>{if(e.target.closest('[data-pclose]')){pop.hidden=true;return;}const b=e.target.closest('[data-atype2]');if(b){snapshot();ar.type=b.dataset.atype2;if(ar.type==='deck'&&!ar.h)ar.h=600;changed(true);areaInfo(ar,ev);return;}if(e.target.closest('[data-adel]')){snapshot();doc.areas=doc.areas.filter(x=>x!==ar);sel=null;pop.hidden=true;changed(true);}};pop.onchange=null;}
 
 /* ---------- 3D ---------- */
 let three=null;
@@ -1371,14 +1489,15 @@ function init3D(){if(three||!window.THREE)return three;const host=$('#v3');const
 /* Tap the model to drop an item: walls, floors and the ground take it; wall items keep the height they were tapped at. */
 /* Where a tap or the pointer lands on the model, and what would go there. */
 function aim3D(ev){const T=three;if(!T||!scaleMM())return null;const r=T.renderer.domElement.getBoundingClientRect();const v=new THREE.Vector2(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1);
-  const rc=new THREE.Raycaster();rc.setFromCamera(v,T.camera);const hit=rc.intersectObjects(T.root.children.concat([T.ground]),false).filter(h=>h.object.userData.pick)[0];if(!hit)return null;
+  const rc=new THREE.Raycaster();rc.setFromCamera(v,T.camera);const dd=placePb?null:ITEM_T[placeKind];const wantRoof=tool==='place'&&dd&&dd.m==='roof';const hits=rc.intersectObjects(T.root.children.concat([T.ground]),true).filter(h=>h.object.userData.pick&&!h.object.userData.itemId&&!h.object.userData.runId);const hit=hits.find(h=>wantRoof?true:h.object.userData.pick!=='roof');if(!hit)return null;
   const n=hit.face?hit.face.normal.clone().transformDirection(hit.object.matrixWorld):new THREE.Vector3(0,1,0);const q=hit.point.clone().add(n.clone().multiplyScalar(0.06));const k=1000/scaleMM();
   const d=placePb?itemDef({kind:'pb',n:placePb.n,sec:placePb.sec}):ITEM_T[placeKind];const onWall=hit.object.userData.pick==='wall';
-  return {hit,n,d,onWall,pt:[(q.x+T.cx)*k,(q.z+T.cz)*k],h:onWall&&d.m==='wall'?Math.round(Math.max(150,Math.min(T.H*1000-100,hit.point.y*1000))/10)*10:null};}
+  return {hit,n,d,onWall,onRoof:hit.object.userData.pick==='roof',host:hit.object.userData.host||null,pt:[(q.x+T.cx)*k,(q.z+T.cz)*k],h:onWall&&d.m==='wall'&&d.h!==0?Math.round(Math.max(150,Math.min(T.H*1000-100,hit.point.y*1000))/10)*10:null};}
 function runTap3D(ev){const A=aim3D(ev);if(!A){flash('Tap a wall, floor or the ground.');return;}const h=runRoute()==='wall'?Math.round(Math.max(0,A.hit.point.y*1000)/10)*10:runH();const p=[A.pt[0],A.pt[1],h];
   if(runDraft.length){const last=runDraft[runDraft.length-1];if(Math.hypot(toM(p[0]-last[0]),toM(p[1]-last[1]))<0.15){finishRun();renderPalette();build3D();return;}}runDraft.push(p);renderPalette();build3D();}
 function pick3D(ev){if(tool!=='place')return;const A=aim3D(ev);if(!A){flash('Tap a wall, floor or the ground near the house.');return;}
   if(A.d.m==='wall'&&!A.onWall){flash(`${A.d.n} goes on a wall. Tap the wall where it goes.`);return;}
+  if(A.d.m==='roof'&&!A.onRoof){flash(L3now().roof?`${A.d.n} goes on the roof. Tap the roof where it goes.`:'Turn on Roof (top right) to place roof items.');return;}
   snapshot();const it=placePb?{id:uid(),kind:'pb',pb:placePb.id,n:placePb.n,sec:placePb.sec,pt:A.pt}:{id:uid(),kind:placeKind,pt:A.pt};if(A.h)it.h=A.h;
   doc.items.push(it);changed(false);renderPlanTab();flash(`${A.d.n} placed${it.h?` at ${it.h} mm`:''}. Tap again to place another, Undo to take it back.`);}
 /* A see-through copy of the item follows the pointer, so you can see where it will go before you tap. */
@@ -1395,30 +1514,40 @@ function ghost3D(ev){const T=three;if(!T)return;const A=tool==='place'&&ev?aim3D
   else{const w=T.P?backToWall([A.hit.point.x,A.hit.point.z],T.P,segs()):null;if(w){g.position.set(w.x,0,w.z);g.rotation.set(0,w.ang,0);}else{g.position.set(A.hit.point.x,0,A.hit.point.z);g.rotation.set(0,0,0);}}
   T.renderer.domElement.style.cursor=bad?'not-allowed':'crosshair';}
 let down3=null;
-function hook3D(){const T=three;if(!T||T.hooked)return;T.hooked=true;const el=T.renderer.domElement;el.addEventListener('pointerdown',e=>{down3=[e.clientX,e.clientY];});el.addEventListener('pointerup',e=>{if(down3&&Math.hypot(e.clientX-down3[0],e.clientY-down3[1])<6){if(tool==='place')pick3D(e);else if(tool==='run')runTap3D(e);else identify3D(e);}down3=null;});
+function hook3D(){const T=three;if(!T||T.hooked)return;T.hooked=true;const el=T.renderer.domElement;el.addEventListener('pointerdown',e=>{down3=[e.clientX,e.clientY];});el.addEventListener('pointerup',e=>{if(down3&&Math.hypot(e.clientX-down3[0],e.clientY-down3[1])<6){if(tool==='place')pick3D(e);else if(tool==='run')runTap3D(e);else if(tool==='opening')openingTap3D(e);else identify3D(e);}down3=null;});
   el.addEventListener('pointermove',e=>{if(e.buttons)return;ghost3D(e);runGhost3D(e);});el.addEventListener('pointerleave',()=>ghost3D(null));}
 /* Look around: tap an item to see what it is. */
 function identify3D(ev){const T=three;if(!T)return;const r=T.renderer.domElement.getBoundingClientRect();const v=new THREE.Vector2(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1);const rc=new THREE.Raycaster();rc.setFromCamera(v,T.camera);
-  const any=rc.intersectObjects(T.root.children,true).find(h=>h.object.userData.itemId||h.object.userData.runId);if(any&&any.object.userData.runId){const r=doc.runs.find(x=>x.id===any.object.userData.runId);if(r)runInfo(r,ev);return;}
-  const hit=any;const pop=$('#v3pop');
-  if(!hit){if(pop&&!pop.hidden){pop.hidden=true;if(sel&&sel.kind==='item'){sel=null;build3D();}}return;}const it=doc.items.find(x=>x.id===hit.object.userData.itemId);if(it)itemInfo(it,ev);}
+  const hit=rc.intersectObjects(T.root.children,true).find(h=>{const u=h.object.userData;return u.itemId||u.runId||u.opId||u.areaId||u.roof||u.host||u.pick==='floor';});const pop=$('#v3pop');
+  if(!hit){if(pop&&!pop.hidden){pop.hidden=true;if(sel){sel=null;build3D();renderPlanTab();}}return;}const u=hit.object.userData;const k=1000/scaleMM();const pt=[(hit.point.x+T.cx)*k,(hit.point.z+T.cz)*k];
+  if(u.itemId){const it=doc.items.find(x=>x.id===u.itemId);if(it)itemInfo(it,ev);return;}
+  if(u.runId){const rr=doc.runs.find(x=>x.id===u.runId);if(rr)runInfo(rr,ev);return;}
+  if(u.opId){const op=doc.openings.find(x=>x.id===u.opId);if(op)openingInfo(op,ev);return;}
+  if(u.areaId){const ar=doc.areas.find(x=>x.id===u.areaId);if(ar)areaInfo(ar,ev);return;}
+  if(u.roof){roofInfo(ev);return;}
+  if(u.host){wallInfo(u.host,pt,ev);return;}
+  if(u.pick==='floor'){roomInfo(pt,ev);return;}}
+let openType='door';
+function openingTap3D(ev){const A=aim3D(ev);if(A&&A.hit.object.userData.opId){flash('There is an opening there already. Tap it in Look around to change it.');return;}if(!A||!A.host){flash('Tap a wall where the opening goes.');return;}const s=segs().find(x=>x.host===A.host);if(!s)return;const q=lerp(s.a,s.b,projT(A.pt,s.a,s.b));const n0=doc.openings.length;addOpening(openType,q);if(doc.openings.length>n0)flash(`${OPEN_NAMES[openType]} added. Tap it in Look around to size it.`);}
 function build3D(){const T=init3D();if(!T)return;hook3D();const root=T.root;root.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose();});while(root.children.length)root.remove(root.children[0]);
   if(!scaleMM()||doc.outline.length<3)return;const S=doc.settings,H=S.wallH/1000;const b=bbox(doc.outline);const cx=toM((b.x0+b.x1)/2),cz=toM((b.y0+b.y1)/2);const P=p=>[toM(p[0])-cx,toM(p[1])-cz];
   const extM=new THREE.MeshStandardMaterial({color:S.extClad==='brick'?0xb5755a:0xe8e4da,roughness:0.85}),intM=new THREE.MeshStandardMaterial({color:0xf2f0ea,roughness:0.9}),glass=new THREE.MeshStandardMaterial({color:0x9fc7e0,transparent:true,opacity:0.45}),doorM=new THREE.MeshStandardMaterial({color:0x8a6a4a,roughness:0.6});
   const finCol={tiles:0xd9d6cf,carpet:0x9aa0a6,hybrid:0xc9a77c,timber:0xb07c4f,epoxy:0x8f9aa3,none:0xbdb9b1};
   const sgn=Math.sign(polyArea(doc.outline))||1;
-  let pickTag=null;const box=(x,y,z,sx,sy,sz,ang,m)=>{const me=new THREE.Mesh(new THREE.BoxGeometry(Math.max(sx,0.01),Math.max(sy,0.01),Math.max(sz,0.01)),m);me.position.set(x,y,z);me.rotation.y=ang;me.castShadow=true;me.receiveShadow=true;if(pickTag)me.userData.pick=pickTag;root.add(me);return me;};
+  let pickTag=null,ud=null;const box=(x,y,z,sx,sy,sz,ang,m)=>{const me=new THREE.Mesh(new THREE.BoxGeometry(Math.max(sx,0.01),Math.max(sy,0.01),Math.max(sz,0.01)),m);me.position.set(x,y,z);me.rotation.y=ang;me.castShadow=true;me.receiveShadow=true;if(pickTag)me.userData.pick=pickTag;if(ud)Object.assign(me.userData,ud);root.add(me);return me;};
+  const L3=layers3d();
   T.cx=cx;T.cz=cz;T.H=H;T.P=P;pickTag='wall';
   segs().forEach(s=>{const a=P(s.a),c=P(s.b);const L=Math.hypot(c[0]-a[0],c[1]-a[1]);if(L<0.05)return;const ux=(c[0]-a[0])/L,uz=(c[1]-a[1])/L;const thk=(s.ext?S.extThk:S.intThk)/1000;
     let nx=-uz,nz=ux;if(s.ext){nx*=sgn;nz*=sgn;}const off=s.ext?thk/2:0;const ang=-Math.atan2(uz,ux);const m=s.ext?extM:intM;
-    const ops=doc.openings.map(o=>({o,h:hostOf(o)})).filter(x=>x.h&&x.h.s.host===s.host).map(x=>{const c0=x.h.t*L,w=x.o.width/1000;return {a:Math.max(0,c0-w/2),b:Math.min(L,c0+w/2),sill:x.o.type==='window'?x.o.sill/1000:0,h:Math.min(H-0.05,x.o.height/1000),t:x.o.type};}).sort((p,q)=>p.a-q.a);
-    const piece=(s0,s1,y0,y1)=>{if(s1-s0<0.01||y1-y0<0.01)return;const mid=(s0+s1)/2;box(a[0]+ux*mid+nx*off,(y0+y1)/2,a[1]+uz*mid+nz*off,s1-s0,y1-y0,thk,ang,m);};
-    let cur=0;ops.forEach(o=>{piece(cur,o.a,0,H);piece(o.a,o.b,0,o.sill);piece(o.a,o.b,o.sill+o.h,H);const mid=(o.a+o.b)/2;if(o.t==='window')box(a[0]+ux*mid+nx*off,o.sill+o.h/2,a[1]+uz*mid+nz*off,o.b-o.a,o.h,0.02,ang,glass);else if(o.t==='door'||o.t==='garage')box(a[0]+ux*mid+nx*off,o.h/2,a[1]+uz*mid+nz*off,o.b-o.a,o.h,0.04,ang,o.t==='garage'?extM:doorM);else box(a[0]+ux*mid+nx*off,o.h/2,a[1]+uz*mid+nz*off,o.b-o.a,o.h,0.02,ang,glass);cur=Math.max(cur,o.b);});piece(cur,L,0,H);});
+    const ops=doc.openings.map(o=>({o,h:hostOf(o)})).filter(x=>x.h&&x.h.s.host===s.host).map(x=>{const c0=x.h.t*L,w=x.o.width/1000;return {a:Math.max(0,c0-w/2),b:Math.min(L,c0+w/2),sill:x.o.type==='window'?x.o.sill/1000:0,h:Math.min(H-0.05,x.o.height/1000),t:x.o.type,id:x.o.id};}).sort((p,q)=>p.a-q.a);
+    const piece=(s0,s1,y0,y1)=>{if(L3.frame||s1-s0<0.01||y1-y0<0.01)return;const mid=(s0+s1)/2;ud={host:s.host};box(a[0]+ux*mid+nx*off,(y0+y1)/2,a[1]+uz*mid+nz*off,s1-s0,y1-y0,thk,ang,m);ud=null;};
+    let cur=0;ops.forEach(o=>{piece(cur,o.a,0,H);piece(o.a,o.b,0,o.sill);piece(o.a,o.b,o.sill+o.h,H);const mid=(o.a+o.b)/2;const cxo=a[0]+ux*mid+nx*off,czo=a[1]+uz*mid+nz*off;openingModel(o,cxo,czo,ang,thk,box,(v)=>{ud=v;});cur=Math.max(cur,o.b);});piece(cur,L,0,H);});
+  if(L3.frame){const F=frameModel(P,S,H);root.add(F);}
   pickTag=null;
   rooms().forEach(r=>{const sh=new THREE.Shape(r.f.poly.map(p=>{const q=P(p);return new THREE.Vector2(q[0],-q[1]);}));const m=new THREE.Mesh(new THREE.ShapeGeometry(sh),new THREE.MeshStandardMaterial({color:finCol[r.finish]||0xcccccc,roughness:0.9}));m.rotation.x=-Math.PI/2;m.position.y=0.01;m.receiveShadow=true;m.userData.pick='floor';root.add(m);});
   /* outdoor areas */
   const wood=new THREE.MeshStandardMaterial({color:0xa8754a,roughness:0.8}),post=new THREE.MeshStandardMaterial({color:0x6e6258,roughness:0.8}),pave=new THREE.MeshStandardMaterial({color:0xb9b2a6,roughness:1}),conc=new THREE.MeshStandardMaterial({color:0xa4a9ad,roughness:1}),sheet=new THREE.MeshStandardMaterial({color:0x8b9aa6,roughness:0.6,side:THREE.DoubleSide}),polyM=new THREE.MeshStandardMaterial({color:0xcfe3ee,transparent:true,opacity:0.45,side:THREE.DoubleSide}),rail=new THREE.MeshStandardMaterial({color:0x40464c,roughness:0.6});
-  doc.areas.forEach(ar=>{const G=areaGeo(ar);if(G.A<0.2)return;const p0=P(G.P[0]),p2=P(G.P[2]);const x0=Math.min(p0[0],p2[0]),x1=Math.max(p0[0],p2[0]),z0=Math.min(p0[1],p2[1]),z1=Math.max(p0[1],p2[1]);const cx2=(x0+x1)/2,cz2=(z0+z1)/2,w=x1-x0,d=z1-z0;
+  doc.areas.forEach(ar=>{ud={areaId:ar.id};const G=areaGeo(ar);if(G.A<0.2)return;const p0=P(G.P[0]),p2=P(G.P[2]);const x0=Math.min(p0[0],p2[0]),x1=Math.max(p0[0],p2[0]),z0=Math.min(p0[1],p2[1]),z1=Math.max(p0[1],p2[1]);const cx2=(x0+x1)/2,cz2=(z0+z1)/2,w=x1-x0,d=z1-z0;
     const openEdges=G.edges.map((e,i)=>({i,open:e.att<e.L*0.5}));
     const edgeLine=i=>[[x0,z0],[x1,z0],[x1,z1],[x0,z1]].map((q,k,a)=>[q,a[(k+1)%4]])[i];
     if(ar.type==='deck'){const h=(+ar.h||600)/1000;box(cx2,h-0.02,cz2,w,0.04,d,0,wood);const nx=Math.max(2,Math.ceil(w/1.8)+1),nz=Math.max(2,Math.ceil(d/1.8)+1);for(let i=0;i<nx;i++)for(let j=0;j<nz;j++)box(x0+0.1+(w-0.2)*i/(nx-1),(h-0.04)/2,z0+0.1+(d-0.2)*j/(nz-1),0.09,h-0.04,0.09,0,post);
@@ -1427,6 +1556,7 @@ function build3D(){const T=init3D();if(!T)return;hook3D();const root=T.root;root
       const seen=new Set();ptsAt.forEach(q=>{const key=q.map(v=>v.toFixed(2)).join();if(seen.has(key))return;seen.add(key);box(q[0],H2/2,q[1],0.09,H2,0.09,0,post);});
       if(ar.type==='verandah')box(cx2,H2+0.05,cz2,w,0.03,d,0,ar.roof==='poly'?polyM:sheet);else{const n=Math.ceil(Math.max(w,d)/0.9)+1;for(let k=0;k<n;k++){if(w>=d)box(x0+w*k/(n-1),H2+0.07,cz2,0.045,0.14,d,0,wood);else box(cx2,H2+0.07,z0+d*k/(n-1),w,0.14,0.045,0,wood);}}}
     else box(cx2,0.02,cz2,w,0.04,d,0,ar.type==='paving'?pave:conc);});
+  ud=null;
   /* property boundary */
   if(doc.site&&doc.site.length>=3){const lm=new THREE.MeshStandardMaterial({color:0x2e7d4f,roughness:0.8});const ps=doc.site.map(P);for(let i=0;i<ps.length;i++){const a=ps[i],c=ps[(i+1)%ps.length];const L=Math.hypot(c[0]-a[0],c[1]-a[1]);if(L<0.05)continue;box((a[0]+c[0])/2,0.06,(a[1]+c[1])/2,L,0.12,0.06,-Math.atan2(c[1]-a[1],c[0]-a[0]),lm);}}
   /* cable and pipe runs */
@@ -1434,12 +1564,15 @@ function build3D(){const T=init3D();if(!T)return;hook3D();const root=T.root;root
   const W3=p=>{const q=P(p);return [q[0],(p[2]||0)/1000+0.02,q[1]];};
   (doc.runs||[]).forEach(r=>{const d=runDef(r);const on=sel&&sel.kind==='run'&&sel.id===r.id;for(let i=1;i<r.pts.length;i++)tube(W3(r.pts[i-1]),W3(r.pts[i]),on?0xf2b705:d.col,r.id);});
   if(tool==='run'&&runDraft.length){const d=runPb?{col:0x7a5cc2}:RUN_T[runKind];for(let i=1;i<runDraft.length;i++)tube(W3(runDraft[i-1]),W3(runDraft[i]),d.col,null,0.75);runDraft.forEach(p=>{const s=new THREE.Mesh(new THREE.SphereGeometry(0.035,12,8),new THREE.MeshStandardMaterial({color:0xffffff}));const w=W3(p);s.position.set(w[0],w[1],w[2]);root.add(s);});}
+  /* roof */
+  T.roof=null;if(L3.roof||L3.frame){const R=roofModel(P,S,H);if(R){T.roof=R;if(L3.roof){if(L3.frame){R.mesh.material.transparent=true;R.mesh.material.opacity=0.35;R.mesh.material.depthWrite=false;}root.add(R.mesh);root.add(R.gut);}if(L3.frame)root.add(trussModel(R,P,S,H));}}
   /* placed items, as look-alike models */
   const segsAll=segs();
   doc.items.forEach(it=>{const d=itemDef(it);const q=P(it.pt);const g=itemModel(it);
-    if(d.m==='ceil'){g.position.set(q[0],H,q[1]);}
+    if(d.m==='roof'){if(!T.roof||!L3.roof)return;const R=T.roof,e=0.05;const y=R.height(q[0],q[1]);const hx=(R.height(q[0]+e,q[1])-R.height(q[0]-e,q[1]))/(2*e),hz=(R.height(q[0],q[1]+e)-R.height(q[0],q[1]-e))/(2*e);g.position.set(q[0],y,q[1]);g.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(-hx,1,-hz).normalize());}
+    else if(d.m==='ceil'){g.position.set(q[0],H,q[1]);}
     else if(d.m==='wall'){let best=null,bd=1e9;segsAll.forEach(sg=>{const t=projT(it.pt,sg.a,sg.b);const pr=lerp(sg.a,sg.b,t);const dd=dist(it.pt,pr);if(dd<bd){bd=dd;best={sg,pr};}});
-      const y=(it.h||d.h||300)/1000;
+      const y=(it.h!=null?it.h:(d.h!=null?d.h:300))/1000;
       if(best&&toM(bd)<0.8){const a=P(best.sg.a),b2=P(best.sg.b),pr=P(best.pr);const L=Math.hypot(b2[0]-a[0],b2[1]-a[1])||1;const ux=(b2[0]-a[0])/L,uz=(b2[1]-a[1])/L;let nx=-uz,nz=ux;const side=Math.sign((q[0]-pr[0])*nx+(q[1]-pr[1])*nz)||1;nx*=side;nz*=side;
         const thk=(best.sg.ext?S.extThk:S.intThk)/1000;const off=best.sg.ext?(side===(Math.sign(polyArea(doc.outline))||1)?thk:0):thk/2;g.position.set(pr[0]+nx*off,y,pr[1]+nz*off);g.rotation.y=Math.atan2(nx,nz);}
       else g.position.set(q[0],y,q[1]);}
@@ -1447,8 +1580,8 @@ function build3D(){const T=init3D();if(!T)return;hook3D();const root=T.root;root
     root.add(g);
     if(sel&&sel.kind==='item'&&sel.id===it.id){const hl=new THREE.BoxHelper(g,0xf2b705);root.add(hl);}});
   if(!T.fitted){const span=Math.max(toM(b.x1-b.x0),toM(b.y1-b.y0));T.camera.position.set(span*0.8,span*1.05,span*1.15);T.controls.target.set(0,0.8,0);T.fitted=true;}}
-function setView(v){VIEW=v;if(v==='3d'&&!TOOLS3D.some(t=>t[0]===tool))tool='select';renderToolbar();$('#svgwrap').hidden=v!=='2d';$('#v3').hidden=v!=='3d';$('#hint').hidden=false;const pp=$('#v3pop');if(pp)pp.hidden=true;renderHint();renderPalette();document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===v));if(v==='3d')build3D();else{fitIfNeeded();draw();}}
-$('#views').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)setView(b.dataset.view);});
+function setView(v){VIEW=v;renderViews();if(v==='3d'&&!TOOLS3D.some(t=>t[0]===tool))tool='select';renderToolbar();$('#svgwrap').hidden=v!=='2d';$('#v3').hidden=v!=='3d';$('#hint').hidden=false;const pp=$('#v3pop');if(pp)pp.hidden=true;renderHint();renderPalette();document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===v));if(v==='3d')build3D();else{fitIfNeeded();draw();}}
+$('#views').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b){setView(b.dataset.view);return;}const l=e.target.closest('[data-layer]');if(l){const L=layers3d();L[l.dataset.layer]=!L[l.dataset.layer];renderViews();build3D();save();}});
 let fitted=false;function fitIfNeeded(){if(!fitted){fitView();fitted=true;}}
 /* ---------- change pipeline ---------- */
 function updateStats(){const sm=scaleMM();const el=$('#stats');if(!sm){el.innerHTML='<b>Scale not set</b>Use the Scale tool on a known dimension<span class="hint">Then trace the outline</span>';return;}
