@@ -343,6 +343,9 @@ dialog::backdrop{background:rgba(10,15,20,.5);}
 .dwg .pi circle{stroke:#fff;stroke-width:1;}
 .dwg .pi text{font-size:7px;font-weight:800;fill:#fff;}
 .dwg .pi.elec text{fill:#1f2a33;}
+
+#ed .site{fill:none;stroke:#2e7d4f;opacity:.9;}
+#ed .sitelab{fill:#2e7d4f;font-weight:700;paint-order:stroke;stroke:#fff;stroke-width:3px;}
 </style>
 </head>
 <body>
@@ -447,7 +450,7 @@ const SECTIONS={build:'Structure',floor:'Slab and floor',roof:'Roofing',line:'In
 function guessType(name){const n=String(name||'').toLowerCase();if(/ens/.test(n))return 'ens';if(/bath/.test(n))return 'bath';if(/\bwc\b|toilet|powder/.test(n))return 'wc';if(/laund|ldry/.test(n))return 'laundry';if(/kitch|meals/.test(n))return 'kitchen';if(/bed|master/.test(n))return 'bed';if(/garage|carport/.test(n))return 'garage';if(/robe|wir\b|store|pantry|ptry|linen/.test(n))return 'robe';if(/hall|entry|foyer|passage/.test(n))return 'hall';if(/study|office/.test(n))return 'study';if(/living|family|lounge|dining|rumpus|theatre|meals/.test(n))return 'living';return 'other';}
 
 /* ---------- document ---------- */
-function defaultDoc(){return {kind:'house',v:1,underlay:{src:null,path:null,w:0,h:0,opacity:0.55},scale:null,outline:[],walls:[],openings:[],rooms:[],
+function defaultDoc(){return {kind:'house',v:1,underlay:{src:null,path:null,w:0,h:0,opacity:0.55},scale:null,outline:[],walls:[],openings:[],rooms:[],site:null,
   settings:{wallH:2400,extThk:250,intThk:90,extStud:'90x45',intStud:'90x35',studSp:450,extClad:'brick',roofType:'hip',pitch:22.5,eave:450,roofMat:'tiles',floor:'slab',slabT:100,lineGarage:false},
   prices:{},links:{},items:[],areas:[],waste:10,labour:{},labourRate:null,scope:null,draft:false};}
 function migrate(p){const d=defaultDoc();p=p||{};return Object.assign({},d,p,{kind:'house',underlay:Object.assign({},d.underlay,p.underlay||{}),settings:Object.assign({},d.settings,p.settings||{}),
@@ -499,6 +502,7 @@ function rooms(){const sm=scaleMM()||0;const S=doc.settings;return faces().map((
   return {i,f,lab,id:lab?lab.id:null,name,type,finish:lab&&lab.finish?lab.finish:DEF_FINISH[type],gpo:lab&&lab.gpo!=null?lab.gpo:DEF_GPO[type],lights:lab&&lab.lights!=null?lab.lights:Math.max(1,Math.ceil(net/2.5)),expect:lab?lab.expect:null,area:net,gross,per:netPer,extL,intL,
     centroid:f.poly.reduce((a,p)=>[a[0]+p[0]/f.poly.length,a[1]+p[1]/f.poly.length],[0,0])};});}
 function hostOf(op){let best=null,bd=1e9;segs().forEach(s=>{const t=projT(op.pt,s.a,s.b);const d=dist(op.pt,lerp(s.a,s.b,t));if(d<bd){bd=d;best={s,t,d};}});const tol=Math.max(12,(doc.settings.extThk/(scaleMM()||10))*1.5);return best&&best.d<=tol?best:null;}
+function siteArea(){return doc.site&&doc.site.length>=3?Math.abs(polyArea(doc.site))*Math.pow(scaleMM()||0,2)/1e6:0;}
 function outlineArea(){return Math.abs(polyArea(doc.outline))*Math.pow(scaleMM()||0,2)/1e6;}
 function outlinePer(){let p=0;const o=doc.outline;for(let i=0;i<o.length;i++)p+=toM(dist(o[i],o[(i+1)%o.length]));return o.length>=3?p:0;}
 function corners(){const o=doc.outline,n=o.length;if(n<3)return {convex:0,concave:0};const sgn=Math.sign(polyArea(o));let cv=0,cc=0;for(let i=0;i<n;i++){const a=o[(i+n-1)%n],b=o[i],c=o[(i+1)%n];const cr=(b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0]);if(Math.abs(cr)<1e-6)continue;if(Math.sign(cr)===sgn)cv++;else cc++;}return {convex:cv,concave:cc};}
@@ -545,9 +549,10 @@ function draw(){layoutOverlays();const r=svg.getBoundingClientRect();svg.setAttr
   const R=rooms();const sm=scaleMM();
   R.forEach(rm=>{el('polygon',{points:rm.f.poly.map(p=>p.join(',')).join(' '),class:'face'+(WET.has(rm.type)?' wet':'')+(sel&&sel.kind==='room'&&sel.id===rm.id&&rm.id?' on':'')});});
   doc.areas.forEach(ar=>{const P=areaPoly(ar);const T=AREA_T[ar.type]||AREA_T.deck;const on=sel&&sel.kind==='area'&&sel.id===ar.id;el('polygon',{points:P.map(p=>p.join(',')).join(' '),class:'area '+ar.type+(on?' on':''),style:`fill:${T.col}`,'stroke-width':sw(on?3:2)});
-    if(sm){const G=areaGeo(ar);const c=[(P[0][0]+P[2][0])/2,(P[0][1]+P[2][1])/2];const t=el('text',{x:c[0],y:c[1],class:'rlab','font-size':sw(12),'text-anchor':'middle'});t.textContent=T.n;const t2=el('text',{x:c[0],y:c[1]+sw(14),class:'rarea','font-size':sw(11),'text-anchor':'middle'});t2.textContent=`${fm(G.Lx,1)} × ${fm(G.Ly,1)} m`;}
+    if(sm){const G=areaGeo(ar);const c=[(P[0][0]+P[2][0])/2,(P[0][1]+P[2][1])/2];const t=el('text',{x:c[0],y:c[1],class:'rlab','font-size':sw(12),'text-anchor':'middle'});t.textContent=ar.name||T.n;const t2=el('text',{x:c[0],y:c[1]+sw(14),class:'rarea','font-size':sw(11),'text-anchor':'middle'});t2.textContent=`${fm(G.Lx,1)} × ${fm(G.Ly,1)} m`;}
     if(on&&tool==='select')P.forEach((p,i)=>el('circle',{cx:p[0],cy:p[1],r:sw(6),class:'hd ac'}));});
   if(drag&&drag.newArea){const P=areaPoly(drag.newArea);el('polygon',{points:P.map(p=>p.join(',')).join(' '),class:'area '+areaType,style:`fill:${(AREA_T[areaType]||AREA_T.deck).col}`,'stroke-width':sw(2)});}
+  if(doc.site&&doc.site.length>=3){el('polygon',{points:doc.site.map(p=>p.join(',')).join(' '),class:'site','stroke-width':sw(2.5),'stroke-dasharray':`${sw(10)} ${sw(6)}`});if(sm){const b=bbox(doc.site);const t=el('text',{x:b.x0+sw(8),y:b.y0+sw(18),class:'sitelab','font-size':sw(12)});t.textContent=`Property boundary, ${fm(siteArea(),0)} m²`;}}
   if(doc.outline.length>=3)el('polygon',{points:doc.outline.map(p=>p.join(',')).join(' '),class:'outl','stroke-width':sw(4)});
   doc.walls.forEach(w=>el('line',{x1:w.a[0],y1:w.a[1],x2:w.b[0],y2:w.b[1],class:'iw'+(sel&&sel.kind==='wall'&&sel.id===w.id?' on':''),'stroke-width':sw(3)}));
   // openings
@@ -574,7 +579,8 @@ function draw(){layoutOverlays();const r=svg.getBoundingClientRect();svg.setAttr
   renderHint();}
 function renderHint(){const h=$('#hint');if(!h)return;const sm=scaleMM();const m={select:'Drag corners and wall ends. Tap a wall edge midpoint dot to add a corner. Drag empty space to pan, scroll or pinch to zoom.',
   outline:'Tap each outside corner of the house. Tap the first corner again to close it. Lines snap square.',wall:'Tap the start and end of each internal wall. Keep tapping to chain walls. Esc or double tap to stop.',
-  place:'Pick an item below, then tap the plan to drop it where it goes. Drag it with Select to move it.',area:'Drag out a deck, verandah or paved area against the house. Set its type and height on the left.',
+  place:VIEW==='3d'?'Pick an item below, then tap the wall, floor or ceiling where it goes. Drag to turn the model.':'Pick an item below, then tap the plan to drop it where it goes. Drag it with Select to move it.',
+  look:'',area:'Drag out a deck, verandah or paved area against the house. Set its type and height on the left.',
   door:'Tap a wall to add a door.',window:'Tap a wall to add a window.',slider:'Tap an outside wall to add a sliding door.',garage:'Tap the garage wall to add a garage door.',room:'Tap inside a room to name it.',
   scale:calibPts.length<2?'Tap both ends of something with a known size, like the width of a labelled room.':'Type the real length below.',erase:'Tap a wall, door, window, room name or corner to remove it.'}[tool]||'';
   h.innerHTML=(!sm?'<b>Set the scale first.</b> ':'')+esc(m);}
@@ -654,8 +660,9 @@ document.addEventListener('keyup',e=>{if(e.key===' ')spaceDown=false;});
 function deleteSel(){if(!sel)return;snapshot();if(sel.kind==='item')doc.items=doc.items.filter(x=>x.id!==sel.id);else if(sel.kind==='area')doc.areas=doc.areas.filter(x=>x.id!==sel.id);else if(sel.kind==='op')doc.openings=doc.openings.filter(o=>o.id!==sel.id);else if(sel.kind==='wall')doc.walls=doc.walls.filter(w=>w.id!==sel.id);else if(sel.kind==='room')doc.rooms=doc.rooms.filter(r=>r.id!==sel.id);sel=null;changed(true);}
 function confirmReplace(){if(confirmReplace.armed&&Date.now()-confirmReplace.armed<4000){confirmReplace.armed=0;return true;}confirmReplace.armed=Date.now();flash('There is already an outline. Tap again to start a new one, or use Select to adjust it.');return false;}
 let flashT;function flash(msg){const f=$('#flash');f.textContent=msg;f.hidden=false;clearTimeout(flashT);flashT=setTimeout(()=>{f.hidden=true;},Math.min(14000,Math.max(3500,msg.length*55)));}
-function setTool(t){tool=t;draft=[];calibPts=[];hideCalib();hover=null;document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===t));svg.style.cursor=t==='select'?'grab':'crosshair';renderPalette();draw();}
-function renderToolbar(){$('#tools').innerHTML=TOOLS.map(([k,n])=>`<button class="chip ${k===tool?'on':''}" data-tool="${k}">${n}</button>`).join('')+`<button class="chip" id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>`;}
+function setTool(t){tool=t;draft=[];calibPts=[];hideCalib();hover=null;document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===t));svg.style.cursor=t==='select'?'grab':'crosshair';if(VIEW==='3d'){$('#hint').hidden=t!=='place';renderHint();if(three)three.renderer.domElement.style.cursor=t==='place'?'crosshair':'';}renderPalette();draw();}
+let VIEW='2d';const TOOLS3D=[['select','Look around'],['place','Place item']];
+function renderToolbar(){$('#tools').innerHTML=(VIEW==='3d'?TOOLS3D:TOOLS).map(([k,n])=>`<button class="chip ${k===tool?'on':''}" data-tool="${k}">${n}</button>`).join('')+`<button class="chip" id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>`;}
 $('#tools').addEventListener('click',e=>{const b=e.target.closest('[data-tool]');if(b){setTool(b.dataset.tool);return;}if(e.target.id==='undoBtn')undo();});
 /* scale */
 function showCalib(){const box=$('#calib');box.hidden=false;const px=dist(calibPts[0],calibPts[1]);box.querySelector('#calPx').textContent=scaleMM()?`Currently ${fm(toM(px),2)} m.`:'';const i=box.querySelector('#calLen');i.value='';setTimeout(()=>i.focus(),30);}
@@ -887,7 +894,7 @@ const SET_FIELDS=[['wallH','Ceiling height','num','mm',[2100,3600,50]],['extThk'
 function renderPlanTab(){const U=doc.underlay;const sm=scaleMM();let h='';
   h+=`<h3>1. The plan</h3><div class="upl"><input type="file" id="ulFile" accept="image/*,application/pdf" hidden><button class="btn" id="ulPick">${U.src?'Replace plan':'Upload a plan'}</button><button class="primary" id="aiBtn" ${U.src&&!aiBusy?'':'disabled'}>${aiBusy?'Tracing...':'Auto trace'}</button></div>`;
   h+=U.src?`<label class="row"><span>Plan visibility</span><input type="range" id="ulOp" min="0.1" max="1" step="0.05" value="${U.opacity}"></label>`:'<p class="note">PDF, JPG or PNG of the floor plan. No plan? Draw straight onto the grid, where each square is 1 m.</p>';
-  h+=`<h3>2. Scale</h3><p class="note" style="margin-top:0">${sm?(doc.scale?`Set: 1 m is ${fm(1000/doc.scale,0)} px on the plan. Check a labelled room measures right.`:'Grid: each square is 1 m.'):'<b>Not set.</b> Use the Scale tool and tap across something with a known size, like a labelled room.'}</p><button class="btn" data-settool="scale">Set the scale</button>`;
+  h+=`${doc.site&&doc.site.length>=3?`<p class="note">Property boundary found: ${sm?fm(siteArea(),0)+' m² site':'set the scale to size it'}. <button class="btn" id="siteDel" style="padding:3px 8px">Remove it</button></p>`:''}<h3>2. Scale</h3><p class="note" style="margin-top:0">${sm?(doc.scale?`Set: 1 m is ${fm(1000/doc.scale,0)} px on the plan. Check a labelled room measures right.`:'Grid: each square is 1 m.'):'<b>Not set.</b> Use the Scale tool and tap across something with a known size, like a labelled room.'}</p><button class="btn" data-settool="scale">Set the scale</button>`;
   h+=`<h3>3. Trace</h3><ol class="steps2"><li>Outline: tap the outside corners of the house.</li><li>Wall: tap along each internal wall.</li><li>Door, Window, Slider, Garage door: tap a wall.</li><li>Name room: tap inside each room.</li><li>Place item: drop power points, lights, taps and more where they go.</li><li>Deck or area: drag out a deck, verandah or paving against the house.</li></ol>`;
   if(sel&&sel.kind==='op'){const o=doc.openings.find(x=>x.id===sel.id);if(o){h+=`<div class="card"><div class="cardh"><b>${OPEN_T[o.type].n}</b><button class="x" data-del="1" aria-label="Remove">✕</button></div><label class="row"><span>Type</span><select data-op="type">${Object.entries(OPEN_T).map(([k,v])=>`<option value="${k}" ${k===o.type?'selected':''}>${v.n}</option>`).join('')}</select></label><div class="grid2"><label>Width<span class="inp"><input type="number" data-op="width" value="${o.width}" step="10"><em>mm</em></span></label><label>Height<span class="inp"><input type="number" data-op="height" value="${o.height}" step="10"><em>mm</em></span></label>${o.type==='window'?`<label>Sill<span class="inp"><input type="number" data-op="sill" value="${o.sill}" step="10"><em>mm</em></span></label>`:''}</div>${hostOf(o)?'':'<p class="warn">Not on a wall. Drag it onto a wall.</p>'}</div>`;}}
   if(sel&&sel.kind==='item'){const it=doc.items.find(x=>x.id===sel.id);if(it){const d=itemDef(it);const rm=roomAt(it.pt);const grp=ITEM_GROUPS.find(g=>g[2].includes(it.kind));
@@ -904,7 +911,7 @@ function renderPlanTab(){const U=doc.underlay;const sm=scaleMM();let h='';
   h+=`<h3>Construction</h3>`+SET_FIELDS.map(([k,l,t,u,o])=>{const v=doc.settings[k];if(t==='num')return `<label class="row"><span>${l}</span><span class="inp"><input type="number" data-set="${k}" value="${v}" min="${o[0]}" max="${o[1]}" step="${o[2]}"><em>${u}</em></span></label>`;if(t==='chk')return `<label class="row"><span>${l}</span><input type="checkbox" data-set="${k}" ${v?'checked':''}></label>`;return `<label class="row"><span>${l}</span><select data-set="${k}">${u.map(([ov,ol])=>`<option value="${ov}" ${String(v)===String(ov)?'selected':''}>${ol}</option>`).join('')}</select></label>`;}).join('');
   h+=`<p class="note">Trace the outside face of the external walls and the middle of internal walls. Room areas allow for wall thickness.</p>`;
   $('#tab-plan').innerHTML=h;}
-$('#tab-plan').addEventListener('click',e=>{if(e.target.id==='ulPick'){$('#ulFile').click();return;}if(e.target.id==='aiBtn'){autoTrace(true);return;}const st=e.target.closest('[data-settool]');if(st){setTool(st.dataset.settool);return;}if(e.target.closest('[data-del]'))deleteSel();});
+$('#tab-plan').addEventListener('click',e=>{if(e.target.id==='ulPick'){$('#ulFile').click();return;}if(e.target.id==='aiBtn'){autoTrace(true);return;}if(e.target.id==='siteDel'){snapshot();doc.site=null;changed(true);return;}const st=e.target.closest('[data-settool]');if(st){setTool(st.dataset.settool);return;}if(e.target.closest('[data-del]'))deleteSel();});
 $('#tab-plan').addEventListener('change',e=>{const t=e.target;if(t.id==='ulFile'){const f=t.files&&t.files[0];t.value='';onUpload(f);return;}
   if(t.dataset.set){const k=t.dataset.set;const f=SET_FIELDS.find(x=>x[0]===k);let v;if(f[2]==='num'){v=parseFloat(t.value);if(!isFinite(v))return;v=Math.min(f[4][1],Math.max(f[4][0],v));}else if(f[2]==='chk')v=t.checked;else{v=t.value;if(typeof doc.settings[k]==='number')v=Number(v);}doc.settings[k]=v;changed(false);renderPlanTab();return;}
   if(t.dataset.it&&sel&&sel.kind==='item'){const it=doc.items.find(x=>x.id===sel.id);if(!it)return;snapshot();it.kind=t.value;placeKind=t.value;changed(false);renderPlanTab();return;}
@@ -995,7 +1002,52 @@ function planarAll(S,eps){const params=S.map(()=>[0,1]);
 function simplifyOrtho(P,tol){let Q=P.slice();let changedQ=true;while(changedQ&&Q.length>3){changedQ=false;for(let i=0;i<Q.length;i++){const a=Q[(i+Q.length-1)%Q.length],b=Q[i],c=Q[(i+1)%Q.length];const cr=Math.abs((b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]))/Math.max(1e-6,dist(a,c));if(cr<tol||dist(a,b)<tol){Q.splice(i,1);changedQ=true;break;}}}return Q;}
 function offsetOut(P,d){const n=P.length;const L=[];for(let i=0;i<n;i++){const a=P[i],b=P[(i+1)%n];const len=dist(a,b)||1;let nx=(b[1]-a[1])/len,ny=-(b[0]-a[0])/len;const m=lerp(a,b,0.5);if(pip([m[0]+nx*0.6,m[1]+ny*0.6],P)){nx=-nx;ny=-ny;}L.push({p:[a[0]+nx*d,a[1]+ny*d],q:[b[0]+nx*d,b[1]+ny*d]});}
   const out=[];for(let i=0;i<n;i++){const l1=L[(i+n-1)%n],l2=L[i];const r=[l1.q[0]-l1.p[0],l1.q[1]-l1.p[1]],s=[l2.q[0]-l2.p[0],l2.q[1]-l2.p[1]];const den=r[0]*s[1]-r[1]*s[0];if(Math.abs(den)<1e-9){out.push(l2.p);continue;}const t=((l2.p[0]-l1.p[0])*s[1]-(l2.p[1]-l1.p[1])*s[0])/den;out.push([l1.p[0]+r[0]*t,l1.p[1]+r[1]*t]);}return out;}
-async function detectPlan(){const U=doc.underlay;if(!U.src)return null;const c=await srcToCanvas(U.src,Math.max(U.w||0,U.h||0)||2600,1500);const w=c.width,h=c.height;const sx=(U.w||w)/w,sy=(U.h||h)/h;
+/* Flood one white region of a mask (1 = blocked). Returns its pixel count and box, or null when it runs past cap. */
+let FST=null;
+function flood(M,w,h,x,y,cap,lab,id){if(x<0||y<0||x>=w||y>=h||M[y*w+x]||lab[y*w+x])return null;if(!FST||FST.length<w*h+8)FST=new Int32Array(w*h+8);const st=FST;let sp=0;st[sp++]=y*w+x;lab[y*w+x]=id;let n=0,x0=x,x1=x,y0=y,y1=y,edge=false;
+  while(sp){const i=st[--sp];n++;const cx=i%w,cy=(i-cx)/w;if(cx<x0)x0=cx;if(cx>x1)x1=cx;if(cy<y0)y0=cy;if(cy>y1)y1=cy;if(cx===0||cy===0||cx===w-1||cy===h-1)edge=true;if(n>cap)return null;
+    const nb=[cx>0?i-1:-1,cx<w-1?i+1:-1,cy>0?i-w:-1,cy<h-1?i+w:-1];for(const j of nb){if(j>=0&&!M[j]&&!lab[j]){lab[j]=id;if(sp>=st.length)return null;st[sp++]=j;}}}
+  return {n,x0,x1,y0,y1,edge};}
+function dilate1(M,w,h){const o=new Uint8Array(w*h);for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x;if(M[i]){o[i]=1;if(x>0)o[i-1]=1;if(x<w-1)o[i+1]=1;if(y>0)o[i-w]=1;if(y<h-1)o[i+w]=1;}}return o;}
+function dpSimplify(P,tol){if(P.length<4)return P;const n=P.length;let a=0,b=0,bd=-1;for(let i=0;i<n;i++){const d=dist(P[0],P[i]);if(d>bd){bd=d;b=i;}}
+  const rdp=(Q)=>{if(Q.length<3)return Q;const A=Q[0],B=Q[Q.length-1];let im=0,dm=-1;for(let i=1;i<Q.length-1;i++){const d=dist(Q[i],lerp(A,B,projT(Q[i],A,B)));if(d>dm){dm=d;im=i;}}if(dm<=tol)return [A,B];const l=rdp(Q.slice(0,im+1)),r=rdp(Q.slice(im));return l.slice(0,-1).concat(r);};
+  const L=rdp(P.slice(0,b+1)),R=rdp(P.slice(b).concat([P[0]]));return L.slice(0,-1).concat(R.slice(0,-1));}
+/* The property boundary: the site drawing (lot lines, fences, trees, the house) is one connected piece of linework; its outer hull is the lot. A sheet border is skipped. Lots with a notch come out as their hull, so the boundary can be removed or redrawn. */
+function hull(pts){pts.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);const cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);const lo=[],up=[];for(const p of pts){while(lo.length>=2&&cr(lo[lo.length-2],lo[lo.length-1],p)<=0)lo.pop();lo.push(p);}for(let i=pts.length-1;i>=0;i--){const p=pts[i];while(up.length>=2&&cr(up[up.length-2],up[up.length-1],p)<=0)up.pop();up.push(p);}up.pop();lo.pop();return lo.concat(up);}
+function findSite(c0,HB){const w=c0.width,h=c0.height;const px=c0.getContext('2d').getImageData(0,0,w,h).data;let ink=new Uint8Array(w*h);for(let i=0,j=0;i<w*h;i++,j+=4)ink[i]=(0.3*px[j]+0.59*px[j+1]+0.11*px[j+2])<238?1:0;
+  const gap=Math.max(1,Math.round(Math.max(w,h)/700))+1;for(let g=0;g<gap;g++)ink=dilate1(ink,w,h);const blocked=new Uint8Array(w*h);for(let i=0;i<w*h;i++)blocked[i]=ink[i]?0:1;
+  const lab=new Int32Array(w*h);let id=0,best=null;const hA=(HB.x1-HB.x0)*(HB.y1-HB.y0);const comps=[];
+  for(let y=0;y<h;y+=2)for(let x=0;x<w;x+=2){const i=y*w+x;if(blocked[i]||lab[i])continue;id++;const r=flood(blocked,w,h,x,y,w*h,lab,id);if(!r)continue;const bw=r.x1-r.x0,bh=r.y1-r.y0;
+    if(bw>=w*0.95&&bh>=h*0.95)continue;r.id=id;comps.push(r);if(!(r.x0<=HB.x0+2&&r.x1>=HB.x1-2&&r.y0<=HB.y0+2&&r.y1>=HB.y1-2))continue;const a=bw*bh;if(!best||a>best.a)best={id,a,r};}
+  if(!best)return null;
+  // lot lines drawn apart from the rest (not touching a fence or tree) still count: long pieces of linework overlapping the site drawing
+  const B=best.r,mx=(B.x1-B.x0)*0.15,my=(B.y1-B.y0)*0.15,minL=Math.hypot(B.x1-B.x0,B.y1-B.y0)*0.2;const use=new Set([best.id]);let X0=B.x0,X1=B.x1,Y0=B.y0,Y1=B.y1;
+  comps.forEach(r=>{if(r.id===best.id)return;if(Math.hypot(r.x1-r.x0,r.y1-r.y0)<minL)return;if(r.x1<B.x0-mx||r.x0>B.x1+mx||r.y1<B.y0-my||r.y0>B.y1+my)return;use.add(r.id);X0=Math.min(X0,r.x0);X1=Math.max(X1,r.x1);Y0=Math.min(Y0,r.y0);Y1=Math.max(Y1,r.y1);});
+  if((X1-X0)*(Y1-Y0)<hA*1.4)return null;const pts=[];for(let y=Y0;y<=Y1;y++){let mn=-1,mx2=-1;for(let x=X0;x<=X1;x++)if(use.has(lab[y*w+x])){if(mn<0)mn=x;mx2=x;}if(mn>=0){pts.push([mn+gap,y]);pts.push([mx2-gap,y]);}}
+  let P=hull(pts);const A0=Math.abs(polyArea(P));
+  // drop corners that barely change the area (a gate swing or a sign poking past the line), then square up near-square edges
+  for(;;){if(P.length<=3)break;let bi=-1,ba=1e18;for(let i=0;i<P.length;i++){const a=P[(i+P.length-1)%P.length],b=P[i],c=P[(i+1)%P.length];const t=Math.abs((b[0]-a[0])*(c[1]-a[1])-(c[0]-a[0])*(b[1]-a[1]))/2;if(t<ba){ba=t;bi=i;}}if(ba>A0*0.012)break;P.splice(bi,1);}
+  for(let pass=0;pass<2;pass++)for(let i=0;i<P.length;i++){const a=P[i],b=P[(i+1)%P.length];const dx=b[0]-a[0],dy=b[1]-a[1];const ang=Math.abs(Math.atan2(dy,dx))%(Math.PI/2);if(ang<0.07||ang>Math.PI/2-0.07){if(Math.abs(dx)>Math.abs(dy)){const m=(a[1]+b[1])/2;a[1]=m;b[1]=m;}else{const m=(a[0]+b[0])/2;a[0]=m;b[0]=m;}}}
+  if(P.length<3)return null;const A=Math.abs(polyArea(P));if(A<hA*1.4)return null;
+  // pull the hull in by the dilation so it sits on the drawn line
+  return P;}
+/* Where the building is on the page: the band holding most of the thick wall ink, padded. A plan printed small on a big sheet with a border and title block gets cropped to the drawing. */
+function planBox(c0){const w=c0.width,h=c0.height;const px=c0.getContext('2d').getImageData(0,0,w,h).data;const dark=new Uint8Array(w*h);for(let i=0,j=0;i<w*h;i++,j+=4)dark[i]=(0.3*px[j]+0.59*px[j+1]+0.11*px[j+2])<115?1:0;
+  const lim=Math.max(5,Math.round(Math.min(w,h)/12));const runs=[];for(let x=0;x<w;x+=3){let r=0;for(let y=0;y<=h;y++){if(y<h&&dark[y*w+x])r++;else{if(r>=2&&r<=lim)runs.push(r);r=0;}}}
+  if(runs.length<40)return {x:0,y:0,w,h};runs.sort((a,b)=>a-b);const T=runs[Math.floor(runs.length*0.95)];const kt=Math.max(2,Math.round(T*0.55));const M=boxFilter(boxFilter(dark,w,h,kt,'min'),w,h,kt,'max');
+  const cx=new Float64Array(w),cy=new Float64Array(h);let tot=0;for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(M[y*w+x]){cx[x]++;cy[y]++;tot++;}if(tot<50)return {x:0,y:0,w,h};
+  const span=(arr)=>{let a=0,acc=0;while(a<arr.length-1&&acc+arr[a]<tot*0.01){acc+=arr[a];a++;}let b=arr.length-1;acc=0;while(b>0&&acc+arr[b]<tot*0.01){acc+=arr[b];b--;}return [a,b];};
+  const [x0,x1]=span(cx),[y0,y1]=span(cy);const bw=x1-x0,bh=y1-y0;if(bw<20||bh<20)return {x:0,y:0,w,h};const pad=Math.max(bw,bh)*0.3;
+  const X0=Math.max(0,Math.floor(x0-pad)),Y0=Math.max(0,Math.floor(y0-pad)),X1=Math.min(w,Math.ceil(x1+pad)),Y1=Math.min(h,Math.ceil(y1+pad));return {x:X0,y:Y0,w:X1-X0,h:Y1-Y0};}
+async function detectPlan(){const U=doc.underlay;if(!U.src)return null;const c0=await srcToCanvas(U.src,2600);const B=planBox(c0);
+  // work on the drawing at 1500 to 2600 px on its long side, whatever size it was printed or scanned at
+  const up=Math.min(3,Math.max(1,1500/Math.max(B.w,B.h)),2600/Math.max(B.w,B.h));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(B.w*up));c.height=Math.max(1,Math.round(B.h*up));const cg=c.getContext('2d');cg.fillStyle='#fff';cg.fillRect(0,0,c.width,c.height);cg.imageSmoothingQuality='high';cg.drawImage(c0,B.x,B.y,B.w,B.h,0,0,c.width,c.height);
+  const w=c.width,h=c.height;const k0=(U.w||c0.width)/c0.width,k1=(U.h||c0.height)/c0.height;const sx=k0*B.w/w,sy=k1*B.h/h;const ox=B.x*k0,oy=B.y*k1;
+  const res=detectIn(c,w,h,sx,sy);if(!res)return null;const sh=p=>[p[0]+ox,p[1]+oy];res.outline=res.outline.map(sh);res.walls.forEach(wl=>{wl.a=sh(wl.a);wl.b=sh(wl.b);});res.ops.forEach(o=>{o.mid=sh(o.mid);});
+  res.areas=(res.areas||[]).map(a=>({a:sh(a.a),b:sh(a.b)}));
+  try{const hb=bbox(res.outline);const site=findSite(c0,{x0:hb.x0/k0,x1:hb.x1/k0,y0:hb.y0/k1,y1:hb.y1/k1});if(site)res.site=site.map(p=>[p[0]*k0,p[1]*k1]);}catch(e){}
+  return res;}
+function detectIn(c,w,h,sx,sy){
   const px=c.getContext('2d').getImageData(0,0,w,h).data;const dark=new Uint8Array(w*h),ink=new Uint8Array(w*h);for(let i=0,j=0;i<w*h;i++,j+=4){const l=0.3*px[j]+0.59*px[j+1]+0.11*px[j+2];dark[i]=l<115?1:0;ink[i]=l<200?1:0;}
   const maxT=Math.max(5,Math.round(Math.min(w,h)/22));const runs=[];
   for(let x=0;x<w;x+=2){let r=0;for(let y=0;y<=h;y++){if(y<h&&dark[y*w+x])r++;else{if(r>=2&&r<=maxT)runs.push(r);r=0;}}}
@@ -1054,12 +1106,34 @@ async function detectPlan(){const U=doc.underlay;if(!U.src)return null;const c=a
   const ops=gaps.map(g=>{const mid=g.axis==='h'?[(g.a+g.b)/2,g.c]:[g.c,(g.a+g.b)/2];const ext=onOutline(mid);const wpx=g.b-g.a;const wmm=wpx*mmPx;
     const type=ext?(g.line?(wmm>=2200?'garage':'window'):(wmm>1300?'slider':'door')):'door';return {type,mid:[mid[0]*sx,mid[1]*sy],wpx:wpx*(g.axis==='h'?sx:sy),wmm};}).filter(o=>o.wmm>=500);
   const opsD=[];ops.sort((p,q)=>q.wmm-p.wmm).forEach(o=>{if(!opsD.some(q=>dist(q.mid,o.mid)<Text*2*sx))opsD.push(o);});
-  return {outline,walls,ops:opsD,mmPerPx:mmPx/((sx+sy)/2),text:Text};}
+  // outdoor areas built against the house: closed, roughly rectangular regions of the drawing that share an outside wall
+  const areas=[];try{const faint=new Uint8Array(w*h);for(let i=0,j=0;i<w*h;i++,j+=4)faint[i]=(0.3*px[j]+0.59*px[j+1]+0.11*px[j+2])<238?1:0;const inkD=dilate1(faint,w,h);const lab=new Int32Array(w*h);const hA=Math.abs(polyArea(centre));let nid=0;const off=Text*0.9+3;
+    for(let i=0;i<centre.length;i++){const a=centre[i],b=centre[(i+1)%centre.length];const L=dist(a,b);if(L<Text*4)continue;let nx=(b[1]-a[1])/L,ny=-(b[0]-a[0])/L;const m=lerp(a,b,0.5);if(pip([m[0]+nx*2,m[1]+ny*2],centre)){nx=-nx;ny=-ny;}
+      [0.2,0.5,0.8].forEach(t=>{const q=lerp(a,b,t);const x=Math.round(q[0]+nx*off),y=Math.round(q[1]+ny*off);if(x<0||y<0||x>=w||y>=h||inkD[y*w+x]||lab[y*w+x])return;nid++;const r=flood(inkD,w,h,x,y,Math.round(hA*1.2),lab,nid);if(!r||r.edge)return;
+        const bw=r.x1-r.x0+1,bh=r.y1-r.y0+1;const fill=r.n/(bw*bh);const m2=bw*bh*mmPx*mmPx/1e6;if(fill<0.72||m2<2.5||m2>90||Math.min(bw,bh)*mmPx<1200)return;areas.push({a:[r.x0*sx,r.y0*sy],b:[(r.x1+1)*sx,(r.y1+1)*sy]});});}}catch(e){}
+  return {outline,walls,ops:opsD,areas,mmPerPx:mmPx/((sx+sy)/2),text:Text};}
+/* Outdoor labels name decks and paving, not rooms. */
+const OUTDOOR_RE=/deck|alfresco|verand|patio|porch|pergola|drive|yard|garden|shed|pool|terrace|balcon|lawn|court|landscap/i;
+function interiorPt(P){const b=bbox(P);let best=null,bd=-1;const n=14;for(let i=1;i<n;i++)for(let j=1;j<n;j++){const q=[b.x0+(b.x1-b.x0)*i/n,b.y0+(b.y1-b.y0)*j/n];if(!pip(q,P))continue;let d=1e9;for(let k=0;k<P.length;k++){const a=P[k],c=P[(k+1)%P.length];d=Math.min(d,dist(q,lerp(a,c,projT(q,a,c))));}if(d>bd){bd=d;best=q;}}return best||[(b.x0+b.x1)/2,(b.y0+b.y1)/2];}
+/* The AI's label positions are rough. Labels landing outside the house, or a bedroom landing in the living room, move to the empty room whose size best fits what the plan says. */
+function placeLabels(){const outdoor=doc.rooms.filter(r=>OUTDOOR_RE.test(r.name));doc.rooms=doc.rooms.filter(r=>!OUTDOOR_RE.test(r.name));invalidate();
+  const k2=Math.pow((scaleMM()||10)/1000,2);const F=faces().map(f=>({f,A:Math.abs(polyArea(f.poly))*k2,L:[]}));const pend=[];
+  const OPEN=new Set(['living','kitchen','hall','other']);const fit=(r,A)=>r.expect?Math.abs(A-r.expect)/r.expect:0.5;
+  const plaus=(r,A)=>{if(A<0.8)return false;if(['bath','ens','wc','laundry','robe'].includes(r.type))return A<12;if(r.type==='bed')return A>6&&A<30;if(r.type==='garage')return A>12;return true;};
+  doc.rooms.forEach(r=>{const x=F.find(o=>pip(r.pt,o.f.poly));if(x&&plaus(r,x.A)&&!(r.expect&&fit(r,x.A)>1&&!OPEN.has(r.type)))x.L.push(r);else pend.push(r);});
+  F.forEach(x=>{if(x.L.length<2)return;if(x.L.every(r=>OPEN.has(r.type)))return;x.L.sort((a,b)=>fit(a,x.A)-fit(b,x.A));const keep=x.L[0];x.L.slice(1).forEach(r=>{if(!(OPEN.has(r.type)&&OPEN.has(keep.type)))pend.push(r);});x.L=x.L.filter(r=>r===keep||(OPEN.has(r.type)&&OPEN.has(keep.type)));});
+  pend.sort((a,b)=>(b.expect?1:0)-(a.expect?1:0));
+  pend.forEach(r=>{const free=F.filter(x=>!x.L.length&&plaus(r,x.A));if(!free.length)return;let best=null;
+    if(r.expect){free.forEach(x=>{const e=fit(r,x.A);if(e<0.45&&(!best||e<best.e))best={x,e};});}
+    else{free.forEach(x=>{const c=interiorPt(x.f.poly);const d=dist(c,r.pt);if(!best||d<best.e)best={x,e:d};});}
+    if(best){r.pt=interiorPt(best.x.f.poly);best.x.L.push(r);}});
+  invalidate();mergeOpenPlan();return outdoor;}
 // Open plan spaces (family, kitchen, meals) share one face with no wall between them: one room, combined name and plan area.
 function mergeOpenPlan(){faces().forEach(f=>{const L=doc.rooms.filter(r=>pip(r.pt,f.poly));if(L.length<2)return;const keep=L[0];keep.name=L.map(r=>r.name).join(' / ');keep.expect=L.every(r=>r.expect)?L.reduce((t,r)=>t+r.expect,0):null;keep.dims=null;doc.rooms=doc.rooms.filter(r=>r===keep||!L.includes(r));});invalidate();}
+let outdoorLabels=[];
 async function autoTrace(manual){if(!doc.underlay.src){flash('Upload a plan first.');return;}if(aiBusy)return;aiBusy=true;renderPlanTab();flash('Finding the walls on your plan...');
   try{const r=await detectPlan();const haveGeo=r&&r.outline.length>=3;
-    if(haveGeo){snapshot();doc.outline=r.outline;doc.walls=r.walls;doc.rooms=[];doc.openings=r.ops.map(o=>({id:uid(),type:o.type,pt:o.mid,wpx:o.wpx,width:OPEN_T[o.type].w,height:OPEN_T[o.type].h,sill:OPEN_T[o.type].sill}));doc.scale=r.mmPerPx;doc.draft=true;invalidate();
+    if(haveGeo){snapshot();doc.outline=r.outline;doc.walls=r.walls;doc.rooms=[];doc.site=r.site||null;doc.areas=[];doc.openings=r.ops.map(o=>({id:uid(),type:o.type,pt:o.mid,wpx:o.wpx,width:OPEN_T[o.type].w,height:OPEN_T[o.type].h,sill:OPEN_T[o.type].sill}));doc.scale=r.mmPerPx;doc.draft=true;invalidate();
       doc.openings=doc.openings.filter(o=>hostOf(o));}
     let labels=null,signup=false;
     try{let image=doc.underlay.src;if(!/^data:image\/jpeg/.test(image)||image.length>3500000){const c=await srcToCanvas(image,2200);image=canvasToJpeg(c,3500000).url;}
@@ -1067,10 +1141,14 @@ async function autoTrace(manual){if(!doc.underlay.src){flash('Upload a plan firs
     if(!haveGeo){if(labels){applyDraft(labels);return;}flash(signup?'Could not find clear walls. Trace it with the Outline and Wall tools, or sign in to use AI.':'Could not find clear walls on this plan. Trace it with the Outline and Wall tools.');return;}
     let scaleNote='Scale estimated from the wall thickness. Set it on a labelled room for an exact takeoff.';
     if(labels&&labels.rooms){const W=doc.underlay.w,H=doc.underlay.h;doc.rooms=labels.rooms.map(rm=>({id:uid(),name:rm.name||'Room',type:guessType(rm.name),pt:[rm.x/1000*W,rm.y/1000*H],expect:(rm.width>0&&rm.length>0)?rm.width*rm.length/1e6:null,dims:(rm.width>0&&rm.length>0)?[rm.width,rm.length]:null}));
-      invalidate();mergeOpenPlan();const s=autoScale();if(s&&s/doc.scale>0.5&&s/doc.scale<2){doc.scale=s;scaleNote=`Scale set from the room sizes on the plan (1 m = ${fm(1000/s,0)} px).`;}}
+      invalidate();outdoorLabels=placeLabels();
+      // outdoor areas drawn against the house become decks, verandahs or paving when the plan names them
+      (r.areas||[]).forEach(a=>{const P=areaPoly(a);const c=[(P[0][0]+P[2][0])/2,(P[0][1]+P[2][1])/2];const big=Math.max(P[2][0]-P[0][0],P[2][1]-P[0][1]);let lab=outdoorLabels.find(l=>pip(l.pt,P));if(!lab){const near=outdoorLabels.map(l=>({l,d:dist(l.pt,c)})).sort((x,y)=>x.d-y.d)[0];if(near&&near.d<big)lab=near.l;}if(!lab)return;outdoorLabels=outdoorLabels.filter(l=>l!==lab);
+        const n=lab.name.toLowerCase();const type=/verand/.test(n)?'verandah':/pergola/.test(n)?'pergola':/deck|alfresco/.test(n)?'deck':/drive|patio|pav|porch|court|terrace/.test(n)?'paving':'deck';
+        doc.areas.push({id:uid(),type,name:lab.name,a:P[0],b:P[2],h:type==='deck'?600:null,board:'merbau',roof:'colorbond',t:100,bal:null});});const s=autoScale();if(s&&s/doc.scale>0.6&&s/doc.scale<1.6){doc.scale=s;scaleNote=`Scale set from the room sizes on the plan (1 m = ${fm(1000/s,0)} px).`;}}
     doc.openings.forEach(o=>{if(o.wpx){o.width=Math.max(500,Math.round(o.wpx*doc.scale/10)*10);delete o.wpx;}});
     invalidate();changed(true);setTool('select');const R=rooms();
-    flash(`Traced from your plan: ${R.length} rooms, ${doc.walls.length} internal walls, ${doc.openings.length} doors and windows. ${scaleNote} Check the room sizes in Rooms.`);}
+    flash(`Traced from your plan: ${R.length} rooms, ${doc.walls.length} internal walls, ${doc.openings.length} doors and windows${doc.areas.length?`, ${doc.areas.length} outdoor ${doc.areas.length===1?'area':'areas'}`:''}${doc.site?', the property boundary':''}. ${scaleNote} Check the room sizes in Rooms.`);}
   catch(e){flash('Auto trace failed on this file. Trace it with the Outline and Wall tools.');}
   finally{aiBusy=false;renderPlanTab();}}
 
@@ -1083,18 +1161,29 @@ function init3D(){if(three||!window.THREE)return three;const host=$('#v3');const
   const ground=new THREE.Mesh(new THREE.PlaneGeometry(300,300),new THREE.MeshStandardMaterial({color:0x9aa58c,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-0.02;ground.receiveShadow=true;scene.add(ground);
   const root=new THREE.Group();scene.add(root);three={renderer,scene,camera,controls,root,host,fitted:false};
   const loop=()=>{requestAnimationFrame(loop);if($('#v3').hidden)return;const w=host.clientWidth,h=host.clientHeight;if(w&&h&&(renderer.domElement.width!==Math.round(w*renderer.getPixelRatio())||renderer.domElement.height!==Math.round(h*renderer.getPixelRatio()))){renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}controls.update();renderer.render(scene,camera);};loop();return three;}
-function build3D(){const T=init3D();if(!T)return;const root=T.root;root.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose();});while(root.children.length)root.remove(root.children[0]);
+/* Tap the model to drop an item: walls, floors and the ground take it; wall items keep the height they were tapped at. */
+function pick3D(ev){const T=three;if(!T||tool!=='place'||!scaleMM())return;const r=T.renderer.domElement.getBoundingClientRect();const v=new THREE.Vector2(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1);
+  const rc=new THREE.Raycaster();rc.setFromCamera(v,T.camera);const hits=rc.intersectObjects(T.root.children,false).filter(h=>h.object.userData.pick);const hit=hits[0];if(!hit){flash('Tap a wall, floor or the ground near the house.');return;}
+  const n=hit.face?hit.face.normal.clone().transformDirection(hit.object.matrixWorld):new THREE.Vector3(0,1,0);const q=hit.point.clone().add(n.multiplyScalar(0.06));const k=1000/scaleMM();const pt=[(q.x+T.cx)*k,(q.z+T.cz)*k];
+  const d=placePb?{m:'floor'}:ITEM_T[placeKind];snapshot();const it=placePb?{id:uid(),kind:'pb',pb:placePb.id,n:placePb.n,sec:placePb.sec,pt}:{id:uid(),kind:placeKind,pt};
+  if(hit.object.userData.pick==='wall'&&d&&d.m==='wall')it.h=Math.round(Math.max(150,Math.min(T.H*1000-100,hit.point.y*1000))/10)*10;
+  doc.items.push(it);sel={kind:'item',id:it.id};changed(false);renderPlanTab();flash(`${placePb?placePb.n:ITEM_T[placeKind].n} placed${it.h?` at ${it.h} mm`:''}. Undo removes it.`);}
+let down3=null;
+function hook3D(){const T=three;if(!T||T.hooked)return;T.hooked=true;const el=T.renderer.domElement;el.addEventListener('pointerdown',e=>{down3=[e.clientX,e.clientY];});el.addEventListener('pointerup',e=>{if(down3&&Math.hypot(e.clientX-down3[0],e.clientY-down3[1])<6)pick3D(e);down3=null;});}
+function build3D(){const T=init3D();if(!T)return;hook3D();const root=T.root;root.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose();});while(root.children.length)root.remove(root.children[0]);
   if(!scaleMM()||doc.outline.length<3)return;const S=doc.settings,H=S.wallH/1000;const b=bbox(doc.outline);const cx=toM((b.x0+b.x1)/2),cz=toM((b.y0+b.y1)/2);const P=p=>[toM(p[0])-cx,toM(p[1])-cz];
   const extM=new THREE.MeshStandardMaterial({color:S.extClad==='brick'?0xb5755a:0xe8e4da,roughness:0.85}),intM=new THREE.MeshStandardMaterial({color:0xf2f0ea,roughness:0.9}),glass=new THREE.MeshStandardMaterial({color:0x9fc7e0,transparent:true,opacity:0.45}),doorM=new THREE.MeshStandardMaterial({color:0x8a6a4a,roughness:0.6});
   const finCol={tiles:0xd9d6cf,carpet:0x9aa0a6,hybrid:0xc9a77c,timber:0xb07c4f,epoxy:0x8f9aa3,none:0xbdb9b1};
   const sgn=Math.sign(polyArea(doc.outline))||1;
-  const box=(x,y,z,sx,sy,sz,ang,m)=>{const me=new THREE.Mesh(new THREE.BoxGeometry(Math.max(sx,0.01),Math.max(sy,0.01),Math.max(sz,0.01)),m);me.position.set(x,y,z);me.rotation.y=ang;me.castShadow=true;me.receiveShadow=true;root.add(me);};
+  let pickTag=null;const box=(x,y,z,sx,sy,sz,ang,m)=>{const me=new THREE.Mesh(new THREE.BoxGeometry(Math.max(sx,0.01),Math.max(sy,0.01),Math.max(sz,0.01)),m);me.position.set(x,y,z);me.rotation.y=ang;me.castShadow=true;me.receiveShadow=true;if(pickTag)me.userData.pick=pickTag;root.add(me);return me;};
+  T.cx=cx;T.cz=cz;T.H=H;pickTag='wall';
   segs().forEach(s=>{const a=P(s.a),c=P(s.b);const L=Math.hypot(c[0]-a[0],c[1]-a[1]);if(L<0.05)return;const ux=(c[0]-a[0])/L,uz=(c[1]-a[1])/L;const thk=(s.ext?S.extThk:S.intThk)/1000;
     let nx=-uz,nz=ux;if(s.ext){nx*=sgn;nz*=sgn;}const off=s.ext?thk/2:0;const ang=-Math.atan2(uz,ux);const m=s.ext?extM:intM;
     const ops=doc.openings.map(o=>({o,h:hostOf(o)})).filter(x=>x.h&&x.h.s.host===s.host).map(x=>{const c0=x.h.t*L,w=x.o.width/1000;return {a:Math.max(0,c0-w/2),b:Math.min(L,c0+w/2),sill:x.o.type==='window'?x.o.sill/1000:0,h:Math.min(H-0.05,x.o.height/1000),t:x.o.type};}).sort((p,q)=>p.a-q.a);
     const piece=(s0,s1,y0,y1)=>{if(s1-s0<0.01||y1-y0<0.01)return;const mid=(s0+s1)/2;box(a[0]+ux*mid+nx*off,(y0+y1)/2,a[1]+uz*mid+nz*off,s1-s0,y1-y0,thk,ang,m);};
     let cur=0;ops.forEach(o=>{piece(cur,o.a,0,H);piece(o.a,o.b,0,o.sill);piece(o.a,o.b,o.sill+o.h,H);const mid=(o.a+o.b)/2;if(o.t==='window')box(a[0]+ux*mid+nx*off,o.sill+o.h/2,a[1]+uz*mid+nz*off,o.b-o.a,o.h,0.02,ang,glass);else if(o.t==='door'||o.t==='garage')box(a[0]+ux*mid+nx*off,o.h/2,a[1]+uz*mid+nz*off,o.b-o.a,o.h,0.04,ang,o.t==='garage'?extM:doorM);else box(a[0]+ux*mid+nx*off,o.h/2,a[1]+uz*mid+nz*off,o.b-o.a,o.h,0.02,ang,glass);cur=Math.max(cur,o.b);});piece(cur,L,0,H);});
-  rooms().forEach(r=>{const sh=new THREE.Shape(r.f.poly.map(p=>{const q=P(p);return new THREE.Vector2(q[0],-q[1]);}));const m=new THREE.Mesh(new THREE.ShapeGeometry(sh),new THREE.MeshStandardMaterial({color:finCol[r.finish]||0xcccccc,roughness:0.9}));m.rotation.x=-Math.PI/2;m.position.y=0.01;m.receiveShadow=true;root.add(m);});
+  pickTag=null;
+  rooms().forEach(r=>{const sh=new THREE.Shape(r.f.poly.map(p=>{const q=P(p);return new THREE.Vector2(q[0],-q[1]);}));const m=new THREE.Mesh(new THREE.ShapeGeometry(sh),new THREE.MeshStandardMaterial({color:finCol[r.finish]||0xcccccc,roughness:0.9}));m.rotation.x=-Math.PI/2;m.position.y=0.01;m.receiveShadow=true;m.userData.pick='floor';root.add(m);});
   /* outdoor areas */
   const wood=new THREE.MeshStandardMaterial({color:0xa8754a,roughness:0.8}),post=new THREE.MeshStandardMaterial({color:0x6e6258,roughness:0.8}),pave=new THREE.MeshStandardMaterial({color:0xb9b2a6,roughness:1}),conc=new THREE.MeshStandardMaterial({color:0xa4a9ad,roughness:1}),sheet=new THREE.MeshStandardMaterial({color:0x8b9aa6,roughness:0.6,side:THREE.DoubleSide}),polyM=new THREE.MeshStandardMaterial({color:0xcfe3ee,transparent:true,opacity:0.45,side:THREE.DoubleSide}),rail=new THREE.MeshStandardMaterial({color:0x40464c,roughness:0.6});
   doc.areas.forEach(ar=>{const G=areaGeo(ar);if(G.A<0.2)return;const p0=P(G.P[0]),p2=P(G.P[2]);const x0=Math.min(p0[0],p2[0]),x1=Math.max(p0[0],p2[0]),z0=Math.min(p0[1],p2[1]),z1=Math.max(p0[1],p2[1]);const cx2=(x0+x1)/2,cz2=(z0+z1)/2,w=x1-x0,d=z1-z0;
@@ -1106,24 +1195,26 @@ function build3D(){const T=init3D();if(!T)return;const root=T.root;root.traverse
       const seen=new Set();ptsAt.forEach(q=>{const key=q.map(v=>v.toFixed(2)).join();if(seen.has(key))return;seen.add(key);box(q[0],H2/2,q[1],0.09,H2,0.09,0,post);});
       if(ar.type==='verandah')box(cx2,H2+0.05,cz2,w,0.03,d,0,ar.roof==='poly'?polyM:sheet);else{const n=Math.ceil(Math.max(w,d)/0.9)+1;for(let k=0;k<n;k++){if(w>=d)box(x0+w*k/(n-1),H2+0.07,cz2,0.045,0.14,d,0,wood);else box(cx2,H2+0.07,z0+d*k/(n-1),w,0.14,0.045,0,wood);}}}
     else box(cx2,0.02,cz2,w,0.04,d,0,ar.type==='paving'?pave:conc);});
+  /* property boundary */
+  if(doc.site&&doc.site.length>=3){const lm=new THREE.MeshStandardMaterial({color:0x2e7d4f,roughness:0.8});const ps=doc.site.map(P);for(let i=0;i<ps.length;i++){const a=ps[i],c=ps[(i+1)%ps.length];const L=Math.hypot(c[0]-a[0],c[1]-a[1]);if(L<0.05)continue;box((a[0]+c[0])/2,0.06,(a[1]+c[1])/2,L,0.12,0.06,-Math.atan2(c[1]-a[1],c[0]-a[0]),lm);}}
   /* placed items */
   const segsAll=segs();const itemCol={elec:0xf2b705,plumb:0x2f6fb0};
   doc.items.forEach(it=>{const d=itemDef(it);const q=P(it.pt);const mat=new THREE.MeshStandardMaterial({color:itemCol[d.sec]||0x5b6770,roughness:0.5,emissive:d.sec==='elec'?0x332200:0x000000});
     if(d.m==='ceil'){const m=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,0.03,20),mat);m.position.set(q[0],H-0.03,q[1]);root.add(m);return;}
     if(d.m==='wall'){let best=null,bd=1e9;segsAll.forEach(sg=>{const t=projT(it.pt,sg.a,sg.b);const pr=lerp(sg.a,sg.b,t);const dd=dist(it.pt,pr);if(dd<bd){bd=dd;best={sg,pr};}});
       if(best&&toM(bd)<0.8){const a=P(best.sg.a),b=P(best.sg.b),pr=P(best.pr);const L=Math.hypot(b[0]-a[0],b[1]-a[1])||1;const ux=(b[0]-a[0])/L,uz=(b[1]-a[1])/L;let nx=-uz,nz=ux;const side=Math.sign((q[0]-pr[0])*nx+(q[1]-pr[1])*nz)||1;nx*=side;nz*=side;
-        const thk=(best.sg.ext?S.extThk:S.intThk)/1000;const off=best.sg.ext?(side===(Math.sign(polyArea(doc.outline))||1)?thk+0.012:0.012):thk/2+0.012;box(pr[0]+nx*off,(d.h||300)/1000,pr[1]+nz*off,0.12,0.08,0.02,-Math.atan2(uz,ux),mat);return;}
-      box(q[0],(d.h||300)/1000,q[1],0.12,0.08,0.12,0,mat);return;}
+        const thk=(best.sg.ext?S.extThk:S.intThk)/1000;const off=best.sg.ext?(side===(Math.sign(polyArea(doc.outline))||1)?thk+0.012:0.012):thk/2+0.012;box(pr[0]+nx*off,(it.h||d.h||300)/1000,pr[1]+nz*off,0.14,0.1,0.025,-Math.atan2(uz,ux),mat);return;}
+      box(q[0],(it.h||d.h||300)/1000,q[1],0.14,0.1,0.14,0,mat);return;}
     const fs={wc:[0.4,0.75,0.65],basin:[0.6,0.85,0.45],bath:[1.6,0.55,0.75],shower:[0.9,0.05,0.9],sink:[0.8,0.9,0.6],tub:[0.6,0.9,0.5],dishwasher:[0.6,0.85,0.6],hws:[0.55,1.5,0.55],fw:[0.15,0.02,0.15]}[it.kind]||[0.3,0.3,0.3];
     box(q[0],fs[1]/2,q[1],fs[0],fs[1],fs[2],0,new THREE.MeshStandardMaterial({color:d.sec==='plumb'?0xf4f6f8:0x8a949c,roughness:0.4}));});
   if(!T.fitted){const span=Math.max(toM(b.x1-b.x0),toM(b.y1-b.y0));T.camera.position.set(span*0.8,span*1.05,span*1.15);T.controls.target.set(0,0.8,0);T.fitted=true;}}
-function setView(v){$('#svgwrap').hidden=v!=='2d';$('#v3').hidden=v!=='3d';$('#tools').hidden=v!=='2d';$('#hint').hidden=v!=='2d';document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===v));if(v==='3d')build3D();else{fitIfNeeded();draw();}}
+function setView(v){VIEW=v;if(v==='3d'&&!TOOLS3D.some(t=>t[0]===tool))tool='select';renderToolbar();$('#svgwrap').hidden=v!=='2d';$('#v3').hidden=v!=='3d';$('#hint').hidden=v!=='2d'&&tool!=='place';renderHint();renderPalette();document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===v));if(v==='3d')build3D();else{fitIfNeeded();draw();}}
 $('#views').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)setView(b.dataset.view);});
 let fitted=false;function fitIfNeeded(){if(!fitted){fitView();fitted=true;}}
 /* ---------- change pipeline ---------- */
 function updateStats(){const sm=scaleMM();const el=$('#stats');if(!sm){el.innerHTML='<b>Scale not set</b>Use the Scale tool on a known dimension<span class="hint">Then trace the outline</span>';return;}
   if(doc.outline.length<3){el.innerHTML='<b>No outline yet</b>Use Outline and tap the outside corners<span class="hint">Or tap AI draft</span>';return;}
-  const R=rooms();el.innerHTML=`<b>${fm(outlineArea(),1)} m² footprint</b>${R.length} rooms, ${fm(outlinePer(),1)} m outside walls<span class="hint">${doc.draft?'AI draft: check it against the plan':'Tap a room to edit it'}</span>`;}
+  const R=rooms();el.innerHTML=`<b>${fm(outlineArea(),1)} m² footprint</b>${R.length} rooms, ${fm(outlinePer(),1)} m outside walls${doc.site&&doc.site.length>=3?`, ${fm(siteArea(),0)} m² site`:''}<span class="hint">${doc.draft?'AI draft: check it against the plan':'Tap a room to edit it'}</span>`;}
 function changed(full){invalidate();draw();updateStats();if(full){renderPlanTab();renderRooms();}else{renderPlanTab();if($('#tab-rooms').classList.contains('on'))renderRooms();}scheduleMaterials();if(!$('#v3').hidden)build3D();save();}
 /* ---------- Swiftscope bridge ---------- */
 function postPlan(){try{const plan=JSON.parse(JSON.stringify(doc));if(plan.underlay&&plan.underlay.path)plan.underlay.src=null;window.parent.postMessage({source:'ss-planner',type:'change',plan,summary:summary()},location.origin);}catch(e){}}

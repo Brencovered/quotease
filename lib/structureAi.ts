@@ -304,7 +304,7 @@ export const TRACE_DRAFT_PROMPT = `You trace Australian floor plans for tradies 
 Coordinates: x and y run from 0 to 1000 across the whole image (0,0 top left, 1000,1000 bottom right), whatever its shape.
 - outline: the outside face of the external walls of the main house, garage included. Follow every step in and out. Leave out porches, alfresco, decks, driveways, sheds, fences and landscaping.
 - walls: internal walls between rooms as straight centrelines. Make each wall run all the way to the walls it meets so rooms close off. Include robe and ensuite walls.
-- rooms: one entry per labelled room, with the label text as the name. Sizes like "3220 X 4640" are mm; "3.3 x 3.2" are metres, so convert to mm.
+- rooms: one entry per labelled room, with the label text as the name, x and y at the centre of the label text itself. Sizes like "3220 X 4640" are mm; "3.3 x 3.2" are metres, so convert to mm. Also list labelled outdoor areas (deck, alfresco, verandah, porch, patio, driveway) the same way.
 - openings: external doors, windows, sliding doors and garage doors, with internal doors, each positioned on its wall line.
 Be precise: a trace that is out by 2% is far more useful than one that is out by 10%.`;
 

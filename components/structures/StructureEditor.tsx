@@ -226,10 +226,16 @@ export default function StructureEditor(props: Props) {
     const dataUrl = typeof d.dataUrl === "string" ? d.dataUrl : "";
     if (!dataUrl.startsWith("data:image/")) return null;
     try {
-      const blob = await (await fetch(dataUrl)).blob();
-      const path = `${props.businessId}/structures/${id}/${Date.now()}.jpg`;
+      // Decode by hand: the app's CSP does not allow fetch() on data: URLs, so fetching it failed every upload.
+      const comma = dataUrl.indexOf(",");
+      const mime = dataUrl.slice(5, dataUrl.indexOf(";")) || "image/jpeg";
+      const bin = atob(dataUrl.slice(comma + 1));
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const blob = new Blob([bytes], { type: mime });
+      const path = `${props.businessId}/structures/${id}/${Date.now()}.${mime === "image/png" ? "png" : "jpg"}`;
       const supabase = createClient();
-      const { error } = await supabase.storage.from("job-files").upload(path, blob, { contentType: blob.type || "image/jpeg", upsert: true });
+      const { error } = await supabase.storage.from("job-files").upload(path, blob, { contentType: mime, upsert: false });
       return error ? null : path;
     } catch {
       return null;
