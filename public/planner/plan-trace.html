@@ -358,6 +358,23 @@ dialog::backdrop{background:rgba(10,15,20,.5);}
 .phread{margin-top:8px;}
 .phnotes{margin:6px 0 0;padding-left:18px;font-size:12.5px;color:var(--muted);}
 .phgrid.pr{grid-template-columns:repeat(3,1fr);}
+
+.palette.tray{flex-direction:column;align-items:stretch;gap:8px;right:auto;width:min(380px,calc(100% - 24px));max-height:min(56vh,520px);overflow:hidden;padding:10px;}
+.tray .tcur{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,var(--accent) 16%,var(--panel));}
+.tray .tcur div{flex:1;min-width:0;}.tray .tcur b{display:block;font-size:14px;}.tray .tcur small{display:block;color:var(--muted);font-size:12px;}
+.tray .tcur .pit-i{min-width:28px;height:28px;font-size:10px;}
+.tray .tdone{padding:5px 10px;}
+.tray .tsearch{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;font-size:13.5px;background:var(--field);color:var(--text);}
+.tray .ttabs{display:flex;gap:4px;flex-wrap:wrap;}
+.tray .ttab{border:1px solid var(--line);background:var(--chip);border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--text);}
+.tray .ttab.on{background:var(--chip-on);color:var(--chip-on-ink);border-color:transparent;}
+.tray .tlist{overflow:auto;display:flex;flex-direction:column;gap:2px;min-height:0;flex:1;}
+.tray .trow{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;border:0;background:none;text-align:left;padding:7px 8px;border-radius:8px;cursor:pointer;font:inherit;font-size:13px;color:var(--text);}
+.tray .trow:hover{background:color-mix(in srgb,var(--accent) 10%,transparent);}
+.tray .trow.on{background:color-mix(in srgb,var(--accent) 24%,transparent);font-weight:700;}
+.tray .tn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tray .tp{font-variant-numeric:tabular-nums;font-weight:700;font-size:12.5px;}.tray .tp.none{font-weight:500;color:var(--muted);font-size:11.5px;}
+.tray .tsub{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:8px 8px 2px;}
 </style>
 </head>
 <body>
@@ -429,7 +446,7 @@ const ITEM_T={
   gpo1:{n:'Single power point',c:'P1',sec:'elec',m:'wall',h:300,match:['single power point','single gpo','single power outlet']},
   usb:{n:'Power point with USB',c:'PU',sec:'elec',m:'wall',h:300,match:['usb']},
   gpow:{n:'Weatherproof power point',c:'PW',sec:'elec',m:'wall',h:600,match:['weatherproof power','weatherproof gpo','ip53','ip56']},
-  sw:{n:'Light switch',c:'SW',sec:'elec',m:'wall',h:1100,match:['light switch','switch']},
+  sw:{n:'Light switch',c:'SW',sec:'elec',m:'wall',h:1100,match:['light switch','gang switch','architrave switch','switch plate','switch mech']},
   dl:{n:'LED downlight',c:'DL',sec:'elec',m:'ceil',match:['downlight']},
   pend:{n:'Pendant light',c:'PL',sec:'elec',m:'ceil',match:['pendant']},
   xl:{n:'Outdoor wall light',c:'OL',sec:'elec',m:'wall',h:1900,match:['outdoor wall light','wall light','exterior light']},
@@ -451,6 +468,11 @@ const ITEM_T={
   hws:{n:'Hot water unit',c:'HW',sec:'plumb',m:'floor',match:['hot water']},
   tap:{n:'Garden tap',c:'GT',sec:'plumb',m:'wall',h:500,match:['garden tap','hose tap','hose cock']},
   fw:{n:'Floor waste',c:'FW',sec:'plumb',m:'floor',match:['floor waste']}};
+/* The takeoff line a placed kind counts into, and what it prices at: the line's own link if the tradie set one, else a strict name match. */
+const kindKey=k=>`h:${ITEM_T[k].sec}:${k}`;
+function kindPrice(k){const d=ITEM_T[k];if(!d)return null;const L=doc.links[kindKey(k)];return L===undefined?PB.match({item:d.n,size:'',match:d.match,unit:'ea',sec:d.sec,strict:true}):(L?PB.byId(L):null);}
+/* A price list item placed on the plan looks like the closest built-in item, if its name says what it is. */
+function modelKindFor(name){const n=String(name||'').toLowerCase();for(const [re,k] of [[/ceiling fan/,'cfan'],[/exhaust/,'fan'],[/downlight/,'dl'],[/pendant/,'pend'],[/smoke/,'smoke'],[/usb/,'usb'],[/weatherproof|ip5\d|ip6\d/,'gpow'],[/single.*(power|gpo|outlet)/,'gpo1'],[/power point|gpo|power outlet|socket/,'gpo'],[/switch(?!board)/,'sw'],[/split system|air ?con/,'ac'],[/ev charg/,'ev'],[/data|cat ?6/,'data'],[/tv |antenna/,'tv'],[/wall light|outdoor light|sensor light/,'xl'],[/toilet/,'wc'],[/basin|vanity/,'basin'],[/shower/,'shower'],[/\bbath\b/,'bath'],[/sink/,'sink'],[/laundry|trough/,'tub'],[/dishwasher/,'dishwasher'],[/hot water/,'hws'],[/tap/,'tap'],[/floor waste/,'fw']])if(re.test(n))return k;return null;}
 const ITEM_GROUPS=[['elec','Electrical',['gpo','gpo1','usb','gpow','sw','dl','pend','xl','smoke','fan','cfan','data','tv','ac','ev']],['plumb','Plumbing',['wc','basin','shower','bath','sink','tub','dishwasher','washer','hws','tap','fw']]];
 const TRADE_SEC={electrician:'elec',plumber:'plumb',roofer:'roof',carpenter:'build',builder:'build',tiler:'finish',painter:'paint',concreter:'floor',plasterer:'line',landscaper:'outdoor',fencer:'outdoor'};
 /* Outdoor areas drawn against the house. */
@@ -554,7 +576,7 @@ function snap(p,from,opts){opts=opts||{};const tol=12/view.k;let best=null;
 function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);(parent||svg).appendChild(e);return e;}
 function lenLabel(a,b){const sm=scaleMM();if(!sm)return '';const m=toM(dist(a,b));return m>=0.3?fm(m,2)+' m':'';}
 /* Stack the item palette and the hint above the toolbar, however many rows it wraps to. */
-function layoutOverlays(){const t=$('#tools'),pal=$('#palette'),hint=$('#hint');if(!t)return;const base=parseFloat(getComputedStyle(t).bottom)||12;let y=base+t.offsetHeight+8;if(pal&&!pal.hidden){pal.style.bottom=y+'px';y+=pal.offsetHeight+8;}if(hint)hint.style.bottom=y+'px';}
+function layoutOverlays(){const t=$('#tools'),pal=$('#palette'),hint=$('#hint');if(!t)return;if(hint)hint.style.visibility=tool==='place'?'hidden':'';const base=parseFloat(getComputedStyle(t).bottom)||12;let y=base+t.offsetHeight+8;if(pal&&!pal.hidden){pal.style.bottom=y+'px';y+=pal.offsetHeight+8;}if(hint)hint.style.bottom=y+'px';}
 function draw(){layoutOverlays();const r=svg.getBoundingClientRect();svg.setAttribute('viewBox',`${view.x} ${view.y} ${r.width/view.k} ${r.height/view.k}`);svg.innerHTML='';const k=view.k;const sw=v=>v/k;
   const U=doc.underlay;if(U.src)el('image',{href:U.src,x:0,y:0,width:U.w,height:U.h,opacity:U.opacity,preserveAspectRatio:'none'});
   else{const g=el('g',{class:'grid'});const step=scaleMM()?1000/scaleMM():100;const x0=Math.floor(view.x/step)*step,y0=Math.floor(view.y/step)*step;for(let x=x0;x<view.x+r.width/k;x+=step)el('line',{x1:x,y1:view.y,x2:x,y2:view.y+r.height/k},g);for(let y=y0;y<view.y+r.height/k;y+=step)el('line',{x1:view.x,y1:y,x2:view.x+r.width/k,y2:y},g);}
@@ -673,7 +695,7 @@ document.addEventListener('keyup',e=>{if(e.key===' ')spaceDown=false;});
 function deleteSel(){if(!sel)return;snapshot();if(sel.kind==='item')doc.items=doc.items.filter(x=>x.id!==sel.id);else if(sel.kind==='area')doc.areas=doc.areas.filter(x=>x.id!==sel.id);else if(sel.kind==='op')doc.openings=doc.openings.filter(o=>o.id!==sel.id);else if(sel.kind==='wall')doc.walls=doc.walls.filter(w=>w.id!==sel.id);else if(sel.kind==='room')doc.rooms=doc.rooms.filter(r=>r.id!==sel.id);sel=null;changed(true);}
 function confirmReplace(){if(confirmReplace.armed&&Date.now()-confirmReplace.armed<4000){confirmReplace.armed=0;return true;}confirmReplace.armed=Date.now();flash('There is already an outline. Tap again to start a new one, or use Select to adjust it.');return false;}
 let flashT;function flash(msg){const f=$('#flash');f.textContent=msg;f.hidden=false;clearTimeout(flashT);flashT=setTimeout(()=>{f.hidden=true;},Math.min(14000,Math.max(3500,msg.length*55)));}
-function setTool(t){tool=t;draft=[];calibPts=[];hideCalib();hover=null;document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===t));svg.style.cursor=t==='select'?'grab':'crosshair';if(VIEW==='3d'){$('#hint').hidden=false;renderHint();if(three)three.renderer.domElement.style.cursor=t==='place'?'crosshair':'';}renderPalette();draw();}
+function setTool(t){tool=t;draft=[];calibPts=[];hideCalib();hover=null;document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===t));svg.style.cursor=t==='select'?'grab':'crosshair';if(VIEW==='3d'){$('#hint').hidden=false;renderHint();if(three&&three.ghost&&t!=='place')three.ghost.visible=false;if(three)three.renderer.domElement.style.cursor=t==='place'?'crosshair':'';}renderPalette();draw();}
 let VIEW='2d';const TOOLS3D=[['select','Look around'],['place','Place item']];
 function renderToolbar(){$('#tools').innerHTML=(VIEW==='3d'?TOOLS3D:TOOLS).map(([k,n])=>`<button class="chip ${k===tool?'on':''}" data-tool="${k}">${n}</button>`).join('')+`<button class="chip" id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>`;}
 $('#tools').addEventListener('click',e=>{const b=e.target.closest('[data-tool]');if(b){setTool(b.dataset.tool);return;}if(e.target.id==='undoBtn')undo();});
@@ -685,18 +707,34 @@ $('#calib').addEventListener('submit',e=>{e.preventDefault();if(calibPts.length<
   snapshot();doc.scale=mm/px;calibPts=[];hideCalib();changed(true);flash(`Scale set: 1 m = ${fm(1000/doc.scale,0)} px on the plan.`);setTool(doc.outline.length>=3?'select':'outline');});
 $('#calCancel').addEventListener('click',()=>{calibPts=[];hideCalib();draw();});
 /* ---------- place palette ---------- */
-function itemDef(it){if(it.kind==='pb')return {n:it.n||'Price list item',c:'$',sec:it.sec||'build'};return ITEM_T[it.kind]||{n:it.kind,c:'?',sec:'build'};}
+function itemDef(it){if(it.kind==='pb'){const mk=ITEM_T[modelKindFor(it.n)];return {n:it.n||'Price list item',c:'$',sec:it.sec||'build',m:mk?mk.m:'floor',h:mk?mk.h:null};}return ITEM_T[it.kind]||{n:it.kind,c:'?',sec:'build'};}
 function paletteGroups(){const pref=USER_TRADES.map(t=>TRADE_SEC[t]).filter(Boolean);return ITEM_GROUPS.slice().sort((a,b)=>(pref.includes(b[0])?1:0)-(pref.includes(a[0])?1:0));}
 function renderPalette(){fillPalette();layoutOverlays();}
+/* The item tray: what to place, with your own price beside each, searchable, built-in items and your price list together. */
+let trayTab=null,trayQ='',trayOpen=true;
+const SEC_LABEL={elec:'Electrical',plumb:'Plumbing'};
+function trayRow(k){const d=ITEM_T[k];const pb=kindPrice(k);const on=!placePb&&k===placeKind;return `<button class="trow ${on?'on':''}" data-pk="${k}"><i class="pit-i ${d.sec}">${d.c}</i><span class="tn">${esc(d.n)}</span><span class="tp ${pb?'':'none'}">${pb?money(pb.p):'Not in your list'}</span></button>`;}
+function pbRow(it){const on=placePb&&placePb.id===it.id;const sec=TRADE_SEC[it.t]||'build';return `<button class="trow ${on?'on':''}" data-pbid="${esc(it.id)}"><i class="pit-i ${sec}">$</i><span class="tn">${esc(it.n)}</span><span class="tp">${money(it.p)}</span></button>`;}
 function fillPalette(){const pal=$('#palette');if(!pal)return;if(tool!=='place'&&tool!=='area'){pal.hidden=true;return;}pal.hidden=false;
-  if(tool==='area'){pal.innerHTML=`<span class="pg">Draw a</span>`+Object.entries(AREA_T).map(([k,v])=>`<button class="chip ${k===areaType?'on':''}" data-atype="${k}">${v.n}</button>`).join('');return;}
-  let h='';paletteGroups().forEach(([sec,name,kinds])=>{h+=`<span class="pg">${name}</span>`+kinds.map(k=>`<button class="chip ${!placePb&&k===placeKind?'on':''}" data-pk="${k}" title="${esc(ITEM_T[k].n)}"><i class="pit-i ${sec}">${ITEM_T[k].c}</i>${esc(ITEM_T[k].n)}</button>`).join('');});
-  h+=`<span class="pg">Anything else</span>`+(placePb?`<button class="chip on" data-pk="pb"><i class="pit-i ${placePb.sec}">$</i>${esc(placePb.n)}</button>`:'')+`<button class="chip" data-pbpick="1">${PB.has()?'From your price list...':'Add a price list item...'}</button>`;
-  pal.innerHTML=h;}
+  if(tool==='area'){pal.className='palette';pal.innerHTML=`<span class="pg">Draw a</span>`+Object.entries(AREA_T).map(([k,v])=>`<button class="chip ${k===areaType?'on':''}" data-atype="${k}">${v.n}</button>`).join('');return;}
+  pal.className='palette tray';const groups=paletteGroups();if(!trayTab)trayTab=groups[0][0];
+  const cur=placePb?{c:'$',n:placePb.n,sec:placePb.sec,p:(PB.byId(placePb.id)||{}).p}:Object.assign({},ITEM_T[placeKind],{p:(kindPrice(placeKind)||{}).p});
+  const where=placePb?'where it goes':ITEM_T[placeKind].m==='wall'?'the wall where it goes':ITEM_T[placeKind].m==='ceil'?(VIEW==='3d'?'the floor under where it hangs':'where it goes on the ceiling'):'the floor where it goes';
+  let h=`<div class="tcur"><i class="pit-i ${cur.sec}">${esc(cur.c)}</i><div><b>${esc(cur.n)}</b><small>${cur.p!=null?money(cur.p)+' from your price list. ':''}Tap ${where}.</small></div><button class="btn tdone" data-ttog="1">${trayOpen?'Hide list':'Change item'}</button><button class="btn tdone" data-tdone="1">Done</button></div>`;if(!trayOpen){pal.innerHTML=h;return;}
+  h+=`<input type="search" class="tsearch" placeholder="Search items${PB.has()?' and your price list':''}" value="${esc(trayQ)}" aria-label="Search items">`;
+  const q=trayQ.trim().toLowerCase();
+  if(q){const ws=q.split(/\s+/);const kinds=Object.keys(ITEM_T).filter(k=>ws.every(w=>ITEM_T[k].n.toLowerCase().includes(w)));const pbs=PB.has()?PB.search(q,it=>it.u==='ea',30):[];
+    h+=`<div class="tlist">${kinds.map(trayRow).join('')}${pbs.length?`<div class="tsub">Your price list</div>${pbs.map(pbRow).join('')}`:''}${!kinds.length&&!pbs.length?'<p class="note" style="padding:8px">Nothing matches.</p>':''}</div>`;}
+  else{h+=`<div class="ttabs">${groups.map(([sec,name])=>`<button class="ttab ${trayTab===sec?'on':''}" data-ttab="${sec}">${name}</button>`).join('')}${PB.has()?`<button class="ttab ${trayTab==='pb'?'on':''}" data-ttab="pb">Your price list</button>`:''}</div>`;
+    if(trayTab==='pb')h+=`<div class="tlist">${PB.search('',it=>it.u==='ea'&&(!USER_TRADES.length||USER_TRADES.includes(it.t)),80).map(pbRow).join('')||'<p class="note" style="padding:8px">Search to find items from other trades.</p>'}</div>`;
+    else{const g=groups.find(x=>x[0]===trayTab)||groups[0];h+=`<div class="tlist">${g[2].map(trayRow).join('')}</div>`;}}
+  pal.innerHTML=h;const inp=pal.querySelector('.tsearch');if(inp&&trayQ&&document.activeElement!==inp&&pal.dataset.focus==='1'){inp.focus();inp.setSelectionRange(trayQ.length,trayQ.length);}}
+$('#palette').addEventListener('input',e=>{if(e.target.classList.contains('tsearch')){trayQ=e.target.value;$('#palette').dataset.focus='1';renderPalette();const inp=$('#palette .tsearch');if(inp){inp.focus();inp.setSelectionRange(trayQ.length,trayQ.length);}}});
 $('#palette').addEventListener('click',e=>{const a=e.target.closest('[data-atype]');if(a){areaType=a.dataset.atype;renderPalette();return;}
-  const b=e.target.closest('[data-pk]');if(b){if(b.dataset.pk!=='pb'){placeKind=b.dataset.pk;placePb=null;}renderPalette();return;}
-  if(e.target.closest('[data-pbpick]')){if(!PB.has()){flash(EMBED?'Your price list is empty. Add materials in Settings, Material pricing.':'Sign in to SwiftScope to place items from your own price list.');return;}
-    PB.pick({title:'Place an item from your price list',sec:USER_TRADES.map(t=>TRADE_SEC[t]).filter(Boolean)[0]||'',onPick:it=>{if(!it)return;placePb={id:it.id,n:it.n,sec:TRADE_SEC[it.t]||'build'};renderPalette();}});}});
+  if(e.target.closest('[data-tdone]')){trayOpen=true;setTool('select');return;}if(e.target.closest('[data-ttog]')){trayOpen=!trayOpen;renderPalette();return;}
+  const tb=e.target.closest('[data-ttab]');if(tb){trayTab=tb.dataset.ttab;renderPalette();return;}
+  const b=e.target.closest('[data-pk]');if(b){placeKind=b.dataset.pk;placePb=null;trayOpen=false;renderPalette();renderHint();return;}
+  const pb=e.target.closest('[data-pbid]');if(pb){const it=PB.byId(pb.dataset.pbid);if(it){placePb={id:it.id,n:it.n,sec:TRADE_SEC[it.t]||'build'};trayOpen=false;renderPalette();}return;}});
 
 /* ---------- takeoff ---------- */
 const CLAD={brick:{n:'Brick veneer',rate:0.9},weatherboard:{n:'Weatherboard',rate:0.6},fc:{n:'Fibre cement sheet',rate:0.45},colorbond:{n:'Colorbond cladding',rate:0.3},render:{n:'Rendered lightweight panel',rate:0.7}};
@@ -844,6 +882,7 @@ function computeRows(){const rows=[],stages=[];if(!scaleMM()||doc.outline.length
   /* items from the price list placed on the plan */
   const pbc={};doc.items.forEach(it=>{if(it.kind==='pb'&&it.pb){const e=pbc[it.pb]||(pbc[it.pb]={n:it.n,sec:it.sec||'build',q:0});e.q++;}});
   Object.entries(pbc).forEach(([id,e])=>{const pb=PB.byId(id);rows.push({key:'p:'+id,sec:SECTIONS[e.sec]?e.sec:'build',group:'Placed from your price list',item:pb?pb.n:e.n,size:'',detail:`${e.q} placed on the plan`,qty:e.q,unit:'ea',pu:'$ ea',match:[],fixed:id});});
+  rows.forEach(r=>{const m=/^h:(elec|plumb):(\w+)$/.exec(r.key);if(m&&ITEM_T[m[2]])r.strict=true;});
   rows.forEach(r=>{const L=doc.links[r.key];r.auto=L===undefined&&!r.fixed;r.pb=r.fixed?(L===undefined?PB.byId(r.fixed):(L?PB.byId(L):null)):(L===undefined?PB.match(r):(L?PB.byId(L):null));r.order=`${r.qty} ${r.unit}`;
     // a price list item sold by a different unit prices the line in that unit (tiles per m² rather than each)
     if(r.pb&&r.pb.u&&r.pb.u!==PB.baseUnit(r.unit)){if(r.alt&&r.alt[r.pb.u]!=null){r.order=`${r.order}, priced as ${r.alt[r.pb.u]} ${r.pb.u}`;r.qty=r.alt[r.pb.u];r.unit=r.pb.u;r.pu={'m':'$/m','m²':'$/m²','m³':'$/m³'}[r.unit];}else r.unitWarn=`Your item is sold per ${r.pb.u}, this line is counted in ${r.unit}.`;}});
@@ -1204,7 +1243,7 @@ function m3(key,color,o){if(!M3[key])M3[key]=new THREE.MeshStandardMaterial(Obje
 function part(g,geo,mat,x,y,z,rx,ry,rz){const m=new THREE.Mesh(geo,mat);m.position.set(x||0,y||0,z||0);if(rx)m.rotation.x=rx;if(ry)m.rotation.y=ry;if(rz)m.rotation.z=rz;m.castShadow=true;m.receiveShadow=true;g.add(m);return m;}
 const BX=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
 const CY=(r1,r2,h,n)=>new THREE.CylinderGeometry(r1,r2,h,n||24);
-function itemModel(it){const g=new THREE.Group();const k=it.kind;
+function itemModel(it){const g=new THREE.Group();const k=it.kind==='pb'?(modelKindFor(it.n)||'pb'):it.kind;
   const white=m3('white',0xf7f7f4,{roughness:0.35}),slot=m3('slot',0x2b2f33,{roughness:0.8}),chrome=m3('chrome',0xc9ced3,{roughness:0.15,metalness:0.8}),steel=m3('steel',0xb8bec4,{roughness:0.25,metalness:0.6}),
     glow=m3('glow',0xfff6d8,{emissive:0xffe9a8,emissiveIntensity:0.9}),dark=m3('dark',0x3a4046,{roughness:0.6}),timber=m3('timber',0x9b7350,{roughness:0.7}),glass=m3('glass3',0xbfe3f2,{transparent:true,opacity:0.35,roughness:0.05}),
     red=m3('red',0xd23b2f,{emissive:0x661010}),green=m3('greenled',0x2fbf5a,{emissive:0x0f4f20}),porcelain=m3('porc',0xfbfbfb,{roughness:0.2}),bench=m3('bench',0xe3ded6,{roughness:0.4}),grey=m3('grey',0x8d969e,{roughness:0.6});
@@ -1236,7 +1275,7 @@ function itemModel(it){const g=new THREE.Group();const k=it.kind;
     case 'dishwasher':part(g,BX(0.6,0.82,0.6),steel,0,0.41,0.3);part(g,BX(0.45,0.02,0.03),chrome,0,0.74,0.62);part(g,BX(0.6,0.06,0.02),dark,0,0.79,0.6);break;
     case 'hws':part(g,CY(0.27,0.27,1.5,32),white,0,0.75,0.3);part(g,CY(0.27,0.24,0.06,32),white,0,1.53,0.3);part(g,CY(0.02,0.02,0.4),chrome,0.12,1.7,0.3);part(g,BX(0.1,0.14,0.02),grey,0,1.05,0.58);break;
     case 'fw':part(g,BX(0.12,0.006,0.12),chrome,0,0.004,0);for(let i=-2;i<=2;i++)part(g,BX(0.1,0.004,0.008),dark,0,0.008,i*0.02);break;
-    default:{const d=itemDef(it);part(g,BX(0.3,0.3,0.3),m3('crate',0xc8a46a,{roughness:0.8}),0,0.15,0.15);const c=document.createElement('canvas');c.width=256;c.height=64;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,256,64);x.fillStyle='#1f2a33';x.font='bold 22px sans-serif';x.fillText(String(d.n).slice(0,20),8,40);const tex=new THREE.CanvasTexture(c);part(g,new THREE.PlaneGeometry(0.28,0.07),new THREE.MeshBasicMaterial({map:tex}),0,0.2,0.302);}
+    default:{part(g,CY(0.004,0.004,0.5,6),grey,0,0.25,0);part(g,new THREE.SphereGeometry(0.05,16,12),m3('pin',0xf2b705,{emissive:0x553300}),0,0.52,0);part(g,CY(0.06,0.06,0.006,20),grey,0,0.003,0);}
   }
   g.traverse(o=>{o.userData.itemId=it.id;});g.userData.itemId=it.id;return g;}
 /* Floor items stand with their back to the nearest wall, if there is one close by. */
@@ -1244,12 +1283,12 @@ function backToWall(q,P,segsAll){let best=null;const pt=q;segsAll.forEach(sg=>{c
   if(!best||best.d<1e-4)return null;const nx=(pt[0]-best.pr[0])/best.d,nz=(pt[1]-best.pr[1])/best.d;const thk=(best.sg.ext?doc.settings.extThk:doc.settings.intThk)/1000;const face=best.sg.ext?0.02:thk/2+0.005;
   return {x:best.pr[0]+nx*face,z:best.pr[1]+nz*face,ang:Math.atan2(nx,nz)};}
 /* ---------- tap an item in Look around to see what it is ---------- */
-function itemInfo(it,ev){const d=itemDef(it);const rm=roomAt(it.pt);const pb=it.kind==='pb'?PB.byId(it.pb):PB.match({item:d.n,size:'',match:d.match||[],unit:'ea',sec:d.sec});
+function itemInfo(it,ev){const d=itemDef(it);const rm=roomAt(it.pt);const pb=it.kind==='pb'?PB.byId(it.pb):kindPrice(it.kind);
   let pop=$('#v3pop');if(!pop){pop=document.createElement('div');pop.id='v3pop';pop.className='v3pop';$('#v3').appendChild(pop);
-    pop.addEventListener('click',e=>{if(e.target.closest('[data-pclose]')){pop.hidden=true;sel=null;build3D();return;}if(e.target.closest('[data-pdel]')){const id=pop.dataset.id;snapshot();doc.items=doc.items.filter(x=>x.id!==id);sel=null;pop.hidden=true;changed(false);renderPlanTab();flash('Removed. Undo puts it back.');}});}
+    pop.addEventListener('click',e=>{if(e.target.closest('[data-pclose]')){pop.hidden=true;sel=null;build3D();return;}if(e.target.closest('[data-plink]')){const it2=doc.items.find(x=>x.id===pop.dataset.id);if(!it2||it2.kind==='pb')return;const d2=ITEM_T[it2.kind];const cur=kindPrice(it2.kind);PB.pick({title:d2.n,query:d2.match[0]||d2.n,sec:d2.sec,current:cur?cur.id:null,allowClear:true,filter:x=>x.u==='ea',onPick:x=>{snapshot();doc.links[kindKey(it2.kind)]=x?x.id:null;changed(false);const r=$('#v3').getBoundingClientRect();itemInfo(it2,{clientX:r.left+parseFloat(pop.style.left)-14,clientY:r.top+parseFloat(pop.style.top)+20});}});return;}if(e.target.closest('[data-pdel]')){const id=pop.dataset.id;snapshot();doc.items=doc.items.filter(x=>x.id!==id);sel=null;pop.hidden=true;changed(false);renderPlanTab();flash('Removed. Undo puts it back.');}});}
   const host=$('#v3').getBoundingClientRect();const x=Math.min(host.width-270,Math.max(10,ev.clientX-host.left+14)),y=Math.min(host.height-170,Math.max(60,ev.clientY-host.top-20));
   const how=d.m==='wall'?`On the wall at ${it.h||d.h||300} mm`:d.m==='ceil'?'On the ceiling':'On the floor';
-  pop.innerHTML=`<div class="cardh"><b><i class="pit-i ${d.sec}">${esc(d.c)}</i> ${esc(d.n)}</b><button class="x" data-pclose="1" aria-label="Close">✕</button></div><p class="note" style="margin:2px 0 4px">${rm?'In '+esc(rm.name):'Outside the rooms'}. ${how}.</p>${pb?`<p class="note" style="margin:0 0 8px">Your price list: <b>${esc(pb.n)}</b> ${money(pb.p)}</p>`:`<p class="note" style="margin:0 0 8px">Not linked to your price list yet. Link it in Materials.</p>`}<button class="btn" data-pdel="1">Remove</button>`;
+  pop.innerHTML=`<div class="cardh"><b><i class="pit-i ${d.sec}">${esc(d.c)}</i> ${esc(d.n)}</b><button class="x" data-pclose="1" aria-label="Close">✕</button></div><p class="note" style="margin:2px 0 4px">${rm?'In '+esc(rm.name):'Outside the rooms'}. ${how}.</p>${pb?`<p class="note" style="margin:0 0 8px">Priced at <b>${money(pb.p)}</b>: ${esc(pb.n)}</p>`:`<p class="note" style="margin:0 0 8px">No price yet. Pick the item from your price list.</p>`}<div class="upl">${it.kind!=='pb'&&PB.has()?`<button class="btn" data-plink="1">${pb?'Change price':'Pick price'}</button>`:''}<button class="btn" data-pdel="1">Remove</button></div>`;
   pop.dataset.id=it.id;pop.style.left=x+'px';pop.style.top=y+'px';pop.hidden=false;sel={kind:'item',id:it.id};renderPlanTab();build3D();}
 
 /* ---------- 3D ---------- */
@@ -1262,14 +1301,30 @@ function init3D(){if(three||!window.THREE)return three;const host=$('#v3');const
   const root=new THREE.Group();scene.add(root);three={renderer,scene,camera,controls,root,host,ground,fitted:false};
   const loop=()=>{requestAnimationFrame(loop);if($('#v3').hidden)return;const w=host.clientWidth,h=host.clientHeight;if(w&&h&&(renderer.domElement.width!==Math.round(w*renderer.getPixelRatio())||renderer.domElement.height!==Math.round(h*renderer.getPixelRatio()))){renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}controls.update();renderer.render(scene,camera);};loop();return three;}
 /* Tap the model to drop an item: walls, floors and the ground take it; wall items keep the height they were tapped at. */
-function pick3D(ev){const T=three;if(!T||tool!=='place'||!scaleMM())return;const r=T.renderer.domElement.getBoundingClientRect();const v=new THREE.Vector2(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1);
-  const rc=new THREE.Raycaster();rc.setFromCamera(v,T.camera);const hits=rc.intersectObjects(T.root.children.concat([T.ground]),false).filter(h=>h.object.userData.pick);const hit=hits[0];if(!hit){flash('Tap a wall, floor or the ground near the house.');return;}
-  const n=hit.face?hit.face.normal.clone().transformDirection(hit.object.matrixWorld):new THREE.Vector3(0,1,0);const q=hit.point.clone().add(n.multiplyScalar(0.06));const k=1000/scaleMM();const pt=[(q.x+T.cx)*k,(q.z+T.cz)*k];
-  const d=placePb?{m:'floor'}:ITEM_T[placeKind];snapshot();const it=placePb?{id:uid(),kind:'pb',pb:placePb.id,n:placePb.n,sec:placePb.sec,pt}:{id:uid(),kind:placeKind,pt};
-  if(hit.object.userData.pick==='wall'&&d&&d.m==='wall')it.h=Math.round(Math.max(150,Math.min(T.H*1000-100,hit.point.y*1000))/10)*10;
-  doc.items.push(it);sel={kind:'item',id:it.id};changed(false);renderPlanTab();flash(`${placePb?placePb.n:ITEM_T[placeKind].n} placed${it.h?` at ${it.h} mm`:''}. Undo removes it.`);}
+/* Where a tap or the pointer lands on the model, and what would go there. */
+function aim3D(ev){const T=three;if(!T||!scaleMM())return null;const r=T.renderer.domElement.getBoundingClientRect();const v=new THREE.Vector2(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1);
+  const rc=new THREE.Raycaster();rc.setFromCamera(v,T.camera);const hit=rc.intersectObjects(T.root.children.concat([T.ground]),false).filter(h=>h.object.userData.pick)[0];if(!hit)return null;
+  const n=hit.face?hit.face.normal.clone().transformDirection(hit.object.matrixWorld):new THREE.Vector3(0,1,0);const q=hit.point.clone().add(n.clone().multiplyScalar(0.06));const k=1000/scaleMM();
+  const d=placePb?itemDef({kind:'pb',n:placePb.n,sec:placePb.sec}):ITEM_T[placeKind];const onWall=hit.object.userData.pick==='wall';
+  return {hit,n,d,onWall,pt:[(q.x+T.cx)*k,(q.z+T.cz)*k],h:onWall&&d.m==='wall'?Math.round(Math.max(150,Math.min(T.H*1000-100,hit.point.y*1000))/10)*10:null};}
+function pick3D(ev){if(tool!=='place')return;const A=aim3D(ev);if(!A){flash('Tap a wall, floor or the ground near the house.');return;}
+  if(A.d.m==='wall'&&!A.onWall){flash(`${A.d.n} goes on a wall. Tap the wall where it goes.`);return;}
+  snapshot();const it=placePb?{id:uid(),kind:'pb',pb:placePb.id,n:placePb.n,sec:placePb.sec,pt:A.pt}:{id:uid(),kind:placeKind,pt:A.pt};if(A.h)it.h=A.h;
+  doc.items.push(it);changed(false);renderPlanTab();flash(`${A.d.n} placed${it.h?` at ${it.h} mm`:''}. Tap again to place another, Undo to take it back.`);}
+/* A see-through copy of the item follows the pointer, so you can see where it will go before you tap. */
+let ghostKey=null;
+function ghost3D(ev){const T=three;if(!T)return;const A=tool==='place'&&ev?aim3D(ev):null;const key=placePb?'pb:'+placePb.id:placeKind;
+  if(!A){if(T.ghost)T.ghost.visible=false;T.renderer.domElement.style.cursor=tool==='place'?'crosshair':'';return;}
+  if(!T.ghost||ghostKey!==key){if(T.ghost)T.scene.remove(T.ghost);const g=itemModel(placePb?{id:'ghost',kind:'pb',n:placePb.n}:{id:'ghost',kind:placeKind});const gm=new THREE.MeshStandardMaterial({color:0xf2b705,transparent:true,opacity:0.6,emissive:0x664400});g.traverse(o=>{if(o.isMesh){o.material=gm;o.castShadow=false;o.userData={};}});g.userData={};T.ghost=g;ghostKey=key;T.scene.add(g);}
+  const g=T.ghost;g.visible=true;const d=A.d;const bad=d.m==='wall'&&!A.onWall;g.traverse(o=>{if(o.isMesh)o.material.color.setHex(bad?0xd23b2f:0xf2b705);});
+  if(d.m==='wall'&&A.onWall){g.position.copy(A.hit.point);g.rotation.set(0,Math.atan2(A.n.x,A.n.z),0);}
+  else if(d.m==='ceil'){g.position.set(A.hit.point.x,T.H,A.hit.point.z);g.rotation.set(0,0,0);}
+  else if(d.m==='wall'){g.position.set(A.hit.point.x,(d.h||300)/1000,A.hit.point.z);g.rotation.set(0,0,0);}
+  else{const w=T.P?backToWall([A.hit.point.x,A.hit.point.z],T.P,segs()):null;if(w){g.position.set(w.x,0,w.z);g.rotation.set(0,w.ang,0);}else{g.position.set(A.hit.point.x,0,A.hit.point.z);g.rotation.set(0,0,0);}}
+  T.renderer.domElement.style.cursor=bad?'not-allowed':'crosshair';}
 let down3=null;
-function hook3D(){const T=three;if(!T||T.hooked)return;T.hooked=true;const el=T.renderer.domElement;el.addEventListener('pointerdown',e=>{down3=[e.clientX,e.clientY];});el.addEventListener('pointerup',e=>{if(down3&&Math.hypot(e.clientX-down3[0],e.clientY-down3[1])<6){if(tool==='place')pick3D(e);else identify3D(e);}down3=null;});}
+function hook3D(){const T=three;if(!T||T.hooked)return;T.hooked=true;const el=T.renderer.domElement;el.addEventListener('pointerdown',e=>{down3=[e.clientX,e.clientY];});el.addEventListener('pointerup',e=>{if(down3&&Math.hypot(e.clientX-down3[0],e.clientY-down3[1])<6){if(tool==='place')pick3D(e);else identify3D(e);}down3=null;});
+  el.addEventListener('pointermove',e=>{if(e.buttons)return;ghost3D(e);});el.addEventListener('pointerleave',()=>ghost3D(null));}
 /* Look around: tap an item to see what it is. */
 function identify3D(ev){const T=three;if(!T)return;const r=T.renderer.domElement.getBoundingClientRect();const v=new THREE.Vector2(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1);const rc=new THREE.Raycaster();rc.setFromCamera(v,T.camera);
   const hit=rc.intersectObjects(T.root.children,true).find(h=>h.object.userData.itemId);const pop=$('#v3pop');
@@ -1280,7 +1335,7 @@ function build3D(){const T=init3D();if(!T)return;hook3D();const root=T.root;root
   const finCol={tiles:0xd9d6cf,carpet:0x9aa0a6,hybrid:0xc9a77c,timber:0xb07c4f,epoxy:0x8f9aa3,none:0xbdb9b1};
   const sgn=Math.sign(polyArea(doc.outline))||1;
   let pickTag=null;const box=(x,y,z,sx,sy,sz,ang,m)=>{const me=new THREE.Mesh(new THREE.BoxGeometry(Math.max(sx,0.01),Math.max(sy,0.01),Math.max(sz,0.01)),m);me.position.set(x,y,z);me.rotation.y=ang;me.castShadow=true;me.receiveShadow=true;if(pickTag)me.userData.pick=pickTag;root.add(me);return me;};
-  T.cx=cx;T.cz=cz;T.H=H;pickTag='wall';
+  T.cx=cx;T.cz=cz;T.H=H;T.P=P;pickTag='wall';
   segs().forEach(s=>{const a=P(s.a),c=P(s.b);const L=Math.hypot(c[0]-a[0],c[1]-a[1]);if(L<0.05)return;const ux=(c[0]-a[0])/L,uz=(c[1]-a[1])/L;const thk=(s.ext?S.extThk:S.intThk)/1000;
     let nx=-uz,nz=ux;if(s.ext){nx*=sgn;nz*=sgn;}const off=s.ext?thk/2:0;const ang=-Math.atan2(uz,ux);const m=s.ext?extM:intM;
     const ops=doc.openings.map(o=>({o,h:hostOf(o)})).filter(x=>x.h&&x.h.s.host===s.host).map(x=>{const c0=x.h.t*L,w=x.o.width/1000;return {a:Math.max(0,c0-w/2),b:Math.min(L,c0+w/2),sill:x.o.type==='window'?x.o.sill/1000:0,h:Math.min(H-0.05,x.o.height/1000),t:x.o.type};}).sort((p,q)=>p.a-q.a);
