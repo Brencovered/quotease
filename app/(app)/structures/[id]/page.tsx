@@ -23,7 +23,9 @@ export default async function StructureEditorPage({ params }: { params: Promise<
   if (!row) notFound();
 
   const plan = (row.plan ?? {}) as Record<string, unknown>;
-  const isNew = !plan || !("shed" in plan);
+  const kind: "build" | "house" = plan.kind === "house" ? "house" : "build";
+  const isNew = kind === "build" && !("shed" in plan);
+  const underlayPath = kind === "house" ? ((plan.underlay as { path?: string } | undefined)?.path ?? null) : null;
 
   const [{ data: clients }, { data: openQuotes }, { data: profile }, lastPricesRes, { data: templateRows }, { data: priceBook }] = await Promise.all([
     supabase.from("clients").select("id, name, billing_address").eq("profile_id", businessId).order("name").range(0, 999),
@@ -59,14 +61,20 @@ export default async function StructureEditorPage({ params }: { params: Promise<
       .neq("id", id)
       .order("name")
       .range(0, 99),
-    // The business's own material prices, matched by name to trade takeoff rows.
+    // The business's own material price list. Planner lines link to these items.
     supabase
       .from("material_items")
-      .select("label, unit_cost")
+      .select("id, label, unit_cost, trade, supplier")
       .eq("profile_id", businessId)
       .gt("unit_cost", 0)
       .range(0, 1999),
   ]);
+
+  let underlayUrl: string | null = null;
+  if (underlayPath) {
+    const { data: signed } = await supabase.storage.from("job-files").createSignedUrl(underlayPath, 3600 * 12);
+    underlayUrl = signed?.signedUrl ?? null;
+  }
 
   const lastPrices = (lastPricesRes.data as { prices?: Record<string, number> } | null)?.prices ?? null;
 
@@ -77,12 +85,20 @@ export default async function StructureEditorPage({ params }: { params: Promise<
         id={row.id}
         businessId={businessId}
         isTemplate={Boolean(row.is_template)}
-        priceBook={(priceBook ?? []).map((p) => ({ label: String(p.label ?? ""), unit_cost: Number(p.unit_cost) || 0 }))}
+        priceBook={(priceBook ?? []).map((p) => ({
+          id: String(p.id),
+          label: String(p.label ?? ""),
+          unit_cost: Number(p.unit_cost) || 0,
+          trade: (p.trade as string | null) ?? "",
+          supplier: (p.supplier as string | null) ?? "",
+        }))}
         templates={(templateRows ?? []).map((t) => ({ id: t.id as string, name: t.name as string, plan: t.plan }))}
         initialName={row.name}
         initialClientId={row.client_id}
         linkedQuoteId={row.quote_id}
         plan={isNew ? null : plan}
+        kind={kind}
+        underlayUrl={underlayUrl}
         lastPrices={lastPrices && typeof lastPrices === "object" ? lastPrices : null}
         clients={clients ?? []}
         openQuotes={openQuotes ?? []}

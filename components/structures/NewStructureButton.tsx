@@ -16,6 +16,7 @@ export default function NewStructureButton({ clients, templates = [] }: { client
   const [name, setName] = useState("");
   const [clientId, setClientId] = useState("");
   const [templateId, setTemplateId] = useState("");
+  const [kind, setKind] = useState<"build" | "house">("build");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -34,7 +35,8 @@ export default function NewStructureButton({ clients, templates = [] }: { client
     const fallback = client?.name ? `${client.name} build` : "New build";
     let plan: Record<string, unknown> = {};
     let summary: Record<string, unknown> = {};
-    if (templateId) {
+    if (kind === "house") plan = { kind: "house" };
+    else if (templateId) {
       const { data: tpl } = await supabase
         .from("structure_plans")
         .select("plan, summary, materials_total, labour_hours")
@@ -81,6 +83,24 @@ export default function NewStructureButton({ clients, templates = [] }: { client
                 <X size={18} />
               </button>
             </div>
+            <div className="grid grid-cols-2 gap-2 mb-4" role="radiogroup" aria-label="What are you building">
+              {([
+                ["build", "Shed, garage, carport, pergola or deck", "Design it in 3D"],
+                ["house", "House or extension", "Trace a floor plan"],
+              ] as const).map(([k, t, s]) => (
+                <button
+                  key={k}
+                  type="button"
+                  role="radio"
+                  aria-checked={kind === k}
+                  onClick={() => setKind(k)}
+                  className={`text-left rounded-xl border-2 px-3 py-2.5 ${kind === k ? "border-[var(--amber)] bg-[var(--amber-light)]" : "border-[var(--line)]"}`}
+                >
+                  <span className="block text-[13px] font-bold text-[var(--ink)] leading-tight">{t}</span>
+                  <span className="block text-[11.5px] text-[var(--ink-faint)] mt-0.5">{s}</span>
+                </button>
+              ))}
+            </div>
             <label className="block text-[12.5px] font-bold text-[var(--ink-soft)] mb-1">Name</label>
             <input
               className="app-field mb-4"
@@ -98,8 +118,8 @@ export default function NewStructureButton({ clients, templates = [] }: { client
                 </option>
               ))}
             </select>
-            <p className="text-[12px] text-[var(--ink-faint)] mb-4">You can link a client later. Prices from your last build carry over.</p>
-            {templates.length > 0 && (
+            <p className="text-[12px] text-[var(--ink-faint)] mb-4">You can link a client later. Materials price from your own price list.</p>
+            {templates.length > 0 && kind === "build" && (
               <>
                 <label className="block text-[12.5px] font-bold text-[var(--ink-soft)] mb-1">Start from</label>
                 <select className="app-field mb-5" value={templateId} onChange={(e) => setTemplateId(e.target.value)}>

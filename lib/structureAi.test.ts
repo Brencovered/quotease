@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeGeneratedPlan, normalizePlanRead, type GeneratedPlan } from "./structureAi";
+import { normalizeGeneratedPlan, normalizePhotoRead, normalizePlanRead, normalizeTraceDraft, type GeneratedPlan } from "./structureAi";
 
 const base: GeneratedPlan = {
   name: "Test",
@@ -91,5 +91,48 @@ describe("structure types", () => {
   it("keeps open rafters only on pergolas and forces verandahs to skillion", () => {
     const n = normalizeGeneratedPlan({ ...base, shed: { ...base.shed, type: "verandah", roof: "gable", roofMat: "none" } });
     expect(n.shed).toMatchObject({ roof: "skillion", roofMat: "corr" });
+  });
+});
+
+describe("normalizeTraceDraft", () => {
+  it("clamps coordinates, drops junk walls and short outlines", () => {
+    const n = normalizeTraceDraft({
+      outline: [[-5, 10], [1200, 10], [1200, 900], [0, 900]],
+      walls: [[100, 100, 100, 101], [100, 100, 100, 500]],
+      rooms: [{ name: "Bed 1", width: 3500, length: 3000, x: 50, y: 60 }],
+      openings: [{ type: "door", x: 10, y: 20 }],
+    });
+    expect(n.outline[0]).toEqual([0, 10]);
+    expect(n.outline[1]).toEqual([1000, 10]);
+    expect(n.walls).toEqual([[100, 100, 100, 500]]);
+    expect(n.rooms[0]).toMatchObject({ name: "Bed 1", width: 3500 });
+    expect(normalizeTraceDraft({ outline: [[1, 1]], walls: [], rooms: [], openings: [] }).outline).toEqual([]);
+  });
+});
+
+describe("normalizePhotoRead", () => {
+  it("clamps numbers, keeps unknowns at zero and trims text", () => {
+    const n = normalizePhotoRead({
+      storeys: 7,
+      roofShape: "hip",
+      roofMaterial: "tiles",
+      roofPitch: 22.3,
+      cladding: "brick",
+      eavesMm: 470,
+      gutter: "  Quad   gutter, Monument ",
+      windows: "Aluminium",
+      colours: "x".repeat(300),
+      notes: ["a", "", "b", "c", "d", "e", "f", "g"],
+    });
+    expect(n.storeys).toBe(3);
+    expect(n.roofPitch).toBe(22.5);
+    expect(n.eavesMm).toBe(450);
+    expect(n.gutter).toBe("Quad gutter, Monument");
+    expect(n.colours.length).toBe(120);
+    expect(n.notes).toEqual(["a", "b", "c", "d", "e", "f"]);
+    const u = normalizePhotoRead({ storeys: 0, roofShape: "unknown", roofMaterial: "unknown", roofPitch: 0, cladding: "unknown", eavesMm: 0, gutter: "", windows: "", colours: "", notes: [] });
+    expect(u.storeys).toBe(0);
+    expect(u.roofPitch).toBe(0);
+    expect(u.eavesMm).toBe(0);
   });
 });
