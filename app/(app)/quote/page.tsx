@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { parseSummary, structureToWizardLines } from "@/lib/structurePlans";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveBusinessId } from "@/lib/team";
 import {
@@ -156,6 +157,21 @@ async function loadBundle(
   };
 }
 
+async function loadStructure(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  businessId: string,
+  structureId: string | undefined
+) {
+  if (!structureId) return [];
+  const { data } = await supabase
+    .from("structure_plans")
+    .select("summary")
+    .eq("id", structureId)
+    .eq("profile_id", businessId)
+    .maybeSingle();
+  return data ? structureToWizardLines(parseSummary(data.summary)) : [];
+}
+
 async function loadPlanMarkup(
   supabase: Awaited<ReturnType<typeof createClient>>,
   businessId: string,
@@ -198,6 +214,7 @@ export default async function NewQuotePage({
     client_id?: string;
     markup_materials?: string;
     plan_id?: string;
+    structure_id?: string;
     package_id?: string;
     bundle_id?: string;
     enquiry_id?: string;
@@ -208,6 +225,7 @@ export default async function NewQuotePage({
     client_id: preClientId,
     markup_materials: preMarkup,
     plan_id: planId,
+    structure_id: structureId,
     package_id: packageId,
     bundle_id: bundleId,
     enquiry_id: enquiryId,
@@ -271,6 +289,7 @@ export default async function NewQuotePage({
     pkgData,
     bundleData,
     planMaterials,
+    structureMaterials,
     { data: teamMemberRows },
     eagerSiteConditions,
     eagerMaterials,
@@ -280,6 +299,7 @@ export default async function NewQuotePage({
     loadPackage(supabase, businessId, packageId, tradeParm),
     loadBundle(supabase, businessId, bundleId, tradeParm),
     loadPlanMarkup(supabase, businessId, planId),
+    loadStructure(supabase, businessId, structureId),
     supabase.from("team_members").select("id, name, email").eq("owner_profile_id", businessId).eq("status", "active").order("name"),
     eagerSiteConditionsPromise ?? Promise.resolve(null),
     eagerMaterialsPromise ?? Promise.resolve(null),
@@ -304,9 +324,12 @@ export default async function NewQuotePage({
     totalCost: number; labourHrs?: number;
   }> = [];
 
-  let preMarkupSource: "package" | "plan markup" | "material bundle" = "plan markup";
+  let preMarkupSource: "package" | "plan markup" | "material bundle" | "build planner" = "plan markup";
 
-  if (pkgData?.preMarkup && pkgData.preMarkup.length > 0) {
+  if (structureMaterials.length > 0) {
+    preMarkupMaterials = structureMaterials;
+    preMarkupSource = "build planner";
+  } else if (pkgData?.preMarkup && pkgData.preMarkup.length > 0) {
     preMarkupMaterials = pkgData.preMarkup;
     preMarkupSource = "package";
   } else if (planMaterials.length > 0) {
@@ -469,6 +492,7 @@ export default async function NewQuotePage({
         preClientId={preClientId}
         preMarkupMaterials={preMarkupMaterials}
         preMarkupSource={preMarkupSource}
+        structureId={structureMaterials.length > 0 ? structureId : undefined}
         pricingTiers={resolvedPricingTiers}
         jobSizeTiers={resolvedJobSizeTiers}
         siteConditions={siteConditions}

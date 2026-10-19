@@ -80,6 +80,7 @@ const PROTECTED_PAGE_PREFIXES = [
   "/leads",
   "/today",
   "/crew",
+  "/structures",
 ];
 
 /** Routes that require admin email */
@@ -92,9 +93,14 @@ const CRON_API_PATH = "/api/cron/";
 /*  Security headers                                                   */
 /* ------------------------------------------------------------------ */
 
-function addSecurityHeaders(response: NextResponse): NextResponse {
-  // Prevent clickjacking
-  response.headers.set("X-Frame-Options", "DENY");
+function addSecurityHeaders(
+  response: NextResponse,
+  opts: { allowSameOriginFrame?: boolean } = {}
+): NextResponse {
+  // Prevent clickjacking. The build planner (/planner/*.html) is a static
+  // page the app embeds in its own /structures editor, so it alone may be
+  // framed by this same origin. Everything else stays DENY.
+  response.headers.set("X-Frame-Options", opts.allowSameOriginFrame ? "SAMEORIGIN" : "DENY");
 
   // Prevent MIME-type sniffing
   response.headers.set("X-Content-Type-Options", "nosniff");
@@ -162,7 +168,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
     "worker-src 'self' blob: data:",
     `connect-src 'self'${supabaseConnectSrc} https://*.supabase.co wss://*.supabase.co https://api.openai.com https://api.anthropic.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://www.google.com https://www.googletagmanager.com https://*.googletagmanager.com https://stats.g.doubleclick.net https://api.stripe.com https://*.stripe.com https://js.stripe.com https://api.xero.com https://identity.xero.com https://va.vercel-scripts.com https://vitals.vercel-insights.com https://*.vercel-insights.com https://*.posthog.com`,
     "manifest-src 'self'",
-    "frame-ancestors 'none'",
+    opts.allowSameOriginFrame ? "frame-ancestors 'self'" : "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self' https://checkout.stripe.com",
     // Skip only when the configured Supabase endpoint is http (local dev /
@@ -486,6 +492,11 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
     return response;
   }
 
+  // Static build planner page, framed by /structures and /tools/shed-planner
+  if (pathname.startsWith("/planner/")) {
+    return addSecurityHeaders(response, { allowSameOriginFrame: true });
+  }
+
   // Check if this is a known public page
   const isPublicPage =
     pathname === "/" ||
@@ -686,6 +697,7 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
     "/comms",
     "/seo",
     "/camera",
+    "/structures",
   ];
   if (
     isFieldWorker &&

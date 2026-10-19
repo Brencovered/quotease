@@ -27,6 +27,7 @@ import {
   UsersRound,
   ChevronDown,
   Sun,
+  Warehouse,
 } from "lucide-react";
 
 type NavItem = {
@@ -216,6 +217,10 @@ export default function AppHeader() {
                 <Users size={17} /> Clients
               </Link>
 
+              <Link prefetch={false} href="/structures" className={navLinkClasses("/structures")}>
+                <Warehouse size={17} /> Build planner
+              </Link>
+
               <Link prefetch={false} href="/team" className={navLinkClasses("/team")}>
                 <UsersRound size={17} /> Team
               </Link>
@@ -354,6 +359,14 @@ export default function AppHeader() {
                     className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]"
                   >
                     <TrendingUp size={15} className="text-[var(--ink-faint)]" /> Profit
+                  </Link>
+                  <Link
+                    prefetch={false}
+                    href="/structures"
+                    onClick={() => setMoreOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-3 text-[13.5px] font-semibold text-[var(--ink)] border-b border-[var(--line)]"
+                  >
+                    <Warehouse size={15} className="text-[var(--ink-faint)]" /> Build planner
                   </Link>
                   <Link
                     prefetch={false}

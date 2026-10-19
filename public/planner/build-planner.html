@@ -1,0 +1,1510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Build Planner</title>
+<style>
+@font-face{font-family:"Archivo";font-weight:400;font-display:swap;src:url(/planner/vendor/archivo-400.woff2) format("woff2");}
+@font-face{font-family:"Archivo";font-weight:600;font-display:swap;src:url(/planner/vendor/archivo-600.woff2) format("woff2");}
+@font-face{font-family:"Archivo";font-weight:700;font-display:swap;src:url(/planner/vendor/archivo-700.woff2) format("woff2");}
+@font-face{font-family:"Archivo";font-weight:800;font-display:swap;src:url(/planner/vendor/archivo-800.woff2) format("woff2");}
+.tpl{display:flex;gap:8px;align-items:center;margin:4px 0 6px;}
+.tpl select{flex:1;min-width:0;}
+.lab .mrow{grid-template-columns:1fr auto;}
+.lab .inp input{width:72px;}
+.ttl{display:grid;grid-template-columns:1fr auto;gap:4px 12px;margin-top:10px;font-size:13.5px;}
+.ttl b{text-align:right;font-variant-numeric:tabular-nums;}
+.ttl .big{font-size:15px;font-weight:800;}
+body.embed .ph{padding:10px 18px 8px;}
+body.embed .ph p{display:none;}
+:root{
+  --bg:#e9edef; --panel:#f7f9fa; --text:#1f2a33; --muted:#5d6b75; --line:#d3dade; --field:#ffffff;
+  --accent:#f2b705; --accent-ink:#1f2a33; --ink:#22303a; --chip:#e3e8eb; --chip-on:#22303a; --chip-on-ink:#f7f9fa;
+  --scene-bg:#dce4e8; --scene-ground:#b7c0a8; --grid1:#7f8a75; --grid2:#9ca690;
+  --ok:#2f7d4a; --bad:#b8362b; --pine:#d9b47a;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121a20; --panel:#18222a; --text:#e6ebee; --muted:#93a3ad; --line:#2a3741; --field:#1f2b34;
+    --accent:#f2b705; --accent-ink:#1a1400; --ink:#e6ebee; --chip:#22303a; --chip-on:#f2b705; --chip-on-ink:#1a1400;
+    --scene-bg:#1a242c; --scene-ground:#2b3327; --grid1:#4b5645; --grid2:#3a4336;
+    --ok:#5cc07c; --bad:#ef6b5e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121a20; --panel:#18222a; --text:#e6ebee; --muted:#93a3ad; --line:#2a3741; --field:#1f2b34;
+  --accent:#f2b705; --accent-ink:#1a1400; --ink:#e6ebee; --chip:#22303a; --chip-on:#f2b705; --chip-on-ink:#1a1400;
+  --scene-bg:#1a242c; --scene-ground:#2b3327; --grid1:#4b5645; --grid2:#3a4336;
+  --ok:#5cc07c; --bad:#ef6b5e;
+  color-scheme: dark;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%;}
+*,*::before,*::after{box-sizing:inherit;}
+body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px;line-height:1.45;overflow:hidden;}
+button,input,select,textarea{font:inherit;color:inherit;}
+.app{display:grid;grid-template-columns:minmax(330px,380px) 1fr;height:100%;}
+.panel{display:flex;flex-direction:column;min-height:0;background:var(--panel);border-right:1px solid var(--line);}
+.ph{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px 12px;}
+.brand{display:flex;align-items:center;gap:12px;}
+.logo{width:38px;height:38px;flex:none;}
+h1{margin:0;font-size:22px;line-height:1;font-weight:800;font-stretch:118%;letter-spacing:-0.01em;}
+.ph p{margin:3px 0 0;color:var(--muted);font-size:13px;}
+.tabs{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--line);}
+.tabs button{flex:1;background:none;border:0;padding:10px 2px 9px;font-weight:600;font-size:13.5px;color:var(--muted);border-bottom:3px solid transparent;cursor:pointer;font-stretch:96%;}
+.tabs button.on{color:var(--text);border-bottom-color:var(--accent);}
+.tabs button:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.tabbody{flex:1;overflow:auto;padding:4px 18px 28px;-webkit-overflow-scrolling:touch;}
+.tab{display:none;}
+.tab.on{display:block;}
+h3{margin:20px 0 8px;font-size:13px;font-weight:700;font-stretch:110%;color:var(--muted);}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;}
+.row>span:first-child{font-size:14px;}
+.inp{display:inline-flex;align-items:center;background:var(--field);border:1px solid var(--line);border-radius:6px;overflow:hidden;}
+.inp input{width:92px;border:0;background:transparent;padding:7px 8px;text-align:right;font-variant-numeric:tabular-nums;}
+.inp em{font-style:normal;color:var(--muted);font-size:12px;padding:0 9px 0 2px;min-width:24px;}
+.inp.sm input{width:70px;padding:5px 6px;}
+select{max-width:210px;}
+select,.textin{background:var(--field);border:1px solid var(--line);border-radius:6px;padding:7px 8px;min-width:130px;}
+.textin{width:100%;}
+input[type=checkbox]{width:20px;height:20px;accent-color:var(--ink);}
+input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-radius:6px;background:var(--field);padding:2px;}
+.colsel{display:inline-flex;align-items:center;gap:8px;}
+.colsel i{width:22px;height:22px;border-radius:4px;border:1px solid rgba(0,0,0,.25);display:inline-block;}
+.summary{margin-top:18px;padding:12px 14px;border-radius:8px;background:var(--chip);font-size:13.5px;display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-variant-numeric:tabular-nums;}
+.summary b{font-weight:700;text-align:right;}
+.note{color:var(--muted);font-size:12.5px;margin:12px 0 0;max-width:60ch;}
+.addrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px;}
+.chip{border:1px solid var(--line);background:var(--chip);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer;}
+.chip.on{background:var(--chip-on);color:var(--chip-on-ink);border-color:var(--chip-on);}
+.card{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:10px;background:var(--field);}
+.cardh{display:flex;gap:6px;align-items:center;}
+.cardh select{min-width:0;flex:1;}
+.x{border:0;background:none;color:var(--muted);font-size:16px;width:32px;height:32px;border-radius:6px;cursor:pointer;flex:none;}
+.x:hover{background:var(--chip);color:var(--bad);}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:8px;}
+.grid2 label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted);}
+.grid2 .inp input{width:100%;}
+.grid2 .inp{width:100%;}
+.warn{font-size:12.5px;color:var(--bad);margin-top:6px;min-height:0;}
+.warn:empty{display:none;}
+.empty{color:var(--muted);font-size:14px;padding:14px 0;}
+.lib{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.libbtn{text-align:left;border:1px solid var(--line);background:var(--field);border-radius:8px;padding:8px 10px;cursor:pointer;display:flex;flex-direction:column;gap:1px;}
+.libbtn:hover{border-color:var(--ink);}
+.libbtn b{font-size:13.5px;font-weight:650;}
+.libbtn small{color:var(--muted);font-size:11.5px;font-variant-numeric:tabular-nums;}
+.ilist{display:flex;flex-direction:column;gap:4px;}
+.irow{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--field);cursor:pointer;text-align:left;width:100%;}
+.irow.sel{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);}
+.irow .sw{width:14px;height:14px;border-radius:3px;flex:none;border:1px solid rgba(0,0,0,.2);}
+.irow .nm{flex:1;min-width:0;font-size:14px;}
+.irow .nm small{display:block;color:var(--muted);font-size:11.5px;font-variant-numeric:tabular-nums;}
+.badge{font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;}
+.badge.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent);}
+.badge.bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent);}
+.editor{margin-top:12px;padding:12px;border-radius:8px;background:var(--chip);}
+.editor .btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+.btn{border:1px solid var(--line);background:var(--field);border-radius:6px;padding:7px 12px;font-weight:600;font-size:13px;cursor:pointer;}
+.btn.danger{color:var(--bad);}
+.primary{background:var(--accent);color:var(--accent-ink);border:0;border-radius:6px;padding:9px 14px;font-weight:700;cursor:pointer;}
+.mtable{display:flex;flex-direction:column;}
+.mrow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:8px 0;border-bottom:1px solid var(--line);}
+.mi b{font-weight:650;font-size:14px;}
+.mi .sz{color:var(--muted);font-size:12.5px;margin-left:4px;}
+.mi small{display:block;color:var(--muted);font-size:12px;}
+.mi .bun{margin-top:2px;}.mi .bun a{color:inherit;text-decoration-color:var(--accent);text-underline-offset:2px;}.bunbar{display:flex;flex-direction:column;gap:6px;margin-top:14px;}.bunbar .primary{align-self:flex-start;}
+.mq{grid-column:1;font-size:12.5px;font-variant-numeric:tabular-nums;}
+.mp{grid-column:2;grid-row:1 / span 2;display:flex;flex-direction:column;align-items:flex-end;gap:3px;}
+.cost{font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--muted);}
+.total{display:flex;justify-content:space-between;align-items:baseline;margin:16px 0 12px;padding:12px 14px;border-radius:8px;background:var(--ink);color:var(--panel);}
+.total b{font-size:20px;font-stretch:115%;font-variant-numeric:tabular-nums;}
+.stage{position:relative;min-width:0;min-height:0;overflow:hidden;}
+#viewport{position:absolute;inset:0;}
+#viewport canvas{display:block;width:100%;height:100%;touch-action:none;}
+#labels{position:absolute;inset:0;pointer-events:none;overflow:hidden;}
+.tag{position:absolute;left:0;top:0;background:var(--accent);color:var(--accent-ink);font-size:12px;font-weight:700;padding:2px 7px;border-radius:3px;white-space:nowrap;font-variant-numeric:tabular-nums;font-stretch:92%;box-shadow:0 1px 0 rgba(0,0,0,.25);}
+.tbar{position:absolute;display:flex;flex-wrap:wrap;gap:6px;}
+.tbar.views{top:12px;right:12px;justify-content:flex-end;}
+.tbar.layers{left:12px;bottom:12px;right:12px;align-items:center;}
+.tbar .chip{background:color-mix(in srgb,var(--panel) 88%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}
+.tbar .chip.on{background:var(--chip-on);}
+.xray{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;padding:4px 12px;border-radius:999px;border:1px solid var(--line);background:color-mix(in srgb,var(--panel) 88%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}
+.xray input{width:90px;accent-color:var(--accent);}
+.stats{position:absolute;top:12px;left:12px;font-size:13px;line-height:1.35;padding:8px 12px;border-radius:8px;background:color-mix(in srgb,var(--panel) 88%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid var(--line);font-variant-numeric:tabular-nums;}
+.stats b{font-size:16px;font-weight:800;font-stretch:115%;display:block;}
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--text);max-width:min(560px,92vw);padding:0;}
+dialog::backdrop{background:rgba(10,15,20,.5);}
+.dlg{padding:18px 20px;}
+.dlg h2{margin:0 0 6px;font-size:19px;font-stretch:115%;}
+.dlg p{margin:0 0 10px;font-size:14px;color:var(--muted);}
+.dlg textarea{width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:var(--field);border:1px solid var(--line);border-radius:6px;padding:8px;}
+.dlgbtns{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+
+.plansov{position:fixed;inset:0;z-index:60;background:var(--bg);overflow:auto;-webkit-overflow-scrolling:touch;}
+.plansov[hidden]{display:none;}
+.pbar{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top,0px)) 18px 10px;background:var(--panel);border-bottom:1px solid var(--line);}
+.pbar b{font-size:17px;font-stretch:112%;}
+.pbar span{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
+.pdoc{max-width:980px;margin:0 auto;padding:18px 16px 40px;}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:18px;}
+.sheet h2{margin:0 0 10px;font-size:20px;font-stretch:115%;}
+.eh{color:var(--text);font-size:15px;margin:18px 0 4px;}
+.sm2{color:var(--muted);font-size:13px;margin:6px 0 0;max-width:72ch;}
+.spec,.tbl{border-collapse:collapse;width:100%;font-size:14px;margin-top:8px;}
+.spec th{text-align:left;width:130px;color:var(--muted);font-weight:600;padding:5px 10px 5px 0;vertical-align:top;}
+.spec td,.tbl td{padding:5px 8px 5px 0;border-bottom:1px solid var(--line);vertical-align:top;}
+.tbl th{text-align:left;font-size:12.5px;color:var(--muted);padding:6px 8px 6px 0;border-bottom:1px solid var(--line);}
+.tblwrap{overflow-x:auto;}
+.warnbox{margin-top:14px;padding:10px 12px;border-left:3px solid var(--accent);background:var(--chip);font-size:13.5px;border-radius:4px;}
+.dwg{width:100%;height:auto;display:block;margin-top:6px;}
+.dwg text{font-family:"Archivo",system-ui,sans-serif;}
+.dwg .wl{fill:var(--muted);fill-opacity:.35;stroke:var(--text);stroke-width:1;}
+.dwg .fl{fill:var(--field);stroke:var(--text);stroke-width:1;}
+.dwg .gap{fill:var(--field);stroke:none;}
+.dwg .win{stroke:#2f7fbf;stroke-width:3;}
+.dwg .roll{stroke:#2f7fbf;stroke-width:2.5;stroke-dasharray:6 3;}
+.dwg .ln{stroke:var(--text);stroke-width:1.4;fill:none;}
+.dwg .arc{stroke:var(--muted);stroke-width:1;fill:none;stroke-dasharray:3 3;}
+.dwg .it{fill:#f2b705;fill-opacity:.12;stroke:var(--muted);stroke-dasharray:4 3;}
+.dwg .code{fill:#2f7fbf;font-size:12px;font-weight:700;}
+.dwg .lbl{fill:var(--text);font-size:13px;font-weight:600;}
+.dwg .sm{fill:var(--muted);font-size:11px;}
+.dwg .dim line{stroke:#b07d00;stroke-width:1;}
+.dwg .dim text{fill:var(--text);font-size:12px;font-weight:600;}
+.dwg .tm{fill:#ecd3a1;stroke:#8a6630;stroke-width:.7;}
+.dwg .tm2{fill:#c9995a;stroke:#6f4f22;stroke-width:.7;}
+.dwg .op{fill:#2f7fbf;fill-opacity:.07;stroke:#2f7fbf;stroke-width:1.2;stroke-dasharray:5 3;}
+.dwg .ol{fill:none;stroke:var(--muted);stroke-width:1;}
+.dwg .rf{fill:var(--muted);fill-opacity:.15;stroke:var(--text);stroke-width:1;}
+.dwg .wd{fill:none;stroke:var(--text);stroke-width:1;stroke-dasharray:6 4;}
+.dwg .raf{stroke:#8a6630;stroke-width:2;}
+.dwg .bat{stroke:#c49a63;stroke-width:1;}
+.dwg .rdg{stroke:var(--text);stroke-width:3;}
+.dwg .hi{stroke:var(--bad);stroke-width:3;}
+.dwg .jst{stroke:#c49a63;stroke-width:1.2;}
+.dwg .bea{fill:#b8894a;stroke:#6f4f22;stroke-width:.6;}
+.dwg .stp{fill:var(--text);}
+.dwg .grd{stroke:var(--muted);stroke-width:.5;}
+.dwg .gnd{stroke:var(--text);stroke-width:1.5;}
+.dwg .rfs{fill:var(--muted);fill-opacity:.5;stroke:var(--text);stroke-width:1;}
+.steps{padding-left:22px;margin:8px 0 0;}
+.steps>li{margin:0 0 14px;}
+.steps>li>b{font-size:15.5px;}
+.steps ul{margin:4px 0 0;padding-left:18px;}
+.steps ul li{margin:3px 0;font-size:14px;max-width:75ch;}
+.incl{margin:4px 0 0;padding-left:18px;font-size:14px;}
+.pick{position:absolute;top:70px;right:12px;width:320px;max-height:calc(100% - 140px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;box-shadow:0 6px 24px rgba(0,0,0,.18);z-index:5;}
+.pick[hidden]{display:none;}
+.pkh{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+.pkh b{font-size:16px;font-stretch:110%;}
+.pkh small{display:block;color:var(--muted);font-size:12.5px;}
+.pkn{font-size:13px;color:var(--muted);margin:6px 0 2px;}
+.pick h4{margin:12px 0 6px;font-size:13px;color:var(--muted);}
+.pick .grid2 .inp input{width:100%;}
+.pick select{max-width:170px;}
+.pkrow{margin-top:10px;padding:8px 10px;border-radius:8px;background:var(--chip);font-size:13px;display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;}
+.pkrow small{grid-column:1 / -1;color:var(--muted);font-size:11.5px;}
+.step{display:inline-flex;align-items:center;gap:6px;margin-left:8px;vertical-align:middle;}
+.step button{width:26px;height:26px;border-radius:6px;border:1px solid var(--line);background:var(--field);cursor:pointer;font-weight:700;line-height:1;padding:0;}
+.step b{min-width:22px;text-align:center;font-variant-numeric:tabular-nums;font-size:12.5px;}
+.parts{display:flex;flex-direction:column;gap:8px;}
+.part{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-size:13px;}
+.part .pn a{display:block;font-size:11.5px;color:var(--muted);}
+.pick .btns{margin-top:12px;}
+.stats .hint{display:block;color:var(--muted);font-size:11.5px;margin-top:2px;}
+@media (max-width:820px){.pick{top:auto;bottom:96px;left:8px;right:8px;width:auto;max-height:62%;}}
+@media print{
+  :root{--bg:#fff;--panel:#fff;--text:#000;--muted:#555;--line:#bbb;--field:#fff;--chip:#f2f2f2;padding:0;}
+  html,body{height:auto;overflow:visible;background:#fff;}
+  .app,.pbar,dialog{display:none!important;}
+  .plansov{position:static;overflow:visible;}
+  .pdoc{max-width:none;padding:0;}
+  .sheet{border:0;padding:0;margin:0 0 8mm;}
+  .sheet+.sheet{break-before:page;}
+  .dwg{break-inside:avoid;}
+}
+@media (max-width:820px){
+  body{overflow:hidden;}
+  .app{grid-template-columns:1fr;grid-template-rows:52% 48%;}
+  .stage{grid-row:1;}
+  .panel{grid-row:2;border-right:0;border-top:1px solid var(--line);}
+  .ph{padding:10px 14px 6px;}
+  .ph p{display:none;}
+  h1{font-size:19px;}
+  .logo{width:30px;height:30px;}
+  .tabbody{padding:2px 14px 24px;}
+  .stats{font-size:12px;padding:6px 10px;}
+  .stats b{font-size:14px;}
+  .tbar.views{top:auto;bottom:52px;right:8px;left:8px;justify-content:flex-start;}
+  .tbar.layers{bottom:8px;left:8px;right:8px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;}
+  .tbar .chip{padding:5px 10px;font-size:12.5px;white-space:nowrap;}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="panel">
+    <header class="ph">
+      <div class="brand">
+        <svg class="logo" viewBox="0 0 40 40" aria-hidden="true"><rect x="0" y="0" width="40" height="40" rx="8" fill="var(--ink)"/><path d="M8 20 L20 10 L32 20 V31 H8 Z" fill="none" stroke="var(--accent)" stroke-width="2.6" stroke-linejoin="round"/><rect x="15" y="22" width="10" height="9" fill="var(--accent)"/></svg>
+        <div><h1>Build Planner</h1><p>Design it, price it, quote it.</p></div>
+      </div>
+      <button class="btn" id="btnFile">Save / load</button>
+    </header>
+    <nav class="tabs" role="tablist">
+      <button data-tab="shed" class="on">Build</button>
+      <button data-tab="openings">Openings</button>
+      <button data-tab="items">Items</button>
+      <button data-tab="materials">Materials</button>
+      <button data-tab="plans">Plans</button>
+    </nav>
+    <div class="tabbody">
+      <section id="tab-shed" class="tab on"></section>
+      <section id="tab-openings" class="tab"></section>
+      <section id="tab-items" class="tab"></section>
+      <section id="tab-materials" class="tab"></section>
+      <section id="tab-plans" class="tab"></section>
+    </div>
+  </aside>
+  <main class="stage">
+    <div id="viewport"></div>
+    <div id="labels"></div>
+    <div class="stats" id="stats"></div>
+    <div class="tbar views" id="views">
+      <button class="chip on" data-view="3d">3D</button>
+      <button class="chip" data-view="front">Front</button>
+      <button class="chip" data-view="side">Side</button>
+      <button class="chip" data-view="top">Top</button>
+      <button class="chip" data-view="inside">Inside</button>
+    </div>
+    <div class="tbar layers" id="layerbar"></div>
+    <div id="pick" class="pick" hidden></div>
+  </main>
+</div>
+
+<div id="plansOv" class="plansov" hidden><div class="pbar"><b>Plans and build guide</b><span><button class="btn" id="printPlans">Print or save as PDF</button><button class="primary" id="closePlans">Close</button></span></div><div class="pdoc" id="plansDoc"></div></div>
+
+<dialog id="fileDlg">
+  <form method="dialog" class="dlg">
+    <h2>Save or load a plan</h2>
+    <p>Your plan saves automatically in this browser. To keep a copy or open it on another device, copy the plan code, then paste it here later and load it.</p>
+    <textarea id="planJson" rows="8" spellcheck="false"></textarea>
+    <div class="dlgbtns">
+      <button type="button" class="btn" id="copyJson">Copy plan code</button>
+      <button type="button" class="btn" id="loadJson">Load pasted code</button>
+      <button type="button" class="btn danger" id="resetPlan">Start a new plan</button>
+      <button value="close" class="primary">Done</button>
+    </div>
+    <p class="note" id="dlgMsg"></p>
+  </form>
+</dialog>
+
+<script src="/planner/vendor/three.min.js"></script>
+<script src="/planner/vendor/OrbitControls.js"></script>
+<script>
+(function(){
+'use strict';
+const $=(s,el=document)=>el.querySelector(s);
+const uid=()=>Math.random().toString(36).slice(2,9);
+const v3=(x,y,z)=>new THREE.Vector3(x,y,z);
+const STORE='shed-planner-v1';
+const EMBED=(()=>{try{return new URLSearchParams(location.search).has('embed')&&window.parent!==window;}catch(e){return false;}})();
+let META={};let SETTINGS={hourlyRate:95};
+if(EMBED)document.body.classList.add('embed');
+const SHEET=0.762;
+const STOCK=[2.4,2.7,3.0,3.3,3.6,4.2,4.8,5.4,6.0];
+const COLORBOND={'Surfmist':'#E4E2D5','Classic Cream':'#E9DCB8','Paperbark':'#CABFA4','Dune':'#B1ADA3','Shale Grey':'#BDBFBA','Bluegum':'#969799','Basalt':'#6D6C6E','Woodland Grey':'#4B4C46','Monument':'#323233','Manor Red':'#5E1D0E','Cottage Green':'#304C3C','Zincalume':'#B8BDBF'};
+const TIMBER={'70x35':[0.07,0.035],'90x35':[0.09,0.035],'90x45':[0.09,0.045],'140x45':[0.14,0.045],'190x45':[0.19,0.045]};
+const OPEN_TYPES={
+  roller:{label:'Roller door',w:2400,h:2100,sill:0},
+  pa:{label:'Door',w:820,h:2040,sill:0},
+  window:{label:'Window',w:1200,h:600,sill:1200},
+  opening:{label:'Open bay',w:1800,h:2100,sill:0}
+};
+const WALLS={front:'Front',back:'Back',left:'Left',right:'Right'};
+const OPEN_BUILDS={
+  roller:[{id:'kit',n:'Roller door kit'}],
+  pa:[{id:'prehung',n:'Pre-hung door with jamb'},{id:'ledge',n:'Ledge and brace timber door'},{id:'colorbond',n:'Framed Colorbond door'}],
+  window:[{id:'alum',n:'Aluminium sliding window'},{id:'poly',n:'Fixed polycarbonate panel'},{id:'louvre',n:'Louvre window'}],
+  opening:[{id:'none',n:'Open bay, no door'}]
+};
+function openingParts(o){
+  const w=o.width/1000,h=o.height/1000;const bl=OPEN_BUILDS[o.type]||[];const b=o.build||(bl[0]&&bl[0].id);const out=[];
+  const add=(id,n,q,unit,bq,extra)=>out.push(Object.assign({id,n,q,unit,bq},extra||{}));
+  const r2=v=>Math.round(v*10)/10;
+  if(o.type==='roller'){add('roller-door',`Roller door ${o.width/10} × ${o.height/10} cm`,1,'ea','Steel-Line roller door',{p:986,pn:'Steel-Line A Series roller door 2200 x 2490mm'});add('roller-seal','Roller door brush seal',1,'ea','roller door seal');add('roller-lock','Roller door slide lock',1,'ea','roller door lock');add('roller-opener','Roller door opener (motor)',1,'ea','roller door opener',{off:true});}
+  if(o.type==='pa'){
+    if(b==='prehung'){add('ph-door',`Solid core external door ${o.width/10} × ${o.height/10} cm`,1,'ea','solid core external door');add('ph-jamb','External door jamb set',1,'ea','external door jamb');add('ph-hinge','Butt hinges 100mm',3,'ea','100mm butt hinge');add('ph-lock','Entrance lockset',1,'ea','entrance lockset');add('ph-seal','Door seal and weather strip',1,'ea','door weather seal');}
+    if(b==='ledge'){add('lb-board',`Pine boards 140 x 19mm, ${Math.round(h*100)} cm long`,Math.ceil(w/0.13),'ea','140 x 19mm pine');add('lb-ledge','Ledges 90 x 45mm',r2(3*w),'m','90 x 45mm framing pine');add('lb-brace','Braces 90 x 45mm',r2(2*Math.hypot(w,h/2)),'m','90 x 45mm framing pine');add('lb-hinge','T-hinges 300mm',3,'ea','300mm tee hinge');add('lb-latch','Gate latch or padbolt',1,'ea','padbolt');}
+    if(b==='colorbond'){add('cb-frame','Door frame 70 x 35mm',r2(2*h+3*w),'m','70 x 35mm framing pine');add('cb-sheet',`Colorbond sheet, ${Math.round(h*100)} cm long`,Math.ceil(w/0.762),'ea','S-Rib Corrugated Colorbond');add('cb-hinge','T-hinges 300mm',3,'ea','300mm tee hinge');add('cb-latch','Padbolt',1,'ea','padbolt');add('cb-screws','Roofing screws, box',1,'ea','roofing screws');}
+  }
+  if(o.type==='window'){
+    if(b==='alum')add('w-alum',`Aluminium sliding window ${o.width/10} × ${o.height/10} cm`,1,'ea','aluminium sliding window');
+    if(b==='poly'){add('w-poly',`Polycarbonate sheet, cut to ${Math.round(w*100+10)} × ${Math.round(h*100+10)} cm`,1,'ea','flat polycarbonate sheet');add('w-bead','Pine stop beads 42 x 18mm',r2(4*(w+h)),'m','42 x 18mm pine');add('w-tape','Glazing tape',1,'ea','glazing tape');}
+    if(b==='louvre')add('w-louv',`Louvre window ${o.width/10} × ${o.height/10} cm`,1,'ea','louvre window');
+    add('w-flash','Window head flashing',r2(w+0.1),'m','window flashing');
+  }
+  const ov=o.parts||{};
+  return out.map(p=>{const st=ov[p.id]||{};return Object.assign(p,{on:st.on!==undefined?st.on:!p.off,qty:(st.q!==undefined&&st.q!==null)?st.q:p.q});});
+}
+const cmv=v=>Math.round(v*100);
+const LIB=[
+  {kind:'bench',name:'Workbench',w:1800,h:900,d:600,color:'#9c6b3c',bom:false},
+  {kind:'shelf',name:'Shelving unit',w:1200,h:1800,d:450,color:'#7a828a',bom:false},
+  {kind:'car',name:'Car',w:4600,h:1500,d:1850,color:'#3b6ea8',bom:false},
+  {kind:'box',name:'Ride-on mower',w:1700,h:1100,d:1100,color:'#3d8b3d',bom:false},
+  {kind:'box',name:'Fridge',w:700,h:1700,d:700,color:'#e8e8e8',bom:false},
+  {kind:'box',name:'Storage tub',w:600,h:400,d:400,color:'#d9a441',bom:false},
+  {kind:'timber',name:'Timber 90x45',w:2400,h:45,d:90,color:'#d2ac6e',bom:true},
+  {kind:'sheet',name:'Plywood sheet',w:2400,h:18,d:1200,color:'#d6b98a',bom:true},
+  {kind:'box',name:'Custom box',w:1000,h:1000,d:1000,color:'#8a8fb0',bom:false}
+];
+const WALL_MATS={
+  corr:{n:'Colorbond corrugated',tex:'corr',dir:'col',pitch:0.076,kind:'sheet'},
+  trimdek:{n:'Colorbond Trimdek',tex:'trim',dir:'col',pitch:0.19,kind:'sheet'},
+  weatherboard:{n:'Pine weatherboard, painted',tex:'board',dir:'row',pitch:0.165,kind:'board',cover:0.165},
+  fc:{n:'Fibre cement sheet, painted',tex:'joint',dir:'col',pitch:1.2,kind:'panel'},
+  ply:{n:'Plywood cladding, natural',tex:'groove',dir:'col',pitch:0.15,kind:'panel',natural:'#c49a63'}
+};
+const ROOF_MATS={
+  corr:{n:'Colorbond corrugated',tex:'corr',pitch:0.076},
+  trimdek:{n:'Colorbond Trimdek',tex:'trim',pitch:0.19},
+  zinc:{n:'Zincalume corrugated',tex:'corr',pitch:0.076,color:'#B8BDBF'},
+  poly:{n:'Clear polycarbonate',tex:'corr',pitch:0.076,color:'#dcebf2',clear:true}
+};
+const FLOORS={slab:'Concrete slab',timber:'Timber on bearers and joists',pavers:'Pavers on sand',gravel:'Crushed rock',none:'None (bare ground)'};
+function floorLift(){return plan.shed.floor==='timber'?(plan.shed.floorH||350)/1000:0;}
+const PAVER_TYPES={concrete:{n:'Concrete pavers',col:'#b9aa94',w:400,l:400,t:40,speck:0.05},clay:{n:'Clay brick pavers',col:'#9a4b32',w:230,l:115,t:50,speck:0.08},bluestone:{n:'Bluestone pavers',col:'#5d6266',w:400,l:400,t:30,speck:0.12},sandstone:{n:'Sandstone pavers',col:'#cdb48a',w:600,l:400,t:30,speck:0.1},porcelain:{n:'Outdoor porcelain tiles',col:'#8f8c86',w:600,l:600,t:20,speck:0.02}};
+const FLOOR_SHEETS={yt:{n:'Yellow tongue particleboard 19mm',sw:3.6,sl:0.8,maxJ:450},ply:{n:'Structural plywood 19mm',sw:2.4,sl:1.2,maxJ:600},deck:{n:'Hardwood decking 90 x 19mm',maxJ:450}};
+const GRAVEL_TYPES={crushed:{n:'Crushed rock',col:'#8f8a80'},roadbase:{n:'Road base',col:'#9c8f78'},toppings:{n:'Granitic sand toppings',col:'#c9a873'},pebbles:{n:'Pebbles',col:'#b5aea3'}};
+const MESH_TYPES={SL62:'SL62 (light duty)',SL72:'SL72 (standard)',SL82:'SL82 (heavy duty)',none:'No mesh'};
+function floorDesc(){const S=plan.shed;
+  if(S.floor==='slab')return `Concrete slab ${S.slabT/10} cm thick${S.slabBase>0?` on ${S.slabBase/10} cm crushed rock`:''}, ${S.mesh==='none'?'no mesh':S.mesh+' mesh'}`;
+  if(S.floor==='timber')return `${(FLOOR_SHEETS[S.floorSheet]||FLOOR_SHEETS.yt).n} on joists at ${S.joistSpacing/10} cm, ${S.floorH/10} cm above ground`;
+  if(S.floor==='pavers')return `${(PAVER_TYPES[S.paverType]||PAVER_TYPES.concrete).n} ${S.paverW/10} × ${S.paverL/10} cm, ${S.paverPattern==='stretcher'?'stretcher bond':'stack bond'}, ${S.paverGap/10} cm joints, on ${S.sandDepth/10} cm sand and ${S.baseDepth/10} cm crushed rock`;
+  if(S.floor==='gravel')return `${(GRAVEL_TYPES[S.gravelType]||GRAVEL_TYPES.crushed).n}, ${S.gravelDepth/10} cm compacted`;
+  return FLOORS.none;}
+function shedSideFx(k,v){const S=plan.shed;
+  if(k==='roof'&&v==='gable')S.roofDir=(+S.roofDir||0)%180;
+  if(k==='paverType'){const t=PAVER_TYPES[v];if(t)Object.assign(S,{paverW:t.w,paverL:t.l,paverColor:t.col});}
+  if(k==='floorSheet'){const f=FLOOR_SHEETS[v];if(f)S.joistSpacing=Math.min(S.joistSpacing,f.maxJ);}
+  return ['roof','floor','paverType','floorSheet'].includes(k);}
+const LAYERS=[['slab','Floor'],['frame','Frame'],['clad','Walls'],['roof','Roof'],['openings','Doors'],['items','Items'],['dims','Sizes']];
+
+function defaultPlan(){
+  return {
+    shed:{width:3600,length:6000,height:2400,roof:'gable',pitch:15,overhang:300,studSize:'90x45',studSpacing:600,rafterSize:'90x45',rafterSpacing:900,battenSpacing:900,slab:true,floor:'slab',slabT:100,slabBase:100,mesh:'SL72',paverType:'concrete',paverW:400,paverL:400,paverGap:3,paverPattern:'stack',paverColor:'#b9aa94',sandDepth:30,baseDepth:75,floorSheet:'yt',joistSpacing:450,floorH:350,gravelType:'crushed',gravelDepth:75,roofDir:0,wallMat:'corr',roofMat:'corr',wallColor:'Surfmist',roofColor:'Monument',doorColor:'Monument'},
+    openings:[
+      {id:uid(),type:'roller',wall:'front',offset:0,width:2400,height:2100,sill:0},
+      {id:uid(),type:'pa',wall:'right',offset:-1600,width:820,height:2040,sill:0},
+      {id:uid(),type:'window',wall:'back',offset:0,width:1200,height:600,sill:1200}
+    ],
+    items:[
+      {id:uid(),kind:'bench',name:'Workbench',w:1800,h:900,d:600,x:0,z:-2550,y:0,rot:0,color:'#9c6b3c',bom:false},
+      {id:uid(),kind:'shelf',name:'Shelving unit',w:1200,h:1800,d:450,x:-1480,z:-500,y:0,rot:90,color:'#7a828a',bom:false},
+      {id:uid(),kind:'box',name:'Ride-on mower',w:1700,h:1100,d:1100,x:600,z:600,y:0,rot:90,color:'#3d8b3d',bom:false}
+    ],
+    prices:{},extra:{},waste:10,labour:{},labourRate:null,xray:1,selected:null,
+    layers:{slab:true,frame:true,clad:true,roof:true,openings:true,items:true,dims:true}
+  };
+}
+function migrate(p){const d=defaultPlan();if(p.shed&&!p.shed.floor)p.shed.floor=p.shed.slab===false?'none':'slab';return Object.assign({},d,p,{shed:Object.assign({},d.shed,p.shed||{}),layers:Object.assign({},d.layers,p.layers||{}),openings:Array.isArray(p.openings)?p.openings:[],items:Array.isArray(p.items)?p.items:[],prices:p.prices||{},extra:p.extra||{},labour:p.labour||{}});}
+function load(){if(EMBED)return null;try{const r=localStorage.getItem(STORE);if(!r)return null;return migrate(JSON.parse(r));}catch(e){return null;}}
+let plan=load()||defaultPlan();
+let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{if(EMBED){postPlan();return;}try{localStorage.setItem(STORE,JSON.stringify(plan));}catch(e){}},300);}
+
+/* ---------- geometry helpers ---------- */
+function rootAngle(){const s=plan.shed;let a=+s.roofDir||0;if(s.roof==='gable')a=a%180;return a;}
+function worldKeyOf(lk){const a=rootAngle()*Math.PI/180;const n={front:[0,1],back:[0,-1],right:[1,0],left:[-1,0]}[lk];const wx=Math.round(n[0]*Math.cos(a)+n[1]*Math.sin(a)),wz=Math.round(-n[0]*Math.sin(a)+n[1]*Math.cos(a));return wz===1?'front':wz===-1?'back':wx===1?'right':'left';}
+function localKeyOf(wk){return ['front','back','left','right'].find(k=>worldKeyOf(k)===wk);}
+function dims(){
+  const s=plan.shed;const sw=rootAngle()%180!==0;const W=(sw?s.length:s.width)/1000,L=(sw?s.width:s.length)/1000,H=s.height/1000;
+  const pd=s.roof==='flat'?2:s.pitch;const p=pd*Math.PI/180;
+  const [d,t]=TIMBER[s.studSize]||TIMBER['90x45'];const [rd,rt]=TIMBER[s.rafterSize]||TIMBER['90x45'];
+  return {W,L,H,p,pd,tp:Math.tan(p),c:Math.cos(p),sn:Math.sin(p),o:s.overhang/1000,d,t,rd,rt,roof:s.roof};
+}
+function topHeight(D,x){
+  if(D.roof==='gable')return D.H+Math.max(0,D.W/2-Math.abs(x))*D.tp;
+  return D.H+(D.W/2-Math.max(-D.W/2,Math.min(D.W/2,x)))*D.tp;
+}
+function wallDefs(D){return {
+  front:{o:[-D.W/2,D.L/2],dir:[1,0],n:[0,1],len:D.W,s0:0,s1:D.W},
+  back:{o:[D.W/2,-D.L/2],dir:[-1,0],n:[0,-1],len:D.W,s0:0,s1:D.W},
+  right:{o:[D.W/2,D.L/2],dir:[0,-1],n:[1,0],len:D.L,s0:D.d,s1:D.L-D.d},
+  left:{o:[-D.W/2,-D.L/2],dir:[0,1],n:[-1,0],len:D.L,s0:D.d,s1:D.L-D.d}
+};}
+function hAt(D,wd,s){return topHeight(D,wd.o[0]+wd.dir[0]*s);}
+function bpsRange(D,wd,key,a,b){const arr=[a,b];if(D.roof==='gable'&&(key==='front'||key==='back'))arr.push(wd.len/2);return [...new Set(arr)].filter(s=>s>=a-1e-9&&s<=b+1e-9).sort((x,y)=>x-y);}
+function peakHeight(D){const base=D.roof==='gable'?D.H+(D.W/2)*D.tp:D.H+D.W*D.tp;return base+(D.rd+0.035+0.012)/D.c;}
+function resolveOps(D,wd,key){
+  return plan.openings.filter(o=>o.wall===key).map(o=>{
+    const w=o.width/1000,h=o.height/1000,door=o.type!=='window';const sill=door?0:o.sill/1000;const sc=wd.len/2+o.offset/1000;
+    return {id:o.id,type:o.type,w,h,sill,door,a:sc-w/2,b:sc+w/2};
+  });
+}
+
+/* ---------- three setup ---------- */
+const host=$('#viewport');
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+host.appendChild(renderer.domElement);
+const canvas=renderer.domElement;
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(45,1,0.05,500);
+camera.position.set(7,5,9);
+const controls=new THREE.OrbitControls(camera,canvas);
+controls.enableDamping=true;controls.dampingFactor=0.12;controls.maxPolarAngle=Math.PI*0.495;controls.target.set(0,1.2,0);
+scene.add(new THREE.HemisphereLight(0xffffff,0x556655,0.62));
+const sun=new THREE.DirectionalLight(0xffffff,0.85);sun.position.set(8,14,6);sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);const sc=sun.shadow.camera;sc.left=-14;sc.right=14;sc.top=14;sc.bottom=-14;sc.near=1;sc.far=50;sun.shadow.bias=-0.0006;
+scene.add(sun);scene.add(new THREE.AmbientLight(0xffffff,0.12));
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(120,120),new THREE.MeshStandardMaterial({color:0xb7c0a8,roughness:1}));
+ground.rotation.x=-Math.PI/2;ground.position.y=-0.06;ground.receiveShadow=true;scene.add(ground);
+let grid=null;
+const shedRoot=new THREE.Group();scene.add(shedRoot);
+const L={};LAYERS.forEach(([k])=>{L[k]=new THREE.Group();(k==='items'?scene:shedRoot).add(L[k]);});
+
+function cssVar(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+function applyTheme(){
+  scene.background=new THREE.Color(cssVar('--scene-bg')||'#dce4e8');
+  ground.material.color.set(cssVar('--scene-ground')||'#b7c0a8').multiplyScalar(0.62);
+  if(grid){scene.remove(grid);grid.geometry.dispose();}
+  grid=new THREE.GridHelper(40,40,new THREE.Color(cssVar('--grid1')||'#7f8a75'),new THREE.Color(cssVar('--grid2')||'#9ca690'));
+  grid.position.y=-0.058;grid.material.transparent=true;grid.material.opacity=0.5;scene.add(grid);
+}
+applyTheme();
+try{window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{applyTheme();rebuildShed();});}catch(e){}
+
+function ribTex(rows){
+  const N=64;const c=document.createElement('canvas');c.width=rows?4:N;c.height=rows?N:4;const g=c.getContext('2d');
+  for(let i=0;i<N;i++){const v=Math.round(212+40*Math.sin(i/N*Math.PI*2));g.fillStyle=`rgb(${v},${v},${v})`;if(rows)g.fillRect(0,i,4,1);else g.fillRect(i,0,1,4);}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
+}
+const RIB_V=ribTex(false),RIB_H=ribTex(true);
+const PROFILES={
+  corr:t=>212+40*Math.sin(t*Math.PI*2),
+  trim:t=>t<0.14?200+45*Math.sin(Math.PI*t/0.14):238,
+  board:t=>t>0.93?140:250-45*t,
+  joint:t=>(t<0.006||t>0.994)?165:240,
+  groove:t=>t<0.07?150:228
+};
+function profTex(name,rows){const N=256;const f=PROFILES[name]||PROFILES.corr;const c=document.createElement('canvas');c.width=rows?4:N;c.height=rows?N:4;const g=c.getContext('2d');for(let i=0;i<N;i++){const v=Math.round(Math.max(0,Math.min(255,f((i+0.5)/N))));g.fillStyle=`rgb(${v},${v},${v})`;if(rows)g.fillRect(0,i,4,1);else g.fillRect(i,0,1,4);}const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;}
+const TEXC={};function tex(name,rows){const k=name+(rows?'r':'c');if(!TEXC[k])TEXC[k]=profTex(name,rows);const t=TEXC[k].clone();t.needsUpdate=true;return t;}
+function paverTex2(pattern,pw,pl,gp,speck){
+  const uW=pw+gp,uL=(pl+gp)*(pattern==='stretcher'?2:1);const cw=256,ch=Math.max(16,Math.min(1024,Math.round(256*uL/uW)));
+  const c=document.createElement('canvas');c.width=cw;c.height=ch;const g=c.getContext('2d');
+  g.fillStyle='rgb(120,118,114)';g.fillRect(0,0,cw,ch);
+  const sx=cw/uW,sz=ch/uL;const gx=gp>0?Math.max(1,gp*sx):0,gz=gp>0?Math.max(1,gp*sz):0;
+  const pav=(x,y,w,h)=>{const v=225+Math.round((Math.random()-0.5)*26);g.fillStyle=`rgb(${v},${v},${v})`;g.fillRect(x,y,w,h);};
+  if(pattern==='stretcher'){const rh=ch/2;pav(gx/2,gz/2,cw-gx,rh-gz);pav(-cw/2+gx/2,rh+gz/2,cw-gx,rh-gz);pav(cw/2+gx/2,rh+gz/2,cw-gx,rh-gz);}
+  else pav(gx/2,gz/2,cw-gx,ch-gz);
+  const N=Math.round(cw*ch*speck*0.15);for(let i=0;i<N;i++){const v=Math.random()<0.5?255:60;g.fillStyle=`rgba(${v},${v},${v},${0.15+Math.random()*0.2})`;g.fillRect(Math.random()*cw,Math.random()*ch,1+Math.random()*2,1+Math.random()*2);}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;}
+function gravelTex(){const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');g.fillStyle='rgb(215,215,215)';g.fillRect(0,0,128,128);
+  for(let i=0;i<900;i++){const v=150+Math.round(Math.random()*105);g.fillStyle=`rgb(${v},${v},${v})`;g.beginPath();g.arc(Math.random()*128,Math.random()*128,1+Math.random()*2.5,0,Math.PI*2);g.fill();}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;}
+function floorSurfMat(D){const S=plan.shed;if(S.floorSheet==='deck'){const t=tex('groove',false);t.repeat.set(D.W/0.095,1);const m=new THREE.MeshStandardMaterial({color:0x9a6a43,map:t,roughness:0.8});m.userData.ownMap=true;return m;}return new THREE.MeshStandardMaterial({color:S.floorSheet==='ply'?0xdcbf8f:0xd8b77c,roughness:0.8});}
+function paverTex(){const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');g.fillStyle='rgb(228,228,228)';g.fillRect(0,0,64,64);g.fillStyle='rgb(150,150,150)';g.fillRect(0,0,64,2);g.fillRect(0,0,2,64);const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;}
+
+function clearGroup(g){
+  g.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){const ms=Array.isArray(o.material)?o.material:[o.material];ms.forEach(m=>{if(m.map&&m.userData.ownMap)m.map.dispose();m.dispose();});}});
+  while(g.children.length)g.remove(g.children[0]);
+}
+let lastMesh=null,curWall=null,lastElev={},lastRoof=null;
+function addBox(g,x,y,z,sx,sy,sz,mat,shadow=true){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(Math.max(sx,0.001),Math.max(sy,0.001),Math.max(sz,0.001)),mat);
+  m.position.set(x,y,z);m.castShadow=shadow;m.receiveShadow=true;g.add(m);lastMesh=m;return m;
+}
+function matGroup(parent,mtx){const g=new THREE.Group();mtx.decompose(g.position,g.quaternion,g.scale);parent.add(g);return g;}
+function wallGroup(parent,wd){return matGroup(parent,new THREE.Matrix4().makeBasis(v3(wd.dir[0],0,wd.dir[1]),v3(0,1,0),v3(wd.n[0],0,wd.n[1])).setPosition(wd.o[0],0,wd.o[1]));}
+
+let M=null;
+function makeMats(D){
+  const S=plan.shed;const op=plan.xray;const tr=op<0.999;
+  const WM=WALL_MATS[S.wallMat]||WALL_MATS.corr,RM=ROOF_MATS[S.roofMat]||ROOF_MATS.corr;
+  const wallTex=tex(WM.tex,WM.dir==='row');if(WM.dir==='row')wallTex.repeat.set(1,1/WM.pitch);else wallTex.repeat.set(1/WM.pitch,1);
+  const Lz=D.L+2*Math.min(D.o,0.15);
+  const roofTex=tex(RM.tex,true);roofTex.repeat.set(1,Lz/RM.pitch);
+  const sheetMat=(col,map,matte,clear)=>{const o2=clear?Math.min(op,0.5):op,t2=!!clear||tr;const m=new THREE.MeshStandardMaterial({color:col,map,roughness:matte?0.85:(clear?0.15:0.55),metalness:matte?0:0.18,side:THREE.DoubleSide,transparent:t2,opacity:o2,depthWrite:!t2});m.userData.ownMap=true;m.userData.xray=!clear;return m;};
+  const plain=(col,x)=>{const m=new THREE.MeshStandardMaterial({color:col,roughness:0.6,metalness:0.15,transparent:x&&tr,opacity:x?op:1,depthWrite:!(x&&tr)});m.userData.xray=!!x;return m;};
+  return {
+    timber:new THREE.MeshStandardMaterial({color:0xd2ac6e,roughness:0.85}),
+    clad:sheetMat(WM.natural||COLORBOND[S.wallColor]||'#E4E2D5',wallTex,WM.kind!=='sheet'),
+    roof:sheetMat(RM.color||COLORBOND[S.roofColor]||'#323233',roofTex,false,RM.clear),
+    trim:plain(COLORBOND[S.wallColor]||'#E4E2D5',true),
+    trimRoof:plain(COLORBOND[S.roofColor]||'#323233',true),
+    door:new THREE.MeshStandardMaterial({color:COLORBOND[S.doorColor]||'#323233',roughness:0.5,metalness:0.2}),
+    doorCol:COLORBOND[S.doorColor]||'#323233',
+    glass:new THREE.MeshStandardMaterial({color:0x9fc7e0,transparent:true,opacity:0.42,roughness:0.08,metalness:0.1,depthWrite:false}),
+    alum:new THREE.MeshStandardMaterial({color:0xc4c9cc,roughness:0.35,metalness:0.6}),
+    slab:new THREE.MeshStandardMaterial({color:0xbdb9b1,roughness:0.95})
+  };
+}
+
+/* ---------- build ---------- */
+let lastPieces=[],lastWallSheets=[],lastRoofSheets=[],lastFlash=[],lastAreas={wall:0,roof:0},labelData=[];
+function rebuildShed(){
+  ['slab','frame','clad','roof','openings','dims'].forEach(k=>clearGroup(L[k]));
+  const D=dims(),S=plan.shed;M=makeMats(D);shedRoot.rotation.y=rootAngle()*Math.PI/180;shedRoot.updateMatrixWorld(true);
+  clearPickHelper();curWall=null;lastElev={};const pieces=[];const P=(cat,size,len)=>{if(lastMesh&&!lastMesh.userData.part)lastMesh.userData.part={type:'timber',cat,size,len,wall:curWall};if(len>0.02)pieces.push({cat,size,len});};
+  const flash=[];const wallSheets=[];let wallArea=0;
+  shedRoot.position.y=floorLift();L.items.position.y=floorLift();buildFloor(D,P);
+  const WD=wallDefs(D);
+  Object.entries(WD).forEach(([key,wd])=>{
+    const ops=resolveOps(D,wd,worldKeyOf(key));
+    curWall=worldKeyOf(key);buildFrame(D,wd,key,ops,P);curWall=null;
+    buildClad(D,wd,key,ops);
+    buildOpenings(wd,ops);
+    const bps=bpsRange(D,wd,key,0,wd.len);
+    for(let i=0;i<bps.length-1;i++)wallArea+=(bps[i+1]-bps[i])*(hAt(D,wd,bps[i])+hAt(D,wd,bps[i+1]))/2;
+    ops.forEach(o=>wallArea-=o.w*o.h);
+    const n=Math.ceil(wd.len/SHEET-1e-6);
+    for(let i=0;i<n;i++){const sa=i*SHEET,sb=Math.min(wd.len,(i+1)*SHEET);let mh=Math.max(hAt(D,wd,sa),hAt(D,wd,sb));bps.forEach(b=>{if(b>sa&&b<sb)mh=Math.max(mh,hAt(D,wd,b));});wallSheets.push(mh);}
+  });
+  [[-D.W/2,D.L/2],[D.W/2,D.L/2],[D.W/2,-D.L/2],[-D.W/2,-D.L/2]].forEach(([x,z])=>{const h=topHeight(D,x);addBox(L.clad,x,h/2,z,0.06,h,0.06,M.trim);flash.push([(WALL_MATS[S.wallMat]||WALL_MATS.corr).kind==='sheet'?'Corner flashing':'Corner trim',h]);});
+  const roofSheets=[];const roofArea=buildRoof(D,P,flash,roofSheets);
+  const tagRest=(g,part)=>g.traverse(o=>{if(o.isMesh&&!o.userData.part)o.userData.part=Object.assign({},part);});tagRest(L.roof,{type:'roof'});tagRest(L.slab,{type:'floor'});tagRest(L.clad,{type:'clad'});
+  buildDims(D);
+  lastPieces=pieces;lastWallSheets=wallSheets;lastRoofSheets=roofSheets;lastFlash=flash;lastAreas={wall:Math.max(0,wallArea),roof:roofArea};
+  applyLayers();updateStats();
+}
+
+function buildFloor(D,P){
+  const S=plan.shed,f=S.floor;
+  if(f==='slab'){const T=S.slabT/1000;addBox(L.slab,0,-T/2,0,D.W+0.1,T,D.L+0.1,M.slab,false);}
+  else if(f==='pavers'){const PT=PAVER_TYPES[S.paverType]||PAVER_TYPES.concrete;const pw=Math.max(0.03,S.paverW/1000),pl=Math.max(0.03,S.paverL/1000),gp=Math.max(0,S.paverGap/1000);const t=paverTex2(S.paverPattern,pw,pl,gp,PT.speck);const uW=pw+gp,uL=(pl+gp)*(S.paverPattern==='stretcher'?2:1);t.repeat.set(D.W/uW,D.L/uL);const m=new THREE.MeshStandardMaterial({color:new THREE.Color(S.paverColor||PT.col),map:t,roughness:0.9});m.userData.ownMap=true;const pt=PT.t/1000;addBox(L.slab,0,-pt/2,0,D.W,pt,D.L,m,false);}
+  else if(f==='gravel'){const t=gravelTex();t.repeat.set(D.W/0.6,D.L/0.6);const m=new THREE.MeshStandardMaterial({color:(GRAVEL_TYPES[S.gravelType]||GRAVEL_TYPES.crushed).col,map:t,roughness:1});m.userData.ownMap=true;addBox(L.slab,0,-0.03,0,D.W+0.1,0.06,D.L+0.1,m,false);}
+  else if(f==='timber'){
+    const lift=floorLift(),ft=0.019,jd=0.09,jt=0.045,bd=0.14,bt=0.045;
+    addBox(L.slab,0,-ft/2,0,D.W,ft,D.L,floorSurfMat(D));
+    const nb=Math.max(2,Math.ceil((D.W-0.1)/1.8)+1);const bx=i=>-D.W/2+0.05+i*(D.W-0.1)/(nb-1);
+    const ns=Math.max(2,Math.ceil(D.L/1.8)+1);const sh=lift+0.06-(ft+jd+bd);
+    for(let i=0;i<nb;i++){
+      addBox(L.slab,bx(i),-ft-jd-bd/2,0,bt*2,bd,D.L,M.timber);P('Bearers (doubled)','140x45',D.L);P('Bearers (doubled)','140x45',D.L);
+      for(let j=0;j<ns;j++){const z=-D.L/2+0.1+j*(D.L-0.2)/(ns-1);addBox(L.slab,bx(i),-ft-jd-bd-sh/2,z,0.09,sh,0.09,M.timber);P('Stumps','90x90',sh+0.45);}
+    }
+    const nj=Math.ceil((D.L-jt)/((plan.shed.joistSpacing||450)/1000));for(let j=0;j<=nj;j++){const z=-D.L/2+jt/2+j*(D.L-jt)/nj;addBox(L.slab,0,-ft-jd/2,z,D.W,jd,jt,M.timber);P('Floor joists','90x45',D.W);}
+  }
+}
+
+function buildFrame(D,wd,key,ops,P){
+  const size=plan.shed.studSize;const g=wallGroup(L.frame,wd);const d=D.d,t=D.t,n=-d/2;
+  const el={len:wd.len,ops,members:[],prof:bpsRange(D,wd,key,0,wd.len).map(s=>[s,hAt(D,wd,s)])};lastElev[worldKeyOf(key)]=el;
+  const box=(s,y,sx,sy)=>{const m=addBox(g,s,y,n,sx,sy,d,M.timber);el.members.push({s,y,sx,sy,m});return m;};
+  let segs=[[wd.s0,wd.s1]];
+  ops.filter(o=>o.door).forEach(o=>{segs=segs.flatMap(([x,y])=>(o.b<=x||o.a>=y)?[[x,y]]:[[x,Math.max(x,o.a)],[Math.min(y,o.b),y]].filter(q=>q[1]-q[0]>0.02));});
+  segs.forEach(([x,y])=>{box((x+y)/2,t/2,y-x,t);P('Bottom plate',size,y-x);});
+  const bps=bpsRange(D,wd,key,wd.s0,wd.s1);
+  for(let i=0;i<bps.length-1;i++){
+    const sa=bps[i],sb=bps[i+1],ha=hAt(D,wd,sa),hb=hAt(D,wd,sb);const ang=Math.atan2(hb-ha,sb-sa),len=Math.hypot(sb-sa,hb-ha);
+    const m=box((sa+sb)/2+Math.sin(ang)*t/2,(ha+hb)/2-Math.cos(ang)*t/2,len,t);m.rotation.z=ang;P('Top plate',size,len);
+  }
+  const topY=s=>{const e=0.001;const sl=(hAt(D,wd,s+e)-hAt(D,wd,s-e))/(2*e);return hAt(D,wd,s)-t*Math.sqrt(1+sl*sl);};
+  const sp=plan.shed.studSpacing/1000;
+  const gridS=[];for(let s=wd.s0;s<wd.s1-t-0.001;s+=sp)gridS.push(s);gridS.push(wd.s1-t);
+  const members=[];
+  const stud=(s,yb,yt,cat)=>{const len=yt-yb;if(len<0.03)return;box(s+t/2,yb+len/2,t,len);P(cat||'Studs',size,len);};
+  gridS.forEach(s=>{if(ops.some(o=>s+t>o.a-t-0.001&&s<o.b+t+0.001))return;stud(s,t,topY(s+t/2));members.push(s);});
+  ops.forEach(o=>{
+    [o.a-t,o.b].forEach(s=>{if(s<wd.s0-0.001||s>wd.s1-t+0.001)return;stud(s,t,topY(s+t/2));members.push(s);});
+    const Y1=o.sill+o.h;const room=Math.min(topY(Math.max(o.a,wd.s0)),topY(Math.min(o.b,wd.s1)))-Y1;
+    const LH=[0.19,0.14,0.09,0.07].find(x=>x<=room-0.005)||0;
+    if(LH>0){box((o.a+o.b)/2,Y1+LH/2,o.b-o.a,LH);P('Lintels',Math.round(LH*1000)+'x'+Math.round(t*1000),o.b-o.a);}
+    gridS.forEach(s=>{if(s>o.a+0.01&&s+t<o.b-0.01)stud(s,Y1+LH,topY(s+t/2));});
+    if(!o.door&&o.sill>t+0.05){box((o.a+o.b)/2,o.sill-t/2,o.b-o.a,t);P('Sill trimmers',size,o.b-o.a);gridS.forEach(s=>{if(s>o.a+0.01&&s+t<o.b-0.01)stud(s,t,o.sill-t);});}
+  });
+  const yN=Math.min(1.2,D.H/2);members.sort((a,b)=>a-b);
+  for(let i=0;i<members.length-1;i++){
+    const x0=members[i]+t,x1=members[i+1];const gap=x1-x0;if(gap<0.03)continue;const mid=(x0+x1)/2;
+    if(yN>topY(mid)-t)continue;
+    if(ops.some(o=>mid>o.a-t&&mid<o.b+t&&yN>o.sill-t-0.05&&yN<o.sill+o.h+0.2))continue;
+    box(mid,yN,gap,t);P('Noggings',size,gap);
+  }
+}
+
+function buildClad(D,wd,key,ops){
+  const g=wallGroup(L.clad,wd);const bps=bpsRange(D,wd,key,0,wd.len);
+  const sh=new THREE.Shape();sh.moveTo(0,0);sh.lineTo(wd.len,0);
+  for(let i=bps.length-1;i>=0;i--)sh.lineTo(bps[i],hAt(D,wd,bps[i]));
+  sh.closePath();
+  ops.forEach(o=>{
+    const a=Math.max(0.01,o.a),b=Math.min(wd.len-0.01,o.b);const y0=Math.max(0.004,o.sill);
+    const y1=Math.min(o.sill+o.h,Math.min(hAt(D,wd,a),hAt(D,wd,b))-0.01);
+    if(b-a<0.02||y1-y0<0.02)return;
+    const hp=new THREE.Path();hp.moveTo(a,y0);hp.lineTo(b,y0);hp.lineTo(b,y1);hp.lineTo(a,y1);hp.closePath();sh.holes.push(hp);
+  });
+  const m=new THREE.Mesh(new THREE.ShapeGeometry(sh),M.clad);m.userData.part={type:'clad',wall:worldKeyOf(key)};m.position.z=0.004;m.castShadow=true;m.receiveShadow=true;g.add(m);
+}
+
+function buildOpenings(wd,ops){
+  const g=wallGroup(L.openings,wd);
+  ops.forEach(o=>{const n0=g.children.length;buildOneOpening(g,o);for(let i=n0;i<g.children.length;i++)g.children[i].userData.part={type:'opening',id:o.id};});
+}
+function buildOneOpening(g,o){
+  const w=o.b-o.a,c=(o.a+o.b)/2;const src=plan.openings.find(x=>x.id===o.id)||{};const bl=OPEN_BUILDS[o.type]||[];const bld=src.build||(bl[0]&&bl[0].id);
+  const texMat=(name,rep,col,rough)=>{const t=tex(name,false);t.repeat.set(rep,1);const m=new THREE.MeshStandardMaterial({color:col,map:t,roughness:rough});m.userData.ownMap=true;return m;};
+  if(o.type==='roller'){
+    const t2=RIB_H.clone();t2.needsUpdate=true;t2.repeat.set(1,o.h/0.07);
+    const mat=new THREE.MeshStandardMaterial({color:M.doorCol,map:t2,roughness:0.5,metalness:0.2});mat.userData.ownMap=true;
+    addBox(g,c,o.h/2,-0.03,w,o.h,0.02,mat);
+  }else if(o.type==='pa'){
+    const mat=bld==='ledge'?texMat('groove',w/0.14,0xc49a63,0.85):bld==='colorbond'?texMat('corr',w/0.076,M.doorCol,0.5):M.door;
+    addBox(g,c,o.h/2,-0.025,w,o.h,0.035,mat);
+    const hd=new THREE.Mesh(new THREE.SphereGeometry(0.03,12,8),M.alum);hd.position.set(c+w/2-0.09,1.0,0);g.add(hd);
+  }else if(o.type==='window'){
+    if(bld==='poly')addBox(g,c,o.sill+o.h/2,-0.02,w,o.h,0.006,new THREE.MeshStandardMaterial({color:0xf3f5f6,transparent:true,opacity:0.78,roughness:0.4,depthWrite:false}),false);
+    else addBox(g,c,o.sill+o.h/2,-0.02,w,o.h,0.006,M.glass,false);
+    const fz=-0.015,ft=0.04,fr=bld==='poly'?M.timber:M.alum;
+    addBox(g,c,o.sill+ft/2,fz,w,ft,0.05,fr);addBox(g,c,o.sill+o.h-ft/2,fz,w,ft,0.05,fr);
+    addBox(g,o.a+ft/2,o.sill+o.h/2,fz,ft,o.h,0.05,fr);addBox(g,o.b-ft/2,o.sill+o.h/2,fz,ft,o.h,0.05,fr);
+    if(bld==='louvre'){const n=Math.max(3,Math.round(o.h/0.1));for(let i=0;i<n;i++){const sl=addBox(g,c,o.sill+ft+(i+0.5)*(o.h-2*ft)/n,-0.02,w-2*ft,0.006,0.08,M.glass,false);sl.rotation.x=0.5;}}
+    else if(w>0.9&&bld!=='poly')addBox(g,c,o.sill+o.h/2,fz,ft*0.75,o.h,0.05,fr);
+  }
+}
+
+function buildRoof(D,P,flash,roofSheets){
+  const S=plan.shed;const {W,H,o,tp,c,sn,rd,rt}=D;const Lz=D.L+2*Math.min(o,0.15);
+  const slopes=D.roof==='gable'
+    ?[{P:[-W/2-o,H-o*tp],sx:1,sv:1,len:(W/2+o)/c},{P:[W/2+o,H-o*tp],sx:-1,sv:1,len:(W/2+o)/c}]
+    :[{P:[-W/2-o,H+(W+o)*tp],sx:1,sv:-1,len:(W+2*o)/c}];
+  const rs=S.rafterSpacing/1000,bs=S.battenSpacing/1000;
+  const nR=Math.max(1,Math.ceil((D.L-rt)/rs));const zs=[];for(let i=0;i<=nR;i++)zs.push(-D.L/2+rt/2+i*(D.L-rt)/nR);
+  const sheetH=rd+0.035;let area=0;
+  slopes.forEach(sl=>{
+    const sd=v3(c*sl.sx,sn*sl.sv,0);const ny=v3(-sd.y,sd.x,0);if(ny.y<0)ny.negate();const nz=sd.clone().cross(ny);
+    const mtx=new THREE.Matrix4().makeBasis(sd,ny,nz).setPosition(sl.P[0],sl.P[1],0);
+    const gf=matGroup(L.frame,mtx),gr=matGroup(L.roof,mtx);
+    zs.forEach(z=>{addBox(gf,sl.len/2,rd/2,z,sl.len,rd,rt,M.timber);P('Rafters',S.rafterSize,sl.len);});
+    const us=[];for(let u=0.05;u<sl.len-0.05;u+=bs)us.push(u);if(!us.length||sl.len-0.05-us[us.length-1]>0.15)us.push(sl.len-0.05);
+    sl.us=us;us.forEach(u=>{addBox(gf,u,rd+0.0175,0,0.07,0.035,Lz,M.timber);P('Roof battens','70x35',Lz);});
+    addBox(gr,sl.len/2,sheetH+0.006,0,sl.len+0.03,0.012,Lz,M.roof);
+    area+=(sl.len+0.03)*Lz;
+    const n=Math.ceil(Lz/SHEET-1e-6);for(let i=0;i<n;i++)roofSheets.push(sl.len+0.03);
+    const lowStart=sl.sv>0;const lp=lowStart?v3(sl.P[0],sl.P[1],0):v3(sl.P[0],sl.P[1],0).addScaledVector(sd,sl.len);const out=lowStart?-sl.sx:sl.sx;
+    addBox(L.roof,lp.x+out*0.06,lp.y+0.03,0,0.12,0.1,Lz,M.trimRoof);flash.push(['Gutter',Lz]);
+    flash.push(['Barge flashing',sl.len],['Barge flashing',sl.len]);
+  });
+  if(D.roof==='gable'){
+    const yb0=H+(W/2)*tp;addBox(L.frame,0,yb0+rd/(2*c),0,rt,rd/c,D.L,M.timber);P('Ridge board',S.rafterSize,D.L);
+    addBox(L.roof,0,yb0+(sheetH+0.012)/c+0.004,0,0.32,0.012,Lz,M.trimRoof);flash.push(['Ridge capping',Lz]);
+  }else{flash.push(['Top capping',Lz]);}
+  lastRoof={slopes,zs,Lz};
+  return area;
+}
+
+function buildDims(D){
+  labelData=[];const lab=$('#labels');lab.innerHTML='';
+  const mat=new THREE.LineBasicMaterial({color:new THREE.Color(cssVar('--accent')||'#f2b705')});
+  const line=pts=>L.dims.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),mat));
+  const tag=(p,t)=>{const el=document.createElement('div');el.className='tag';el.textContent=t;lab.appendChild(el);labelData.push({p,el});};
+  const y=0.03,off=D.o+0.45,S=plan.shed;
+  const zf=D.L/2+off;line([v3(-D.W/2,y,zf),v3(D.W/2,y,zf)]);[-D.W/2,D.W/2].forEach(x=>line([v3(x,y,zf-0.15),v3(x,y,zf+0.15)]));tag(v3(0,y,zf),fmtMM(D.W*1000));
+  const xr=D.W/2+off;line([v3(xr,y,-D.L/2),v3(xr,y,D.L/2)]);[-D.L/2,D.L/2].forEach(z=>line([v3(xr-0.15,y,z),v3(xr+0.15,y,z)]));tag(v3(xr,y,0),fmtMM(D.L*1000));
+  const hx=D.W/2+0.3,hz=D.L/2+0.3;line([v3(hx,0,hz),v3(hx,D.H,hz)]);tag(v3(hx,D.H/2,hz),fmtMM(S.height)+' wall');
+  const pk=peakHeight(D);tag(v3(D.roof==='gable'?0:-D.W/2,pk+0.25,D.L/2),(D.roof==='gable'?'Ridge ':'High side ')+fmtMM(Math.round(pk*1000)));
+}
+
+function applyLayers(){LAYERS.forEach(([k])=>{L[k].visible=!!plan.layers[k];});$('#labels').style.display=plan.layers.dims?'':'none';}
+
+/* ---------- items ---------- */
+const itemMeshes={};
+function getItem(id){return plan.items.find(i=>i.id===id);}
+function buildItemMesh(it){
+  const g=new THREE.Group();g.userData.itemId=it.id;
+  const w=Math.max(it.w,10)/1000,h=Math.max(it.h,5)/1000,d=Math.max(it.d,5)/1000;
+  const m=new THREE.MeshStandardMaterial({color:new THREE.Color(it.color),roughness:0.7});
+  const dark=new THREE.MeshStandardMaterial({color:0x2a2d30,roughness:0.85});
+  const add=(x,y,z,sx,sy,sz,mat)=>addBox(g,x,y,z,sx,sy,sz,mat||m);
+  const corners=[[-1,-1],[1,-1],[-1,1],[1,1]];
+  if(it.kind==='bench'&&h>0.2){
+    add(0,h-0.02,0,w,0.04,d);corners.forEach(([a,b])=>add(a*(w/2-0.05),(h-0.04)/2,b*(d/2-0.05),0.06,h-0.04,0.06));
+    if(h>0.45)add(0,0.15,0,w-0.1,0.02,d-0.1);
+  }else if(it.kind==='shelf'&&h>0.3){
+    const u=0.035;corners.forEach(([a,b])=>add(a*(w/2-u/2),h/2,b*(d/2-u/2),u,h,u,dark));
+    const n=Math.max(2,Math.round(h/0.45)+1);for(let i=0;i<n;i++)add(0,0.05+i*(h-0.07)/(n-1),0,w,0.02,d);
+  }else if(it.kind==='car'&&h>0.5){
+    const r=Math.min(0.34,h*0.22),by=r*0.75,bh=h*0.4,ch=Math.max(0.05,h-by-bh);
+    add(0,by+bh/2,0,w,bh,d);
+    add(-w*0.04,by+bh+ch/2,0,w*0.52,ch,d*0.86,new THREE.MeshStandardMaterial({color:0x2f3d4a,roughness:0.2,metalness:0.3}));
+    const wg=new THREE.CylinderGeometry(r,r,0.22,20);
+    corners.forEach(([a,b])=>{const wh=new THREE.Mesh(a===corners[0][0]&&b===corners[0][1]?wg:wg.clone(),dark);wh.rotation.x=Math.PI/2;wh.position.set(a*w*0.32,r,b*(d/2-0.12));wh.castShadow=true;g.add(wh);});
+  }else{add(0,h/2,0,w,h,d);}
+  g.traverse(o=>{o.userData.itemId=it.id;});
+  return g;
+}
+function placeItem(g,it){g.position.set(it.x/1000,it.y/1000,it.z/1000);g.rotation.y=-it.rot*Math.PI/180;}
+function rebuildItems(){
+  clearGroup(L.items);Object.keys(itemMeshes).forEach(k=>delete itemMeshes[k]);
+  plan.items.forEach(it=>{const g=buildItemMesh(it);placeItem(g,it);L.items.add(g);itemMeshes[it.id]=g;});
+  updateSelHelper();
+}
+function itemFit(it){
+  const D=dims();const r=(it.rot+rootAngle())*Math.PI/180;const w=it.w/1000,d=it.d/1000;
+  const hx=Math.abs(Math.cos(r))*w/2+Math.abs(Math.sin(r))*d/2,hz=Math.abs(Math.sin(r))*w/2+Math.abs(Math.cos(r))*d/2;
+  const ra=rootAngle()*Math.PI/180,wx=it.x/1000,wz=it.z/1000;const x=wx*Math.cos(ra)-wz*Math.sin(ra),z=wx*Math.sin(ra)+wz*Math.cos(ra);const ix=D.W/2-D.d,iz=D.L/2-D.d;
+  if(Math.abs(x)+hx>ix+1e-6||Math.abs(z)+hz>iz+1e-6)return {ok:false,msg:'Outside walls'};
+  const edge=D.roof==='gable'?Math.abs(x)+hx:x+hx;const clear=topHeight(D,edge)-0.02;
+  if((it.y+it.h)/1000>clear+1e-6)return {ok:false,msg:'Too tall'};
+  return {ok:true,msg:'Fits'};
+}
+let selHelper=null;
+function updateSelHelper(){
+  if(selHelper){scene.remove(selHelper);selHelper.geometry.dispose();selHelper.material.dispose();selHelper=null;}
+  const it=getItem(plan.selected);const g=it&&itemMeshes[it.id];if(!g||!plan.layers.items)return;
+  selHelper=new THREE.BoxHelper(g,itemFit(it).ok?0xf2b705:0xe0452f);scene.add(selHelper);
+}
+
+/* ---------- picking + drag ---------- */
+const ray=new THREE.Raycaster(),ptr=new THREE.Vector2();let drag=null,down=null;
+function setPtr(e){const r=canvas.getBoundingClientRect();ptr.x=((e.clientX-r.left)/r.width)*2-1;ptr.y=-((e.clientY-r.top)/r.height)*2+1;}
+canvas.addEventListener('pointerdown',e=>{
+  down={x:e.clientX,y:e.clientY,hit:false};if(!plan.layers.items)return;
+  setPtr(e);ray.setFromCamera(ptr,camera);
+  const hits=ray.intersectObjects(L.items.children,true);if(!hits.length)return;
+  const id=hits[0].object.userData.itemId;const it=getItem(id);if(!it)return;
+  const blk=['openings','clad','roof'].filter(k=>plan.layers[k]&&!((k==='clad'||k==='roof')&&plan.xray<0.6)).map(k=>L[k]);const sh=ray.intersectObjects(blk,true);if(sh.length&&sh[0].distance<hits[0].distance)return;
+  down.hit=true;closePick();select(id,true);
+  const plane=new THREE.Plane(v3(0,1,0),-(it.y/1000+floorLift()));const pt=new THREE.Vector3();
+  if(!ray.ray.intersectPlane(plane,pt))return;
+  drag={id,plane,off:{x:pt.x-it.x/1000,z:pt.z-it.z/1000}};controls.enabled=false;
+  try{canvas.setPointerCapture(e.pointerId);}catch(_){}
+  e.preventDefault();
+},true);
+canvas.addEventListener('pointermove',e=>{
+  if(!drag)return;setPtr(e);ray.setFromCamera(ptr,camera);const pt=new THREE.Vector3();
+  if(!ray.ray.intersectPlane(drag.plane,pt))return;const it=getItem(drag.id);if(!it)return;
+  it.x=Math.round((pt.x-drag.off.x)*100)*10;it.z=Math.round((pt.z-drag.off.z)*100)*10;
+  placeItem(itemMeshes[it.id],it);if(selHelper){selHelper.update();selHelper.material.color.set(itemFit(it).ok?0xf2b705:0xe0452f);}
+  syncEditorPos(it);
+});
+function endDrag(e){
+  if(drag){drag=null;controls.enabled=true;save();renderItemList();scheduleMaterials();return;}
+  if(down&&!down.hit&&e&&Math.hypot(e.clientX-down.x,e.clientY-down.y)<5){if(!pickAt(e)){closePick();if(plan.selected)select(null);}}
+  down=null;
+}
+canvas.addEventListener('pointerup',endDrag);canvas.addEventListener('pointercancel',()=>{drag=null;controls.enabled=true;});
+
+/* ---------- views ---------- */
+function setView(v){
+  const D=dims();const asp=camera.aspect||1;const r=(Math.max(D.W,D.L)*1.25+4)*Math.max(1,1.15/asp);const ty=D.H*0.55;controls.target.set(0,ty,0);
+  if(v==='3d')camera.position.set(r*0.62,r*0.5,r*0.8);
+  else if(v==='top'){controls.target.set(0,0,0);camera.position.set(0,r*1.6,0.01);}
+  else if(v==='front')camera.position.set(0,ty,r*1.1);
+  else if(v==='side')camera.position.set(r*1.1,ty,0);
+  else if(v==='inside'){camera.position.set(0.001,1.6,D.L/2-0.35);controls.target.set(0,1.1,-D.L/2+0.5);}
+  controls.update();
+  document.querySelectorAll('#views .chip').forEach(b=>b.classList.toggle('on',b.dataset.view===v));
+}
+$('#views').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)setView(b.dataset.view);});
+
+/* ---------- layers bar ---------- */
+function renderLayerBar(){
+  $('#layerbar').innerHTML=LAYERS.map(([k,l])=>`<button class="chip ${plan.layers[k]?'on':''}" data-layer="${k}" aria-pressed="${!!plan.layers[k]}">${l}</button>`).join('')+
+  `<label class="xray">See-through<input type="range" id="xray" min="0.15" max="1" step="0.05" value="${plan.xray}"></label>`;
+}
+$('#layerbar').addEventListener('click',e=>{const b=e.target.closest('[data-layer]');if(!b)return;const k=b.dataset.layer;plan.layers[k]=!plan.layers[k];b.classList.toggle('on',plan.layers[k]);b.setAttribute('aria-pressed',plan.layers[k]);applyLayers();updateSelHelper();save();});
+$('#layerbar').addEventListener('input',e=>{
+  if(e.target.id!=='xray')return;plan.xray=parseFloat(e.target.value);const tr=plan.xray<0.999;
+  L.clad.traverse(setOp);L.roof.traverse(setOp);
+  function setOp(o){if(o.material&&o.material.userData.xray){o.material.transparent=tr;o.material.opacity=plan.xray;o.material.depthWrite=!tr;o.material.needsUpdate=true;}}
+  save();
+});
+
+/* ---------- formatting ---------- */
+function fmtMM(v){return Math.round(v/10).toLocaleString('en-AU')+' cm';}
+function fm(v,dp=1){return (+v).toFixed(dp);}
+function money(v){return '$'+(v||0).toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+function updateStats(){
+  const D=dims();const pk=peakHeight(D);
+  $('#stats').innerHTML=`<b>${plan.shed.width/10} × ${plan.shed.length/10} cm</b>${fm(D.W*D.L,1)} m² floor, ${D.roof==='gable'?'ridge':'high side'} ${Math.round(pk*100)} cm<span class="hint">Tap any part of the shed to edit it</span>`;
+}
+
+/* ---------- Shed tab ---------- */
+const SHED_FIELDS=[
+  {sec:'Size'},
+  {k:'width',label:'Width',type:'num',unit:'cm',step:10,min:120,max:1500,cm:true},
+  {k:'length',label:'Length',type:'num',unit:'cm',step:10,min:120,max:3000,cm:true},
+  {k:'height',label:'Wall height',type:'num',unit:'cm',step:5,min:180,max:600,cm:true},
+  {sec:'Roof'},
+  {k:'roof',label:'Roof style',type:'sel',opts:[['gable','Gable'],['skillion','Skillion'],['flat','Flat (2°)']]},
+  {k:'roofDir',label:'Roof direction',type:'sel',opts:()=>plan.shed.roof==='gable'?[[0,'Ridge along the length'],[90,'Ridge along the width']]:[[0,'High side on the left'],[180,'High side on the right'],[270,'High side at the back'],[90,'High side at the front']]},
+  {k:'pitch',label:'Pitch',type:'num',unit:'°',step:1,min:2,max:45},
+  {k:'overhang',label:'Eave overhang',type:'num',unit:'cm',step:5,min:0,max:90,cm:true},
+  {sec:'Framing'},
+  {k:'studSize',label:'Stud size',type:'sel',opts:['70x35','90x35','90x45']},
+  {k:'studSpacing',label:'Stud spacing',type:'sel',opts:[[450,'45 cm'],[600,'60 cm']]},
+  {k:'rafterSize',label:'Rafter size',type:'sel',opts:['90x45','140x45','190x45']},
+  {k:'rafterSpacing',label:'Rafter spacing',type:'sel',opts:[[600,'60 cm'],[900,'90 cm'],[1200,'120 cm']]},
+  {k:'battenSpacing',label:'Roof batten spacing',type:'sel',opts:[[600,'60 cm'],[900,'90 cm'],[1200,'120 cm']]},
+  {sec:'Floor'},
+  {k:'floor',label:'Floor',type:'sel',opts:Object.entries(FLOORS)},
+  {k:'slabT',label:'Slab thickness',type:'num',unit:'cm',step:2.5,min:7.5,max:20,cm:true,show:f=>f==='slab'},
+  {k:'slabBase',label:'Crushed rock base',type:'num',unit:'cm',step:2.5,min:0,max:30,cm:true,show:f=>f==='slab'},
+  {k:'mesh',label:'Reinforcing mesh',type:'sel',opts:Object.entries(MESH_TYPES),show:f=>f==='slab'},
+  {k:'paverType',label:'Paver type',type:'sel',opts:Object.entries(PAVER_TYPES).map(([k,v])=>[k,v.n]),show:f=>f==='pavers'},
+  {k:'paverW',label:'Paver length',type:'num',unit:'cm',step:0.5,min:5,max:120,cm:true,show:f=>f==='pavers'},
+  {k:'paverL',label:'Paver width',type:'num',unit:'cm',step:0.5,min:5,max:120,cm:true,show:f=>f==='pavers'},
+  {k:'paverGap',label:'Joint gap',type:'num',unit:'cm',step:0.1,min:0,max:2,cm:true,show:f=>f==='pavers'},
+  {k:'paverPattern',label:'Laying pattern',type:'sel',opts:[['stack','Stack bond (grid)'],['stretcher','Stretcher bond (offset rows)']],show:f=>f==='pavers'},
+  {k:'paverColor',label:'Paver colour',type:'hex',show:f=>f==='pavers'},
+  {k:'sandDepth',label:'Sand bed',type:'num',unit:'cm',step:0.5,min:0,max:10,cm:true,show:f=>f==='pavers'},
+  {k:'baseDepth',label:'Crushed rock base',type:'num',unit:'cm',step:2.5,min:0,max:30,cm:true,show:f=>f==='pavers'},
+  {k:'floorSheet',label:'Flooring',type:'sel',opts:Object.entries(FLOOR_SHEETS).map(([k,v])=>[k,v.n]),show:f=>f==='timber'},
+  {k:'joistSpacing',label:'Joist spacing',type:'sel',opts:[[300,'30 cm'],[450,'45 cm'],[600,'60 cm']],show:f=>f==='timber'},
+  {k:'floorH',label:'Floor height above ground',type:'num',unit:'cm',step:5,min:25,max:120,cm:true,show:f=>f==='timber'},
+  {k:'_floorWarn',type:'note',show:f=>f==='timber'},
+  {k:'gravelType',label:'Material',type:'sel',opts:Object.entries(GRAVEL_TYPES).map(([k,v])=>[k,v.n]),show:f=>f==='gravel'},
+  {k:'gravelDepth',label:'Depth',type:'num',unit:'cm',step:2.5,min:2.5,max:30,cm:true,show:f=>f==='gravel'},
+  {sec:'Materials'},
+  {k:'wallMat',label:'Walls',type:'sel',opts:Object.entries(WALL_MATS).map(([k,v])=>[k,v.n])},
+  {k:'roofMat',label:'Roof',type:'sel',opts:Object.entries(ROOF_MATS).map(([k,v])=>[k,v.n])},
+  {sec:'Colours'},
+  {k:'wallColor',label:'Walls',type:'color'},
+  {k:'roofColor',label:'Roof and trims',type:'color'},
+  {k:'doorColor',label:'Doors',type:'color'}
+];
+const TEMPLATES={
+  garden:{n:'Garden shed 2.4 × 1.8 m',shed:{width:2400,length:1800,height:2100,roof:'gable',roofDir:90,pitch:15,overhang:150,studSize:'70x35',rafterSize:'90x45',rafterSpacing:900,floor:'pavers',wallMat:'corr',roofMat:'corr'},ops:[{type:'pa',wall:'front',offset:0,width:820,height:1900,build:'colorbond'},{type:'window',wall:'left',offset:0,width:900,height:500,sill:1150,build:'poly'}]},
+  single:{n:'Single garage 3.6 × 6 m',shed:{width:3600,length:6000,height:2400,roof:'gable',roofDir:0,pitch:15,overhang:300,studSize:'90x45',rafterSize:'90x45',rafterSpacing:900,floor:'slab',wallMat:'corr',roofMat:'corr'},ops:[{type:'roller',wall:'front',offset:0,width:2400,height:2100},{type:'pa',wall:'right',offset:-1600,width:820,height:2040,build:'prehung'},{type:'window',wall:'back',offset:0,width:1200,height:600,sill:1200,build:'alum'}]},
+  double:{n:'Double garage 6 × 6 m',shed:{width:6000,length:6000,height:2700,roof:'gable',roofDir:90,pitch:15,overhang:300,studSize:'90x45',rafterSize:'140x45',rafterSpacing:900,floor:'slab',wallMat:'corr',roofMat:'corr'},ops:[{type:'roller',wall:'front',offset:-1500,width:2400,height:2100},{type:'roller',wall:'front',offset:1500,width:2400,height:2100},{type:'pa',wall:'right',offset:-1600,width:820,height:2040,build:'prehung'},{type:'window',wall:'left',offset:0,width:1200,height:600,sill:1200,build:'alum'}]},
+  workshop:{n:'Workshop 6 × 9 m',shed:{width:6000,length:9000,height:3000,roof:'gable',roofDir:0,pitch:12,overhang:300,studSize:'90x45',rafterSize:'190x45',rafterSpacing:900,floor:'slab',slabT:125,mesh:'SL82',wallMat:'trimdek',roofMat:'trimdek'},ops:[{type:'roller',wall:'front',offset:0,width:3000,height:2700},{type:'pa',wall:'right',offset:-3000,width:820,height:2040,build:'prehung'},{type:'window',wall:'left',offset:-2000,width:1500,height:900,sill:1200,build:'alum'},{type:'window',wall:'left',offset:2000,width:1500,height:900,sill:1200,build:'alum'}]},
+  studio:{n:'Backyard studio 3 × 4.2 m',shed:{width:4200,length:3000,height:2400,roof:'skillion',roofDir:270,pitch:8,overhang:450,studSize:'90x45',rafterSize:'140x45',rafterSpacing:600,floor:'timber',floorSheet:'yt',joistSpacing:450,floorH:400,wallMat:'weatherboard',roofMat:'corr'},ops:[{type:'pa',wall:'front',offset:-900,width:820,height:2040,build:'prehung'},{type:'window',wall:'front',offset:900,width:1500,height:1200,sill:900,build:'alum'},{type:'window',wall:'left',offset:0,width:900,height:900,sill:1100,build:'louvre'}]},
+  leanto:{n:'Lean-to store 3 × 1.8 m',shed:{width:3000,length:1800,height:2100,roof:'skillion',roofDir:270,pitch:8,overhang:200,studSize:'70x35',rafterSize:'90x45',rafterSpacing:900,floor:'gravel',wallMat:'corr',roofMat:'corr'},ops:[{type:'pa',wall:'front',offset:0,width:900,height:1900,build:'colorbond'}]}
+};
+function applyTemplate(k){const t=TEMPLATES[k];if(!t)return;Object.assign(plan.shed,t.shed);
+  plan.openings=t.ops.map(o=>Object.assign({id:uid(),sill:0,parts:{}},o,{build:o.build||(OPEN_BUILDS[o.type][0]||{}).id}));
+  plan.items=plan.items.filter(i=>Math.abs(i.x)<plan.shed.width/2&&Math.abs(i.z)<plan.shed.length/2);plan.selected=null;plan.extra={};
+  refreshAll();save();}
+function renderShedTab(){
+  const s=plan.shed;let h=`<h3>Start from a template</h3><div class="tpl"><select id="tplSel" aria-label="Template">${Object.entries(TEMPLATES).map(([k,v])=>`<option value="${k}" ${k==='single'?'selected':''}>${v.n}</option>`).join('')}</select><button class="btn" id="tplApply">Apply</button></div><p class="note" id="tplMsg" style="margin-top:0">Replaces the size, roof, floor, walls and openings. Your prices stay.</p>`;
+  SHED_FIELDS.forEach(f=>{
+    if(f.sec){h+=`<h3>${f.sec}</h3>`;return;}
+    if(f.show&&!f.show(s.floor))return;
+    if(f.type==='note'){h+=`<p class="warn" id="floorWarn"></p>`;return;}
+    h+=`<label class="row"><span>${f.label}</span>`;
+    if(f.type==='num')h+=`<span class="inp"><input type="number" data-k="${f.k}" value="${f.cm?s[f.k]/10:s[f.k]}" step="${f.step}" min="${f.min}" max="${f.max}" inputmode="decimal"><em>${f.unit}</em></span>`;
+    else if(f.type==='sel')h+=`<select data-k="${f.k}">${(typeof f.opts==='function'?f.opts():f.opts).map(o=>{const [v,l]=Array.isArray(o)?o:[o,o];return `<option value="${v}" ${String(s[f.k])===String(v)?'selected':''}>${l}</option>`;}).join('')}</select>`;
+    else if(f.type==='hex')h+=`<input type="color" data-k="${f.k}" value="${esc(s[f.k])}">`;
+    else if(f.type==='chk')h+=`<input type="checkbox" data-k="${f.k}" ${s[f.k]?'checked':''}>`;
+    else if(f.type==='color')h+=`<span class="colsel"><i data-sw="${f.k}" style="background:${COLORBOND[s[f.k]]}"></i><select data-k="${f.k}">${Object.keys(COLORBOND).map(n=>`<option ${n===s[f.k]?'selected':''}>${n}</option>`).join('')}</select></span>`;
+    h+='</label>';
+  });
+  h+=`<div class="summary" id="shedSummary"></div><p class="note">Sizes are external frame dimensions. Colours are approximate Colorbond shades.</p>`;
+  $('#tab-shed').innerHTML=h;updateShedTabState();
+}
+function updateShedTabState(){
+  const pi=$('#tab-shed [data-k="pitch"]');if(pi)pi.disabled=plan.shed.roof==='flat';
+  const fw=$('#floorWarn');if(fw){const fs=FLOOR_SHEETS[plan.shed.floorSheet]||FLOOR_SHEETS.yt;fw.textContent=plan.shed.joistSpacing>fs.maxJ?`${fs.n} needs joists at ${fs.maxJ/10} cm centres or closer.`:'';}const si=$('#tab-shed [data-k="slabT"]');if(si)si.disabled=plan.shed.floor!=='slab';const wc=$('#tab-shed [data-k="wallColor"]');if(wc)wc.disabled=plan.shed.wallMat==='ply';const rc=$('#tab-shed [data-k="roofColor"]');if(rc)rc.disabled=['zinc','poly'].includes(plan.shed.roofMat);
+  const D=dims();const iw=plan.shed.width-2*D.d*1000,il=plan.shed.length-2*D.d*1000;
+  const el=$('#shedSummary');if(!el)return;
+  el.innerHTML=`<span>Inside clear width</span><b>${fmtMM(iw)}</b><span>Inside clear length</span><b>${fmtMM(il)}</b><span>Floor area</span><b>${fm(D.W*D.L,2)} m²</b><span>${D.roof==='gable'?'Ridge height':'High side height'}</span><b>${fmtMM(peakHeight(D)*1000)}</b><span>Roof pitch</span><b>${D.pd}°</b>`;
+}
+function onShedInput(e){
+  const el=e.target;const k=el.dataset.k;if(!k)return;const f=SHED_FIELDS.find(x=>x.k===k);let v;
+  if(f.type==='num'){v=parseFloat(el.value);if(!isFinite(v))return;if(e.type==='input'&&(v<f.min||v>f.max))return;v=Math.min(f.max,Math.max(f.min,v));if(e.type==='change')el.value=v;if(f.cm)v=Math.round(v*10);}
+  else if(f.type==='chk')v=el.checked;
+  else{v=el.value;if(typeof plan.shed[k]==='number')v=Number(v);}
+  if(f.type==='color'){const sw=$(`[data-sw="${k}"]`);if(sw)sw.style.background=COLORBOND[v];}
+  if(plan.shed[k]===v)return;plan.shed[k]=v;if(shedSideFx(k,v))renderShedTab();onShedChanged();
+}
+let tplArmed=0;
+$('#tab-shed').addEventListener('click',e=>{if(e.target.id!=='tplApply')return;
+  if(Date.now()-tplArmed>4000){tplArmed=Date.now();e.target.textContent='Tap to confirm';return;}
+  tplArmed=0;applyTemplate($('#tplSel').value);});
+$('#tab-shed').addEventListener('input',onShedInput);$('#tab-shed').addEventListener('change',onShedInput);
+function onShedChanged(){rebuildShed();renderPick();updateSelHelper();updateShedTabState();updateOpeningWarnings();renderItemList();scheduleMaterials();save();}
+
+/* ---------- Openings tab ---------- */
+function numField(label,f,v,step){return `<label>${label}<span class="inp"><input type="number" data-f="${f}" value="${v/10}" step="${step}" inputmode="decimal"><em>cm</em></span></label>`;}
+function renderOpeningsTab(){
+  let h=`<div class="addrow">${Object.entries(OPEN_TYPES).map(([k,v])=>`<button class="chip" data-addop="${k}">+ ${v.label}</button>`).join('')}</div>`;
+  if(!plan.openings.length)h+='<p class="empty">No doors or windows yet. Add one above.</p>';
+  plan.openings.forEach(o=>{
+    h+=`<div class="card" data-op="${o.id}"><div class="cardh"><select data-f="type" aria-label="Type">${Object.entries(OPEN_TYPES).map(([k,v])=>`<option value="${k}" ${k===o.type?'selected':''}>${v.label}</option>`).join('')}</select><select data-f="wall" aria-label="Wall">${Object.entries(WALLS).map(([k,v])=>`<option value="${k}" ${k===o.wall?'selected':''}>${v} wall</option>`).join('')}</select><button class="x" data-delop="${o.id}" aria-label="Remove opening">✕</button></div>
+    <div class="grid2">${numField('Offset from centre','offset',o.offset,5)}${numField('Width','width',o.width,1)}${numField('Height','height',o.height,1)}${o.type==='window'?numField('Sill height','sill',o.sill,5):''}</div>${OPEN_BUILDS[o.type].length>1?`<label class="row"><span>Made from</span><select data-f="build">${OPEN_BUILDS[o.type].map(b=>`<option value="${b.id}" ${b.id===(o.build||OPEN_BUILDS[o.type][0].id)?'selected':''}>${b.n}</option>`).join('')}</select></label>`:''}<div class="warn" data-warn="${o.id}"></div></div>`;
+  });
+  h+=`<p class="note">Tap a door or window in the 3D view to change what it’s made from and adjust its parts. Offset is measured from the middle of the wall. Positive moves it right when you stand outside facing that wall. The front wall faces the default 3D view.</p>`;
+  $('#tab-openings').innerHTML=h;updateOpeningWarnings();
+}
+function openingIssue(o){
+  const D=dims();const wd=wallDefs(D)[localKeyOf(o.wall)];const sc=wd.len/2+o.offset/1000,w=o.width/1000,h=o.height/1000;const sill=o.type==='window'?o.sill/1000:0;
+  const a=sc-w/2,b=sc+w/2;if(w<=0||h<=0)return 'Width and height need to be more than 0.';
+  if(a<wd.s0+D.t-0.001||b>wd.s1-D.t+0.001)return 'Runs past the end of the wall. Reduce the width or move it toward the centre.';
+  const top=Math.min(hAt(D,wd,Math.max(a,0)),hAt(D,wd,Math.min(b,wd.len)));
+  if(sill+h>top-D.t-0.07)return 'Too tall for this wall once a lintel is added. Lower it or raise the wall height.';
+  const clash=plan.openings.find(p=>{if(p===o||p.wall!==o.wall)return false;const pa=wd.len/2+p.offset/1000-p.width/2000,pb=pa+p.width/1000;const ps=p.type==='window'?p.sill/1000:0;return pa<b+2*D.t&&pb>a-2*D.t&&ps<sill+h&&ps+p.height/1000>sill;});
+  if(clash)return 'Overlaps another opening on this wall.';
+  return '';
+}
+function updateOpeningWarnings(){plan.openings.forEach(o=>{const el=$(`[data-warn="${o.id}"]`);if(el)el.textContent=openingIssue(o);});}
+$('#tab-openings').addEventListener('click',e=>{
+  const add=e.target.closest('[data-addop]');
+  if(add){const t=OPEN_TYPES[add.dataset.addop];const wall=add.dataset.addop==='roller'?'front':add.dataset.addop==='window'?'left':'right';plan.openings.push({id:uid(),type:add.dataset.addop,wall,offset:0,width:t.w,height:t.h,sill:t.sill});afterOpenings(true);return;}
+  const del=e.target.closest('[data-delop]');if(del){plan.openings=plan.openings.filter(o=>o.id!==del.dataset.delop);afterOpenings(true);}
+});
+function onOpInput(e){
+  const card=e.target.closest('[data-op]');const f=e.target.dataset.f;if(!card||!f)return;const o=plan.openings.find(x=>x.id===card.dataset.op);if(!o)return;
+  if(f==='type'||f==='wall'||f==='build'){if(e.type!=='change')return;o[f]=e.target.value;if(f==='type'){const t=OPEN_TYPES[o.type];o.width=t.w;o.height=t.h;o.sill=t.sill;o.build=OPEN_BUILDS[o.type][0].id;o.parts={};}if(f==='build')o.parts={};afterOpenings(true);return;}
+  const v=parseFloat(e.target.value);if(!isFinite(v))return;o[f]=Math.round(v*10);afterOpenings(false);
+}
+$('#tab-openings').addEventListener('input',onOpInput);$('#tab-openings').addEventListener('change',onOpInput);
+function afterOpenings(rerender){rebuildShed();renderPick();if(rerender)renderOpeningsTab();else updateOpeningWarnings();scheduleMaterials();save();}
+
+/* ---------- Items tab ---------- */
+function renderItemsTab(){
+  $('#tab-items').innerHTML=`<h3>Add to the shed</h3><div class="lib">${LIB.map((l,i)=>`<button class="libbtn" data-lib="${i}"><b>${l.name}</b><small>${l.w/10} × ${l.d/10} × ${l.h/10} cm</small></button>`).join('')}</div>
+  <p class="note">Drag items in the 3D view to move them. With an item selected, press R to rotate 90°, arrow keys to nudge 5 cm (Shift for 1 cm), Delete to remove.</p>
+  <h3 id="itemsHead">In this plan</h3><div class="ilist" id="itemList"></div><div id="itemEditor"></div>`;
+  renderItemList();renderItemEditor();
+}
+function renderItemList(){
+  const el=$('#itemList');if(!el)return;
+  if(!plan.items.length){el.innerHTML='<p class="empty">Nothing placed yet. Add a workbench, car or anything else above to check it fits.</p>';return;}
+  el.innerHTML=plan.items.map(it=>{const f=itemFit(it);return `<button class="irow ${it.id===plan.selected?'sel':''}" data-item="${it.id}"><span class="sw" style="background:${esc(it.color)}"></span><span class="nm">${esc(it.name)}<small>${it.w/10} × ${it.d/10} × ${it.h/10} cm</small></span><span class="badge ${f.ok?'ok':'bad'}">${f.msg}</span></button>`;}).join('');
+}
+function renderItemEditor(){
+  const el=$('#itemEditor');if(!el)return;const it=getItem(plan.selected);if(!it){el.innerHTML='';return;}
+  const nf=(l,f,v,step,unit='cm')=>`<label>${l}<span class="inp"><input type="number" data-if="${f}" value="${unit==='cm'?v/10:v}" step="${step}" inputmode="decimal"><em>${unit}</em></span></label>`;
+  el.innerHTML=`<div class="editor"><label class="row" style="padding-top:0"><input class="textin" data-if="name" value="${esc(it.name)}" aria-label="Item name"></label>
+  <div class="grid2">${nf('Length','w',it.w,1)}${nf('Depth','d',it.d,1)}${nf('Height','h',it.h,1)}${nf('Raised off floor','y',it.y,1)}${nf('Left / right','x',it.x,1)}${nf('Front / back','z',it.z,1)}${nf('Rotation','rot',it.rot,15,'°')}<label>Colour<input type="color" data-if="color" value="${esc(it.color)}"></label></div>
+  <label class="row"><span>Include in materials list</span><input type="checkbox" data-if="bom" ${it.bom?'checked':''}></label>
+  <div class="btns"><button class="btn" data-act="rot">Rotate 90°</button><button class="btn" data-act="dup">Duplicate</button><button class="btn danger" data-act="del">Remove</button></div></div>`;
+}
+function syncEditorPos(it){['x','z'].forEach(k=>{const i=$(`#itemEditor [data-if="${k}"]`);if(i&&document.activeElement!==i)i.value=it[k]/10;});}
+function select(id,fromScene){
+  plan.selected=id;updateSelHelper();
+  if(fromScene&&id&&!$('#tab-items').classList.contains('on'))switchTab('items');else{renderItemList();renderItemEditor();}
+}
+function itemChanged(it,shapeChanged){
+  if(shapeChanged||!itemMeshes[it.id])rebuildItems();else{placeItem(itemMeshes[it.id],it);updateSelHelper();}
+  renderItemList();scheduleMaterials();save();
+}
+function removeItem(id){plan.items=plan.items.filter(i=>i.id!==id);if(plan.selected===id)plan.selected=null;rebuildItems();renderItemList();renderItemEditor();scheduleMaterials();save();}
+$('#tab-items').addEventListener('click',e=>{
+  const lb=e.target.closest('[data-lib]');
+  if(lb){const l=LIB[+lb.dataset.lib];const it=Object.assign({id:uid(),x:0,z:0,y:0,rot:0},JSON.parse(JSON.stringify(l)));plan.items.push(it);plan.selected=it.id;rebuildItems();renderItemList();renderItemEditor();scheduleMaterials();save();return;}
+  const row=e.target.closest('[data-item]');if(row){select(row.dataset.item===plan.selected?null:row.dataset.item);return;}
+  const act=e.target.closest('[data-act]');const it=getItem(plan.selected);if(!act||!it)return;
+  if(act.dataset.act==='rot'){it.rot=(it.rot+90)%360;renderItemEditor();itemChanged(it,false);}
+  else if(act.dataset.act==='dup'){const c=Object.assign({},it,{id:uid(),x:it.x+200,z:it.z+200});plan.items.push(c);plan.selected=c.id;rebuildItems();renderItemList();renderItemEditor();scheduleMaterials();save();}
+  else if(act.dataset.act==='del')removeItem(it.id);
+});
+function onItemInput(e){
+  const f=e.target.dataset.if;const it=getItem(plan.selected);if(!f||!it)return;
+  if(f==='name'){it.name=e.target.value;renderItemList();scheduleMaterials();save();return;}
+  if(f==='color'){it.color=e.target.value;itemChanged(it,true);return;}
+  if(f==='bom'){it.bom=e.target.checked;scheduleMaterials();save();return;}
+  let v=parseFloat(e.target.value);if(!isFinite(v))return;if(f!=='rot')v=Math.round(v*10);
+  if(['w','h','d'].includes(f)){v=Math.max(5,v);it[f]=v;itemChanged(it,true);}
+  else{it[f]=v;itemChanged(it,false);}
+}
+$('#tab-items').addEventListener('input',onItemInput);
+$('#tab-items').addEventListener('change',e=>{if(e.target.dataset.if==='bom')onItemInput(e);});
+document.addEventListener('keydown',e=>{
+  const ae=document.activeElement;if(ae&&/INPUT|SELECT|TEXTAREA/.test(ae.tagName))return;if($('#fileDlg').open)return;
+  const it=getItem(plan.selected);if(!it)return;const st=e.shiftKey?10:50;let ch=true;
+  switch(e.key){
+    case 'r':case 'R':it.rot=(it.rot+90)%360;break;
+    case 'ArrowLeft':it.x-=st;break;case 'ArrowRight':it.x+=st;break;
+    case 'ArrowUp':it.z-=st;break;case 'ArrowDown':it.z+=st;break;
+    case 'Delete':case 'Backspace':e.preventDefault();removeItem(it.id);return;
+    case 'Escape':select(null);return;
+    default:ch=false;
+  }
+  if(ch){e.preventDefault();itemChanged(it,false);const r=$('#itemEditor [data-if="rot"]');if(r)r.value=it.rot;syncEditorPos(it);}
+});
+
+/* ---------- Materials ---------- */
+const CAT_ORDER=['Stumps','Bearers (doubled)','Floor joists','Bottom plate','Top plate','Studs','Noggings','Lintels','Sill trimmers','Rafters','Ridge board','Roof battens'];
+let lastRows=[];
+const BUN_DATE='17 Oct 2026';
+const BUN_TIMBER={'70x35':{p:4.11,n:'70 x 35mm Framing MGP10 H2 Blue Pine'},'90x35':{p:4.01,n:'90 x 35mm Framing MGP10 H2 Blue Pine'},'90x45':{p:5.82,n:'90 x 45mm Framing MGP10 H2 Blue Pine',u:'https://www.bunnings.com.au/90-x-45mm-framing-mgp10-h2-blue-pine-6-0m_p8031034'},'140x45':{p:11.28,n:'140 x 45mm Framing MGP10 Untreated Pine'}};
+const bunSearch=q=>'https://www.bunnings.com.au/search/products?q='+encodeURIComponent(q);
+function bunningsFor(r){
+  const k=r.key;
+  if(r.part)return r.part.p?{p:r.part.p,n:r.part.pn||r.part.n,u:bunSearch(r.part.bq)}:{n:'Find '+r.part.n.toLowerCase(),u:bunSearch(r.part.bq)};
+  if(k.startsWith('t:')){const t=BUN_TIMBER[r.size];if(t)return {p:t.p,n:t.n,u:t.u||bunSearch(t.n)};return r.size==='90x90'?{n:'Find 90 x 90mm H4 treated pine (or use concrete stumps)',u:bunSearch('90 x 90mm H4 treated pine')}:{n:'Find '+r.size+' framing pine',u:bunSearch(r.size.replace('x',' x ')+'mm framing pine')};}
+  if(k==='s:wall:fc')return {p:81.07,n:'James Hardie HardieFlex 2400 x 1200 x 6mm',u:'https://www.bunnings.com.au/james-hardie-hardieflex-2400-x-1200-x-6mm-cladding-2-88m-2400-x-1200-x-6_p0711095'};
+  if(k==='s:wall:weatherboard')return {p:15.69,n:'185 x 18mm H3 primed rusticated weatherboard 5.4m ($84.70 each, special order)',u:bunSearch('185 x 18mm weatherboard H3 treated pine primed')};
+  if(k==='s:wall:ply')return {n:'Find plywood cladding',u:bunSearch('plywood cladding')};
+  if(k.startsWith('s:')&&k.endsWith('trimdek'))return {n:'Find Trimdek',u:bunSearch('Trimdek Colorbond')};
+  if(k==='s:roof:zinc')return {n:'Find Zincalume corrugated',u:bunSearch('zincalume corrugated roofing')};
+  if(k==='s:roof:poly')return {n:'Find polycarbonate roofing',u:bunSearch('corrugated polycarbonate roofing')};
+  if(k==='s:wrap')return {n:'Find wall wrap',u:bunSearch('wall wrap sarking')};
+  if(k==='fl:yt')return {p:53.80,n:'STRUCTAflor 3600 x 800 x 19mm YELLOWtongue',u:'https://www.bunnings.com.au/structaflor-3600x800mm-19mm-yellow-tongue-particle-board_p0148884'};
+  if(k==='fl:pav-old')return {n:'Find 400 x 400 pavers',u:bunSearch('400 x 400 paver')};
+  if(k==='fl:sand')return {n:'Find paving sand',u:bunSearch('paving sand 20kg')};
+  if(k==='fl:rock')return {n:'Find crushed rock',u:bunSearch('crushed rock road base')};
+  if(k==='s:wall:corr'||k==='s:roof:corr'){const mon=r.size==='Monument';return {p:20.38,n:'Fielders S-Rib Corrugated 0.42mm Colorbond '+r.size+' (special order)',u:mon?'https://www.bunnings.com.au/s-rib-corrugated-steel-cladding-0-42mm-bmt-colorbond-steel-monument_p1141864':bunSearch('S-Rib Corrugated Colorbond '+r.size)};}
+  if(k.startsWith('o:roller'))return {p:986,n:'Steel-Line A Series roller door 2200 x 2490mm',u:bunSearch('Steel-Line roller door')};
+  if(k.startsWith('o:pa'))return {n:'Find an external door',u:bunSearch('external door')};
+  if(k.startsWith('o:window'))return {n:'Find an aluminium window',u:bunSearch('aluminium sliding window')};
+  if(k==='f:Gutter')return {n:'Find Colorbond gutter',u:bunSearch('colorbond gutter')};
+  if(k.startsWith('f:'))return {n:'Find Colorbond flashing',u:bunSearch('colorbond flashing')};
+  if(k==='c:concrete')return {n:'Find concrete mix (ready-mix is usually cheaper for a full slab)',u:bunSearch('concrete mix 20kg')};
+  if(k==='c:mesh-old')return {n:'Find reinforcing mesh',u:bunSearch('reinforcing mesh')};
+  return {n:'Find '+r.item.toLowerCase(),u:bunSearch(r.bq||r.item)};
+}
+function stockFor(lens){const stock={};let buy=0;const K=0.005;const bins=[];
+  lens.slice().sort((a,b)=>b-a).forEach(l=>{if(l>6){const n=Math.ceil(l/6-1e-9);stock[6]=(stock[6]||0)+n;buy+=6*n;return;}
+    const b=bins.find(b=>6-b.used>=l+K);if(b)b.used+=l+K;else bins.push({used:l+K});});
+  bins.forEach(b=>{const s=STOCK.find(x=>x>=b.used-K-0.0005)||6;stock[s]=(stock[s]||0)+1;buy+=s;});const common=+(Object.entries(stock).sort((a,b)=>b[1]-a[1])[0]||[6])[0];return {buy,common,text:Object.entries(stock).sort((a,b)=>a[0]-b[0]).map(([s,n])=>`${n} × ${fm(s,1)} m`).join(', ')};}
+function computeMaterials(){
+  const D=dims(),S=plan.shed;const rows=[];
+  const groups={};lastPieces.forEach(p=>{const k=p.cat+'|'+p.size;(groups[k]=groups[k]||{cat:p.cat,size:p.size,lens:[]}).lens.push(p.len);});
+  Object.values(groups).sort((a,b)=>CAT_ORDER.indexOf(a.cat)-CAT_ORDER.indexOf(b.cat)).forEach(g=>{
+    const tot=g.lens.reduce((a,b)=>a+b,0);const st=stockFor(g.lens);
+    rows.push({key:'t:'+g.cat+':'+g.size,group:'Framing timber',item:g.cat,size:g.size,detail:`${g.lens.length} ${g.lens.length===1?'piece':'pieces'}, ${fm(tot,1)} m after cutting`,order:'Buy '+st.text,buy:st.buy,pu:'$/m',common:st.common});
+  });
+  const sheetRow=(key,item,col,lens,area)=>{const tot=lens.reduce((a,b)=>a+b,0);const mx=Math.max(...lens),mn=Math.min(...lens);
+    rows.push({key,group:'Sheeting',item,size:col,detail:`${fm(area,1)} m² ${key.startsWith('s:wall')?'net of openings':'roof area'}`,order:`${lens.length} sheets, ${mn===mx?fm(mx,2)+' m each':fm(mn,2)+' to '+fm(mx,2)+' m long'}, ${fm(tot,1)} m total`,buy:tot,pu:'$/m',sheetLen:tot/lens.length});};
+  const WM=WALL_MATS[S.wallMat]||WALL_MATS.corr,RM=ROOF_MATS[S.roofMat]||ROOF_MATS.corr;
+  if(WM.kind==='sheet'){if(lastWallSheets.length)sheetRow('s:wall:'+S.wallMat,WM.n+' wall sheets',S.wallColor,lastWallSheets,lastAreas.wall);}
+  else if(WM.kind==='board'){const lm=Math.ceil(lastAreas.wall*1.1/WM.cover);rows.push({key:'s:wall:'+S.wallMat,group:'Sheeting',item:'Weatherboards',size:'185 x 18mm, '+S.wallColor,detail:`${fm(lastAreas.wall,1)} m² net of openings, plus 10% for cuts`,order:`${lm} m (about ${Math.ceil(lm/5.4)} × 5.4 m boards)`,buy:lm,pu:'$/m'});}
+  else{const n=Math.ceil(lastAreas.wall*1.08/2.88);rows.push({key:'s:wall:'+S.wallMat,group:'Sheeting',item:S.wallMat==='fc'?'Fibre cement sheets':'Plywood cladding sheets',size:'2400 x 1200mm',detail:`${fm(lastAreas.wall,1)} m² net of openings, plus 8% for cuts`,order:`${n} sheets`,buy:n,pu:'$ ea'});}
+  if(WM.kind!=='sheet')rows.push({key:'s:wrap',group:'Sheeting',item:'Wall wrap (sarking)',size:'',detail:'Goes behind timber or fibre cement cladding',order:`${Math.ceil(lastAreas.wall*1.1)} m²`,buy:Math.ceil(lastAreas.wall*1.1),pu:'$/m²'});
+  if(lastRoofSheets.length)sheetRow('s:roof:'+S.roofMat,RM.n+' roof sheets',RM.color?(S.roofMat==='zinc'?'Zincalume':'Clear'):S.roofColor,lastRoofSheets,lastAreas.roof);
+  const fg={};lastFlash.forEach(([n,l])=>{(fg[n]=fg[n]||[]).push(l);});
+  Object.entries(fg).forEach(([n,ls])=>{const tot=ls.reduce((a,b)=>a+b,0);rows.push({key:'f:'+n,group:'Flashings and gutter',item:n,size:n.startsWith('Corner')?S.wallColor:S.roofColor,detail:`${ls.length} ${ls.length===1?'length':'lengths'}`,order:`${fm(tot,1)} m total`,buy:tot,pu:'$/m'});});
+  if(S.floor==='slab'){const vol=(D.W+0.1)*(D.L+0.1)*S.slabT/1000;rows.push({key:'c:concrete',group:'Slab',item:'Concrete',size:`${S.slabT/10} cm thick`,detail:`${fm((D.W+0.1)*(D.L+0.1),1)} m² slab`,order:`${fm(Math.ceil(vol*10)/10,1)} m³`,buy:Math.ceil(vol*10)/10,pu:'$/m³'});
+    if(S.mesh!=='none'){const mesh=Math.ceil(((D.W)*(D.L))/(6*2.4*0.85));rows.push({key:'c:mesh:'+S.mesh,group:'Slab',item:'Reinforcing mesh',size:`${S.mesh}, 6.0 × 2.4 m`,detail:'Includes overlap',order:`${mesh} sheets`,buy:mesh,pu:'$ ea',bq:S.mesh+' reinforcing mesh'});}}
+  const area=D.W*D.L;
+  if(S.floor==='slab'&&S.slabBase>0){const v=Math.ceil(area*1.1*S.slabBase/1000*10)/10;rows.push({key:'c:base',group:'Slab',item:'Crushed rock base',size:`${S.slabBase/10} cm compacted`,detail:'Under the slab',order:`${fm(v,1)} m³`,buy:v,pu:'$/m³',bq:'crushed rock'});}
+  if(S.floor==='timber'){const fs=FLOOR_SHEETS[S.floorSheet]||FLOOR_SHEETS.yt;
+    if(S.floorSheet==='deck'){const lm=Math.ceil(area/0.095*1.1);const bx=Math.max(1,Math.ceil((area/0.095)/((S.joistSpacing||450)/1000)*2/500));rows.push({key:'fl:deck',group:'Floor',item:'Hardwood decking',size:'90 x 19mm',detail:`${fm(area,1)} m² with 5 mm gaps, plus 10%`,order:`${lm} m`,buy:lm,pu:'$/m',bq:'hardwood decking 90 x 19mm'});rows.push({key:'fl:deckscrew',group:'Floor',item:'Decking screws',size:'Stainless, box of 500',detail:'Two per board at each joist',order:`${bx} ${bx===1?'box':'boxes'}`,buy:bx,pu:'$ ea',bq:'stainless decking screws'});}
+    else{const n=Math.ceil(area*1.05/(fs.sw*fs.sl));rows.push({key:'fl:'+S.floorSheet,group:'Floor',item:fs.n,size:`${Math.round(fs.sw*1000)} x ${Math.round(fs.sl*1000)}mm`,detail:`${fm(area,1)} m² floor plus 5%`,order:`${n} sheets`,buy:n,pu:'$ ea',bq:S.floorSheet==='ply'?'structural plywood 19mm':'yellow tongue flooring'});}}
+  if(S.floor==='pavers'){const PT=PAVER_TYPES[S.paverType]||PAVER_TYPES.concrete;const pw=S.paverW/1000,pl=S.paverL/1000,gp=S.paverGap/1000;const n=Math.ceil(area/((pw+gp)*(pl+gp))*(S.paverPattern==='stretcher'?1.1:1.05));
+    rows.push({key:'fl:pav:'+S.paverType+':'+S.paverW+'x'+S.paverL,group:'Floor',item:PT.n,size:`${S.paverW/10} × ${S.paverL/10} cm`,detail:`${fm(area,1)} m², ${S.paverPattern==='stretcher'?'stretcher bond, plus 10% for cuts':'stack bond, plus 5%'}`,order:`${n} pavers`,buy:n,pu:'$ ea',bq:`${PT.n} ${S.paverW}x${S.paverL}`});
+    if(S.sandDepth>0){const v=area*S.sandDepth/1000*1.1;const bags=Math.ceil(v/0.0125);rows.push({key:'fl:sand',group:'Floor',item:'Paving sand',size:`${S.sandDepth/10} cm bed`,detail:`${fm(v,2)} m³. Bulk delivery is cheaper for big areas.`,order:`${bags} × 20kg bags`,buy:bags,pu:'$ ea',bq:'paving sand 20kg'});}
+    if(S.baseDepth>0){const v=Math.ceil(area*1.1*S.baseDepth/1000*10)/10;rows.push({key:'fl:rock',group:'Floor',item:'Crushed rock base',size:`${S.baseDepth/10} cm compacted`,detail:'',order:`${fm(v,1)} m³`,buy:v,pu:'$/m³',bq:'crushed rock'});}
+    if(gp>0)rows.push({key:'fl:joint',group:'Floor',item:'Joint sand',size:'Fine paving sand',detail:'Swept into the joints',order:'1 × 20kg bag',buy:1,pu:'$ ea',bq:'paving joint sand'});}
+  if(S.floor==='gravel'){const gt=GRAVEL_TYPES[S.gravelType]||GRAVEL_TYPES.crushed;const v=Math.ceil(area*1.1*S.gravelDepth/1000*10)/10;rows.push({key:'fl:gravel:'+S.gravelType,group:'Floor',item:gt.n,size:`${S.gravelDepth/10} cm compacted`,detail:`${fm(area,1)} m²`,order:`${fm(v,1)} m³`,buy:v,pu:'$/m³',bq:gt.n});}
+  const pg={};plan.openings.forEach(o=>openingParts(o).forEach(pt=>{if(!pt.on||!(pt.qty>0))return;const k=pt.id+'|'+pt.n;(pg[k]=pg[k]||{p:pt,q:0,n:0}).q+=pt.qty;pg[k].n++;}));
+  Object.values(pg).forEach(({p,q,n})=>rows.push({key:'dp:'+p.id+':'+p.n,group:'Doors and windows',item:p.n,size:'',detail:n>1?`For ${n} openings`:'',order:p.unit==='m'?`${fm(q,1)} m`:`${q}`,buy:p.unit==='m'?Math.round(q*100)/100:q,pu:p.unit==='m'?'$/m':'$ ea',part:p}));
+  const ig={};plan.items.filter(i=>i.bom).forEach(i=>{const k=i.name+':'+i.w+'x'+i.d+'x'+i.h;(ig[k]=ig[k]||{i,n:0}).n++;});
+  Object.entries(ig).forEach(([k,{i,n}])=>rows.push({key:'i:'+k,group:'Placed items',item:i.name,size:`${i.w/10} × ${i.d/10} × ${i.h/10} cm`,detail:'',order:`${n}`,buy:n,pu:'$ ea'}));
+  rows.forEach(r=>{let step=1,lab='';
+    if(r.key.startsWith('t:')){step=r.common||6;lab='× '+fm(step,1)+' m';}
+    else if(r.sheetLen){step=r.sheetLen;lab='sheets';}
+    else if(r.pu==='$/m³'){step=0.1;lab='× 0.1 m³';}
+    else if(r.pu==='$/m')lab='m';else if(r.pu==='$/m²')lab='m²';
+    const ex=+((plan.extra||{})[r.key])||0;r.step=step;r.exLab=lab;r.extra=ex;
+    if(ex){r.buy=Math.max(0,Math.round((r.buy+ex*step)*1000)/1000);r.order+=(ex>0?`, plus ${ex} extra `:`, minus ${-ex} `)+lab;}
+  });
+  return rows;
+}
+function materialsSub(){return lastRows.reduce((a,r)=>a+(+plan.prices[r.key]||0)*r.buy,0);}
+function grandTotal(){return materialsSub()*(1+(+plan.waste||0)/100);}
+const OPEN_HRS={kit:4,prehung:3,ledge:6,colorbond:5,alum:2,poly:2.5,louvre:2.5,none:0.5};
+const LAB_NOTE={setout:'Pegs, string lines, levels',floor:'Base, formwork, pour or lay',frame:'Cut, nail up and stand all framing',roof:'Sheets, capping, barges and gutter',clad:'Wall sheets or boards and flashings',open:'Hang doors and fit windows',finish:'Trims, sealing and clean-up'};
+function labourStages(){
+  const D=dims(),S=plan.shed;const area=D.W*D.L;const r5=v=>Math.max(0.5,Math.round(v*2)/2);
+  const pieces=lastPieces.filter(p=>!['Stumps','Bearers (doubled)','Floor joists'].includes(p.cat)).length;
+  const floorPieces=lastPieces.length-pieces;const flashM=lastFlash.reduce((a,f)=>a+f[1],0);
+  const WM=WALL_MATS[S.wallMat]||WALL_MATS.corr;const cladRate=WM.kind==='sheet'?0.3:WM.kind==='board'?0.6:0.45;
+  const floorH={slab:4+0.8*area,timber:4+0.6*area+0.15*floorPieces,pavers:2+0.8*area,gravel:1+0.2*area,none:0.1*area}[S.floor]||0;
+  const st=[
+    ['setout','Set out and site prep',3+0.1*area],
+    ['floor',FLOORS[S.floor]||'Floor',floorH],
+    ['frame','Wall and roof framing',0.12*pieces],
+    ['roof','Roofing and gutter',0.35*lastAreas.roof+0.08*flashM],
+    ['clad','Wall cladding',cladRate*lastAreas.wall],
+    ['open','Doors and windows',plan.openings.reduce((a,o)=>a+(OPEN_HRS[o.build||(OPEN_BUILDS[o.type][0]||{}).id]||2),0)],
+    ['finish','Finishing off',2+0.05*area]
+  ];
+  return st.filter(s=>s[2]>0.01||(plan.labour||{})[s[0]]!==undefined).map(([k,n,v])=>{const est=r5(v);const ov=(plan.labour||{})[k];const hrs=(ov!==undefined&&ov!==null&&isFinite(ov))?+ov:est;return {k,n,est,hrs,ov:ov!==undefined&&ov!==null,note:LAB_NOTE[k]||''};});
+}
+function labourRate(){const r=+plan.labourRate;return isFinite(r)&&r>0?r:(+SETTINGS.hourlyRate||95);}
+function labourHours(){return labourStages().reduce((a,s)=>a+s.hrs,0);}
+function labourHTML(){const st=labourStages();const tot=st.reduce((a,s)=>a+s.hrs,0);
+  return `<h3>Labour</h3><p class="note" style="margin-top:0">Starting estimates in crew hours, worked out from the model. Change any stage to match how your crew works.</p><div class="mtable lab">${st.map(s=>`<div class="mrow"><div class="mi"><b>${esc(s.n)}</b><small>${esc(s.note)}${s.ov?` · estimate ${s.est} h`:''}</small></div><div class="mp"><span class="inp sm"><input type="number" data-lab="${s.k}" value="${s.hrs}" min="0" step="0.5" inputmode="decimal" aria-label="Hours for ${esc(s.n)}"><em>h</em></span></div></div>`).join('')}</div>
+  <label class="row"><span>Labour rate</span><span class="inp"><input type="number" id="labRate" value="${labourRate()}" min="0" step="1" inputmode="decimal"><em>$/h</em></span></label>
+  <div class="ttl"><span>Materials${plan.waste?` (incl. ${plan.waste}% waste)`:''}</span><b id="tMat">${money(grandTotal())}</b><span>Labour, <span id="tHrs">${fm(tot,1)}</span> h</span><b id="tLab">${money(tot*labourRate())}</b><span class="big">Total cost, ex GST</span><b class="big" id="tAll">${money(grandTotal()+tot*labourRate())}</b></div>
+  <p class="note">${EMBED?'Your materials margin and pricing tiers are added when you start the quote.':'Cost only. Add your margin and GST when you quote.'}</p>`;}
+function updateTotals(){const hrs=labourHours();const g=$('#grand');if(g)g.textContent=money(grandTotal());const m=$('#tMat');if(m)m.textContent=money(grandTotal());const th=$('#tHrs');if(th)th.textContent=fm(hrs,1);const tl=$('#tLab');if(tl)tl.textContent=money(hrs*labourRate());const ta=$('#tAll');if(ta)ta.textContent=money(grandTotal()+hrs*labourRate());}
+function renderMaterials(){
+  lastRows=computeMaterials();const groups=[...new Set(lastRows.map(r=>r.group))];
+  let h=`<div class="bunbar"><button class="primary" id="useBun">Use Bunnings prices</button><span class="note" style="margin:0">Prices checked ${BUN_DATE} and vary by store and state. Tap a product to check your local price. Items without a price need a quick search.</span></div><label class="row" style="margin-top:12px"><span>Waste and fixings allowance</span><span class="inp"><input type="number" id="waste" value="${plan.waste}" min="0" max="50" step="1"><em>%</em></span></label>`;
+  groups.forEach(g=>{
+    h+=`<h3>${g}</h3><div class="mtable">`;
+    lastRows.filter(r=>r.group===g).forEach(r=>{const pr=plan.prices[r.key]??'';const b=bunningsFor(r);
+      h+=`<div class="mrow"><div class="mi"><b>${esc(r.item)}</b><span class="sz">${esc(r.size)}</span>${r.detail?`<small>${esc(r.detail)}</small>`:''}<small class="bun"><a href="${b.u}" target="_blank" rel="noopener">Bunnings: ${esc(b.n)}</a>${b.p?` ${money(b.p)} ${r.pu.replace('$','')}`:''}</small></div><div class="mq">${esc(r.order)}<span class="step"><button data-ex="${esc(r.key)}" data-d="-1" aria-label="Fewer">−</button><b>${r.extra>0?'+'+r.extra:r.extra}</b><button data-ex="${esc(r.key)}" data-d="1" aria-label="More">+</button></span></div><div class="mp"><span class="inp sm"><input type="number" data-price="${esc(r.key)}" value="${pr}" placeholder="0.00" min="0" step="0.01" aria-label="Price for ${esc(r.item)}"><em>${r.pu}</em></span><span class="cost" data-cost="${esc(r.key)}">${money((+pr||0)*r.buy)}</span></div></div>`;});
+    h+='</div>';
+  });
+  h+=`<div class="total"><span>Materials total</span><b id="grand">${money(grandTotal())}</b></div>${labourHTML()}<button class="primary" id="copyCsv">Copy list as CSV</button> <span class="note" id="csvMsg"></span>
+  <p class="note">Quantities are taken from the 3D model and rounded up to common stock lengths. Enter your supplier’s prices to get a total. Check sizes against your council and engineering requirements before ordering.</p>`;
+  $('#tab-materials').innerHTML=h;
+}
+let matT;function scheduleMaterials(){clearTimeout(matT);matT=setTimeout(()=>{if($('#tab-materials').classList.contains('on'))renderMaterials();},120);}
+$('#tab-materials').addEventListener('input',e=>{
+  if(e.target.id==='waste'){const v=parseFloat(e.target.value);plan.waste=isFinite(v)?Math.max(0,v):0;}
+  else if(e.target.dataset.price){const k=e.target.dataset.price;const v=parseFloat(e.target.value);if(isFinite(v))plan.prices[k]=v;else delete plan.prices[k];const r=lastRows.find(x=>x.key===k);const c=$(`[data-cost="${CSS.escape(k)}"]`);if(r&&c)c.textContent=money((plan.prices[k]||0)*r.buy);}
+  else if(e.target.dataset.lab){const k=e.target.dataset.lab;const v=parseFloat(e.target.value);plan.labour=plan.labour||{};if(isFinite(v)&&v>=0)plan.labour[k]=v;else delete plan.labour[k];}
+  else if(e.target.id==='labRate'){const v=parseFloat(e.target.value);plan.labourRate=isFinite(v)&&v>0?v:null;}
+  else return;
+  updateTotals();save();
+});
+$('#tab-materials').addEventListener('click',async e=>{
+  const exb=e.target.closest('[data-ex]');if(exb){bumpExtra(exb.dataset.ex,+exb.dataset.d);return;}
+  if(e.target.id==='useBun'){lastRows.forEach(r=>{const b=bunningsFor(r);if(b.p)plan.prices[r.key]=b.p;});save();renderMaterials();return;}
+  if(e.target.id!=='copyCsv')return;
+  const q=s=>'"'+String(s).replace(/"/g,'""')+'"';
+  const lines=[['Group','Item','Size','Detail','Order','Unit price','Cost'].map(q).join(',')].concat(lastRows.map(r=>{const p=+plan.prices[r.key]||0;return [r.group,r.item,r.size,r.detail,r.order,p?p.toFixed(2)+' '+r.pu:'',(p*r.buy).toFixed(2)].map(q).join(',');}));
+  lines.push(['','','','','Waste allowance',plan.waste+'%',''].map(q).join(','),['','','','','Materials total','',grandTotal().toFixed(2)].map(q).join(','));
+  labourStages().forEach(s=>lines.push(['Labour',s.n,'','',s.hrs+' h',labourRate().toFixed(2)+' $/h',(s.hrs*labourRate()).toFixed(2)].map(q).join(',')));
+  lines.push(['','','','','Total cost ex GST','',(grandTotal()+labourHours()*labourRate()).toFixed(2)].map(q).join(','));
+  const ok=await copyText(lines.join('\n'));$('#csvMsg').textContent=ok?'Copied. Paste it into a spreadsheet.':'Copy is blocked here. Use Save / load to copy the plan instead.';
+});
+
+async function copyText(txt,ta){
+  try{await navigator.clipboard.writeText(txt);return true;}catch(e){
+    try{const t=ta||document.createElement('textarea');if(!ta){t.value=txt;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);}t.focus();t.select();const ok=document.execCommand('copy');if(!ta)t.remove();return ok;}catch(_){return false;}
+  }
+}
+
+/* ---------- tabs ---------- */
+function switchTab(name){
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===name));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+name));
+  if(name==='materials')renderMaterials();
+  if(name==='items'){renderItemList();renderItemEditor();}
+}
+$('.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b)switchTab(b.dataset.tab);});
+
+/* ---------- save / load ---------- */
+const dlg=$('#fileDlg');let resetArmed=0;
+$('#btnFile').addEventListener('click',()=>{$('#planJson').value=JSON.stringify(Object.assign({},plan,{selected:null}));$('#dlgMsg').textContent='';resetArmed=0;$('#resetPlan').textContent='Start a new plan';dlg.showModal();});
+$('#copyJson').addEventListener('click',async()=>{const ta=$('#planJson');const ok=await copyText(ta.value,ta);$('#dlgMsg').textContent=ok?'Plan code copied.':'Select the code above and copy it manually.';});
+$('#loadJson').addEventListener('click',()=>{
+  try{const p=JSON.parse($('#planJson').value);if(!p||!p.shed)throw new Error();plan=migrate(p);plan.selected=null;refreshAll();save();$('#dlgMsg').textContent='Plan loaded.';}
+  catch(e){$('#dlgMsg').textContent='That code isn’t a valid plan. Paste the full code copied from this tool.';}
+});
+$('#resetPlan').addEventListener('click',()=>{
+  if(Date.now()-resetArmed>4000){resetArmed=Date.now();$('#resetPlan').textContent='Tap again to clear this plan';return;}
+  plan=defaultPlan();refreshAll();save();$('#planJson').value=JSON.stringify(plan);$('#resetPlan').textContent='Start a new plan';resetArmed=0;$('#dlgMsg').textContent='New plan started.';
+});
+
+function refreshAll(){closePick();renderPlansTab();renderShedTab();renderOpeningsTab();renderItemsTab();renderLayerBar();rebuildShed();rebuildItems();if($('#tab-materials').classList.contains('on'))renderMaterials();setView('3d');}
+
+/* ---------- tap to edit ---------- */
+let pickState=null,pickHelper=null;
+function clearPickHelper(){if(pickHelper){scene.remove(pickHelper);pickHelper.geometry.dispose();pickHelper.material.dispose();pickHelper=null;}}
+function closePick(){pickState=null;clearPickHelper();const el=$('#pick');if(el){el.hidden=true;el.innerHTML='';}}
+function pickAt(e){
+  setPtr(e);ray.setFromCamera(ptr,camera);
+  const ks=['openings','frame','clad','roof','slab'].filter(k=>plan.layers[k]&&!((k==='clad'||k==='roof')&&plan.xray<0.6));
+  const hits=ray.intersectObjects(ks.map(k=>L[k]),true).filter(h=>h.object.userData.part);
+  if(!hits.length)return false;
+  const m=hits[0].object;pickState=Object.assign({},m.userData.part);
+  clearPickHelper();pickHelper=new THREE.BoxHelper(m,0x2fb6ff);scene.add(pickHelper);
+  renderPick();return true;
+}
+function pkSel(k,label){
+  const S=plan.shed;const f=SHED_FIELDS.find(x=>x.k===k);if(!f)return '';
+  const opts=f.type==='color'?Object.keys(COLORBOND):(typeof f.opts==='function'?f.opts():f.opts);
+  return `<label class="row"><span>${esc(label||f.label)}</span><select data-pks="${k}">${opts.map(o=>{const [v,l]=Array.isArray(o)?o:[o,o];return `<option value="${esc(v)}" ${String(S[k])===String(v)?'selected':''}>${esc(l)}</option>`;}).join('')}</select></label>`;
+}
+function pkNum(k,label,unit){const f=SHED_FIELDS.find(x=>x.k===k);const v=f.cm?plan.shed[k]/10:plan.shed[k];return `<label class="row"><span>${label}</span><span class="inp"><input type="number" data-pkn="${k}" value="${v}" step="${f.step}" inputmode="decimal"><em>${unit}</em></span></label>`;}
+function pkOp(l,f,v,step){return `<label>${l}<span class="inp"><input type="number" data-po="${f}" value="${v/10}" step="${step}" inputmode="decimal"><em>cm</em></span></label>`;}
+function pkRow(key){
+  const r=computeMaterials().find(x=>x.key===key);if(!r)return '';
+  return `<div class="pkrow"><small>In your materials list${r.exLab?', adjust extra '+esc(r.exLab):''}</small><div>${esc(r.order)}</div><span class="step"><button data-ex="${esc(r.key)}" data-d="-1" aria-label="Fewer">−</button><b>${r.extra>0?'+'+r.extra:r.extra}</b><button data-ex="${esc(r.key)}" data-d="1" aria-label="More">+</button></span></div>`;
+}
+function renderPick(){
+  const el=$('#pick');if(!el)return;const p=pickState;if(!p){el.hidden=true;return;}
+  const S=plan.shed;let h='';
+  const head=(t,sub)=>`<div class="pkh"><div><b>${esc(t)}</b>${sub?`<small>${esc(sub)}</small>`:''}</div><button class="x" data-pk="close" aria-label="Close">✕</button></div>`;
+  if(p.type==='timber'){
+    const same=lastPieces.filter(x=>x.cat===p.cat&&x.size===p.size).length;
+    h+=head(p.cat,`${p.size} timber, ${Math.round(p.len*100)} cm long${p.wall?', '+WALLS[p.wall]+' wall':''}`);
+    h+=`<p class="pkn">${same} ${same===1?'piece':'pieces'} like this across the shed.</p>`;
+    if(['Bottom plate','Top plate','Studs','Noggings','Sill trimmers'].includes(p.cat))h+=pkSel('studSize','Wall frame size')+pkSel('studSpacing');
+    else if(p.cat==='Rafters'||p.cat==='Ridge board')h+=pkSel('rafterSize')+pkSel('rafterSpacing');
+    else if(p.cat==='Roof battens')h+=pkSel('battenSpacing');
+    else if(p.cat==='Lintels')h+=`<p class="pkn">Lintel size is picked automatically to fit the space above the opening.</p>`;
+    else h+=pkSel('floor');
+    h+=pkRow('t:'+p.cat+':'+p.size);
+  }else if(p.type==='clad'){
+    const WM=WALL_MATS[S.wallMat]||WALL_MATS.corr;
+    h+=head(WM.n,p.wall?WALLS[p.wall]+' wall':'Corner trim');
+    h+=pkSel('wallMat','Wall material');if(S.wallMat!=='ply')h+=pkSel('wallColor','Colour');
+    h+=pkRow('s:wall:'+S.wallMat);
+    if(p.wall)h+=`<h4>Add to this wall</h4><div class="addrow" style="margin-top:0">${Object.entries(OPEN_TYPES).map(([k,v])=>`<button class="chip" data-pkadd="${k}">+ ${v.label}</button>`).join('')}</div>`;
+  }else if(p.type==='roof'){
+    const RM=ROOF_MATS[S.roofMat]||ROOF_MATS.corr;
+    h+=head('Roof',RM.n);h+=pkSel('roofMat','Roof material');if(!RM.color)h+=pkSel('roofColor','Colour');
+    h+=pkSel('roof')+pkSel('roofDir');if(S.roof!=='flat')h+=pkNum('pitch','Pitch','°');
+    h+=pkRow('s:roof:'+S.roofMat);
+  }else if(p.type==='floor'){
+    h+=head(FLOORS[S.floor],floorDesc());h+=pkSel('floor');
+    h+=SHED_FIELDS.filter(f=>f.show&&f.show(S.floor)&&f.type!=='note').map(f=>f.type==='num'?pkNum(f.k,f.label,f.unit):f.type==='sel'?pkSel(f.k):f.type==='hex'?`<label class="row"><span>${f.label}</span><input type="color" data-pkh="${f.k}" value="${esc(S[f.k])}"></label>`:'').join('');
+    const fk={slab:'c:concrete',timber:'fl:'+S.floorSheet,pavers:'fl:pav:'+S.paverType+':'+S.paverW+'x'+S.paverL,gravel:'fl:gravel:'+S.gravelType}[S.floor];if(fk)h+=pkRow(fk);
+  }else if(p.type==='opening'){
+    const o=plan.openings.find(x=>x.id===p.id);if(!o){closePick();return;}
+    const builds=OPEN_BUILDS[o.type];const b=o.build||builds[0].id;
+    h+=head(OPEN_TYPES[o.type].label,`${WALLS[o.wall]} wall, ${o.width/10} × ${o.height/10} cm`);
+    h+=`<label class="row"><span>Type</span><select data-po="type">${Object.entries(OPEN_TYPES).map(([k,v])=>`<option value="${k}" ${k===o.type?'selected':''}>${v.label}</option>`).join('')}</select></label>`;
+    if(builds.length>1)h+=`<label class="row"><span>Made from</span><select data-po="build">${builds.map(x=>`<option value="${x.id}" ${x.id===b?'selected':''}>${x.n}</option>`).join('')}</select></label>`;
+    h+=`<div class="grid2">${pkOp('Width','width',o.width,1)}${pkOp('Height','height',o.height,1)}${pkOp('Offset from centre','offset',o.offset,5)}${o.type==='window'?pkOp('Sill height','sill',o.sill,5):''}</div>`;
+    const parts=openingParts(o);
+    if(parts.length){h+=`<h4>What it’s made of</h4><div class="parts">`+parts.map(pt=>`<div class="part"><input type="checkbox" data-pp="${pt.id}" ${pt.on?'checked':''} aria-label="Include ${esc(pt.n)}"><span class="pn">${esc(pt.n)}<a href="${bunSearch(pt.bq)}" target="_blank" rel="noopener">${pt.p?'Bunnings '+money(pt.p):'Find at Bunnings'}</a></span><span class="inp sm"><input type="number" data-pq="${pt.id}" value="${pt.qty}" min="0" step="${pt.unit==='m'?0.1:1}" aria-label="Quantity"><em>${pt.unit}</em></span></div>`).join('')+'</div><p class="pkn">Untick anything you already have. Quantities flow into the Materials tab.</p>';}
+    const iss=openingIssue(o);if(iss)h+=`<p class="warn">${esc(iss)}</p>`;
+    h+=`<div class="btns"><button class="btn danger" data-pk="delop">Remove this ${OPEN_TYPES[o.type].label.toLowerCase()}</button></div>`;
+  }
+  el.innerHTML=h;el.hidden=false;
+}
+function bumpExtra(k,d){plan.extra=plan.extra||{};plan.extra[k]=(+plan.extra[k]||0)+d;if(!plan.extra[k])delete plan.extra[k];save();if($('#tab-materials').classList.contains('on'))renderMaterials();renderPick();}
+$('#pick').addEventListener('click',e=>{
+  const c=e.target.closest('[data-pk]');
+  if(c){if(c.dataset.pk==='close')closePick();else if(c.dataset.pk==='delop'&&pickState){plan.openings=plan.openings.filter(o=>o.id!==pickState.id);closePick();afterOpenings(true);}return;}
+  const ex=e.target.closest('[data-ex]');if(ex){bumpExtra(ex.dataset.ex,+ex.dataset.d);return;}
+  const ad=e.target.closest('[data-pkadd]');
+  if(ad&&pickState&&pickState.wall){const k=ad.dataset.pkadd,t=OPEN_TYPES[k];const o={id:uid(),type:k,wall:pickState.wall,offset:0,width:t.w,height:t.h,sill:t.sill,build:OPEN_BUILDS[k][0].id,parts:{}};plan.openings.push(o);pickState={type:'opening',id:o.id};afterOpenings(true);}
+});
+$('#pick').addEventListener('change',e=>{
+  const t=e.target,S=plan.shed;
+  if(t.dataset.pks){const k=t.dataset.pks;let v=t.value;if(typeof S[k]==='number')v=Number(v);S[k]=v;shedSideFx(k,v);if(pickState&&pickState.type==='timber'&&(k==='studSize'||k==='rafterSize'))pickState.size=v;renderShedTab();onShedChanged();return;}
+  if(t.dataset.pkh){S[t.dataset.pkh]=t.value;renderShedTab();onShedChanged();return;}
+  if(t.dataset.pkn){const k=t.dataset.pkn;const f=SHED_FIELDS.find(x=>x.k===k);let v=parseFloat(t.value);if(!isFinite(v))return;v=Math.min(f.max,Math.max(f.min,v));S[k]=f.cm?Math.round(v*10):v;renderShedTab();onShedChanged();return;}
+  const o=pickState&&plan.openings.find(x=>x.id===pickState.id);if(!o)return;
+  if(t.dataset.po){const f=t.dataset.po;if(f==='type'){o.type=t.value;const d=OPEN_TYPES[o.type];o.width=d.w;o.height=d.h;o.sill=d.sill;o.build=OPEN_BUILDS[o.type][0].id;o.parts={};}else if(f==='build'){o.build=t.value;o.parts={};}else{const v=parseFloat(t.value);if(!isFinite(v))return;o[f]=Math.round(v*10);}afterOpenings(true);return;}
+  o.parts=o.parts||{};
+  if(t.dataset.pp){const st=o.parts[t.dataset.pp]=o.parts[t.dataset.pp]||{};st.on=t.checked;scheduleMaterials();save();return;}
+  if(t.dataset.pq){const st=o.parts[t.dataset.pq]=o.parts[t.dataset.pq]||{};const v=parseFloat(t.value);st.q=isFinite(v)?Math.max(0,v):null;scheduleMaterials();save();return;}
+});
+
+/* ---------- plans + guide ---------- */
+function renderPlansTab(){
+  $('#tab-plans').innerHTML=`<h3>Plans and build guide</h3><p class="note" style="margin-top:0">Drawings and step-by-step instructions generated from your current design. They update whenever you change the shed.</p>
+  <button class="primary" id="openPlans" style="margin-top:12px">Open plans and build guide</button>
+  <h3>What’s included</h3><ul class="incl"><li>Floor plan with doors, windows and items</li><li>Slab or floor framing plan</li><li>Framing elevation for every wall</li><li>Roof framing plan and section</li><li>Door and window schedule</li><li>Cut list for all framing</li><li>Build guide in order, from set-out to finishing</li></ul>
+  <p class="note">These are guide drawings made from the model, not engineered plans. Council or a certifier may ask for engineering if a permit is needed.</p>`;
+}
+$('#tab-plans').addEventListener('click',e=>{if(e.target.id==='openPlans')openPlans();});
+function openPlans(){$('#plansDoc').innerHTML=plansHTML();const ov=$('#plansOv');ov.hidden=false;ov.scrollTop=0;}
+$('#closePlans').addEventListener('click',()=>{$('#plansOv').hidden=true;});
+$('#printPlans').addEventListener('click',()=>{try{window.print();}catch(e){}});
+
+function svgWrap(w,h,inner){return `<div class="tblwrap"><svg viewBox="0 0 ${Math.round(w)} ${Math.round(h)}" class="dwg" role="img" style="max-width:${Math.round(w*1.15)}px;margin:6px auto 0">${inner}</svg></div>`;}
+function dimH(x1,x2,y,label,tk=6){if(Math.abs(x2-x1)<1)return '';return `<g class="dim"><line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}"/><line x1="${x1}" y1="${y-tk}" x2="${x1}" y2="${y+tk}"/><line x1="${x2}" y1="${y-tk}" x2="${x2}" y2="${y+tk}"/><text x="${(x1+x2)/2}" y="${y-5}" text-anchor="middle">${label}</text></g>`;}
+function dimV(x,y1,y2,label,tk=6){if(Math.abs(y2-y1)<1)return '';const ym=(y1+y2)/2;return `<g class="dim"><line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}"/><line x1="${x-tk}" y1="${y1}" x2="${x+tk}" y2="${y1}"/><line x1="${x-tk}" y1="${y2}" x2="${x+tk}" y2="${y2}"/><text x="${x-6}" y="${ym}" text-anchor="middle" transform="rotate(-90 ${x-6} ${ym})">${label}</text></g>`;}
+function rotWrap(hx,hz){const a=rootAngle(),sw=a%180!==0;const wx=sw?hz:hx,wz=sw?hx:hz;const sc=Math.min(320/wx,210/wz);const m=70;const vw=2*wx*sc+2*m,vh=2*wz*sc+2*m+10;const cx=vw/2,cy=m+wz*sc;
+  return {sc,vw,vh,cx,cy,wx,wz,open:`<g transform="translate(${cx} ${cy}) rotate(${-a})">`,close:'</g>',front:`<text x="${cx}" y="${vh-14}" text-anchor="middle" class="lbl">Front</text>`};}
+function dims2(R,a,b){return dimH(R.cx-R.wx*R.sc,R.cx+R.wx*R.sc,R.cy+R.wz*R.sc+30,a)+dimV(R.cx+R.wx*R.sc+30,R.cy-R.wz*R.sc,R.cy+R.wz*R.sc,b);}
+function worldWalls(){const S=plan.shed;return wallDefs({W:S.width/1000,L:S.length/1000,d:dims().d});}
+function openingCodes(){const pre={roller:'R',pa:'D',window:'W',opening:'B'};const n={},m={};plan.openings.forEach(o=>{const p=pre[o.type]||'O';n[p]=(n[p]||0)+1;m[o.id]=p+n[p];});return m;}
+function buildName(o){const bl=OPEN_BUILDS[o.type];return (bl.find(x=>x.id===o.build)||bl[0]).n;}
+
+function plansHTML(){
+  const S=plan.shed,D=dims();const WM=WALL_MATS[S.wallMat]||WALL_MATS.corr,RM=ROOF_MATS[S.roofMat]||ROOF_MATS.corr;
+  const codes=openingCodes();const dirOpt=(SHED_FIELDS.find(f=>f.k==='roofDir').opts().find(o=>o[0]==rootAngle())||[0,''])[1];
+  const tb=[META.planName,META.clientName,META.siteAddress].filter(Boolean).map(esc).join(' · ');
+  let h=`<section class="sheet"><h2>${META.planName?esc(META.planName):'Build plans'}</h2>${META.businessName?`<p class="sm2"><b>${esc(META.businessName)}</b>${META.businessContact?' · '+esc(META.businessContact):''}</p>`:''}${tb&&META.clientName?`<p class="sm2">Prepared for ${esc(META.clientName)}${META.siteAddress?', '+esc(META.siteAddress):''}</p>`:''}<p class="sm2">Generated ${new Date().toLocaleDateString('en-AU')} from the SwiftScope build planner. All dimensions in cm unless noted.</p>
+  <table class="spec">
+  <tr><th>Size</th><td>${S.width/10} × ${S.length/10} cm outside frame, ${fm(S.width*S.length/1e6,1)} m² floor</td></tr>
+  <tr><th>Wall height</th><td>${S.height/10} cm</td></tr>
+  <tr><th>Roof</th><td>${{gable:'Gable',skillion:'Skillion',flat:'Flat'}[S.roof]}, ${D.pd}° pitch, ${dirOpt.toLowerCase()}, ${S.overhang/10} cm overhang, ${D.roof==='gable'?'ridge':'high side'} ${cmv(peakHeight(D))} cm</td></tr>
+  <tr><th>Roof cover</th><td>${RM.n}${RM.color?'':', '+S.roofColor}</td></tr>
+  <tr><th>Walls</th><td>${WM.n}${S.wallMat==='ply'?'':', '+S.wallColor}</td></tr>
+  <tr><th>Wall frame</th><td>${S.studSize} studs at ${S.studSpacing/10} cm centres</td></tr>
+  <tr><th>Roof frame</th><td>${S.rafterSize} rafters at up to ${S.rafterSpacing/10} cm centres, 70 x 35 battens at up to ${S.battenSpacing/10} cm</td></tr>
+  <tr><th>Floor</th><td>${floorDesc()}</td></tr></table>
+  <p class="warnbox">These are guide drawings made from the model, not engineered plans. Before building, check with council whether a permit is needed and how far the structure must sit from boundaries, confirm your wind region, and follow AS 1684 and the manufacturers’ instructions for bracing, tie-downs and fixings. Lodge a free Before You Dig Australia enquiry (byda.com.au) before digging.</p></section>`;
+  h+=`<section class="sheet"><h2>1. Floor plan</h2>${floorPlanSVG(codes)}<h3 class="eh">Door and window schedule</h3>${scheduleHTML(codes)}</section>`;
+  h+=`<section class="sheet"><h2>2. ${S.floor==='timber'?'Floor framing plan':S.floor==='slab'?'Slab plan':'Base plan'}</h2>${floorBaseSVG()}</section>`;
+  h+=`<section class="sheet"><h2>3. Wall framing elevations</h2><p class="sm2">Each wall is drawn as seen from outside. Studs at ${S.studSpacing/10} cm centres, noggings at mid height, lintels in darker timber. Dimension rows under each wall give the distance from the left end to each opening, then its width.</p>${['front','right','back','left'].map(k=>elevSVG(k,codes)).join('')}</section>`;
+  h+=`<section class="sheet"><h2>4. Roof framing</h2>${roofPlanSVG()}${sectionSVG()}</section>`;
+  h+=`<section class="sheet"><h2>5. Cut list</h2>${cutListHTML()}</section>`;
+  h+=`<section class="sheet"><h2>6. Build guide</h2>${guideHTML(codes)}</section>`;
+  return h;
+}
+
+function floorPlanSVG(codes){
+  const S=plan.shed,D=dims();const W=S.width/1000,L=S.length/1000,d=D.d;
+  const sc=Math.min(640/W,420/L),m=80,vw=W*sc+2*m,vh=L*sc+2*m+20;
+  const X=x=>m+(x+W/2)*sc,Y=z=>m+(z+L/2)*sc,P2=p=>X(p[0])+','+Y(p[1]);
+  let g=`<rect x="${X(-W/2)}" y="${Y(-L/2)}" width="${W*sc}" height="${L*sc}" class="wl"/><rect x="${X(-W/2+d)}" y="${Y(-L/2+d)}" width="${(W-2*d)*sc}" height="${(L-2*d)*sc}" class="fl"/>`;
+  plan.items.forEach(it=>{const w=it.w/1000,dd=it.d/1000,ph=-it.rot*Math.PI/180;const c=Math.cos(ph),s=Math.sin(ph);
+    const pts=[[-w/2,-dd/2],[w/2,-dd/2],[w/2,dd/2],[-w/2,dd/2]].map(([lx,lz])=>[it.x/1000+lx*c+lz*s,it.z/1000-lx*s+lz*c]);
+    g+=`<polygon points="${pts.map(P2).join(' ')}" class="it"/><text x="${X(it.x/1000)}" y="${Y(it.z/1000)+4}" text-anchor="middle" class="sm">${esc(it.name)}</text>`;});
+  const WW=worldWalls();
+  plan.openings.forEach(o=>{
+    const wd=WW[o.wall];const c0=wd.len/2+o.offset/1000,w=o.width/1000;const a=c0-w/2,b=c0+w/2;
+    const pt=(s,off)=>[wd.o[0]+wd.dir[0]*s-wd.n[0]*off,wd.o[1]+wd.dir[1]*s-wd.n[1]*off];
+    g+=`<polygon points="${[pt(a,-0.01),pt(b,-0.01),pt(b,d+0.01),pt(a,d+0.01)].map(P2).join(' ')}" class="gap"/>`;
+    if(o.type==='window'){const q1=pt(a,d/2),q2=pt(b,d/2);g+=`<line x1="${X(q1[0])}" y1="${Y(q1[1])}" x2="${X(q2[0])}" y2="${Y(q2[1])}" class="win"/>`;}
+    else if(o.type==='pa'){const hp=pt(a,d),lp=pt(a,d+w),ep=pt(b,d);const v1=[X(lp[0])-X(hp[0]),Y(lp[1])-Y(hp[1])],v2=[X(ep[0])-X(hp[0]),Y(ep[1])-Y(hp[1])];const sw=(v1[0]*v2[1]-v1[1]*v2[0])>0?1:0;
+      g+=`<line x1="${X(hp[0])}" y1="${Y(hp[1])}" x2="${X(lp[0])}" y2="${Y(lp[1])}" class="ln"/><path d="M${X(lp[0])},${Y(lp[1])} A${w*sc},${w*sc} 0 0 ${sw} ${X(ep[0])},${Y(ep[1])}" class="arc"/>`;}
+    else if(o.type==='roller'){const q1=pt(a,0),q2=pt(b,0);g+=`<line x1="${X(q1[0])}" y1="${Y(q1[1])}" x2="${X(q2[0])}" y2="${Y(q2[1])}" class="roll"/>`;}
+    const lp=pt(c0,-0.3);g+=`<text x="${X(lp[0])}" y="${Y(lp[1])+4}" text-anchor="middle" class="code">${codes[o.id]}</text>`;
+  });
+  g+=dimH(X(-W/2),X(W/2),Y(L/2)+48,`${S.width/10} cm`)+dimV(X(W/2)+48,Y(-L/2),Y(L/2),`${S.length/10} cm`)+`<text x="${X(0)}" y="${vh-12}" text-anchor="middle" class="lbl">Front</text>`;
+  return svgWrap(vw,vh,g)+`<p class="sm2">Inside clear size ${cmv(W-2*d)} × ${cmv(L-2*d)} cm. Blue codes match the schedule below. Dashed shapes are the items you placed.</p>`;
+}
+function scheduleHTML(codes){
+  if(!plan.openings.length)return '<p class="sm2">No doors or windows in this design.</p>';
+  const WW=worldWalls();
+  return `<div class="tblwrap"><table class="tbl"><tr><th>Code</th><th>Type</th><th>Wall</th><th>Size (W × H)</th><th>Made from</th><th>Position</th></tr>${plan.openings.map(o=>{const wd=WW[o.wall];const left=cmv(wd.len/2+o.offset/1000-o.width/2000);
+    return `<tr><td><b>${codes[o.id]}</b></td><td>${OPEN_TYPES[o.type].label}</td><td>${WALLS[o.wall]}</td><td>${o.width/10} × ${o.height/10}</td><td>${buildName(o)}</td><td>${left} cm from left end${o.type==='window'?`, sill at ${o.sill/10} cm`:''}</td></tr>`;}).join('')}</table></div><p class="sm2">The left end is on your left when you stand outside facing that wall. Frame openings to these sizes, or to the rough opening size given in the door or window maker’s instructions if it differs.</p>`;
+}
+function floorBaseSVG(){
+  const S=plan.shed,D=dims();const R=rotWrap(D.W/2,D.L/2);const sc=R.sc;let g=R.open,note='';
+  if(S.floor==='timber'){
+    g+=`<rect x="${-D.W/2*sc}" y="${-D.L/2*sc}" width="${D.W*sc}" height="${D.L*sc}" class="fl"/>`;
+    const jt=0.045,nj=Math.ceil((D.L-jt)/((plan.shed.joistSpacing||450)/1000));for(let j=0;j<=nj;j++){const z=-D.L/2+jt/2+j*(D.L-jt)/nj;g+=`<line x1="${-D.W/2*sc}" y1="${z*sc}" x2="${D.W/2*sc}" y2="${z*sc}" class="jst"/>`;}
+    const nb=Math.max(2,Math.ceil((D.W-0.1)/1.8)+1),bx=i=>-D.W/2+0.05+i*(D.W-0.1)/(nb-1),ns=Math.max(2,Math.ceil(D.L/1.8)+1);
+    for(let i=0;i<nb;i++){g+=`<rect x="${(bx(i)-0.045)*sc}" y="${-D.L/2*sc}" width="${0.09*sc}" height="${D.L*sc}" class="bea"/>`;for(let j=0;j<ns;j++){const z=-D.L/2+0.1+j*(D.L-0.2)/(ns-1);g+=`<rect x="${(bx(i)-0.06)*sc}" y="${(z-0.06)*sc}" width="${0.12*sc}" height="${0.12*sc}" class="stp"/>`;}}
+    note=`Black squares are stumps (${nb*ns} total, about ${cmv((D.L-0.2)/(ns-1))} cm apart along each bearer). Wide bars are doubled 140 x 45 bearers (${nb}) running ${rootAngle()%180===0?'front to back':'side to side'} at about ${cmv((D.W-0.1)/(nb-1))} cm centres. Thin lines are 90 x 45 joists (${nj+1}) at ${S.joistSpacing/10} cm centres, covered with ${(FLOOR_SHEETS[S.floorSheet]||FLOOR_SHEETS.yt).n.toLowerCase()}. The floor top sits about ${S.floorH/10} cm above the ground.`;
+  }else if(S.floor==='slab'){
+    g+=`<rect x="${-(D.W/2+0.05)*sc}" y="${-(D.L/2+0.05)*sc}" width="${(D.W+0.1)*sc}" height="${(D.L+0.1)*sc}" class="fl"/>`;
+    for(let x=-D.W/2+0.2;x<D.W/2;x+=0.2)g+=`<line x1="${x*sc}" y1="${-D.L/2*sc}" x2="${x*sc}" y2="${D.L/2*sc}" class="grd"/>`;
+    for(let z=-D.L/2+0.2;z<D.L/2;z+=0.2)g+=`<line x1="${-D.W/2*sc}" y1="${z*sc}" x2="${D.W/2*sc}" y2="${z*sc}" class="grd"/>`;
+    g+=`<rect x="${-D.W/2*sc}" y="${-D.L/2*sc}" width="${D.W*sc}" height="${D.L*sc}" class="wd"/>`;
+    const c=computeMaterials().find(r=>r.key==='c:concrete');
+    note=`Slab ${cmv(D.W+0.1)} × ${cmv(D.L+0.1)} cm and ${S.slabT/10} cm thick, about ${c?c.order:''} of concrete. ${S.mesh==='none'?'No mesh is specified.':`The grid is ${S.mesh} mesh (20 cm squares) sitting in the middle third of the slab.`}${S.slabBase>0?` It sits on ${S.slabBase/10} cm of compacted crushed rock.`:''} The dashed line is the outside of the wall frames, set 5 cm in from the slab edge.`;
+  }else if(S.floor==='pavers'){
+    g+=`<rect x="${-D.W/2*sc}" y="${-D.L/2*sc}" width="${D.W*sc}" height="${D.L*sc}" class="fl"/>`;
+    const uw=(S.paverW+S.paverGap)/1000,ul=(S.paverL+S.paverGap)/1000;const x0=-D.W/2,z0=-D.L/2;
+    for(let z=z0+ul;z<D.L/2-0.005;z+=ul)g+=`<line x1="${x0*sc}" y1="${z*sc}" x2="${D.W/2*sc}" y2="${z*sc}" class="grd"/>`;
+    if(S.paverPattern==='stretcher'){let r=0;for(let z=z0;z<D.L/2-0.005;z+=ul,r++){const z2=Math.min(D.L/2,z+ul);for(let x=x0+(r%2?uw/2:uw);x<D.W/2-0.005;x+=uw)g+=`<line x1="${x*sc}" y1="${z*sc}" x2="${x*sc}" y2="${z2*sc}" class="grd"/>`;}}
+    else for(let x=x0+uw;x<D.W/2-0.005;x+=uw)g+=`<line x1="${x*sc}" y1="${z0*sc}" x2="${x*sc}" y2="${D.L/2*sc}" class="grd"/>`;
+    note=`${floorDesc()}. Start from the front corner so any cut pavers end up at the back. Paver lengths run ${rootAngle()%180===0?'across the width':'along the length'} of the shed.`;
+  }else{
+    g+=`<rect x="${-D.W/2*sc}" y="${-D.L/2*sc}" width="${D.W*sc}" height="${D.L*sc}" class="fl"/>`;
+    note=S.floor==='gravel'?`${floorDesc()}, laid and compacted in two layers.`:'No floor. Level and compact the ground, and sit the bottom plates on H4 treated pine or masonry blocks.';
+  }
+  g+=R.close+dims2(R,`${S.width/10} cm`,`${S.length/10} cm`)+R.front;
+  return svgWrap(R.vw,R.vh,g)+`<p class="sm2">${note}</p>`;
+}
+function elevSVG(k,codes){
+  const el=lastElev[k];if(!el)return '';const S=plan.shed;
+  const maxH=Math.max(...el.prof.map(p=>p[1]));const sc=Math.min(640/el.len,260/maxH);const m=60;const nO=el.ops.length;
+  const vw=el.len*sc+2*m,vh=maxH*sc+m+46+nO*26+20;const X=s=>m+s*sc,Y=y=>m+(maxH-y)*sc;
+  const outline=[[0,0]].concat(el.prof,[[el.len,0],[0,0]]);
+  let g=`<polyline points="${outline.map(p=>X(p[0])+','+Y(p[1])).join(' ')}" class="ol"/>`;
+  el.members.forEach(mb=>{const rot=(mb.m.rotation.z||0)*180/Math.PI;const lint=mb.m.userData.part&&mb.m.userData.part.cat==='Lintels';g+=`<rect x="${-mb.sx*sc/2}" y="${-mb.sy*sc/2}" width="${mb.sx*sc}" height="${mb.sy*sc}" class="${lint?'tm2':'tm'}" transform="translate(${X(mb.s)} ${Y(mb.y)}) rotate(${-rot})"/>`;});
+  el.ops.forEach((o,i)=>{g+=`<rect x="${X(o.a)}" y="${Y(o.sill+o.h)}" width="${(o.b-o.a)*sc}" height="${o.h*sc}" class="op"/><text x="${X((o.a+o.b)/2)}" y="${Y(o.sill+o.h/2)+4}" text-anchor="middle" class="code">${codes[o.id]||''}</text>`;
+    const y=Y(0)+36+i*26;g+=dimH(X(0),X(o.a),y,`${cmv(o.a)}`)+dimH(X(o.a),X(o.b),y,`${cmv(o.b-o.a)}`);});
+  g+=dimH(X(0),X(el.len),Y(0)+36+nO*26,`${cmv(el.len)} cm`);
+  g+=dimV(X(0)-26,Y(0),Y(el.prof[0][1]),`${cmv(el.prof[0][1])}`);
+  const pk=el.prof.reduce((a,p)=>p[1]>a[1]?p:a);const last=el.prof[el.prof.length-1];
+  if(pk[1]>el.prof[0][1]+0.01&&pk!==last)g+=`<text x="${X(pk[0])}" y="${Y(pk[1])-8}" text-anchor="middle" class="sm">peak ${cmv(pk[1])}</text>`;
+  if(Math.abs(last[1]-el.prof[0][1])>0.01)g+=dimV(X(el.len)+26,Y(0),Y(last[1]),`${cmv(last[1])}`);
+  const studs=el.members.filter(x=>x.m.userData.part&&x.m.userData.part.cat==='Studs').length;
+  return `<h3 class="eh">${WALLS[k]} wall</h3>`+svgWrap(vw,vh,g)+`<p class="sm2">${cmv(el.len)} cm long with ${studs} studs${nO?` and ${nO} ${nO===1?'opening':'openings'} (${el.ops.map(o=>codes[o.id]).join(', ')})`:''}.${k==='left'||k==='right'?` This wall’s frame fits between the front and back walls, so its plates are ${cmv(el.len-2*dims().d)} cm long.`:''}</p>`;
+}
+function roofPlanSVG(){
+  const S=plan.shed,D=dims();if(!lastRoof)return '';const o=D.o,Lz=lastRoof.Lz;const R=rotWrap(D.W/2+o,Lz/2);const sc=R.sc;let g=R.open;
+  g+=`<rect x="${(-D.W/2-o)*sc}" y="${-Lz/2*sc}" width="${(D.W+2*o)*sc}" height="${Lz*sc}" class="rf"/>`;
+  lastRoof.slopes.forEach(sl=>(sl.us||[]).forEach(u=>{const x=sl.P[0]+sl.sx*D.c*u;g+=`<line x1="${x*sc}" y1="${-Lz/2*sc}" x2="${x*sc}" y2="${Lz/2*sc}" class="bat"/>`;}));
+  lastRoof.zs.forEach(z=>{g+=`<line x1="${(-D.W/2-o)*sc}" y1="${z*sc}" x2="${(D.W/2+o)*sc}" y2="${z*sc}" class="raf"/>`;});
+  if(D.roof==='gable')g+=`<line x1="0" y1="${-D.L/2*sc}" x2="0" y2="${D.L/2*sc}" class="rdg"/>`;
+  else g+=`<line x1="${(-D.W/2-o)*sc}" y1="${-Lz/2*sc}" x2="${(-D.W/2-o)*sc}" y2="${Lz/2*sc}" class="hi"/>`;
+  g+=`<rect x="${-D.W/2*sc}" y="${-D.L/2*sc}" width="${D.W*sc}" height="${D.L*sc}" class="wd"/>`;
+  g+=R.close+dims2(R,`${cmv(2*R.wx)} cm`,`${cmv(2*R.wz)} cm`)+R.front;
+  const n=lastRoof.zs.length,cc=n>1?cmv((D.L-D.rt)/(n-1)):0;
+  return `<h3 class="eh">Roof framing plan, from above</h3>`+svgWrap(R.vw,R.vh,g)+`<p class="sm2">Thick brown lines are ${S.rafterSize} rafters: ${n}${D.roof==='gable'?' pairs':''} at ${cc} cm centres. Thin lines are 70 x 35 battens at up to ${S.battenSpacing/10} cm centres. ${D.roof==='gable'?'The black line is the ridge board.':'The red line is the high side.'} The dashed outline is the walls, and the roof overhangs them by ${S.overhang/10} cm at the eaves.</p>`;
+}
+function sectionSVG(){
+  const S=plan.shed,D=dims();const o=D.o;const yb=x=>D.roof==='gable'?D.H+(D.W/2-Math.abs(x))*D.tp:D.H+(D.W/2-x)*D.tp;const th=(D.rd+0.047)/D.c;const lift=floorLift();
+  const x0=-D.W/2-o,x1=D.W/2+o;const pk=peakHeight(D);const maxY=pk+0.15,minY=-lift-0.1;
+  const sc=Math.min(600/(x1-x0),280/(maxY-minY));const m=80;const vw=(x1-x0)*sc+2*m;const vh=(maxY-minY)*sc+m+70;
+  const X=x=>m+(x-x0)*sc,Y=y=>m+(maxY-y)*sc;
+  let g=`<line x1="${X(x0)-30}" y1="${Y(-lift)}" x2="${X(x1)+30}" y2="${Y(-lift)}" class="gnd"/>`;
+  if(lift>0)g+=`<rect x="${X(-D.W/2)}" y="${Y(0)}" width="${D.W*sc}" height="${0.25*sc}" class="bea"/>`;
+  else if(S.floor==='slab')g+=`<rect x="${X(-D.W/2-0.05)}" y="${Y(0)}" width="${(D.W+0.1)*sc}" height="${S.slabT/1000*sc}" class="rf"/>`;
+  [-D.W/2,D.W/2-D.d].forEach(x=>{const h=yb(x<0?-D.W/2:D.W/2);g+=`<rect x="${X(x)}" y="${Y(h)}" width="${D.d*sc}" height="${h*sc}" class="tm"/>`;});
+  const pts=D.roof==='gable'?[x0,0,x1]:[x0,x1];const under=pts.map(x=>[x,yb(x)]),top=pts.slice().reverse().map(x=>[x,yb(x)+th]);
+  g+=`<polygon points="${under.concat(top).map(p=>X(p[0])+','+Y(p[1])).join(' ')}" class="rfs"/>`;
+  g+=dimH(X(-D.W/2),X(D.W/2),Y(minY)+34,`${cmv(D.W)} cm span`);
+  g+=dimV(X(x0)-24,Y(0),Y(yb(-D.W/2)),`${cmv(yb(-D.W/2))}`);
+  g+=dimV(X(x1)+34,Y(0),Y(pk),`${cmv(pk)}`);
+  g+=dimH(X(x0),X(-D.W/2),m-30,`${S.overhang/10}`);
+  g+=`<text x="${X(D.roof==='gable'?-D.W/4:0)}" y="${Y(yb(D.roof==='gable'?-D.W/4:0)+th)-10}" text-anchor="middle" class="lbl">${D.pd}°</text>`;
+  return `<h3 class="eh">Section across the roof span</h3>`+svgWrap(vw,vh,g)+`<p class="sm2">Heights in cm above the floor. The ${D.roof==='gable'?'ridge':'high side'} height is to the top of the roof sheeting. Rafters sit on the top plates with a birdsmouth notch at ${D.pd}°.</p>`;
+}
+function cutListHTML(){
+  const g={};lastPieces.forEach(p=>{const k=p.cat+'|'+p.size;(g[k]=g[k]||{cat:p.cat,size:p.size,l:{}});const c=Math.ceil(p.len*100-0.01);g[k].l[c]=(g[k].l[c]||0)+1;});
+  const cats=Object.values(g).sort((a,b)=>CAT_ORDER.indexOf(a.cat)-CAT_ORDER.indexOf(b.cat));
+  return `<div class="tblwrap"><table class="tbl"><tr><th>Part</th><th>Size</th><th>Cut lengths</th></tr>${cats.map(c=>`<tr><td>${c.cat}</td><td>${c.size}</td><td>${Object.entries(c.l).sort((a,b)=>b[0]-a[0]).map(([l,n])=>`${n} × ${l} cm`).join(', ')}</td></tr>`).join('')}</table></div><p class="sm2">Lengths are rounded up to the nearest centimetre. Raked top plates, gable or skillion end studs and rafters need angled cuts at ${dims().pd}°, so mark those off the frame as you go rather than cutting them all in advance.</p>`;
+}
+function guideHTML(codes){
+  const S=plan.shed,D=dims();const RM=ROOF_MATS[S.roofMat]||ROOF_MATS.corr;const rows=computeMaterials();const conc=rows.find(r=>r.key==='c:concrete');
+  const diag=Math.round(Math.hypot(S.width,S.length)/10);const steps=[];const st=(t,items)=>steps.push({t,items:items.filter(Boolean)});
+  st('Plan and prepare',['Check with your council whether this shed needs a permit, and how far it must sit from boundaries, fences and other buildings.','Lodge a free Before You Dig Australia enquiry (byda.com.au) to find underground services before you dig.','Gather safety gear: glasses, gloves, hearing protection, and a P2 dust mask for cutting fibre cement, concrete or treated pine.','Order materials from the Materials tab. Store timber flat and off the ground, and keep sheeting and flooring dry.']);
+  st('Set out the site',[`Mark the four outside corners with pegs and string lines, ${S.width/10} × ${S.length/10} cm.`,`Square the corners by measuring both diagonals. They should both be ${diag} cm.`,'Use a laser or water level to mark a level line around the pegs.']);
+  const F={
+    slab:['Strip the topsoil and level the area about 10 cm wider than the slab all round.',`Build formwork to ${cmv(D.W+0.1)} × ${cmv(D.L+0.1)} cm with the top edge at finished floor height. Check the diagonals again.`,S.slabBase>0?`Lay and compact ${S.slabBase/10} cm of crushed rock, then cover it with a plastic vapour barrier lapped 20 cm at the joins.`:'Compact the ground, then cover it with a plastic vapour barrier lapped 20 cm at the joins.',S.mesh==='none'?'':`Set ${S.mesh} mesh on bar chairs so it sits in the middle third of the ${S.slabT/10} cm slab, lapping sheets by two squares.`,`Pour about ${conc?conc.order:'the concrete'}, screed it level off the formwork, then float and trowel the surface. For this volume a ready-mix truck is far easier than bags.`,'Keep the slab damp and covered for about a week before standing frames on it.'],
+    timber:['Mark the stump positions from the floor framing plan.','Dig stump holes about 45 cm deep, set the stumps in concrete, and string-line the tops to one level before the concrete sets.','Fix the doubled 140 x 45 bearers to the stumps with galvanised stirrups or straps.',`Lay 90 x 45 joists at ${S.joistSpacing/10} cm centres across the bearers and fix them with triple grips or joist hangers.`,S.floorSheet==='deck'?'Screw the decking boards across the joists with 5 mm gaps, two screws at each joist, pre-drilling near the ends.':`Glue and screw the ${(FLOOR_SHEETS[S.floorSheet]||FLOOR_SHEETS.yt).n.toLowerCase()} sheets to the joists, long edges across the joists, staggering the end joins.`],
+    pavers:[`Dig out about ${Math.round((S.baseDepth+S.sandDepth)/10+(PAVER_TYPES[S.paverType]||PAVER_TYPES.concrete).t/10)} cm and level the base.`,S.baseDepth>0?`Lay and compact ${S.baseDepth/10} cm of crushed rock in two layers with a plate compactor.`:'',S.sandDepth>0?`Screed a ${S.sandDepth/10} cm bed of paving sand.`:'',`Lay the ${(PAVER_TYPES[S.paverType]||PAVER_TYPES.concrete).n.toLowerCase()} (${S.paverW/10} × ${S.paverL/10} cm) in ${S.paverPattern==='stretcher'?'stretcher bond, offsetting each row by half a paver':'stack bond, in straight lines both ways'}, from the front corner, with ${S.paverGap/10} cm joints. Check level as you go.`,S.paverGap>0?'Sweep joint sand into the gaps and run a plate compactor over the pavers on a protective mat.':''],
+    gravel:[`Dig out about ${S.gravelDepth/10+2.5} cm and level the base.`,`Spread the ${(GRAVEL_TYPES[S.gravelType]||GRAVEL_TYPES.crushed).n.toLowerCase()} in two layers, wetting and compacting each with a plate compactor.`],
+    none:['Level and compact the ground.','Set H4 treated pine or masonry blocks under the bottom plate line so the frame stays off the soil.']
+  };
+  st('Build the '+(S.floor==='slab'?'slab':S.floor==='none'?'base':'floor'),F[S.floor]||F.none);
+  st('Build the wall frames',[`Cut plates and studs using the cut list. Lay each wall’s top and bottom plates side by side and mark stud positions at ${S.studSpacing/10} cm centres from the left end.`,'Mark each opening from the elevations. Openings get full-height jamb studs each side, a lintel on top, and for windows a sill trimmer with short studs below.','Nail the frames together flat on the floor, with two 75 mm nails through the plate into each stud end.',`Fit noggings between the studs at about ${Math.round(Math.min(120,S.height/20))} cm high.`,D.roof==='gable'?'The two gable end walls have raked top plates. Mark the angle from the elevation and cut each stud to the line.':'The end walls slope from high to low. Cut each end stud to the line of its raked top plate.','Leave the bottom plate across door openings in place for now so the frame stays square. Cut it out once the wall is fixed down.']);
+  st('Stand and fix the walls',['Stand the back wall first, plumb it and hold it with temporary diagonal braces.','Stand the side walls, nail the corners together, then stand the front wall.',S.floor==='slab'?'Fix the bottom plates to the slab with masonry anchors at each corner, each side of door openings and along each wall.':S.floor==='timber'?'Screw or nail the bottom plates down through the flooring into the joists.':'Fix the bottom plates down to the base so the frame can’t lift.','Check the walls are plumb and the diagonals across the top plates match, then fit permanent bracing (metal strap brace or structural ply) as your bracing plan requires.']);
+  st('Frame the roof',D.roof==='gable'?[`Stand the ${S.rafterSize} ridge board on temporary props at the peak, ${cmv(D.H+(D.W/2)*D.tp)} cm above the floor at the underside of the rafters.`,`Cut a pattern rafter with a plumb cut at the top and a birdsmouth notch at the wall, at ${D.pd}°. Test it at both ends before cutting the rest.`,`Fix rafters in pairs at up to ${S.rafterSpacing/10} cm centres, with cyclone ties or triple grips at every top plate.`,`Fix 70 x 35 battens across the rafters at up to ${S.battenSpacing/10} cm centres, with one close to each eave and one close to the ridge.`]:[`Cut a pattern rafter with birdsmouth notches at ${D.pd}° where it sits on each wall. Test it at both ends before cutting the rest.`,`Fix rafters at up to ${S.rafterSpacing/10} cm centres with cyclone ties or triple grips at both walls.`,`Fix 70 x 35 battens across the rafters at up to ${S.battenSpacing/10} cm centres, with one close to each edge.`]);
+  st('Put the roof on',RM.clear?['Lay sheets with the corrugations running down the slope, starting at the end away from the prevailing wind and overlapping one corrugation.','Pre-drill oversized holes and fix through the crests with polycarbonate screws and sealing washers.','Don’t over-tighten the screws. Polycarbonate needs room to expand.','Fit the capping, barge flashings and gutter.']:['Start at the end away from the prevailing wind, with ribs running down the slope.','Overlap each sheet by one rib and fix with roofing screws through the crests into the battens.',`Fit ${D.roof==='gable'?'ridge capping':'top capping'}, barge flashings, and the gutter with a slight fall toward the downpipe end.`,'Sweep off all metal filings (swarf) at the end of each day. Left on the roof, they rust and stain the sheets.']);
+  const Wsteps={
+    corr:['Fix wall sheets vertically, overlapping one rib, with screws into the noggings and plates.','Trim sheets around openings and fit flashings over each door and window head.','Fit the corner flashings last.'],
+    trimdek:['Fix Trimdek sheets vertically, overlapping one rib, with screws through the pans into the noggings and plates.','Trim around openings and fit head flashings over doors and windows.','Fit the corner flashings last.'],
+    weatherboard:['Staple wall wrap over the frame, each run lapping over the one below.','Fix a starter strip at the bottom, then nail weatherboards from the bottom up, checking each board is level.','Join boards over studs, and prime cut ends before fixing.','Fit corner stops, then prime and paint.'],
+    fc:['Staple wall wrap over the frame.','Fix the 2400 × 1200 sheets with joins centred on studs, using the fasteners and spacings in the James Hardie instructions.','Cut sheets outdoors with a fibre cement blade or score-and-snap tool, wearing a P2 mask.','Finish the joins, then prime and paint.'],
+    ply:['Staple wall wrap over the frame.','Fix plywood sheets vertically with the shiplap edges overlapping, using galvanised or stainless nails into studs and noggings.','Seal all cut edges, then oil or stain the cladding.']
+  };
+  st('Clad the walls',Wsteps[S.wallMat]||Wsteps.corr);
+  const B={kit:'Fit the roller door to the jamb studs following the kit instructions: brackets, drum, guides, then set the spring tension. Add the brush seal.',prehung:'Sit the pre-hung door in the opening, pack it plumb with wedges at the hinges and lock, then nail through the jamb into the studs. Fit the lockset and seals.',ledge:'Lay the boards face down, fix three ledges across them, then fit two braces running down toward the hinge side. Hang the door on T-hinges and fit the latch.',colorbond:'Make a 70 x 35 frame with a middle rail, screw the Colorbond sheet to it, hang it on T-hinges and fit the padbolt.',alum:'Fit the head flashing, sit the window on packers, check it’s square, and fix through the frame into the studs. Seal around the outside.',poly:'Fit stop beads inside the opening, run glazing tape on them, set the polycarbonate in, and fix the outer beads.',louvre:'Fit the head flashing, install the louvre frame square and plumb on packers, and fix through into the studs.',none:'Leave the opening clear and fit a flashing over the lintel.'};
+  st('Fit doors and windows',plan.openings.length?plan.openings.map(o=>{const bl=OPEN_BUILDS[o.type];const b=o.build||bl[0].id;return `${codes[o.id]}, ${OPEN_TYPES[o.type].label.toLowerCase()} (${buildName(o).toLowerCase()}): ${B[b]||''}`;}):['No doors or windows in this design.']);
+  st('Finish off',['Fit any remaining flashings and trims, and check all screws are tight.','Seal gaps along the bottom of the walls to keep vermin out.','Clean up swarf and offcuts. Dispose of treated timber offcuts properly and never burn them.']);
+  return `<ol class="steps">${steps.map(x=>`<li><b>${x.t}</b><ul>${x.items.map(i=>`<li>${i}</li>`).join('')}</ul></li>`).join('')}</ol>`;
+}
+
+/* ---------- loop ---------- */
+function resize(){const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+try{new ResizeObserver(resize).observe(host);}catch(e){window.addEventListener('resize',resize);}
+const tmp=new THREE.Vector3();
+function updateLabels(){
+  if(!plan.layers.dims)return;const w=host.clientWidth,h=host.clientHeight;
+  labelData.forEach(l=>{tmp.copy(l.p).applyMatrix4(shedRoot.matrixWorld).project(camera);if(tmp.z>1||tmp.z<-1){l.el.style.display='none';return;}l.el.style.display='';l.el.style.transform=`translate(${(tmp.x+1)/2*w}px,${(1-tmp.y)/2*h}px) translate(-50%,-50%)`;});
+}
+function loop(){requestAnimationFrame(loop);controls.update();renderer.render(scene,camera);updateLabels();}
+/* ---------- SwiftScope bridge ---------- */
+const PU={'$/m':'m','$ ea':'ea','$/m³':'m³','$/m²':'m²'};
+function quoteLines(){const rows=computeMaterials();const out=[];let sub=0;
+  rows.forEach(r=>{const p=+plan.prices[r.key]||0;const qty=Math.round(r.buy*100)/100;if(!(qty>0))return;const tot=Math.round(p*qty*100)/100;sub+=tot;
+    out.push({key:r.key,group:r.group,label:[r.item,r.size].filter(Boolean).join(', '),quantity:qty,unit:PU[r.pu]||'ea',unitCost:Math.round(p*100)/100,totalCost:tot});});
+  const w=+plan.waste||0;if(w>0&&sub>0)out.push({key:'waste',group:'Allowances',label:`Waste and fixings allowance (${w}%)`,quantity:1,unit:'lot',unitCost:Math.round(sub*w)/100,totalCost:Math.round(sub*w)/100});
+  return out;}
+function summary(){const S=plan.shed,D=dims();const st=labourStages();const lines=quoteLines();const mat=lines.reduce((a,l)=>a+l.totalCost,0);const hrs=st.reduce((a,s)=>a+s.hrs,0);
+  return {width:S.width,length:S.length,height:S.height,roof:S.roof,floor:S.floor,area:Math.round(D.W*D.L*100)/100,openings:plan.openings.length,
+    description:`${S.width/10} × ${S.length/10} cm ${({gable:'gable',skillion:'skillion',flat:'flat'})[S.roof]} roof, ${(WALL_MATS[S.wallMat]||WALL_MATS.corr).n.toLowerCase()} walls, ${(FLOORS[S.floor]||'').toLowerCase()}`,
+    materialsTotal:Math.round(mat*100)/100,labourHours:hrs,labourRate:labourRate(),unpriced:lines.filter(l=>!l.unitCost).length,
+    labour:st.map(s=>({key:s.k,label:s.n,hours:s.hrs})),lines};}
+function postPlan(){try{window.parent.postMessage({source:'ss-planner',type:'change',plan:Object.assign({},plan,{selected:null}),summary:summary()},location.origin);}catch(e){}}
+if(EMBED){
+  $('#btnFile').hidden=true;
+  window.addEventListener('message',e=>{
+    if(e.origin!==location.origin||e.source!==window.parent)return;const d=e.data||{};if(d.target!=='ss-planner')return;
+    if(d.type==='load'){if(d.meta)META=d.meta;if(d.settings)SETTINGS=Object.assign(SETTINGS,d.settings);
+      plan=d.plan&&d.plan.shed?migrate(d.plan):defaultPlan();if(d.prices&&!Object.keys(plan.prices).length)plan.prices=Object.assign({},d.prices);
+      plan.selected=null;refreshAll();
+      if(!d.plan||!d.plan.shed){computeMaterials().forEach(r=>{const bp=bunningsFor(r);if(bp.p&&plan.prices[r.key]===undefined)plan.prices[r.key]=bp.p;});if($('#tab-materials').classList.contains('on'))renderMaterials();postPlan();}}
+    if(d.type==='meta'){META=Object.assign(META,d.meta||{});}
+    if(d.type==='print'){openPlans();setTimeout(()=>{try{window.print();}catch(_){}},150);}
+    if(d.type==='flush'){clearTimeout(saveT);postPlan();}
+  });
+}
+refreshAll();resize();loop();
+if(EMBED){try{window.parent.postMessage({source:'ss-planner',type:'ready'},location.origin);}catch(e){}}
+})();
+</script>
+</body>
+</html>

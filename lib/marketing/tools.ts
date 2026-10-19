@@ -145,10 +145,30 @@ export function sourcesForTool(slug: string): ToolSource[] {
       return BALLPARK_SOURCES;
     case "diy-materials":
       return DIY_SOURCES;
+    case "shed-planner":
+      return SHED_PLANNER_SOURCES;
     default:
       return [];
   }
 }
+
+export const SHED_PLANNER_SOURCES: ToolSource[] = [
+  {
+    label: "Before You Dig Australia",
+    href: "https://www.byda.com.au/",
+    note: "Free enquiry to locate underground services before digging footings or slabs.",
+  },
+  {
+    label: "Standards Australia AS 1684 (timber framing)",
+    href: "https://www.standards.org.au/",
+    note: "The residential timber-framed construction standard that sets member sizes, bracing and tie-downs.",
+  },
+  {
+    label: "BlueScope Colorbond colour range",
+    href: "https://colorbond.com/colours",
+    note: "Official Colorbond colours. Planner colours are approximate on screen.",
+  },
+];
 
 export const TOOLS: ToolMeta[] = [
   {
@@ -204,6 +224,19 @@ export const TOOLS: ToolMeta[] = [
     accessLabel: "No login required",
   },
   {
+    slug: "shed-planner",
+    href: "/tools/shed-planner",
+    title: "3D shed and garage planner with materials and cut list",
+    shortTitle: "Shed & garage planner",
+    description:
+      "Design a shed, garage, workshop or studio in 3D. Get framing elevations, a cut list, a full materials list with prices, a labour estimate and a printable build guide.",
+    audience: "tradie",
+    hook: "In Swiftscope every build saves against the client, carries your prices into the next job, and turns into a quote in one tap.",
+    hookCta: "Quote your next build free",
+    hookHref: "/signup",
+    accessLabel: "No login required",
+  },
+  {
     slug: "ballpark-cost",
     href: "/tools/ballpark-cost",
     title: "Ballpark renovation and job cost estimator",
@@ -243,6 +276,21 @@ export const CHARGE_OUT_FAQS = [
   {
     q: "Should I use break-even or the buffered charge-out?",
     a: "Break-even covers costs. The buffered rate adds a profit margin so one quiet week or a materials surprise does not wipe you out. Most crews quote off the buffered number. Check with your accountant before locking prices.",
+  },
+];
+
+export const SHED_PLANNER_FAQS = [
+  {
+    q: "Are these engineered plans?",
+    a: "No. The drawings come straight from the 3D model and follow common AS 1684 style framing, but they are guide drawings. Council or a certifier may ask for engineering, a wind rating or a bracing plan before a permit.",
+  },
+  {
+    q: "Where do the material quantities come from?",
+    a: "Every stud, plate, rafter, batten and sheet is counted from the model, then rounded up to common stock lengths. Change the size, roof, floor or openings and the list updates. Prices start from Bunnings online prices and you can replace any of them with your supplier's.",
+  },
+  {
+    q: "How is the labour estimate worked out?",
+    a: "Each stage (set out, floor, framing, roofing, cladding, doors and finishing) starts from the size of the build and the number of framing pieces. They are starting points only. Set each stage to how your crew actually works.",
   },
 ];
 
