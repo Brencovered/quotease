@@ -10,6 +10,15 @@
 @font-face{font-family:"Archivo";font-weight:700;font-display:swap;src:url(/planner/vendor/archivo-700.woff2) format("woff2");}
 @font-face{font-family:"Archivo";font-weight:800;font-display:swap;src:url(/planner/vendor/archivo-800.woff2) format("woff2");}
 .tpl{display:flex;gap:8px;align-items:center;margin:4px 0 6px;}
+.desc textarea{width:100%;min-height:76px;resize:vertical;border:1px solid var(--line);border-radius:10px;background:var(--field);padding:10px 12px;font-size:14px;line-height:1.4;}
+.desc .btns{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;}
+.desc .btn.rec{background:var(--bad);color:#fff;border-color:var(--bad);}
+.descmsg{margin:8px 0 0;font-size:12.5px;color:var(--muted);}
+.descmsg.err{color:var(--bad);}
+.descmsg ul{margin:4px 0 0;padding-left:18px;}
+.descmsg a{color:inherit;font-weight:700;}
+.savetpl{display:flex;gap:8px;margin-top:8px;}
+.savetpl input{flex:1;min-width:0;border:1px solid var(--line);border-radius:8px;background:var(--field);padding:7px 10px;}
 .tpl select{flex:1;min-width:0;}
 .lab .mrow{grid-template-columns:1fr auto;}
 .lab .inp input{width:72px;}
@@ -879,12 +888,51 @@ const TEMPLATES={
   studio:{n:'Backyard studio 3 × 4.2 m',shed:{width:4200,length:3000,height:2400,roof:'skillion',roofDir:270,pitch:8,overhang:450,studSize:'90x45',rafterSize:'140x45',rafterSpacing:600,floor:'timber',floorSheet:'yt',joistSpacing:450,floorH:400,wallMat:'weatherboard',roofMat:'corr'},ops:[{type:'pa',wall:'front',offset:-900,width:820,height:2040,build:'prehung'},{type:'window',wall:'front',offset:900,width:1500,height:1200,sill:900,build:'alum'},{type:'window',wall:'left',offset:0,width:900,height:900,sill:1100,build:'louvre'}]},
   leanto:{n:'Lean-to store 3 × 1.8 m',shed:{width:3000,length:1800,height:2100,roof:'skillion',roofDir:270,pitch:8,overhang:200,studSize:'70x35',rafterSize:'90x45',rafterSpacing:900,floor:'gravel',wallMat:'corr',roofMat:'corr'},ops:[{type:'pa',wall:'front',offset:0,width:900,height:1900,build:'colorbond'}]}
 };
-function applyTemplate(k){const t=TEMPLATES[k];if(!t)return;Object.assign(plan.shed,t.shed);
-  plan.openings=t.ops.map(o=>Object.assign({id:uid(),sill:0,parts:{}},o,{build:o.build||(OPEN_BUILDS[o.type][0]||{}).id}));
-  plan.items=plan.items.filter(i=>Math.abs(i.x)<plan.shed.width/2&&Math.abs(i.z)<plan.shed.length/2);plan.selected=null;plan.extra={};
-  refreshAll();save();}
+let BIZ_TEMPLATES=[];let descDraft='';let descState={busy:false,msg:'',err:false,warn:[]};let tplMsg='';
+const clone=o=>JSON.parse(JSON.stringify(o));
+function withOpeningIds(list){return (list||[]).map(o=>Object.assign({id:uid(),sill:0,offset:0,parts:{}},o,{id:uid(),build:o.build||(OPEN_BUILDS[o.type]&&OPEN_BUILDS[o.type][0]||{}).id}));}
+function keepItemsInside(){plan.items=plan.items.filter(i=>Math.abs(i.x)<plan.shed.width/2&&Math.abs(i.z)<plan.shed.length/2);}
+function applyTemplate(v){
+  if(!v)return false;
+  if(v.startsWith('b:')){const t=BIZ_TEMPLATES.find(x=>'b:'+x.id===v);if(!t||!t.plan||!t.plan.shed)return false;const tp=clone(t.plan);
+    plan.shed=Object.assign({},defaultPlan().shed,tp.shed);plan.openings=withOpeningIds(tp.openings);plan.items=(tp.items||[]).map(i=>Object.assign({},i,{id:uid()}));
+    plan.prices=Object.assign({},tp.prices||{},plan.prices);plan.labour=Object.assign({},tp.labour||{});plan.waste=tp.waste!=null?tp.waste:plan.waste;if(tp.labourRate)plan.labourRate=tp.labourRate;}
+  else{const t=TEMPLATES[v.replace(/^s:/,'')];if(!t)return false;Object.assign(plan.shed,t.shed);plan.openings=withOpeningIds(t.ops);keepItemsInside();plan.labour={};}
+  plan.selected=null;plan.extra={};refreshAll();save();return true;}
+function applyGenerated(np){
+  plan.shed=Object.assign({},plan.shed,np.shed);plan.openings=withOpeningIds(np.openings);
+  if(np.items&&np.items.length)plan.items=np.items.map(i=>Object.assign({kind:'box',color:'#8a8fb0',bom:false,y:0},i,{id:uid()}));else keepItemsInside();
+  plan.selected=null;plan.extra={};plan.labour={};tplMsg='';refreshAll();save();
+  if(EMBED&&np.name){try{window.parent.postMessage({source:'ss-planner',type:'suggest-name',name:np.name},location.origin);}catch(e){}}}
+async function runDescribe(){
+  const txt=(descDraft||'').trim();if(!txt||descState.busy)return;
+  descState={busy:true,msg:'Building it...',err:false,warn:[]};renderDescMsg();
+  try{const r=await fetch('/api/structures/generate',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({description:txt,current:{shed:plan.shed,openings:plan.openings,items:plan.items}})});
+    const b=await r.json().catch(()=>({}));
+    if(!r.ok){descState={busy:false,err:true,warn:[],msg:b.signup?'signup':(b.error||'Could not build that one. Try rewording it.')};renderDescMsg();return;}
+    descDraft='';applyGenerated(b.plan);descState={busy:false,err:false,msg:'Done. Check the model, then tap any part to adjust it.',warn:b.plan.warnings||[]};renderDescMsg();
+  }catch(e){descState={busy:false,err:true,warn:[],msg:'No connection. Try again.'};renderDescMsg();}}
+function renderDescMsg(){const el=$('#descMsg');if(!el)return;const s=descState;const go=$('#descGo');if(go){go.disabled=s.busy;go.textContent=s.busy?'Building...':'Build it';}
+  if(s.msg==='signup'){el.className='descmsg';el.innerHTML='Describe-to-build is part of Swiftscope. <a href="/signup" target="_top">Start a free trial</a> to use it, or start from a template below.';return;}
+  el.className='descmsg'+(s.err?' err':'');el.innerHTML=esc(s.msg||'')+(s.warn&&s.warn.length?`<ul>${s.warn.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>`:'');}
+let recog=null;
+function micSupported(){return !!(window.SpeechRecognition||window.webkitSpeechRecognition);}
+function toggleMic(btn){
+  if(recog){recog.stop();return;}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return;
+  recog=new SR();recog.lang='en-AU';recog.interimResults=true;recog.continuous=true;const start=descDraft?descDraft.trim()+' ':'';
+  recog.onresult=ev=>{let t='';for(let i=0;i<ev.results.length;i++)t+=ev.results[i][0].transcript;descDraft=start+t;const ta=$('#descIn');if(ta)ta.value=descDraft;};
+  recog.onend=()=>{recog=null;const b=$('#descMic');if(b){b.classList.remove('rec');b.textContent='Speak';}};
+  recog.onerror=()=>{descState={busy:false,err:true,warn:[],msg:'Microphone not available. Type the description instead.'};renderDescMsg();};
+  try{recog.start();btn.classList.add('rec');btn.textContent='Stop';}catch(e){recog=null;}}
+function startHTML(){
+  const opts=`<option value="" selected>Choose a template</option>`+(BIZ_TEMPLATES.length?`<optgroup label="Your templates">${BIZ_TEMPLATES.map(t=>`<option value="b:${esc(t.id)}">${esc(t.name)}</option>`).join('')}</optgroup>`:'')+`<optgroup label="Starter templates">${Object.entries(TEMPLATES).map(([k,v])=>`<option value="s:${k}">${v.n}</option>`).join('')}</optgroup>`;
+  return `<div class="desc"><h3>Describe the build</h3><textarea id="descIn" placeholder="e.g. 6 x 9 m Colorbond workshop, 3 m walls, 3 m wide roller door at the front, two windows on the left, 125 mm slab. Or describe a change: make it 1 m longer and add a door on the right." aria-label="Describe the build">${esc(descDraft)}</textarea>
+  <div class="btns"><button class="primary" id="descGo">Build it</button>${micSupported()?'<button class="btn" id="descMic" type="button">Speak</button>':''}</div><div class="descmsg" id="descMsg"></div></div>
+  <h3>Or start from a template</h3><div class="tpl"><select id="tplSel" aria-label="Template">${opts}</select><button class="btn" id="tplApply">Apply</button></div><p class="note" style="margin-top:0">${tplMsg?esc(tplMsg):'Replaces the size, roof, floor, walls and openings. Your prices stay.'}</p>
+  ${EMBED?`<div class="savetpl"><input id="tplName" placeholder="Name this design" aria-label="Template name"><button class="btn" id="tplSave">Save as template</button></div><p class="note" style="margin-top:4px">Saved templates show up for everyone in your business.</p>`:''}`;}
 function renderShedTab(){
-  const s=plan.shed;let h=`<h3>Start from a template</h3><div class="tpl"><select id="tplSel" aria-label="Template">${Object.entries(TEMPLATES).map(([k,v])=>`<option value="${k}" ${k==='single'?'selected':''}>${v.n}</option>`).join('')}</select><button class="btn" id="tplApply">Apply</button></div><p class="note" id="tplMsg" style="margin-top:0">Replaces the size, roof, floor, walls and openings. Your prices stay.</p>`;
+  const s=plan.shed;let h=startHTML();
   SHED_FIELDS.forEach(f=>{
     if(f.sec){h+=`<h3>${f.sec}</h3>`;return;}
     if(f.show&&!f.show(s.floor))return;
@@ -898,7 +946,7 @@ function renderShedTab(){
     h+='</label>';
   });
   h+=`<div class="summary" id="shedSummary"></div><p class="note">Sizes are external frame dimensions. Colours are approximate Colorbond shades.</p>`;
-  $('#tab-shed').innerHTML=h;updateShedTabState();
+  $('#tab-shed').innerHTML=h;updateShedTabState();renderDescMsg();
 }
 function updateShedTabState(){
   const pi=$('#tab-shed [data-k="pitch"]');if(pi)pi.disabled=plan.shed.roof==='flat';
@@ -916,9 +964,18 @@ function onShedInput(e){
   if(plan.shed[k]===v)return;plan.shed[k]=v;if(shedSideFx(k,v))renderShedTab();onShedChanged();
 }
 let tplArmed=0;
-$('#tab-shed').addEventListener('click',e=>{if(e.target.id!=='tplApply')return;
+$('#tab-shed').addEventListener('click',e=>{
+  if(e.target.id==='descGo'){runDescribe();return;}
+  if(e.target.id==='descMic'){toggleMic(e.target);return;}
+  if(e.target.id==='tplSave'){const n=($('#tplName').value||'').trim();if(!n){$('#tplName').focus();return;}
+    try{window.parent.postMessage({source:'ss-planner',type:'save-template',name:n,plan:Object.assign({},clone(plan),{selected:null}),summary:summary()},location.origin);}catch(_){}
+    tplMsg='Saving template...';renderShedTab();return;}
+  if(e.target.id!=='tplApply')return;
+  const v=$('#tplSel').value;if(!v){tplMsg='Pick a template first.';renderShedTab();return;}
   if(Date.now()-tplArmed>4000){tplArmed=Date.now();e.target.textContent='Tap to confirm';return;}
-  tplArmed=0;applyTemplate($('#tplSel').value);});
+  tplArmed=0;tplMsg='';applyTemplate(v);});
+$('#tab-shed').addEventListener('input',e=>{if(e.target.id==='descIn')descDraft=e.target.value;});
+$('#tab-shed').addEventListener('keydown',e=>{if(e.target.id==='descIn'&&e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();runDescribe();}});
 $('#tab-shed').addEventListener('input',onShedInput);$('#tab-shed').addEventListener('change',onShedInput);
 function onShedChanged(){rebuildShed();renderPick();updateSelHelper();updateShedTabState();updateOpeningWarnings();renderItemList();scheduleMaterials();save();}
 
@@ -1493,11 +1550,12 @@ if(EMBED){
   $('#btnFile').hidden=true;
   window.addEventListener('message',e=>{
     if(e.origin!==location.origin||e.source!==window.parent)return;const d=e.data||{};if(d.target!=='ss-planner')return;
-    if(d.type==='load'){if(d.meta)META=d.meta;if(d.settings)SETTINGS=Object.assign(SETTINGS,d.settings);
+    if(d.type==='load'){if(d.meta)META=d.meta;if(Array.isArray(d.templates))BIZ_TEMPLATES=d.templates;if(d.settings)SETTINGS=Object.assign(SETTINGS,d.settings);
       plan=d.plan&&d.plan.shed?migrate(d.plan):defaultPlan();if(d.prices&&!Object.keys(plan.prices).length)plan.prices=Object.assign({},d.prices);
       plan.selected=null;refreshAll();
       if(!d.plan||!d.plan.shed){computeMaterials().forEach(r=>{const bp=bunningsFor(r);if(bp.p&&plan.prices[r.key]===undefined)plan.prices[r.key]=bp.p;});if($('#tab-materials').classList.contains('on'))renderMaterials();postPlan();}}
     if(d.type==='meta'){META=Object.assign(META,d.meta||{});}
+    if(d.type==='templates'){BIZ_TEMPLATES=Array.isArray(d.templates)?d.templates:[];tplMsg=d.message||'';renderShedTab();}
     if(d.type==='print'){openPlans();setTimeout(()=>{try{window.print();}catch(_){}},150);}
     if(d.type==='flush'){clearTimeout(saveT);postPlan();}
   });

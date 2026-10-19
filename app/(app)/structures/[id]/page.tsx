@@ -16,7 +16,7 @@ export default async function StructureEditorPage({ params }: { params: Promise<
 
   const { data: row } = await supabase
     .from("structure_plans")
-    .select("id, name, client_id, quote_id, plan, updated_at")
+    .select("id, name, client_id, quote_id, plan, updated_at, is_template")
     .eq("id", id)
     .eq("profile_id", businessId)
     .maybeSingle();
@@ -25,7 +25,7 @@ export default async function StructureEditorPage({ params }: { params: Promise<
   const plan = (row.plan ?? {}) as Record<string, unknown>;
   const isNew = !plan || !("shed" in plan);
 
-  const [{ data: clients }, { data: openQuotes }, { data: profile }, lastPricesRes] = await Promise.all([
+  const [{ data: clients }, { data: openQuotes }, { data: profile }, lastPricesRes, { data: templateRows }] = await Promise.all([
     supabase.from("clients").select("id, name, billing_address").eq("profile_id", businessId).order("name").range(0, 999),
     supabase
       .from("quotes")
@@ -51,6 +51,14 @@ export default async function StructureEditorPage({ params }: { params: Promise<
           .limit(1)
           .maybeSingle()
       : Promise.resolve({ data: null }),
+    supabase
+      .from("structure_plans")
+      .select("id, name, plan")
+      .eq("profile_id", businessId)
+      .eq("is_template", true)
+      .neq("id", id)
+      .order("name")
+      .range(0, 99),
   ]);
 
   const lastPrices = (lastPricesRes.data as { prices?: Record<string, number> } | null)?.prices ?? null;
@@ -60,6 +68,9 @@ export default async function StructureEditorPage({ params }: { params: Promise<
       <AppHeader />
       <StructureEditor
         id={row.id}
+        businessId={businessId}
+        isTemplate={Boolean(row.is_template)}
+        templates={(templateRows ?? []).map((t) => ({ id: t.id as string, name: t.name as string, plan: t.plan }))}
         initialName={row.name}
         initialClientId={row.client_id}
         linkedQuoteId={row.quote_id}

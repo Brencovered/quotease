@@ -1,0 +1,56 @@
+import { describe, expect, it } from "vitest";
+import { normalizeGeneratedPlan, type GeneratedPlan } from "./structureAi";
+
+const base: GeneratedPlan = {
+  name: "Test",
+  shed: {
+    width: 6000, length: 9000, height: 3000, roof: "gable", roofDir: "90", pitch: 12, overhang: 300,
+    studSize: "90x45", studSpacing: "600", rafterSize: "190x45", rafterSpacing: "900", floor: "slab",
+    slabT: 125, mesh: "SL82", floorSheet: null, floorH: null, paverType: null, gravelType: null,
+    wallMat: "corr", roofMat: "corr", wallColor: "Surfmist", roofColor: "Monument", doorColor: "Monument",
+  },
+  openings: [{ type: "roller", wall: "front", offset: 0, width: 3000, height: 2700, sill: 0, build: "kit" }],
+  items: [],
+  warnings: [],
+};
+
+describe("normalizeGeneratedPlan", () => {
+  it("passes a sensible plan through", () => {
+    const n = normalizeGeneratedPlan(base);
+    expect(n.shed).toMatchObject({ width: 6000, length: 9000, roofDir: 90, studSpacing: 600, slabT: 125, mesh: "SL82" });
+    expect(n.openings[0]).toMatchObject({ width: 3000, height: 2700, sill: 0 });
+  });
+
+  it("clamps absurd sizes and keeps openings inside their wall", () => {
+    const n = normalizeGeneratedPlan({
+      ...base,
+      shed: { ...base.shed, width: 99999, height: 100, roof: "gable", roofDir: "270" },
+      openings: [
+        { type: "roller", wall: "front", offset: 99999, width: 99999, height: 9999, sill: 50, build: "alum" },
+        { type: "window", wall: "left", offset: 0, width: 1200, height: 600, sill: 1200, build: "louvre" },
+      ],
+    });
+    expect(n.shed.width).toBe(15000);
+    expect(n.shed.height).toBe(1800);
+    expect(n.shed.roofDir).toBe(90);
+    const roller = n.openings[0];
+    expect(roller.build).toBe("kit");
+    expect(roller.sill).toBe(0);
+    expect(roller.width).toBeLessThanOrEqual(15000 - 400);
+    expect(Math.abs(roller.offset) + roller.width / 2).toBeLessThanOrEqual(15000 / 2 - 200);
+    expect(roller.height).toBeLessThanOrEqual(1800 - 250);
+    const win = n.openings[1];
+    expect(win.sill + win.height).toBeLessThanOrEqual(1800 - 250);
+  });
+
+  it("fills timber floor defaults and drops unrelated floor fields", () => {
+    const n = normalizeGeneratedPlan({ ...base, shed: { ...base.shed, floor: "timber", floorSheet: "ply" } });
+    expect(n.shed).toMatchObject({ floor: "timber", floorSheet: "ply", joistSpacing: 600, floorH: 350 });
+    expect(n.shed.slabT).toBeUndefined();
+  });
+
+  it("snaps item rotation and keeps items on the floor", () => {
+    const n = normalizeGeneratedPlan({ ...base, items: [{ name: "Car", w: 4600, d: 1850, h: 1500, x: 99999, z: 0, rot: 100 }] });
+    expect(n.items[0]).toMatchObject({ x: 3000, rot: 90, y: 0 });
+  });
+});

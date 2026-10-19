@@ -17,8 +17,13 @@ type QuoteOption = {
   total_cost: number | null;
 };
 
+type TemplateOption = { id: string; name: string; plan: unknown };
+
 interface Props {
   id: string;
+  businessId: string;
+  isTemplate: boolean;
+  templates: TemplateOption[];
   initialName: string;
   initialClientId: string | null;
   linkedQuoteId: string | null;
@@ -53,6 +58,9 @@ export default function StructureEditor(props: Props) {
   const [busy, setBusy] = useState<null | "quote" | "add">(null);
   const [addOpen, setAddOpen] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const templatesRef = useRef<TemplateOption[]>(props.templates);
+  const nameRef = useRef(name);
+  nameRef.current = name;
 
   const client = props.clients.find((c) => c.id === clientId) ?? null;
 
@@ -140,7 +148,22 @@ export default function StructureEditor(props: Props) {
           prices: props.lastPrices,
           meta,
           settings: { hourlyRate: business.hourlyRate },
+          templates: templatesRef.current,
         });
+        return;
+      }
+      if (d.type === "save-template") {
+        void saveTemplate(d as { name?: unknown; plan?: unknown; summary?: unknown });
+        return;
+      }
+      if (d.type === "suggest-name") {
+        const suggested = typeof (d as { name?: unknown }).name === "string" ? String((d as { name: string }).name).trim() : "";
+        const cur = nameRef.current.trim();
+        const generic = !cur || cur === "New build" || cur === "Untitled build" || (cur === props.initialName.trim() && / build$/.test(cur));
+        if (suggested && generic && !props.isTemplate) {
+          setName(suggested);
+          void saveDetails({ name: suggested });
+        }
         return;
       }
       if (d.type === "change") {
@@ -181,6 +204,32 @@ export default function StructureEditor(props: Props) {
       if (latest.current) void save();
     };
   }, [save]);
+
+  async function saveTemplate(d: { name?: unknown; plan?: unknown; summary?: unknown }) {
+    const tplName = typeof d.name === "string" ? d.name.trim().slice(0, 80) : "";
+    if (!tplName || !d.plan) return;
+    const s = parseSummary(d.summary);
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("structure_plans")
+      .insert({
+        profile_id: props.businessId,
+        name: tplName,
+        plan: d.plan,
+        summary: d.summary ?? {},
+        materials_total: s.materialsTotal ?? 0,
+        labour_hours: s.labourHours ?? 0,
+        is_template: true,
+      })
+      .select("id, name, plan")
+      .single();
+    if (error || !data) {
+      post({ type: "templates", templates: templatesRef.current, message: "Could not save the template. Try again." });
+      return;
+    }
+    templatesRef.current = [...templatesRef.current, { id: data.id, name: data.name, plan: data.plan }].sort((a, b) => a.name.localeCompare(b.name));
+    post({ type: "templates", templates: templatesRef.current, message: `Saved "${data.name}". It is now in your templates.` });
+  }
 
   async function saveDetails(patch: { name?: string; client_id?: string | null }) {
     const supabase = createClient();
@@ -261,6 +310,8 @@ export default function StructureEditor(props: Props) {
           onChange={(e) => setName(e.target.value)}
           onBlur={() => name.trim() && name !== props.initialName && saveDetails({ name: name.trim() })}
         />
+        {props.isTemplate && <span className="pill bg-[var(--amber-light)] text-[var(--amber-deep)]">Template</span>}
+        {!props.isTemplate && (
         <select
           aria-label="Client"
           className="text-[13px] border border-[var(--line)] rounded-lg px-2 py-1.5 bg-[var(--surface)] max-w-[180px]"
@@ -277,6 +328,7 @@ export default function StructureEditor(props: Props) {
             </option>
           ))}
         </select>
+        )}
         <span className="text-[12px] text-[var(--ink-faint)] inline-flex items-center gap-1 min-w-[64px]" aria-live="polite">
           {saveState === "saving" && (<><Loader2 size={12} className="animate-spin" /> Saving</>)}
           {saveState === "pending" && "Unsaved"}
@@ -294,6 +346,7 @@ export default function StructureEditor(props: Props) {
           <button type="button" onClick={() => post({ type: "print" })} className="btn-secondary !py-1.5 !px-3 !text-[13px]" title="Print plans and build guide">
             <Printer size={14} /> <span className="hidden sm:inline">Plans</span>
           </button>
+          {!props.isTemplate && (<>
           <div className="relative">
             <button
               type="button"
@@ -333,6 +386,7 @@ export default function StructureEditor(props: Props) {
           >
             {busy === "quote" ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} Start quote
           </button>
+          </>)}
         </div>
       </div>
 
@@ -349,6 +403,7 @@ export default function StructureEditor(props: Props) {
             ref={frameRef}
             src={PLANNER_SRC}
             title="Build planner"
+            allow="microphone"
             className="w-full h-full border-0 block"
           />
         )}
