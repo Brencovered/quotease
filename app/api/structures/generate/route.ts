@@ -20,12 +20,12 @@ export const maxDuration = 60;
 
 function describeCurrent(current: unknown): string {
   if (!current || typeof current !== "object") return "";
-  const c = current as { shed?: Record<string, unknown>; openings?: unknown[]; items?: unknown[] };
+  const c = current as { shed?: Record<string, unknown>; openings?: unknown[]; items?: unknown[]; walls?: unknown[] };
   if (!c.shed) return "";
   const pick = (o: Record<string, unknown>, keys: string[]) =>
     Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]));
   const shed = pick(c.shed, [
-    "width", "length", "height", "roof", "roofDir", "pitch", "overhang", "studSize", "studSpacing",
+    "type", "width", "length", "height", "roof", "roofDir", "pitch", "overhang", "studSize", "studSpacing",
     "rafterSize", "rafterSpacing", "floor", "slabT", "mesh", "floorSheet", "floorH", "paverType",
     "gravelType", "wallMat", "roofMat", "wallColor", "roofColor", "doorColor",
   ]);
@@ -35,7 +35,11 @@ function describeCurrent(current: unknown): string {
   const items = (Array.isArray(c.items) ? c.items : []).slice(0, 24).map((i) =>
     pick(i as Record<string, unknown>, ["name", "w", "d", "h", "x", "z", "rot"])
   );
-  return JSON.stringify({ shed, openings, items });
+  const internalWalls = (Array.isArray(c.walls) ? c.walls : []).slice(0, 8).map((w) => {
+    const o = w as Record<string, unknown>;
+    return { axis: o.axis, pos: o.pos, door: o.door, doorOffset: o.doorPos };
+  });
+  return JSON.stringify({ shed, openings, internalWalls, items });
 }
 
 export async function POST(req: NextRequest) {

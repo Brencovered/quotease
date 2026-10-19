@@ -21,6 +21,9 @@ const OPENING_BUILDS = {
 } as const;
 
 const ShedSchema = z.object({
+  type: z
+    .enum(["enclosed", "carport", "pergola", "verandah", "deck"])
+    .describe("enclosed = walls all round. carport = posts, beams and a roof, open sides. pergola = posts, beams and rafters, usually no roof sheets. verandah = attached along one side of a house, skillion, house on the high side. deck = raised timber floor, no roof."),
   width: z.number().describe("External frame width in mm (the front wall length)"),
   length: z.number().describe("External frame length in mm (side wall length, front to back)"),
   height: z.number().describe("Wall height in mm, floor to top plate"),
@@ -42,7 +45,7 @@ const ShedSchema = z.object({
   paverType: z.enum(["concrete", "clay", "bluestone", "sandstone", "porcelain"]).nullable(),
   gravelType: z.enum(["crushed", "roadbase", "toppings", "pebbles"]).nullable(),
   wallMat: z.enum(["corr", "trimdek", "weatherboard", "fc", "ply"]).describe("corr = Colorbond corrugated, trimdek = Colorbond Trimdek, weatherboard = painted pine weatherboard, fc = fibre cement sheet, ply = plywood cladding"),
-  roofMat: z.enum(["corr", "trimdek", "zinc", "poly"]).describe("zinc = Zincalume corrugated, poly = clear polycarbonate"),
+  roofMat: z.enum(["corr", "trimdek", "zinc", "poly", "none"]).describe("zinc = Zincalume corrugated, poly = clear polycarbonate, none = open rafters (pergola only)"),
   wallColor: z.enum(COLORBOND),
   roofColor: z.enum(COLORBOND),
   doorColor: z.enum(COLORBOND),
@@ -72,6 +75,16 @@ export const GeneratedPlanSchema = z.object({
   name: z.string().describe("Short name for the build, e.g. 'Double garage with workshop bay'"),
   shed: ShedSchema,
   openings: z.array(OpeningSchema),
+  internalWalls: z
+    .array(
+      z.object({
+        axis: z.enum(["across", "along"]).describe("across = runs side to side (parallel to the front wall). along = runs front to back."),
+        pos: z.number().describe("mm from the middle of the building. across: positive = towards the front. along: positive = to the right when facing the front."),
+        door: z.boolean().describe("Whether the wall has a doorway"),
+        doorOffset: z.number().describe("Doorway centre in mm from the middle of the wall"),
+      })
+    )
+    .describe("Full-span internal walls in an enclosed building, only when asked for or shown between rooms on a plan"),
   items: z.array(ItemSchema).describe("Things placed inside, only if asked for (car, workbench, shelving, mower)"),
   warnings: z.array(z.string()).describe("Short notes on anything asked for that this planner cannot draw, or assumptions made"),
 });
@@ -79,8 +92,13 @@ export const GeneratedPlanSchema = z.object({
 export type GeneratedPlan = z.infer<typeof GeneratedPlanSchema>;
 
 export const STRUCTURE_SYSTEM_PROMPT = `You design small framed structures for Australian tradies inside a 3D build planner.
-The planner draws ONE rectangular, fully enclosed, timber stick-framed building with a gable, skillion or flat roof, clad walls, doors and windows, and a floor (slab, timber, pavers, gravel or none).
-It cannot yet draw open-sided structures (carports, pergolas, verandahs), decks without walls, multiple rooms, internal walls, L shapes, steel portal frames, mezzanines or attached lean-tos against a house. If asked for one of those, build the closest enclosed version and say so in warnings.
+The planner draws ONE rectangular timber structure of one of these types:
+- enclosed: stick-framed walls all round with cladding, doors and windows, and optional full-span internal walls with doorways
+- carport: posts and doubled beams carrying a gable, skillion or flat roof, open sides
+- pergola: posts, beams and rafters, roofMat "none" for open rafters or a roof sheet if asked
+- verandah: attached along one side of a house. Use roof "skillion" with the house on the high side; roofDir 270 puts the house at the back
+- deck: raised timber floor (floor "timber", floorSheet "deck") with a balustrade, no roof
+All types have a floor (slab, timber, pavers, gravel or none). It cannot draw L shapes, joined roofs, steel portal frames, mezzanines or partial-length internal walls. If asked for one of those, build the closest version and say so in warnings.
 
 Rules:
 - All sizes in millimetres. Width is the front wall. Length runs front to back.
@@ -90,6 +108,7 @@ Rules:
 - Keep every opening fully inside its wall, at least 200 mm from the corners, with at least 300 mm between openings on the same wall, and at least 250 mm below the top of the wall.
 - Pick rafter size from the span: up to 3600 mm span 90x45, up to 6000 mm 140x45, wider 190x45.
 - When a current design is given and the request reads like a change ("make it longer", "add a window"), keep everything else from the current design.
+- Doors, windows and internal walls only apply to enclosed buildings. Leave openings and internalWalls empty for other types.
 - Only add items when asked. Australian spelling.`;
 
 /* ---------- normalisation ---------- */
@@ -108,6 +127,7 @@ export interface NormalizedPlan {
   name: string;
   shed: PlannerShedPatch;
   openings: Array<{ type: string; wall: string; offset: number; width: number; height: number; sill: number; build: string }>;
+  internalWalls: Array<{ axis: string; pos: number; door: boolean; doorOffset: number }>;
   items: Array<{ name: string; w: number; d: number; h: number; x: number; z: number; y: number; rot: number }>;
   warnings: string[];
 }
@@ -122,7 +142,9 @@ export function normalizeGeneratedPlan(p: GeneratedPlan): NormalizedPlan {
   let roofDir = Number(s.roofDir) || 0;
   if (roof === "gable") roofDir = roofDir % 180;
 
+  const type = s.type ?? "enclosed";
   const shed: PlannerShedPatch = {
+    type,
     width,
     length,
     height,
@@ -150,6 +172,14 @@ export function normalizeGeneratedPlan(p: GeneratedPlan): NormalizedPlan {
     shed.floorH = r10(clamp(s.floorH ?? 350, 250, 1200, 350));
     shed.joistSpacing = shed.floorSheet === "ply" ? 600 : 450;
   }
+  if (type === "deck") {
+    shed.floor = "timber";
+    shed.floorSheet = "deck";
+    shed.joistSpacing = 450;
+    shed.floorH = r10(clamp(s.floorH ?? 600, 250, 3000, 600));
+  }
+  if (shed.roofMat === "none" && type !== "pergola") shed.roofMat = "corr";
+  if (type === "verandah") shed.roof = "skillion";
   if (s.floor === "pavers" && s.paverType) shed.paverType = s.paverType;
   if (s.floor === "gravel" && s.gravelType) shed.gravelType = s.gravelType;
 
@@ -157,7 +187,7 @@ export function normalizeGeneratedPlan(p: GeneratedPlan): NormalizedPlan {
   // left/right run the length (the planner swaps these itself when a
   // roof direction rotates the building).
   const wallLen = (w: string) => (w === "front" || w === "back" ? width : length);
-  const openings = (p.openings ?? []).slice(0, 16).map((o) => {
+  const openings = (type === "enclosed" ? p.openings ?? [] : []).slice(0, 16).map((o) => {
     const len = wallLen(o.wall);
     const isWin = o.type === "window";
     const ow = r10(clamp(o.width, 300, Math.max(300, len - 400), isWin ? 1200 : 820));
@@ -188,10 +218,24 @@ export function normalizeGeneratedPlan(p: GeneratedPlan): NormalizedPlan {
     rot: (Math.round(clamp(i.rot, -360, 720, 0) / 90) * 90 + 360) % 360,
   }));
 
+  const internalWalls = (type === "enclosed" ? p.internalWalls ?? [] : []).slice(0, 8).map((w) => {
+    const across = w.axis !== "along";
+    const span = across ? width : length;
+    const depth = across ? length : width;
+    const lim = Math.max(0, depth / 2 - 300);
+    return {
+      axis: across ? "across" : "along",
+      pos: r10(clamp(w.pos, -lim, lim, 0)),
+      door: w.door !== false,
+      doorOffset: r10(clamp(w.doorOffset, -(span / 2 - 600), span / 2 - 600, 0)),
+    };
+  });
+
   return {
     name: String(p.name || "New build").slice(0, 80),
     shed,
     openings,
+    internalWalls,
     items,
     warnings: (p.warnings ?? []).filter((w) => typeof w === "string" && w.trim()).slice(0, 6).map((w) => w.slice(0, 240)),
   };
@@ -219,7 +263,8 @@ You are reading an uploaded drawing: a floor plan, site plan, shed kit drawing o
 - If the outline is L-shaped or irregular, use the bounding rectangle of the main enclosed area for width and length, and say so in warnings.
 - Read wall height and roof pitch from elevations, sections or notes if shown. Otherwise use the defaults.
 - Place every external door, window and roller door on the right wall. Window codes like "1218" usually mean 1200 high x 1810 wide, and "0909" 900 x 900. Measure each opening's offset from the middle of its wall using the dimension chains.
-- List the rooms you can read with their sizes. Do not place internal walls.
+- List the rooms you can read with their sizes.
+- For a house or studio, place internal walls along the main lines between rows of rooms (e.g. the wall between the bedroom wing and the living areas), each full span, with a doorway where the plan shows one. Skip short robe and ensuite walls. Add at most 6 internal walls.
 - Set confidence to "medium" when the overall size came from adding up room sizes, "high" only when overall dimension chains are shown, and "low" only when there are no readable numbers at all. Always return your best estimate of the building, never an empty answer.`;
 
 export function normalizePlanRead(p: PlanRead) {
