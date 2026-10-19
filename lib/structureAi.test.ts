@@ -4,12 +4,13 @@ import { normalizeGeneratedPlan, normalizePlanRead, type GeneratedPlan } from ".
 const base: GeneratedPlan = {
   name: "Test",
   shed: {
-    width: 6000, length: 9000, height: 3000, roof: "gable", roofDir: "90", pitch: 12, overhang: 300,
+    type: "enclosed", width: 6000, length: 9000, height: 3000, roof: "gable", roofDir: "90", pitch: 12, overhang: 300,
     studSize: "90x45", studSpacing: "600", rafterSize: "190x45", rafterSpacing: "900", floor: "slab",
     slabT: 125, mesh: "SL82", floorSheet: null, floorH: null, paverType: null, gravelType: null,
     wallMat: "corr", roofMat: "corr", wallColor: "Surfmist", roofColor: "Monument", doorColor: "Monument",
   },
   openings: [{ type: "roller", wall: "front", offset: 0, width: 3000, height: 2700, sill: 0, build: "kit" }],
+  internalWalls: [],
   items: [],
   warnings: [],
 };
@@ -67,5 +68,28 @@ describe("normalizePlanRead", () => {
     expect(n.rooms[1]).toEqual({ name: "Room", width: 0, length: 50000 });
     expect(n.warnings[0]).toMatch(/L-shaped/);
     expect(n.confidence).toBe("medium");
+  });
+});
+
+describe("structure types", () => {
+  it("drops openings and walls for open structures and forces deck floors", () => {
+    const n = normalizeGeneratedPlan({
+      ...base,
+      shed: { ...base.shed, type: "deck", floor: "slab", floorH: 900, roofMat: "none" },
+      internalWalls: [{ axis: "across", pos: 0, door: true, doorOffset: 0 }],
+    });
+    expect(n.openings).toHaveLength(0);
+    expect(n.internalWalls).toHaveLength(0);
+    expect(n.shed).toMatchObject({ type: "deck", floor: "timber", floorSheet: "deck", floorH: 900, roofMat: "corr" });
+  });
+
+  it("clamps internal walls inside the building", () => {
+    const n = normalizeGeneratedPlan({ ...base, internalWalls: [{ axis: "along", pos: 99999, door: true, doorOffset: -99999 }] });
+    expect(n.internalWalls[0]).toEqual({ axis: "along", pos: 2700, door: true, doorOffset: -3900 });
+  });
+
+  it("keeps open rafters only on pergolas and forces verandahs to skillion", () => {
+    const n = normalizeGeneratedPlan({ ...base, shed: { ...base.shed, type: "verandah", roof: "gable", roofMat: "none" } });
+    expect(n.shed).toMatchObject({ roof: "skillion", roofMat: "corr" });
   });
 });

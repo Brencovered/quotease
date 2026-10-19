@@ -341,7 +341,7 @@ if(EMBED)document.body.classList.add('embed');
 const SHEET=0.762;
 const STOCK=[2.4,2.7,3.0,3.3,3.6,4.2,4.8,5.4,6.0];
 const COLORBOND={'Surfmist':'#E4E2D5','Classic Cream':'#E9DCB8','Paperbark':'#CABFA4','Dune':'#B1ADA3','Shale Grey':'#BDBFBA','Bluegum':'#969799','Basalt':'#6D6C6E','Woodland Grey':'#4B4C46','Monument':'#323233','Manor Red':'#5E1D0E','Cottage Green':'#304C3C','Zincalume':'#B8BDBF'};
-const TIMBER={'70x35':[0.07,0.035],'90x35':[0.09,0.035],'90x45':[0.09,0.045],'140x45':[0.14,0.045],'190x45':[0.19,0.045]};
+const TIMBER={'70x35':[0.07,0.035],'90x35':[0.09,0.035],'90x45':[0.09,0.045],'140x45':[0.14,0.045],'190x45':[0.19,0.045],'240x45':[0.24,0.045],'90x90':[0.09,0.09],'125x125':[0.125,0.125],'42x42':[0.042,0.042]};
 const OPEN_TYPES={
   roller:{label:'Roller door',w:2400,h:2100,sill:0},
   pa:{label:'Door',w:820,h:2040,sill:0},
@@ -397,7 +397,8 @@ const ROOF_MATS={
   corr:{n:'Colorbond corrugated',tex:'corr',pitch:0.076},
   trimdek:{n:'Colorbond Trimdek',tex:'trim',pitch:0.19},
   zinc:{n:'Zincalume corrugated',tex:'corr',pitch:0.076,color:'#B8BDBF'},
-  poly:{n:'Clear polycarbonate',tex:'corr',pitch:0.076,color:'#dcebf2',clear:true}
+  poly:{n:'Clear polycarbonate',tex:'corr',pitch:0.076,color:'#dcebf2',clear:true},
+  none:{n:'None, open rafters',tex:'corr',pitch:0.076,color:'#cccccc'}
 };
 const FLOORS={slab:'Concrete slab',timber:'Timber on bearers and joists',pavers:'Pavers on sand',gravel:'Crushed rock',none:'None (bare ground)'};
 function floorLift(){return plan.shed.floor==='timber'?(plan.shed.floorH||350)/1000:0;}
@@ -415,12 +416,16 @@ function shedSideFx(k,v){const S=plan.shed;
   if(k==='roof'&&v==='gable')S.roofDir=(+S.roofDir||0)%180;
   if(k==='paverType'){const t=PAVER_TYPES[v];if(t)Object.assign(S,{paverW:t.w,paverL:t.l,paverColor:t.col});}
   if(k==='floorSheet'){const f=FLOOR_SHEETS[v];if(f)S.joistSpacing=Math.min(S.joistSpacing,f.maxJ);}
-  return ['roof','floor','paverType','floorSheet'].includes(k);}
+  if(k==='type'){if(v==='deck'){S.floor='timber';S.floorSheet='deck';S.floorH=Math.max(+S.floorH||0,600);S.joistSpacing=Math.min(S.joistSpacing,450);}
+    if(v==='pergola')S.roofMat='none';else if(S.roofMat==='none')S.roofMat='corr';
+    if(v==='verandah'){S.roof='skillion';if(+S.roofDir%180===0&&+S.roofDir!==180)S.roofDir=270;}}
+  if(k==='roofMat'&&v==='none'&&S.type!=='pergola')S.roofMat='corr';
+  return ['roof','floor','paverType','floorSheet','type','roofMat','balustrade'].includes(k);}
 const LAYERS=[['slab','Floor'],['frame','Frame'],['clad','Walls'],['roof','Roof'],['openings','Doors'],['services','Services'],['items','Items'],['dims','Sizes']];
 
 function defaultPlan(){
   return {
-    shed:{width:3600,length:6000,height:2400,roof:'gable',pitch:15,overhang:300,studSize:'90x45',studSpacing:600,rafterSize:'90x45',rafterSpacing:900,battenSpacing:900,slab:true,floor:'slab',slabT:100,slabBase:100,mesh:'SL72',paverType:'concrete',paverW:400,paverL:400,paverGap:3,paverPattern:'stack',paverColor:'#b9aa94',sandDepth:30,baseDepth:75,floorSheet:'yt',joistSpacing:450,floorH:350,gravelType:'crushed',gravelDepth:75,roofDir:0,wallMat:'corr',roofMat:'corr',wallColor:'Surfmist',roofColor:'Monument',doorColor:'Monument'},
+    shed:{type:'enclosed',postSize:'90x90',postSpacing:3000,beamSize:'190x45',balustrade:'timber',balSides:'three',width:3600,length:6000,height:2400,roof:'gable',pitch:15,overhang:300,studSize:'90x45',studSpacing:600,rafterSize:'90x45',rafterSpacing:900,battenSpacing:900,slab:true,floor:'slab',slabT:100,slabBase:100,mesh:'SL72',paverType:'concrete',paverW:400,paverL:400,paverGap:3,paverPattern:'stack',paverColor:'#b9aa94',sandDepth:30,baseDepth:75,floorSheet:'yt',joistSpacing:450,floorH:350,gravelType:'crushed',gravelDepth:75,roofDir:0,wallMat:'corr',roofMat:'corr',wallColor:'Surfmist',roofColor:'Monument',doorColor:'Monument'},
     openings:[
       {id:uid(),type:'roller',wall:'front',offset:0,width:2400,height:2100,sill:0},
       {id:uid(),type:'pa',wall:'right',offset:-1600,width:820,height:2040,sill:0},
@@ -432,11 +437,11 @@ function defaultPlan(){
       {id:uid(),kind:'box',name:'Ride-on mower',w:1700,h:1100,d:1100,x:600,z:600,y:0,rot:90,color:'#3d8b3d',bom:false}
     ],
     prices:{},extra:{},waste:10,labour:{},labourRate:null,xray:1,selected:null,
-    trades:{},scope:null,
+    trades:{},scope:null,walls:[],
     layers:{slab:true,frame:true,clad:true,roof:true,openings:true,services:true,items:true,dims:true}
   };
 }
-function migrate(p){const d=defaultPlan();if(p.shed&&!p.shed.floor)p.shed.floor=p.shed.slab===false?'none':'slab';return Object.assign({},d,p,{shed:Object.assign({},d.shed,p.shed||{}),layers:Object.assign({},d.layers,p.layers||{}),openings:Array.isArray(p.openings)?p.openings:[],items:Array.isArray(p.items)?p.items:[],prices:p.prices||{},extra:p.extra||{},labour:p.labour||{},trades:p.trades||{},scope:p.scope||null,planRooms:Array.isArray(p.planRooms)?p.planRooms:[]});}
+function migrate(p){const d=defaultPlan();if(p.shed&&!p.shed.floor)p.shed.floor=p.shed.slab===false?'none':'slab';return Object.assign({},d,p,{shed:Object.assign({},d.shed,p.shed||{}),layers:Object.assign({},d.layers,p.layers||{}),openings:Array.isArray(p.openings)?p.openings:[],items:Array.isArray(p.items)?p.items:[],prices:p.prices||{},extra:p.extra||{},labour:p.labour||{},trades:p.trades||{},scope:p.scope||null,planRooms:Array.isArray(p.planRooms)?p.planRooms:[],walls:Array.isArray(p.walls)?p.walls:[]});}
 function load(){if(EMBED)return null;try{const r=localStorage.getItem(STORE);if(!r)return null;return migrate(JSON.parse(r));}catch(e){return null;}}
 let plan=load()||defaultPlan();
 let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{if(EMBED){postPlan();return;}try{localStorage.setItem(STORE,JSON.stringify(plan));}catch(e){}},300);}
@@ -492,6 +497,7 @@ ground.rotation.x=-Math.PI/2;ground.position.y=-0.06;ground.receiveShadow=true;s
 let grid=null;
 const shedRoot=new THREE.Group();scene.add(shedRoot);
 const L={};LAYERS.forEach(([k])=>{L[k]=new THREE.Group();(k==='items'?scene:shedRoot).add(L[k]);});
+const innerRoot=new THREE.Group();scene.add(innerRoot);const ctxRoot=new THREE.Group();shedRoot.add(ctxRoot);
 
 function cssVar(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
 function applyTheme(){
@@ -573,13 +579,13 @@ function makeMats(D){
 /* ---------- build ---------- */
 let lastPieces=[],lastWallSheets=[],lastRoofSheets=[],lastFlash=[],lastAreas={wall:0,roof:0},labelData=[];
 function rebuildShed(){
-  ['slab','frame','clad','roof','openings','dims'].forEach(k=>clearGroup(L[k]));
+  ['slab','frame','clad','roof','openings','dims'].forEach(k=>clearGroup(L[k]));clearGroup(ctxRoot);lastPosts=[];
   const D=dims(),S=plan.shed;M=makeMats(D);shedRoot.rotation.y=rootAngle()*Math.PI/180;shedRoot.updateMatrixWorld(true);
   clearPickHelper();curWall=null;lastElev={};const pieces=[];const P=(cat,size,len)=>{if(lastMesh&&!lastMesh.userData.part)lastMesh.userData.part={type:'timber',cat,size,len,wall:curWall};if(len>0.02)pieces.push({cat,size,len});};
   const flash=[];const wallSheets=[];let wallArea=0;
   shedRoot.position.y=floorLift();L.items.position.y=floorLift();buildFloor(D,P);
   const WD=wallDefs(D);
-  Object.entries(WD).forEach(([key,wd])=>{
+  if(isEnclosed())Object.entries(WD).forEach(([key,wd])=>{
     const ops=resolveOps(D,wd,worldKeyOf(key));
     curWall=worldKeyOf(key);buildFrame(D,wd,key,ops,P);curWall=null;
     buildClad(D,wd,key,ops);
@@ -590,8 +596,9 @@ function rebuildShed(){
     const n=Math.ceil(wd.len/SHEET-1e-6);
     for(let i=0;i<n;i++){const sa=i*SHEET,sb=Math.min(wd.len,(i+1)*SHEET);let mh=Math.max(hAt(D,wd,sa),hAt(D,wd,sb));bps.forEach(b=>{if(b>sa&&b<sb)mh=Math.max(mh,hAt(D,wd,b));});wallSheets.push(mh);}
   });
-  [[-D.W/2,D.L/2],[D.W/2,D.L/2],[D.W/2,-D.L/2],[-D.W/2,-D.L/2]].forEach(([x,z])=>{const h=topHeight(D,x);addBox(L.clad,x,h/2,z,0.06,h,0.06,M.trim);flash.push([(WALL_MATS[S.wallMat]||WALL_MATS.corr).kind==='sheet'?'Corner flashing':'Corner trim',h]);});
-  const roofSheets=[];const roofArea=buildRoof(D,P,flash,roofSheets);
+  if(!isEnclosed()&&stype()!=='deck')buildPosts(D,P);if(stype()==='deck')buildBalustrade(D,P);buildInner(D,P);
+  if(isEnclosed())[[-D.W/2,D.L/2],[D.W/2,D.L/2],[D.W/2,-D.L/2],[-D.W/2,-D.L/2]].forEach(([x,z])=>{const h=topHeight(D,x);addBox(L.clad,x,h/2,z,0.06,h,0.06,M.trim);flash.push([(WALL_MATS[S.wallMat]||WALL_MATS.corr).kind==='sheet'?'Corner flashing':'Corner trim',h]);});
+  const roofSheets=[];if(stype()==='deck')lastRoof=null;const roofArea=stype()==='deck'?0:buildRoof(D,P,flash,roofSheets);
   const tagRest=(g,part)=>g.traverse(o=>{if(o.isMesh&&!o.userData.part)o.userData.part=Object.assign({},part);});tagRest(L.roof,{type:'roof'});tagRest(L.slab,{type:'floor'});tagRest(L.clad,{type:'clad'});
   buildDims(D);
   lastPieces=pieces;lastWallSheets=wallSheets;lastRoofSheets=roofSheets;lastFlash=flash;lastAreas={wall:Math.max(0,wallArea),roof:roofArea};
@@ -692,7 +699,7 @@ function buildOneOpening(g,o){
 }
 
 function buildRoof(D,P,flash,roofSheets){
-  const S=plan.shed;const {W,H,o,tp,c,sn,rd,rt}=D;const Lz=D.L+2*Math.min(o,0.15);
+  const S=plan.shed;const {W,H,o,tp,c,sn,rd,rt}=D;const Lz=D.L+2*Math.min(o,0.15);const openRoof=S.roofMat==='none';
   const slopes=D.roof==='gable'
     ?[{P:[-W/2-o,H-o*tp],sx:1,sv:1,len:(W/2+o)/c},{P:[W/2+o,H-o*tp],sx:-1,sv:1,len:(W/2+o)/c}]
     :[{P:[-W/2-o,H+(W+o)*tp],sx:1,sv:-1,len:(W+2*o)/c}];
@@ -705,18 +712,18 @@ function buildRoof(D,P,flash,roofSheets){
     const gf=matGroup(L.frame,mtx),gr=matGroup(L.roof,mtx);
     zs.forEach(z=>{addBox(gf,sl.len/2,rd/2,z,sl.len,rd,rt,M.timber);P('Rafters',S.rafterSize,sl.len);});
     const us=[];for(let u=0.05;u<sl.len-0.05;u+=bs)us.push(u);if(!us.length||sl.len-0.05-us[us.length-1]>0.15)us.push(sl.len-0.05);
-    sl.us=us;us.forEach(u=>{addBox(gf,u,rd+0.0175,0,0.07,0.035,Lz,M.timber);P('Roof battens','70x35',Lz);});
-    addBox(gr,sl.len/2,sheetH+0.006,0,sl.len+0.03,0.012,Lz,M.roof);
+    if(!openRoof){sl.us=us;us.forEach(u=>{addBox(gf,u,rd+0.0175,0,0.07,0.035,Lz,M.timber);P('Roof battens','70x35',Lz);});}
+    if(!openRoof){addBox(gr,sl.len/2,sheetH+0.006,0,sl.len+0.03,0.012,Lz,M.roof);
     area+=(sl.len+0.03)*Lz;
-    const n=Math.ceil(Lz/SHEET-1e-6);for(let i=0;i<n;i++)roofSheets.push(sl.len+0.03);
+    const n=Math.ceil(Lz/SHEET-1e-6);for(let i=0;i<n;i++)roofSheets.push(sl.len+0.03);}
     const lowStart=sl.sv>0;const lp=lowStart?v3(sl.P[0],sl.P[1],0):v3(sl.P[0],sl.P[1],0).addScaledVector(sd,sl.len);const out=lowStart?-sl.sx:sl.sx;
-    addBox(L.roof,lp.x+out*0.06,lp.y+0.03,0,0.12,0.1,Lz,M.trimRoof);flash.push(['Gutter',Lz]);
-    flash.push(['Barge flashing',sl.len],['Barge flashing',sl.len]);
+    if(!openRoof){addBox(L.roof,lp.x+out*0.06,lp.y+0.03,0,0.12,0.1,Lz,M.trimRoof);flash.push(['Gutter',Lz]);
+    flash.push(['Barge flashing',sl.len],['Barge flashing',sl.len]);}
   });
   if(D.roof==='gable'){
     const yb0=H+(W/2)*tp;addBox(L.frame,0,yb0+rd/(2*c),0,rt,rd/c,D.L,M.timber);P('Ridge board',S.rafterSize,D.L);
-    addBox(L.roof,0,yb0+(sheetH+0.012)/c+0.004,0,0.32,0.012,Lz,M.trimRoof);flash.push(['Ridge capping',Lz]);
-  }else{flash.push(['Top capping',Lz]);}
+    if(!openRoof){addBox(L.roof,0,yb0+(sheetH+0.012)/c+0.004,0,0.32,0.012,Lz,M.trimRoof);flash.push(['Ridge capping',Lz]);}
+  }else if(!openRoof){flash.push([stype()==='verandah'?'House wall flashing':'Top capping',Lz]);}
   lastRoof={slopes,zs,Lz};
   return area;
 }
@@ -729,11 +736,63 @@ function buildDims(D){
   const y=0.03,off=D.o+0.45,S=plan.shed;
   const zf=D.L/2+off;line([v3(-D.W/2,y,zf),v3(D.W/2,y,zf)]);[-D.W/2,D.W/2].forEach(x=>line([v3(x,y,zf-0.15),v3(x,y,zf+0.15)]));tag(v3(0,y,zf),fmtMM(D.W*1000));
   const xr=D.W/2+off;line([v3(xr,y,-D.L/2),v3(xr,y,D.L/2)]);[-D.L/2,D.L/2].forEach(z=>line([v3(xr-0.15,y,z),v3(xr+0.15,y,z)]));tag(v3(xr,y,0),fmtMM(D.L*1000));
-  const hx=D.W/2+0.3,hz=D.L/2+0.3;line([v3(hx,0,hz),v3(hx,D.H,hz)]);tag(v3(hx,D.H/2,hz),fmtMM(S.height)+' wall');
-  const pk=peakHeight(D);tag(v3(D.roof==='gable'?0:-D.W/2,pk+0.25,D.L/2),(D.roof==='gable'?'Ridge ':'High side ')+fmtMM(Math.round(pk*1000)));
+  const hx=D.W/2+0.3,hz=D.L/2+0.3;line([v3(hx,0,hz),v3(hx,D.H,hz)]);if(stype()!=='deck')tag(v3(hx,D.H/2,hz),fmtMM(S.height)+(isEnclosed()?' wall':' to rafters'));
+  const pk=peakHeight(D);if(stype()!=='deck')tag(v3(D.roof==='gable'?0:-D.W/2,pk+0.25,D.L/2),(D.roof==='gable'?'Ridge ':'High side ')+fmtMM(Math.round(pk*1000)));
 }
 
-function applyLayers(){LAYERS.forEach(([k])=>{L[k].visible=!!plan.layers[k];});$('#labels').style.display=plan.layers.dims?'':'none';}
+function applyLayers(){LAYERS.forEach(([k])=>{L[k].visible=!!plan.layers[k];});innerRoot.visible=!!plan.layers.frame&&isEnclosed();$('#labels').style.display=plan.layers.dims?'':'none';}
+
+/* ---------- structure types and internal walls ---------- */
+const STYPES={enclosed:'Enclosed building',carport:'Carport',pergola:'Pergola',verandah:'Verandah or patio (attached)',deck:'Deck'};
+function stype(){return STYPES[plan.shed.type]?plan.shed.type:'enclosed';}
+function isEnclosed(){return stype()==='enclosed';}
+let lastPosts=[],lastInner=[];
+function postMat(){return new THREE.MeshStandardMaterial({color:0xc9a46a,roughness:0.85});}
+function buildPosts(D,P){
+  const S=plan.shed,T=stype();const ps=(+S.postSpacing||3000)/1000;const pz=S.postSize||'90x90';const pw=(+pz.split('x')[0]||90)/1000;
+  const bz=S.beamSize||'190x45';const [bd,bt]=TIMBER[bz]||TIMBER['190x45'];const WD=wallDefs(D);const pm=postMat();
+  ['left','right'].forEach(key=>{const wd=WD[key];const top=hAt(D,wd,wd.len/2);
+    if(T==='verandah'&&key==='left'){const g=wallGroup(L.frame,wd);const m=addBox(g,wd.len/2,top-bd/2,-bt/2,wd.len,bd,bt,M.timber);m.userData.part={type:'timber',cat:'Ledger',size:bz,len:wd.len};P('Ledger',bz,wd.len);
+      const hw=new THREE.MeshStandardMaterial({color:0xd6d0c6,roughness:0.95,transparent:true,opacity:0.55,depthWrite:false});const hh=top+1.0;const cg=wallGroup(ctxRoot,wd);addBox(cg,wd.len/2,hh/2,0.16,wd.len+2.4,hh,0.3,hw,false);return;}
+    const g=wallGroup(L.frame,wd);const n=Math.max(2,Math.ceil((wd.len-pw)/ps)+1);const h=Math.max(0.3,top-bd);
+    for(let i=0;i<n;i++){const s=pw/2+i*(wd.len-pw)/(n-1);const m=addBox(g,s,h/2,-pw/2,pw,h,pw,pm);m.userData.part={type:'timber',cat:'Posts',size:pz,len:h};P('Posts',pz,h+(S.floor==='slab'?0:0.1));
+      m.updateMatrixWorld(true);const wp=new THREE.Vector3();m.getWorldPosition(wp);lastPosts.push({x:wp.x,z:wp.z});}
+    [-1,1].forEach(side=>{const m=addBox(g,wd.len/2,top-bd/2,-pw/2+side*(pw/2+bt/2),wd.len,bd,bt,M.timber);m.userData.part={type:'timber',cat:'Beams',size:bz,len:wd.len};P('Beams',bz,wd.len);});
+  });}
+function buildBalustrade(D,P){const S=plan.shed;if(S.balustrade==='none')return;const WD=wallDefs(D);const skip=S.balSides==='all'?null:localKeyOf('back');const hg=1.0;const pm=postMat();
+  Object.entries(WD).forEach(([key,wd])=>{if(key===skip)return;const g=wallGroup(L.frame,wd);const len=wd.len;const n=Math.max(2,Math.ceil(len/1.5)+1);
+    for(let i=0;i<n;i++){const s=0.045+i*(len-0.09)/(n-1);const m=addBox(g,s,hg/2,-0.045,0.09,hg,0.09,pm);m.userData.part={type:'timber',cat:'Balustrade posts',size:'90x90',len:hg+0.3};P('Balustrade posts','90x90',hg+0.3);}
+    [hg-0.0225,0.1].forEach(y=>{const m=addBox(g,len/2,y,-0.045,len,0.045,0.09,M.timber);m.userData.part={type:'timber',cat:'Balustrade rails',size:'90x45',len};P('Balustrade rails','90x45',len);});
+    const nb=Math.max(0,Math.floor(len/0.12));for(let i=1;i<nb;i++){const m=addBox(g,i*len/nb,(hg+0.1)/2,-0.045,0.042,hg-0.15,0.042,M.timber,false);m.userData.part={type:'timber',cat:'Balusters',size:'42x42',len:hg-0.15};P('Balusters','42x42',hg-0.15);}
+  });}
+function buildInner(D,P){clearGroup(innerRoot);lastInner=[];if(!isEnclosed())return;const S=plan.shed;const W=S.width/1000,Ln=S.length/1000,d=D.d,t=D.t,H=S.height/1000;const size=S.studSize;const sp=S.studSpacing/1000;innerRoot.position.y=floorLift();
+  (plan.walls||[]).forEach(w=>{const across=w.axis!=='along';const lim=(across?Ln:W)/2-d-0.1;const pos=Math.max(-lim,Math.min(lim,(+w.pos||0)/1000));const len=(across?W:Ln)-2*d;if(len<0.3)return;
+    const g=new THREE.Group();innerRoot.add(g);if(across)g.position.set(-W/2+d,0,pos);else{g.position.set(pos,0,Ln/2-d);g.rotation.y=Math.PI/2;}
+    const dw=Math.max(0.5,(+w.doorW||820)/1000),dc=len/2+(+w.doorPos||0)/1000;const da=Math.max(t*2,dc-dw/2),db=Math.min(len-2*t,dc+dw/2);const hasDoor=w.door!==false&&db-da>0.45;const DH=2.04;
+    const bx=(x,y,sx,sy,cat,l)=>{const m=addBox(g,x,y,0,sx,sy,d,M.timber);m.userData.part={type:'inner',id:w.id};P(cat,size,l);};
+    (hasDoor?[[0,da-t],[db+t,len]]:[[0,len]]).forEach(([a,b])=>{if(b-a>0.02)bx((a+b)/2,t/2,b-a,t,'Internal plates',b-a);});
+    bx(len/2,H-t/2,len,t,'Internal plates',len);
+    const studs=[];for(let s=0;s<len-t-0.001;s+=sp)studs.push(s);studs.push(len-t);
+    const inDoor=s=>hasDoor&&s+t>da-t-0.001&&s<db+t+0.001;const sh=H-2*t;
+    studs.forEach(s=>{if(!inDoor(s))bx(s+t/2,t+sh/2,t,sh,'Internal studs',sh);});
+    if(hasDoor){[da-t,db].forEach(s=>bx(s+t/2,t+sh/2,t,sh,'Internal studs',sh));const LH=0.09;if(H-t-DH>LH+0.01){bx((da+db)/2,DH+LH/2,db-da,LH,'Internal lintels',db-da);const cs=H-t-(DH+LH);if(cs>0.05)studs.forEach(s=>{if(s>da&&s+t<db)bx(s+t/2,DH+LH+cs/2,t,cs,'Internal studs',cs);});}}
+    const mem=studs.filter(s=>!inDoor(s));if(hasDoor)mem.push(da-t,db);mem.sort((a,b)=>a-b);const yN=Math.min(1.2,H/2);
+    for(let i=0;i<mem.length-1;i++){const x0=mem[i]+t,x1=mem[i+1];if(x1-x0<0.03)continue;if(hasDoor&&x0>=da-0.01&&x1<=db+0.01)continue;bx((x0+x1)/2,yN,x1-x0,t,'Internal noggings',x1-x0);}
+    lastInner.push({id:w.id,across,pos,len,d,da:hasDoor?da:null,db:hasDoor?db:null});
+  });}
+function innerArea(){const H=plan.shed.height/1000;return lastInner.reduce((a,w)=>a+2*(w.len*H-(w.da!=null?(w.db-w.da)*2.04:0)),0);}
+function postsNote(){const S=plan.shed,D=dims();if(stype()==='deck')return S.balustrade==='none'?`No balustrade. Decks 1 m or more above the ground need one.`:`Timber balustrade 1 m above the deck on ${S.balSides==='all'?'all four sides':'three sides, open on the house side'}: 90 x 90 posts at up to 1.5 m, 90 x 45 top and bottom rails, 42 x 42 balusters at about 12 cm centres (gaps under 12.5 cm).`;
+  const [bd]=TIMBER[S.beamSize]||TIMBER['190x45'];return `${lastPosts.length} ${S.postSize} posts at up to ${S.postSpacing/10} cm centres, ${cmv(D.H-bd)} cm tall, carrying doubled ${S.beamSize} beams that the rafters sit on.${stype()==='verandah'?' On the house side a '+S.beamSize+' ledger is bolted to the house frame or brickwork at about 60 cm centres, with a flashing over the top.':''} Post positions are the squares on the floor plan. ${S.floor==='slab'?'Posts bolt to the slab on galvanised base plates.':'Each post sits in a stirrup cast into a 45 x 45 x 60 cm concrete footing.'}`;}
+function renderInnerWalls(){if(!isEnclosed())return '';const iw=(l,f,v,step)=>`<label>${l}<span class="inp"><input type="number" data-iwf="${f}" value="${(+v||0)/10}" step="${step}" inputmode="decimal"><em>cm</em></span></label>`;
+  let h=`<h3>Internal walls</h3><div class="addrow"><button class="chip" data-addwall="across">+ Wall side to side</button><button class="chip" data-addwall="along">+ Wall front to back</button></div>`;
+  (plan.walls||[]).forEach(w=>{h+=`<div class="card" data-iw="${w.id}"><div class="cardh"><b>${w.axis==='along'?'Front to back':'Side to side'} wall</b><button class="x" data-delwall="${w.id}" aria-label="Remove wall">✕</button></div><div class="grid2">${iw('Position from the middle','pos',w.pos,10)}${iw('Doorway offset','doorPos',w.doorPos,5)}${iw('Doorway width','doorW',w.doorW||820,1)}<label>Doorway<input type="checkbox" data-iwf="door" ${w.door!==false?'checked':''}></label></div></div>`;});
+  return h+`<p class="note">Internal walls are framed full height to the top plate. Side to side walls: positive moves them towards the front. Front to back walls: positive moves them to the right.</p>`;}
+function afterWalls(rerender){rebuildShed();renderPick();if(rerender)renderOpeningsTab();scheduleMaterials();save();}
+$('#tab-openings').addEventListener('click',e=>{
+  const a=e.target.closest('[data-addwall]');if(a){plan.walls=plan.walls||[];plan.walls.push({id:uid(),axis:a.dataset.addwall,pos:0,door:true,doorPos:0,doorW:820});afterWalls(true);return;}
+  const dl=e.target.closest('[data-delwall]');if(dl){plan.walls=(plan.walls||[]).filter(w=>w.id!==dl.dataset.delwall);afterWalls(true);}});
+$('#tab-openings').addEventListener('change',e=>{const f=e.target.dataset.iwf;const card=e.target.closest('[data-iw]');if(!f||!card)return;const w=(plan.walls||[]).find(x=>x.id===card.dataset.iw);if(!w)return;
+  if(f==='door')w.door=e.target.checked;else{const v=parseFloat(e.target.value);if(!isFinite(v))return;w[f]=Math.round(v*10);}afterWalls(false);});
 
 /* ---------- items ---------- */
 const itemMeshes={};
@@ -846,27 +905,36 @@ function money(v){return '$'+(v||0).toLocaleString('en-AU',{minimumFractionDigit
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
 function updateStats(){
-  const D=dims();const pk=peakHeight(D);
-  $('#stats').innerHTML=`<b>${plan.shed.width/10} × ${plan.shed.length/10} cm</b>${fm(D.W*D.L,1)} m² floor, ${D.roof==='gable'?'ridge':'high side'} ${Math.round(pk*100)} cm<span class="hint">Tap any part of the shed to edit it</span>`;
+  const D=dims();const pk=peakHeight(D);const S=plan.shed;const T=stype();
+  $('#stats').innerHTML=T==='deck'?`<b>${S.width/10} × ${S.length/10} cm deck</b>${fm(D.W*D.L,1)} m², ${S.floorH/10} cm above the ground<span class="hint">Tap any part to edit it</span>`:`<b>${S.width/10} × ${S.length/10} cm${T==='enclosed'?'':' '+STYPES[T].split(' (')[0].toLowerCase()}</b>${fm(D.W*D.L,1)} m² ${T==='enclosed'?'floor':'covered'}, ${D.roof==='gable'?'ridge':'high side'} ${Math.round(pk*100)} cm<span class="hint">Tap any part to edit it</span>`;
 }
 
 /* ---------- Shed tab ---------- */
 const SHED_FIELDS=[
+  {sec:'Structure'},
+  {k:'type',label:'Type',type:'sel',opts:Object.entries(STYPES)},
   {sec:'Size'},
   {k:'width',label:'Width',type:'num',unit:'cm',step:10,min:120,max:1500,cm:true},
   {k:'length',label:'Length',type:'num',unit:'cm',step:10,min:120,max:3000,cm:true},
-  {k:'height',label:'Wall height',type:'num',unit:'cm',step:5,min:180,max:600,cm:true},
-  {sec:'Roof'},
-  {k:'roof',label:'Roof style',type:'sel',opts:[['gable','Gable'],['skillion','Skillion'],['flat','Flat (2°)']]},
-  {k:'roofDir',label:'Roof direction',type:'sel',opts:()=>plan.shed.roof==='gable'?[[0,'Ridge along the length'],[90,'Ridge along the width']]:[[0,'High side on the left'],[180,'High side on the right'],[270,'High side at the back'],[90,'High side at the front']]},
-  {k:'pitch',label:'Pitch',type:'num',unit:'°',step:1,min:2,max:45},
-  {k:'overhang',label:'Eave overhang',type:'num',unit:'cm',step:5,min:0,max:90,cm:true},
-  {sec:'Framing'},
-  {k:'studSize',label:'Stud size',type:'sel',opts:['70x35','90x35','90x45']},
-  {k:'studSpacing',label:'Stud spacing',type:'sel',opts:[[450,'45 cm'],[600,'60 cm']]},
-  {k:'rafterSize',label:'Rafter size',type:'sel',opts:['90x45','140x45','190x45']},
-  {k:'rafterSpacing',label:'Rafter spacing',type:'sel',opts:[[600,'60 cm'],[900,'90 cm'],[1200,'120 cm']]},
-  {k:'battenSpacing',label:'Roof batten spacing',type:'sel',opts:[[600,'60 cm'],[900,'90 cm'],[1200,'120 cm']]},
+  {k:'height',label:'Wall height',labelFn:s=>(!s.type||s.type==='enclosed')?'Wall height':'Height to the rafters',show:(f,s)=>s.type!=='deck',type:'num',unit:'cm',step:5,min:180,max:600,cm:true},
+  {sec:'Roof',show:(f,s)=>s.type!=='deck'},
+  {k:'roof',label:'Roof style',show:(f,s)=>s.type!=='deck',type:'sel',opts:[['gable','Gable'],['skillion','Skillion'],['flat','Flat (2°)']]},
+  {k:'roofDir',label:'Roof direction',show:(f,s)=>s.type!=='deck',type:'sel',opts:()=>plan.shed.roof==='gable'?[[0,'Ridge along the length'],[90,'Ridge along the width']]:[[0,'High side on the left'],[180,'High side on the right'],[270,'High side at the back'],[90,'High side at the front']]},
+  {k:'pitch',label:'Pitch',show:(f,s)=>s.type!=='deck',type:'num',unit:'°',step:1,min:2,max:45},
+  {k:'overhang',label:'Eave overhang',show:(f,s)=>s.type!=='deck',type:'num',unit:'cm',step:5,min:0,max:90,cm:true},
+  {sec:'Framing',show:(f,s)=>s.type!=='deck'||true},
+  {k:'studSize',label:'Stud size',show:(f,s)=>!s.type||s.type==='enclosed',type:'sel',opts:['70x35','90x35','90x45']},
+  {k:'studSpacing',label:'Stud spacing',show:(f,s)=>!s.type||s.type==='enclosed',type:'sel',opts:[[450,'45 cm'],[600,'60 cm']]},
+  {k:'rafterSize',label:'Rafter size',show:(f,s)=>s.type!=='deck',type:'sel',opts:['90x45','140x45','190x45']},
+  {k:'rafterSpacing',label:'Rafter spacing',show:(f,s)=>s.type!=='deck',type:'sel',opts:[[600,'60 cm'],[900,'90 cm'],[1200,'120 cm']]},
+  {k:'battenSpacing',label:'Roof batten spacing',show:(f,s)=>s.type!=='deck'&&s.roofMat!=='none',type:'sel',opts:[[600,'60 cm'],[900,'90 cm'],[1200,'120 cm']]},
+  {sec:'Posts and beams',show:(f,s)=>s.type&&s.type!=='enclosed'&&s.type!=='deck'},
+  {k:'postSize',label:'Post size',type:'sel',opts:[['90x90','90 x 90 H4 pine'],['125x125','125 x 125 H4 pine']],show:(f,s)=>s.type&&s.type!=='enclosed'&&s.type!=='deck'},
+  {k:'postSpacing',label:'Post spacing, up to',type:'sel',opts:[[2400,'2.4 m'],[3000,'3.0 m'],[3600,'3.6 m'],[4200,'4.2 m']],show:(f,s)=>s.type&&s.type!=='enclosed'&&s.type!=='deck'},
+  {k:'beamSize',label:'Beams (doubled)',type:'sel',opts:[['140x45','140 x 45'],['190x45','190 x 45'],['240x45','240 x 45']],show:(f,s)=>s.type&&s.type!=='enclosed'&&s.type!=='deck'},
+  {sec:'Balustrade',show:(f,s)=>s.type==='deck'},
+  {k:'balustrade',label:'Balustrade',type:'sel',opts:[['timber','Timber posts, rails and balusters'],['none','None']],show:(f,s)=>s.type==='deck'},
+  {k:'balSides',label:'Sides',type:'sel',opts:[['three','Three sides, open on the house side'],['all','All four sides']],show:(f,s)=>s.type==='deck'},
   {sec:'Floor'},
   {k:'floor',label:'Floor',type:'sel',opts:Object.entries(FLOORS)},
   {k:'slabT',label:'Slab thickness',type:'num',unit:'cm',step:2.5,min:7.5,max:20,cm:true,show:f=>f==='slab'},
@@ -887,20 +955,25 @@ const SHED_FIELDS=[
   {k:'gravelType',label:'Material',type:'sel',opts:Object.entries(GRAVEL_TYPES).map(([k,v])=>[k,v.n]),show:f=>f==='gravel'},
   {k:'gravelDepth',label:'Depth',type:'num',unit:'cm',step:2.5,min:2.5,max:30,cm:true,show:f=>f==='gravel'},
   {sec:'Materials'},
-  {k:'wallMat',label:'Walls',type:'sel',opts:Object.entries(WALL_MATS).map(([k,v])=>[k,v.n])},
-  {k:'roofMat',label:'Roof',type:'sel',opts:Object.entries(ROOF_MATS).map(([k,v])=>[k,v.n])},
+  {k:'wallMat',label:'Walls',show:(f,s)=>!s.type||s.type==='enclosed',type:'sel',opts:Object.entries(WALL_MATS).map(([k,v])=>[k,v.n])},
+  {k:'roofMat',label:'Roof',type:'sel',show:(f,s)=>s.type!=='deck',opts:()=>Object.entries(ROOF_MATS).filter(([k])=>k!=='none'||plan.shed.type==='pergola').map(([k,v])=>[k,v.n])},
   {sec:'Colours'},
-  {k:'wallColor',label:'Walls',type:'color'},
-  {k:'roofColor',label:'Roof and trims',type:'color'},
-  {k:'doorColor',label:'Doors',type:'color'}
+  {k:'wallColor',label:'Walls',type:'color',show:(f,s)=>!s.type||s.type==='enclosed'},
+  {k:'roofColor',label:'Roof and trims',type:'color',show:(f,s)=>s.type!=='deck'&&s.roofMat!=='none'},
+  {k:'doorColor',label:'Doors',type:'color',show:(f,s)=>!s.type||s.type==='enclosed'}
 ];
 const TEMPLATES={
-  garden:{n:'Garden shed 2.4 × 1.8 m',shed:{width:2400,length:1800,height:2100,roof:'gable',roofDir:90,pitch:15,overhang:150,studSize:'70x35',rafterSize:'90x45',rafterSpacing:900,floor:'pavers',wallMat:'corr',roofMat:'corr'},ops:[{type:'pa',wall:'front',offset:0,width:820,height:1900,build:'colorbond'},{type:'window',wall:'left',offset:0,width:900,height:500,sill:1150,build:'poly'}]},
-  single:{n:'Single garage 3.6 × 6 m',shed:{width:3600,length:6000,height:2400,roof:'gable',roofDir:0,pitch:15,overhang:300,studSize:'90x45',rafterSize:'90x45',rafterSpacing:900,floor:'slab',wallMat:'corr',roofMat:'corr'},ops:[{type:'roller',wall:'front',offset:0,width:2400,height:2100},{type:'pa',wall:'right',offset:-1600,width:820,height:2040,build:'prehung'},{type:'window',wall:'back',offset:0,width:1200,height:600,sill:1200,build:'alum'}]},
-  double:{n:'Double garage 6 × 6 m',shed:{width:6000,length:6000,height:2700,roof:'gable',roofDir:90,pitch:15,overhang:300,studSize:'90x45',rafterSize:'140x45',rafterSpacing:900,floor:'slab',wallMat:'corr',roofMat:'corr'},ops:[{type:'roller',wall:'front',offset:-1500,width:2400,height:2100},{type:'roller',wall:'front',offset:1500,width:2400,height:2100},{type:'pa',wall:'right',offset:-1600,width:820,height:2040,build:'prehung'},{type:'window',wall:'left',offset:0,width:1200,height:600,sill:1200,build:'alum'}]},
-  workshop:{n:'Workshop 6 × 9 m',shed:{width:6000,length:9000,height:3000,roof:'gable',roofDir:0,pitch:12,overhang:300,studSize:'90x45',rafterSize:'190x45',rafterSpacing:900,floor:'slab',slabT:125,mesh:'SL82',wallMat:'trimdek',roofMat:'trimdek'},ops:[{type:'roller',wall:'front',offset:0,width:3000,height:2700},{type:'pa',wall:'right',offset:-3000,width:820,height:2040,build:'prehung'},{type:'window',wall:'left',offset:-2000,width:1500,height:900,sill:1200,build:'alum'},{type:'window',wall:'left',offset:2000,width:1500,height:900,sill:1200,build:'alum'}]},
-  studio:{n:'Backyard studio 3 × 4.2 m',shed:{width:4200,length:3000,height:2400,roof:'skillion',roofDir:270,pitch:8,overhang:450,studSize:'90x45',rafterSize:'140x45',rafterSpacing:600,floor:'timber',floorSheet:'yt',joistSpacing:450,floorH:400,wallMat:'weatherboard',roofMat:'corr'},ops:[{type:'pa',wall:'front',offset:-900,width:820,height:2040,build:'prehung'},{type:'window',wall:'front',offset:900,width:1500,height:1200,sill:900,build:'alum'},{type:'window',wall:'left',offset:0,width:900,height:900,sill:1100,build:'louvre'}]},
-  leanto:{n:'Lean-to store 3 × 1.8 m',shed:{width:3000,length:1800,height:2100,roof:'skillion',roofDir:270,pitch:8,overhang:200,studSize:'70x35',rafterSize:'90x45',rafterSpacing:900,floor:'gravel',wallMat:'corr',roofMat:'corr'},ops:[{type:'pa',wall:'front',offset:0,width:900,height:1900,build:'colorbond'}]}
+  garden:{n:'Garden shed 2.4 × 1.8 m',shed:{type:'enclosed',width:2400,length:1800,height:2100,roof:'gable',roofDir:90,pitch:15,overhang:150,studSize:'70x35',rafterSize:'90x45',rafterSpacing:900,floor:'pavers',wallMat:'corr',roofMat:'corr'},ops:[{type:'pa',wall:'front',offset:0,width:820,height:1900,build:'colorbond'},{type:'window',wall:'left',offset:0,width:900,height:500,sill:1150,build:'poly'}]},
+  single:{n:'Single garage 3.6 × 6 m',shed:{type:'enclosed',width:3600,length:6000,height:2400,roof:'gable',roofDir:0,pitch:15,overhang:300,studSize:'90x45',rafterSize:'90x45',rafterSpacing:900,floor:'slab',wallMat:'corr',roofMat:'corr'},ops:[{type:'roller',wall:'front',offset:0,width:2400,height:2100},{type:'pa',wall:'right',offset:-1600,width:820,height:2040,build:'prehung'},{type:'window',wall:'back',offset:0,width:1200,height:600,sill:1200,build:'alum'}]},
+  double:{n:'Double garage 6 × 6 m',shed:{type:'enclosed',width:6000,length:6000,height:2700,roof:'gable',roofDir:90,pitch:15,overhang:300,studSize:'90x45',rafterSize:'140x45',rafterSpacing:900,floor:'slab',wallMat:'corr',roofMat:'corr'},ops:[{type:'roller',wall:'front',offset:-1500,width:2400,height:2100},{type:'roller',wall:'front',offset:1500,width:2400,height:2100},{type:'pa',wall:'right',offset:-1600,width:820,height:2040,build:'prehung'},{type:'window',wall:'left',offset:0,width:1200,height:600,sill:1200,build:'alum'}]},
+  workshop:{n:'Workshop 6 × 9 m',shed:{type:'enclosed',width:6000,length:9000,height:3000,roof:'gable',roofDir:0,pitch:12,overhang:300,studSize:'90x45',rafterSize:'190x45',rafterSpacing:900,floor:'slab',slabT:125,mesh:'SL82',wallMat:'trimdek',roofMat:'trimdek'},ops:[{type:'roller',wall:'front',offset:0,width:3000,height:2700},{type:'pa',wall:'right',offset:-3000,width:820,height:2040,build:'prehung'},{type:'window',wall:'left',offset:-2000,width:1500,height:900,sill:1200,build:'alum'},{type:'window',wall:'left',offset:2000,width:1500,height:900,sill:1200,build:'alum'}]},
+  studio:{n:'Backyard studio 3 × 4.2 m',shed:{type:'enclosed',width:4200,length:3000,height:2400,roof:'skillion',roofDir:270,pitch:8,overhang:450,studSize:'90x45',rafterSize:'140x45',rafterSpacing:600,floor:'timber',floorSheet:'yt',joistSpacing:450,floorH:400,wallMat:'weatherboard',roofMat:'corr'},ops:[{type:'pa',wall:'front',offset:-900,width:820,height:2040,build:'prehung'},{type:'window',wall:'front',offset:900,width:1500,height:1200,sill:900,build:'alum'},{type:'window',wall:'left',offset:0,width:900,height:900,sill:1100,build:'louvre'}]},
+  leanto:{n:'Lean-to store 3 × 1.8 m',shed:{type:'enclosed',width:3000,length:1800,height:2100,roof:'skillion',roofDir:270,pitch:8,overhang:200,studSize:'70x35',rafterSize:'90x45',rafterSpacing:900,floor:'gravel',wallMat:'corr',roofMat:'corr'},ops:[{type:'pa',wall:'front',offset:0,width:900,height:1900,build:'colorbond'}]},
+  carport1:{n:'Single carport 3 × 6 m',shed:{type:'carport',width:3000,length:6000,height:2400,roof:'flat',roofDir:0,pitch:2,overhang:150,rafterSize:'140x45',rafterSpacing:900,floor:'slab',roofMat:'corr',postSize:'90x90',postSpacing:3000,beamSize:'190x45'},ops:[]},
+  carport2:{n:'Double carport 6 × 6 m, gable',shed:{type:'carport',width:6000,length:6000,height:2400,roof:'gable',roofDir:0,pitch:15,overhang:300,rafterSize:'140x45',rafterSpacing:900,floor:'slab',roofMat:'corr',postSize:'90x90',postSpacing:3000,beamSize:'240x45'},ops:[]},
+  pergola:{n:'Pergola 4 × 4 m',shed:{type:'pergola',width:4000,length:4000,height:2400,roof:'flat',roofDir:0,pitch:2,overhang:300,rafterSize:'140x45',rafterSpacing:600,floor:'pavers',roofMat:'none',postSize:'90x90',postSpacing:4200,beamSize:'190x45'},ops:[]},
+  verandah:{n:'Verandah on the house 6 × 3 m',shed:{type:'verandah',width:6000,length:3000,height:2400,roof:'skillion',roofDir:270,pitch:5,overhang:300,rafterSize:'140x45',rafterSpacing:900,floor:'pavers',roofMat:'corr',postSize:'90x90',postSpacing:3000,beamSize:'190x45'},ops:[]},
+  deck:{n:'Deck 5 × 4 m',shed:{type:'deck',width:5000,length:4000,height:2400,roof:'flat',floor:'timber',floorSheet:'deck',joistSpacing:450,floorH:600,balustrade:'timber',balSides:'three',roofMat:'corr'},ops:[]}
 };
 let BIZ_TEMPLATES=[];let descDraft='';let descState={busy:false,msg:'',err:false,warn:[]};let tplMsg='';
 const clone=o=>JSON.parse(JSON.stringify(o));
@@ -909,19 +982,20 @@ function keepItemsInside(){plan.items=plan.items.filter(i=>Math.abs(i.x)<plan.sh
 function applyTemplate(v){
   if(!v)return false;
   if(v.startsWith('b:')){const t=BIZ_TEMPLATES.find(x=>'b:'+x.id===v);if(!t||!t.plan||!t.plan.shed)return false;const tp=clone(t.plan);
-    plan.shed=Object.assign({},defaultPlan().shed,tp.shed);plan.openings=withOpeningIds(tp.openings);plan.items=(tp.items||[]).map(i=>Object.assign({},i,{id:uid()}));
+    plan.shed=Object.assign({},defaultPlan().shed,tp.shed);plan.openings=withOpeningIds(tp.openings);plan.items=(tp.items||[]).map(i=>Object.assign({},i,{id:uid()}));plan.walls=(tp.walls||[]).map(w=>Object.assign({},w,{id:uid()}));
     plan.prices=Object.assign({},tp.prices||{},plan.prices);plan.labour=Object.assign({},tp.labour||{});plan.waste=tp.waste!=null?tp.waste:plan.waste;if(tp.labourRate)plan.labourRate=tp.labourRate;}
-  else{const t=TEMPLATES[v.replace(/^s:/,'')];if(!t)return false;Object.assign(plan.shed,t.shed);plan.openings=withOpeningIds(t.ops);keepItemsInside();plan.labour={};}
+  else{const t=TEMPLATES[v.replace(/^s:/,'')];if(!t)return false;Object.assign(plan.shed,t.shed);plan.openings=withOpeningIds(t.ops);plan.walls=[];if(t.shed.type&&t.shed.type!=='enclosed')plan.items=[];else keepItemsInside();plan.labour={};}
   plan.selected=null;plan.extra={};refreshAll();save();return true;}
 function applyGenerated(np){
-  plan.shed=Object.assign({},plan.shed,np.shed);plan.openings=withOpeningIds(np.openings);
+  plan.shed=Object.assign({},plan.shed,{type:'enclosed'},np.shed);plan.openings=withOpeningIds(np.openings);
+  plan.walls=(np.internalWalls||[]).map(w=>({id:uid(),axis:w.axis,pos:w.pos,door:w.door!==false,doorPos:w.doorOffset||0,doorW:820}));
   if(np.items&&np.items.length)plan.items=np.items.map(i=>Object.assign({kind:'box',color:'#8a8fb0',bom:false,y:0},i,{id:uid()}));else keepItemsInside();
   plan.selected=null;plan.extra={};plan.labour={};tplMsg='';refreshAll();save();
   if(EMBED&&np.name){try{window.parent.postMessage({source:'ss-planner',type:'suggest-name',name:np.name},location.origin);}catch(e){}}}
 async function runDescribe(){
   const txt=(descDraft||'').trim();if(!txt||descState.busy)return;
   descState={busy:true,msg:'Building it...',err:false,warn:[]};renderDescMsg();
-  try{const r=await fetch('/api/structures/generate',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({description:txt,current:{shed:plan.shed,openings:plan.openings,items:plan.items}})});
+  try{const r=await fetch('/api/structures/generate',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({description:txt,current:{shed:plan.shed,openings:plan.openings,items:plan.items,walls:plan.walls}})});
     const b=await r.json().catch(()=>({}));
     if(!r.ok){descState={busy:false,err:true,warn:[],msg:b.signup?'signup':(b.error||'Could not build that one. Try rewording it.')};renderDescMsg();return;}
     descDraft='';plan.planRooms=[];applyGenerated(b.plan);descState={busy:false,err:false,msg:'Done. Check the model, then tap any part to adjust it.',warn:b.plan.warnings||[]};renderDescMsg();
@@ -964,7 +1038,7 @@ function toggleMic(btn){
   try{recog.start();btn.classList.add('rec');btn.textContent='Stop';}catch(e){recog=null;}}
 function startHTML(){
   const opts=`<option value="" selected>Choose a template</option>`+(BIZ_TEMPLATES.length?`<optgroup label="Your templates">${BIZ_TEMPLATES.map(t=>`<option value="b:${esc(t.id)}">${esc(t.name)}</option>`).join('')}</optgroup>`:'')+`<optgroup label="Starter templates">${Object.entries(TEMPLATES).map(([k,v])=>`<option value="s:${k}">${v.n}</option>`).join('')}</optgroup>`;
-  return `<div class="desc"><h3>Describe the build</h3><textarea id="descIn" placeholder="e.g. 6 x 9 m Colorbond workshop, 3 m walls, 3 m wide roller door at the front, two windows on the left, 125 mm slab. Or describe a change: make it 1 m longer and add a door on the right." aria-label="Describe the build">${esc(descDraft)}</textarea>
+  return `<div class="desc"><h3>Describe the build</h3><textarea id="descIn" placeholder="e.g. 6 x 9 m Colorbond workshop with a 3 m roller door and an office wall inside, or a 6 x 3 m verandah on the back of the house, or a 5 x 4 m deck 1.2 m high. Or describe a change: make it 1 m longer and add a door on the right." aria-label="Describe the build">${esc(descDraft)}</textarea>
   <div class="btns"><button class="primary" id="descGo">Build it</button>${micSupported()?'<button class="btn" id="descMic" type="button">Speak</button>':''}</div><div class="descmsg" id="descMsg"></div></div>
   <h3>Or build from a plan</h3><div class="upl"><input type="file" id="planFile" accept="image/*,application/pdf" hidden><button class="btn" id="planPick" type="button">Upload a plan</button><span class="note">PDF, JPG or PNG. Floor plans, kit drawings or a photo of a sketch with dimensions. Anything typed above is sent as notes.</span></div><div class="descmsg" id="planMsg"></div>
   <h3>Or start from a template</h3><div class="tpl"><select id="tplSel" aria-label="Template">${opts}</select><button class="btn" id="tplApply">Apply</button></div><p class="note" style="margin-top:0">${tplMsg?esc(tplMsg):'Replaces the size, roof, floor, walls and openings. Your prices stay.'}</p>
@@ -972,10 +1046,10 @@ function startHTML(){
 function renderShedTab(){
   const s=plan.shed;let h=startHTML();
   SHED_FIELDS.forEach(f=>{
-    if(f.sec){h+=`<h3>${f.sec}</h3>`;return;}
-    if(f.show&&!f.show(s.floor))return;
+    if(f.sec){if(f.show&&!f.show(s.floor,s))return;h+=`<h3>${f.sec}</h3>`;return;}
+    if(f.show&&!f.show(s.floor,s))return;
     if(f.type==='note'){h+=`<p class="warn" id="floorWarn"></p>`;return;}
-    h+=`<label class="row"><span>${f.label}</span>`;
+    h+=`<label class="row"><span>${f.labelFn?f.labelFn(s):f.label}</span>`;
     if(f.type==='num')h+=`<span class="inp"><input type="number" data-k="${f.k}" value="${f.cm?s[f.k]/10:s[f.k]}" step="${f.step}" min="${f.min}" max="${f.max}" inputmode="decimal"><em>${f.unit}</em></span>`;
     else if(f.type==='sel')h+=`<select data-k="${f.k}">${(typeof f.opts==='function'?f.opts():f.opts).map(o=>{const [v,l]=Array.isArray(o)?o:[o,o];return `<option value="${v}" ${String(s[f.k])===String(v)?'selected':''}>${l}</option>`;}).join('')}</select>`;
     else if(f.type==='hex')h+=`<input type="color" data-k="${f.k}" value="${esc(s[f.k])}">`;
@@ -988,7 +1062,7 @@ function renderShedTab(){
 }
 function updateShedTabState(){
   const pi=$('#tab-shed [data-k="pitch"]');if(pi)pi.disabled=plan.shed.roof==='flat';
-  const fw=$('#floorWarn');if(fw){const fs=FLOOR_SHEETS[plan.shed.floorSheet]||FLOOR_SHEETS.yt;fw.textContent=plan.shed.joistSpacing>fs.maxJ?`${fs.n} needs joists at ${fs.maxJ/10} cm centres or closer.`:'';}const si=$('#tab-shed [data-k="slabT"]');if(si)si.disabled=plan.shed.floor!=='slab';const wc=$('#tab-shed [data-k="wallColor"]');if(wc)wc.disabled=plan.shed.wallMat==='ply';const rc=$('#tab-shed [data-k="roofColor"]');if(rc)rc.disabled=['zinc','poly'].includes(plan.shed.roofMat);
+  const fw=$('#floorWarn');if(fw){const fs=FLOOR_SHEETS[plan.shed.floorSheet]||FLOOR_SHEETS.yt;fw.textContent=plan.shed.joistSpacing>fs.maxJ?`${fs.n} needs joists at ${fs.maxJ/10} cm centres or closer.`:(plan.shed.type==='deck'&&plan.shed.floorH>=1000&&plan.shed.balustrade==='none')?'Decks 1 m or more above the ground need a balustrade.':'';}const si=$('#tab-shed [data-k="slabT"]');if(si)si.disabled=plan.shed.floor!=='slab';const wc=$('#tab-shed [data-k="wallColor"]');if(wc)wc.disabled=plan.shed.wallMat==='ply';const rc=$('#tab-shed [data-k="roofColor"]');if(rc)rc.disabled=['zinc','poly'].includes(plan.shed.roofMat);
   const D=dims();const iw=plan.shed.width-2*D.d*1000,il=plan.shed.length-2*D.d*1000;
   const el=$('#shedSummary');if(!el)return;
   el.innerHTML=`<span>Inside clear width</span><b>${fmtMM(iw)}</b><span>Inside clear length</span><b>${fmtMM(il)}</b><span>Floor area</span><b>${fm(D.W*D.L,2)} m²</b><span>${D.roof==='gable'?'Ridge height':'High side height'}</span><b>${fmtMM(peakHeight(D)*1000)}</b><span>Roof pitch</span><b>${D.pd}°</b>`;
@@ -1022,6 +1096,7 @@ function onShedChanged(){rebuildShed();renderPick();updateSelHelper();updateShed
 /* ---------- Openings tab ---------- */
 function numField(label,f,v,step){return `<label>${label}<span class="inp"><input type="number" data-f="${f}" value="${v/10}" step="${step}" inputmode="decimal"><em>cm</em></span></label>`;}
 function renderOpeningsTab(){
+  if(!isEnclosed()){$('#tab-openings').innerHTML=`<p class="empty">A ${STYPES[stype()].toLowerCase()} has no walls, so there are no doors, windows or internal walls. Change the type on the Build tab to add them.</p>`;return;}
   let h=`<div class="addrow">${Object.entries(OPEN_TYPES).map(([k,v])=>`<button class="chip" data-addop="${k}">+ ${v.label}</button>`).join('')}</div>`;
   if(!plan.openings.length)h+='<p class="empty">No doors or windows yet. Add one above.</p>';
   plan.openings.forEach(o=>{
@@ -1029,6 +1104,7 @@ function renderOpeningsTab(){
     <div class="grid2">${numField('Offset from centre','offset',o.offset,5)}${numField('Width','width',o.width,1)}${numField('Height','height',o.height,1)}${o.type==='window'?numField('Sill height','sill',o.sill,5):''}</div>${OPEN_BUILDS[o.type].length>1?`<label class="row"><span>Made from</span><select data-f="build">${OPEN_BUILDS[o.type].map(b=>`<option value="${b.id}" ${b.id===(o.build||OPEN_BUILDS[o.type][0].id)?'selected':''}>${b.n}</option>`).join('')}</select></label>`:''}<div class="warn" data-warn="${o.id}"></div></div>`;
   });
   h+=`<p class="note">Tap a door or window in the 3D view to change what it’s made from and adjust its parts. Offset is measured from the middle of the wall. Positive moves it right when you stand outside facing that wall. The front wall faces the default 3D view.</p>`;
+  h+=renderInnerWalls();
   $('#tab-openings').innerHTML=h;updateOpeningWarnings();
 }
 function openingIssue(o){
@@ -1120,7 +1196,7 @@ document.addEventListener('keydown',e=>{
 });
 
 /* ---------- Materials ---------- */
-const CAT_ORDER=['Stumps','Bearers (doubled)','Floor joists','Bottom plate','Top plate','Studs','Noggings','Lintels','Sill trimmers','Rafters','Ridge board','Roof battens'];
+const CAT_ORDER=['Stumps','Bearers (doubled)','Floor joists','Posts','Beams','Ledger','Bottom plate','Top plate','Studs','Noggings','Lintels','Sill trimmers','Internal plates','Internal studs','Internal noggings','Internal lintels','Balustrade posts','Balustrade rails','Balusters','Rafters','Ridge board','Roof battens'];
 let lastRows=[];
 const BUN_DATE='17 Oct 2026';
 const BUN_TIMBER={'70x35':{p:4.11,n:'70 x 35mm Framing MGP10 H2 Blue Pine'},'90x35':{p:4.01,n:'90 x 35mm Framing MGP10 H2 Blue Pine'},'90x45':{p:5.82,n:'90 x 45mm Framing MGP10 H2 Blue Pine',u:'https://www.bunnings.com.au/90-x-45mm-framing-mgp10-h2-blue-pine-6-0m_p8031034'},'140x45':{p:11.28,n:'140 x 45mm Framing MGP10 Untreated Pine'}};
@@ -1164,10 +1240,10 @@ function computeMaterials(){
   const sheetRow=(key,item,col,lens,area)=>{const tot=lens.reduce((a,b)=>a+b,0);const mx=Math.max(...lens),mn=Math.min(...lens);
     rows.push({key,group:key.startsWith('s:roof')?'Roofing':'Sheeting',item,size:col,detail:`${fm(area,1)} m² ${key.startsWith('s:wall')?'net of openings':'roof area'}`,order:`${lens.length} sheets, ${mn===mx?fm(mx,2)+' m each':fm(mn,2)+' to '+fm(mx,2)+' m long'}, ${fm(tot,1)} m total`,buy:tot,pu:'$/m',sheetLen:tot/lens.length});};
   const WM=WALL_MATS[S.wallMat]||WALL_MATS.corr,RM=ROOF_MATS[S.roofMat]||ROOF_MATS.corr;
-  if(WM.kind==='sheet'){if(lastWallSheets.length)sheetRow('s:wall:'+S.wallMat,WM.n+' wall sheets',S.wallColor,lastWallSheets,lastAreas.wall);}
+  if(isEnclosed()&&lastAreas.wall>0.01){if(WM.kind==='sheet'){if(lastWallSheets.length)sheetRow('s:wall:'+S.wallMat,WM.n+' wall sheets',S.wallColor,lastWallSheets,lastAreas.wall);}
   else if(WM.kind==='board'){const lm=Math.ceil(lastAreas.wall*1.1/WM.cover);rows.push({key:'s:wall:'+S.wallMat,group:'Sheeting',item:'Weatherboards',size:'185 x 18mm, '+S.wallColor,detail:`${fm(lastAreas.wall,1)} m² net of openings, plus 10% for cuts`,order:`${lm} m (about ${Math.ceil(lm/5.4)} × 5.4 m boards)`,buy:lm,pu:'$/m'});}
   else{const n=Math.ceil(lastAreas.wall*1.08/2.88);rows.push({key:'s:wall:'+S.wallMat,group:'Sheeting',item:S.wallMat==='fc'?'Fibre cement sheets':'Plywood cladding sheets',size:'2400 x 1200mm',detail:`${fm(lastAreas.wall,1)} m² net of openings, plus 8% for cuts`,order:`${n} sheets`,buy:n,pu:'$ ea'});}
-  if(WM.kind!=='sheet')rows.push({key:'s:wrap',group:'Sheeting',item:'Wall wrap (sarking)',size:'',detail:'Goes behind timber or fibre cement cladding',order:`${Math.ceil(lastAreas.wall*1.1)} m²`,buy:Math.ceil(lastAreas.wall*1.1),pu:'$/m²'});
+  if(WM.kind!=='sheet')rows.push({key:'s:wrap',group:'Sheeting',item:'Wall wrap (sarking)',size:'',detail:'Goes behind timber or fibre cement cladding',order:`${Math.ceil(lastAreas.wall*1.1)} m²`,buy:Math.ceil(lastAreas.wall*1.1),pu:'$/m²'});}
   if(lastRoofSheets.length)sheetRow('s:roof:'+S.roofMat,RM.n+' roof sheets',RM.color?(S.roofMat==='zinc'?'Zincalume':'Clear'):S.roofColor,lastRoofSheets,lastAreas.roof);
   const fg={};lastFlash.forEach(([n,l])=>{(fg[n]=fg[n]||[]).push(l);});
   Object.entries(fg).forEach(([n,ls])=>{const tot=ls.reduce((a,b)=>a+b,0);rows.push({key:'f:'+n,group:'Flashings and gutter',item:n,size:n.startsWith('Corner')?S.wallColor:S.roofColor,detail:`${ls.length} ${ls.length===1?'length':'lengths'}`,order:`${fm(tot,1)} m total`,buy:tot,pu:'$/m'});});
@@ -1184,10 +1260,13 @@ function computeMaterials(){
     if(S.baseDepth>0){const v=Math.ceil(area*1.1*S.baseDepth/1000*10)/10;rows.push({key:'fl:rock',group:'Floor',item:'Crushed rock base',size:`${S.baseDepth/10} cm compacted`,detail:'',order:`${fm(v,1)} m³`,buy:v,pu:'$/m³',bq:'crushed rock'});}
     if(gp>0)rows.push({key:'fl:joint',group:'Floor',item:'Joint sand',size:'Fine paving sand',detail:'Swept into the joints',order:'1 × 20kg bag',buy:1,pu:'$ ea',bq:'paving joint sand'});}
   if(S.floor==='gravel'){const gt=GRAVEL_TYPES[S.gravelType]||GRAVEL_TYPES.crushed;const v=Math.ceil(area*1.1*S.gravelDepth/1000*10)/10;rows.push({key:'fl:gravel:'+S.gravelType,group:'Floor',item:gt.n,size:`${S.gravelDepth/10} cm compacted`,detail:`${fm(area,1)} m²`,order:`${fm(v,1)} m³`,buy:v,pu:'$/m³',bq:gt.n});}
-  const pg={};plan.openings.forEach(o=>openingParts(o).forEach(pt=>{if(!pt.on||!(pt.qty>0))return;const k=pt.id+'|'+pt.n;(pg[k]=pg[k]||{p:pt,q:0,n:0}).q+=pt.qty;pg[k].n++;}));
+  const pg={};(isEnclosed()?plan.openings:[]).forEach(o=>openingParts(o).forEach(pt=>{if(!pt.on||!(pt.qty>0))return;const k=pt.id+'|'+pt.n;(pg[k]=pg[k]||{p:pt,q:0,n:0}).q+=pt.qty;pg[k].n++;}));
   Object.values(pg).forEach(({p,q,n})=>rows.push({key:'dp:'+p.id+':'+p.n,group:'Doors and windows',item:p.n,size:'',detail:n>1?`For ${n} openings`:'',order:p.unit==='m'?`${fm(q,1)} m`:`${q}`,buy:p.unit==='m'?Math.round(q*100)/100:q,pu:p.unit==='m'?'$/m':'$ ea',part:p}));
   const ig={};plan.items.filter(i=>i.bom).forEach(i=>{const k=i.name+':'+i.w+'x'+i.d+'x'+i.h;(ig[k]=ig[k]||{i,n:0}).n++;});
   Object.entries(ig).forEach(([k,{i,n}])=>rows.push({key:'i:'+k,group:'Placed items',item:i.name,size:`${i.w/10} × ${i.d/10} × ${i.h/10} cm`,detail:'',order:`${n}`,buy:n,pu:'$ ea'}));
+  if(lastPosts.length){const n=lastPosts.length;if(S.floor==='slab')rows.push({key:'c:stirrup',group:'Footings',sec:'floor',item:'Post base plates',size:'Galvanised, bolted to the slab',detail:'One per post',order:`${n}`,buy:n,pu:'$ ea',bq:'post stirrup bolt down'});
+    else{const v=Math.ceil(n*0.1215*10)/10;rows.push({key:'c:footing',group:'Footings',sec:'floor',item:'Concrete for post footings',size:'45 x 45 x 60 cm deep',detail:`${n} footings`,order:`${fm(v,1)} m³ (about ${Math.ceil(n*0.1215/0.011)} × 20 kg bags)`,buy:v,pu:'$/m³',bq:'concrete mix 20kg'});rows.push({key:'c:stirrup',group:'Footings',sec:'floor',item:'Post stirrups',size:'Galvanised, cast in',detail:'One per post',order:`${n}`,buy:n,pu:'$ ea',bq:'post stirrup'});}}
+  if(stype()==='verandah'){const nb=Math.ceil(D.L/0.6)+1;rows.push({key:'c:ledgerbolts',group:'Footings',sec:'build',item:'Ledger bolts or masonry anchors',size:'M12',detail:'Ledger to the house frame or brickwork at about 60 cm centres',order:`${nb}`,buy:nb,pu:'$ ea',bq:'m12 masonry anchor'});}
   tradeRows().forEach(r=>rows.push(r));
   rows.forEach(r=>{r.sec=secOf(r);const pb=pbPrice(r);if(pb)r.pb=pb;});
   rows.forEach(r=>{let step=1,lab='';
@@ -1214,10 +1293,10 @@ function labourStages(all){
   const st=[
     ['setout','Set out and site prep',3+0.1*area,'build'],
     ['floor',FLOORS[S.floor]||'Floor',floorH,'floor'],
-    ['frame','Wall and roof framing',0.12*pieces,'build'],
+    ['frame',isEnclosed()?'Wall and roof framing':stype()==='deck'?'Balustrade':'Posts, beams and rafters',0.12*pieces+0.75*lastPosts.length,'build'],
     ['roof','Roofing and gutter',0.35*lastAreas.roof+0.08*flashM,'roof'],
     ['clad','Wall cladding',cladRate*lastAreas.wall,'build'],
-    ['open','Doors and windows',plan.openings.reduce((a,o)=>a+(OPEN_HRS[o.build||(OPEN_BUILDS[o.type][0]||{}).id]||2),0),'build'],
+    ['open','Doors and windows',(isEnclosed()?plan.openings:[]).reduce((a,o)=>a+(OPEN_HRS[o.build||(OPEN_BUILDS[o.type][0]||{}).id]||2),0),'build'],
     ['finish','Finishing off',2+0.05*area,'build']
   ];
   tradeLabour().forEach(t=>st.push([t.k,t.n,t.v,t.sec,t.note]));
@@ -1335,6 +1414,8 @@ function renderPick(){
     else if(p.cat==='Rafters'||p.cat==='Ridge board')h+=pkSel('rafterSize')+pkSel('rafterSpacing');
     else if(p.cat==='Roof battens')h+=pkSel('battenSpacing');
     else if(p.cat==='Lintels')h+=`<p class="pkn">Lintel size is picked automatically to fit the space above the opening.</p>`;
+    else if(['Posts','Beams','Ledger'].includes(p.cat))h+=pkSel('postSize')+pkSel('postSpacing')+pkSel('beamSize');
+    else if(/^Balust/.test(p.cat))h+=pkSel('balustrade')+pkSel('balSides');
     else h+=pkSel('floor');
     h+=pkRow('t:'+p.cat+':'+p.size);
   }else if(p.type==='clad'){
@@ -1414,19 +1495,21 @@ function plansHTML(){
   const tb=[META.planName,META.clientName,META.siteAddress].filter(Boolean).map(esc).join(' · ');
   let h=`<section class="sheet"><h2>${META.planName?esc(META.planName):'Build plans'}</h2>${META.businessName?`<p class="sm2"><b>${esc(META.businessName)}</b>${META.businessContact?' · '+esc(META.businessContact):''}</p>`:''}${tb&&META.clientName?`<p class="sm2">Prepared for ${esc(META.clientName)}${META.siteAddress?', '+esc(META.siteAddress):''}</p>`:''}<p class="sm2">Generated ${new Date().toLocaleDateString('en-AU')} from the SwiftScope build planner. All dimensions in cm unless noted.</p>
   <table class="spec">
+  <tr><th>Type</th><td>${STYPES[stype()]}</td></tr>
   <tr><th>Size</th><td>${S.width/10} × ${S.length/10} cm outside frame, ${fm(S.width*S.length/1e6,1)} m² floor</td></tr>
-  <tr><th>Wall height</th><td>${S.height/10} cm</td></tr>
-  <tr><th>Roof</th><td>${{gable:'Gable',skillion:'Skillion',flat:'Flat'}[S.roof]}, ${D.pd}° pitch, ${dirOpt.toLowerCase()}, ${S.overhang/10} cm overhang, ${D.roof==='gable'?'ridge':'high side'} ${cmv(peakHeight(D))} cm</td></tr>
-  <tr><th>Roof cover</th><td>${RM.n}${RM.color?'':', '+S.roofColor}</td></tr>
-  <tr><th>Walls</th><td>${WM.n}${S.wallMat==='ply'?'':', '+S.wallColor}</td></tr>
-  <tr><th>Wall frame</th><td>${S.studSize} studs at ${S.studSpacing/10} cm centres</td></tr>
-  <tr><th>Roof frame</th><td>${S.rafterSize} rafters at up to ${S.rafterSpacing/10} cm centres, 70 x 35 battens at up to ${S.battenSpacing/10} cm</td></tr>
+  ${stype()==='deck'?'':`  <tr><th>Wall height</th><td>${S.height/10} cm</td></tr>`}
+  ${stype()==='deck'?'':`  <tr><th>Roof</th><td>${{gable:'Gable',skillion:'Skillion',flat:'Flat'}[S.roof]}, ${D.pd}° pitch, ${dirOpt.toLowerCase()}, ${S.overhang/10} cm overhang, ${D.roof==='gable'?'ridge':'high side'} ${cmv(peakHeight(D))} cm</td></tr>`}
+  ${stype()==='deck'?'':`  <tr><th>Roof cover</th><td>${RM.n}${RM.color?'':', '+S.roofColor}</td></tr>`}
+  <tr><th>Walls</th><td>${isEnclosed()?`${WM.n}${S.wallMat==='ply'?'':', '+S.wallColor}${(plan.walls||[]).length?`, ${plan.walls.length} internal wall${plan.walls.length>1?'s':''}`:''}`:'Open sides'}</td></tr>
+  <tr><th>${isEnclosed()?'Wall frame':stype()==='deck'?'Balustrade':'Posts and beams'}</th><td>${isEnclosed()?`${S.studSize} studs at ${S.studSpacing/10} cm centres`:stype()==='deck'?(S.balustrade==='none'?'None':`Timber, 1 m high, ${S.balSides==='all'?'all sides':'three sides'}`):`${S.postSize} posts at up to ${S.postSpacing/10} cm, doubled ${S.beamSize} beams${stype()==='verandah'?', ledger on the house':''}`}</td></tr>
+  ${stype()==='deck'?'':`  <tr><th>Roof frame</th><td>${S.rafterSize} rafters at up to ${S.rafterSpacing/10} cm centres, 70 x 35 battens at up to ${S.battenSpacing/10} cm</td></tr>`}
   <tr><th>Floor</th><td>${floorDesc()}</td></tr>${(plan.planRooms||[]).length?`<tr><th>Rooms on the uploaded plan</th><td>${plan.planRooms.map(r=>esc(r.name)+(r.width&&r.length?` ${r.width/10} × ${r.length/10}`:'')).join(', ')}</td></tr>`:''}</table>
   <p class="warnbox">These are guide drawings made from the model, not engineered plans. Before building, check with council whether a permit is needed and how far the structure must sit from boundaries, confirm your wind region, and follow AS 1684 and the manufacturers’ instructions for bracing, tie-downs and fixings. Lodge a free Before You Dig Australia enquiry (byda.com.au) before digging.</p></section>`;
   h+=`<section class="sheet"><h2>1. Floor plan</h2>${floorPlanSVG(codes)}<h3 class="eh">Door and window schedule</h3>${scheduleHTML(codes)}</section>`;
   h+=`<section class="sheet"><h2>2. ${S.floor==='timber'?'Floor framing plan':S.floor==='slab'?'Slab plan':'Base plan'}</h2>${floorBaseSVG()}</section>`;
-  h+=`<section class="sheet"><h2>3. Wall framing elevations</h2><p class="sm2">Each wall is drawn as seen from outside. Studs at ${S.studSpacing/10} cm centres, noggings at mid height, lintels in darker timber. Dimension rows under each wall give the distance from the left end to each opening, then its width.</p>${['front','right','back','left'].map(k=>elevSVG(k,codes)).join('')}</section>`;
-  h+=`<section class="sheet"><h2>4. Roof framing</h2>${roofPlanSVG()}${sectionSVG()}</section>`;
+  if(isEnclosed())h+=`<section class="sheet"><h2>3. Wall framing elevations</h2><p class="sm2">Each wall is drawn as seen from outside. Studs at ${S.studSpacing/10} cm centres, noggings at mid height, lintels in darker timber. Dimension rows under each wall give the distance from the left end to each opening, then its width.</p>${['front','right','back','left'].map(k=>elevSVG(k,codes)).join('')}</section>`;
+  else h+=`<section class="sheet"><h2>3. ${stype()==='deck'?'Balustrade':'Posts and beams'}</h2><p class="sm2">${postsNote()}</p></section>`;
+  if(stype()!=='deck')h+=`<section class="sheet"><h2>4. Roof framing</h2>${roofPlanSVG()}${sectionSVG()}</section>`;
   h+=`<section class="sheet"><h2>5. Cut list</h2>${cutListHTML()}</section>`;
   h+=`<section class="sheet"><h2>6. Build guide</h2>${guideHTML(codes)}</section>`;
   h+=servicesHTML();
@@ -1438,11 +1521,13 @@ function floorPlanSVG(codes){
   const sc=Math.min(640/W,420/L),m=80,vw=W*sc+2*m,vh=L*sc+2*m+20;
   const X=x=>m+(x+W/2)*sc,Y=z=>m+(z+L/2)*sc,P2=p=>X(p[0])+','+Y(p[1]);
   let g=`<rect x="${X(-W/2)}" y="${Y(-L/2)}" width="${W*sc}" height="${L*sc}" class="wl"/><rect x="${X(-W/2+d)}" y="${Y(-L/2+d)}" width="${(W-2*d)*sc}" height="${(L-2*d)*sc}" class="fl"/>`;
+  if(!isEnclosed())g=`<rect x="${X(-W/2)}" y="${Y(-L/2)}" width="${W*sc}" height="${L*sc}" class="fl"/>`+lastPosts.map(q=>`<rect x="${X(q.x)-5}" y="${Y(q.z)-5}" width="10" height="10" class="wl"/>`).join('');
+  lastInner.forEach(w=>{const segs=w.da!=null?[[0,w.da],[w.db,w.len]]:[[0,w.len]];segs.forEach(([a,b])=>{if(b-a<0.01)return;if(w.across)g+=`<rect x="${X(-W/2+w.d+a)}" y="${Y(w.pos)-w.d*sc/2}" width="${(b-a)*sc}" height="${w.d*sc}" class="wl"/>`;else g+=`<rect x="${X(w.pos)-w.d*sc/2}" y="${Y(L/2-w.d-b)}" width="${w.d*sc}" height="${(b-a)*sc}" class="wl"/>`;});});
   plan.items.forEach(it=>{const w=it.w/1000,dd=it.d/1000,ph=-it.rot*Math.PI/180;const c=Math.cos(ph),s=Math.sin(ph);
     const pts=[[-w/2,-dd/2],[w/2,-dd/2],[w/2,dd/2],[-w/2,dd/2]].map(([lx,lz])=>[it.x/1000+lx*c+lz*s,it.z/1000-lx*s+lz*c]);
     g+=`<polygon points="${pts.map(P2).join(' ')}" class="it"/><text x="${X(it.x/1000)}" y="${Y(it.z/1000)+4}" text-anchor="middle" class="sm">${esc(it.name)}</text>`;});
   const WW=worldWalls();
-  plan.openings.forEach(o=>{
+  (isEnclosed()?plan.openings:[]).forEach(o=>{
     const wd=WW[o.wall];const c0=wd.len/2+o.offset/1000,w=o.width/1000;const a=c0-w/2,b=c0+w/2;
     const pt=(s,off)=>[wd.o[0]+wd.dir[0]*s-wd.n[0]*off,wd.o[1]+wd.dir[1]*s-wd.n[1]*off];
     g+=`<polygon points="${[pt(a,-0.01),pt(b,-0.01),pt(b,d+0.01),pt(a,d+0.01)].map(P2).join(' ')}" class="gap"/>`;
@@ -1456,7 +1541,7 @@ function floorPlanSVG(codes){
   return svgWrap(vw,vh,g)+`<p class="sm2">Inside clear size ${cmv(W-2*d)} × ${cmv(L-2*d)} cm. Blue codes match the schedule below. Dashed shapes are the items you placed.</p>`;
 }
 function scheduleHTML(codes){
-  if(!plan.openings.length)return '<p class="sm2">No doors or windows in this design.</p>';
+  if(!plan.openings.length||!isEnclosed())return '<p class="sm2">No doors or windows in this design.</p>';
   const WW=worldWalls();
   return `<div class="tblwrap"><table class="tbl"><tr><th>Code</th><th>Type</th><th>Wall</th><th>Size (W × H)</th><th>Made from</th><th>Position</th></tr>${plan.openings.map(o=>{const wd=WW[o.wall];const left=cmv(wd.len/2+o.offset/1000-o.width/2000);
     return `<tr><td><b>${codes[o.id]}</b></td><td>${OPEN_TYPES[o.type].label}</td><td>${WALLS[o.wall]}</td><td>${o.width/10} × ${o.height/10}</td><td>${buildName(o)}</td><td>${left} cm from left end${o.type==='window'?`, sill at ${o.sill/10} cm`:''}</td></tr>`;}).join('')}</table></div><p class="sm2">The left end is on your left when you stand outside facing that wall. Frame openings to these sizes, or to the rough opening size given in the door or window maker’s instructions if it differs.</p>`;
@@ -1555,10 +1640,13 @@ function guideHTML(codes){
     none:['Level and compact the ground.','Set H4 treated pine or masonry blocks under the bottom plate line so the frame stays off the soil.']
   };
   st('Build the '+(S.floor==='slab'?'slab':S.floor==='none'?'base':'floor'),F[S.floor]||F.none);
-  st('Build the wall frames',[`Cut plates and studs using the cut list. Lay each wall’s top and bottom plates side by side and mark stud positions at ${S.studSpacing/10} cm centres from the left end.`,'Mark each opening from the elevations. Openings get full-height jamb studs each side, a lintel on top, and for windows a sill trimmer with short studs below.','Nail the frames together flat on the floor, with two 75 mm nails through the plate into each stud end.',`Fit noggings between the studs at about ${Math.round(Math.min(120,S.height/20))} cm high.`,D.roof==='gable'?'The two gable end walls have raked top plates. Mark the angle from the elevation and cut each stud to the line.':'The end walls slope from high to low. Cut each end stud to the line of its raked top plate.','Leave the bottom plate across door openings in place for now so the frame stays square. Cut it out once the wall is fixed down.']);
-  st('Stand and fix the walls',['Stand the back wall first, plumb it and hold it with temporary diagonal braces.','Stand the side walls, nail the corners together, then stand the front wall.',S.floor==='slab'?'Fix the bottom plates to the slab with masonry anchors at each corner, each side of door openings and along each wall.':S.floor==='timber'?'Screw or nail the bottom plates down through the flooring into the joists.':'Fix the bottom plates down to the base so the frame can’t lift.','Check the walls are plumb and the diagonals across the top plates match, then fit permanent bracing (metal strap brace or structural ply) as your bracing plan requires.']);
-  st('Frame the roof',D.roof==='gable'?[`Stand the ${S.rafterSize} ridge board on temporary props at the peak, ${cmv(D.H+(D.W/2)*D.tp)} cm above the floor at the underside of the rafters.`,`Cut a pattern rafter with a plumb cut at the top and a birdsmouth notch at the wall, at ${D.pd}°. Test it at both ends before cutting the rest.`,`Fix rafters in pairs at up to ${S.rafterSpacing/10} cm centres, with cyclone ties or triple grips at every top plate.`,`Fix 70 x 35 battens across the rafters at up to ${S.battenSpacing/10} cm centres, with one close to each eave and one close to the ridge.`]:[`Cut a pattern rafter with birdsmouth notches at ${D.pd}° where it sits on each wall. Test it at both ends before cutting the rest.`,`Fix rafters at up to ${S.rafterSpacing/10} cm centres with cyclone ties or triple grips at both walls.`,`Fix 70 x 35 battens across the rafters at up to ${S.battenSpacing/10} cm centres, with one close to each edge.`]);
-  st('Put the roof on',RM.clear?['Lay sheets with the corrugations running down the slope, starting at the end away from the prevailing wind and overlapping one corrugation.','Pre-drill oversized holes and fix through the crests with polycarbonate screws and sealing washers.','Don’t over-tighten the screws. Polycarbonate needs room to expand.','Fit the capping, barge flashings and gutter.']:['Start at the end away from the prevailing wind, with ribs running down the slope.','Overlap each sheet by one rib and fix with roofing screws through the crests into the battens.',`Fit ${D.roof==='gable'?'ridge capping':'top capping'}, barge flashings, and the gutter with a slight fall toward the downpipe end.`,'Sweep off all metal filings (swarf) at the end of each day. Left on the roof, they rust and stain the sheets.']);
+  if(isEnclosed())st('Build the wall frames',[`Cut plates and studs using the cut list. Lay each wall’s top and bottom plates side by side and mark stud positions at ${S.studSpacing/10} cm centres from the left end.`,'Mark each opening from the elevations. Openings get full-height jamb studs each side, a lintel on top, and for windows a sill trimmer with short studs below.','Nail the frames together flat on the floor, with two 75 mm nails through the plate into each stud end.',`Fit noggings between the studs at about ${Math.round(Math.min(120,S.height/20))} cm high.`,D.roof==='gable'?'The two gable end walls have raked top plates. Mark the angle from the elevation and cut each stud to the line.':'The end walls slope from high to low. Cut each end stud to the line of its raked top plate.','Leave the bottom plate across door openings in place for now so the frame stays square. Cut it out once the wall is fixed down.']);
+  if(isEnclosed())st('Stand and fix the walls',['Stand the back wall first, plumb it and hold it with temporary diagonal braces.','Stand the side walls, nail the corners together, then stand the front wall.',S.floor==='slab'?'Fix the bottom plates to the slab with masonry anchors at each corner, each side of door openings and along each wall.':S.floor==='timber'?'Screw or nail the bottom plates down through the flooring into the joists.':'Fix the bottom plates down to the base so the frame can’t lift.','Check the walls are plumb and the diagonals across the top plates match, then fit permanent bracing (metal strap brace or structural ply) as your bracing plan requires.']);
+  if(isEnclosed()&&(plan.walls||[]).length)st('Frame the internal walls',['Mark each internal wall on the floor from the floor plan.','Build each wall flat with top and bottom plates, studs at the same spacing as the outside walls and a lintel over any doorway.','Stand it, fix the bottom plate down, and fix the top plate to the outside wall frames at each end and to the rafters or ceiling joists above.']);
+  if(!isEnclosed()&&stype()!=='deck')st('Set the posts and beams',[S.floor==='slab'?'Mark the post positions from the floor plan and bolt galvanised base plates to the slab.':'Dig 45 x 45 cm holes about 60 cm deep at each post position, set stirrups in concrete and string-line them to one height.',`Stand the ${S.postSize} posts, plumb them both ways and brace them temporarily.`,`Bolt the doubled ${S.beamSize} beams to the tops of the posts, one on each side, and check they are level.`,stype()==='verandah'?`Bolt the ${S.beamSize} ledger to the house frame or brickwork at about 60 cm centres, level with the top of the beam line less the roof fall, and flash over it.`:'']);
+  if(stype()==='deck'&&S.balustrade!=='none')st('Build the balustrade',['Bolt the 90 x 90 balustrade posts to the bearers or joists at up to 1.5 m centres.','Fix the top and bottom rails between the posts.','Fix the balusters at about 12 cm centres so no gap is more than 12.5 cm.']);
+  if(stype()!=='deck')st('Frame the roof',D.roof==='gable'?[`Stand the ${S.rafterSize} ridge board on temporary props at the peak, ${cmv(D.H+(D.W/2)*D.tp)} cm above the floor at the underside of the rafters.`,`Cut a pattern rafter with a plumb cut at the top and a birdsmouth notch at the wall, at ${D.pd}°. Test it at both ends before cutting the rest.`,`Fix rafters in pairs at up to ${S.rafterSpacing/10} cm centres, with cyclone ties or triple grips at every top plate.`,`Fix 70 x 35 battens across the rafters at up to ${S.battenSpacing/10} cm centres, with one close to each eave and one close to the ridge.`]:[`Cut a pattern rafter with birdsmouth notches at ${D.pd}° where it sits on each wall. Test it at both ends before cutting the rest.`,`Fix rafters at up to ${S.rafterSpacing/10} cm centres with cyclone ties or triple grips at both walls.`,`Fix 70 x 35 battens across the rafters at up to ${S.battenSpacing/10} cm centres, with one close to each edge.`]);
+  if(stype()!=='deck'&&S.roofMat!=='none')st('Put the roof on',RM.clear?['Lay sheets with the corrugations running down the slope, starting at the end away from the prevailing wind and overlapping one corrugation.','Pre-drill oversized holes and fix through the crests with polycarbonate screws and sealing washers.','Don’t over-tighten the screws. Polycarbonate needs room to expand.','Fit the capping, barge flashings and gutter.']:['Start at the end away from the prevailing wind, with ribs running down the slope.','Overlap each sheet by one rib and fix with roofing screws through the crests into the battens.',`Fit ${D.roof==='gable'?'ridge capping':'top capping'}, barge flashings, and the gutter with a slight fall toward the downpipe end.`,'Sweep off all metal filings (swarf) at the end of each day. Left on the roof, they rust and stain the sheets.']);
   const Wsteps={
     corr:['Fix wall sheets vertically, overlapping one rib, with screws into the noggings and plates.','Trim sheets around openings and fit flashings over each door and window head.','Fit the corner flashings last.'],
     trimdek:['Fix Trimdek sheets vertically, overlapping one rib, with screws through the pans into the noggings and plates.','Trim around openings and fit head flashings over doors and windows.','Fit the corner flashings last.'],
@@ -1566,9 +1654,9 @@ function guideHTML(codes){
     fc:['Staple wall wrap over the frame.','Fix the 2400 × 1200 sheets with joins centred on studs, using the fasteners and spacings in the James Hardie instructions.','Cut sheets outdoors with a fibre cement blade or score-and-snap tool, wearing a P2 mask.','Finish the joins, then prime and paint.'],
     ply:['Staple wall wrap over the frame.','Fix plywood sheets vertically with the shiplap edges overlapping, using galvanised or stainless nails into studs and noggings.','Seal all cut edges, then oil or stain the cladding.']
   };
-  st('Clad the walls',Wsteps[S.wallMat]||Wsteps.corr);
+  if(isEnclosed())st('Clad the walls',Wsteps[S.wallMat]||Wsteps.corr);
   const B={kit:'Fit the roller door to the jamb studs following the kit instructions: brackets, drum, guides, then set the spring tension. Add the brush seal.',prehung:'Sit the pre-hung door in the opening, pack it plumb with wedges at the hinges and lock, then nail through the jamb into the studs. Fit the lockset and seals.',ledge:'Lay the boards face down, fix three ledges across them, then fit two braces running down toward the hinge side. Hang the door on T-hinges and fit the latch.',colorbond:'Make a 70 x 35 frame with a middle rail, screw the Colorbond sheet to it, hang it on T-hinges and fit the padbolt.',alum:'Fit the head flashing, sit the window on packers, check it’s square, and fix through the frame into the studs. Seal around the outside.',poly:'Fit stop beads inside the opening, run glazing tape on them, set the polycarbonate in, and fix the outer beads.',louvre:'Fit the head flashing, install the louvre frame square and plumb on packers, and fix through into the studs.',none:'Leave the opening clear and fit a flashing over the lintel.'};
-  st('Fit doors and windows',plan.openings.length?plan.openings.map(o=>{const bl=OPEN_BUILDS[o.type];const b=o.build||bl[0].id;return `${codes[o.id]}, ${OPEN_TYPES[o.type].label.toLowerCase()} (${buildName(o).toLowerCase()}): ${B[b]||''}`;}):['No doors or windows in this design.']);
+  if(isEnclosed())st('Fit doors and windows',plan.openings.length?plan.openings.map(o=>{const bl=OPEN_BUILDS[o.type];const b=o.build||bl[0].id;return `${codes[o.id]}, ${OPEN_TYPES[o.type].label.toLowerCase()} (${buildName(o).toLowerCase()}): ${B[b]||''}`;}):['No doors or windows in this design.']);
   st('Finish off',['Fit any remaining flashings and trims, and check all screws are tight.','Seal gaps along the bottom of the walls to keep vermin out.','Clean up swarf and offcuts. Dispose of treated timber offcuts properly and never burn them.']);
   return `<ol class="steps">${steps.map(x=>`<li><b>${x.t}</b><ul>${x.items.map(i=>`<li>${i}</li>`).join('')}</ul></li>`).join('')}</ol>`;
 }
@@ -1589,12 +1677,12 @@ function secOf(r){if(r.sec)return r.sec;if(r.group==='Framing timber'&&['Stumps'
 function inScope(sec){return !plan.scope||plan.scope[sec]!==false;}
 const TANKS={0:null,1000:[1.1,1.25],2000:[1.4,1.5],3000:[1.6,1.65],5000:[1.85,2.05],10000:[2.4,2.35]};
 function geo(){const D=dims(),S=plan.shed;const area=D.W*D.L;const per=2*(D.W+D.L);const iw=Math.max(0.1,D.W-2*D.d),il=Math.max(0.1,D.L-2*D.d);
-  const gutters=lastFlash.filter(f=>f[0]==='Gutter').map(f=>f[1]);const doors=plan.openings.filter(o=>o.type==='pa'||o.type==='roller');
-  return {D,S,area,per,iw,il,iarea:iw*il,iper:2*(iw+il),gutters,doors,rollers:plan.openings.filter(o=>o.type==='roller'),roofPlan:(D.W+2*D.o)*(D.L+2*Math.min(D.o,0.15))};}
+  const gutters=lastFlash.filter(f=>f[0]==='Gutter').map(f=>f[1]);const ops0=isEnclosed()?plan.openings:[];const doors=ops0.filter(o=>o.type==='pa'||o.type==='roller');
+  return {D,S,area,per,iw,il,iarea:iw*il,iper:2*(iw+il),gutters,doors,rollers:ops0.filter(o=>o.type==='roller'),roofPlan:(D.W+2*D.o)*(D.L+2*Math.min(D.o,0.15))};}
 const TRADES={
   elec:{n:'Electrical',sec:'elec',blurb:'Power points, lighting, sub-board and the supply run, with cable lengths from the model.',
     fields:[
-      {k:'gpo',label:'Double power points',type:'num',step:1,min:0,auto:g=>Math.max(2,Math.ceil(g.iper/4))},
+      {k:'gpo',label:'Double power points',type:'num',step:1,min:0,auto:g=>isEnclosed()?Math.max(2,Math.ceil(g.iper/4)):2},
       {k:'lights',label:'LED battens',type:'num',step:1,min:0,auto:g=>Math.max(1,Math.ceil(g.iarea/7))},
       {k:'outdoor',label:'Outdoor sensor lights',type:'num',step:1,min:0,auto:g=>Math.min(2,g.doors.length)},
       {k:'board',label:'Switchboard',type:'sel',opts:[['sub','New sub-board in the build'],['house','Circuits from the house board']],dflt:'sub'},
@@ -1692,7 +1780,7 @@ const TRADES={
       if(ext+int+trimM>0)add('sundry','Rollers, brushes, tape and filler','','',1,'lot',['paint sundries','roller'],'paint roller kit');
       const A=ext+int;const lab=[];if(A+trimM>0)lab.push(['x-paint','Painting',0.05*A+0.12*A*(v.coats+(v.primer?1:0))+0.15*trimM*v.coats+1,'Prep, prime and top coats']);
       return {rows,lab,sum:A+trimM>0?`${fm(A,1)} m² walls${trimM?`, ${fm(trimM,1)} m trims`:''}, ${v.coats} coats`:'Nothing to paint yet'};}},
-  line:{n:'Insulation and lining',sec:'line',blurb:'Batts, plasterboard and a flat ceiling for studios, offices and lined workshops.',
+  line:{n:'Insulation and lining',sec:'line',needs:()=>isEnclosed()?'':'Needs an enclosed building. Change the type on the Build tab.',blurb:'Batts, plasterboard and a flat ceiling for studios, offices and lined workshops.',
     fields:[
       {k:'wallIns',label:'Wall batts',type:'sel',opts:[['none','None'],['R2.0','R2.0 (70 mm studs)'],['R2.5','R2.5 (90 mm studs)']],auto:g=>g.S.studSize==='70x35'?'R2.0':'R2.5'},
       {k:'ceiling',label:'Flat ceiling at wall height',type:'chk',dflt:true},
@@ -1733,7 +1821,7 @@ const TRADES={
       return {rows,lab,sum:`${({tiles:'Tiles',vinyl:'Vinyl plank',epoxy:'Epoxy'})[v.type]||''}, ${fm(A,1)} m²`};}}
 };
 function lineAreas(g,v){const L=(plan.trades||{}).line||{};const ceiling=v?v.ceiling:(L.on&&tradeVals('line').ceiling);const H=g.D.H;
-  const ops=plan.openings.reduce((a,o)=>a+o.width*o.height/1e6,0);return {walls:Math.max(0,g.iper*H-ops),ceil:ceiling?g.iarea:0};}
+  const ops=plan.openings.reduce((a,o)=>a+o.width*o.height/1e6,0);return {walls:Math.max(0,g.iper*H-ops)+innerArea(),ceil:ceiling?g.iarea:0};}
 function tradeVals(id){const T=TRADES[id];const st=(plan.trades||{})[id]||{};const g=geo();const v={};
   T.fields.forEach(f=>{const o=st[f.k];if(o!==undefined&&o!==null&&o!=='')v[f.k]=o;else v[f.k]=f.auto?f.auto(g):f.dflt;if(f.type==='num')v[f.k]=Math.max(f.min||0,+v[f.k]||0);});return v;}
 function tradeOn(id){return !!(((plan.trades||{})[id]||{}).on)&&!(TRADES[id].needs&&TRADES[id].needs(geo()));}
@@ -1774,10 +1862,10 @@ function rebuildServices(){const G=L.services;if(!G)return;clearGroup(G);const g
   const mk=(c,e)=>new THREE.MeshStandardMaterial({color:c,roughness:0.5,metalness:0.1,emissive:e||0x000000,emissiveIntensity:e?0.6:0});
   if(tradeOn('elec')){const v=tradeVals('elec');const WD=wallDefs(D);const white=mk(0xf4f4f0),glow=mk(0xfffbe6,0xfff2b0),board=mk(0x9aa3a8);
     const cand=[];Object.entries(WD).forEach(([key,wd])=>{const ops=resolveOps(D,wd,worldKeyOf(key));for(let s=wd.s0+0.4;s<=wd.s1-0.4;s+=0.6){if(ops.some(o=>s>o.a-0.2&&s<o.b+0.2))continue;cand.push([key,s]);}});
-    const n=Math.min(v.gpo,cand.length);for(let i=0;i<n;i++){const [key,s]=cand[Math.floor((i+0.5)*cand.length/n)];const wg=wallGroup(G,WD[key]);addBox(wg,s,0.3,-(D.d+0.02),0.14,0.08,0.035,white,false).userData.svc='gpo';}
+    const n=isEnclosed()?Math.min(v.gpo,cand.length):0;for(let i=0;i<n;i++){const [key,s]=cand[Math.floor((i+0.5)*cand.length/n)];const wg=wallGroup(G,WD[key]);addBox(wg,s,0.3,-(D.d+0.02),0.14,0.08,0.035,white,false).userData.svc='gpo';}
     const rows=D.W>4.5?2:1,per=Math.ceil(v.lights/rows);let left=v.lights;for(let r=0;r<rows&&left>0;r++){const k=Math.min(per,left);left-=k;const x=rows===2?(r?D.W/4:-D.W/4):0;for(let j=0;j<k;j++){const z=-D.L/2+(j+0.5)*D.L/k;addBox(G,x,D.H-0.06,z,0.08,0.05,1.2,glow,false).userData.svc='light';}}
     const pa=plan.openings.find(o=>o.type==='pa');let bk='front',bs=WD.front.s0+0.5;if(pa){const lk=localKeyOf(pa.wall);const ops=resolveOps(D,WD[lk],pa.wall);const op=ops.find(o=>o.id===pa.id);if(op){bk=lk;bs=op.b+0.35<WD[lk].s1-0.2?op.b+0.35:op.a-0.35;}}
-    if(v.board==='sub'){const wg=wallGroup(G,WD[bk]);addBox(wg,bs,1.5,-(D.d+0.06),0.36,0.48,0.1,board,false).userData.svc='board';}
+    if(v.board==='sub'&&isEnclosed()){const wg=wallGroup(G,WD[bk]);addBox(wg,bs,1.5,-(D.d+0.06),0.36,0.48,0.1,board,false).userData.svc='board';}
     if(v.outdoor>0){g.doors.slice(0,v.outdoor).forEach(o=>{const lk=localKeyOf(o.wall);const op=resolveOps(D,WD[lk],o.wall).find(x=>x.id===o.id);if(!op)return;const wg=wallGroup(G,WD[lk]);addBox(wg,(op.a+op.b)/2,Math.min(op.h+0.25,hAt(D,WD[lk],(op.a+op.b)/2)-0.15),0.06,0.22,0.12,0.1,glow,false).userData.svc='out';});}}
   if(tradeOn('plumb')){const v=tradeVals('plumb');const dpm=mk(new THREE.Color(v.dpType==='round'?'#e8e8e4':(COLORBOND[plan.shed.roofColor]||'#323233')));
     const xs=D.roof==='gable'?[-D.W/2-0.05,D.W/2+0.05]:[D.W/2+0.05];const spots=[];xs.forEach(x=>[-1,1].forEach(sz=>spots.push([x,sz*(D.L/2-0.12)])));
@@ -1811,7 +1899,7 @@ function quoteLines(){const rows=computeMaterials();const out=[];let sub=0;
   return out;}
 function summary(){const S=plan.shed,D=dims();const st=labourStages();const lines=quoteLines();const mat=lines.reduce((a,l)=>a+l.totalCost,0);const hrs=st.reduce((a,s)=>a+s.hrs,0);
   return {width:S.width,length:S.length,height:S.height,roof:S.roof,floor:S.floor,area:Math.round(D.W*D.L*100)/100,openings:plan.openings.length,
-    description:`${S.width/10} × ${S.length/10} cm ${({gable:'gable',skillion:'skillion',flat:'flat'})[S.roof]} roof, ${(WALL_MATS[S.wallMat]||WALL_MATS.corr).n.toLowerCase()} walls, ${(FLOORS[S.floor]||'').toLowerCase()}`,
+    description:stype()==='deck'?`${S.width/10} × ${S.length/10} cm deck, ${S.floorH/10} cm high`:`${isEnclosed()?'':STYPES[stype()].split(' (')[0]+', '}${S.width/10} × ${S.length/10} cm ${({gable:'gable',skillion:'skillion',flat:'flat'})[S.roof]} roof, ${isEnclosed()?(WALL_MATS[S.wallMat]||WALL_MATS.corr).n.toLowerCase()+' walls':'open sides'}, ${(FLOORS[S.floor]||'').toLowerCase()}`,
     materialsTotal:Math.round(mat*100)/100,labourHours:hrs,labourRate:labourRate(),unpriced:lines.filter(l=>!l.unitCost).length,trades:Object.keys(TRADES).filter(tradeOn).map(id=>TRADES[id].n),sections:Object.keys(SECTIONS).filter(inScope).map(s=>SECTIONS[s]),
     labour:st.map(s=>({key:s.k,label:s.n,hours:s.hrs})),lines};}
 function postPlan(){try{window.parent.postMessage({source:'ss-planner',type:'change',plan:Object.assign({},plan,{selected:null}),summary:summary()},location.origin);}catch(e){}}
