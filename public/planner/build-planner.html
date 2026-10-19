@@ -18,6 +18,15 @@
 .descmsg ul{margin:4px 0 0;padding-left:18px;}
 .descmsg a{color:inherit;font-weight:700;}
 .savetpl{display:flex;gap:8px;margin-top:8px;}
+.card.trade{margin-top:10px;}
+.card.trade .row{padding:6px 0;}
+.scope{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:12px 0 4px;}
+.scope .note{margin:0 4px 0 0;}
+.mi .pbk{display:block;font-size:11.5px;color:var(--ok);}
+.dwg .sv{fill:#fff;stroke:#1f2a33;stroke-width:1.5;}
+.dwg .svl{fill:#f2b705;stroke:#1f2a33;stroke-width:1;}
+.dwg .svb{fill:#cfd6da;stroke:#1f2a33;stroke-width:1.5;}
+.dwg .svd{fill:#2f6fb0;stroke:#1f2a33;stroke-width:1;fill-opacity:0.85;}
 .savetpl input{flex:1;min-width:0;border:1px solid var(--line);border-radius:8px;background:var(--field);padding:7px 10px;}
 .tpl select{flex:1;min-width:0;}
 .lab .mrow{grid-template-columns:1fr auto;}
@@ -267,8 +276,9 @@ dialog::backdrop{background:rgba(10,15,20,.5);}
     </header>
     <nav class="tabs" role="tablist">
       <button data-tab="shed" class="on">Build</button>
-      <button data-tab="openings">Openings</button>
+      <button data-tab="openings">Doors</button>
       <button data-tab="items">Items</button>
+      <button data-tab="trades">Trades</button>
       <button data-tab="materials">Materials</button>
       <button data-tab="plans">Plans</button>
     </nav>
@@ -276,6 +286,7 @@ dialog::backdrop{background:rgba(10,15,20,.5);}
       <section id="tab-shed" class="tab on"></section>
       <section id="tab-openings" class="tab"></section>
       <section id="tab-items" class="tab"></section>
+      <section id="tab-trades" class="tab"></section>
       <section id="tab-materials" class="tab"></section>
       <section id="tab-plans" class="tab"></section>
     </div>
@@ -403,7 +414,7 @@ function shedSideFx(k,v){const S=plan.shed;
   if(k==='paverType'){const t=PAVER_TYPES[v];if(t)Object.assign(S,{paverW:t.w,paverL:t.l,paverColor:t.col});}
   if(k==='floorSheet'){const f=FLOOR_SHEETS[v];if(f)S.joistSpacing=Math.min(S.joistSpacing,f.maxJ);}
   return ['roof','floor','paverType','floorSheet'].includes(k);}
-const LAYERS=[['slab','Floor'],['frame','Frame'],['clad','Walls'],['roof','Roof'],['openings','Doors'],['items','Items'],['dims','Sizes']];
+const LAYERS=[['slab','Floor'],['frame','Frame'],['clad','Walls'],['roof','Roof'],['openings','Doors'],['services','Services'],['items','Items'],['dims','Sizes']];
 
 function defaultPlan(){
   return {
@@ -419,10 +430,11 @@ function defaultPlan(){
       {id:uid(),kind:'box',name:'Ride-on mower',w:1700,h:1100,d:1100,x:600,z:600,y:0,rot:90,color:'#3d8b3d',bom:false}
     ],
     prices:{},extra:{},waste:10,labour:{},labourRate:null,xray:1,selected:null,
-    layers:{slab:true,frame:true,clad:true,roof:true,openings:true,items:true,dims:true}
+    trades:{},scope:null,
+    layers:{slab:true,frame:true,clad:true,roof:true,openings:true,services:true,items:true,dims:true}
   };
 }
-function migrate(p){const d=defaultPlan();if(p.shed&&!p.shed.floor)p.shed.floor=p.shed.slab===false?'none':'slab';return Object.assign({},d,p,{shed:Object.assign({},d.shed,p.shed||{}),layers:Object.assign({},d.layers,p.layers||{}),openings:Array.isArray(p.openings)?p.openings:[],items:Array.isArray(p.items)?p.items:[],prices:p.prices||{},extra:p.extra||{},labour:p.labour||{}});}
+function migrate(p){const d=defaultPlan();if(p.shed&&!p.shed.floor)p.shed.floor=p.shed.slab===false?'none':'slab';return Object.assign({},d,p,{shed:Object.assign({},d.shed,p.shed||{}),layers:Object.assign({},d.layers,p.layers||{}),openings:Array.isArray(p.openings)?p.openings:[],items:Array.isArray(p.items)?p.items:[],prices:p.prices||{},extra:p.extra||{},labour:p.labour||{},trades:p.trades||{},scope:p.scope||null});}
 function load(){if(EMBED)return null;try{const r=localStorage.getItem(STORE);if(!r)return null;return migrate(JSON.parse(r));}catch(e){return null;}}
 let plan=load()||defaultPlan();
 let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{if(EMBED){postPlan();return;}try{localStorage.setItem(STORE,JSON.stringify(plan));}catch(e){}},300);}
@@ -581,7 +593,7 @@ function rebuildShed(){
   const tagRest=(g,part)=>g.traverse(o=>{if(o.isMesh&&!o.userData.part)o.userData.part=Object.assign({},part);});tagRest(L.roof,{type:'roof'});tagRest(L.slab,{type:'floor'});tagRest(L.clad,{type:'clad'});
   buildDims(D);
   lastPieces=pieces;lastWallSheets=wallSheets;lastRoofSheets=roofSheets;lastFlash=flash;lastAreas={wall:Math.max(0,wallArea),roof:roofArea};
-  applyLayers();updateStats();
+  rebuildServices();applyLayers();updateStats();
 }
 
 function buildFloor(D,P){
@@ -1122,7 +1134,7 @@ function computeMaterials(){
     rows.push({key:'t:'+g.cat+':'+g.size,group:'Framing timber',item:g.cat,size:g.size,detail:`${g.lens.length} ${g.lens.length===1?'piece':'pieces'}, ${fm(tot,1)} m after cutting`,order:'Buy '+st.text,buy:st.buy,pu:'$/m',common:st.common});
   });
   const sheetRow=(key,item,col,lens,area)=>{const tot=lens.reduce((a,b)=>a+b,0);const mx=Math.max(...lens),mn=Math.min(...lens);
-    rows.push({key,group:'Sheeting',item,size:col,detail:`${fm(area,1)} m² ${key.startsWith('s:wall')?'net of openings':'roof area'}`,order:`${lens.length} sheets, ${mn===mx?fm(mx,2)+' m each':fm(mn,2)+' to '+fm(mx,2)+' m long'}, ${fm(tot,1)} m total`,buy:tot,pu:'$/m',sheetLen:tot/lens.length});};
+    rows.push({key,group:key.startsWith('s:roof')?'Roofing':'Sheeting',item,size:col,detail:`${fm(area,1)} m² ${key.startsWith('s:wall')?'net of openings':'roof area'}`,order:`${lens.length} sheets, ${mn===mx?fm(mx,2)+' m each':fm(mn,2)+' to '+fm(mx,2)+' m long'}, ${fm(tot,1)} m total`,buy:tot,pu:'$/m',sheetLen:tot/lens.length});};
   const WM=WALL_MATS[S.wallMat]||WALL_MATS.corr,RM=ROOF_MATS[S.roofMat]||ROOF_MATS.corr;
   if(WM.kind==='sheet'){if(lastWallSheets.length)sheetRow('s:wall:'+S.wallMat,WM.n+' wall sheets',S.wallColor,lastWallSheets,lastAreas.wall);}
   else if(WM.kind==='board'){const lm=Math.ceil(lastAreas.wall*1.1/WM.cover);rows.push({key:'s:wall:'+S.wallMat,group:'Sheeting',item:'Weatherboards',size:'185 x 18mm, '+S.wallColor,detail:`${fm(lastAreas.wall,1)} m² net of openings, plus 10% for cuts`,order:`${lm} m (about ${Math.ceil(lm/5.4)} × 5.4 m boards)`,buy:lm,pu:'$/m'});}
@@ -1148,6 +1160,8 @@ function computeMaterials(){
   Object.values(pg).forEach(({p,q,n})=>rows.push({key:'dp:'+p.id+':'+p.n,group:'Doors and windows',item:p.n,size:'',detail:n>1?`For ${n} openings`:'',order:p.unit==='m'?`${fm(q,1)} m`:`${q}`,buy:p.unit==='m'?Math.round(q*100)/100:q,pu:p.unit==='m'?'$/m':'$ ea',part:p}));
   const ig={};plan.items.filter(i=>i.bom).forEach(i=>{const k=i.name+':'+i.w+'x'+i.d+'x'+i.h;(ig[k]=ig[k]||{i,n:0}).n++;});
   Object.entries(ig).forEach(([k,{i,n}])=>rows.push({key:'i:'+k,group:'Placed items',item:i.name,size:`${i.w/10} × ${i.d/10} × ${i.h/10} cm`,detail:'',order:`${n}`,buy:n,pu:'$ ea'}));
+  tradeRows().forEach(r=>rows.push(r));
+  rows.forEach(r=>{r.sec=secOf(r);const pb=pbPrice(r);if(pb)r.pb=pb;});
   rows.forEach(r=>{let step=1,lab='';
     if(r.key.startsWith('t:')){step=r.common||6;lab='× '+fm(step,1)+' m';}
     else if(r.sheetLen){step=r.sheetLen;lab='sheets';}
@@ -1158,26 +1172,28 @@ function computeMaterials(){
   });
   return rows;
 }
-function materialsSub(){return lastRows.reduce((a,r)=>a+(+plan.prices[r.key]||0)*r.buy,0);}
+function materialsSub(){return lastRows.filter(r=>inScope(r.sec)).reduce((a,r)=>a+priceOf(r)*r.buy,0);}
 function grandTotal(){return materialsSub()*(1+(+plan.waste||0)/100);}
 const OPEN_HRS={kit:4,prehung:3,ledge:6,colorbond:5,alum:2,poly:2.5,louvre:2.5,none:0.5};
 const LAB_NOTE={setout:'Pegs, string lines, levels',floor:'Base, formwork, pour or lay',frame:'Cut, nail up and stand all framing',roof:'Sheets, capping, barges and gutter',clad:'Wall sheets or boards and flashings',open:'Hang doors and fit windows',finish:'Trims, sealing and clean-up'};
-function labourStages(){
+function labourStagesAll(){return labourStages(true);}
+function labourStages(all){
   const D=dims(),S=plan.shed;const area=D.W*D.L;const r5=v=>Math.max(0.5,Math.round(v*2)/2);
   const pieces=lastPieces.filter(p=>!['Stumps','Bearers (doubled)','Floor joists'].includes(p.cat)).length;
   const floorPieces=lastPieces.length-pieces;const flashM=lastFlash.reduce((a,f)=>a+f[1],0);
   const WM=WALL_MATS[S.wallMat]||WALL_MATS.corr;const cladRate=WM.kind==='sheet'?0.3:WM.kind==='board'?0.6:0.45;
   const floorH={slab:4+0.8*area,timber:4+0.6*area+0.15*floorPieces,pavers:2+0.8*area,gravel:1+0.2*area,none:0.1*area}[S.floor]||0;
   const st=[
-    ['setout','Set out and site prep',3+0.1*area],
-    ['floor',FLOORS[S.floor]||'Floor',floorH],
-    ['frame','Wall and roof framing',0.12*pieces],
-    ['roof','Roofing and gutter',0.35*lastAreas.roof+0.08*flashM],
-    ['clad','Wall cladding',cladRate*lastAreas.wall],
-    ['open','Doors and windows',plan.openings.reduce((a,o)=>a+(OPEN_HRS[o.build||(OPEN_BUILDS[o.type][0]||{}).id]||2),0)],
-    ['finish','Finishing off',2+0.05*area]
+    ['setout','Set out and site prep',3+0.1*area,'build'],
+    ['floor',FLOORS[S.floor]||'Floor',floorH,'floor'],
+    ['frame','Wall and roof framing',0.12*pieces,'build'],
+    ['roof','Roofing and gutter',0.35*lastAreas.roof+0.08*flashM,'roof'],
+    ['clad','Wall cladding',cladRate*lastAreas.wall,'build'],
+    ['open','Doors and windows',plan.openings.reduce((a,o)=>a+(OPEN_HRS[o.build||(OPEN_BUILDS[o.type][0]||{}).id]||2),0),'build'],
+    ['finish','Finishing off',2+0.05*area,'build']
   ];
-  return st.filter(s=>s[2]>0.01||(plan.labour||{})[s[0]]!==undefined).map(([k,n,v])=>{const est=r5(v);const ov=(plan.labour||{})[k];const hrs=(ov!==undefined&&ov!==null&&isFinite(ov))?+ov:est;return {k,n,est,hrs,ov:ov!==undefined&&ov!==null,note:LAB_NOTE[k]||''};});
+  tradeLabour().forEach(t=>st.push([t.k,t.n,t.v,t.sec,t.note]));
+  return st.filter(s=>s[2]>0.01||(plan.labour||{})[s[0]]!==undefined).filter(s=>all||inScope(s[3])).map(([k,n,v,sec,tnote])=>{const est=r5(v);const ov=(plan.labour||{})[k];const hrs=(ov!==undefined&&ov!==null&&isFinite(ov))?+ov:est;return {k,n,est,hrs,sec,ov:ov!==undefined&&ov!==null,note:tnote||LAB_NOTE[k]||''};});
 }
 function labourRate(){const r=+plan.labourRate;return isFinite(r)&&r>0?r:(+SETTINGS.hourlyRate||95);}
 function labourHours(){return labourStages().reduce((a,s)=>a+s.hrs,0);}
@@ -1188,12 +1204,14 @@ function labourHTML(){const st=labourStages();const tot=st.reduce((a,s)=>a+s.hrs
   <p class="note">${EMBED?'Your materials margin and pricing tiers are added when you start the quote.':'Cost only. Add your margin and GST when you quote.'}</p>`;}
 function updateTotals(){const hrs=labourHours();const g=$('#grand');if(g)g.textContent=money(grandTotal());const m=$('#tMat');if(m)m.textContent=money(grandTotal());const th=$('#tHrs');if(th)th.textContent=fm(hrs,1);const tl=$('#tLab');if(tl)tl.textContent=money(hrs*labourRate());const ta=$('#tAll');if(ta)ta.textContent=money(grandTotal()+hrs*labourRate());}
 function renderMaterials(){
-  lastRows=computeMaterials();const groups=[...new Set(lastRows.map(r=>r.group))];
-  let h=`<div class="bunbar"><button class="primary" id="useBun">Use Bunnings prices</button><span class="note" style="margin:0">Prices checked ${BUN_DATE} and vary by store and state. Tap a product to check your local price. Items without a price need a quick search.</span></div><label class="row" style="margin-top:12px"><span>Waste and fixings allowance</span><span class="inp"><input type="number" id="waste" value="${plan.waste}" min="0" max="50" step="1"><em>%</em></span></label>`;
+  lastRows=computeMaterials();const groups=[...new Set(lastRows.filter(r=>inScope(r.sec)).map(r=>r.group))];
+  const secs=[...new Set(lastRows.map(r=>r.sec).concat(labourStagesAll().map(s=>s.sec)))].filter(s=>SECTIONS[s]);
+  const scopeHTML=secs.length>1?`<div class="scope"><span class="note">In this quote:</span>${secs.map(s=>`<button class="chip ${inScope(s)?'on':''}" data-scope="${s}" aria-pressed="${inScope(s)}">${SECTIONS[s]}</button>`).join('')}</div>${secs.some(s=>!inScope(s))?'<p class="note" style="margin-top:2px">Sections switched off are left out of the totals and the quote.</p>':''}`:'';
+  let h=`<div class="bunbar"><button class="primary" id="useBun">Use Bunnings prices</button><span class="note" style="margin:0">Prices checked ${BUN_DATE} and vary by store and state. Tap a product to check your local price. Items without a price need a quick search.</span></div><label class="row" style="margin-top:12px"><span>Waste and fixings allowance</span><span class="inp"><input type="number" id="waste" value="${plan.waste}" min="0" max="50" step="1"><em>%</em></span></label>${scopeHTML}`;
   groups.forEach(g=>{
     h+=`<h3>${g}</h3><div class="mtable">`;
-    lastRows.filter(r=>r.group===g).forEach(r=>{const pr=plan.prices[r.key]??'';const b=bunningsFor(r);
-      h+=`<div class="mrow"><div class="mi"><b>${esc(r.item)}</b><span class="sz">${esc(r.size)}</span>${r.detail?`<small>${esc(r.detail)}</small>`:''}<small class="bun"><a href="${b.u}" target="_blank" rel="noopener">Bunnings: ${esc(b.n)}</a>${b.p?` ${money(b.p)} ${r.pu.replace('$','')}`:''}</small></div><div class="mq">${esc(r.order)}<span class="step"><button data-ex="${esc(r.key)}" data-d="-1" aria-label="Fewer">−</button><b>${r.extra>0?'+'+r.extra:r.extra}</b><button data-ex="${esc(r.key)}" data-d="1" aria-label="More">+</button></span></div><div class="mp"><span class="inp sm"><input type="number" data-price="${esc(r.key)}" value="${pr}" placeholder="0.00" min="0" step="0.01" aria-label="Price for ${esc(r.item)}"><em>${r.pu}</em></span><span class="cost" data-cost="${esc(r.key)}">${money((+pr||0)*r.buy)}</span></div></div>`;});
+    lastRows.filter(r=>r.group===g&&inScope(r.sec)).forEach(r=>{const own=plan.prices[r.key];const pr=own??'';const b=bunningsFor(r);const pbh=(own===undefined&&r.pb)?`<small class="pbk">Your price book: ${esc(r.pb.n)} ${money(r.pb.p)}</small>`:'';
+      h+=`<div class="mrow"><div class="mi"><b>${esc(r.item)}</b><span class="sz">${esc(r.size)}</span>${r.detail?`<small>${esc(r.detail)}</small>`:''}${pbh}<small class="bun"><a href="${b.u}" target="_blank" rel="noopener">Bunnings: ${esc(b.n)}</a>${b.p?` ${money(b.p)} ${r.pu.replace('$','')}`:''}</small></div><div class="mq">${esc(r.order)}<span class="step"><button data-ex="${esc(r.key)}" data-d="-1" aria-label="Fewer">−</button><b>${r.extra>0?'+'+r.extra:r.extra}</b><button data-ex="${esc(r.key)}" data-d="1" aria-label="More">+</button></span></div><div class="mp"><span class="inp sm"><input type="number" data-price="${esc(r.key)}" value="${pr}" placeholder="${r.pb?r.pb.p.toFixed(2):'0.00'}" min="0" step="0.01" aria-label="Price for ${esc(r.item)}"><em>${r.pu}</em></span><span class="cost" data-cost="${esc(r.key)}">${money(priceOf(r)*r.buy)}</span></div></div>`;});
     h+='</div>';
   });
   h+=`<div class="total"><span>Materials total</span><b id="grand">${money(grandTotal())}</b></div>${labourHTML()}<button class="primary" id="copyCsv">Copy list as CSV</button> <span class="note" id="csvMsg"></span>
@@ -1203,7 +1221,7 @@ function renderMaterials(){
 let matT;function scheduleMaterials(){clearTimeout(matT);matT=setTimeout(()=>{if($('#tab-materials').classList.contains('on'))renderMaterials();},120);}
 $('#tab-materials').addEventListener('input',e=>{
   if(e.target.id==='waste'){const v=parseFloat(e.target.value);plan.waste=isFinite(v)?Math.max(0,v):0;}
-  else if(e.target.dataset.price){const k=e.target.dataset.price;const v=parseFloat(e.target.value);if(isFinite(v))plan.prices[k]=v;else delete plan.prices[k];const r=lastRows.find(x=>x.key===k);const c=$(`[data-cost="${CSS.escape(k)}"]`);if(r&&c)c.textContent=money((plan.prices[k]||0)*r.buy);}
+  else if(e.target.dataset.price){const k=e.target.dataset.price;const v=parseFloat(e.target.value);if(isFinite(v))plan.prices[k]=v;else delete plan.prices[k];const r=lastRows.find(x=>x.key===k);const c=$(`[data-cost="${CSS.escape(k)}"]`);if(r&&c)c.textContent=money(priceOf(r)*r.buy);}
   else if(e.target.dataset.lab){const k=e.target.dataset.lab;const v=parseFloat(e.target.value);plan.labour=plan.labour||{};if(isFinite(v)&&v>=0)plan.labour[k]=v;else delete plan.labour[k];}
   else if(e.target.id==='labRate'){const v=parseFloat(e.target.value);plan.labourRate=isFinite(v)&&v>0?v:null;}
   else return;
@@ -1211,10 +1229,11 @@ $('#tab-materials').addEventListener('input',e=>{
 });
 $('#tab-materials').addEventListener('click',async e=>{
   const exb=e.target.closest('[data-ex]');if(exb){bumpExtra(exb.dataset.ex,+exb.dataset.d);return;}
+  const scb=e.target.closest('[data-scope]');if(scb){const s=scb.dataset.scope;plan.scope=Object.assign({},plan.scope||{});plan.scope[s]=!inScope(s);renderMaterials();save();return;}
   if(e.target.id==='useBun'){lastRows.forEach(r=>{const b=bunningsFor(r);if(b.p)plan.prices[r.key]=b.p;});save();renderMaterials();return;}
   if(e.target.id!=='copyCsv')return;
   const q=s=>'"'+String(s).replace(/"/g,'""')+'"';
-  const lines=[['Group','Item','Size','Detail','Order','Unit price','Cost'].map(q).join(',')].concat(lastRows.map(r=>{const p=+plan.prices[r.key]||0;return [r.group,r.item,r.size,r.detail,r.order,p?p.toFixed(2)+' '+r.pu:'',(p*r.buy).toFixed(2)].map(q).join(',');}));
+  const lines=[['Group','Item','Size','Detail','Order','Unit price','Cost'].map(q).join(',')].concat(lastRows.filter(r=>inScope(r.sec)).map(r=>{const p=priceOf(r);return [r.group,r.item,r.size,r.detail,r.order,p?p.toFixed(2)+' '+r.pu:'',(p*r.buy).toFixed(2)].map(q).join(',');}));
   lines.push(['','','','','Waste allowance',plan.waste+'%',''].map(q).join(','),['','','','','Materials total','',grandTotal().toFixed(2)].map(q).join(','));
   labourStages().forEach(s=>lines.push(['Labour',s.n,'','',s.hrs+' h',labourRate().toFixed(2)+' $/h',(s.hrs*labourRate()).toFixed(2)].map(q).join(',')));
   lines.push(['','','','','Total cost ex GST','',(grandTotal()+labourHours()*labourRate()).toFixed(2)].map(q).join(','));
@@ -1233,6 +1252,7 @@ function switchTab(name){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+name));
   if(name==='materials')renderMaterials();
   if(name==='items'){renderItemList();renderItemEditor();}
+  if(name==='trades')renderTradesTab();
 }
 $('.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b)switchTab(b.dataset.tab);});
 
@@ -1249,7 +1269,7 @@ $('#resetPlan').addEventListener('click',()=>{
   plan=defaultPlan();refreshAll();save();$('#planJson').value=JSON.stringify(plan);$('#resetPlan').textContent='Start a new plan';resetArmed=0;$('#dlgMsg').textContent='New plan started.';
 });
 
-function refreshAll(){closePick();renderPlansTab();renderShedTab();renderOpeningsTab();renderItemsTab();renderLayerBar();rebuildShed();rebuildItems();if($('#tab-materials').classList.contains('on'))renderMaterials();setView('3d');}
+function refreshAll(){closePick();renderPlansTab();renderShedTab();renderOpeningsTab();renderItemsTab();renderLayerBar();rebuildShed();rebuildItems();renderTradesTab();if($('#tab-materials').classList.contains('on'))renderMaterials();setView('3d');}
 
 /* ---------- tap to edit ---------- */
 let pickState=null,pickHelper=null;
@@ -1342,7 +1362,7 @@ $('#pick').addEventListener('change',e=>{
 function renderPlansTab(){
   $('#tab-plans').innerHTML=`<h3>Plans and build guide</h3><p class="note" style="margin-top:0">Drawings and step-by-step instructions generated from your current design. They update whenever you change the shed.</p>
   <button class="primary" id="openPlans" style="margin-top:12px">Open plans and build guide</button>
-  <h3>What’s included</h3><ul class="incl"><li>Floor plan with doors, windows and items</li><li>Slab or floor framing plan</li><li>Framing elevation for every wall</li><li>Roof framing plan and section</li><li>Door and window schedule</li><li>Cut list for all framing</li><li>Build guide in order, from set-out to finishing</li></ul>
+  <h3>What’s included</h3><ul class="incl"><li>Floor plan with doors, windows and items</li><li>Slab or floor framing plan</li><li>Framing elevation for every wall</li><li>Roof framing plan and section</li><li>Door and window schedule</li><li>Cut list for all framing</li><li>Build guide in order, from set-out to finishing</li><li>Services layout and takeoff for each trade you add</li></ul>
   <p class="note">These are guide drawings made from the model, not engineered plans. Council or a certifier may ask for engineering if a permit is needed.</p>`;
 }
 $('#tab-plans').addEventListener('click',e=>{if(e.target.id==='openPlans')openPlans();});
@@ -1381,6 +1401,7 @@ function plansHTML(){
   h+=`<section class="sheet"><h2>4. Roof framing</h2>${roofPlanSVG()}${sectionSVG()}</section>`;
   h+=`<section class="sheet"><h2>5. Cut list</h2>${cutListHTML()}</section>`;
   h+=`<section class="sheet"><h2>6. Build guide</h2>${guideHTML(codes)}</section>`;
+  h+=servicesHTML();
   return h;
 }
 
@@ -1533,25 +1554,246 @@ function updateLabels(){
   labelData.forEach(l=>{tmp.copy(l.p).applyMatrix4(shedRoot.matrixWorld).project(camera);if(tmp.z>1||tmp.z<-1){l.el.style.display='none';return;}l.el.style.display='';l.el.style.transform=`translate(${(tmp.x+1)/2*w}px,${(1-tmp.y)/2*h}px) translate(-50%,-50%)`;});
 }
 function loop(){requestAnimationFrame(loop);controls.update();renderer.render(scene,camera);updateLabels();}
+/* ---------- trade layers ---------- */
+const SECTIONS={build:'Structure',floor:'Slab and floor',roof:'Roofing',elec:'Electrical',plumb:'Plumbing and stormwater',paint:'Painting',line:'Insulation and lining',finish:'Floor finish'};
+const GROUP_SEC={'Framing timber':'build','Sheeting':'build','Doors and windows':'build','Placed items':'build','Slab':'floor','Floor':'floor','Roofing':'roof','Flashings and gutter':'roof'};
+function secOf(r){if(r.sec)return r.sec;if(r.group==='Framing timber'&&['Stumps','Bearers (doubled)','Floor joists'].includes(r.item))return 'floor';if(r.group==='Flashings and gutter'&&/^Corner/.test(r.item))return 'build';return GROUP_SEC[r.group]||'build';}
+function inScope(sec){return !plan.scope||plan.scope[sec]!==false;}
+const TANKS={0:null,1000:[1.1,1.25],2000:[1.4,1.5],3000:[1.6,1.65],5000:[1.85,2.05],10000:[2.4,2.35]};
+function geo(){const D=dims(),S=plan.shed;const area=D.W*D.L;const per=2*(D.W+D.L);const iw=Math.max(0.1,D.W-2*D.d),il=Math.max(0.1,D.L-2*D.d);
+  const gutters=lastFlash.filter(f=>f[0]==='Gutter').map(f=>f[1]);const doors=plan.openings.filter(o=>o.type==='pa'||o.type==='roller');
+  return {D,S,area,per,iw,il,iarea:iw*il,iper:2*(iw+il),gutters,doors,rollers:plan.openings.filter(o=>o.type==='roller'),roofPlan:(D.W+2*D.o)*(D.L+2*Math.min(D.o,0.15))};}
+const TRADES={
+  elec:{n:'Electrical',sec:'elec',blurb:'Power points, lighting, sub-board and the supply run, with cable lengths from the model.',
+    fields:[
+      {k:'gpo',label:'Double power points',type:'num',step:1,min:0,auto:g=>Math.max(2,Math.ceil(g.iper/4))},
+      {k:'lights',label:'LED battens',type:'num',step:1,min:0,auto:g=>Math.max(1,Math.ceil(g.iarea/7))},
+      {k:'outdoor',label:'Outdoor sensor lights',type:'num',step:1,min:0,auto:g=>Math.min(2,g.doors.length)},
+      {k:'board',label:'Switchboard',type:'sel',opts:[['sub','New sub-board in the build'],['house','Circuits from the house board']],dflt:'sub'},
+      {k:'supply',label:'Supply run from the house',type:'num',unit:'m',step:1,min:0,dflt:15},
+      {k:'route',label:'Supply route',type:'sel',opts:[['trench','Trench and conduit'],['surface','Surface or overhead']],dflt:'trench'},
+      {k:'motor',label:'Circuit for a roller door motor',type:'chk',auto:g=>g.rollers.length>0}
+    ],
+    calc(g,v){const sw=Math.max(1,g.doors.length);const circuits=1+Math.ceil(v.gpo/8)+(v.motor?1:0);const H=g.D.H;const rows=[];
+      const add=(id,item,size,detail,qty,unit,match,bq)=>rows.push({id,item,size,detail,qty,unit,match,bq});
+      if(v.gpo>0)add('gpo','Double power points','10A, flush mount','Spread around the walls at 30 cm',v.gpo,'ea',['double power point','double gpo','gpo'],'double power point');
+      if(v.lights>0)add('batten','LED battens','1200 mm, about 40 W',`${v.lights} on ${g.D.W>4.5?'two rows':'one row'} under the ceiling`,v.lights,'ea',['led batten','batten light','batten'],'led batten 1200mm');
+      if(v.outdoor>0)add('sensor','Outdoor sensor lights','LED, IP65','Over the doors',v.outdoor,'ea',['sensor light','outdoor light','bunker'],'led sensor light');
+      add('switch','Light switches','',`One at each door (${sw})`,sw,'ea',['light switch','switch'],'light switch');
+      const p25=Math.ceil(g.iper*1.1+v.gpo*1.2+(v.motor?H+1:0)),p15=Math.ceil((g.D.L+g.D.W)*1.2+v.lights*1.5+v.outdoor*(H+1)+sw*H);
+      add('tps25','Power cable','2.5 mm² TPS',`About ${p25} m of power circuit runs, buy ${Math.ceil(p25/100)} × 100 m roll`,p25,'m',['2.5mm','2.5 mm','2.5mm2'],'2.5mm twin and earth');
+      add('tps15','Lighting cable','1.5 mm² TPS',`About ${p15} m of lighting runs, buy ${Math.ceil(p15/100)} × 100 m roll`,p15,'m',['1.5mm','1.5 mm','1.5mm2'],'1.5mm twin and earth');
+      if(v.board==='sub'){add('board','Sub-board enclosure','with main switch','',1,'ea',['sub board','subboard','enclosure'],'switchboard enclosure');
+        add('rcbo','RCBOs','',`${circuits} circuits: lights${v.gpo?', power':''}${v.motor?', roller door motor':''}`,circuits,'ea',['rcbo'],'rcbo');
+        if(v.supply>0)add('submain','Sub-main cable','6 mm² 2C+E',`Supply run plus 10%`,Math.ceil(v.supply*1.1),'m',['6mm','sub main','submain'],'6mm twin and earth');}
+      else if(v.supply>0)add('feed','Circuit cable to the house board','2.5 mm² TPS','Supply run plus 10%',Math.ceil(v.supply*1.1*circuits),'m',['2.5mm','2.5 mm'],'2.5mm twin and earth');
+      if(v.supply>0&&v.route==='trench')add('conduit','Underground conduit','25 mm, orange heavy duty','Plus marker tape in the trench',Math.ceil(v.supply),'m',['conduit'],'25mm heavy duty conduit');
+      add('sundry','Clips, boxes and sundries','','Mounting blocks, saddles, junction boxes',1,'lot',['electrical sundries','sundries'],'electrical mounting block');
+      const pts=v.gpo+v.lights+v.outdoor+sw;
+      const lab=[['x-elec-rough','Electrical rough-in',0.35*pts+g.iper/12,'Run cables, fix boxes'],
+        ['x-elec-supply',v.board==='sub'?'Sub-board and sub-main':'Circuits to the house board',(v.board==='sub'?3+0.5*circuits:1+0.5*circuits)+v.supply*(v.route==='trench'?0.25:0.08),v.route==='trench'?'Includes trenching':'Surface or overhead run'],
+        ['x-elec-fit','Fit-off, test and certificate',0.3*pts+2,'Fit points and lights, test, CoC']];
+      return {rows,lab,sum:`${v.gpo} power points, ${v.lights} lights${v.outdoor?`, ${v.outdoor} outdoor`:''}, ${v.board==='sub'?'sub-board':'house board'}, ${v.supply} m supply`};}},
+  plumb:{n:'Plumbing and stormwater',sec:'plumb',blurb:'Downpipes, stormwater to the legal point of discharge, and an optional rainwater tank.',
+    fields:[
+      {k:'dp',label:'Downpipes',type:'num',step:1,min:0,auto:g=>Math.max(1,g.gutters.reduce((a,l)=>a+Math.max(1,Math.ceil(l/12)),0))},
+      {k:'dpType',label:'Downpipe type',type:'sel',opts:[['round','90 mm round PVC'],['rect','100 x 50 Colorbond']],dflt:'round'},
+      {k:'storm',label:'Stormwater run to discharge point',type:'num',unit:'m',step:1,min:0,dflt:10},
+      {k:'tank',label:'Rainwater tank',type:'sel',opts:[[0,'None'],[1000,'1,000 L'],[2000,'2,000 L'],[3000,'3,000 L'],[5000,'5,000 L'],[10000,'10,000 L']],dflt:0},
+      {k:'tap',label:'Garden tap off the tank',type:'chk',dflt:false},
+      {k:'rain',label:'Annual rainfall',type:'num',unit:'mm',step:10,min:100,dflt:600}
+    ],
+    calc(g,v){const H=g.D.H;const rows=[];const add=(id,item,size,detail,qty,unit,match,bq)=>rows.push({id,item,size,detail,qty,unit,match,bq});const tank=+v.tank||0;
+      const catchL=Math.round(g.roofPlan*v.rain*0.8/100)*100;
+      if(v.dp>0){add('dp','Downpipe',v.dpType==='round'?'90 mm PVC':'100 x 50 Colorbond',`${v.dp} drops of ${fm(H+0.3,1)} m`,v.dp*Math.ceil((H+0.3)/3),'× 3 m',v.dpType==='round'?['90mm downpipe','downpipe'] :['100 x 50','downpipe'],v.dpType==='round'?'90mm pvc downpipe':'colorbond downpipe 100 x 50');
+        add('pop','Gutter outlets (pops)','',``,v.dp,'ea',['pop','outlet'],'gutter outlet pop');add('elbow','Downpipe elbows','',`Two per downpipe`,v.dp*2,'ea',['elbow','bend'],'downpipe elbow');}
+      const sm=Math.ceil(v.storm+g.per/2);if(sm>0){add('storm','Stormwater pipe','90 mm PVC',`${sm} m including runs between downpipes`,Math.ceil(sm/6),'× 6 m',['90mm stormwater','stormwater pipe','90mm pvc'],'90mm stormwater pipe');
+        add('junction','Junctions and bends','90 mm',`At each downpipe and turn`,v.dp+2,'ea',['junction','90mm bend'],'90mm stormwater junction');}
+      if(tank){add('tank','Rainwater tank',`${tank.toLocaleString('en-AU')} L`,`Roof catchment ${fm(g.roofPlan,1)} m² collects about ${catchL.toLocaleString('en-AU')} L a year at ${v.rain} mm`,1,'ea',['rainwater tank','water tank','tank'],`${tank} litre water tank`);
+        add('diverter','First flush diverter','','',1,'ea',['first flush','diverter'],'first flush diverter');add('tankbase','Tank base','Compacted sand or crushed rock pad','',1,'lot',['tank base','tank stand'],'tank stand');
+        add('overflow','Tank overflow pipe','90 mm PVC','To the stormwater line',1,'× 6 m',['90mm stormwater','stormwater pipe'],'90mm stormwater pipe');
+        if(v.tap)add('tap','Garden tap kit','Brass, with fittings','',1,'ea',['garden tap','tap'],'tank tap fitting');}
+      const lab=[['x-plumb-storm','Downpipes and stormwater',0.75*v.dp+0.35*v.storm+1,'Fit downpipes, trench and lay pipe']];
+      if(tank)lab.push(['x-plumb-tank','Rainwater tank',3+(v.tap?1:0),'Base, connect, overflow']);
+      return {rows,lab,sum:`${v.dp} downpipes, ${v.storm} m stormwater${tank?`, ${tank.toLocaleString('en-AU')} L tank`:''}`};}},
+  roofx:{n:'Roofing extras',sec:'roof',blurb:'Insulation, safety mesh, whirlybirds and skylights on top of the roof sheets and flashings already in the list.',
+    fields:[
+      {k:'ins',label:'Roof insulation blanket',type:'sel',opts:[['none','None'],['anticon','Anticon blanket under the sheets']],dflt:'anticon'},
+      {k:'mesh',label:'Roof safety mesh',type:'chk',dflt:true},
+      {k:'whirly',label:'Whirlybirds',type:'num',step:1,min:0,dflt:0},
+      {k:'sky',label:'Clear skylight sheets',type:'num',step:1,min:0,dflt:0}
+    ],
+    calc(g,v){const A=lastAreas.roof;const rows=[];const add=(id,item,size,detail,qty,unit,match,bq)=>rows.push({id,item,size,detail,qty,unit,match,bq});
+      if(v.ins==='anticon')add('anticon','Roof insulation blanket','Anticon 60 mm, 1350 x 22 m roll',`${fm(A,1)} m² roof plus 5%`,Math.ceil(A*1.05/29.7),'rolls',['anticon','roof blanket','insulation blanket'],'anticon roof blanket');
+      if(v.mesh)add('mesh','Roof safety mesh','Galvanised, 1.2 m wide',`${fm(A,1)} m² roof`,Math.ceil(A*1.05),'m²',['safety mesh'],'roof safety mesh');
+      if(v.whirly>0)add('whirly','Whirlybirds','300 mm with base flashing','',v.whirly,'ea',['whirlybird','roof vent'],'whirlybird');
+      if(v.sky>0)add('sky','Clear skylight sheets','Polycarbonate, same profile as the roof','Replace a roof sheet each',v.sky,'ea',['polycarbonate','skylight'],'corrugated polycarbonate roofing');
+      const lab=[];const h=(v.ins==='anticon'?0.06*A:0)+(v.mesh?0.05*A:0)+1.5*v.whirly+1*v.sky;if(h>0)lab.push(['x-roof-extras','Roof insulation, mesh and vents',h,'On top of laying the sheets']);
+      return {rows,lab,sum:[v.ins==='anticon'?'Anticon':'',v.mesh?'safety mesh':'',v.whirly?`${v.whirly} whirlybird${v.whirly>1?'s':''}`:'',v.sky?`${v.sky} skylight${v.sky>1?'s':''}`:''].filter(Boolean).join(', ')||'Nothing added'};}},
+  concx:{n:'Concreting extras',sec:'floor',blurb:'Formwork, vapour barrier, bar chairs, a driveway apron and pump hire for the slab.',needs:g=>g.S.floor==='slab'?'':'Needs a concrete slab floor. Change the floor on the Build tab.',
+    fields:[
+      {k:'forms',label:'Edge formwork',type:'chk',dflt:true},
+      {k:'membrane',label:'Vapour barrier',type:'chk',dflt:true},
+      {k:'apron',label:'Apron depth at roller doors',type:'num',unit:'m',step:0.5,min:0,dflt:0},
+      {k:'pump',label:'Concrete pump hire',type:'chk',dflt:false}
+    ],
+    calc(g,v){const S=g.S;const rows=[];const add=(id,item,size,detail,qty,unit,match,bq)=>rows.push({id,item,size,detail,qty,unit,match,bq});const sa=(g.D.W+0.1)*(g.D.L+0.1);
+      if(v.forms)add('forms','Edge formwork','Form ply or 150 x 38 boards with pegs',`Slab perimeter`,Math.ceil(2*(g.D.W+g.D.L)+0.4),'m',['formwork','form ply'],'formwork ply');
+      if(v.membrane)add('membrane','Vapour barrier','200 µm polythene, lapped 200 mm',`${fm(sa,1)} m² plus laps`,Math.ceil(sa*1.15),'m²',['vapour barrier','builders film','polythene'],'builders film 200um');
+      add('chairs','Bar chairs','Bags of 100','About 4 per m²',Math.max(1,Math.ceil(sa*4/100)),'bags',['bar chair'],'bar chairs');
+      let av=0;if(v.apron>0&&g.rollers.length){const aw=g.rollers.reduce((a,o)=>a+o.width/1000+0.6,0);av=Math.ceil(aw*v.apron*(S.slabT/1000)*10)/10;
+        add('apron','Concrete for apron',`${S.slabT/10} cm thick`,`${fm(aw*v.apron,1)} m² in front of the roller ${g.rollers.length>1?'doors':'door'}`,av,'m³',['concrete','ready mix'],'concrete');}
+      if(v.pump)add('pump','Concrete pump hire','Line pump, half day','',1,'ea',['pump hire','concrete pump'],'concrete pump hire');
+      const lab=[];if(av)lab.push(['x-conc-apron','Concrete apron',2+v.apron*g.rollers.length*1.5,'Form, pour and finish']);
+      return {rows,lab,sum:[v.forms?'formwork':'',v.membrane?'vapour barrier':'','bar chairs',av?`${av} m³ apron`:'',v.pump?'pump':''].filter(Boolean).join(', ')};}},
+  paint:{n:'Painting',sec:'paint',blurb:'Paint areas worked out from the walls, openings and lining, with litres per coat.',
+    fields:[
+      {k:'ext',label:'Paint the outside cladding',type:'chk',auto:g=>['weatherboard','fc'].includes(g.S.wallMat)},
+      {k:'trims',label:'Paint door and window trims',type:'chk',dflt:true},
+      {k:'int',label:'Paint the inside lining',type:'chk',auto:()=>!!((plan.trades||{}).line||{}).on},
+      {k:'coats',label:'Top coats',type:'num',step:1,min:1,dflt:2},
+      {k:'primer',label:'Primer or sealer coat',type:'chk',dflt:true}
+    ],
+    calc(g,v){const rows=[];const add=(id,item,size,detail,qty,unit,match,bq)=>rows.push({id,item,size,detail,qty,unit,match,bq});
+      const ext=v.ext?lastAreas.wall:0;const trimM=v.trims?plan.openings.reduce((a,o)=>a+2*(o.width+o.height)/1000,0):0;const ln=lineAreas(g);const int=v.int?ln.walls+(ln.ceil||0):0;
+      const tins=L=>{const t=Math.ceil(L/10);return t};
+      if(ext){const L=ext*v.coats/14;add('ext','Exterior acrylic','Low sheen',`${fm(ext,1)} m² × ${v.coats} coats at 14 m²/L = ${fm(L,1)} L`,tins(L),'× 10 L',['exterior acrylic','exterior paint'],'exterior acrylic paint 10l');}
+      if(int){const L=int*v.coats/16;add('int','Interior acrylic','Low sheen walls, flat ceiling',`${fm(int,1)} m² × ${v.coats} coats at 16 m²/L = ${fm(L,1)} L`,tins(L),'× 10 L',['interior acrylic','interior paint','ceiling paint'],'interior acrylic paint 10l');}
+      if(v.primer&&(ext+int)>0){const L=(ext+int)/12;add('primer','Primer sealer undercoat','',`${fm(ext+int,1)} m² at 12 m²/L = ${fm(L,1)} L`,tins(L),'× 10 L',['primer','sealer','undercoat'],'primer sealer undercoat 10l');}
+      if(trimM){const L=trimM*0.15*v.coats/14;add('trim','Trim enamel','Semi gloss',`${fm(trimM,1)} m of trims`,Math.max(1,Math.ceil(L/4)),'× 4 L',['enamel','semi gloss','trim paint'],'semi gloss enamel 4l');}
+      if(ext+int+trimM>0)add('sundry','Rollers, brushes, tape and filler','','',1,'lot',['paint sundries','roller'],'paint roller kit');
+      const A=ext+int;const lab=[];if(A+trimM>0)lab.push(['x-paint','Painting',0.05*A+0.12*A*(v.coats+(v.primer?1:0))+0.15*trimM*v.coats+1,'Prep, prime and top coats']);
+      return {rows,lab,sum:A+trimM>0?`${fm(A,1)} m² walls${trimM?`, ${fm(trimM,1)} m trims`:''}, ${v.coats} coats`:'Nothing to paint yet'};}},
+  line:{n:'Insulation and lining',sec:'line',blurb:'Batts, plasterboard and a flat ceiling for studios, offices and lined workshops.',
+    fields:[
+      {k:'wallIns',label:'Wall batts',type:'sel',opts:[['none','None'],['R2.0','R2.0 (70 mm studs)'],['R2.5','R2.5 (90 mm studs)']],auto:g=>g.S.studSize==='70x35'?'R2.0':'R2.5'},
+      {k:'ceiling',label:'Flat ceiling at wall height',type:'chk',dflt:true},
+      {k:'ceilIns',label:'Ceiling batts',type:'sel',opts:[['none','None'],['R3.5','R3.5'],['R4.0','R4.0']],dflt:'R3.5'},
+      {k:'lining',label:'Lining',type:'sel',opts:[['plaster','10 mm plasterboard'],['ply','12 mm plywood'],['none','None']],dflt:'plaster'}
+    ],
+    calc(g,v){const rows=[];const add=(id,item,size,detail,qty,unit,match,bq)=>rows.push({id,item,size,detail,qty,unit,match,bq});const a=lineAreas(g,v);
+      if(v.wallIns!=='none')add('wallins','Wall batts',v.wallIns,`${fm(a.walls,1)} m² of walls, packs cover about 8 m²`,Math.ceil(a.walls*1.05/8),'packs',['wall batt',v.wallIns.toLowerCase(),'batts'],`${v.wallIns} wall batts`);
+      if(v.ceiling){const nj=Math.ceil(g.il/0.6)+1;add('cjoist','Ceiling joists','90x45 MGP10',`${nj} at 60 cm centres, ${fm(g.iw,1)} m span`,Math.ceil(nj*g.iw),'m',['90x45','90 x 45'],'90 x 45mm framing pine');
+        if(v.ceilIns!=='none')add('ceilins','Ceiling batts',v.ceilIns,`${fm(a.ceil,1)} m², packs cover about 7 m²`,Math.ceil(a.ceil*1.05/7),'packs',['ceiling batt',v.ceilIns.toLowerCase(),'batts'],`${v.ceilIns} ceiling batts`);}
+      if(v.lining==='plaster'){add('pbwall','Plasterboard, walls','10 mm, 2400 x 1200',`${fm(a.walls,1)} m² plus 10%`,Math.ceil(a.walls*1.1/2.88),'sheets',['plasterboard','10mm plaster'],'10mm plasterboard 2400 x 1200');
+        if(v.ceiling)add('pbceil','Plasterboard, ceiling','10 mm, 3600 x 1200',`${fm(a.ceil,1)} m² plus 10%`,Math.ceil(a.ceil*1.1/4.32),'sheets',['plasterboard','10mm plaster'],'10mm plasterboard 3600 x 1200');
+        const A=a.walls+(v.ceiling?a.ceil:0);add('setting','Base coat, top coat and tape','',`${fm(A,1)} m² of board`,Math.max(1,Math.ceil(A/25)),'bags',['base coat','topping','plaster compound'],'plaster base coat');
+        if(v.ceiling)add('cornice','Cornice','90 mm cove',`Room perimeter ${fm(g.iper,1)} m`,Math.ceil(g.iper*1.1/4.8),'× 4.8 m',['cornice'],'90mm cove cornice');
+        add('screws','Plasterboard screws and adhesive','','',Math.max(1,Math.ceil(A/40)),'lot',['plasterboard screw','stud adhesive'],'plasterboard screws');}
+      if(v.lining==='ply')add('plywall','Plywood lining','12 mm, 2400 x 1200',`${fm(a.walls,1)} m² plus 10%`,Math.ceil(a.walls*1.1/2.88),'sheets',['12mm ply','plywood'],'12mm plywood 2400 x 1200');
+      const A=a.walls+(v.ceiling?a.ceil:0);const lab=[];
+      const ins=(v.wallIns!=='none'?a.walls:0)+(v.ceiling&&v.ceilIns!=='none'?a.ceil:0);if(ins)lab.push(['x-line-ins','Insulation',0.06*ins,'Fit batts']);
+      if(v.ceiling)lab.push(['x-line-ceil','Ceiling framing',0.15*(Math.ceil(g.il/0.6)+1)+1,'Ceiling joists and trimmers']);
+      if(v.lining==='plaster')lab.push(['x-line-board','Plasterboard, hang and set',0.55*A,'Hang, tape, set and sand']);
+      if(v.lining==='ply')lab.push(['x-line-board','Plywood lining',0.3*a.walls,'Fix and finish edges']);
+      return {rows,lab,sum:[v.wallIns!=='none'?`${v.wallIns} walls`:'',v.ceiling?`ceiling${v.ceilIns!=='none'?' '+v.ceilIns:''}`:'',v.lining!=='none'?(v.lining==='plaster'?'plasterboard':'ply'):''].filter(Boolean).join(', ')||'Nothing added'};}},
+  finish:{n:'Floor finish',sec:'finish',blurb:'Tiles, vinyl plank or epoxy over the inside floor area.',needs:g=>['slab','timber'].includes(g.S.floor)?'':'Needs a slab or timber floor. Change the floor on the Build tab.',
+    fields:[
+      {k:'type',label:'Finish',type:'sel',opts:[['tiles','Tiles'],['vinyl','Hybrid or vinyl plank'],['epoxy','Epoxy floor coating']],auto:g=>g.S.floor==='timber'?'vinyl':'tiles'},
+      {k:'tile',label:'Tile size',type:'sel',opts:[['600','600 x 600'],['450','450 x 450'],['300','300 x 300']],dflt:'600'},
+      {k:'area',label:'Floor area',type:'num',unit:'m²',step:0.5,min:0,auto:g=>Math.round(g.iarea*10)/10},
+      {k:'skirting',label:'Skirting',type:'chk',dflt:true}
+    ],
+    calc(g,v){const rows=[];const add=(id,item,size,detail,qty,unit,match,bq)=>rows.push({id,item,size,detail,qty,unit,match,bq});const A=+v.area||0;const lab=[];
+      if(v.type==='tiles'){const box={600:1.44,450:1.62,300:1.44}[v.tile]||1.44;add('tiles','Floor tiles',`${v.tile} x ${v.tile}`,`${fm(A,1)} m² plus 10% for cuts`,Math.ceil(A*1.1/box),'boxes',['floor tile',`${v.tile}x${v.tile}`,`${v.tile} x ${v.tile}`],`${v.tile} x ${v.tile} floor tile`);
+        add('adhesive','Tile adhesive','20 kg',`About 5 m² per bag`,Math.ceil(A/5),'bags',['tile adhesive'],'tile adhesive 20kg');add('grout','Grout','5 kg','',Math.max(1,Math.ceil(A/15)),'bags',['grout'],'grout 5kg');
+        if(g.S.floor==='timber')add('fcu','Fibre cement underlay','6 mm, 1200 x 900','Needed under tiles on a timber floor',Math.ceil(A*1.08/1.08),'sheets',['tile underlay','fibre cement underlay'],'fibre cement tile underlay');
+        lab.push(['x-finish','Tiling',0.9*A+2,'Set out, lay, grout and seal']);}
+      if(v.type==='vinyl'){add('plank','Hybrid or vinyl plank','',`${fm(A,1)} m² plus 8%`,Math.ceil(A*1.08/2.2),'boxes',['hybrid','vinyl plank','vinyl'],'hybrid flooring');add('underlay','Underlay','',`${fm(A,1)} m²`,Math.ceil(A*1.05),'m²',['underlay'],'flooring underlay');lab.push(['x-finish','Vinyl plank flooring',0.35*A+1,'Underlay, lay and trims']);}
+      if(v.type==='epoxy'){add('epoxy','Epoxy floor kit','Two-pack, covers about 20 m²',`${fm(A,1)} m²`,Math.ceil(A/20),'kits',['epoxy'],'epoxy floor coating');add('etch','Concrete etch and degreaser','','',1,'lot',['etch','degreaser'],'concrete etch');lab.push(['x-finish','Epoxy coating',0.25*A+0.1*A+1,'Grind or etch, prime and coat']);}
+      if(v.skirting)add('skirt','Skirting',v.type==='epoxy'?'Aluminium edge trim':'68 mm primed MDF',`Room perimeter ${fm(g.iper,1)} m`,Math.ceil(g.iper*1.1/5.4),'× 5.4 m',['skirting'],'primed skirting board');
+      return {rows,lab,sum:`${({tiles:'Tiles',vinyl:'Vinyl plank',epoxy:'Epoxy'})[v.type]||''}, ${fm(A,1)} m²`};}}
+};
+function lineAreas(g,v){const L=(plan.trades||{}).line||{};const ceiling=v?v.ceiling:(L.on&&tradeVals('line').ceiling);const H=g.D.H;
+  const ops=plan.openings.reduce((a,o)=>a+o.width*o.height/1e6,0);return {walls:Math.max(0,g.iper*H-ops),ceil:ceiling?g.iarea:0};}
+function tradeVals(id){const T=TRADES[id];const st=(plan.trades||{})[id]||{};const g=geo();const v={};
+  T.fields.forEach(f=>{const o=st[f.k];if(o!==undefined&&o!==null&&o!=='')v[f.k]=o;else v[f.k]=f.auto?f.auto(g):f.dflt;if(f.type==='num')v[f.k]=Math.max(f.min||0,+v[f.k]||0);});return v;}
+function tradeOn(id){return !!(((plan.trades||{})[id]||{}).on)&&!(TRADES[id].needs&&TRADES[id].needs(geo()));}
+function tradeResult(id){return TRADES[id].calc(geo(),tradeVals(id));}
+const TU={'m':'$/m','ea':'$ ea','m²':'$/m²','m³':'$/m³'};
+function tradeRows(){const out=[];Object.keys(TRADES).forEach(id=>{if(!tradeOn(id))return;const T=TRADES[id];const res=tradeResult(id);
+  res.rows.forEach(r=>{if(!(r.qty>0))return;const pu=TU[r.unit]||'$ ea';out.push({key:`x:${id}:${r.id}`,group:T.n,sec:T.sec,item:r.item,size:r.size||'',detail:r.detail||'',order:TU[r.unit]?`${fm(r.qty,r.unit==='m³'?1:0)} ${r.unit}`:`${r.qty} ${r.unit}`,buy:r.qty,pu,bq:r.bq,match:r.match});});});return out;}
+function tradeLabour(){const out=[];Object.keys(TRADES).forEach(id=>{if(!tradeOn(id))return;const T=TRADES[id];tradeResult(id).lab.forEach(([k,n,v,note])=>out.push({k,n,v,note,sec:T.sec}));});return out;}
+/* price book: a business's own Swiftscope material prices, matched by name */
+let PRICEBOOK=[];
+function pbPrice(r){if(!PRICEBOOK.length)return null;const keys=(r.match||[]).map(s=>s.toLowerCase());if(!keys.length)return null;
+  for(const k of keys){const hit=PRICEBOOK.find(p=>p.l.includes(k));if(hit)return hit;}return null;}
+function priceOf(r){const v=plan.prices[r.key];if(v!==undefined&&v!==null&&v!==''&&isFinite(v))return +v;return r.pb?r.pb.p:0;}
+/* scope + layer defaults from the business's trades */
+const TRADE_DEFAULTS={electrician:{layers:['elec'],scope:['elec']},plumber:{layers:['plumb'],scope:['plumb']},roofer:{layers:['roofx'],scope:['roof']},painter:{layers:['paint'],scope:['paint']},tiler:{layers:['finish'],scope:['finish']},concreter:{layers:['concx'],scope:['floor']},landscaper:{layers:[],scope:['floor']}};
+function applyTradeDefaults(trades){const t=(trades||[]).filter(x=>TRADE_DEFAULTS[x]);if(!t.length)return;
+  const builds=(trades||[]).some(x=>['carpenter','builder','custom'].includes(x));plan.trades=plan.trades||{};const scope={};
+  Object.keys(SECTIONS).forEach(s=>scope[s]=builds);t.forEach(x=>{TRADE_DEFAULTS[x].layers.forEach(l=>{plan.trades[l]=Object.assign({},plan.trades[l],{on:true});});TRADE_DEFAULTS[x].scope.forEach(s=>scope[s]=true);});plan.scope=scope;}
+/* trades tab */
+function renderTradesTab(){const g=geo();let h=`<p class="note" style="margin-top:4px">Tick a trade to add its takeoff from this model. Quantities fill in automatically and you can change any of them. Each trade’s materials and labour show in Materials and go into the quote.</p>`;
+  Object.entries(TRADES).forEach(([id,T])=>{const st=(plan.trades||{})[id]||{};const need=T.needs?T.needs(g):'';const on=!!st.on;
+    h+=`<div class="card trade" data-trade="${id}"><label class="row" style="padding:0"><span><b>${T.n}</b><small style="display:block;color:var(--muted);font-size:12px">${on&&!need?esc(tradeResult(id).sum):esc(T.blurb)}</small></span><input type="checkbox" data-ton="${id}" ${on?'checked':''} aria-label="Include ${esc(T.n)}"></label>`;
+    if(on&&need)h+=`<p class="warn">${esc(need)}</p>`;
+    if(on&&!need){const v=tradeVals(id);h+=T.fields.map(f=>{const ov=st[f.k]!==undefined&&st[f.k]!==null&&st[f.k]!=='';const tag=f.auto?(ov?`<button class="x" data-treset="${id}:${f.k}" title="Back to the worked-out value" style="font-size:11px;width:auto;padding:0 6px">auto</button>`:'<em style="font-size:11px;color:var(--muted);font-style:normal">auto</em>'):'';
+      if(f.type==='num')return `<label class="row"><span>${f.label} ${tag}</span><span class="inp"><input type="number" data-tf="${id}:${f.k}" value="${v[f.k]}" step="${f.step||1}" min="${f.min||0}" inputmode="decimal">${f.unit?`<em>${f.unit}</em>`:''}</span></label>`;
+      if(f.type==='sel')return `<label class="row"><span>${f.label} ${tag}</span><select data-tf="${id}:${f.k}">${f.opts.map(([ov2,l])=>`<option value="${ov2}" ${String(v[f.k])===String(ov2)?'selected':''}>${l}</option>`).join('')}</select></label>`;
+      return `<label class="row"><span>${f.label} ${tag}</span><input type="checkbox" data-tf="${id}:${f.k}" ${v[f.k]?'checked':''}></label>`;}).join('');}
+    h+='</div>';});
+  $('#tab-trades').innerHTML=h;}
+function afterTrades(rerender){if(!plan.scope)plan.scope={};rebuildServices();if(rerender)renderTradesTab();scheduleMaterials();save();}
+$('#tab-trades').addEventListener('change',e=>{const t=e.target;plan.trades=plan.trades||{};
+  if(t.dataset.ton){const id=t.dataset.ton;plan.trades[id]=Object.assign({},plan.trades[id],{on:t.checked});if(t.checked){plan.scope=plan.scope||{};plan.scope[TRADES[id].sec]=true;}afterTrades(true);return;}
+  if(t.dataset.tf){const [id,k]=t.dataset.tf.split(':');const f=TRADES[id].fields.find(x=>x.k===k);let v;if(f.type==='num'){v=parseFloat(t.value);if(!isFinite(v))return;v=Math.max(f.min||0,v);}else if(f.type==='chk')v=t.checked;else{v=t.value;if(f.opts&&typeof f.opts[0][0]==='number')v=Number(v);}
+    plan.trades[id]=Object.assign({},plan.trades[id]);plan.trades[id][k]=v;afterTrades(true);}});
+$('#tab-trades').addEventListener('click',e=>{const r=e.target.closest('[data-treset]');if(!r)return;e.preventDefault();const [id,k]=r.dataset.treset.split(':');if(plan.trades&&plan.trades[id])delete plan.trades[id][k];afterTrades(true);});
+/* 3D markers for services */
+function rebuildServices(){const G=L.services;if(!G)return;clearGroup(G);const g=geo();const D=g.D;const lift=floorLift();
+  const mk=(c,e)=>new THREE.MeshStandardMaterial({color:c,roughness:0.5,metalness:0.1,emissive:e||0x000000,emissiveIntensity:e?0.6:0});
+  if(tradeOn('elec')){const v=tradeVals('elec');const WD=wallDefs(D);const white=mk(0xf4f4f0),glow=mk(0xfffbe6,0xfff2b0),board=mk(0x9aa3a8);
+    const cand=[];Object.entries(WD).forEach(([key,wd])=>{const ops=resolveOps(D,wd,worldKeyOf(key));for(let s=wd.s0+0.4;s<=wd.s1-0.4;s+=0.6){if(ops.some(o=>s>o.a-0.2&&s<o.b+0.2))continue;cand.push([key,s]);}});
+    const n=Math.min(v.gpo,cand.length);for(let i=0;i<n;i++){const [key,s]=cand[Math.floor((i+0.5)*cand.length/n)];const wg=wallGroup(G,WD[key]);addBox(wg,s,0.3,-(D.d+0.02),0.14,0.08,0.035,white,false).userData.svc='gpo';}
+    const rows=D.W>4.5?2:1,per=Math.ceil(v.lights/rows);let left=v.lights;for(let r=0;r<rows&&left>0;r++){const k=Math.min(per,left);left-=k;const x=rows===2?(r?D.W/4:-D.W/4):0;for(let j=0;j<k;j++){const z=-D.L/2+(j+0.5)*D.L/k;addBox(G,x,D.H-0.06,z,0.08,0.05,1.2,glow,false).userData.svc='light';}}
+    const pa=plan.openings.find(o=>o.type==='pa');let bk='front',bs=WD.front.s0+0.5;if(pa){const lk=localKeyOf(pa.wall);const ops=resolveOps(D,WD[lk],pa.wall);const op=ops.find(o=>o.id===pa.id);if(op){bk=lk;bs=op.b+0.35<WD[lk].s1-0.2?op.b+0.35:op.a-0.35;}}
+    if(v.board==='sub'){const wg=wallGroup(G,WD[bk]);addBox(wg,bs,1.5,-(D.d+0.06),0.36,0.48,0.1,board,false).userData.svc='board';}
+    if(v.outdoor>0){g.doors.slice(0,v.outdoor).forEach(o=>{const lk=localKeyOf(o.wall);const op=resolveOps(D,WD[lk],o.wall).find(x=>x.id===o.id);if(!op)return;const wg=wallGroup(G,WD[lk]);addBox(wg,(op.a+op.b)/2,Math.min(op.h+0.25,hAt(D,WD[lk],(op.a+op.b)/2)-0.15),0.06,0.22,0.12,0.1,glow,false).userData.svc='out';});}}
+  if(tradeOn('plumb')){const v=tradeVals('plumb');const dpm=mk(new THREE.Color(v.dpType==='round'?'#e8e8e4':(COLORBOND[plan.shed.roofColor]||'#323233')));
+    const xs=D.roof==='gable'?[-D.W/2-0.05,D.W/2+0.05]:[D.W/2+0.05];const spots=[];xs.forEach(x=>[-1,1].forEach(sz=>spots.push([x,sz*(D.L/2-0.12)])));
+    const xh=x=>topHeight(D,x>0?D.W/2:-D.W/2);for(let i=0;i<Math.min(v.dp,24);i++){let x,z;if(i<spots.length){[x,z]=spots[i];}else{const k=i-spots.length;x=xs[k%xs.length];z=-D.L/2+((Math.floor(k/xs.length)+1)/(Math.ceil((v.dp-spots.length)/xs.length)+1))*D.L;}
+      const h=xh(x)+lift;const m=new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.045,h,12),dpm);m.position.set(x,h/2-lift,z);m.userData.svc='dp';G.add(m);}
+    const T=TANKS[+v.tank];if(T){const [dia,ht]=T;const tm=mk(new THREE.Color(COLORBOND[plan.shed.wallColor]||'#E4E2D5'));const x=xs[xs.length-1]+(xs[xs.length-1]>0?1:-1)*(dia/2+0.35);const m=new THREE.Mesh(new THREE.CylinderGeometry(dia/2,dia/2,ht,28),tm);m.position.set(x,ht/2-lift,-D.L/2+dia/2+0.2);m.castShadow=true;m.userData.svc='tank';G.add(m);}}
+  if(tradeOn('concx')){const v=tradeVals('concx');if(v.apron>0){const WD=wallDefs(D);const cm=mk(0xbdb9b1);g.rollers.forEach(o=>{const lk=localKeyOf(o.wall);const op=resolveOps(D,WD[lk],o.wall).find(x=>x.id===o.id);if(!op)return;const wg=wallGroup(G,WD[lk]);addBox(wg,(op.a+op.b)/2,-0.05-lift,0.05+v.apron/2,op.b-op.a+0.6,0.1,v.apron,cm,false);});}}
+  if(tradeOn('roofx')){const v=tradeVals('roofx');if(v.whirly>0){const wm=mk(0xc4c9cc);for(let i=0;i<Math.min(v.whirly,8);i++){const z=-D.L/2+(i+1)*D.L/(v.whirly+1);const x=D.roof==='gable'?0:-D.W/4;const y=topHeight(D,x)+0.18;const m=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.17,0.3,16),wm);m.position.set(x,y+0.08,z);G.add(m);}}}
+  applyLayers();}
+/* services sheet for the plans */
+function servicesHTML(){const ids=Object.keys(TRADES).filter(tradeOn);if(!ids.length)return '';
+  let h=`<section class="sheet"><h2>7. Services and trades</h2><p class="sm2">Takeoffs from the model for each trade included in this design. Check final positions on site.</p>`;
+  if(tradeOn('elec')||tradeOn('plumb'))h+=servicesPlanSVG();
+  ids.forEach(id=>{const T=TRADES[id];const res=tradeResult(id);h+=`<h3 class="eh">${T.n}</h3><div class="tblwrap"><table class="tbl"><tr><th>Item</th><th>Size</th><th>Quantity</th><th>Notes</th></tr>${res.rows.filter(r=>r.qty>0).map(r=>`<tr><td>${esc(r.item)}</td><td>${esc(r.size||'')}</td><td>${r.qty} ${esc(r.unit)}</td><td>${esc(r.detail||'')}</td></tr>`).join('')}</table></div>`;});
+  return h+'</section>';}
+function servicesPlanSVG(){const S=plan.shed,D=dims();const W=S.width/1000,Ln=S.length/1000;const sc=Math.min(640/W,420/Ln),m=80,vw=W*sc+2*m,vh=Ln*sc+2*m+20;const X=x=>m+(x+W/2)*sc,Y=z=>m+(z+Ln/2)*sc;
+  let gsvg=`<rect x="${X(-W/2)}" y="${Y(-Ln/2)}" width="${W*sc}" height="${Ln*sc}" class="wl"/><rect x="${X(-W/2+D.d)}" y="${Y(-Ln/2+D.d)}" width="${(W-2*D.d)*sc}" height="${(Ln-2*D.d)*sc}" class="fl"/>`;
+  const pts=[];shedRoot.updateMatrixWorld(true);
+  L.services.traverse(o=>{if(!o.isMesh||!o.userData.svc)return;const p=new THREE.Vector3();o.getWorldPosition(p);pts.push({x:p.x,z:p.z,kind:o.userData.svc});});
+  const sym={gpo:(x,y)=>`<circle cx="${x}" cy="${y}" r="5" class="sv"/><line x1="${x-3}" y1="${y}" x2="${x+3}" y2="${y}" class="sv"/>`,light:(x,y)=>`<rect x="${x-4}" y="${y-12}" width="8" height="24" class="svl"/>`,board:(x,y)=>`<rect x="${x-8}" y="${y-6}" width="16" height="12" class="svb"/><text x="${x}" y="${y+3}" text-anchor="middle" class="sm">DB</text>`,dp:(x,y)=>`<circle cx="${x}" cy="${y}" r="5" class="svd"/>`,tank:(x,y)=>`<circle cx="${x}" cy="${y}" r="16" class="svd"/><text x="${x}" y="${y+4}" text-anchor="middle" class="sm">Tank</text>`,out:(x,y)=>`<circle cx="${x}" cy="${y}" r="5" class="svl"/>`,whirly:()=>'',apron:()=>''};
+  pts.forEach(p=>{gsvg+=(sym[p.kind]||sym.gpo)(X(p.x),Y(p.z));});
+  gsvg+=`<text x="${X(0)}" y="${vh-12}" text-anchor="middle" class="lbl">Front</text>`;
+  return svgWrap(vw,vh+20,gsvg)+`<p class="sm2">Circles with a line are double power points, bars are LED battens, DB is the sub-board, filled circles are downpipes. Positions are indicative.</p>`;}
+
 /* ---------- SwiftScope bridge ---------- */
 const PU={'$/m':'m','$ ea':'ea','$/m³':'m³','$/m²':'m²'};
 function quoteLines(){const rows=computeMaterials();const out=[];let sub=0;
-  rows.forEach(r=>{const p=+plan.prices[r.key]||0;const qty=Math.round(r.buy*100)/100;if(!(qty>0))return;const tot=Math.round(p*qty*100)/100;sub+=tot;
+  rows.forEach(r=>{if(!inScope(r.sec))return;const p=priceOf(r);const qty=Math.round(r.buy*100)/100;if(!(qty>0))return;const tot=Math.round(p*qty*100)/100;sub+=tot;
     out.push({key:r.key,group:r.group,label:[r.item,r.size].filter(Boolean).join(', '),quantity:qty,unit:PU[r.pu]||'ea',unitCost:Math.round(p*100)/100,totalCost:tot});});
   const w=+plan.waste||0;if(w>0&&sub>0)out.push({key:'waste',group:'Allowances',label:`Waste and fixings allowance (${w}%)`,quantity:1,unit:'lot',unitCost:Math.round(sub*w)/100,totalCost:Math.round(sub*w)/100});
   return out;}
 function summary(){const S=plan.shed,D=dims();const st=labourStages();const lines=quoteLines();const mat=lines.reduce((a,l)=>a+l.totalCost,0);const hrs=st.reduce((a,s)=>a+s.hrs,0);
   return {width:S.width,length:S.length,height:S.height,roof:S.roof,floor:S.floor,area:Math.round(D.W*D.L*100)/100,openings:plan.openings.length,
     description:`${S.width/10} × ${S.length/10} cm ${({gable:'gable',skillion:'skillion',flat:'flat'})[S.roof]} roof, ${(WALL_MATS[S.wallMat]||WALL_MATS.corr).n.toLowerCase()} walls, ${(FLOORS[S.floor]||'').toLowerCase()}`,
-    materialsTotal:Math.round(mat*100)/100,labourHours:hrs,labourRate:labourRate(),unpriced:lines.filter(l=>!l.unitCost).length,
+    materialsTotal:Math.round(mat*100)/100,labourHours:hrs,labourRate:labourRate(),unpriced:lines.filter(l=>!l.unitCost).length,trades:Object.keys(TRADES).filter(tradeOn).map(id=>TRADES[id].n),sections:Object.keys(SECTIONS).filter(inScope).map(s=>SECTIONS[s]),
     labour:st.map(s=>({key:s.k,label:s.n,hours:s.hrs})),lines};}
 function postPlan(){try{window.parent.postMessage({source:'ss-planner',type:'change',plan:Object.assign({},plan,{selected:null}),summary:summary()},location.origin);}catch(e){}}
 if(EMBED){
   $('#btnFile').hidden=true;
   window.addEventListener('message',e=>{
     if(e.origin!==location.origin||e.source!==window.parent)return;const d=e.data||{};if(d.target!=='ss-planner')return;
-    if(d.type==='load'){if(d.meta)META=d.meta;if(Array.isArray(d.templates))BIZ_TEMPLATES=d.templates;if(d.settings)SETTINGS=Object.assign(SETTINGS,d.settings);
-      plan=d.plan&&d.plan.shed?migrate(d.plan):defaultPlan();if(d.prices&&!Object.keys(plan.prices).length)plan.prices=Object.assign({},d.prices);
+    if(d.type==='load'){if(d.meta)META=d.meta;if(Array.isArray(d.templates))BIZ_TEMPLATES=d.templates;
+      PRICEBOOK=(Array.isArray(d.pricebook)?d.pricebook:[]).map(x=>({l:String(x.label||'').toLowerCase(),n:String(x.label||''),p:+x.unit_cost||0})).filter(x=>x.l&&x.p>0);if(d.settings)SETTINGS=Object.assign(SETTINGS,d.settings);
+      plan=d.plan&&d.plan.shed?migrate(d.plan):defaultPlan();if(!d.plan||!d.plan.shed)applyTradeDefaults(d.trades);if(d.prices&&!Object.keys(plan.prices).length)plan.prices=Object.assign({},d.prices);
       plan.selected=null;refreshAll();
       if(!d.plan||!d.plan.shed){computeMaterials().forEach(r=>{const bp=bunningsFor(r);if(bp.p&&plan.prices[r.key]===undefined)plan.prices[r.key]=bp.p;});if($('#tab-materials').classList.contains('on'))renderMaterials();postPlan();}}
     if(d.type==='meta'){META=Object.assign(META,d.meta||{});}
