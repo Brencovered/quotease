@@ -75,11 +75,9 @@ export async function POST(req: NextRequest) {
       const result = await generateObject({
         model,
         schema: DrawingSchema,
+        // AI SDK 7 rejects role "system" inside messages; it goes in instructions.
+        instructions: getTradeSystemPrompt(trade) + (instructions ? `\n\nAdditional instructions: ${instructions}` : ""),
         messages: [
-          {
-            role: "system",
-            content: getTradeSystemPrompt(trade) + (instructions ? `\n\nAdditional instructions: ${instructions}` : ""),
-          },
           {
             role: "user",
             content: [
