@@ -8,11 +8,14 @@ import { getActiveBusinessId } from "@/lib/team";
 
 type ClientOption = { id: string; name: string | null; billing_address?: string | null };
 
-export default function NewStructureButton({ clients }: { clients: ClientOption[] }) {
+type TemplateOption = { id: string; name: string };
+
+export default function NewStructureButton({ clients, templates = [] }: { clients: ClientOption[]; templates?: TemplateOption[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [clientId, setClientId] = useState("");
+  const [templateId, setTemplateId] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -29,9 +32,31 @@ export default function NewStructureButton({ clients }: { clients: ClientOption[
     const businessId = await getActiveBusinessId(supabase, user.id);
     const client = clients.find((c) => c.id === clientId);
     const fallback = client?.name ? `${client.name} build` : "New build";
+    let plan: Record<string, unknown> = {};
+    let summary: Record<string, unknown> = {};
+    if (templateId) {
+      const { data: tpl } = await supabase
+        .from("structure_plans")
+        .select("plan, summary, materials_total, labour_hours")
+        .eq("id", templateId)
+        .eq("profile_id", businessId)
+        .maybeSingle();
+      if (tpl) {
+        plan = (tpl.plan as Record<string, unknown>) ?? {};
+        summary = (tpl.summary as Record<string, unknown>) ?? {};
+      }
+    }
     const { data, error } = await supabase
       .from("structure_plans")
-      .insert({ profile_id: businessId, client_id: clientId || null, name: name.trim() || fallback })
+      .insert({
+        profile_id: businessId,
+        client_id: clientId || null,
+        name: name.trim() || fallback,
+        plan,
+        summary,
+        materials_total: Number(summary.materialsTotal) || 0,
+        labour_hours: Number(summary.labourHours) || 0,
+      })
       .select("id")
       .single();
     if (error || !data) {
@@ -73,7 +98,20 @@ export default function NewStructureButton({ clients }: { clients: ClientOption[
                 </option>
               ))}
             </select>
-            <p className="text-[12px] text-[var(--ink-faint)] mb-5">You can link a client later. Prices from your last build carry over.</p>
+            <p className="text-[12px] text-[var(--ink-faint)] mb-4">You can link a client later. Prices from your last build carry over.</p>
+            {templates.length > 0 && (
+              <>
+                <label className="block text-[12.5px] font-bold text-[var(--ink-soft)] mb-1">Start from</label>
+                <select className="app-field mb-5" value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
+                  <option value="">Blank, describe it or pick a starter</option>
+                  {templates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
             {err && <p className="text-[13px] text-red-600 mb-3">{err}</p>}
             <button type="button" className="btn-primary" disabled={busy} onClick={create}>
               {busy ? "Creating..." : "Open the planner"}

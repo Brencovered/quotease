@@ -18,13 +18,21 @@ export default async function StructuresPage() {
   if (!user) redirect("/login");
   const businessId = await getActiveBusinessId(supabase, user.id);
 
-  const [{ data: rows, error }, { data: clients }] = await Promise.all([
+  const [{ data: rows, error }, { data: templateRows }, { data: clients }] = await Promise.all([
     supabase
       .from("structure_plans")
       .select("id, name, summary, materials_total, labour_hours, updated_at, quote_id, clients(name)")
       .eq("profile_id", businessId)
+      .eq("is_template", false)
       .order("updated_at", { ascending: false })
       .range(0, 199),
+    supabase
+      .from("structure_plans")
+      .select("id, name, summary")
+      .eq("profile_id", businessId)
+      .eq("is_template", true)
+      .order("name")
+      .range(0, 99),
     supabase.from("clients").select("id, name, billing_address").eq("profile_id", businessId).order("name").range(0, 999),
   ]);
 
@@ -43,6 +51,12 @@ export default async function StructuresPage() {
     };
   });
 
+  const templates = (templateRows ?? []).map((t) => ({
+    id: t.id as string,
+    name: t.name as string,
+    description: parseSummary(t.summary).description ?? null,
+  }));
+
   return (
     <>
       <AppHeader />
@@ -51,10 +65,10 @@ export default async function StructuresPage() {
           <div>
             <h1 className="font-display text-[26px] text-[var(--ink)]">Build planner</h1>
             <p className="text-[13.5px] text-[var(--ink-faint)] mt-0.5 max-w-[60ch]">
-              Design a shed, garage, workshop or studio in 3D. Get the framing, cut list, materials and labour, then turn it into a quote and hand the client real plans.
+              Describe any framed build or start from one of your templates. Get the 3D model, framing, cut list, materials and labour, then turn it into a quote and hand the client real plans.
             </p>
           </div>
-          <NewStructureButton clients={clients ?? []} />
+          <NewStructureButton clients={clients ?? []} templates={templates} />
         </div>
 
         {error && (
@@ -68,7 +82,7 @@ export default async function StructuresPage() {
             <Warehouse size={36} className="text-[var(--amber-deep)] mb-3" />
             <p className="font-bold text-[16px] text-[var(--ink)]">No builds yet</p>
             <p className="text-[13.5px] text-[var(--ink-faint)] mt-1 max-w-[44ch]">
-              Start from a template like a single garage or backyard studio, change it to suit the site, and the materials list and labour update as you go.
+              Type or say what you are building, like a 6 x 9 m workshop with a 3 m roller door. Change anything in 3D and the materials and labour update as you go.
             </p>
           </div>
         ) : (
@@ -95,6 +109,28 @@ export default async function StructuresPage() {
               </li>
             ))}
           </ul>
+        )}
+
+        {templates.length > 0 && (
+          <section className="mt-10">
+            <h2 className="font-display text-[19px] text-[var(--ink)] mb-1">Your templates</h2>
+            <p className="text-[13px] text-[var(--ink-faint)] mb-3">
+              Saved from the planner. Pick one when you start a new build, or open it here to change the template itself.
+            </p>
+            <ul className="flex flex-wrap gap-2">
+              {templates.map((t) => (
+                <li key={t.id}>
+                  <Link
+                    href={`/structures/${t.id}`}
+                    className="inline-flex flex-col border border-[var(--line)] bg-[var(--surface)] rounded-xl px-3.5 py-2 hover:border-[var(--ink-faint)]"
+                  >
+                    <span className="text-[13.5px] font-bold text-[var(--ink)]">{t.name}</span>
+                    {t.description && <span className="text-[11.5px] text-[var(--ink-faint)]">{t.description}</span>}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
       </div>
     </>
