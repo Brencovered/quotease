@@ -833,9 +833,9 @@ async function detectPlan(){const U=doc.underlay;if(!U.src)return null;const c=a
   for(let y=0;y<h;y+=2){let r=0;for(let x=0;x<=w;x++){if(x<w&&dark[y*w+x])r++;else{if(r>=2&&r<=maxT)runs.push(r);r=0;}}}
   if(runs.length<40)return null;runs.sort((a,b)=>a-b);const T95=runs[Math.floor(runs.length*0.95)];
   const same=(p,q)=>p.axis===q.axis&&Math.abs(p.c-q.c)<=Math.max(p.t,q.t)/2+1;
-  const pass1=k=>{
+  const pass1=(k,T0)=>{
   const M=boxFilter(boxFilter(dark,w,h,k,'min'),w,h,k,'max');
-  const Lmin=Math.max(4*k,Math.round(Math.max(w,h)*0.025));
+  const Lmin=T0?Math.max(4*k,Math.round(Math.min(Math.max(w,h)*0.025,T0*2.5))):Math.max(4*k,Math.round(Math.max(w,h)*0.025));
   let S=[...findBands(M,w,h,true,Lmin,maxT),...findBands(M,w,h,false,Lmin,maxT)];
   if(S.length<4)return null;
   // merge duplicates on the same line
@@ -845,14 +845,17 @@ async function detectPlan(){const U=doc.underlay;if(!U.src)return null;const c=a
   const maxLen=Math.max(...S.map(s=>s.b-s.a));const tk=S.filter(s=>s.b-s.a>=0.45*maxLen).map(s=>s.t).sort((a,b)=>a-b);const Text=tk[Math.floor(tk.length/2)]||T95;
   return {S,Text,Lmin,k};};
   // Site features (trees, text, hatching) inflate the dark-run estimate, so redo the clean-up at the wall thickness actually found.
-  let P=pass1(Math.max(2,Math.round(T95*0.32)));if(!P)return null;const k2=Math.max(2,Math.round(P.Text*0.32));if(P.k>k2+1){const P2=pass1(k2);if(P2)P=P2;}
-  let S=P.S;const Text=P.Text,Lmin=P.Lmin,k=P.k;
+  // The first pass's thickness is the outside wall; a second pass at that thickness keeps thin internal walls and short corner stubs.
+  let P=pass1(Math.max(2,Math.round(T95*0.32)));if(!P)return null;const Text=P.Text;const k2=Math.max(2,Math.round(Text*0.32));if(P.k>k2+1){const P2=pass1(k2,Text);if(P2)P=P2;}
+  let S=P.S;const Lmin=P.Lmin,k=P.k;
   const mmPx=Math.min(60,Math.max(4,230/Text));S=S.filter(s=>s.t<=Text*2.2);
   const lineInfo=(sg,a,b)=>{let one=0,both=0,tot=0;const half=Math.ceil(sg.t/2)+2;for(let u=Math.ceil(a);u<=b;u++){tot++;let lo=false,hi=false;for(let d=-half;d<=half;d++){const cc=Math.round(sg.c)+d;const x=sg.axis==='h'?u:cc,y=sg.axis==='h'?cc:u;if(x>=0&&y>=0&&x<w&&y<h&&ink[y*w+x]){if(d<=0)lo=true;if(d>=0)hi=true;}}if(lo||hi)one++;if(lo&&hi)both++;}return tot?{one:one/tot,both:both/tot}:{one:0,both:0};};
+  // A wall line runs the full extent of its collinear pieces (windows break it into pieces), so test against that extent.
+  // Inside the house there is a parallel wall on both sides of the gap; an outside wall has open ground on one side.
   const exterior=(sg,a,b)=>{const m=(a+b)/2;let lo=false,hi=false;S.forEach(o=>{if(!o||o===sg||o.axis!==sg.axis)return;if(Math.abs(o.c-sg.c)<=Text*2)return;if(o.a-Text>m||o.b+Text<m)return;if(o.c<sg.c)lo=true;else hi=true;});return !(lo&&hi);};
   const okGap=(sg,a,b,single)=>{const g=b-a;if(g>Gdoor&&!exterior(sg,a,b))return {ok:false,line:false};const L=lineInfo(sg,a,b);if(L.both>0.5&&g<=Gwin)return {ok:true,line:true};if(single&&L.one>0.5&&g<=Gmid)return {ok:true,line:true};return {ok:g<=Gdoor,line:false};};
   // join collinear pieces across door and window gaps
-  const gaps=[];const Gdoor=1600/mmPx,Gwin=5600/mmPx,Gmid=3200/mmPx;
+  const gaps=[];const Gdoor=1250/mmPx,Gwin=4000/mmPx,Gmid=3200/mmPx;
   ['h','v'].forEach(ax=>{const L=S.filter(s=>s.axis===ax).sort((p,q)=>p.a-q.a||p.c-q.c);for(let i=0;i<L.length;i++){const p=L[i];if(!p)continue;for(let j=i+1;j<L.length;j++){const q=L[j];if(!q||!same(p,q))continue;const g=q.a-p.b;if(g<=0){if(q.b>p.b)p.b=q.b;L[j]=null;continue;}const G=okGap(p,p.b,q.a,true);if(G.ok){gaps.push({axis:ax,c:(p.c+q.c)/2,a:p.b,b:q.a,line:G.line});p.b=Math.max(p.b,q.b);p.t=Math.max(p.t,q.t);L[j]=null;}}}
     S=S.filter(s=>s.axis!==ax).concat(L.filter(Boolean));});
   // run wall ends across window and door gaps into the wall they meet
@@ -873,9 +876,11 @@ async function detectPlan(){const U=doc.underlay;if(!U.src)return null;const c=a
   const onOutline=pt=>{for(let i=0;i<centre.length;i++){const a=centre[i],b=centre[(i+1)%centre.length];if(dist(pt,lerp(a,b,projT(pt,a,b)))<=Text*0.8+k)return true;}return false;};
   const outline=offsetOut(centre,Text/2).map(p=>[p[0]*sx,p[1]*sy]);
   const conn=(pt,self)=>segsD.some(o=>o!==self&&dist(pt,lerp(o.a,o.b,projT(pt,o.a,o.b)))<=eps*2);
-  const walls=segsD.filter(s=>!(onOutline(s.a)&&onOutline(s.b)&&onOutline(lerp(s.a,s.b,0.5)))).filter(s=>conn(s.a,s)||conn(s.b,s)).filter(s=>dist(s.a,s.b)*mmPx>=900||(conn(s.a,s)&&conn(s.b,s))).map(s=>({id:uid(),a:[s.a[0]*sx,s.a[1]*sy],b:[s.b[0]*sx,s.b[1]*sy]}));
+  // A line counts as an internal wall when some of it runs inside the house (it may share the rest with the outline); lines wholly on the outline or outside it (sheds, fences) go.
+  const inner=segsD.filter(s=>{const L=dist(s.a,s.b);const n=Math.max(2,Math.ceil(L/2));let run=0,best=0;for(let i=0;i<=n;i++){const pt=lerp(s.a,s.b,i/n);if(!onOutline(pt)&&pip(pt,centre)){run++;best=Math.max(best,run);}else run=0;}return best*L/n>=Text;});
+  const walls=inner.filter(s=>conn(s.a,s)||conn(s.b,s)).filter(s=>dist(s.a,s.b)*mmPx>=900||(conn(s.a,s)&&conn(s.b,s))).map(s=>({id:uid(),a:[s.a[0]*sx,s.a[1]*sy],b:[s.b[0]*sx,s.b[1]*sy]}));
   // run internal wall ends out onto the outline (outline is the outside face)
-  const snapOut=(pt,other)=>{let best=null;for(let i=0;i<outline.length;i++){const a=outline[i],b=outline[(i+1)%outline.length];const ux=other[0]-pt[0],uy=other[1]-pt[1];const L=Math.hypot(ux,uy)||1;const X=segX([pt[0],pt[1]],[pt[0]-ux/L*Text*1.6*sx,pt[1]-uy/L*Text*1.6*sy],a,b);if(X){const q=lerp(a,b,X[1]);const d=dist(q,pt);if(!best||d<best.d)best={q,d};}}return best?best.q:pt;};
+  const snapOut=(pt,other)=>{let best=null;for(let i=0;i<outline.length;i++){const a=outline[i],b=outline[(i+1)%outline.length];const ux=other[0]-pt[0],uy=other[1]-pt[1];const L=Math.hypot(ux,uy)||1;const X=segX([pt[0],pt[1]],[pt[0]-ux/L*(Text*2.2+k)*sx,pt[1]-uy/L*(Text*2.2+k)*sy],a,b);if(X){const q=lerp(a,b,X[1]);const d=dist(q,pt);if(!best||d<best.d)best={q,d};}}return best?best.q:pt;};
   walls.forEach(wl=>{const a=wl.a,b=wl.b;wl.a=snapOut(a,b);wl.b=snapOut(b,a);});
   const ops=gaps.map(g=>{const mid=g.axis==='h'?[(g.a+g.b)/2,g.c]:[g.c,(g.a+g.b)/2];const ext=onOutline(mid);const wpx=g.b-g.a;const wmm=wpx*mmPx;
     const type=ext?(g.line?(wmm>=2200?'garage':'window'):(wmm>1300?'slider':'door')):'door';return {type,mid:[mid[0]*sx,mid[1]*sy],wpx:wpx*(g.axis==='h'?sx:sy),wmm};}).filter(o=>o.wmm>=500);
