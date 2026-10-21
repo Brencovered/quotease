@@ -5,17 +5,18 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 import { PostHogProvider } from "@/components/PostHogProvider";
 import DeferredThirdParties from "@/components/DeferredThirdParties";
-import BrandFonts from "@/components/BrandFonts";
+import BrandFonts, { BRAND_DISPLAY_FONT_WARMUP } from "@/components/BrandFonts";
 import OrganizationSchema from "@/components/seo/OrganizationSchema";
 import { WebSiteSchema } from "@/components/seo/StructuredData";
 
 // next/font/google self-hosts the files (no runtime Google Fonts request).
 // preload is off so Next does not emit <link rel="preload" as="font">.
-// The families are still not applied until html.fonts-ready, which
-// BrandFonts adds from the load event. Chrome waits for an in-use
-// @font-face download before firing window.load, including with
-// font-display: swap, so a stalled woff2 otherwise holds the tab spinner
-// after the page has already painted.
+// Inter is applied from html.fonts-ready, which BrandFonts adds on the
+// load event. Anton is applied by the body warmup script once its latin
+// file is cached, so the headline does not stay on the fallback face for
+// the whole image download. Chrome waits for an in-use @font-face before
+// firing window.load, including with font-display: swap, so neither face
+// is applied until its file is already cached.
 const inter = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
@@ -81,6 +82,7 @@ export default function RootLayout({
         <WebSiteSchema />
       </head>
       <body className="min-h-full flex flex-col">
+        <script dangerouslySetInnerHTML={{ __html: BRAND_DISPLAY_FONT_WARMUP }} />
         <PostHogProvider>
           <Providers>{children}</Providers>
         </PostHogProvider>
