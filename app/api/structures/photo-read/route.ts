@@ -1,8 +1,8 @@
 /**
  * POST /api/structures/photo-read
- * Trace mode: reads photos of the house for what a floor plan does not show
- * (roof shape and cover, cladding, eaves, storeys, condition) so the
- * planner's construction settings start from the real building.
+ * Reads house photos, and the floor plan when one is attached.
+ * Returns suggestions for roof, walls, storeys and scale. Nothing is
+ * written onto the job until the tradie accepts one.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { generateObject } from "ai";
