@@ -54,6 +54,18 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
         person_profiles: "identified_only", // Do not create a person profile for anonymous visitors; only for people who actually sign in. Cuts cost and matches how the account is used (a directory visitor browsing listings is not someone who needs a tracked identity).
         capture_pageview: false, // See PageviewTracker: App Router needs this captured manually.
         capture_pageleave: true,
+        // The project turns these on from the server config. On the
+        // marketing site they download the recorder, surveys, dead-click
+        // and web-vitals bundles, then the recorder keeps posting, so the
+        // homepage network never goes idle. Nothing in the app reads
+        // feature flags. Session replay is started below only inside the
+        // product, not on public pages.
+        disable_session_recording: true,
+        disable_surveys: true,
+        autocapture: false,
+        capture_dead_clicks: false,
+        capture_performance: false,
+        advanced_disable_feature_flags: true,
       });
       setBooted(true);
     };
@@ -91,10 +103,21 @@ function SuspendedPageviewTracker({ booted }: { booted: boolean }) {
   );
 }
 
+/** Public pages. Session replay stays off here so the recorder does not keep the network open. */
+function isMarketingPath(pathname: string) {
+  return pathname === "/" || /^\/(features|signup|login|for|tools|how-it-works|blog|directory|terms|privacy|areas|tradies-in|quoting-software|get-quotes)(\/|$)/.test(pathname);
+}
+
 function PageviewTracker({ booted }: { booted: boolean }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const posthogClient = usePostHog();
+
+  useEffect(() => {
+    if (!booted || !pathname || !posthogClient) return;
+    if (isMarketingPath(pathname)) posthogClient.stopSessionRecording();
+    else posthogClient.startSessionRecording();
+  }, [booted, pathname, posthogClient]);
 
   useEffect(() => {
     if (!booted || !pathname || !posthogClient) return;
