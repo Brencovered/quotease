@@ -38,7 +38,7 @@ function chromePath() {
 function serve(dir: string, port: number) {
   const server = http.createServer((req, res) => {
     const url = decodeURIComponent((req.url || "/").split("?")[0]);
-    let file = path.join(dir, url === "/" ? "/planner/plan-trace.html" : url);
+    const file = path.join(dir, url === "/" ? "/planner/plan-trace.html" : url);
     if (!file.startsWith(path.resolve(dir))) { res.writeHead(403); res.end("no"); return; }
     if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end("missing"); return; }
     const ext = path.extname(file);
@@ -76,8 +76,9 @@ describe("Diakrit poche plan", () => {
       const errors: string[] = [];
       page.on("pageerror", (e: Error) => errors.push(String(e).slice(0, 240)));
       await page.evaluateOnNewDocument(() => {
-        window.fetch = async (url: string) => {
-          if (String(url).includes("trace-draft")) {
+        window.fetch = async (input: RequestInfo | URL) => {
+          const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+          if (url.includes("trace-draft")) {
             let rooms: unknown[] = [];
             try { rooms = JSON.parse(sessionStorage.getItem("rooms") || "[]"); } catch { /* empty draft */ }
             return new Response(JSON.stringify({ draft: { rooms } }), { status: 200, headers: { "Content-Type": "application/json" } });
@@ -103,7 +104,7 @@ describe("Diakrit poche plan", () => {
         const btn = document.querySelector("#aiBtn");
         if (btn && /Tracing/.test(btn.textContent || "")) return false;
         const f = document.querySelector("#flash");
-        const t = f && !f.hidden ? (f.textContent || "") : "";
+        const t = f instanceof HTMLElement && !f.hidden ? (f.textContent || "") : "";
         return !!t && !/Opening the plan|Finding the walls/.test(t);
       });
 
@@ -198,6 +199,6 @@ interface Page {
   evaluateOnNewDocument: (fn: () => void) => Promise<void>;
   goto: (url: string, opts: object) => Promise<void>;
   waitForSelector: (sel: string) => Promise<unknown>;
-  evaluate: (fn: (...args: never[]) => unknown, ...args: unknown[]) => Promise<unknown>;
+  evaluate: <T>(fn: (...args: never[]) => T, ...args: unknown[]) => Promise<T>;
   waitForFunction: (fn: () => boolean) => Promise<unknown>;
 }
