@@ -436,17 +436,17 @@ export default function QuoteTapDemo() {
               </div>
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div>
-                  <p className="text-[9px] font-bold uppercase tracking-wider text-white/45">Labour</p>
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-[#c5d4e0]">Labour</p>
                   <p className="text-[13px] font-bold text-white tabular-nums">{labourHrs}h</p>
                 </div>
                 <div>
-                  <p className="text-[9px] font-bold uppercase tracking-wider text-white/45">Materials</p>
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-[#c5d4e0]">Materials</p>
                   <p className="text-[13px] font-bold text-white tabular-nums">
                     ${materialsSell.toLocaleString("en-AU")}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[9px] font-bold uppercase tracking-wider text-white/45">Total</p>
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-[#c5d4e0]">Total</p>
                   <p className="text-[15px] font-black text-[#ffb400] tabular-nums">
                     ${total.toLocaleString("en-AU")}
                   </p>

@@ -10,10 +10,10 @@ export default function AccountingLogos({
   tone?: "light" | "dark";
   className?: string;
 }) {
-  const muted = tone === "light" ? "text-[#071018]/35" : "text-white/35";
-  const label = tone === "light" ? "text-[#5a6a78]" : "text-white/45";
+  const muted = tone === "light" ? "text-[#3d4f5c]" : "text-[#c5d4e0]";
+  const label = tone === "light" ? "text-[#5a6a78]" : "text-[#9eb0bf]";
   const live = tone === "light" ? "text-[#1c7a3a] bg-[#e8f5ec]" : "text-[#8fd9a4] bg-white/10";
-  const soon = tone === "light" ? "text-[#8b96a1] bg-[#f0f2f4]" : "text-white/50 bg-white/8";
+  const soon = tone === "light" ? "text-[#3d4f5c] bg-[#f0f2f4]" : "text-[#c5d4e0] bg-white/10";
 
   return (
     <div className={className}>

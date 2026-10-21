@@ -184,7 +184,7 @@ export default function HomeHero() {
               </Link>
             </div>
             <TrialRiskReversal tone="light" className="mb-3" />
-            <p className="font-sans text-[12.5px] text-white/40">
+            <p className="font-sans text-[12.5px] text-[#9eb0bf]">
               Solo tradies and crews up to about 15 · Flat $45/mo · No per-lead fees
             </p>
           </div>
@@ -245,7 +245,7 @@ export default function HomeHero() {
                 <span className="w-1.5 h-1.5 rounded-full bg-[#ffb400] home-dot-pulse" />
                 <span className="font-sans text-[11px] sm:text-[12px] font-bold text-white">
                   <span className="text-[#ffb400]">{scene.label}</span>
-                  <span className="text-white/45"> · </span>
+                  <span className="text-[#c5d4e0]"> · </span>
                   {scene.chip}
                 </span>
               </div>
@@ -263,7 +263,7 @@ export default function HomeHero() {
                 <p className="font-display text-[1.15rem] sm:text-[1.35rem] tracking-wide text-white leading-none mb-1.5">
                   {scene.result.title}
                 </p>
-                <p className="font-sans text-[12px] text-white/55 leading-snug">
+                <p className="font-sans text-[12px] text-[#c5d4e0] leading-snug">
                   {scene.result.meta}
                 </p>
               </div>
@@ -332,7 +332,7 @@ export default function HomeHero() {
                         <span
                           className={[
                             "hidden sm:inline text-[11px] font-bold tracking-[0.14em] uppercase",
-                            selected ? "text-[#ffb400]" : "text-white/35",
+                            selected ? "text-[#ffb400]" : "text-[#c5d4e0]",
                           ].join(" ")}
                         >
                           0{i + 1}
@@ -340,7 +340,7 @@ export default function HomeHero() {
                         <span
                           className={[
                             "font-display text-[14px] sm:text-[16px] tracking-wide truncate",
-                            selected ? "text-white" : "text-white/55",
+                            selected ? "text-white" : "text-[#c5d4e0]",
                           ].join(" ")}
                         >
                           {s.label}
@@ -349,7 +349,7 @@ export default function HomeHero() {
                       <p
                         className={[
                           "hidden sm:block font-sans text-[13px] leading-snug mt-0.5",
-                          selected ? "text-[#c5d4e0]" : "text-white/40",
+                          selected ? "text-[#c5d4e0]" : "text-[#9eb0bf]",
                         ].join(" ")}
                       >
                         {s.blurb}

@@ -1,7 +1,6 @@
 "use client";
 
-import { Suspense, useState, useMemo, type ReactNode } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState, useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
@@ -143,16 +142,25 @@ function MobileTeaser() {
 /*  Main signup form                                                   */
 /* ------------------------------------------------------------------ */
 function SignupForm() {
-  const searchParams = useSearchParams();
-  const next = searchParams.get("next");
-  const tradeFromUrl = searchParams.get("trade");
-  const initialTrade =
-    tradeFromUrl && TRADES.some((t) => t.key === tradeFromUrl) ? tradeFromUrl : "";
-
+  // Read the query string after mount. useSearchParams() bails the whole
+  // page out of server rendering, so the HTML response was only the
+  // suspense fallback: no form, no novalidate, no label ids. The browser
+  // then applied native email validation to whatever form hydrated later.
+  const [next, setNext] = useState<string | null>(null);
   const [businessName, setBusinessName] = useState("");
   const [email, setEmail] = useState("");
   const [suburb, setSuburb] = useState("");
-  const [trade, setTrade] = useState(initialTrade);
+  const [trade, setTrade] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedNext = params.get("next");
+    if (requestedNext && requestedNext.startsWith("/")) setNext(requestedNext);
+    const requestedTrade = params.get("trade");
+    if (requestedTrade && TRADES.some((t) => t.key === requestedTrade)) {
+      setTrade(requestedTrade);
+    }
+  }, []);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{
@@ -282,7 +290,7 @@ function SignupForm() {
                     {/* Email */}
                     <div>
                       <label htmlFor="signup-email" className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Email</label>
-                      <input id="signup-email" type="email" value={email} onChange={(e) => { setEmail(e.target.value); clearField("email"); }}
+                      <input id="signup-email" type="text" value={email} onChange={(e) => { setEmail(e.target.value); clearField("email"); }}
                         autoComplete="email" inputMode="email" aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? "signup-email-error" : undefined}
                         className="app-field" placeholder="you@example.com" />
                       <FieldError id="signup-email-error">{fieldErrors.email}</FieldError>
@@ -332,7 +340,7 @@ function SignupForm() {
                       <label htmlFor="signup-password" className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Password</label>
                       <div className="relative">
                         <input id="signup-password" type={showPassword ? "text" : "password"} value={password} onChange={(e) => { setPassword(e.target.value); clearField("password"); }}
-                          autoComplete="new-password" aria-invalid={!!fieldErrors.password} aria-describedby={fieldErrors.password ? "signup-password-error" : undefined} className="app-field pr-16" placeholder="Create a password" />
+                          autoComplete="new-password" aria-invalid={!!fieldErrors.password} aria-describedby={fieldErrors.password ? "signup-password-error" : undefined} className="app-field pr-16" />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
@@ -379,7 +387,7 @@ function SignupForm() {
                       <Link href="/privacy" target="_blank" className="text-[var(--navy)] font-semibold hover:underline">Privacy Policy</Link>.
                     </p>
 
-                    <button type="submit" disabled={loading} className="btn-primary mt-1">
+                    <button type="submit" formNoValidate disabled={loading} className="btn-primary mt-1">
                       {loading ? "Creating account..." : <>Create account <ArrowRight size={16} /></>}
                     </button>
                   </form>
@@ -407,16 +415,5 @@ function SignupForm() {
 }
 
 export default function SignupPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="text-center">
-          <h1 className="font-display text-[26px] text-[var(--ink)] mb-1">Start your free trial</h1>
-          <p className="text-[13.5px] text-[var(--ink-faint)]">7-day free trial - $45/month flat - cancel anytime</p>
-        </div>
-      </div>
-    }>
-      <SignupForm />
-    </Suspense>
-  );
+  return <SignupForm />;
 }

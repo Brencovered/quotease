@@ -1,7 +1,6 @@
 "use client";
 
-import { Suspense, useState, type ReactNode } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveBusinessId, getTeamContext, isFieldWorker } from "@/lib/team";
@@ -156,7 +155,7 @@ function ResetPasswordModal({
                 </label>
                 <input
                   id="reset-email"
-                  type="email"
+                  type="text"
                   value={resetEmail}
                   onChange={(e) => setResetEmail(e.target.value)}
                   autoFocus
@@ -177,6 +176,7 @@ function ResetPasswordModal({
 
               <button
                 type="submit"
+                formNoValidate
                 disabled={resetLoading}
                 className="btn-primary"
               >
@@ -317,8 +317,14 @@ function MobileTeaser() {
 /*  Main login form                                                    */
 /* ------------------------------------------------------------------ */
 function LoginForm() {
-  const searchParams = useSearchParams();
-  const next = searchParams.get("next");
+  // Same reason as signup: useSearchParams() replaced this form with a
+  // suspense fallback in the HTML response, so the first document had no
+  // novalidate and no label associations.
+  const [next, setNext] = useState<string | null>(null);
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("next");
+    if (requested && requested.startsWith("/")) setNext(requested);
+  }, []);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -448,7 +454,7 @@ function LoginForm() {
                   </label>
                   <input
                     id="login-email"
-                    type="email"
+                    type="text"
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
@@ -516,6 +522,7 @@ function LoginForm() {
                 {/* Submit */}
                 <button
                   type="submit"
+                  formNoValidate
                   disabled={loading}
                   className="btn-primary mt-1"
                 >
@@ -560,21 +567,5 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
-  return (
-    <Suspense
-      fallback={
-        /* Server-rendered while the client form hydrates. Without this the
-           initial HTML was completely empty (fallback={null}) - crawlers
-           saw no h1 and no content at all. */
-        <div className="min-h-screen flex items-center justify-center px-4">
-          <div className="text-center">
-            <h1 className="font-display text-[26px] text-[var(--ink)] mb-1">Welcome back</h1>
-            <p className="text-[13.5px] text-[var(--ink-faint)]">Log in to your SwiftScope account</p>
-          </div>
-        </div>
-      }
-    >
-      <LoginForm />
-    </Suspense>
-  );
+  return <LoginForm />;
 }
