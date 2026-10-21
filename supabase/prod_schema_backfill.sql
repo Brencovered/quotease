@@ -39,7 +39,28 @@ create table if not exists public.abn_trade_candidates (
   entity_type text,
   processed_at timestamp with time zone,
   website_url_found text,
-  directory_listing_id uuid
+  directory_listing_id uuid,
+  created_at timestamp with time zone not null default now()
+);
+
+create table if not exists public.abn_directory_runs (
+  id uuid primary key default gen_random_uuid(),
+  phase text not null,
+  status text not null default 'queued',
+  message text,
+  error text,
+  github_run_id text,
+  github_run_url text,
+  triggered_by text,
+  candidates_inserted integer not null default 0,
+  listings_created integer not null default 0,
+  candidates_processed integer not null default 0,
+  started_at timestamptz,
+  finished_at timestamptz,
+  updated_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  constraint abn_directory_runs_phase_check check (phase in ('all', 'ingest', 'enrich', 'verify')),
+  constraint abn_directory_runs_status_check check (status in ('queued', 'running', 'done', 'failed'))
 );
 
 create table if not exists public.business_suppliers (
@@ -1515,6 +1536,12 @@ alter table public.timesheets enable row level security;
 alter table public.tradie_directory_settings enable row level security;
 alter table public.tradie_profiles enable row level security;
 alter table public.traffic_log enable row level security;
+alter table public.abn_directory_runs enable row level security;
+revoke all on public.abn_directory_runs from public, anon, authenticated;
+alter table public.abn_trade_candidates
+  add column if not exists created_at timestamptz not null default now();
+create index if not exists abn_trade_candidates_created_at_idx
+  on public.abn_trade_candidates (created_at desc);
 
 -- Policies on missing tables -------------------------------------------------
 drop policy if exists "Business suppliers" on public.business_suppliers; create policy "Business suppliers" on public.business_suppliers as permissive for all to public using ((profile_id IN ( SELECT accessible_business_ids(( SELECT auth.uid() AS uid)) AS accessible_business_ids)));

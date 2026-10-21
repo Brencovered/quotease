@@ -19,6 +19,8 @@
  * Optional:
  *   ABN_ENRICH_LIMIT         candidates per run (default 800)
  *   DIRECTORY_VERIFY_LIMIT   listings per run (default 2000)
+ *   ABN_DIRECTORY_RUN_ID     abn_directory_runs id, set by the admin page
+ *   GITHUB_RUN_URL           link stored on that row for the admin panel
  *
  * GOOGLE_PLACES_API_KEY is removed from the environment before any work
  * so this job cannot call Places even if the secret is present on the runner.
@@ -29,6 +31,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { downloadToFile, fetchDownloadUrls, ingestZipFile } from "@/lib/abnBulkIngest";
+import { AbnRunReporter, type AbnRunPhase } from "@/lib/abnDirectoryRun";
 import { runAbnEnrichmentBatch } from "@/lib/abnDirectoryEnrichment";
 import { runDirectoryVerification } from "@/lib/directoryVerification";
 
@@ -50,8 +53,7 @@ function requireEnv() {
   delete process.env.GOOGLE_MAPS_API_KEY;
 }
 
-async function ingest() {
-  const admin = createAdminClient();
+async function ingest(admin: ReturnType<typeof createAdminClient>, reporter: AbnRunReporter) {
   const urls = await fetchDownloadUrls();
   if (urls.length === 0) throw new Error("ABR resource list returned no zip URLs");
 
@@ -64,17 +66,31 @@ async function ingest() {
     internal = 0;
   }
 
+  let inserted = 0;
   const dir = await mkdtemp(path.join(tmpdir(), "abn-bulk-"));
   try {
     for (let index = split - 1; index < urls.length; index++) {
       const url = urls[index];
       const dest = path.join(dir, `split-${index + 1}.zip`);
-      console.log(`[abn] downloading split ${index + 1}/${urls.length} once: ${url}`);
+      const label = `Downloading split ${index + 1} of ${urls.length}`;
+      console.log(`[abn] ${label}: ${url}`);
+      await reporter.progress({ message: label, candidates_inserted: inserted }, true);
       await downloadToFile(url, dest);
       const startEntry = index === split - 1 ? internal : 0;
-      await ingestZipFile(dest, admin, {
+      await reporter.progress({
+        message: `Parsing split ${index + 1} of ${urls.length}`,
+        candidates_inserted: inserted,
+      }, true);
+      const fileTotals = await ingestZipFile(dest, admin, {
         startEntryIndex: startEntry,
-        onFile: async (entryIndex) => {
+        onBatch: async (snapshot) => {
+          await reporter.progress({
+            message: `Parsing ${snapshot.entry}: ${inserted + snapshot.candidatesInserted} trade candidates inserted this run`,
+            candidates_inserted: inserted + snapshot.candidatesInserted,
+          });
+        },
+        onFile: async (entryIndex, entryName, result) => {
+          inserted += result.candidatesInserted;
           await admin.from("abn_ingest_cursor").upsert({
             id: 1,
             split_file_index: index + 1,
@@ -82,8 +98,13 @@ async function ingest() {
             records_processed_in_file: 0,
             last_run_at: new Date().toISOString(),
           });
+          await reporter.progress({
+            message: `Finished ${entryName}. ${inserted} trade candidates inserted this run.`,
+            candidates_inserted: inserted,
+          }, true);
         },
       });
+      console.log(`[abn] split ${index + 1} inserted ${fileTotals.candidatesInserted} candidates`);
       await admin.from("abn_ingest_cursor").upsert({
         id: 1,
         split_file_index: index + 2,
@@ -96,9 +117,10 @@ async function ingest() {
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+  return inserted;
 }
 
-async function enrich() {
+async function enrich(reporter: AbnRunReporter) {
   const limit = Number(process.env.ABN_ENRICH_LIMIT ?? "800");
   let processed = 0;
   let created = 0;
@@ -107,9 +129,15 @@ async function enrich() {
     processed += batch.processed;
     created += batch.listingsCreated;
     console.log(`[abn] enrich processed ${batch.processed}, created ${batch.listingsCreated}, remaining ${batch.remaining}`);
+    await reporter.progress({
+      message: `Guessing websites: ${processed} candidates processed, ${created} listings created.`,
+      candidates_processed: processed,
+      listings_created: created,
+    }, true);
     if (batch.processed === 0) break;
   }
   console.log(`[abn] enrich done: processed ${processed}, listings created ${created}`);
+  return { processed, created };
 }
 
 async function verify() {
@@ -129,9 +157,38 @@ async function main() {
     console.error("--phase must be all, ingest, enrich, or verify");
     process.exit(1);
   }
-  if (phase === "all" || phase === "ingest") await ingest();
-  if (phase === "all" || phase === "enrich") await enrich();
-  if (phase === "all" || phase === "verify") await verify();
+  const admin = createAdminClient();
+  const reporter = new AbnRunReporter(
+    admin,
+    process.env.ABN_DIRECTORY_RUN_ID?.trim() || null,
+    {
+      runId: process.env.GITHUB_RUN_ID ?? null,
+      runUrl: process.env.GITHUB_RUN_URL ?? null,
+    },
+  );
+  await reporter.ensure(phase as AbnRunPhase);
+  try {
+    let inserted = 0;
+    let created = 0;
+    let processed = 0;
+    if (phase === "all" || phase === "ingest") inserted = await ingest(admin, reporter);
+    if (phase === "all" || phase === "enrich") {
+      const enriched = await enrich(reporter);
+      created = enriched.created;
+      processed = enriched.processed;
+    }
+    if (phase === "all" || phase === "verify") {
+      await reporter.progress({ message: "Checking ABN status and email MX records." }, true);
+      await verify();
+    }
+    const summary = [`Finished ${phase}.`];
+    if (phase === "all" || phase === "ingest") summary.push(`${inserted} candidates inserted.`);
+    if (phase === "all" || phase === "enrich") summary.push(`${created} listings created from ${processed} candidates.`);
+    await reporter.finish(summary.join(" "));
+  } catch (err) {
+    await reporter.fail(err);
+    throw err;
+  }
 }
 
 main().catch((err) => {
