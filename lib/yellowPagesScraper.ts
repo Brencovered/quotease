@@ -25,6 +25,8 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getRandomUserAgent } from "@/lib/websiteScraper";
+import { DIRECTORY_SOURCE } from "@/lib/directoryIdentity";
+import { upsertDirectoryListing } from "@/lib/directoryListingUpsert";
 
 const DELAY_MS = 1500; // be polite - don't hammer their servers
 const RESULTS_PER_PAGE = 30; // confirmed from a real page: "Showing 1-30 of 1438"
@@ -69,6 +71,7 @@ interface YPListing {
 export interface YellowPagesScrapeResult {
   found: number;
   inserted: number;
+  updated: number;
   skipped: number;
   pagesScraped: number;
   trade: string;
@@ -258,42 +261,41 @@ export async function scrapeYellowPagesCombo(
     if (page < pages) await new Promise(r => setTimeout(r, DELAY_MS));
   }
 
-  // Upsert into directory_listing (skip duplicates by business_name + suburb)
-  let inserted = 0; let skipped = 0;
+  // Match on normalised phone, domain, and name+suburb. A repeat scrape
+  // fills blanks on the existing row instead of inserting another one.
+  // directory_listing has no state column; the suburb string carries it.
+  let inserted = 0;
+  let updated = 0;
+  let skipped = 0;
   for (const l of allListings) {
     if (!l.business_name || !l.suburb) { skipped++; continue; }
 
-    const { data: existing } = await admin
-      .from("directory_listing")
-      .select("id")
-      .ilike("business_name", l.business_name)
-      .ilike("suburb", l.suburb ?? "")
-      .limit(1);
-
-    if (existing?.length) { skipped++; continue; }
-
-    const { error } = await admin.from("directory_listing").insert({
-      business_name:        l.business_name,
-      trades:               [l.trade],
-      suburb:               l.suburb,
-      postcode:             l.postcode || postcode || null,
-      state:                l.state ?? (suburb.match(/\b(NSW|VIC|QLD|WA|SA|TAS|NT|ACT)\b/)?.[0] ?? null),
-      scraped_contact_phone: l.phone,
-      private_email:        l.email,
-      website_url:          l.website_url,
-      google_rating:        l.google_rating,
-      google_reviews_count: l.google_reviews_count,
-      source:               "yellowpages",
-      is_claimed:           false,
-    });
-
-    if (!error) inserted++;
-    else skipped++;
+    try {
+      const outcome = await upsertDirectoryListing(admin, {
+        business_name: l.business_name,
+        trades: [l.trade],
+        suburb: l.suburb,
+        postcode: l.postcode || postcode || null,
+        scraped_contact_phone: l.phone,
+        private_email: l.email,
+        website_url: l.website_url,
+        google_rating: l.google_rating,
+        google_reviews_count: l.google_reviews_count,
+        source: DIRECTORY_SOURCE.yellowPages,
+        is_claimed: false,
+      });
+      if (outcome.action === "inserted") inserted++;
+      else if (outcome.action === "updated") updated++;
+      else skipped++;
+    } catch (err) {
+      console.error("[yellowPagesScraper] upsert failed:", err instanceof Error ? err.message : err);
+      skipped++;
+    }
   }
 
   return {
     found: allListings.length,
-    inserted, skipped,
+    inserted, updated, skipped,
     pagesScraped,
     trade, suburb,
   };

@@ -7,6 +7,8 @@ import {
   scrapeDirectoryPage,
   sanitizeSuburb,
 } from "@/lib/directoryPageScrape";
+import { canonicalDirectorySource, DIRECTORY_SOURCE } from "@/lib/directoryIdentity";
+import { upsertDirectoryListing } from "@/lib/directoryListingUpsert";
 
 export const maxDuration = 60;
 
@@ -19,6 +21,7 @@ type ImportListing = {
   website?: string | null;
   website_url?: string | null;
   phone?: string | null;
+  source?: string | null;
 };
 
 export async function POST(request: NextRequest) {
@@ -77,6 +80,7 @@ async function importListings(listings: ImportListing[]) {
   const admin = createAdminClient();
 
   let inserted = 0;
+  let updated = 0;
   let skipped = 0;
   const errors: string[] = [];
 
@@ -86,51 +90,30 @@ async function importListings(listings: ImportListing[]) {
     const website = (listing.website_url ?? listing.website)?.trim() || null;
     const email = listing.email?.trim() || null;
     const phone = listing.phone?.trim() || null;
+    const source = canonicalDirectorySource(listing.source, DIRECTORY_SOURCE.directoryHtml);
 
-    let already = false;
-    if (suburb) {
-      const { data: existing } = await admin
-        .from("directory_listing")
-        .select("id")
-        .ilike("business_name", name)
-        .ilike("suburb", suburb)
-        .limit(1);
-      already = Boolean(existing?.length);
-    }
-    if (!already && website) {
-      const { data: bySite } = await admin
-        .from("directory_listing")
-        .select("id")
-        .ilike("website_url", website)
-        .limit(1);
-      already = Boolean(bySite?.length);
-    }
-    if (already) {
-      skipped++;
-      continue;
-    }
-
-    const row: Record<string, unknown> = {
-      business_name: name,
-      suburb,
-      postcode: listing.postcode?.trim() || null,
-      state: listing.state?.trim() || null,
-      website_url: website,
-      scraped_contact_email: email,
-      private_email: email,
-      scraped_contact_phone: phone,
-      source: "directory-page",
-      is_claimed: false,
-    };
-
-    const { error } = await admin.from("directory_listing").insert(row);
-
-    if (error) {
-      errors.push(`${name}: ${error.message}`);
-    } else {
-      inserted++;
+    try {
+      const outcome = await upsertDirectoryListing(admin, {
+        business_name: name,
+        suburb,
+        postcode: listing.postcode?.trim() || null,
+        website_url: website,
+        scraped_contact_email: email,
+        private_email: email,
+        scraped_contact_phone: phone,
+        source,
+        is_claimed: false,
+      });
+      if (outcome.action === "inserted") inserted++;
+      else if (outcome.action === "updated") updated++;
+      else {
+        skipped++;
+        if (outcome.conflict) errors.push(`${name}: ${outcome.conflict}`);
+      }
+    } catch (err) {
+      errors.push(`${name}: ${err instanceof Error ? err.message : "upsert failed"}`);
     }
   }
 
-  return NextResponse.json({ inserted, skipped, errors });
+  return NextResponse.json({ inserted, updated, skipped, errors });
 }

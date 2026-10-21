@@ -4,7 +4,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getActiveBusinessId } from "@/lib/team";
 import { CLAIMED_DIRECTORY_PAGES_ENABLED } from "@/lib/featureFlags";
 import { buildDirectorySlug } from "@/lib/seo/meta";
-import { verifyAbn } from "@/lib/abnLookup";
+import { verifyAbn, type AbnVerificationResult } from "@/lib/abnLookup";
+import { DIRECTORY_SOURCE } from "@/lib/directoryIdentity";
+import { upsertDirectoryListing } from "@/lib/directoryListingUpsert";
 import { getClientIp, getUserAgent } from "@/lib/clientIp";
 import { isIpBlocked } from "@/lib/ipBlocklist";
 
@@ -158,8 +160,10 @@ export async function POST(req: NextRequest) {
   }
 
   let verifiedBadge = false;
+  let abnResult: AbnVerificationResult | null = null;
   if (abn) {
-    const verification = await verifyAbn(abn);
+    abnResult = await verifyAbn(abn);
+    const verification = abnResult;
     verifiedBadge = verification.valid && verification.active === true;
     await admin.from("profiles").update({
       abn,
@@ -228,6 +232,12 @@ export async function POST(req: NextRequest) {
       .update({
         claim_pending_profile_id: businessId,
         ...(logoUrl && !listing.logo_url ? { logo_url: logoUrl } : {}),
+        ...(abnResult?.configured && abn ? {
+          abn,
+          contact_phone: phoneDigits,
+          verified_at: new Date().toISOString(),
+          verification_source: verifiedBadge ? "abn_lookup:active" : "abn_lookup:inactive",
+        } : { contact_phone: phoneDigits }),
       })
       .eq("id", listingId)
       .eq("is_claimed", false)
@@ -303,9 +313,9 @@ export async function POST(req: NextRequest) {
   // a fabricated business name with no scraped provenance behind it at
   // all, which is why this branch needed the change more than the
   // claim-existing one above, not less.
-  const { data: created, error: createErr } = await admin
-    .from("directory_listing")
-    .insert({
+  let created: { id: string | null; action: string; conflict?: string };
+  try {
+    created = await upsertDirectoryListing(admin, {
       business_name: businessName,
       trades: [trade],
       suburb,
@@ -313,25 +323,38 @@ export async function POST(req: NextRequest) {
       logo_url: logoUrl || null,
       street_address: streetAddress,
       contact_phone: phoneDigits,
+      abn: abn || null,
       claim_pending_profile_id: businessId,
       is_claimed: false,
-      source: "manual",
-    })
-    .select("id")
-    .single();
+      source: DIRECTORY_SOURCE.claim,
+    }, { strategy: "insert" });
+  } catch (err) {
+    console.error("[directory/claim] listing insert failed:", err instanceof Error ? err.message : err);
+    created = { id: null, action: "conflict", conflict: err instanceof Error ? err.message : "insert failed" };
+  }
 
-  if (createErr || !created) {
-    console.error("[directory/claim] listing insert failed:", createErr?.message);
+  if (created.action === "conflict" || !created.id) {
+    console.error("[directory/claim] listing insert failed:", created.conflict);
+    const message = created.conflict ?? "";
     return NextResponse.json(
-      { error: createErr?.message?.includes("business_name is required")
+      { error: message.includes("business_name is required")
           ? "A business name is required."
-          : createErr?.message?.includes("suburb must be a real suburb")
+          : message.includes("suburb must be a real suburb")
           ? "Please enter your actual suburb, not just the city."
-          : createErr?.message?.includes("contact_phone is required")
+          : message.includes("contact_phone is required")
           ? "A contact number is required to create a new listing."
+          : message.includes("duplicate key")
+          ? "A listing with this phone or website is already in the directory. Search for it and claim that page."
           : "Failed to create listing" },
-      { status: 400 }
+      { status: message.includes("duplicate key") ? 409 : 400 }
     );
+  }
+
+  if (abnResult?.configured && abn) {
+    await admin.from("directory_listing").update({
+      verified_at: new Date().toISOString(),
+      verification_source: verifiedBadge ? "abn_lookup:active" : "abn_lookup:inactive",
+    }).eq("id", created.id);
   }
 
   // Record the attempt for the rate limiter above, success or not mattering

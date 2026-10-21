@@ -169,7 +169,15 @@ create table if not exists public.directory_listing (
   street_address text,
   contact_phone text,
   services_extraction_method text,
-  testimonials jsonb
+  testimonials jsonb,
+  phone_e164 text,
+  website_domain text,
+  abn text,
+  verified_at timestamp with time zone,
+  verification_source text,
+  email_valid boolean,
+  phone_identity_shared boolean not null default false,
+  domain_identity_shared boolean not null default false
 );
 
 create table if not exists public.directory_listing_traffic_daily (
@@ -1460,7 +1468,7 @@ BEGIN
   ) VALUES (
     p_business_name, p_trades, p_website_url, p_suburb, p_postcode,
     p_latitude, p_longitude, p_place_id, p_google_rating, p_google_reviews_count,
-    p_photo_references, p_scraped_contact_phone, p_private_email, p_logo_url, 'scraper'
+    p_photo_references, p_scraped_contact_phone, p_private_email, p_logo_url, 'google_places'
   )
   ON CONFLICT ON CONSTRAINT directory_listing_place_id_unique DO UPDATE SET
     business_name = EXCLUDED.business_name,
@@ -1476,6 +1484,10 @@ BEGIN
     scraped_contact_phone = COALESCE(EXCLUDED.scraped_contact_phone, directory_listing.scraped_contact_phone),
     private_email = COALESCE(EXCLUDED.private_email, directory_listing.private_email),
     logo_url = COALESCE(EXCLUDED.logo_url, directory_listing.logo_url),
+    source = CASE
+      WHEN directory_listing.source IN ('scraper', 'scraped') THEN 'google_places'
+      ELSE directory_listing.source
+    END,
     updated_at = NOW();
 END;
 $function$
@@ -1543,6 +1555,46 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created after insert on auth.users for each row execute function public.handle_new_user();
 
 reset check_function_bodies;
+
+-- Directory identity columns for databases created from this backfill.
+-- The dated migration is the production path; it no-ops when this CREATE
+-- has not run yet, so the same objects are declared here.
+alter table public.directory_listing add column if not exists phone_e164 text;
+alter table public.directory_listing add column if not exists website_domain text;
+alter table public.directory_listing add column if not exists abn text;
+alter table public.directory_listing add column if not exists verified_at timestamp with time zone;
+alter table public.directory_listing add column if not exists verification_source text;
+alter table public.directory_listing add column if not exists email_valid boolean;
+alter table public.directory_listing add column if not exists phone_identity_shared boolean not null default false;
+alter table public.directory_listing add column if not exists domain_identity_shared boolean not null default false;
+
+create index if not exists directory_listing_phone_e164_idx
+  on public.directory_listing (phone_e164) where phone_e164 is not null;
+create index if not exists directory_listing_website_domain_idx
+  on public.directory_listing (website_domain) where website_domain is not null;
+create index if not exists directory_listing_abn_idx
+  on public.directory_listing (abn) where abn is not null;
+
+drop trigger if exists trg_directory_listing_normalized_identity on public.directory_listing;
+create trigger trg_directory_listing_normalized_identity
+  before insert or update on public.directory_listing
+  for each row execute function public.directory_listing_set_normalized_identity();
+
+create unique index if not exists directory_listing_phone_suburb_uidx
+  on public.directory_listing (phone_e164, lower(btrim(suburb)))
+  where phone_e164 is not null
+    and suburb is not null
+    and btrim(suburb) <> ''
+    and phone_e164 !~ '^\+6113[0-9]{4}$'
+    and phone_e164 !~ '^\+611(300|800|900)[0-9]{6}$';
+
+create unique index if not exists directory_listing_domain_suburb_uidx
+  on public.directory_listing (website_domain, lower(btrim(suburb)))
+  where website_domain is not null and suburb is not null and btrim(suburb) <> '';
+
+create unique index if not exists directory_listing_abn_suburb_uidx
+  on public.directory_listing (abn, lower(btrim(suburb)))
+  where abn is not null and suburb is not null and btrim(suburb) <> '';
 
 -- Make PostgREST pick up the new tables/columns without a restart.
 notify pgrst, 'reload schema';

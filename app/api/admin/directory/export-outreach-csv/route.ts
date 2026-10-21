@@ -55,6 +55,7 @@ export async function GET(req: NextRequest) {
     google_reviews_count: number | null;
     scraped_contact_email: string | null;
     private_email: string | null;
+    email_valid: boolean | null;
     claim_token: string;
     outreach_contacted_at: string | null;
   };
@@ -64,7 +65,7 @@ export async function GET(req: NextRequest) {
   while (true) {
     let query = admin
       .from("directory_listing")
-      .select("id, business_name, trades, suburb, postcode, google_rating, google_reviews_count, scraped_contact_email, private_email, claim_token, outreach_contacted_at")
+      .select("id, business_name, trades, suburb, postcode, google_rating, google_reviews_count, scraped_contact_email, private_email, email_valid, claim_token, outreach_contacted_at")
       .eq("is_claimed", false)
       .or("scraped_contact_email.not.is.null,private_email.not.is.null")
       .order("business_name")
@@ -88,6 +89,7 @@ export async function GET(req: NextRequest) {
   // Dedupe by email - a handful of listings share a scraped email
   const seen = new Set<string>();
   const deduped = rows.filter((r) => {
+    if (r.email_valid === false) return false;
     const email = (r.private_email ?? r.scraped_contact_email ?? "").toLowerCase().trim();
     if (!email || seen.has(email)) return false;
     seen.add(email);

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdminEmail } from "@/lib/admin";
+import { DIRECTORY_SOURCE } from "@/lib/directoryIdentity";
+import { upsertDirectoryListing } from "@/lib/directoryListingUpsert";
 import {
   fetchWebsiteHtml, extractLogoUrl, extractBlurb,
   extractPhotos, extractAbout, extractPhone, filterPhotos,
@@ -217,127 +219,57 @@ export async function POST(req: NextRequest) {
 
     const siteUrl = fields.website_url;
 
-    const { data: existing } = await admin
-      .from("directory_listing")
-      .select("id, business_name, photo_references")
-      .ilike("website_url", siteUrl)
-      .limit(1);
+    let outcome;
+    try {
+      outcome = await upsertDirectoryListing(admin, {
+        business_name: fields.business_name ?? siteUrl,
+        website_url: siteUrl,
+        logo_url: fields.logo_url,
+        blurb: fields.blurb,
+        scraped_contact_phone: fields.phone,
+        suburb: fields.suburb,
+        postcode: fields.postcode,
+        trades: fields.trades,
+        facebook_url: fields.facebook_url,
+        instagram_url: fields.instagram_url,
+        years_experience: fields.years_experience,
+        licenses: fields.licenses?.length ? fields.licenses : null,
+        services_offered: fields.services_offered?.length ? fields.services_offered : null,
+        services_extraction_method: fields.services_offered?.length ? fields.services_extraction_method : null,
+        testimonials: fields.testimonials?.length ? fields.testimonials : null,
+        source: DIRECTORY_SOURCE.websiteScrape,
+        is_claimed: false,
+      }, { overwrite });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not save listing";
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
+    if (!outcome.id) {
+      return NextResponse.json({ error: outcome.conflict ?? "Could not save listing" }, { status: 409 });
+    }
 
-    const existingListing = existing?.[0];
-    const listingId = existingListing?.id ?? crypto.randomUUID();
-
-    // Download and store photos now - only at confirm time, using
-    // whichever photo URLs the admin actually approved in the preview
-    // (they may have removed some).
+    const listingId = outcome.id;
     const storedPhotos: string[] = [];
     for (let i = 0; i < Math.min(fields.photo_urls?.length ?? 0, 6); i++) {
       const stored = await downloadAndStore(fields.photo_urls[i], listingId, i, admin);
       if (stored) storedPhotos.push(stored);
     }
-    const existingPhotos = existingListing
-      ? ((existingListing.photo_references ?? []) as string[]).filter((p: string) => p.startsWith("http"))
-      : [];
-    const allPhotos = [...new Set([...storedPhotos, ...existingPhotos])].slice(0, 6);
-
-    const payload = {
-      business_name:          fields.business_name,
-      website_url:            siteUrl,
-      logo_url:               fields.logo_url,
-      blurb:                  fields.blurb,
-      scraped_contact_phone:  fields.phone,
-      suburb:                 fields.suburb,
-      postcode:               fields.postcode,
-      state:                  fields.state,
-      trades:                 fields.trades,
-      photo_references:       allPhotos.length > 0 ? allPhotos : null,
-      photos_cached_at:       allPhotos.length > 0 ? new Date().toISOString() : null,
-      website_scraped_at:     new Date().toISOString(),
-      source:                 "manual",
-      is_claimed:             false,
-      facebook_url:           fields.facebook_url,
-      instagram_url:          fields.instagram_url,
-      years_experience:       fields.years_experience,
-      licenses:               fields.licenses.length > 0 ? fields.licenses : null,
-      services_offered:       fields.services_offered.length > 0 ? fields.services_offered : null,
-      services_extraction_method: fields.services_offered.length > 0 ? fields.services_extraction_method : null,
-      testimonials:           fields.testimonials.length > 0 ? fields.testimonials : null,
-    };
-
-    const clean: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(payload)) {
-      if (v !== null || overwrite) clean[k] = v;
-    }
-
-    let action: "created" | "updated";
-
-    if (existingListing) {
-      const updateData = overwrite
-        ? clean
-        : Object.fromEntries(Object.entries(clean).filter(([k]) => !["id", "source"].includes(k)));
-      const { error: updateErr } = await admin
-        .from("directory_listing")
-        .update(updateData)
-        .eq("id", existingListing.id);
-      if (updateErr) console.error("[scrape-url confirm] update error:", updateErr);
-      action = "updated";
+    if (storedPhotos.length > 0) {
+      await admin.from("directory_listing").update({
+        photo_references: storedPhotos,
+        photos_cached_at: new Date().toISOString(),
+        website_scraped_at: new Date().toISOString(),
+      }).eq("id", listingId);
     } else {
-      const { error: rpcErr } = await admin.rpc("upsert_directory_listing", {
-        p_business_name:         fields.business_name ?? siteUrl,
-        p_trades:                fields.trades,
-        p_website_url:           siteUrl,
-        p_suburb:                fields.suburb,
-        p_postcode:              fields.postcode,
-        p_latitude:              null,
-        p_longitude:             null,
-        p_place_id:              null,
-        p_google_rating:         null,
-        p_google_reviews_count:  null,
-        p_photo_references:      allPhotos.length > 0 ? allPhotos : [],
-        p_scraped_contact_phone: fields.phone,
-        p_private_email:         null,
-        p_logo_url:              fields.logo_url,
-      });
-
-      if (rpcErr) {
-        console.error("[scrape-url confirm] RPC error, falling back to direct insert:", rpcErr);
-        const slug = (fields.business_name ?? "listing")
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/(^-|-$)/g, "")
-          + (fields.suburb ? "-" + fields.suburb.toLowerCase().replace(/[^a-z0-9]+/g, "-") : "")
-          + "-" + Date.now().toString(36);
-
-        await admin.from("directory_listing").insert({ ...clean, id: listingId, slug });
-      }
-
-      const { data: fresh } = await admin
-        .from("directory_listing")
-        .select("id")
-        .ilike("website_url", siteUrl)
-        .limit(1);
-
-      if (fresh?.[0]) {
-        await admin.from("directory_listing").update({
-          blurb:              fields.blurb,
-          photos_cached_at:   allPhotos.length > 0 ? new Date().toISOString() : null,
-          website_scraped_at: new Date().toISOString(),
-          source:             "manual",
-        }).eq("id", fresh[0].id);
-      }
-
-      action = "created";
+      await admin.from("directory_listing").update({
+        website_scraped_at: new Date().toISOString(),
+      }).eq("id", listingId);
     }
-
-    const { data: finalListing } = await admin
-      .from("directory_listing")
-      .select("id, slug")
-      .ilike("website_url", siteUrl)
-      .limit(1);
 
     return NextResponse.json({
-      action,
-      id:   finalListing?.[0]?.id ?? existingListing?.id ?? listingId,
-      slug: finalListing?.[0]?.slug ?? null,
+      action: outcome.action === "inserted" ? "created" : "updated",
+      id: listingId,
+      slug: null,
     });
   }
 

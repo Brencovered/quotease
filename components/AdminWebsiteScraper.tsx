@@ -648,12 +648,7 @@ function AbnDirectoryPanel() {
     totalCandidates: number; unprocessed: number; listingsCreated: number;
     ingestCursor: { split_file_index: number; records_processed_in_file: number } | null;
   } | null>(null);
-  const [ingesting, setIngesting] = useState(false);
   const [enriching, setEnriching] = useState(false);
-  const [ingestResult, setIngestResult] = useState<{
-    splitFileIndex: number; recordsScanned: number; tradeMatches: number;
-    candidatesInserted: number; finishedAllFiles: boolean; error?: string;
-  } | null>(null);
   const [enrichResult, setEnrichResult] = useState<{
     processed: number; websitesFound: number; listingsCreated: number;
     remaining: number; detail: string[];
@@ -665,18 +660,6 @@ function AbnDirectoryPanel() {
   }
 
   useEffect(() => { loadStats(); }, []);
-
-  async function runIngest() {
-    setIngesting(true);
-    const res = await fetch("/api/admin/abn-directory", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phase: "ingest" }),
-    });
-    setIngestResult(await res.json());
-    setIngesting(false);
-    loadStats();
-  }
 
   async function runEnrich() {
     setEnriching(true);
@@ -696,9 +679,9 @@ function AbnDirectoryPanel() {
         <p className="section-tag">ABN directory growth</p>
         <p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5">
           Free, no IP-blocking risk - pulls trade businesses from the Australian Business Register&apos;s public bulk
-          data, then guesses their website from their name (validated ~60% hit rate on real businesses) rather than
-          paying for a search API. Two phases: pull candidates from the ABN file, then try to find + verify a
-          website for 50 of them at a time.
+          data, then guesses their website from their name rather than paying for a search API. The bulk file is
+          too large for this server, so phase 1 runs on the free GitHub Actions workflow <span className="font-mono">abn-directory</span>.
+          This page can still process a small batch of candidates that workflow has already queued.
         </p>
       </div>
 
@@ -723,20 +706,10 @@ function AbnDirectoryPanel() {
         <div className="border border-[var(--line)] rounded-xl p-3">
           <p className="text-[12px] font-bold text-[var(--ink)] mb-1">Phase 1: pull from ABN file</p>
           <p className="text-[11px] text-[var(--ink-faint)] mb-2">
-            {stats?.ingestCursor
-              ? `File ${stats.ingestCursor.split_file_index}, record ${stats.ingestCursor.records_processed_in_file}`
-              : "Not started"}
+            Runs weekly in GitHub Actions, or on demand with workflow_dispatch. It downloads each zip once,
+            stream-parses it, and bulk-inserts trade matches. No Google Places calls.
+            {stats?.ingestCursor ? ` Last cursor: file ${stats.ingestCursor.split_file_index}.` : ""}
           </p>
-          <button onClick={runIngest} disabled={ingesting}
-            className="w-full flex items-center justify-center gap-1.5 text-[12.5px] font-bold text-white bg-[var(--navy)] px-3 py-2 rounded-lg">
-            {ingesting ? <><RefreshCw size={12} className="animate-spin" /> Pulling...</> : <><Play size={12} /> Pull next chunk</>}
-          </button>
-          {ingestResult && (
-            <p className="text-[11px] text-[var(--ink-faint)] mt-2 font-mono">
-              scanned {ingestResult.recordsScanned}, matched {ingestResult.tradeMatches}, queued {ingestResult.candidatesInserted}
-              {ingestResult.error && <span className="text-red-600"> — {ingestResult.error}</span>}
-            </p>
-          )}
         </div>
 
         <div className="border border-[var(--line)] rounded-xl p-3">
