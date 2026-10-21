@@ -7,8 +7,8 @@ import { ArrowRight, Calendar } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Blog & Insights - Swiftscope",
-  description: "Trade business tips, industry insights, and product updates from the Swiftscope team.",
+  title: "Blog & Insights - SwiftScope",
+  description: "Trade business tips, industry insights, and product updates from the SwiftScope team.",
 };
 
 export default async function BlogPage() {
@@ -69,7 +69,7 @@ export default async function BlogPage() {
                 {featured.cover_url
                   ? <Image src={featured.cover_url} alt={featured.title} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover group-hover:scale-105 transition-transform duration-500" />
                   : <div className="w-full h-full min-h-[240px] bg-gradient-to-br from-[#0a1722] to-[#1a3a52] flex items-center justify-center">
-                      <span className="font-display text-[#ffb400] text-[2rem] opacity-30">Swiftscope</span>
+                      <span className="font-display text-[#ffb400] text-[2rem] opacity-30">SwiftScope</span>
                     </div>
                 }
               </div>
@@ -105,7 +105,7 @@ export default async function BlogPage() {
                   {post.cover_url
                     ? <Image src={post.cover_url} alt={post.title} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover group-hover:scale-105 transition-transform duration-500" />
                     : <div className="w-full h-full bg-gradient-to-br from-[#0a1722] to-[#1a3a52] flex items-center justify-center">
-                        <span className="font-display text-[#ffb400] opacity-20 text-[1.4rem]">Swiftscope</span>
+                        <span className="font-display text-[#ffb400] opacity-20 text-[1.4rem]">SwiftScope</span>
                       </div>
                   }
                 </div>
@@ -135,7 +135,7 @@ export default async function BlogPage() {
       {/* Footer */}
       <div className="bg-[#0a1722] border-t border-white/10">
         <div className="max-w-7xl mx-auto px-6 py-8 flex flex-wrap items-center justify-between gap-4">
-          <span className="font-display text-lg text-white">SWIFTSCOPE</span>
+          <span className="font-display text-lg text-white">SwiftScope</span>
           <div className="flex gap-6 text-[12.5px] font-semibold text-white/40">
             <Link href="/" className="hover:text-white transition-colors">Home</Link>
             <Link href="/features" className="hover:text-white transition-colors">Features</Link>

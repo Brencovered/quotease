@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
               "Content-Type": "application/json",
               Authorization: `Bearer ${RESEND_KEY}`,
             },
-            body: JSON.stringify({ from: `Swiftscope <${FROM}>`, to, subject, html, text }),
+            body: JSON.stringify({ from: `SwiftScope <${FROM}>`, to, subject, html, text }),
           });
           if (res.ok) {
             results.sent++;

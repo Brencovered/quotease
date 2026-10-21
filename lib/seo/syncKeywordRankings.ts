@@ -7,7 +7,7 @@
  * nobody has a way to populate.
  *
  * Matching is by exact (case-insensitive) query string. GSC's Search
- * Analytics API only returns queries Swiftscope has actually received
+ * Analytics API only returns queries SwiftScope has actually received
  * impressions for, so most of the 120 imported keywords will simply not
  * appear in the response until real ranking exists for them, that's
  * expected, not a bug.

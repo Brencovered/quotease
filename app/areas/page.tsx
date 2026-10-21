@@ -21,8 +21,8 @@ import MarketingNav from "@/components/MarketingNav";
 export const revalidate = 604800; // 1 week, same cadence as the other SEO pages
 
 export const metadata: Metadata = {
-  title: "Areas we cover | Swiftscope Directory",
-  description: "Every suburb and region where Swiftscope has curated, verified trade business listings across Australia.",
+  title: "Areas we cover | SwiftScope Directory",
+  description: "Every suburb and region where SwiftScope has curated, verified trade business listings across Australia.",
   alternates: { canonical: "https://swiftscope.com.au/areas" },
 };
 

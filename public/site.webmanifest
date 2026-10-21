@@ -1,6 +1,6 @@
 {
-  "name": "Swiftscope",
-  "short_name": "Swiftscope",
+  "name": "SwiftScope",
+  "short_name": "SwiftScope",
   "description": "Quote it, send it, win the job",
   "start_url": "/",
   "display": "standalone",

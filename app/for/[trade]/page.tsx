@@ -21,13 +21,13 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { trade } = await params;
   const hub = getTradeHubBySlug(trade);
-  if (!hub) return { title: "For your trade - Swiftscope" };
+  if (!hub) return { title: "For your trade - SwiftScope" };
   return {
-    title: `${hub.metaTitle} - Swiftscope`,
+    title: `${hub.metaTitle} - SwiftScope`,
     description: hub.metaDescription,
     alternates: { canonical: `https://swiftscope.com.au/for/${hub.slug}` },
     openGraph: {
-      title: `${hub.metaTitle} - Swiftscope`,
+      title: `${hub.metaTitle} - SwiftScope`,
       description: hub.metaDescription,
       images: [{ url: hub.heroImage }],
     },

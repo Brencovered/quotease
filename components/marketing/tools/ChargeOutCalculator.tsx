@@ -147,7 +147,7 @@ export default function ChargeOutCalculator() {
             <NumberField label="Workers compensation" value={workersComp} onChange={setWorkersComp} prefix="$" min={0} step={50} />
             <NumberField label="Rego" value={rego} onChange={setRego} prefix="$" min={0} step={50} />
             <NumberField label="Insurance" value={insurance} onChange={setInsurance} prefix="$" min={0} step={50} />
-            <NumberField label="Software (incl. Swiftscope)" value={software} onChange={setSoftware} prefix="$" min={0} step={45} />
+            <NumberField label="Software (incl. SwiftScope)" value={software} onChange={setSoftware} prefix="$" min={0} step={45} />
             <NumberField label="Tools / consumables" value={tools} onChange={setTools} prefix="$" min={0} step={50} />
             <NumberField label="Other overhead" value={otherOverhead} onChange={setOtherOverhead} prefix="$" min={0} step={100} />
           </div>

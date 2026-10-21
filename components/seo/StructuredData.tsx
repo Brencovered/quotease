@@ -68,7 +68,7 @@ export function WebSiteSchema() {
   const data = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: "Swiftscope",
+    name: "SwiftScope",
     url: BASE_URL,
     potentialAction: {
       "@type": "SearchAction",
@@ -111,10 +111,10 @@ export function ArticleSchema({
     url,
     ...(description ? { description } : {}),
     ...(imageUrl ? { image: imageUrl } : {}),
-    author: { "@type": authorName && authorName !== "Swiftscope" ? "Person" : "Organization", name: authorName || "Swiftscope" },
+    author: { "@type": authorName && authorName !== "SwiftScope" ? "Person" : "Organization", name: authorName || "SwiftScope" },
     publisher: {
       "@type": "Organization",
-      name: "Swiftscope",
+      name: "SwiftScope",
       logo: { "@type": "ImageObject", url: `${BASE_URL}/logo.png` },
     },
     ...(publishedAt ? { datePublished: new Date(publishedAt).toISOString() } : {}),

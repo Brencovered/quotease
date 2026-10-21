@@ -6,9 +6,9 @@ import MarketingNav from "@/components/MarketingNav";
 import { TRADE_HUBS } from "@/lib/marketing/trade-hubs";
 
 export const metadata: Metadata = {
-  title: "Quoting software by trade - Swiftscope",
+  title: "Quoting software by trade - SwiftScope",
   description:
-    "On-site quoting and job software for electricians, plumbers, carpenters, roofers, and every trade Swiftscope supports.",
+    "On-site quoting and job software for electricians, plumbers, carpenters, roofers, and every trade SwiftScope supports.",
 };
 
 export default function ForTradesIndexPage() {

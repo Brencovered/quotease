@@ -472,7 +472,7 @@ export default function OnboardingPage() {
 
       {/* Header */}
       <div className="bg-[var(--navy)] px-6 py-4 flex items-center justify-between shrink-0">
-        <span className="font-display text-[15px] tracking-widest text-white">SWIFTSCOPE</span>
+        <span className="font-display text-[15px] tracking-widest text-white">SwiftScope</span>
         <span className="text-[12px] text-[var(--steel-3)] font-semibold">Step {step} of {STEPS.length}</span>
         {error && (
           <div className="flex items-center gap-1.5 text-red-400 text-[12px] font-bold">
@@ -555,7 +555,7 @@ export default function OnboardingPage() {
               </div>
 
               <p className="text-[14px] text-[var(--ink-soft)] leading-relaxed mb-6">
-                Including yourself. This just helps us understand who&apos;s using Swiftscope - you can invite your team anytime later from Settings.
+                Including yourself. This just helps us understand who&apos;s using SwiftScope - you can invite your team anytime later from Settings.
               </p>
 
               <div className="flex items-center justify-center gap-6 mb-6">
@@ -580,7 +580,7 @@ export default function OnboardingPage() {
               </div>
 
               <TipBox icon={Sparkles}>
-                Swiftscope is $45/month flat, unlimited users - no per-seat pricing whether it&apos;s just you or a crew of ten.
+                SwiftScope is $45/month flat, unlimited users - no per-seat pricing whether it&apos;s just you or a crew of ten.
               </TipBox>
             </div>
           )}
@@ -599,7 +599,7 @@ export default function OnboardingPage() {
               </div>
 
               <p className="text-[14px] text-[var(--ink-soft)] leading-relaxed mb-6">
-                This helps us tailor Swiftscope to replace the tools you&apos;re already paying for. Select everything you currently use.
+                This helps us tailor SwiftScope to replace the tools you&apos;re already paying for. Select everything you currently use.
               </p>
 
               <div className="grid grid-cols-2 gap-2.5 mb-6">
@@ -625,7 +625,7 @@ export default function OnboardingPage() {
               )}
 
               <TipBox icon={Sparkles}>
-                Swiftscope replaces most of these at $45/month flat. No per-user fees, no per-lead costs, no separate drawing tool needed.
+                SwiftScope replaces most of these at $45/month flat. No per-user fees, no per-lead costs, no separate drawing tool needed.
               </TipBox>
             </div>
           )}
@@ -804,7 +804,7 @@ export default function OnboardingPage() {
               </div>
 
               <p className="text-[14px] text-[var(--ink-soft)] leading-relaxed mb-6">
-                Swiftscope is built for quoting on the job site. Tell us how often you quote from the field and we&apos;ll tailor your experience.
+                SwiftScope is built for quoting on the job site. Tell us how often you quote from the field and we&apos;ll tailor your experience.
               </p>
 
               <div className="space-y-2.5 mb-6">
@@ -828,7 +828,7 @@ export default function OnboardingPage() {
               </div>
 
               <TipBox icon={Sparkles}>
-                Whether you quote daily or once a month, Swiftscope has you covered. Quote in under 4 minutes from your phone on site.
+                Whether you quote daily or once a month, SwiftScope has you covered. Quote in under 4 minutes from your phone on site.
               </TipBox>
             </div>
           )}

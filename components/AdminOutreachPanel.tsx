@@ -30,34 +30,34 @@ interface Contact {
 
 const TEMPLATES = [
   {
-    id: "intro", label: "Swiftscope intro",
+    id: "intro", label: "SwiftScope intro",
     subject: "The quoting tool tradies are using to win jobs on the driveway",
     html: `<p>Hi there,</p>
-<p>We're Swiftscope - a quoting and job management platform built specifically for Australian trade businesses.</p>
-<p>Tradies using Swiftscope are quoting on site from their phone in minutes, sending professional quotes before leaving the driveway, and winning more jobs because their clients can say yes before anyone else calls.</p>
+<p>We're SwiftScope - a quoting and job management platform built specifically for Australian trade businesses.</p>
+<p>Tradies using SwiftScope are quoting on site from their phone in minutes, sending professional quotes before leaving the driveway, and winning more jobs because their clients can say yes before anyone else calls.</p>
 <p>It replaces the patchwork of tools most trade businesses are stitching together - job management, scheduling, drawing markup, and Xero sync - for a flat $45/month with no per-seat fees.</p>
 <p>We're offering a free 7-day trial with no credit card required.</p>
 <p><a href="https://swiftscope.com.au/signup">Start your free trial here</a></p>
-<p>The Swiftscope team<br/>swiftscope.com.au</p>`,
+<p>The SwiftScope team<br/>swiftscope.com.au</p>`,
   },
   {
     id: "followup", label: "Follow-up",
-    subject: "Have you had a chance to look at Swiftscope?",
+    subject: "Have you had a chance to look at SwiftScope?",
     html: `<p>Hi there,</p>
-<p>Just following up on our earlier note about Swiftscope.</p>
+<p>Just following up on our earlier note about SwiftScope.</p>
 <p>If you haven't had a chance to explore it yet, we'd love to show you how tradies are using it to quote faster and win more jobs on site.</p>
 <p>The 7-day free trial is still open - no card required, takes about 5 minutes to set up.</p>
-<p><a href="https://swiftscope.com.au/signup">Try Swiftscope free</a></p>
-<p>The Swiftscope team</p>`,
+<p><a href="https://swiftscope.com.au/signup">Try SwiftScope free</a></p>
+<p>The SwiftScope team</p>`,
   },
   {
     id: "directory", label: "Join the directory",
-    subject: "Get found by homeowners in your area - free on Swiftscope",
+    subject: "Get found by homeowners in your area - free on SwiftScope",
     html: `<p>Hi there,</p>
 <p>We've built a tradie directory at swiftscope.com.au where homeowners in your area are already searching for local trade businesses.</p>
 <p>Getting listed is free. You'll get a profile page with your Google rating, your trades, and a direct contact button for homeowners to reach you.</p>
 <p><a href="https://swiftscope.com.au/signup">Create your free listing</a></p>
-<p>The Swiftscope team</p>`,
+<p>The SwiftScope team</p>`,
   },
   { id: "custom", label: "Write my own", subject: "", html: "" },
 ];

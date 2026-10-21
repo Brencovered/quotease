@@ -138,7 +138,7 @@ function domainFromUrl(url: string): string | null {
 }
 
 // When neither the business's own logo nor a Google photo is available, show
-// a small branded Swiftscope cover instead of a bare initial letter - it
+// a small branded SwiftScope cover instead of a bare initial letter - it
 // reads as "this listing is taken care of" rather than "something's missing".
 function SwiftscopeCover({ trade, onLoad }: { trade?: string; onLoad?: () => void }) {
   const accent = (trade && TRADE_COLORS[trade]) || "#ffb400";
@@ -160,7 +160,7 @@ function SwiftscopeCover({ trade, onLoad }: { trade?: string; onLoad?: () => voi
       <div className="absolute -left-6 -top-4 w-20 h-20 rounded-full border-[6px] border-white/[0.04]" />
       {/* Content */}
       <div className="relative flex flex-col items-center gap-1.5">
-        <p className="font-display text-[1.4rem] text-[#ffb400] tracking-wide leading-none">Swiftscope</p>
+        <p className="font-display text-[1.4rem] text-[#ffb400] tracking-wide leading-none">SwiftScope</p>
         {tradeLabel && (
           <span className="text-[10px] font-bold uppercase tracking-[.2em] px-2.5 py-0.5 rounded-full"
             style={{ background: accent + "22", color: accent }}>
@@ -185,7 +185,7 @@ function SwiftscopeCover({ trade, onLoad }: { trade?: string; onLoad?: () => voi
 //      "grey circle with an arrow" - a Photoslider nav button left visible
 //      behind a hung, invisible image).
 //   3. A real Google Places photo, if one exists.
-//   4. A branded Swiftscope cover - guaranteed to render, no network call.
+//   4. A branded SwiftScope cover - guaranteed to render, no network call.
 //
 // A logo only "counts" if it loads AND isn't one of those services' tiny
 // (~16px) generic "no icon found" placeholders.

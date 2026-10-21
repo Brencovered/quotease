@@ -6,7 +6,7 @@ import { getToolBySlug } from "@/lib/marketing/tools";
 const tool = getToolBySlug("diy-materials")!;
 
 export const metadata: Metadata = {
-  title: `${tool.title} - Swiftscope`,
+  title: `${tool.title} - SwiftScope`,
   description: tool.description,
   alternates: { canonical: "https://swiftscope.com.au/tools/diy-materials" },
 };

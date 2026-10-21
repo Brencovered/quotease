@@ -79,7 +79,7 @@ ${profit.jobsTracked > 0 ? `- Jobs with profit tracked: ${profit.jobsTracked}
 - Average margin: ${profit.avgMarginPct != null ? profit.avgMarginPct.toFixed(1) + "%" : "N/A"}` : "- No profit data tracked yet"}
 `.trim();
 
-  const SYSTEM = `You are a practical business assistant for an Australian tradie using Swiftscope, a quoting and job management platform.
+  const SYSTEM = `You are a practical business assistant for an Australian tradie using SwiftScope, a quoting and job management platform.
 
 Here are their current business stats:
 ${statsSummary}

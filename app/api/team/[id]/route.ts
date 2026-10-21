@@ -91,7 +91,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       .single();
     const appUrl = teamInviteAcceptBaseUrl(request);
     const acceptUrl = `${appUrl}/team/accept/${invite.invite_token}`;
-    const businessName = profile?.business_name || "their Swiftscope account";
+    const businessName = profile?.business_name || "their SwiftScope account";
 
     if (RESEND_API_KEY) {
       try {
@@ -102,9 +102,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: "Swiftscope <noreply@swiftscope.com.au>",
+            from: "SwiftScope <noreply@swiftscope.com.au>",
             to: [invite.email],
-            subject: `Reminder: set your password for ${businessName} on Swiftscope`,
+            subject: `Reminder: set your password for ${businessName} on SwiftScope`,
             html: teamInviteEmailHtml({
               name: invite.name,
               businessName,

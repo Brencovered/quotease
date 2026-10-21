@@ -21,7 +21,7 @@ export default function TeamAcceptPanel({
   businessName: string;
   status: string;
   currentUserEmail: string | null;
-  /** True when this email already signed into Swiftscope before (show sign-in option more prominently). */
+  /** True when this email already signed into SwiftScope before (show sign-in option more prominently). */
   alreadyHadAccount: boolean;
 }) {
   const router = useRouter();
@@ -248,7 +248,7 @@ export default function TeamAcceptPanel({
 
             <p className="text-[13px] text-[var(--ink-soft)] mt-4 leading-[1.5]">
               {alreadyHadAccount
-                ? "Already have a Swiftscope password?"
+                ? "Already have a SwiftScope password?"
                 : "Already set a password before?"}{" "}
               <Link
                 href={`/login?next=${encodeURIComponent(next)}`}

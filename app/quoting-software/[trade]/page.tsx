@@ -209,7 +209,7 @@ export default async function TradeQuotingPage({
                 </h2>
                 <p className="text-[15.5px] leading-[1.7] text-[#5a6a78]">
                   The reason most tradies never finish setting up job software is the data entry nobody
-                  warns them about. Swiftscope starts from the price file your supplier already sends you.
+                  warns them about. SwiftScope starts from the price file your supplier already sends you.
                 </p>
               </div>
             </div>
@@ -327,7 +327,7 @@ export default async function TradeQuotingPage({
               Two ways in, both on site
             </h2>
             <p className="text-[16px] leading-[1.7] text-[#5a6a78]">
-              Swiftscope runs a different prompt for each trade, so it is reading your plan and
+              SwiftScope runs a different prompt for each trade, so it is reading your plan and
               listening to your description with your work in mind. You confirm every number before
               it reaches a client. The AI drafts, you decide.
             </p>
@@ -348,7 +348,7 @@ export default async function TradeQuotingPage({
               </div>
               <h3 className="font-display text-[1.35rem] mb-3">Or just talk</h3>
               <p className="text-[14.5px] leading-[1.6] text-[#5a6a78] mb-4">
-                Describe the job out loud, walking the site. Swiftscope turns it into priced line
+                Describe the job out loud, walking the site. SwiftScope turns it into priced line
                 items you can correct before sending.
               </p>
               <p className="text-[14px] leading-[1.6] text-[#0a1722] italic border-l-2 border-[#ffb400] pl-4">

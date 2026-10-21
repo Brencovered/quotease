@@ -347,7 +347,7 @@ export async function generateQuotePdf(
   // ── FOOTER ───────────────────────────────────────────────────────
   for (const p of pdfDoc.getPages()) {
     p.drawRectangle({ x: 0, y: 0, width: PAGE_WIDTH, height: 26, color: NAVY });
-    p.drawText("Quoting by Swiftscope", { x: MARGIN, y: 9, size: 8, font, color: rgb(0.55, 0.62, 0.69) });
+    p.drawText("Quoting by SwiftScope", { x: MARGIN, y: 9, size: 8, font, color: rgb(0.55, 0.62, 0.69) });
   }
 
   return pdfDoc.save();

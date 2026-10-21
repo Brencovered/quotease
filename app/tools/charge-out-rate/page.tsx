@@ -7,7 +7,7 @@ import { CHARGE_OUT_FAQS, getToolBySlug } from "@/lib/marketing/tools";
 const tool = getToolBySlug("charge-out-rate")!;
 
 export const metadata: Metadata = {
-  title: `${tool.title} - Swiftscope`,
+  title: `${tool.title} - SwiftScope`,
   description: tool.description,
   alternates: { canonical: "https://swiftscope.com.au/tools/charge-out-rate" },
   openGraph: { title: tool.title, description: tool.description },

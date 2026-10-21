@@ -599,7 +599,7 @@ function ClaimDirectoryListingInner() {
           Claim or add your business listing
         </h1>
         <p className="text-[15px] text-[#5a6b78] mb-10">
-          Get a free page in the Swiftscope directory, built for homeowners
+          Get a free page in the SwiftScope directory, built for homeowners
           searching for a tradie in your area. Already listed? Claim it. Not
           listed yet? We&apos;ll create your page right now.
         </p>
@@ -725,7 +725,7 @@ function ClaimDirectoryListingInner() {
                 </button>
 
                 <p className="text-[12px] text-[#8a97a1] text-center">
-                  This is just for your directory page - not the full Swiftscope job management sign up. Already claimed a listing? Log in above to manage it.
+                  This is just for your directory page - not the full SwiftScope job management sign up. Already claimed a listing? Log in above to manage it.
                 </p>
               </form>
               </>

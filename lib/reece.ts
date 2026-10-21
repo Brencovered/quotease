@@ -1,6 +1,6 @@
 // Reece maX integration configuration and helpers
 // This proxies requests to Reece's internal API using stored session cookies.
-// When Reece approves Swiftscope as a Technology Partner, this gets replaced
+// When Reece approves SwiftScope as a Technology Partner, this gets replaced
 // with proper OAuth2 client credentials.
 
 export interface ReeceAccount {

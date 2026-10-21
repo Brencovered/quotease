@@ -95,7 +95,7 @@ export default function AIPackageAssistant({
         ? `\n- The tradie has ${priceBook.length} items in their price book but none matched keywords from this request - use realistic Australian trade prices and say in your note that these are estimates, not price book items.`
         : "\n- No price book connected yet, use realistic Australian trade prices and say in your note that these are estimates.";
 
-    return `You are an expert Australian trade business assistant helping a ${trade} build reusable job packages in Swiftscope.
+    return `You are an expert Australian trade business assistant helping a ${trade} build reusable job packages in SwiftScope.
 
 When the tradie describes a job type, respond with:
 1. A short helpful sentence

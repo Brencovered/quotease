@@ -22,7 +22,7 @@ import { getAdminEmails } from "@/lib/admin";
 import { buildWelcomeEmail, buildAdminNewSignupEmail } from "@/lib/email/templates";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const FROM_EMAIL = "Swiftscope <noreply@swiftscope.com.au>";
+const FROM_EMAIL = "SwiftScope <noreply@swiftscope.com.au>";
 
 async function sendEmail(to: string | string[], subject: string, html: string) {
   if (!RESEND_API_KEY) {

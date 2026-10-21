@@ -2,8 +2,8 @@ import Link from "next/link";
 import MarketingNav from "@/components/MarketingNav";
 
 export const metadata = {
-  title: "Privacy Policy - Swiftscope",
-  description: "How Swiftscope collects, uses, stores, and protects personal information, in line with the Australian Privacy Principles and the New Zealand Privacy Act 2020.",
+  title: "Privacy Policy - SwiftScope",
+  description: "How SwiftScope collects, uses, stores, and protects personal information, in line with the Australian Privacy Principles and the New Zealand Privacy Act 2020.",
 };
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
@@ -28,7 +28,7 @@ export default function PrivacyPolicyPage() {
             Privacy Policy
           </h1>
           <p className="text-[15px] text-[#8aa4b4] mt-4 max-w-xl">
-            Last updated: 11 July 2026. This policy explains what personal information Swiftscope collects,
+            Last updated: 11 July 2026. This policy explains what personal information SwiftScope collects,
             why, how it&apos;s stored and protected, and what rights you have over it.
           </p>
         </div>
@@ -47,15 +47,15 @@ export default function PrivacyPolicyPage() {
 
         <Section id="overview" title="1. Overview">
           <p>
-            This policy applies to <strong>the sole trader trading as Swiftscope, ABN 13 829 040 278</strong> (&quot;<strong>Swiftscope</strong>&quot;, &quot;<strong>we</strong>&quot;, &quot;<strong>us</strong>&quot;), and covers the
-            swiftscope.com.au website, the Swiftscope quoting and job management platform, and any related
+            This policy applies to <strong>the sole trader trading as SwiftScope, ABN 13 829 040 278</strong> (&quot;<strong>SwiftScope</strong>&quot;, &quot;<strong>we</strong>&quot;, &quot;<strong>us</strong>&quot;), and covers the
+            swiftscope.com.au website, the SwiftScope quoting and job management platform, and any related
             mobile or desktop experience (together, the &quot;<strong>Service</strong>&quot;).
           </p>
           <p>
-            Swiftscope has two kinds of users whose personal information we handle differently:
+            SwiftScope has two kinds of users whose personal information we handle differently:
           </p>
           <ul className="list-disc pl-5 space-y-1.5">
-            <li><strong>Tradie account holders</strong> - the trade businesses and their staff who sign up to use Swiftscope to quote, manage, and invoice jobs.</li>
+            <li><strong>Tradie account holders</strong> - the trade businesses and their staff who sign up to use SwiftScope to quote, manage, and invoice jobs.</li>
             <li><strong>Homeowners and other members of the public</strong> - people who submit a quote request through our public directory, or whose contact details a tradie enters into the platform as part of running their own business (e.g. a client&apos;s name, address, or phone number on a quote).</li>
           </ul>
           <p>
@@ -71,7 +71,7 @@ export default function PrivacyPolicyPage() {
           <p><strong>From tradie account holders, we collect:</strong></p>
           <ul className="list-disc pl-5 space-y-1.5">
             <li>Account details: name, email address, phone number, password (stored as a salted hash, never in plain text), business name, ABN, trade type, and service area.</li>
-            <li>Billing details, where applicable: handled directly by our payment processor (Stripe) - Swiftscope does not store full card numbers.</li>
+            <li>Billing details, where applicable: handled directly by our payment processor (Stripe) - SwiftScope does not store full card numbers.</li>
             <li>Content you create or upload: quotes, price book items, job records, client details you enter (see below), site photos, drawings and plans, and voice notes you record for AI-assisted quoting.</li>
             <li>Team and business data: details of staff you invite to your account, timesheets, and job costing records.</li>
             <li>Communications: support requests and any correspondence with us.</li>
@@ -80,7 +80,7 @@ export default function PrivacyPolicyPage() {
           <p><strong>From homeowners and other members of the public, we collect:</strong></p>
           <ul className="list-disc pl-5 space-y-1.5">
             <li>Contact and job details submitted through a quote request form on our public directory (name, contact details, suburb/postcode, and a description of the job).</li>
-            <li>Any client details a tradie using Swiftscope enters about you in the course of quoting or managing your job (e.g. your name, address, phone number, and email) - this information is entered and controlled by the tradie as our customer, not collected by us directly from you.</li>
+            <li>Any client details a tradie using SwiftScope enters about you in the course of quoting or managing your job (e.g. your name, address, phone number, and email) - this information is entered and controlled by the tradie as our customer, not collected by us directly from you.</li>
           </ul>
           <p>
             We do not intentionally collect sensitive information (as defined under the APPs and the NZ Privacy
@@ -94,9 +94,9 @@ export default function PrivacyPolicyPage() {
             We collect personal information directly from you when you create an account, use the Service, submit
             a quote request, contact support, or otherwise interact with our website. Where practical, we collect
             information directly from the individual concerned. Where a tradie enters details about their own
-            client into Swiftscope, that information is collected by the tradie in the course of running their
+            client into SwiftScope, that information is collected by the tradie in the course of running their
             business - the tradie is responsible for having a lawful basis to hold and use that information, and
-            Swiftscope processes it on the tradie&apos;s behalf as described in Section 4.
+            SwiftScope processes it on the tradie&apos;s behalf as described in Section 4.
           </p>
         </Section>
 
@@ -150,7 +150,7 @@ export default function PrivacyPolicyPage() {
           </ul>
           <p>
             Most browsers let you block or delete cookies through their settings. Blocking essential cookies will
-            prevent you from logging in to Swiftscope.
+            prevent you from logging in to SwiftScope.
           </p>
         </Section>
 
@@ -158,7 +158,7 @@ export default function PrivacyPolicyPage() {
           <p>
             Under Australian Privacy Principle 8 and the equivalent NZ Privacy Act provisions, we&apos;re required to
             tell you where personal information may be disclosed overseas. Here&apos;s the actual breakdown for
-            Swiftscope:
+            SwiftScope:
           </p>
           <ul className="list-disc pl-5 space-y-1.5">
             <li><strong>Database and file storage (Supabase)</strong>: hosted in Sydney, Australia (ap-southeast-2). Your account data, quotes, jobs, and uploaded files are stored here.</li>
@@ -192,7 +192,7 @@ export default function PrivacyPolicyPage() {
           </ul>
           <p>
             No method of transmission or storage is 100% secure, and we can&apos;t guarantee absolute security.
-            If you become aware of a security issue affecting Swiftscope, please contact us immediately at{" "}
+            If you become aware of a security issue affecting SwiftScope, please contact us immediately at{" "}
             <a href="mailto:team@swiftscope.com.au" className="text-[#c98600] underline font-semibold">team@swiftscope.com.au</a>.
           </p>
         </Section>
@@ -212,7 +212,7 @@ export default function PrivacyPolicyPage() {
           <p>
             We keep personal information for as long as your account is active, and for a reasonable period
             afterwards to meet legal, accounting, or reporting requirements. If you close or delete your
-            Swiftscope account, your data enters a 30-day recovery window during which it can be restored on
+            SwiftScope account, your data enters a 30-day recovery window during which it can be restored on
             request, after which it is permanently deleted from our active systems (residual copies may persist
             briefly in backups before they are cycled out).
           </p>
@@ -257,7 +257,7 @@ export default function PrivacyPolicyPage() {
 
         <Section id="childrens-data" title="11. Children's information">
           <p>
-            Swiftscope is a business-to-business platform intended for trade business owners, staff, and adult
+            SwiftScope is a business-to-business platform intended for trade business owners, staff, and adult
             homeowners. It is not directed at, and we do not knowingly collect personal information from,
             children.
           </p>
@@ -267,7 +267,7 @@ export default function PrivacyPolicyPage() {
           <p>
             Our public directory may display information about trade businesses, and tradie profiles may link to
             external websites or review platforms. We are not responsible for the privacy practices of external
-            sites you visit from Swiftscope. This policy only covers information handled by Swiftscope itself.
+            sites you visit from SwiftScope. This policy only covers information handled by SwiftScope itself.
           </p>
         </Section>
 
@@ -284,7 +284,7 @@ export default function PrivacyPolicyPage() {
             For any question about this policy or how we handle personal information, contact:
           </p>
           <p>
-            <strong>Swiftscope (sole trader)</strong><br />
+            <strong>SwiftScope (sole trader)</strong><br />
             ABN: 13 829 040 278<br />
             Location: Melbourne, Victoria, Australia<br />
             Email: <a href="mailto:team@swiftscope.com.au" className="text-[#c98600] underline font-semibold">team@swiftscope.com.au</a>
@@ -295,7 +295,7 @@ export default function PrivacyPolicyPage() {
       {/* FOOTER */}
       <div className="bg-[#1a242c] border-t border-white/[0.08]">
         <div className="max-w-7xl mx-auto px-6 py-5 flex flex-wrap items-center justify-between gap-4">
-          <span className="font-display text-lg text-white">SWIFTSCOPE</span>
+          <span className="font-display text-lg text-white">SwiftScope</span>
           <div className="flex gap-6 text-[12.5px] font-semibold text-white/40">
             <Link href="/terms" className="hover:text-white transition-colors">Terms of Use</Link>
             <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>

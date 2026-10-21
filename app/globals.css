@@ -44,19 +44,33 @@
 body {
   background: var(--app-bg);
   color: var(--ink);
-  font-family: var(--font-inter), sans-serif;
+  /* "Inter Fallback" is next/font's local() face (size-adjusted Arial).
+     The real woff2 is only referenced after window.load. Chrome counts an
+     in-use @font-face download toward window.onload even with
+     font-display: swap, so applying Inter up front leaves the tab spinner
+     running whenever that file stalls. */
+  font-family: "Inter Fallback", sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+html.fonts-ready body {
+  font-family: var(--font-inter), sans-serif;
 }
 
 .font-display {
   /* Marketing headings only - Anton. Never pair with font-bold (single weight). */
-  font-family: var(--font-anton), sans-serif;
+  font-family: "Anton Fallback", sans-serif;
   font-weight: 400;
   letter-spacing: 0.01em;
+}
+html.fonts-ready .font-display {
+  font-family: var(--font-anton), sans-serif;
 }
 
 .font-sans {
   /* Marketing body, labels, buttons - Inter */
+  font-family: "Inter Fallback", sans-serif;
+}
+html.fonts-ready .font-sans {
   font-family: var(--font-inter), sans-serif;
 }
 
@@ -81,9 +95,12 @@ input[type="radio"] {
   border-radius: var(--radius-sm);
   padding: 12px 14px;
   font-size: 15px;
-  font-family: var(--font-inter), sans-serif;
+  font-family: "Inter Fallback", sans-serif;
   transition: border-color 0.12s, box-shadow 0.12s;
   -webkit-appearance: none;
+}
+html.fonts-ready .app-field {
+  font-family: var(--font-inter), sans-serif;
 }
 .app-field:focus {
   outline: none;
@@ -103,6 +120,9 @@ input[type="radio"] {
   -moz-appearance: textfield;
 }
 .app-field::placeholder { color: var(--ink-faint); }
+.app-field[aria-invalid="true"] {
+  border-color: var(--red);
+}
 
 /* Card */
 .card {

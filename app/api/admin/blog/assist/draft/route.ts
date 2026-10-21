@@ -30,7 +30,7 @@ const FORMAT_NOTES = `CONTENT FORMAT this section must follow (plain markdown, n
   markup in the output.
 - pipe tables: | Col 1 | Col 2 |
 - "> " for a pull quote
-- inline links as [text](/path) - only real Swiftscope paths: /features /how-it-works
+- inline links as [text](/path) - only real SwiftScope paths: /features /how-it-works
   /directory /areas /signup /blog/...
 
 STYLE: never use em or en dashes. Punchy, direct, Australian spelling, no filler, no moralising.
@@ -119,7 +119,7 @@ Include at least one internal link. No preamble, no sign-off, no explanation of 
   try {
     const result = await generateWithFallback({
       models: textModelsFrom(modelOffset),
-      system: `You write SEO blog posts for Swiftscope, Australian trade business software.\n\n${FORMAT_NOTES}`,
+      system: `You write SEO blog posts for SwiftScope, Australian trade business software.\n\n${FORMAT_NOTES}`,
       prompt,
       maxTokens: 700,
       maxRateLimitHops: 3,
@@ -162,7 +162,7 @@ RULES:
     try {
       const result = await generateWithFallback({
         models: [model],
-        system: `You write SEO blog posts for Swiftscope, Australian trade business software.\n\n${FORMAT_NOTES}`,
+        system: `You write SEO blog posts for SwiftScope, Australian trade business software.\n\n${FORMAT_NOTES}`,
         prompt,
         maxTokens: Math.min(700 * opts.batch.length, 4500),
         maxRateLimitHops: 1,

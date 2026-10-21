@@ -72,7 +72,7 @@ export default function DirectoryPanel({
 
   return (
     <div className="card">
-      <p className="section-tag mb-1">Swiftscope Directory</p>
+      <p className="section-tag mb-1">SwiftScope Directory</p>
       <p className="font-semibold text-[var(--ink)] mb-1">List your business for free</p>
       <p className="text-[13px] text-[var(--ink-faint)] mb-4">
         Get your business in front of homeowners searching for your trade.

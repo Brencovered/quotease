@@ -158,7 +158,7 @@ export async function POST(request: Request) {
   <!-- Footer -->
   <tr><td style="background:#f8fafc;border-radius:0 0 16px 16px;padding:16px 32px;border-top:1px solid #e2e8f0;">
     <p style="font-size:12px;color:#94a3b8;margin:0;text-align:center;">
-      This quote is valid for 30 days. Sent by ${business} via Swiftscope.
+      This quote is valid for 30 days. Sent by ${business} via SwiftScope.
     </p>
   </td></tr>
 
@@ -175,11 +175,11 @@ export async function POST(request: Request) {
     },
     body: JSON.stringify({
       // Resend supports "Display Name <address>" - the client should see the
-      // tradie's business name as the sender, not "Swiftscope" or a bare address.
+      // tradie's business name as the sender, not "SwiftScope" or a bare address.
       from: `${business} <${process.env.RESEND_FROM_EMAIL ?? "quotes@yourdomain.com"}>`,
-      // The send address belongs to Swiftscope's domain (needed for SPF/DKIM
+      // The send address belongs to SwiftScope's domain (needed for SPF/DKIM
       // to pass), but if the client hits Reply, that needs to reach the
-      // tradie, not Swiftscope's own inbox - hence reply_to.
+      // tradie, not SwiftScope's own inbox - hence reply_to.
       ...(quote.profiles?.contact_email ? { reply_to: quote.profiles.contact_email } : {}),
       to: quote.client_email,
       subject: `Quote from ${business} - $${displayTotal.toLocaleString()} inc GST`,

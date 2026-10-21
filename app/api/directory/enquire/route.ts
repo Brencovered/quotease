@@ -206,7 +206,7 @@ export async function POST(req: NextRequest) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Swiftscope Directory <directory@swiftscope.com.au>",
+        from: "SwiftScope Directory <directory@swiftscope.com.au>",
         to: [toAddress],
         reply_to: customerEmail,
         subject,
@@ -262,7 +262,7 @@ export async function POST(req: NextRequest) {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: "Swiftscope Directory <directory@swiftscope.com.au>",
+            from: "SwiftScope Directory <directory@swiftscope.com.au>",
             to: ["team@swiftscope.com.au"],
             subject: adminEmail.subject,
             html: adminEmail.html,
@@ -275,7 +275,7 @@ export async function POST(req: NextRequest) {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: "Swiftscope Directory <directory@swiftscope.com.au>",
+            from: "SwiftScope Directory <directory@swiftscope.com.au>",
             to: [customerEmail],
             reply_to: "team@swiftscope.com.au",
             subject: customerEmailContent.subject,

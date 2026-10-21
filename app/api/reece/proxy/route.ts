@@ -13,7 +13,7 @@ const ALLOWED_KEYS = Object.keys(REECE_ENDPOINTS) as Array<
  * The cookies are read from environment variables (set via Vercel connector
  * or manual env vars).
  *
- * When Reece approves Swiftscope as a Technology Partner, this flow will be
+ * When Reece approves SwiftScope as a Technology Partner, this flow will be
  * replaced with proper OAuth2 client credentials.
  */
 export async function GET(request: NextRequest) {

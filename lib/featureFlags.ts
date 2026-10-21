@@ -41,7 +41,7 @@ export const LEADS_ENABLED = false;
  * Routing:
  *  - Claimed listing: sent to the account's real email (profiles.contact_email)
  *  - Unclaimed listing: sent to the scraped contact email if we have a
- *    valid one on file, falling back to Swiftscope's own inbox otherwise
+ *    valid one on file, falling back to SwiftScope's own inbox otherwise
  *    - and includes a claim-your-page nudge, since this is a genuine,
  *    concrete "here's why you'd want an account" moment for an unclaimed
  *    business.

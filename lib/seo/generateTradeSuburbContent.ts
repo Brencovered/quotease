@@ -12,7 +12,7 @@
  *   cost table). The PRICING_RANGES map below is a manually-maintained
  *   set of rough Australian market ranges per trade, used only as
  *   illustrative copy ("Typical jobs range from $X-$Y") with a visible
- *   disclaimer that it's a general guide, not Swiftscope-sourced data.
+ *   disclaimer that it's a general guide, not SwiftScope-sourced data.
  *   Replace with real aggregated quote data once there's enough volume
  *   to be statistically meaningful (and worth getting legal/compliance
  *   eyes on before publishing "real" pricing claims).
@@ -65,7 +65,7 @@ const MIN_LISTINGS_FOR_INDEX = 3;
 const TOP_LISTINGS_COUNT = 5;
 const MIN_REVIEWS_FOR_RANKING = 3;
 
-// NOTE: illustrative only, not derived from real Swiftscope quote data.
+// NOTE: illustrative only, not derived from real SwiftScope quote data.
 // Manually maintained - update periodically or replace with real
 // aggregated data once volume supports it. AUD, ex-GST, rough national
 // averages for common residential jobs as of mid-2026.

@@ -308,7 +308,7 @@ function BlockquoteEditor({ block, onChange }: { block: ContentBlock; onChange: 
         value={block.content}
         onChange={e => onChange({ ...block, content: e.target.value })}
         rows={3}
-        placeholder='e.g. "Since switching to Swiftscope, we quote 3x faster and win more jobs." - John Smith, Electrician'
+        placeholder='e.g. "Since switching to SwiftScope, we quote 3x faster and win more jobs." - John Smith, Electrician'
         className="app-field text-[13.5px] italic resize-y"
       />
     </div>

@@ -109,7 +109,7 @@ export function getTradeDisplay(trade: string) {
 // - Page-level Metadata generators ---------------------------------------
 
 export function homepageMeta(): Metadata {
-  const title       = "Swiftscope - Scope, Quote & Win Jobs On Site | Built for Tradies";
+  const title       = "SwiftScope - Scope, Quote & Win Jobs On Site | Built for Tradies";
   const description = "Quoting software built site-first for trade teams of 1-10. Scope, quote and send before you leave the driveway. Homeowners get free quotes from local tradies.";
   return {
     title,
@@ -119,8 +119,8 @@ export function homepageMeta(): Metadata {
       title,
       description,
       url: BASE_URL,
-      siteName: "Swiftscope",
-      images: [{ url: DEFAULT_OG, width: 1200, height: 630, alt: "Swiftscope - find local tradies" }],
+      siteName: "SwiftScope",
+      images: [{ url: DEFAULT_OG, width: 1200, height: 630, alt: "SwiftScope - find local tradies" }],
       type: "website",
     },
     twitter: { card: "summary_large_image", title, description, images: [DEFAULT_OG] },
@@ -140,10 +140,10 @@ export function tradeSuburbMeta(
   const canonical  = tradeSuburbCanonical(trade, suburb, state);
 
   const ratingSnippet = avgRating ? ` (avg ${avgRating.toFixed(1)}★)` : "";
-  const title       = `${plural} in ${suburb} ${stateUpper} | Compare Quotes - Swiftscope`;
+  const title       = `${plural} in ${suburb} ${stateUpper} | Compare Quotes - SwiftScope`;
   const description = listingCount > 0
     ? `Compare ${listingCount} local ${plural.toLowerCase()} in ${suburb}${ratingSnippet}. Get free quotes instantly. Verified reviews, upfront pricing, no call-centre.`
-    : `Find trusted ${plural.toLowerCase()} in ${suburb} ${stateUpper}. Get up to 3 free quotes from verified local tradies on Swiftscope.`;
+    : `Find trusted ${plural.toLowerCase()} in ${suburb} ${stateUpper}. Get up to 3 free quotes from verified local tradies on SwiftScope.`;
 
   return {
     title,
@@ -153,7 +153,7 @@ export function tradeSuburbMeta(
       title,
       description,
       url: canonical,
-      siteName: "Swiftscope",
+      siteName: "SwiftScope",
       images: [{ url: DEFAULT_OG, width: 1200, height: 630, alt: `${plural} in ${suburb}` }],
       type: "website",
     },
@@ -198,13 +198,13 @@ export function buildListingTitle(businessName: string, singular: string, suburb
   const cleanName = cleanNameForTitle(businessName);
   const ratingSnippet = rating ? ` - ${rating}★ (${reviewCount ?? 0} reviews)` : "";
 
-  let title = `${cleanName} | ${singular} in ${suburb}${ratingSnippet} - Swiftscope`;
+  let title = `${cleanName} | ${singular} in ${suburb}${ratingSnippet} - SwiftScope`;
   if (title.length <= TITLE_MAX_LENGTH) return title;
 
   // Drop the rating snippet first - least essential for search intent,
   // and the same information is already visible in the search result's
   // review-stars rich snippet when Google renders one.
-  title = `${cleanName} | ${singular} in ${suburb} - Swiftscope`;
+  title = `${cleanName} | ${singular} in ${suburb} - SwiftScope`;
   if (title.length <= TITLE_MAX_LENGTH) return title;
 
   // Drop the brand suffix next
@@ -239,7 +239,7 @@ export function tradieListingMeta(listing: {
   const title       = buildListingTitle(listing.business_name, singular, listing.suburb, listing.google_rating, listing.google_reviews_count);
   const description = listing.blurb
     ? listing.blurb.slice(0, 155)
-    : `${listing.business_name} is a ${singular.toLowerCase()} based in ${listing.suburb}. Get a free quote on Swiftscope.`;
+    : `${listing.business_name} is a ${singular.toLowerCase()} based in ${listing.suburb}. Get a free quote on SwiftScope.`;
 
   const image = listing.logo_url ?? DEFAULT_OG;
 
@@ -251,7 +251,7 @@ export function tradieListingMeta(listing: {
       title,
       description,
       url: canonical,
-      siteName: "Swiftscope",
+      siteName: "SwiftScope",
       images: [{ url: image, width: 800, height: 800, alt: listing.business_name }],
       type: "profile",
     },
@@ -261,7 +261,7 @@ export function tradieListingMeta(listing: {
 }
 
 export function directoryMeta(): Metadata {
-  const title       = "Find Local Tradies Near You | Swiftscope Directory";
+  const title       = "Find Local Tradies Near You | SwiftScope Directory";
   const description = "Browse verified electricians, plumbers, builders and more across Australia. Real Google reviews. Get free quotes in minutes.";
   return {
     title,
@@ -270,8 +270,8 @@ export function directoryMeta(): Metadata {
     openGraph: {
       title, description,
       url: `${BASE_URL}/directory`,
-      siteName: "Swiftscope",
-      images: [{ url: DEFAULT_OG, width: 1200, height: 630, alt: "Swiftscope tradie directory" }],
+      siteName: "SwiftScope",
+      images: [{ url: DEFAULT_OG, width: 1200, height: 630, alt: "SwiftScope tradie directory" }],
       type: "website",
     },
     twitter: { card: "summary_large_image", title, description, images: [DEFAULT_OG] },

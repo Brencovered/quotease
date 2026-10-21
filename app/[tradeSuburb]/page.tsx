@@ -121,7 +121,7 @@ export default async function TradeSuburbPage({ params }: PageProps) {
           <p className="text-[16px] text-[#8aa4b4] max-w-xl mb-6">
             {listingCount > 0
               ? `Compare ${listingCount} local ${tradePlural.toLowerCase()} in ${suburb}${avgRating ? ` with an average rating of ${avgRating.toFixed(1)} stars` : ""}. Curated listings, real Google ratings.`
-              : `Looking for a ${tradeSingular.toLowerCase()} in ${suburb}? Browse nearby suburbs, or check back soon as more tradies join Swiftscope.`}
+              : `Looking for a ${tradeSingular.toLowerCase()} in ${suburb}? Browse nearby suburbs, or check back soon as more tradies join SwiftScope.`}
           </p>
           <div className="flex flex-wrap gap-3">
             <Link href={`/directory?trade=${parsed.trade}&suburb=${encodeURIComponent(suburb)}`} className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[15px] px-7 py-3.5 rounded-xl hover:opacity-90">
@@ -184,7 +184,7 @@ export default async function TradeSuburbPage({ params }: PageProps) {
           <div className="max-w-5xl mx-auto px-6 py-16 text-center">
             <p className="font-display text-[1.6rem] text-[#0a1722] mb-2">No {tradePlural.toLowerCase()} listed in {suburb} yet</p>
             <p className="text-[14px] text-[#5a6a78] max-w-md mx-auto mb-6">
-              Check back soon as more tradies join Swiftscope, or browse {tradePlural.toLowerCase()} in nearby suburbs.
+              Check back soon as more tradies join SwiftScope, or browse {tradePlural.toLowerCase()} in nearby suburbs.
             </p>
             <Link href={`/directory?trade=${parsed.trade}`} className="inline-flex items-center gap-2 bg-[#0a1722] text-white font-extrabold text-[15px] px-7 py-3.5 rounded-xl hover:opacity-90">
               Browse {tradePlural.toLowerCase()} nearby <ArrowRight size={15} />

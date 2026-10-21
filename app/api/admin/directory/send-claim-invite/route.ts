@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   // transactional domain via the fallback below.
   const FROM = process.env.OUTREACH_FROM_EMAIL ?? process.env.RESEND_FROM_EMAIL ?? "team@swiftscope.com.au";
   // Real ask: this should read as coming from Brendan personally, not
-  // a branded "Swiftscope" sender - but the technical From address has
+  // a branded "SwiftScope" sender - but the technical From address has
   // to stay on a domain verified in Resend (can't send as an arbitrary
   // personal Gmail address without it being verified, which isn't
   // possible for a domain you don't own). Reply-To is where a genuine

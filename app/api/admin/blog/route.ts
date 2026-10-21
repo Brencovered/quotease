@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     cover_url: (cover_url && typeof cover_url === "string") ? cover_url : null,
     category: (category && typeof category === "string") ? category : "Blog",
     tags: Array.isArray(tags) ? tags.filter((t): t is string => typeof t === "string") : [],
-    author_name: (author_name && typeof author_name === "string") ? author_name.trim() : "Swiftscope",
+    author_name: (author_name && typeof author_name === "string") ? author_name.trim() : "SwiftScope",
     author_avatar: (author_avatar && typeof author_avatar === "string") ? author_avatar : null,
     published: published === true,
     featured: featured === true,
@@ -87,7 +87,7 @@ export async function PUT(request: Request) {
   if (cover_url !== undefined) payload.cover_url = typeof cover_url === "string" && cover_url ? cover_url : null;
   if (category !== undefined) payload.category = typeof category === "string" ? category : "Blog";
   if (tags !== undefined) payload.tags = Array.isArray(tags) ? tags.filter((t): t is string => typeof t === "string") : [];
-  if (author_name !== undefined) payload.author_name = typeof author_name === "string" && author_name.trim() ? author_name.trim() : "Swiftscope";
+  if (author_name !== undefined) payload.author_name = typeof author_name === "string" && author_name.trim() ? author_name.trim() : "SwiftScope";
   if (author_avatar !== undefined) payload.author_avatar = typeof author_avatar === "string" && author_avatar ? author_avatar : null;
   if (published !== undefined) payload.published = published === true;
   if (featured !== undefined) payload.featured = featured === true;

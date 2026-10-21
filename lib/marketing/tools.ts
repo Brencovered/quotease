@@ -159,7 +159,7 @@ export const TOOLS: ToolMeta[] = [
     description:
       "Free calculator that factors net pay, tax, 12% super, workers comp, leave, public holidays, and unbillable admin time into your real hourly and day rate.",
     audience: "tradie",
-    hook: "Save your true charge-out rate straight into your Swiftscope profile so on-site quotes automatically protect your profit.",
+    hook: "Save your true charge-out rate straight into your SwiftScope profile so on-site quotes automatically protect your profit.",
     hookCta: "Start 7-day free trial",
     hookHref: "/signup",
     accessLabel: "No login required",
@@ -172,8 +172,8 @@ export const TOOLS: ToolMeta[] = [
     description:
       "Free margin and markup converter with GST toggle and a side-by-side matrix. Stop leaking profit by confusing 20% markup with 20% margin.",
     audience: "tradie",
-    hook: "Stop doing driveway math at Bunnings. Swiftscope applies your exact pre-configured profit margins to materials instantly.",
-    hookCta: "Try Swiftscope free",
+    hook: "Stop doing driveway math at Bunnings. SwiftScope applies your exact pre-configured profit margins to materials instantly.",
+    hookCta: "Try SwiftScope free",
     hookHref: "/signup",
     accessLabel: "No login required",
   },
@@ -185,7 +185,7 @@ export const TOOLS: ToolMeta[] = [
     description:
       "No-login quote PDF builder with logo, brand colour, labour and materials lines, payment terms, and a signature line. Email and phone unlock the download.",
     audience: "tradie",
-    hook: "Creating this PDF took minutes at your desk. Swiftscope's AI voice quote builder creates and sends this in seconds from your driveway.",
+    hook: "Creating this PDF took minutes at your desk. SwiftScope's AI voice quote builder creates and sends this in seconds from your driveway.",
     hookCta: "Try voice and on-site quoting free",
     hookHref: "/signup",
     accessLabel: "Build free · email and phone to download the PDF",
@@ -198,7 +198,7 @@ export const TOOLS: ToolMeta[] = [
     description:
       "Calculate true cost per kilometre and daily rolling overhead for ute, van, or truck. Includes fuel, tyres, depreciation, tool replacement, and ATO 88c/km comparison.",
     audience: "tradie",
-    hook: "Automatically include your custom vehicle trip fee in every quote with one tap in Swiftscope.",
+    hook: "Automatically include your custom vehicle trip fee in every quote with one tap in SwiftScope.",
     hookCta: "Build quotes with real costs",
     hookHref: "/signup",
     accessLabel: "No login required",
@@ -259,7 +259,7 @@ export const MARGIN_FAQS = [
 
 export const QUOTE_PDF_FAQS = [
   {
-    q: "Do I need a Swiftscope account to make a PDF?",
+    q: "Do I need a SwiftScope account to make a PDF?",
     a: "No. Build the quote in the browser. Email and phone unlock the download so we can send useful follow-up tips. No login wall on the builder itself.",
   },
   {

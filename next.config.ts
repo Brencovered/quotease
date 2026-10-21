@@ -70,6 +70,11 @@ const nextConfig: NextConfig = {
     // slower, but that cost is paid once per source image on Vercel and
     // cached, while the byte saving is paid on every mobile visit.
     formats: ["image/avif", "image/webp"],
+    // Default deviceSizes includes 3840, and next/image uses the largest
+    // entry as the img src fallback. That makes the document load event
+    // wait on a cold optimisation of a multi-megabyte source. 2048 covers
+    // the hero's sizes cap (1280px) at 1.5x and typical 2x screens.
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "ltmxsmoyaoennqksxyqt.supabase.co" },

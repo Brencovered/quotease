@@ -5,7 +5,7 @@
  * software for tradies), not the directory. Unlike generateDirectoryKeywords
  * (which mechanically derives from live trade+suburb data), there's no
  * equivalent live dataset to derive SaaS keywords from - this is a
- * template-based expansion grounded in what Swiftscope actually is: a flat-
+ * template-based expansion grounded in what SwiftScope actually is: a flat-
  * rate SaaS consolidating tools like ServiceM8, Tradify, Fergus, HiPages,
  * GroundPlan and SimPro for Australian trade businesses (electricians,
  * plumbers, carpenters, roofers, and generic trades).
@@ -29,7 +29,7 @@ const TRADES_PLURAL: Record<string, string> = {
   tradie: "tradies",
 };
 
-// The actual named tools Swiftscope consolidates - kept in sync with
+// The actual named tools SwiftScope consolidates - kept in sync with
 // product_information rather than invented. Only used for genuine
 // comparison/alternative-style keywords, not fabricated claims.
 const COMPETITORS = ["ServiceM8", "Tradify", "Fergus", "SimPro", "GroundPlan"];
@@ -66,7 +66,7 @@ function buildTemplates(): KeywordTemplate[] {
   templates.push({ keyword: "quoting software no per user fee", intent: "Commercial", notes: "Pricing differentiator" });
 
   // Genuine alternative/comparison terms against the named tools
-  // Swiftscope actually consolidates - never invent a claim about a
+  // SwiftScope actually consolidates - never invent a claim about a
   // competitor, just the comparison search pattern itself.
   for (const competitor of COMPETITORS) {
     templates.push({ keyword: `${competitor} alternative`, intent: "Commercial", notes: `Alternative-to search for ${competitor}` });

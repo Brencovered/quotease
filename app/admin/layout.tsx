@@ -27,7 +27,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <header className="bg-[var(--navy)] px-5 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <Link href="/admin/tradies" className="font-display text-lg text-white">
-            Swiftscope <span className="text-[var(--amber)]">Admin</span>
+            SwiftScope <span className="text-[var(--amber)]">Admin</span>
           </Link>
           <nav className="flex items-center gap-5 text-[13px] font-semibold">
             <Link href="/admin/overview" className="text-[var(--steel-1)] hover:text-white">Overview</Link>

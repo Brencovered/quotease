@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Check, Send, Target } from "lucide-react";
 import TrialRiskReversal from "@/components/marketing/TrialRiskReversal";
+import { HERO_POSTERS } from "@/components/marketing/heroPosters";
 
 type Scene = {
   key: "scope" | "quote" | "win";
@@ -36,7 +37,7 @@ const SCENES: Scene[] = [
     objectPos: "object-left",
     icon: <Target size={18} aria-hidden />,
     phone: "/marketing/v2/phone-quote.png",
-    phoneAlt: "Scope capture with live site markup in Swiftscope",
+    phoneAlt: "Scope capture with live site markup in SwiftScope",
     result: {
       kicker: "On site",
       title: "12 items marked up",
@@ -202,9 +203,11 @@ export default function HomeHero() {
                 <div
                   key={s.key}
                   className={[
-                    "absolute inset-0 transition-opacity duration-700 ease-out",
+                    "absolute inset-0 transition-opacity duration-700 ease-out bg-[#0e2030] bg-cover",
+                    s.objectPos === "object-center" ? "bg-center" : "bg-left",
                     i === active ? "opacity-100" : "opacity-0",
                   ].join(" ")}
+                  style={{ backgroundImage: `url("${HERO_POSTERS[s.key]}")` }}
                   aria-hidden={i !== active}
                 >
                   <Image
@@ -386,7 +389,7 @@ function HeadlineWord({
     <span
       className={[
         "transition-colors duration-500",
-        active ? "text-[#ffb400]" : "text-white/35",
+        active ? "text-[#ffb400]" : "text-[#c5d4e0]",
         active && !reduceMotion ? "home-word-active" : "",
       ].join(" ")}
     >

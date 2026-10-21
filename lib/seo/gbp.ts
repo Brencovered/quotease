@@ -16,7 +16,7 @@
  *    Google Business Profile (GBP "Posts", responding to reviews, updating
  *    business hours, etc) requires the Google Business Profile API, which
  *    needs EACH TRADIE to individually OAuth-connect their own GBP account
- *    to Swiftscope - there is no way to post on a business's behalf with
+ *    to SwiftScope - there is no way to post on a business's behalf with
  *    just our own service account, the way the Search Console wrapper
  *    works. That's a real feature (OAuth flow, token storage per tradie,
  *    consent screen, Google API access review since GBP API has stricter

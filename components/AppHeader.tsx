@@ -170,7 +170,7 @@ export default function AppHeader() {
           href={homeHref}
           className="font-display text-[15px] tracking-widest text-white px-6 pt-6 pb-5"
         >
-          SWIFTSCOPE
+          SwiftScope
         </Link>
 
         {!showFieldNav && (
@@ -264,7 +264,7 @@ export default function AppHeader() {
           href={homeHref}
           className="font-display text-[14px] tracking-widest text-white"
         >
-          SWIFTSCOPE
+          SwiftScope
         </Link>
         <button
           onClick={() => setMoreOpen((v) => !v)}

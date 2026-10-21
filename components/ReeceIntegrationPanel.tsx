@@ -109,7 +109,7 @@ export default function ReeceIntegrationPanel() {
             Connect your Reece maX account
           </p>
           <p className="text-[13px] text-[var(--ink-soft)]">
-            Until Reece registers Swiftscope as a Technology Partner, we use a
+            Until Reece registers SwiftScope as a Technology Partner, we use a
             session-based proxy. Follow these steps to connect:
           </p>
 
@@ -287,7 +287,7 @@ export default function ReeceIntegrationPanel() {
         <p className="text-[13px] text-[var(--ink-soft)]">
           ServiceM8, Fergus, AroFlo and others are registered Reece Technology
           Partners with a standardised OAuth flow. When Reece approves
-          Swiftscope, users will click{" "}
+          SwiftScope, users will click{" "}
           <strong>&quot;Connect to Reece&quot;</strong> and authorise via a popup - no
           manual cookie copying.
         </p>

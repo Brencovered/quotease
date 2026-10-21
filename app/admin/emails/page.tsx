@@ -24,7 +24,7 @@ export default function AdminEmailsPage() {
       <div className="mb-6">
         <h1 className="font-display text-2xl text-[var(--ink)] mb-1">Automated emails</h1>
         <p className="text-[13.5px] text-[var(--ink-soft)] max-w-2xl">
-          Every automated / system-triggered email Swiftscope sends, rendered with sample data so you can see
+          Every automated / system-triggered email SwiftScope sends, rendered with sample data so you can see
           exactly what goes out without digging through code. These come from a shared template file
           (<code className="text-[12px] bg-[var(--line-subtle)] px-1 py-0.5 rounded">lib/email/templates.ts</code>) -
           editing that file changes both the real send and what you see here, so this view can never drift out of

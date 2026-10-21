@@ -148,8 +148,8 @@ export default function QuoteForm({
         </p>
         <p className="text-[12.5px] text-gray-400">
           {listing.is_claimed
-            ? "Your details go directly to the tradie. Swiftscope never shares them with anyone else."
-            : "Swiftscope will pass this quote request on to them for you."}
+            ? "Your details go directly to the tradie. SwiftScope never shares them with anyone else."
+            : "SwiftScope will pass this quote request on to them for you."}
         </p>
       </div>
     );
@@ -383,7 +383,7 @@ export default function QuoteForm({
         <p className="text-[11.5px] text-gray-400 text-center leading-snug">
           {listing.is_claimed
             ? `Your details go directly to ${listing.business_name} only.`
-            : `Swiftscope will pass this quote on to ${listing.business_name} for you.`}
+            : `SwiftScope will pass this quote on to ${listing.business_name} for you.`}
         </p>
 
         {listing.scraped_contact_phone && (

@@ -22,14 +22,14 @@ describe("cleanNameForTitle", () => {
 describe("buildListingTitle", () => {
   it("keeps the full template with rating when short enough to fit", () => {
     const title = buildListingTitle("ABC Tiling", "Tiler", "Perth", 5, 2);
-    expect(title).toBe("ABC Tiling | Tiler in Perth - 5★ (2 reviews) - Swiftscope");
+    expect(title).toBe("ABC Tiling | Tiler in Perth - 5★ (2 reviews) - SwiftScope");
     expect(title.length).toBeLessThanOrEqual(60);
   });
 
   it("drops the rating snippet once the full template overflows, even for an otherwise-short name", () => {
-    // "Hoppy's Plumbing | Plumber in Strathfield - 5★ (444 reviews) - Swiftscope" is 75 chars
+    // "Hoppy's Plumbing | Plumber in Strathfield - 5★ (444 reviews) - SwiftScope" is 75 chars
     const title = buildListingTitle("Hoppy's Plumbing", "Plumber", "Strathfield", 5, 444);
-    expect(title).toBe("Hoppy's Plumbing | Plumber in Strathfield - Swiftscope");
+    expect(title).toBe("Hoppy's Plumbing | Plumber in Strathfield - SwiftScope");
     expect(title.length).toBeLessThanOrEqual(60);
   });
 

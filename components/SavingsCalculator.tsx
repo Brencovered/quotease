@@ -295,7 +295,7 @@ export default function SavingsCalculator() {
               <p className="text-[12px] text-white/40 mt-1">per month</p>
             </div>
             <div className="bg-[#ffb400]/10 border border-[#ffb400]/30 rounded-xl p-4">
-              <p className="text-[11px] text-[#ffb400] font-bold uppercase tracking-wide mb-1">Swiftscope</p>
+              <p className="text-[11px] text-[#ffb400] font-bold uppercase tracking-wide mb-1">SwiftScope</p>
               <p className="font-display text-[2.2rem] text-white leading-none">${SWIFTSCOPE_PRICE}</p>
               <p className="text-[12px] text-white/40 mt-1">per month, all in</p>
             </div>
@@ -313,7 +313,7 @@ export default function SavingsCalculator() {
           )}
 
           <p className="text-white/40 text-[11.5px] mb-5">
-            Swiftscope replaces quoting, job management, scheduling, and Xero sync. Xero and accounting software work alongside Swiftscope.
+            SwiftScope replaces quoting, job management, scheduling, and Xero sync. Xero and accounting software work alongside SwiftScope.
           </p>
 
           <Link
@@ -330,7 +330,7 @@ export default function SavingsCalculator() {
         <div className="bg-[#0a1722] rounded-2xl p-6 text-center">
           <p className="text-white font-bold text-[16px] mb-2">You&apos;re already running lean</p>
           <p className="text-white/50 text-[13px] mb-4">
-            Your current spend is ${total}/mo. Swiftscope is $39/mo and adds quoting, job management, scheduling, and Xero sync in one place.
+            Your current spend is ${total}/mo. SwiftScope is $39/mo and adds quoting, job management, scheduling, and Xero sync in one place.
           </p>
           <Link href="/signup" className="inline-flex items-center gap-2 bg-[#ffb400] text-[#0a1722] font-extrabold text-[14px] px-8 py-3.5 rounded-xl hover:opacity-90">
             Start free 7-day trial <ArrowRight size={14} />

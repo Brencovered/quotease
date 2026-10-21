@@ -101,7 +101,7 @@ export async function POST(request: Request) {
 
   const appUrl = teamInviteAcceptBaseUrl(request);
   const acceptUrl = `${appUrl}/team/accept/${invite.invite_token}`;
-  const businessName = profile?.business_name || "their Swiftscope account";
+  const businessName = profile?.business_name || "their SwiftScope account";
 
   if (RESEND_API_KEY) {
     try {
@@ -112,9 +112,9 @@ export async function POST(request: Request) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: "Swiftscope <noreply@swiftscope.com.au>",
+          from: "SwiftScope <noreply@swiftscope.com.au>",
           to: [cleanEmail],
-          subject: `You've been added to ${businessName} on Swiftscope`,
+          subject: `You've been added to ${businessName} on SwiftScope`,
           html: teamInviteEmailHtml({
             name: cleanName,
             businessName,

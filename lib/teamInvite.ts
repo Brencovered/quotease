@@ -116,9 +116,9 @@ export function teamInviteEmailHtml(opts: {
 }): string {
   return `
     <p>${opts.name ? `Hi ${opts.name},` : "Hi,"}</p>
-    <p><strong>${opts.businessName}</strong> has added you to their team on Swiftscope.</p>
+    <p><strong>${opts.businessName}</strong> has added you to their team on SwiftScope.</p>
     <p><a href="${opts.acceptUrl}">Set your password and join the team</a>.</p>
-    <p style="color:#888;font-size:12px">This adds you to their company - you don&apos;t need to create a separate Swiftscope business.</p>
+    <p style="color:#888;font-size:12px">This adds you to their company - you don&apos;t need to create a separate SwiftScope business.</p>
   `;
 }
 

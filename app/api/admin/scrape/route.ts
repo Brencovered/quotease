@@ -336,7 +336,7 @@ function extractEmails(html: string): string | null {
 // social-media link previews and is almost always a generic hero/content
 // photo, not a logo. Using it here was exactly why a scraped business's
 // "logo" would show a random banner photo (e.g. a hero shot from their
-// homepage) instead of an actual brand mark, or Swiftscope's own
+// homepage) instead of an actual brand mark, or SwiftScope's own
 // "add your logo" placeholder if no real logo signal exists.
 //
 // Priority instead goes to actual logo signals, most to least direct:

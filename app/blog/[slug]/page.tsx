@@ -22,12 +22,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     .single();
 
   if (!post) {
-    return { title: "Article not found | Swiftscope", robots: { index: false, follow: true } };
+    return { title: "Article not found | SwiftScope", robots: { index: false, follow: true } };
   }
 
   const canonical = `${BASE_URL}/blog/${slug}`;
-  const title = `${post.title} | Swiftscope Blog`;
-  const description = (post.excerpt || `${post.title} - insights for Australian trade businesses from Swiftscope.`).slice(0, 155);
+  const title = `${post.title} | SwiftScope Blog`;
+  const description = (post.excerpt || `${post.title} - insights for Australian trade businesses from SwiftScope.`).slice(0, 155);
   const image = post.cover_url || `${BASE_URL}/og-default-image`;
 
   return {
@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       title: post.title,
       description,
       url: canonical,
-      siteName: "Swiftscope",
+      siteName: "SwiftScope",
       type: "article",
       images: [{ url: image }],
       publishedTime: post.published_at ?? undefined,
@@ -464,7 +464,7 @@ function CTASection() {
       <div className="absolute bottom-0 left-0 w-32 h-32 bg-[#ffb400]/5 rounded-full translate-y-1/2 -translate-x-1/2" />
       <div className="relative z-10">
         <h3 className="font-display text-[1.6rem] sm:text-[2rem] text-white uppercase mb-3">
-          Reclaim Your Evenings with <span className="text-[#ffb400]">Swiftscope</span>
+          Reclaim Your Evenings with <span className="text-[#ffb400]">SwiftScope</span>
         </h3>
         <p className="text-[15px] text-white/70 leading-relaxed max-w-xl mx-auto mb-6">
           Stop letting profitable jobs slip through the cracks because of paperwork bottlenecks.
@@ -894,7 +894,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       <footer className="bg-[#0a1722]">
         <div className="max-w-7xl mx-auto px-6 py-10 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <span className="font-display text-lg text-white">SWIFTSCOPE</span>
+            <span className="font-display text-lg text-white">SwiftScope</span>
             <p className="text-[12px] text-white/40 mt-1">Quote it, send it, win the job</p>
           </div>
           <div className="flex items-center gap-6">

@@ -1,10 +1,10 @@
-// Swiftscope push notification service worker.
+// SwiftScope push notification service worker.
 // Registered by components/PushNotificationToggle.tsx when a user
 // enables notifications. Only handles push display + click-through;
 // no caching / offline behaviour is implemented here.
 
 self.addEventListener("push", (event) => {
-  let data = { title: "Swiftscope", body: "", url: "/" };
+  let data = { title: "SwiftScope", body: "", url: "/" };
   try {
     if (event.data) data = { ...data, ...event.data.json() };
   } catch {
