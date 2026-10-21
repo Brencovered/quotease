@@ -1271,8 +1271,10 @@ function gutterSplit(c0){const w=c0.width,h=c0.height;const px=c0.getContext('2d
     const minGap=Math.max(3,Math.round((hi-lo)*0.015));const parts=[];let s0=lo,run=0;for(let a=lo;a<=hi+1;a++){const blank=a>hi||cnt[a]<=tol;if(blank)run++;else{if(run>=minGap&&a-run>s0){parts.push([s0,a-run]);s0=a;}else if(run>=minGap)s0=a;run=0;}}parts.push([s0,hi+1]);
     const mass=parts.map(([p,q])=>{let t=0;for(let a=p;a<q;a++)t+=cnt[a];return t;});const big=Math.max(...mass);const keep=parts.filter((p,i)=>mass[i]>=big*0.3&&(p[1]-p[0])>=(hi-lo)*0.15);return keep.length>=2&&keep.length<=6?keep:null;};
   const box=(x0,x1,y0,y1)=>{let a=y1,b=y0,c=x1,d=x0;for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++)if(ink[y*w+x]){if(y<a)a=y;if(y>b)b=y;if(x<c)c=x;if(x>d)d=x;}const pw=Math.round((d-c)*0.06),ph=Math.round((b-a)*0.06);return {x:Math.max(x0,c-pw),y:Math.max(0,a-ph),w:Math.min(x1,d+pw+1)-Math.max(x0,c-pw),h:Math.min(h,b+ph+1)-Math.max(0,a-ph)};};
-  const cols=cut(w,h,(x,y)=>ink[y*w+x]);if(cols)return cols.map(([p,q])=>{const b=box(p,q,0,h);return b;});
-  const rows=cut(h,w,(y,x)=>ink[y*w+x]);if(rows)return rows.map(([p,q])=>{let a=w,b=0;for(let y=p;y<q;y++)for(let x=0;x<w;x++)if(ink[y*w+x]){if(x<a)a=x;if(x>b)b=x;}const ph=Math.round((q-p)*0.06),pw=Math.round((b-a)*0.06);return {x:Math.max(0,a-pw),y:Math.max(0,p-ph),w:Math.min(w,b+pw+1)-Math.max(0,a-pw),h:Math.min(h,q+ph)-Math.max(0,p-ph)};});
+  // A sheet border or title rule runs through the gutter. Ignore a rim so that frame does not glue the two drawings together.
+  const rim=Math.max(4,Math.round(Math.min(w,h)*0.025));
+  const cols=cut(w,h,(x,y)=>(y<rim||y>=h-rim)?0:ink[y*w+x]);if(cols)return cols.map(([p,q])=>{const b=box(p,q,0,h);return b;});
+  const rows=cut(h,w,(y,x)=>(x<rim||x>=w-rim)?0:ink[y*w+x]);if(rows)return rows.map(([p,q])=>{let a=w,b=0;for(let y=p;y<q;y++)for(let x=0;x<w;x++)if(ink[y*w+x]){if(x<a)a=x;if(x>b)b=x;}const ph=Math.round((q-p)*0.06),pw=Math.round((b-a)*0.06);return {x:Math.max(0,a-pw),y:Math.max(0,p-ph),w:Math.min(w,b+pw+1)-Math.max(0,a-pw),h:Math.min(h,q+ph+1)-Math.max(0,p-ph)};});
   return null;}
 function splitBlobs(M,w,h,gapMax){
   const g=Math.max(4,Math.round(Math.min(w,h)/150));const gw=Math.ceil(w/g),gh=Math.ceil(h/g);const occ=new Uint32Array(gw*gh);
@@ -1297,21 +1299,21 @@ function splitBlobs(M,w,h,gapMax){
 /* Every floor plan on the sheet, ground floor first. */
 async function detectPlans(){const U=doc.underlay;if(!U.src)return null;let c0=await srcToCanvas(U.src,2600);
   // a small image (a screenshot or a thumbnail) is blown up first, so a wall a couple of pixels thick still reads as a wall
-  const lg=Math.max(c0.width,c0.height);if(lg<1400){const f=Math.min(8,1600/lg);const cu=document.createElement('canvas');cu.width=Math.round(c0.width*f);cu.height=Math.round(c0.height*f);const g=cu.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,cu.width,cu.height);g.imageSmoothingQuality='high';g.drawImage(c0,0,0,cu.width,cu.height);c0=cu;}const boxes=planBoxes(c0);
+  const lg=Math.max(c0.width,c0.height);if(lg<1400){const f=Math.min(8,1600/lg);const cu=document.createElement('canvas');cu.width=Math.round(c0.width*f);cu.height=Math.round(c0.height*f);const g=cu.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,cu.width,cu.height);g.imageSmoothingEnabled=false;g.drawImage(c0,0,0,cu.width,cu.height);c0=cu;}const boxes=planBoxes(c0);
   if(boxes.length<2){const r=await detectPlan(c0,boxes[0]);return r?[r]:null;}
   const k0=(U.w||c0.width)/c0.width,k1=(U.h||c0.height)/c0.height;
   // keep every drawing, traced or not: a floor the walls could not be read on still gets its own floor to trace by hand
   const out=[];for(const B of boxes){let r=null;try{r=await detectPlan(c0,B,true);}catch(e){r=null;}if(!r||r.outline.length<3)r={outline:[],walls:[],ops:[],areas:[],failed:true};r.box=B;r.ubox={x0:B.x*k0,x1:(B.x+B.w)*k0,y0:B.y*k1,y1:(B.y+B.h)*k1};out.push(r);}
-  if(!out.some(r=>!r.failed))return null;
+  if(!out.some(r=>!r.failed)&&out.length<2)return null;
   // ground floor: the biggest drawing (it carries the garage and the living areas); the rest in reading order, left to right then down
   const size=r=>r.box.w*r.box.h;out.sort((a,b)=>size(b)-size(a));const g0=out.shift();
   out.sort((a,b)=>{const ay=a.box.y+a.box.h/2,by=b.box.y+b.box.h/2;if(Math.abs(ay-by)>Math.min(a.box.h,b.box.h)/2)return ay-by;return a.box.x-b.box.x;});
   // the floors on one sheet share one scale
-  const sc=(g0.failed?out.find(r=>!r.failed):g0).mmPerPx;out.concat([g0]).forEach(r=>{r.mmPerPx=sc;});
+  const donor=g0.failed?out.find(r=>!r.failed):g0;const sc=donor&&donor.mmPerPx;if(sc)out.concat([g0]).forEach(r=>{r.mmPerPx=sc;});
   return [g0].concat(out);}
 async function detectPlan(c0,B,many){const U=doc.underlay;
   // work on the drawing at 1500 to 2600 px on its long side, whatever size it was printed or scanned at
-  const up=Math.min(3,Math.max(1,1500/Math.max(B.w,B.h)),2600/Math.max(B.w,B.h));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(B.w*up));c.height=Math.max(1,Math.round(B.h*up));const cg=c.getContext('2d');cg.fillStyle='#fff';cg.fillRect(0,0,c.width,c.height);cg.imageSmoothingQuality='high';cg.drawImage(c0,B.x,B.y,B.w,B.h,0,0,c.width,c.height);
+  const up=Math.min(3,Math.max(1,1500/Math.max(B.w,B.h)),2600/Math.max(B.w,B.h));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(B.w*up));c.height=Math.max(1,Math.round(B.h*up));const cg=c.getContext('2d');cg.fillStyle='#fff';cg.fillRect(0,0,c.width,c.height);cg.imageSmoothingEnabled=false;cg.drawImage(c0,B.x,B.y,B.w,B.h,0,0,c.width,c.height);
   const w=c.width,h=c.height;const k0=(U.w||c0.width)/c0.width,k1=(U.h||c0.height)/c0.height;const sx=k0*B.w/w,sy=k1*B.h/h;const ox=B.x*k0,oy=B.y*k1;
   const res=detectIn(c,w,h,sx,sy);if(!res)return null;const sh=p=>[p[0]+ox,p[1]+oy];res.outline=res.outline.map(sh);res.walls.forEach(wl=>{wl.a=sh(wl.a);wl.b=sh(wl.b);});res.ops.forEach(o=>{o.mid=sh(o.mid);});
   res.areas=(res.areas||[]).map(a=>({a:sh(a.a),b:sh(a.b)}));
@@ -1339,7 +1341,9 @@ function detectIn(c,w,h,sx,sy){
   // The first pass's thickness is the outside wall; a second pass at that thickness keeps thin internal walls and short corner stubs.
   let P=pass1(Math.max(2,Math.round(T95*0.32)));if(!P)return null;const Text=P.Text;const k2=Math.max(2,Math.round(Text*0.32));if(P.k>k2+1){const P2=pass1(k2,Text);if(P2)P=P2;}
   let S=P.S;const Lmin=P.Lmin,k=P.k;
-  const mmPx=Math.min(60,Math.max(4,230/Text));S=S.filter(s=>s.t<=Text*2.2);
+  const mmPxWall=Math.min(60,Math.max(4,230/Text));
+  // A thin pen stroke is not the wall thickness. A house plan is rarely more than about 18 m on its long side, so a 2 px line must not shrink door and window gaps to a few pixels or the outline never closes.
+  const mmPx=Math.max(4,Math.min(mmPxWall,18000/Math.max(w,h)));S=S.filter(s=>s.t<=Text*2.2);
   const lineInfo=(sg,a,b)=>{let one=0,both=0,tot=0;const half=Math.ceil(sg.t/2)+2;for(let u=Math.ceil(a);u<=b;u++){tot++;let lo=false,hi=false;for(let d=-half;d<=half;d++){const cc=Math.round(sg.c)+d;const x=sg.axis==='h'?u:cc,y=sg.axis==='h'?cc:u;if(x>=0&&y>=0&&x<w&&y<h&&ink[y*w+x]){if(d<=0)lo=true;if(d>=0)hi=true;}}if(lo||hi)one++;if(lo&&hi)both++;}return tot?{one:one/tot,both:both/tot}:{one:0,both:0};};
   // A wall line runs the full extent of its collinear pieces (windows break it into pieces), so test against that extent.
   // Inside the house there is a parallel wall on both sides of the gap; an outside wall has open ground on one side.
@@ -1411,7 +1415,7 @@ function labelLevel(r,labs){const W=doc.underlay.w,H=doc.underlay.h;doc.rooms=la
     const n=lab.name.toLowerCase();const type=/verand/.test(n)?'verandah':/pergola/.test(n)?'pergola':/deck|alfresco|balcony/.test(n)?'deck':/drive|patio|pav|porch|court|terrace/.test(n)?'paving':'deck';
     doc.areas.push({id:uid(),type,name:lab.name,a:P[0],b:P[2],h:type==='deck'?600:null,board:'merbau',roof:'colorbond',t:100,bal:null});});}
 function finishOpenings(){doc.openings.forEach(o=>{if(o.wpx){o.width=Math.max(500,Math.round(o.wpx*doc.scale/10)*10);delete o.wpx;}});}
-async function autoTrace(manual){if(!doc.underlay.src){flash('Upload a plan first.');return;}if(aiBusy)return;aiBusy=true;renderPlanTab();flash('Finding the walls on your plan...');
+async function autoTrace(manual){if(!doc.underlay.src){flash('Upload a plan first.');return;}if(aiBusy)return;if(manual&&doc.outline.length>=3&&!confirmReplace())return;aiBusy=true;renderPlanTab();flash('Finding the walls on your plan...');
   try{const list=await detectPlans();const many=!!(list&&list.length>1);const r=list&&(list.find(x=>!x.failed)||list[0]);const haveGeo=r&&r.outline.length>=3;
     if(haveGeo){snapshot();doc.scale=r.mmPerPx;
       if(many){ensureLevels();const old=doc.levels;doc.levels=list.map((_,i)=>({id:(old[i]&&old[i].id)||uid(),name:(old[i]&&old[i].name)||LEVEL_NAMES[i]||('Level '+(i+1)),h:old[i]?old[i].h:null,shift:[0,0],data:levelData({})}));doc.level=0;loadLevelData(0);doc.site=null;
@@ -1420,7 +1424,7 @@ async function autoTrace(manual){if(!doc.underlay.src){flash('Upload a plan firs
     let labels=null,signup=false;
     try{let image=doc.underlay.src;if(!/^data:image\/jpeg/.test(image)||image.length>3500000){const c=await srcToCanvas(image,2200);image=canvasToJpeg(c,3500000).url;}
       const res=await fetch('/api/structures/trace-draft',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({image})});const b=await res.json().catch(()=>({}));if(res.ok)labels=b.draft;else signup=!!b.signup;}catch(e){}
-    if(!haveGeo){if(labels){applyDraft(labels);return;}flash(signup?'Could not find clear walls. Trace it with the Outline and Wall tools, or sign in to use AI.':'Could not find clear walls on this plan. Trace it with the Outline and Wall tools.');return;}
+    if(!haveGeo){if(many){snapshot();ensureLevels();const old=doc.levels;doc.levels=list.map((_,i)=>({id:(old[i]&&old[i].id)||uid(),name:(old[i]&&old[i].name)||LEVEL_NAMES[i]||('Level '+(i+1)),h:old[i]?old[i].h:null,shift:[0,0],data:levelData({})}));doc.level=0;loadLevelData(0);doc.site=null;invalidate();changed(true);renderViews();setTool('outline');flash(`Found ${list.length} floors on this sheet, but the walls were too faint to trace. Switch floors at the top and trace each one with Outline and Wall, or upload a sharper copy.`);return;}if(labels){applyDraft(labels);return;}flash(signup?'Could not find clear walls. Trace it with the Outline and Wall tools, or sign in to use AI.':'Could not find clear walls on this plan. Trace it with the Outline and Wall tools.');return;}
     let scaleNote='Scale estimated from the wall thickness. Set it on a labelled room for an exact takeoff.';
     const UW=doc.underlay.w||0,UH=doc.underlay.h||0;const lowRes=UW&&Math.max(UW,UH)<900?`Your plan image is only ${UW} × ${UH} px, so thin walls get lost. Upload the PDF or a full size image for a sharper trace. `:'';
     if(labels&&labels.rooms){
@@ -1765,7 +1769,7 @@ $('#views').addEventListener('click',e=>{const b=e.target.closest('[data-view]')
 let fitted=false;function fitIfNeeded(){if(!fitted){fitView();fitted=true;}}
 /* ---------- change pipeline ---------- */
 function updateStats(){const sm=scaleMM();const el=$('#stats');if(!sm){el.innerHTML='<b>Scale not set</b>Use the Scale tool on a known dimension<span class="hint">Then trace the outline</span>';return;}
-  if(doc.outline.length<3){el.innerHTML='<b>No outline yet</b>Use Outline and tap the outside corners<span class="hint">Or tap AI draft</span>';return;}
+  if(doc.outline.length<3){el.innerHTML='<b>No outline yet</b>Use Outline and tap the outside corners<span class="hint">Or tap Auto trace</span>';return;}
   const R=rooms();el.innerHTML=`<b>${fm(outlineArea(),1)} m² footprint</b>${R.length} rooms, ${fm(outlinePer(),1)} m outside walls${doc.site&&doc.site.length>=3?`, ${fm(siteArea(),0)} m² site`:''}<span class="hint">${doc.draft?'AI draft: check it against the plan':'Tap a room to edit it'}</span>`;}
 function changed(full){invalidate();draw();updateStats();if(full){renderPlanTab();renderRooms();}else{renderPlanTab();if($('#tab-rooms').classList.contains('on'))renderRooms();}scheduleMaterials();if(!$('#v3').hidden)build3D();save();}
 /* ---------- Swiftscope bridge ---------- */
