@@ -9,11 +9,19 @@ const require = createRequire(import.meta.url);
 const FIX = path.resolve("test/fixtures/diakrit-single-storey.png");
 /* The plan the owner uploaded: thick black poche, small house on a large white sheet. */
 const FIX_SHA256 = "a67461e5382dea179c3759c67fd724e2cc57438f1123914654cec2bd98bcb5a0";
+/* The five photos of that house. Offline tests do not call the vision model. They pin the bytes and check that a weatherboard and skillion read cannot change the plan. */
+const PHOTO_SHA: Record<string, string> = {
+  "covered-deck.jpg": "100efe358224f6528400c9ed9ff398d8f00dcafe30c875ca6eadc53156ff2a19",
+  "living-dining.jpg": "a2c7579ed2f59602ebe1a643ff41e6c7f6e941f804d5caa63010da412764920b",
+  "living-fireplace.jpg": "e7731446d9ddc96d5c797023fb9e364beb62f47be2d5a69450e782cec3b9d777",
+  "living-stone.jpg": "95acd61d797a7a1fe537e1201ba8baad268b73d21704ecaecf620aca5d140c61",
+  "rear-elevation.jpg": "a4e770a3157aa643641c75c3b98a4dc0b41e8a87971c223ac0d99ee89ec35ed1",
+};
 
 /* Label positions are 0–1000 of the sheet. Sizes are millimetres, as printed on the plan.
    Living and Dining share one open face, so their sizes must not veto the scale.
    The two bedrooms that close (3.5×3.0 and 4.2×3.2) are what the scale is taken from.
-   A third bedroom (3.3×3.2) is drawn, but its partition is not a continuous thick wall, so it is not a separate face. */
+   The top bedroom (3.7×3.2) is drawn, but its partition is not a continuous thick wall, so it is not a separate face and must not be glued onto the living room name. */
 const ROOMS = [
   { name: "Living", x: 437, y: 551, width: 9300, length: 3000 },
   { name: "Dining", x: 465, y: 593, width: 3800, length: 2800 },
@@ -24,8 +32,10 @@ const ROOMS = [
   { name: "Bedroom", x: 455, y: 692, width: 4200, length: 3200 },
   { name: "Robe", x: 419, y: 715 },
   { name: "Ensuite", x: 419, y: 699 },
+  { name: "Bedroom", x: 430, y: 480, width: 3700, length: 3200 },
   { name: "Alfresco", x: 385, y: 390 },
   { name: "Deck", x: 538, y: 569 },
+  { name: "Ramp", x: 500, y: 640 },
   { name: "Driveway", x: 615, y: 732 },
   { name: "Shed", x: 377, y: 341 },
 ];
@@ -56,6 +66,14 @@ describe("Diakrit poche plan", () => {
     expect(buf.length).toBeGreaterThan(50_000);
   });
 
+  it("keeps the house photos that were read with this plan", () => {
+    const dir = path.resolve("test/fixtures/house-rear");
+    for (const [name, sha] of Object.entries(PHOTO_SHA)) {
+      const buf = fs.readFileSync(path.join(dir, name));
+      expect(createHash("sha256").update(buf).digest("hex"), name).toBe(sha);
+    }
+  });
+
   it("follows the house walls and scales from the labelled rooms", async () => {
     const chrome = chromePath();
     let puppeteer: { launch: (opts: object) => Promise<{ newPage: () => Promise<Page>; close: () => Promise<void> }> } | null = null;
@@ -81,7 +99,9 @@ describe("Diakrit poche plan", () => {
           if (url.includes("trace-draft")) {
             let rooms: unknown[] = [];
             try { rooms = JSON.parse(sessionStorage.getItem("rooms") || "[]"); } catch { /* empty draft */ }
-            return new Response(JSON.stringify({ draft: { rooms } }), { status: 200, headers: { "Content-Type": "application/json" } });
+            return new Response(JSON.stringify({
+              draft: { rooms, openings: [{ type: "garage", x: 420, y: 480 }, { type: "garage", x: 480, y: 500 }] },
+            }), { status: 200, headers: { "Content-Type": "application/json" } });
           }
           return new Response("{}", { status: 404, headers: { "Content-Type": "application/json" } });
         };
@@ -128,12 +148,21 @@ describe("Diakrit poche plan", () => {
         const tab = document.querySelector("#tab-plan")?.textContent || "";
         const px = tab.match(/1 m is ([\d.]+) px/);
         const foot = tab.match(/Footprint\s*([\d.]+)/);
+        const openings = [...document.querySelectorAll("#ed .op")].map((e) => {
+          const cls = (e.getAttribute("class") || "").split(/\s+/);
+          return cls.find((c) => c === "door" || c === "window" || c === "slider" || c === "garage") || "";
+        });
+        const areas = [...document.querySelectorAll("#ed polygon.area")].map((el) => {
+          const next = el.nextElementSibling;
+          return { cls: el.getAttribute("class") || "", name: next && next.tagName === "text" ? (next.textContent || "") : "" };
+        });
         return {
-          box, walls, labels, siteBox,
+          box, walls, labels, siteBox, openings, areas, corners: pts.length,
           underlay: img ? { w: +img.getAttribute("width")!, h: +img.getAttribute("height")! } : null,
           pxPerM: px ? +px[1] : null,
           footprint: foot ? +foot[1] : null,
           flash: document.querySelector("#flash")?.textContent || "",
+          hint: document.querySelector("#stats .hint")?.textContent || "",
         };
       });
 
@@ -167,18 +196,30 @@ describe("Diakrit poche plan", () => {
       }
 
       const text = data.labels.map((l) => l.t).join(" | ");
-      expect(data.labels.filter((l) => l.orphan).map((l) => l.t)).toEqual([]);
-      expect(text).not.toMatch(/not in a room/i);
+      const orphans = data.labels.filter((l) => l.orphan).map((l) => l.t);
+      // The top bedroom has no thick wall of its own, so it may sit outside a closed room. It must not be renamed onto the living room.
+      expect(orphans.every((t) => /^Bedroom/.test(t))).toBe(true);
+      expect(orphans.length).toBeLessThanOrEqual(1);
+      const named = data.labels.filter((l) => !l.orphan).map((l) => l.t).join(" | ");
+      expect(named).not.toMatch(/\/ Bedroom|Bedroom \//);
       for (const name of ["Living", "Dining", "Kitchen", "Laundry", "Bath", "Bedroom", "Robe", "Ensuite"]) {
         expect(text, text).toContain(name);
       }
       expect(text).not.toMatch(/Driveway|Shed/i);
+      expect(data.corners).toBeLessThanOrEqual(4);
+      expect(data.openings).not.toContain("garage");
+      expect(data.openings.filter((t) => t === "slider" || t === "window").length).toBeGreaterThan(0);
+      const areaNames = data.areas.map((a) => a.name).join(" | ");
+      for (const name of ["Alfresco", "Deck", "Ramp"]) expect(areaNames, areaNames).toMatch(new RegExp(name, "i"));
+      expect(areaNames).not.toMatch(/Driveway|Shed/i);
+      expect(data.areas.every((a) => /\bdeck\b/.test(a.cls))).toBe(true);
 
       expect(data.flash).toMatch(/Scale set from the room sizes/);
+      expect(data.hint).not.toMatch(/AI draft/);
       expect(data.pxPerM).toBeGreaterThan(30);
       expect(data.pxPerM).toBeLessThan(45);
-      expect(data.footprint).toBeGreaterThan(80);
-      expect(data.footprint).toBeLessThan(130);
+      expect(data.footprint).toBeGreaterThan(85);
+      expect(data.footprint).toBeLessThan(120);
 
       if (data.siteBox) {
         const sw = data.siteBox.x1 - data.siteBox.x0;

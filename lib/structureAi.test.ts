@@ -108,6 +108,27 @@ describe("normalizeTraceDraft", () => {
     expect(n.rooms[0]).toMatchObject({ name: "Bed 1", width: 3500 });
     expect(normalizeTraceDraft({ outline: [[1, 1]], walls: [], rooms: [], openings: [] }).outline).toEqual([]);
   });
+
+  it("turns a garage door into a slider unless a room is labelled Garage", () => {
+    const openings = [
+      { type: "garage" as const, x: 100, y: 200 },
+      { type: "window" as const, x: 300, y: 200 },
+    ];
+    const bare = normalizeTraceDraft({
+      outline: [[0, 0], [1000, 0], [1000, 1000], [0, 1000]],
+      walls: [],
+      rooms: [{ name: "Living", width: 0, length: 0, x: 400, y: 400 }],
+      openings,
+    });
+    expect(bare.openings.map((o) => o.type)).toEqual(["slider", "window"]);
+    const withGarage = normalizeTraceDraft({
+      outline: [[0, 0], [1000, 0], [1000, 1000], [0, 1000]],
+      walls: [],
+      rooms: [{ name: "Garage", width: 5500, length: 5500, x: 200, y: 400 }],
+      openings,
+    });
+    expect(withGarage.openings.map((o) => o.type)).toEqual(["garage", "window"]);
+  });
 });
 
 describe("normalizePhotoRead", () => {
@@ -163,7 +184,7 @@ describe("photoSuggestions", () => {
     expect(photoSuggestions(base(), JOB)).toEqual([]);
   });
 
-  it("bundles roof, walls and ceiling into one suggestion and leaves the scale alone", () => {
+  it("bundles roof, walls and ceiling, and does not suggest floors, scale or a deck", () => {
     const read = base();
     read.cladding = "weatherboard";
     read.roofShape = "skillion";
@@ -177,16 +198,14 @@ describe("photoSuggestions", () => {
     read.deck = "alfresco";
     read.deckInOutline = "yes";
     const s = photoSuggestions(read, JOB);
-    const build = s.find((x) => x.id === "build");
-    expect(build?.apply).toMatchObject({ extClad: "weatherboard", roofType: "skillion", roofMat: "colorbond", pitch: 8, eave: 200, wallH: 2700 });
-    expect(build?.kind).toBe("setting");
-    expect(s.find((x) => x.id === "floors")?.apply).toEqual({ addFloors: 1 });
-    expect(s.find((x) => x.id === "scale")).toMatchObject({ kind: "scale", detail: "A garage door looks wider than the scale allows." });
-    expect(s.find((x) => x.id === "scale")?.apply).toBeUndefined();
-    expect(s.find((x) => x.id === "deck")?.label).toMatch(/inside the house outline/);
+    expect(s).toHaveLength(1);
+    expect(s[0]?.apply).toMatchObject({ extClad: "weatherboard", roofType: "skillion", roofMat: "colorbond", pitch: 8, eave: 200, wallH: 2700 });
+    expect(s[0]?.kind).toBe("setting");
+    expect(s[0]?.apply).not.toHaveProperty("addFloors");
+    expect(s.map((x) => x.id)).toEqual(["build"]);
   });
 
-  it("treats a flat roof with no pitch as 2 degrees and skips a floor that is already there", () => {
+  it("treats a flat roof with no pitch as 2 degrees", () => {
     const read = base();
     read.roofShape = "flat";
     read.roofPitch = 0;
@@ -194,8 +213,8 @@ describe("photoSuggestions", () => {
     read.deck = "deck";
     read.deckInOutline = "no";
     const s = photoSuggestions(read, { ...JOB, storeys: 2, outdoor: ["Alfresco"] });
-    expect(s.find((x) => x.id === "build")?.apply).toMatchObject({ roofType: "flat", pitch: 2 });
-    expect(s.find((x) => x.id === "floors")).toBeUndefined();
-    expect(s.find((x) => x.id === "deck")?.detail).toMatch(/already outside/);
+    expect(s).toHaveLength(1);
+    expect(s[0]?.apply).toMatchObject({ roofType: "flat", pitch: 2 });
+    expect(s[0]?.apply).not.toHaveProperty("addFloors");
   });
 });
