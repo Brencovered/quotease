@@ -64,6 +64,10 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
         disable_surveys: true,
         autocapture: false,
         capture_dead_clicks: false,
+        // Remote config turns heatmaps on. The heatmap client then
+        // downloads dead-clicks-autocapture.js and flushes on a timer,
+        // so the homepage network stays busy after the document loads.
+        capture_heatmaps: false,
         capture_performance: false,
         advanced_disable_feature_flags: true,
       });

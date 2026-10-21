@@ -33,18 +33,18 @@ export default async function Home() {
   const listingCount = await getListingCount();
 
   return (
-    <main className="bg-[#1a242c] text-[#071018] overflow-hidden">
+    <main className="bg-[#1a242c] text-[#071018] overflow-clip">
       <MarketingNav transparent compact />
 
       <HomeHero />
 
       {/* Proof strip */}
-      <section className="bg-white border-b border-[#e8ecef]">
-        <div className="max-w-[1280px] mx-auto px-6 py-14 sm:py-16">
-          <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-8">
+      <section className="bg-white border-b border-[#e8ecef] overflow-x-clip">
+        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 py-14 sm:py-16 min-w-0">
+          <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#ffb400] mb-8 max-w-full">
             Built for solo tradies and small crews
           </p>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-8 lg:gap-6 min-w-0">
             {[
               { n: "7 days", d: "free trial, no card" },
               { n: "$45", d: "flat per month, unlimited seats" },
@@ -54,11 +54,11 @@ export default async function Home() {
                 d: listingCount !== null ? "tradies in the directory" : "tradie directory, free to browse",
               },
             ].map((s) => (
-              <div key={s.d}>
-                <p className="font-display text-[clamp(1.8rem,3.5vw,2.6rem)] tracking-wide text-[#071018] leading-none mb-2">
+              <div key={s.d} className="min-w-0">
+                <p className="font-display text-[clamp(1.8rem,3.5vw,2.6rem)] tracking-wide text-[#071018] leading-none mb-2 break-words">
                   {s.n}
                 </p>
-                <p className="font-sans text-[13.5px] text-[#5a6a78] leading-snug">{s.d}</p>
+                <p className="font-sans text-[13.5px] text-[#5a6a78] leading-snug break-words">{s.d}</p>
               </div>
             ))}
           </div>

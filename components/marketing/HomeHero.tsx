@@ -109,8 +109,24 @@ export default function HomeHero() {
   }, []);
 
   useEffect(() => {
-    const t = window.setTimeout(() => setDeferredScenesMounted(true), 1200);
-    return () => window.clearTimeout(t);
+    // Inactive scenes stay unmounted until the carousel is about to
+    // move, so their /_next/image requests are not in the first load.
+    // The inlined poster already fills the stage. Mounting them at
+    // 1.2s kept the homepage network busy well after the first paint.
+    const arm = () => window.setTimeout(() => setDeferredScenesMounted(true), CYCLE_MS - 700);
+    if (document.readyState === "complete") {
+      const t = arm();
+      return () => window.clearTimeout(t);
+    }
+    let t = 0;
+    const onLoad = () => {
+      t = arm();
+    };
+    window.addEventListener("load", onLoad, { once: true });
+    return () => {
+      window.removeEventListener("load", onLoad);
+      window.clearTimeout(t);
+    };
   }, []);
 
   useEffect(() => {
@@ -139,8 +155,8 @@ export default function HomeHero() {
       />
 
       <div className="relative max-w-[1280px] mx-auto px-5 sm:px-6">
-        <div className="grid lg:grid-cols-12 gap-5 lg:gap-10 mb-7 sm:mb-10 lg:mb-12 home-hero-copy">
-          <div className="lg:col-span-7">
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-10 mb-5 sm:mb-10 lg:mb-12 home-hero-copy">
+          <div className="lg:col-span-7 min-w-0">
             <p className="font-display text-[clamp(2.4rem,8vw,4.8rem)] leading-[0.88] tracking-wide text-white mb-3 sm:mb-5">
               SwiftScope
             </p>
@@ -160,8 +176,27 @@ export default function HomeHero() {
               it on site.
             </h1>
           </div>
-          <div className="lg:col-span-5 flex flex-col justify-end">
-            <p className="font-sans text-[14.5px] sm:text-[16px] leading-[1.6] text-[#9eb0bf] mb-5 sm:mb-7 max-w-[42ch]">
+          <div className="lg:col-span-5 min-w-0 flex flex-col gap-3 lg:justify-end">
+            {/* Buttons lead on small screens so they sit in the band under
+                the headline. justify-end only from lg, where this column
+                shares a row with the headline and should rest on its baseline. */}
+            <div className="order-1 lg:order-2 flex flex-col min-[420px]:flex-row flex-wrap gap-2.5 sm:gap-3">
+              <Link
+                href="/signup"
+                prefetch={false}
+                className="inline-flex items-center justify-center bg-[#ffb400] text-[#050b11] font-extrabold text-[14px] sm:text-[15px] px-5 sm:px-6 py-3 sm:py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors"
+              >
+                Start free for 7 days
+              </Link>
+              <Link
+                href="/directory"
+                prefetch={false}
+                className="inline-flex items-center justify-center gap-2 text-white font-bold text-[14px] sm:text-[15px] px-4 sm:px-5 py-3 sm:py-3.5 rounded-lg border border-white/25 hover:border-white/55 transition-colors"
+              >
+                Find a tradie <ArrowRight size={15} aria-hidden />
+              </Link>
+            </div>
+            <p className="order-2 lg:order-1 font-sans text-[14.5px] sm:text-[16px] leading-[1.6] text-[#c5d4e0] max-w-[42ch]">
               <span className="sm:hidden">
                 A complete online quoting and pricing solution for trade businesses. Built to be used standing on site - mark up the job, price it directly from your price book, and send before you leave the driveway.
               </span>
@@ -169,24 +204,12 @@ export default function HomeHero() {
                 A complete online quoting and pricing solution for trade businesses. Built to be used standing on site, mark up the job, price it directly from your price book, and send before you leave the driveway.
               </span>
             </p>
-            <div className="flex flex-wrap gap-2.5 sm:gap-3 mb-3">
-              <Link
-                href="/signup"
-                className="inline-flex items-center justify-center bg-[#ffb400] text-[#050b11] font-extrabold text-[14px] sm:text-[15px] px-5 sm:px-6 py-3 sm:py-3.5 rounded-lg hover:bg-[#e89e00] transition-colors"
-              >
-                Start free for 7 days
-              </Link>
-              <Link
-                href="/directory"
-                className="inline-flex items-center gap-2 text-white font-bold text-[14px] sm:text-[15px] px-4 sm:px-5 py-3 sm:py-3.5 rounded-lg border border-white/25 hover:border-white/55 transition-colors"
-              >
-                Find a tradie <ArrowRight size={15} aria-hidden />
-              </Link>
+            <div className="order-3">
+              <TrialRiskReversal tone="light" className="mb-2" />
+              <p className="font-sans text-[12.5px] leading-snug text-[#c5d4e0] max-w-[42ch]">
+                Solo tradies and crews up to about 15 · Flat $45/mo · No per-lead fees
+              </p>
             </div>
-            <TrialRiskReversal tone="light" className="mb-3" />
-            <p className="font-sans text-[12.5px] text-[#9eb0bf]">
-              Solo tradies and crews up to about 15 · Flat $45/mo · No per-lead fees
-            </p>
           </div>
         </div>
 
@@ -271,7 +294,7 @@ export default function HomeHero() {
 
             <div
               key={`phone-${scene.key}`}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 h-[62%] sm:h-[80%] sm:right-5 lg:right-8 home-overlay-in"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 h-[62%] max-w-[46%] sm:max-w-none sm:h-[80%] sm:right-5 lg:right-8 home-overlay-in"
               style={{ aspectRatio: `${PHONE_W} / ${PHONE_H}` }}
             >
               <div
@@ -280,17 +303,15 @@ export default function HomeHero() {
                   !reduceMotion ? "home-phone-float" : "",
                 ].join(" ")}
               >
-                {(active === 0 || deferredScenesMounted) && (
-                  <Image
-                    src={scene.phone}
-                    alt={scene.phoneAlt}
-                    fill
-                    sizes="(max-width: 640px) 130px, 200px"
-                    priority={active === 0}
-                    quality={active === 0 ? 90 : 75}
-                    className="object-contain"
-                  />
-                )}
+                <Image
+                  src={scene.phone}
+                  alt={scene.phoneAlt}
+                  fill
+                  sizes="(max-width: 640px) 130px, 200px"
+                  priority={active === 0}
+                  quality={active === 0 ? 90 : 75}
+                  className="object-contain"
+                />
               </div>
             </div>
           </div>
