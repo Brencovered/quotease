@@ -37,7 +37,7 @@ type Plan = z.infer<typeof PlanSchema>;
 
 const PRODUCT_CONTEXT = `PRODUCT FACTS (use only these, never invent competitor pricing or specifics - if
 something else is needed, phrase the brief as a placeholder to verify, not a fabricated claim):
-Swiftscope: $45/month flat, unlimited users, unlimited jobs, 7 day trial, no per-user or
+SwiftScope: $45/month flat, unlimited users, unlimited jobs, 7 day trial, no per-user or
 per-job fees, directory listing with no per-lead cost, drawing markup built in, Xero integration.
 ServiceM8 (for comparison posts): charges by job volume - Free $0 (1 user, 30 jobs), Starter $29
 (50 jobs), Growing $79 (150 jobs), Premium $149 (500 jobs), Premium Plus $349 (1500+ jobs),
@@ -47,7 +47,7 @@ STYLE: Australian spelling and tone, direct, no filler, no moralising. Never use
 Concede genuine competitor strengths where relevant rather than overselling.`;
 
 function buildSystemPrompt() {
-  return `You plan SEO blog posts for Swiftscope, a quoting and job management platform for
+  return `You plan SEO blog posts for SwiftScope, a quoting and job management platform for
 Australian trade businesses (electricians, plumbers, carpenters, roofers, and other trades).
 
 ${PRODUCT_CONTEXT}
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
     comparison: "A comparison against a named competitor.",
     practical:  "A practical how-to guide for one specific trade.",
     explainer:  "An explainer on pricing or how something works.",
-    data:       "A piece built on Swiftscope's own directory data (listing counts, suburb coverage) rather than external claims.",
+    data:       "A piece built on SwiftScope's own directory data (listing counts, suburb coverage) rather than external claims.",
   };
 
   const prompt = `Target keyword: "${keyword}"

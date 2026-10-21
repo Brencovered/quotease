@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useMemo } from "react";
+import { Suspense, useState, useMemo, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -50,6 +50,17 @@ function FeatureCard({ icon: Icon, title, desc, delay }: { icon: React.ElementTy
   );
 }
 
+function FieldError({ id, children }: { id: string; children?: ReactNode }) {
+  if (!children) return null;
+  return (
+    <p id={id} role="alert" className="text-[12.5px] font-semibold text-[var(--red)] mt-1.5">
+      {children}
+    </p>
+  );
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function TrustBadge({ icon: Icon, text }: { icon: React.ElementType; text: string }) {
   return (
     <div className="flex items-center gap-2 text-[11.5px] font-semibold text-[#8b96a1]">
@@ -74,7 +85,7 @@ function SignupRightPanel() {
       <div className="relative z-10">
         <div className="reveal flex items-center gap-2 mb-5">
           <Sparkles size={14} style={{ color: "var(--amber)" }} />
-          <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[var(--amber)]">Swiftscope for Tradies</span>
+          <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[var(--amber)]">SwiftScope for Tradies</span>
         </div>
 
         <h2 className="reveal font-display text-[2.4rem] xl:text-[2.8rem] text-white leading-[1.05] mb-4">
@@ -116,7 +127,7 @@ function MobileTeaser() {
     <div className="lg:hidden bg-[#1a242c] px-6 pt-10 pb-8 relative overflow-hidden">
       <div className="absolute w-[300px] h-[300px] rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(255,180,0,0.18) 0%, transparent 65%)", top: "-30%", right: "-10%" }} />
       <div className="relative z-10 text-center">
-        <span className="text-[10px] font-bold tracking-[.2em] uppercase text-[var(--amber)]">Swiftscope for Tradies</span>
+        <span className="text-[10px] font-bold tracking-[.2em] uppercase text-[var(--amber)]">SwiftScope for Tradies</span>
         <h2 className="font-display text-[1.8rem] text-white leading-tight mt-2 mb-2">Win more jobs from the driveway</h2>
         <p className="text-[12.5px] text-[#8b96a1] mb-4">7-day free trial - then $45/month flat</p>
         <div className="flex items-center justify-center gap-4 text-[11px] font-semibold text-[#8b96a1]">
@@ -144,16 +155,37 @@ function SignupForm() {
   const [trade, setTrade] = useState(initialTrade);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    businessName?: string;
+    email?: string;
+    suburb?: string;
+    trade?: string;
+    password?: string;
+  }>({});
   const [loading, setLoading] = useState(false);
   const [checkEmail, setCheckEmail] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const strength = useMemo(() => getPasswordStrength(password), [password]);
 
+  function clearField(key: keyof typeof fieldErrors) {
+    setFieldErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const nextErrors: typeof fieldErrors = {};
+    if (!businessName.trim()) nextErrors.businessName = "Enter your business name.";
+    if (!email.trim()) nextErrors.email = "Enter your email address.";
+    else if (!EMAIL_RE.test(email.trim())) nextErrors.email = "Enter a valid email address.";
+    if (!suburb.trim()) nextErrors.suburb = "Enter the suburb you work in.";
+    if (!trade) nextErrors.trade = "Select your trade.";
+    if (!password) nextErrors.password = "Enter a password.";
+    else if (password.length < 6) nextErrors.password = "Password must be at least 6 characters.";
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
     if (!SUPABASE_CONFIGURED) { setError("Not connected to a database yet."); return; }
-    if (!trade) { setError("Please select your trade."); return; }
     setLoading(true); setError(null);
     try {
       const supabase = createClient();
@@ -204,7 +236,7 @@ function SignupForm() {
 
       <div className="flex-1 flex flex-col">
         <div className="bg-[var(--navy)] px-6 py-4">
-          <Link href="/" className="font-display text-[15px] tracking-widest text-white">SWIFTSCOPE</Link>
+          <Link href="/" className="font-display text-[15px] tracking-widest text-white">SwiftScope</Link>
         </div>
 
         <div className="flex-1 flex items-center justify-center px-4 py-10 lg:py-12">
@@ -237,61 +269,70 @@ function SignupForm() {
                     <div className="flex-1 h-px bg-[var(--line)]" />
                   </div>
 
-                  <form onSubmit={handleSubmit} className="space-y-3">
+                  <form onSubmit={handleSubmit} noValidate className="space-y-3">
                     {/* Business name */}
                     <div>
-                      <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Business name</label>
-                      <input type="text" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required autoFocus
+                      <label htmlFor="signup-business-name" className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Business name</label>
+                      <input id="signup-business-name" type="text" value={businessName} onChange={(e) => { setBusinessName(e.target.value); clearField("businessName"); }} autoFocus
+                        autoComplete="organization" aria-invalid={!!fieldErrors.businessName} aria-describedby={fieldErrors.businessName ? "signup-business-name-error" : undefined}
                         className="app-field" placeholder="e.g. Smith Electrical Services" />
+                      <FieldError id="signup-business-name-error">{fieldErrors.businessName}</FieldError>
                     </div>
 
                     {/* Email */}
                     <div>
-                      <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Email</label>
-                      <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
+                      <label htmlFor="signup-email" className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Email</label>
+                      <input id="signup-email" type="email" value={email} onChange={(e) => { setEmail(e.target.value); clearField("email"); }}
+                        autoComplete="email" inputMode="email" aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? "signup-email-error" : undefined}
                         className="app-field" placeholder="you@example.com" />
+                      <FieldError id="signup-email-error">{fieldErrors.email}</FieldError>
                     </div>
 
                     {/* Suburb */}
                     <div>
-                      <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">
-                        <MapPin size={12} className="inline mr-0.5" />Primary suburb you work in
+                      <label htmlFor="signup-suburb" className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">
+                        <MapPin size={12} className="inline mr-0.5" aria-hidden />Primary suburb you work in
                       </label>
                       <input
+                        id="signup-suburb"
                         type="text"
                         value={suburb}
-                        onChange={(e) => setSuburb(e.target.value)}
-                        required
+                        onChange={(e) => { setSuburb(e.target.value); clearField("suburb"); }}
                         autoComplete="address-level2"
                         spellCheck={false}
+                        aria-invalid={!!fieldErrors.suburb}
+                        aria-describedby={fieldErrors.suburb ? "signup-suburb-error" : "signup-suburb-hint"}
                         className="app-field"
                         placeholder="e.g. Marrickville, NSW"
                       />
-                      <p className="text-[11.5px] text-[var(--ink-faint)] mt-1.5">
+                      <p id="signup-suburb-hint" className="text-[11.5px] text-[var(--ink-faint)] mt-1.5">
                         Suburb and state. Your phone may suggest Australian places as you type.
                       </p>
+                      <FieldError id="signup-suburb-error">{fieldErrors.suburb}</FieldError>
                     </div>
 
                     {/* Trade */}
                     <div>
-                      <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">
-                        <Briefcase size={12} className="inline mr-0.5" />Your trade
+                      <label htmlFor="signup-trade" className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">
+                        <Briefcase size={12} className="inline mr-0.5" aria-hidden />Your trade
                       </label>
-                      <select value={trade} onChange={(e) => setTrade(e.target.value)} required
+                      <select id="signup-trade" value={trade} onChange={(e) => { setTrade(e.target.value); clearField("trade"); }}
+                        aria-invalid={!!fieldErrors.trade} aria-describedby={fieldErrors.trade ? "signup-trade-error" : undefined}
                         className="app-field w-full">
                         <option value="">Select your trade...</option>
                         {TRADES.map((t) => (
                           <option key={t.key} value={t.key}>{t.label}</option>
                         ))}
                       </select>
+                      <FieldError id="signup-trade-error">{fieldErrors.trade}</FieldError>
                     </div>
 
                     {/* Password */}
                     <div>
-                      <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Password</label>
+                      <label htmlFor="signup-password" className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">Password</label>
                       <div className="relative">
-                        <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)}
-                          required minLength={6} autoComplete="new-password" className="app-field pr-16" placeholder="At least 6 characters" />
+                        <input id="signup-password" type={showPassword ? "text" : "password"} value={password} onChange={(e) => { setPassword(e.target.value); clearField("password"); }}
+                          autoComplete="new-password" aria-invalid={!!fieldErrors.password} aria-describedby={fieldErrors.password ? "signup-password-error" : undefined} className="app-field pr-16" placeholder="Create a password" />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
@@ -301,6 +342,7 @@ function SignupForm() {
                           {showPassword ? "Hide" : "Show"}
                         </button>
                       </div>
+                      <FieldError id="signup-password-error">{fieldErrors.password}</FieldError>
 
                       {password.length > 0 && (
                         <div className="mt-2">

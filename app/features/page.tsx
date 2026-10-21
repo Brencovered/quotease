@@ -9,7 +9,7 @@ import {
 import MarketingNav from "@/components/MarketingNav";
 import { FEATURES_GRID } from "@/lib/marketing/features-grid-data";
 
-export const metadata = { title: "Features - Swiftscope" };
+export const metadata = { title: "Features - SwiftScope" };
 
 export default function FeaturesPage() {
   return (
@@ -24,7 +24,7 @@ export default function FeaturesPage() {
             Everything a tradie actually needs
           </h1>
           <p className="font-sans text-[16px] text-[#8aa4b4] mt-4 max-w-xl">
-            Most crews juggle three or four apps. Swiftscope pulls quoting, jobs, and markup into one phone-first workflow, and connects cleanly to Xero for the books.
+            Most crews juggle three or four apps. SwiftScope pulls quoting, jobs, and markup into one phone-first workflow, and connects cleanly to Xero for the books.
           </p>
         </div>
       </div>
@@ -95,7 +95,7 @@ export default function FeaturesPage() {
                 </div>
               </div>
               <div className="bg-white/[0.05] rounded-2xl p-7 text-center border border-white/10">
-                <p className="text-[12px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Swiftscope</p>
+                <p className="text-[12px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">SwiftScope</p>
                 <div className="font-display text-[5rem] leading-none text-[#ffb400] mb-1">$45</div>
                 <p className="text-[#8aa4b4] text-[16px] mb-1">/month</p>
                 <p className="text-[13px] text-[#4a6070] mb-6">Quoting, jobs, markup, and Xero. Unlimited seats.<br/>Directory listing included.</p>
@@ -105,7 +105,7 @@ export default function FeaturesPage() {
               </div>
             </div>
             <p className="font-sans text-[12px] leading-relaxed text-[#8aa4b4] mt-6 max-w-[72ch]">
-              Competitor figures are indicative public list prices for a typical sole trader or small crew, rounded for comparison. Check each vendor&apos;s current pricing. Swiftscope is $45/month flat with unlimited seats and a directory listing included.
+              Competitor figures are indicative public list prices for a typical sole trader or small crew, rounded for comparison. Check each vendor&apos;s current pricing. SwiftScope is $45/month flat with unlimited seats and a directory listing included.
             </p>
           </div>
         </div>
@@ -171,7 +171,7 @@ export default function FeaturesPage() {
                 <tr className="border-b-2 border-[#e8ecef]">
                   <th className="pb-4 pr-4 text-left text-[12px] font-bold uppercase tracking-wider text-[#8a9ba8] w-[26%]">Feature</th>
                   {[
-                    { name:"Swiftscope", highlight:true },
+                    { name:"SwiftScope", highlight:true },
                     { name:"HiPages",   highlight:false },
                     { name:"Fergus",    highlight:false },
                     { name:"ServiceM8", highlight:false },
@@ -193,52 +193,52 @@ export default function FeaturesPage() {
                 {[
                   {
                     feature:"Directory / local discovery",
-                    detail:"Swiftscope includes a free directory listing with Google ratings so homeowners can find and contact you direct. No auction, no credits, no per-lead fee. HiPages charges $30-150 per lead depending on trade and urgency.",
+                    detail:"SwiftScope includes a free directory listing with Google ratings so homeowners can find and contact you direct. No auction, no credits, no per-lead fee. HiPages charges $30-150 per lead depending on trade and urgency.",
                     us:"Included",    c1:"$30-150/lead",    c2:"Not included",    c3:"Not included",  c4:"Not included",  c5:"Not included", usBest:true,
                   },
                   {
                     feature:"Job management",
-                    detail:"Swiftscope covers the full job lifecycle: quote, accept, schedule, track materials, log actuals, raise variations, complete. Fergus and SimPro have more enterprise depth but cost significantly more per user.",
+                    detail:"SwiftScope covers the full job lifecycle: quote, accept, schedule, track materials, log actuals, raise variations, complete. Fergus and SimPro have more enterprise depth but cost significantly more per user.",
                     us:"Included",       c1:"Not included",    c2:"Full suite",      c3:"Full suite",    c4:"Full suite",    c5:"Enterprise",   usBest:false,
                   },
                   {
                     feature:"Mobile quoting",
-                    detail:"Swiftscope is built phone-first. Trade-specific fields, live cost calculation, send from site. All major platforms support mobile quoting - this is table stakes.",
+                    detail:"SwiftScope is built phone-first. Trade-specific fields, live cost calculation, send from site. All major platforms support mobile quoting - this is table stakes.",
                     us:"Phone-first",    c1:"Not included",    c2:"Yes",             c3:"Yes",           c4:"Yes",           c5:"Limited",      usBest:false,
                   },
                   {
                     feature:"Drawing markup",
-                    detail:"Swiftscope includes drawing markup natively - upload a site plan, draw cable runs or pipe routes, count items, and those quantities flow directly into the quote. Fergus requires GroundPlan as a separate integration at $60-100/month extra.",
+                    detail:"SwiftScope includes drawing markup natively - upload a site plan, draw cable runs or pipe routes, count items, and those quantities flow directly into the quote. Fergus requires GroundPlan as a separate integration at $60-100/month extra.",
                     us:"Built in",       c1:"Not included",    c2:"Extra ($60-100/mo)", c3:"Basic photos", c4:"Not available", c5:"Basic",       usBest:true,
                   },
                   {
                     feature:"Xero integration",
-                    detail:"Swiftscope integrates with Xero via live OAuth sync. Accepted quotes push as invoices automatically. All platforms listed offer some form of Xero integration - Swiftscope's is included in the base plan.",
+                    detail:"SwiftScope integrates with Xero via live OAuth sync. Accepted quotes push as invoices automatically. All platforms listed offer some form of Xero integration - SwiftScope's is included in the base plan.",
                     us:"Live sync",      c1:"Not applicable",  c2:"Live sync",       c3:"Live sync",     c4:"Live sync",     c5:"Live sync",    usBest:false,
                   },
                   {
                     feature:"Job costing",
-                    detail:"Track actual labour hours and materials against what you quoted. Swiftscope shows your real margin on every job. Fergus, Tradify, and SimPro all have job costing - this is where they are more mature than Swiftscope currently.",
+                    detail:"Track actual labour hours and materials against what you quoted. SwiftScope shows your real margin on every job. Fergus, Tradify, and SimPro all have job costing - this is where they are more mature than SwiftScope currently.",
                     us:"Included",       c1:"Not included",    c2:"Yes",             c3:"Add-on",        c4:"Yes",           c5:"Advanced",     usBest:false,
                   },
                   {
                     feature:"Homeowner directory",
-                    detail:"Swiftscope includes a public tradie directory with real Google ratings, photo galleries, and a quote request system - built into the same platform tradies use to run their business. HiPages has a larger network; Swiftscope's directory is newer and growing, but a tradie who claims their listing gets the directory and the quoting tool in one place, which HiPages doesn't offer.",
+                    detail:"SwiftScope includes a public tradie directory with real Google ratings, photo galleries, and a quote request system - built into the same platform tradies use to run their business. HiPages has a larger network; SwiftScope's directory is newer and growing, but a tradie who claims their listing gets the directory and the quoting tool in one place, which HiPages doesn't offer.",
                     us:"Included", c1:"Large network", c2:"Not included", c3:"Not included", c4:"Not included", c5:"Not included", usBest:false,
                   },
                   {
                     feature:"Pricing",
-                    detail:"Swiftscope is $45/month flat for the full platform - unlimited seats, unlimited quotes, unlimited jobs, directory and leads included. Per-user pricing at competitors means costs scale steeply as you add staff.",
+                    detail:"SwiftScope is $45/month flat for the full platform - unlimited seats, unlimited quotes, unlimited jobs, directory and leads included. Per-user pricing at competitors means costs scale steeply as you add staff.",
                     us:"$45/mo flat",    c1:"$80-300/mo + leads", c2:"~$40/user/mo", c3:"$29-349/mo",   c4:"$48-62/user/mo", c5:"$75+/user/mo", usBest:true,
                   },
                   {
                     feature:"Unlimited users",
-                    detail:"Swiftscope has no per-user fees. Add apprentices, office staff, or business partners at no extra cost. Fergus, Tradify, and SimPro all charge per user which can double or triple the cost for larger teams.",
+                    detail:"SwiftScope has no per-user fees. Add apprentices, office staff, or business partners at no extra cost. Fergus, Tradify, and SimPro all charge per user which can double or triple the cost for larger teams.",
                     us:"Always",         c1:"N/A",             c2:"Per user",        c3:"Yes",           c4:"Per user",      c5:"Per user",     usBest:true,
                   },
                   {
                     feature:"Setup time",
-                    detail:"Swiftscope is designed to have you quoting on the same day you sign up. No implementation project, no onboarding consultant. SimPro and Fergus often require days to weeks of configuration for larger businesses.",
+                    detail:"SwiftScope is designed to have you quoting on the same day you sign up. No implementation project, no onboarding consultant. SimPro and Fergus often require days to weeks of configuration for larger businesses.",
                     us:"Same day",       c1:"Same day",        c2:"Days to weeks",   c3:"1-2 days",      c4:"Half day",      c5:"Weeks",        usBest:true,
                   },
                 ].map((row) => (
@@ -287,7 +287,7 @@ export default function FeaturesPage() {
           <div className="text-center mb-12">
             <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Savings calculator</p>
             <h2 className="font-display uppercase text-[2.4rem] sm:text-[3rem] leading-[0.93] text-[#0a1722] mb-4">
-              See what you&apos;d save switching to Swiftscope
+              See what you&apos;d save switching to SwiftScope
             </h2>
             <p className="text-[15px] text-[#5a6a78] max-w-xl mx-auto">
               Select the platforms you&apos;re currently paying for, adjust seat count and pricing, then calculate.
@@ -307,7 +307,7 @@ export default function FeaturesPage() {
         </div>
         <div className="border-t border-white/[0.08]">
           <div className="max-w-7xl mx-auto px-6 py-5 flex flex-wrap items-center justify-between gap-4">
-            <span className="font-display text-lg text-white">SWIFTSCOPE</span>
+            <span className="font-display text-lg text-white">SwiftScope</span>
             <div className="flex gap-6 text-[12.5px] font-semibold text-white/40">
               <Link href="/features" className="hover:text-white transition-colors">Features</Link>
               <Link href="/how-it-works" className="hover:text-white transition-colors">How it works</Link>

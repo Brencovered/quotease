@@ -134,7 +134,7 @@ export async function generateMetadata({
   const { slug } = await params;
   const supabase = await createClient();
   const { listing } = await resolveListingBySlug(supabase, slug);
-  if (!listing) return { title: "Not found | Swiftscope" };
+  if (!listing) return { title: "Not found | SwiftScope" };
   // Canonical always points at the pretty slug, even when this metadata
   // is being generated for a request that arrived via the legacy raw-UUID
   // URL - that's the whole point of a canonical tag here: tell Google
@@ -278,7 +278,7 @@ export default async function TradieProfilePage({
                     {tradeLabel}
                   </span>
                   <span className="flex items-center gap-1 text-[12px] font-semibold text-emerald-400 bg-emerald-400/10 px-2.5 py-1 rounded-full">
-                    <ShieldCheck size={12} /> Curated on Swiftscope
+                    <ShieldCheck size={12} /> Curated on SwiftScope
                   </span>
                   {CLAIMED_DIRECTORY_PAGES_ENABLED && listing.is_claimed && (
                     <span className="flex items-center gap-1 text-[12px] font-semibold text-white bg-blue-600/80 px-2.5 py-1 rounded-full">
@@ -586,7 +586,7 @@ export default async function TradieProfilePage({
                       <p className="text-[11.5px] text-gray-400">
                         {listing.is_claimed
                           ? "Your details go only to this business."
-                          : "Swiftscope forwards the job to this listing."}
+                          : "SwiftScope forwards the job to this listing."}
                       </p>
                     </div>
                   </div>
@@ -613,7 +613,7 @@ export default async function TradieProfilePage({
                     </div>
                     <div>
                       <p className="text-[13px] font-semibold text-gray-800">
-                        {isVerifiedBadge ? "Verified business" : "Swiftscope curated"}
+                        {isVerifiedBadge ? "Verified business" : "SwiftScope curated"}
                       </p>
                       <p className="text-[11.5px] text-gray-400">
                         {isVerifiedBadge

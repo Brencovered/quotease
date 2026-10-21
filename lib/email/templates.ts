@@ -27,9 +27,9 @@ export function htmlEscape(str: string): string {
 export function buildWelcomeEmail(vars: { businessName: string }) {
   const businessName = vars.businessName?.trim() || "there";
   return {
-    subject: "Welcome to Swiftscope - your 7-day free trial has started",
+    subject: "Welcome to SwiftScope - your 7-day free trial has started",
     html: `
-      <h2>Welcome to Swiftscope, ${htmlEscape(businessName)}!</h2>
+      <h2>Welcome to SwiftScope, ${htmlEscape(businessName)}!</h2>
       <p>Your 7-day free trial just started - no card needed until it ends.</p>
       <p>A few things worth doing first:</p>
       <ul>
@@ -56,7 +56,7 @@ export function buildAdminNewSignupEmail(vars: {
   return {
     subject: `New signup: ${vars.businessName} (${vars.trade})`,
     html: `
-      <h2>New Swiftscope signup</h2>
+      <h2>New SwiftScope signup</h2>
       <p><strong>Business:</strong> ${htmlEscape(vars.businessName)}</p>
       <p><strong>Trade:</strong> ${htmlEscape(vars.trade)}</p>
       <p><strong>Suburb:</strong> ${htmlEscape(vars.suburb || "Not set")}</p>
@@ -145,7 +145,7 @@ export function buildWeeklyScheduleEmail(vars: {
           <tr>
             <td style="padding:20px 24px 0;">
               <p style="margin:0;font-size:14px;color:#334155;line-height:1.6;">${greeting}</p>
-              <p style="margin:8px 0 0;font-size:14px;color:#334155;line-height:1.6;">You have <strong>${totalJobs} job${totalJobs === 1 ? "" : "s"}</strong> scheduled. Tap any job to open it in Swiftscope.</p>
+              <p style="margin:8px 0 0;font-size:14px;color:#334155;line-height:1.6;">You have <strong>${totalJobs} job${totalJobs === 1 ? "" : "s"}</strong> scheduled. Tap any job to open it in SwiftScope.</p>
             </td>
           </tr>
           <tr>
@@ -155,12 +155,12 @@ export function buildWeeklyScheduleEmail(vars: {
           </tr>
           <tr>
             <td style="padding:0 24px 24px;text-align:center;">
-              <a href="${vars.appUrl}/schedule" style="display:inline-block;padding:12px 24px;background:#0f172a;color:#fbbf24;font-size:14px;font-weight:800;text-decoration:none;border-radius:10px;">View full schedule in Swiftscope</a>
+              <a href="${vars.appUrl}/schedule" style="display:inline-block;padding:12px 24px;background:#0f172a;color:#fbbf24;font-size:14px;font-weight:800;text-decoration:none;border-radius:10px;">View full schedule in SwiftScope</a>
             </td>
           </tr>
           <tr>
             <td style="padding:16px 24px;border-top:1px solid #e5e7eb;text-align:center;">
-              <p style="margin:0;font-size:11px;color:#94a3b8;">Sent from Swiftscope • <a href="${vars.appUrl}" style="color:#64748b;">Open Swiftscope</a></p>
+              <p style="margin:0;font-size:11px;color:#94a3b8;">Sent from SwiftScope • <a href="${vars.appUrl}" style="color:#64748b;">Open SwiftScope</a></p>
             </td>
           </tr>
         </table>
@@ -201,7 +201,7 @@ export function buildTrialNudgeEmail(vars: {
       <div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:24px;">
         <p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#d97706;">Day ${vars.day} of your trial</p>
         <h1 style="margin:0 0 16px;font-size:22px;color:#0f172a;">${htmlEscape(vars.dayTitle)}</h1>
-        <p style="font-size:14px;color:#334155;line-height:1.5;margin:0 0 20px;">Hi ${htmlEscape(vars.businessName)}, here's today's focus in Swiftscope:</p>
+        <p style="font-size:14px;color:#334155;line-height:1.5;margin:0 0 20px;">Hi ${htmlEscape(vars.businessName)}, here's today's focus in SwiftScope:</p>
         <table width="100%" cellpadding="0" cellspacing="0">${taskRows}</table>
         <p style="font-size:12px;color:#94a3b8;margin:24px 0 0;">
           ${vars.daysRemaining} day${vars.daysRemaining === 1 ? "" : "s"} left in your trial.
@@ -220,7 +220,7 @@ export function buildDirectoryClaimInviteEmail(vars: {
   listingUrl: string;
 }) {
   return {
-    subject: `${vars.businessName} - your free Swiftscope directory page is ready`,
+    subject: `${vars.businessName} - your free SwiftScope directory page is ready`,
     // Plain text on purpose, not HTML - this is one-to-one outreach to
     // a business owner, not a branded transactional email. A styled
     // button and boxed layout reads as a mass-sent marketing email and
@@ -231,7 +231,7 @@ export function buildDirectoryClaimInviteEmail(vars: {
     // dockets), not outreach.
     text: `Hi,
 
-We've set up a free directory page for ${vars.businessName} on Swiftscope, an Australian directory for trade businesses, built for homeowners searching for a tradie in your area.
+We've set up a free directory page for ${vars.businessName} on SwiftScope, an Australian directory for trade businesses, built for homeowners searching for a tradie in your area.
 
 You can see it here: ${vars.listingUrl}
 
@@ -281,16 +281,16 @@ export function buildDirectoryEnquiryEmail(vars: {
     : `
     <hr/>
     <p style="background:#fffbeb;border:1px solid #ffe58f;border-radius:8px;padding:12px 16px;font-size:13px;color:#5a4a00;">
-      This lead came through your free, unclaimed Swiftscope directory page. Claim it to receive enquiries like
+      This lead came through your free, unclaimed SwiftScope directory page. Claim it to receive enquiries like
       this straight to your own account, manage your photos and services, and get a verified badge -
       <a href="https://swiftscope.com.au/directory/claim" style="color:#c98600;font-weight:600;">claim your listing free</a>.
     </p>
   `;
 
   return {
-    subject: `Quote request from ${vars.customerName} - Swiftscope`,
+    subject: `Quote request from ${vars.customerName} - SwiftScope`,
     html: `
-      <h2>${vars.isClaimed ? "New quote request via your Swiftscope page" : "New quote request from Swiftscope Directory"}</h2>
+      <h2>${vars.isClaimed ? "New quote request via your SwiftScope page" : "New quote request from SwiftScope Directory"}</h2>
       <p><strong>Business:</strong> ${htmlEscape(vars.businessName)}</p>
       <hr/>
       <p><strong>From:</strong> ${htmlEscape(vars.customerName)}</p>
@@ -300,13 +300,13 @@ export function buildDirectoryEnquiryEmail(vars: {
       <p><strong>Job:</strong> ${htmlEscape(vars.jobDesc)}</p>
       ${claimNudge}
       <hr/>
-      <p style="color:#888;font-size:12px">Sent via Swiftscope Directory - swiftscope.com.au/directory</p>
+      <p style="color:#888;font-size:12px">Sent via SwiftScope Directory - swiftscope.com.au/directory</p>
     `,
   };
 }
 
 /* ────────────────────────────────────────────────────────────────────
- * 6b. Directory enquiry - admin copy (to Swiftscope team)
+ * 6b. Directory enquiry - admin copy (to SwiftScope team)
  *
  * Sent alongside the tradie's copy whenever the listing has a real email
  * on file. Previously the team only ever saw these enquiries when the
@@ -345,7 +345,7 @@ export function buildDirectoryEnquiryAdminNotifyEmail(vars: {
  * 6c. Directory enquiry - customer confirmation
  *
  * Sent to the homeowner only when the listing had a real email on file
- * (i.e. their request actually went to the tradie, not just Swiftscope's
+ * (i.e. their request actually went to the tradie, not just SwiftScope's
  * fallback inbox), so the reassurance is honest about what happened.
  * ──────────────────────────────────────────────────────────────────── */
 export function buildDirectoryEnquiryCustomerConfirmationEmail(vars: {
@@ -362,7 +362,7 @@ export function buildDirectoryEnquiryCustomerConfirmationEmail(vars: {
         <p>We'll do everything we can to make sure your request gets seen to as soon as possible.</p>
         <p style="color:#5a6b78;font-size:13px;">If you don't hear back within a couple of days, feel free to reply to this email and our team will follow up.</p>
         <hr/>
-        <p style="color:#888;font-size:12px">Sent via Swiftscope Directory - swiftscope.com.au/directory</p>
+        <p style="color:#888;font-size:12px">Sent via SwiftScope Directory - swiftscope.com.au/directory</p>
       </div>
     `,
   };
@@ -413,7 +413,7 @@ export function buildLeadMatchEmail(vars: {
             View and claim this lead →
           </a>
           <p style="color: #9ca3af; font-size: 12px; margin-top: 24px; line-height: 1.5;">
-            You're receiving this because you're subscribed to ${htmlEscape(vars.trade)} leads in ${htmlEscape(vars.suburb)} on Swiftscope.
+            You're receiving this because you're subscribed to ${htmlEscape(vars.trade)} leads in ${htmlEscape(vars.suburb)} on SwiftScope.
             Every tradie is auto-subscribed by default. <a href="${vars.appUrl}/settings" style="color: #0a1722; text-decoration: underline;">Manage your lead preferences</a> to opt out.
           </p>
         </div>
@@ -423,7 +423,7 @@ export function buildLeadMatchEmail(vars: {
 }
 
 /* ────────────────────────────────────────────────────────────────────
- * 8. "No tradies matched" internal notification (to Swiftscope team)
+ * 8. "No tradies matched" internal notification (to SwiftScope team)
  * ──────────────────────────────────────────────────────────────────── */
 export function buildNoMatchLeadEmail(vars: { trade: string; suburb: string; description: string }) {
   return {
@@ -458,7 +458,7 @@ export const EMAIL_TEMPLATES: EmailTemplateMeta[] = [
     id: "welcome",
     name: "Signup welcome",
     trigger: "Sent once, first time a new user reaches /onboarding after signing up",
-    from: "Swiftscope <noreply@swiftscope.com.au>",
+    from: "SwiftScope <noreply@swiftscope.com.au>",
     routeFile: "app/api/onboarding/welcome/route.ts",
     preview: () => buildWelcomeEmail({ businessName: "Spark Ease Electrical" }),
   },
@@ -466,7 +466,7 @@ export const EMAIL_TEMPLATES: EmailTemplateMeta[] = [
     id: "admin-new-signup",
     name: "Admin: new signup notification",
     trigger: "Sent to ADMIN_EMAILS alongside the welcome email above",
-    from: "Swiftscope <noreply@swiftscope.com.au>",
+    from: "SwiftScope <noreply@swiftscope.com.au>",
     routeFile: "app/api/onboarding/welcome/route.ts",
     preview: () =>
       buildAdminNewSignupEmail({
@@ -480,7 +480,7 @@ export const EMAIL_TEMPLATES: EmailTemplateMeta[] = [
     id: "weekly-schedule",
     name: "Weekly schedule digest",
     trigger: "Business owner triggers a send (manual button) to their active team members",
-    from: "Swiftscope <noreply@swiftscope.com.au>",
+    from: "SwiftScope <noreply@swiftscope.com.au>",
     routeFile: "app/api/schedule/send-weekly/route.ts",
     preview: () =>
       buildWeeklyScheduleEmail({
@@ -498,7 +498,7 @@ export const EMAIL_TEMPLATES: EmailTemplateMeta[] = [
     id: "trial-nudge",
     name: "Trial day nudge",
     trigger: "Daily cron - one email per trialing business, matching their current trial day (2-7)",
-    from: "Swiftscope <noreply@swiftscope.com.au>",
+    from: "SwiftScope <noreply@swiftscope.com.au>",
     routeFile: "app/api/cron/trial-onboarding-nudge/route.ts",
     preview: () =>
       buildTrialNudgeEmail({
@@ -530,7 +530,7 @@ export const EMAIL_TEMPLATES: EmailTemplateMeta[] = [
     id: "directory-enquiry",
     name: "Directory: quote request notification",
     trigger: "Homeowner submits an enquiry form on a directory listing page",
-    from: "Swiftscope Directory <directory@swiftscope.com.au>",
+    from: "SwiftScope Directory <directory@swiftscope.com.au>",
     routeFile: "app/api/directory/enquire/route.ts",
     preview: () =>
       buildDirectoryEnquiryEmail({
@@ -552,7 +552,7 @@ export const EMAIL_TEMPLATES: EmailTemplateMeta[] = [
     id: "lead-match",
     name: "Matched lead notification",
     trigger: "Homeowner submits Get Quotes form - sent to every matching, opted-in tradie",
-    from: "Swiftscope Leads <noreply@swiftscope.com.au>",
+    from: "SwiftScope Leads <noreply@swiftscope.com.au>",
     routeFile: "app/api/job-requests/notify/route.ts",
     preview: () =>
       buildLeadMatchEmail({
@@ -571,7 +571,7 @@ export const EMAIL_TEMPLATES: EmailTemplateMeta[] = [
     id: "lead-no-match",
     name: "Internal: no tradies matched a lead",
     trigger: "Same trigger as above, when zero tradies match - sent to team@swiftscope.com.au",
-    from: "Swiftscope Leads <noreply@swiftscope.com.au>",
+    from: "SwiftScope Leads <noreply@swiftscope.com.au>",
     routeFile: "app/api/job-requests/notify/route.ts",
     preview: () =>
       buildNoMatchLeadEmail({

@@ -44,7 +44,7 @@ export async function GET(request: Request) {
 
   const admin = createAdminClient();
   const resend = new Resend(process.env.RESEND_API_KEY);
-  const FROM_EMAIL = "Swiftscope <noreply@swiftscope.com.au>";
+  const FROM_EMAIL = "SwiftScope <noreply@swiftscope.com.au>";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
 
   const nowIso = new Date().toISOString();

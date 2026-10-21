@@ -451,7 +451,7 @@ export default async function DirectoryPage({
           <div className="reveal flex items-center gap-2 mb-5">
             <Sparkles size={14} className="text-[#ffb400]" />
             <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">
-              Swiftscope Directory
+              SwiftScope Directory
             </span>
           </div>
 
@@ -646,7 +646,7 @@ export default async function DirectoryPage({
             <div className="max-w-6xl mx-auto px-6 py-16 sm:py-20">
               <div className="text-center mb-12">
                 <h2 className="font-display text-[1.8rem] sm:text-[2.2rem] mb-3" style={{ color: "var(--ink)" }}>
-                  How homeowners find tradies on Swiftscope
+                  How homeowners find tradies on SwiftScope
                 </h2>
                 <p className="text-[14px] sm:text-[15px] max-w-md mx-auto" style={{ color: "var(--ink-soft)" }}>
                   Three simple steps to find the right tradie for your job.

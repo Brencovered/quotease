@@ -116,7 +116,7 @@ export default function FindTradieHeroSearch({
         <div className="inline-flex items-center gap-2 mb-6">
           <Sparkles size={14} className="text-[#ffb400]" />
           <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400]">
-            Swiftscope Directory
+            SwiftScope Directory
           </span>
         </div>
 

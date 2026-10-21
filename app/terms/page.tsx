@@ -2,8 +2,8 @@ import Link from "next/link";
 import MarketingNav from "@/components/MarketingNav";
 
 export const metadata = {
-  title: "Terms of Use - Swiftscope",
-  description: "The terms and conditions governing use of the Swiftscope quoting and job management platform.",
+  title: "Terms of Use - SwiftScope",
+  description: "The terms and conditions governing use of the SwiftScope quoting and job management platform.",
 };
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
@@ -28,7 +28,7 @@ export default function TermsOfUsePage() {
             Terms of Use
           </h1>
           <p className="text-[15px] text-[#8aa4b4] mt-4 max-w-xl">
-            Last updated: 11 July 2026. These terms govern your use of the Swiftscope platform. Please read
+            Last updated: 11 July 2026. These terms govern your use of the SwiftScope platform. Please read
             them carefully before creating an account.
           </p>
         </div>
@@ -49,9 +49,9 @@ export default function TermsOfUsePage() {
         <Section id="acceptance" title="1. Acceptance of these terms">
           <p>
             These Terms of Use (&quot;<strong>Terms</strong>&quot;) are a legal agreement between you (and, if
-            applicable, the business you represent) and <strong>the sole trader trading as Swiftscope, ABN 13 829 040 278</strong> (&quot;<strong>Swiftscope</strong>&quot;, &quot;<strong>we</strong>&quot;,
+            applicable, the business you represent) and <strong>the sole trader trading as SwiftScope, ABN 13 829 040 278</strong> (&quot;<strong>SwiftScope</strong>&quot;, &quot;<strong>we</strong>&quot;,
             &quot;<strong>us</strong>&quot;), governing your access to and use of the swiftscope.com.au website and the
-            Swiftscope quoting and job management platform (together, the &quot;<strong>Service</strong>&quot;).
+            SwiftScope quoting and job management platform (together, the &quot;<strong>Service</strong>&quot;).
           </p>
           <p>
             By creating an account, or by accessing or using the Service in any way, you agree to be bound by
@@ -62,11 +62,11 @@ export default function TermsOfUsePage() {
           </p>
         </Section>
 
-        <Section id="the-service" title="2. What Swiftscope is">
+        <Section id="the-service" title="2. What SwiftScope is">
           <p>
-            Swiftscope is a subscription software platform that helps trade businesses (electricians, plumbers,
+            SwiftScope is a subscription software platform that helps trade businesses (electricians, plumbers,
             carpenters, roofers, and other trades) build quotes, manage jobs, track materials and job costing,
-            schedule work, and optionally connect to third-party services such as Xero. Swiftscope also operates
+            schedule work, and optionally connect to third-party services such as Xero. SwiftScope also operates
             a public directory that lets homeowners find tradies and submit quote requests.
           </p>
           <p>
@@ -116,7 +116,7 @@ export default function TermsOfUsePage() {
         <Section id="your-content" title="6. Your content and data">
           <p>
             You (or, where you enter client details on behalf of your own customers, your business) retain
-            ownership of the content and data you input into Swiftscope, including quotes, price book items,
+            ownership of the content and data you input into SwiftScope, including quotes, price book items,
             job records, client details, drawings, photos, and voice recordings (&quot;<strong>Your Content</strong>&quot;).
           </p>
           <p>
@@ -127,14 +127,14 @@ export default function TermsOfUsePage() {
             don&apos;t sell it.
           </p>
           <p>
-            If you enter another person&apos;s personal information into Swiftscope (for example, a client&apos;s
+            If you enter another person&apos;s personal information into SwiftScope (for example, a client&apos;s
             name and address on a quote), you&apos;re responsible for having a lawful basis to collect and use
             that information, and for complying with your own obligations under applicable privacy law with
             respect to it.
           </p>
           <p>
             You&apos;re solely responsible for the accuracy of quotes, pricing, and job information you create
-            using the Service. Swiftscope provides tools to help you build and calculate quotes, but doesn&apos;t
+            using the Service. SwiftScope provides tools to help you build and calculate quotes, but doesn&apos;t
             review, approve, or warrant the accuracy of any quote, estimate, or price you generate - that
             professional responsibility remains yours.
           </p>
@@ -162,7 +162,7 @@ export default function TermsOfUsePage() {
 
         <Section id="directory" title="9. Public directory and homeowner quote requests">
           <p>
-            Homeowners can browse tradie profiles in our public directory and submit quote requests. Swiftscope
+            Homeowners can browse tradie profiles in our public directory and submit quote requests. SwiftScope
             passes on quote requests to relevant tradies but is not a party to, and takes no responsibility for,
             any agreement, quote, or work carried out between a homeowner and a tradie. We don&apos;t vet, license,
             insure, or guarantee the work of any tradie listed on the platform.
@@ -171,7 +171,7 @@ export default function TermsOfUsePage() {
 
         <Section id="ip" title="10. Intellectual property">
           <p>
-            Swiftscope and its licensors own all intellectual property rights in the Service itself (the
+            SwiftScope and its licensors own all intellectual property rights in the Service itself (the
             software, design, branding, and underlying technology), excluding Your Content. Nothing in these
             Terms transfers any of our intellectual property to you, except the limited right to use the
             Service in accordance with these Terms.
@@ -191,7 +191,7 @@ export default function TermsOfUsePage() {
 
         <Section id="liability" title="12. Limitation of liability">
           <p>
-            To the maximum extent permitted by law, and subject to Section 11, Swiftscope&apos;s total liability
+            To the maximum extent permitted by law, and subject to Section 11, SwiftScope&apos;s total liability
             to you arising out of or in connection with these Terms or the Service, however arising (including
             in contract, tort, or under statute), is limited to the total fees you paid us in the 12 months
             immediately preceding the event giving rise to the claim. We&apos;re not liable for any indirect,
@@ -202,7 +202,7 @@ export default function TermsOfUsePage() {
 
         <Section id="indemnity" title="13. Indemnity">
           <p>
-            You agree to indemnify and hold Swiftscope harmless against any claim, loss, or liability arising
+            You agree to indemnify and hold SwiftScope harmless against any claim, loss, or liability arising
             from your breach of these Terms, your misuse of the Service, or Your Content, except to the extent
             caused by our own negligence or breach of these Terms.
           </p>
@@ -240,7 +240,7 @@ export default function TermsOfUsePage() {
             Questions about these Terms can be sent to:
           </p>
           <p>
-            <strong>Swiftscope (sole trader)</strong><br />
+            <strong>SwiftScope (sole trader)</strong><br />
             ABN: 13 829 040 278<br />
             Location: Melbourne, Victoria, Australia<br />
             Email: <a href="mailto:team@swiftscope.com.au" className="text-[#c98600] underline font-semibold">team@swiftscope.com.au</a>
@@ -251,7 +251,7 @@ export default function TermsOfUsePage() {
       {/* FOOTER */}
       <div className="bg-[#1a242c] border-t border-white/[0.08]">
         <div className="max-w-7xl mx-auto px-6 py-5 flex flex-wrap items-center justify-between gap-4">
-          <span className="font-display text-lg text-white">SWIFTSCOPE</span>
+          <span className="font-display text-lg text-white">SwiftScope</span>
           <div className="flex gap-6 text-[12.5px] font-semibold text-white/40">
             <Link href="/terms" className="hover:text-white transition-colors">Terms of Use</Link>
             <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>

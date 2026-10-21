@@ -160,14 +160,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const canonical = suburbLandingCanonical(parsed.suburbSlug, parsed.state);
   const tradeNames = content.trades.map((t) => getTradeDisplay(t.trade).plural.toLowerCase()).join(", ");
-  const title = `Tradies in ${content.suburb} | ${content.totalListings} Local Trades - Swiftscope`;
-  const description = `Find local tradies in ${content.suburb}: ${tradeNames}. ${content.totalListings} curated listings with real Google reviews on Swiftscope.`;
+  const title = `Tradies in ${content.suburb} | ${content.totalListings} Local Trades - SwiftScope`;
+  const description = `Find local tradies in ${content.suburb}: ${tradeNames}. ${content.totalListings} curated listings with real Google reviews on SwiftScope.`;
 
   return {
     title,
     description,
     alternates: { canonical },
-    openGraph: { title, description, url: canonical, siteName: "Swiftscope", type: "website" },
+    openGraph: { title, description, url: canonical, siteName: "SwiftScope", type: "website" },
     twitter: { card: "summary", title, description },
     // Same thin-content protection as the trade+suburb pages
     // (tradeSuburbMeta in this file) - don't ask Google to index a

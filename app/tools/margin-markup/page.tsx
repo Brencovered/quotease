@@ -7,7 +7,7 @@ import { MARGIN_FAQS, getToolBySlug } from "@/lib/marketing/tools";
 const tool = getToolBySlug("margin-markup")!;
 
 export const metadata: Metadata = {
-  title: `${tool.title} - Swiftscope`,
+  title: `${tool.title} - SwiftScope`,
   description: tool.description,
   alternates: { canonical: "https://swiftscope.com.au/tools/margin-markup" },
   openGraph: { title: tool.title, description: tool.description },

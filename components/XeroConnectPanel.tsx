@@ -29,7 +29,7 @@ export default function XeroConnectPanel({
       <p className="font-semibold text-[var(--ink)] mb-1">Push invoices to Xero</p>
       <p className="text-[13px] text-[var(--ink-faint)] mb-4">
         Connect Xero to push accepted quotes as draft invoices - client, reference, and scope lines when available.
-        Payments still clear in Xero; mark jobs paid in Swiftscope when you want the board to match.
+        Payments still clear in Xero; mark jobs paid in SwiftScope when you want the board to match.
       </p>
 
       {connected ? (

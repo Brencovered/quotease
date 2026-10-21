@@ -429,7 +429,7 @@ async function buildPdf(input: {
     page.drawText("Date: ____________________", { x: 48, y, size: 10, font, color: soft });
   }
 
-  page.drawText("Created free with Swiftscope tools · Quote from site in seconds at swiftscope.com.au", {
+  page.drawText("Created free with SwiftScope tools · Quote from site in seconds at swiftscope.com.au", {
     x: 48,
     y: 48,
     size: 8,

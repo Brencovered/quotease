@@ -3,7 +3,7 @@
  * --------------------------------------
  * Site-wide Schema.org Organization markup, rendered once in the root
  * layout. This is the technical prerequisite for Google to associate a
- * specific logo image with "Swiftscope" as a brand/entity (e.g. in a
+ * specific logo image with "SwiftScope" as a brand/entity (e.g. in a
  * Knowledge Panel, or next to the brand name in some search contexts) -
  * separate from the favicon shown next to the URL in a search result,
  * which is unrelated markup.
@@ -25,7 +25,7 @@ export default function OrganizationSchema() {
   const schema = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: "Swiftscope",
+    name: "SwiftScope",
     url: BASE_URL,
     logo: `${BASE_URL}/logo.png`,
     description: "Quoting and job management platform for Australian trade businesses, plus a public directory of curated local tradies.",

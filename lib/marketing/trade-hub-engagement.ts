@@ -54,7 +54,7 @@ export const TRADE_ENGAGEMENT: Record<string, TradeEngagement> = {
     compliance: {
       badge: "COES",
       title: "COES and compliance on the quote",
-      body: "Add Certificate of Electrical Safety notes and compliance line items with the priced scope. Your COES process stays yours - Swiftscope keeps the paperwork with the job.",
+      body: "Add Certificate of Electrical Safety notes and compliance line items with the priced scope. Your COES process stays yours - SwiftScope keeps the paperwork with the job.",
     },
     demoJobs: [
       {

@@ -27,14 +27,14 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const feature = getFeatureBySlug(slug);
-  if (!feature) return { title: "Features - Swiftscope" };
+  if (!feature) return { title: "Features - SwiftScope" };
   const canonical = `https://swiftscope.com.au/features/${feature.slug}`;
   return {
-    title: `${feature.label} - Swiftscope`,
+    title: `${feature.label} - SwiftScope`,
     description: feature.note,
     alternates: { canonical },
-    openGraph: { title: `${feature.label} - Swiftscope`, description: feature.note, url: canonical, siteName: "Swiftscope", type: "website" },
-    twitter: { card: "summary", title: `${feature.label} - Swiftscope`, description: feature.note },
+    openGraph: { title: `${feature.label} - SwiftScope`, description: feature.note, url: canonical, siteName: "SwiftScope", type: "website" },
+    twitter: { card: "summary", title: `${feature.label} - SwiftScope`, description: feature.note },
   };
 }
 
@@ -138,7 +138,7 @@ export default async function FeatureDetailPage({ params }: { params: Promise<{ 
                     <span className="text-[15px] font-bold text-white/50 line-through whitespace-nowrap">{feature.competitorCost}</span>
                   </div>
                   <div className="flex items-center justify-between pt-3">
-                    <span className="text-[13px] font-semibold text-white">Swiftscope</span>
+                    <span className="text-[13px] font-semibold text-white">SwiftScope</span>
                     <span className="text-[1.6rem] font-display text-[#ffb400] leading-none">$45<span className="text-[13px] text-[#8aa4b4] font-sans font-normal">/mo flat</span></span>
                   </div>
                   <p className="text-[11.5px] text-[#8aa4b4] mt-3 leading-snug">{feature.replacesReason}</p>
@@ -182,7 +182,7 @@ export default async function FeatureDetailPage({ params }: { params: Promise<{ 
           <div className="max-w-7xl mx-auto px-6 py-16">
             <div className="grid md:grid-cols-2 gap-16 items-start">
               <div>
-                <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Why Swiftscope</p>
+                <p className="text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Why SwiftScope</p>
                 <h2 className="font-display uppercase text-[2rem] sm:text-[2.6rem] leading-[0.95] text-[#0a1722] mb-4">
                   Not another tool.<br />The last one.
                 </h2>
@@ -256,7 +256,7 @@ export default async function FeatureDetailPage({ params }: { params: Promise<{ 
         </div>
         <div className="border-t border-white/[0.08]">
           <div className="max-w-7xl mx-auto px-6 py-5 flex flex-wrap items-center justify-between gap-4">
-            <span className="font-display text-lg text-white">SWIFTSCOPE</span>
+            <span className="font-display text-lg text-white">SwiftScope</span>
             <div className="flex gap-6 text-[12.5px] font-semibold text-white/40">
               <Link href="/features" className="hover:text-white transition-colors">Features</Link>
               <Link href="/how-it-works" className="hover:text-white transition-colors">How it works</Link>

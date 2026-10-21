@@ -188,7 +188,7 @@ export function DirectoryPageSchema({ trade, suburb, state = "VIC", listings }: 
   const schema = {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    name: `${plural} in ${suburb} ${state} - Swiftscope`,
+    name: `${plural} in ${suburb} ${state} - SwiftScope`,
     description: `Curated ${plural.toLowerCase()} serving ${suburb} and surrounds.`,
     numberOfItems: listings.length,
     itemListElement: listings.map((l, i) => ({

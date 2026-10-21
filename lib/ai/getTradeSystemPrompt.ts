@@ -1,5 +1,5 @@
 /**
- * Swiftscope AI Pipeline - Trade System Prompt Generator
+ * SwiftScope AI Pipeline - Trade System Prompt Generator
  * Exports a dynamic function that returns a gold-standard system prompt
  * for each trade, matching the depth and precision of the reference electrical output.
  *

@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
     tags: fm.tags
       ? fm.tags.split(",").map((t) => t.trim()).filter(Boolean)
       : null,
-    author_name: fm.author_name ?? "Swiftscope",
+    author_name: fm.author_name ?? "SwiftScope",
     published,
     featured: fm.featured === "true",
     published_at: publishedAt,

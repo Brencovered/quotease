@@ -6,7 +6,7 @@ import { useCallback, useRef, useState } from "react";
  * PlanMarkupSlider
  * -----------------
  * A drag-to-reveal before/after: a plain uploaded floor plan on the left,
- * the same plan marked up and quantified by Swiftscope on the right.
+ * the same plan marked up and quantified by SwiftScope on the right.
  *
  * This is the one thing from the landing-page brief that was not already on
  * the page in some form. The brief's "Live Proof Bar" (4,800+ tradies, 390+
@@ -144,7 +144,7 @@ function PlanBase({ dim = false }: { dim?: boolean }) {
   );
 }
 
-/** The Swiftscope layer: runs, counted fixtures and a priced side panel. */
+/** The SwiftScope layer: runs, counted fixtures and a priced side panel. */
 function MarkupLayer() {
   return (
     <g>

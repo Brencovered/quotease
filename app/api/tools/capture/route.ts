@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
 
   const key = process.env.RESEND_API_KEY;
   const notifyTo = process.env.TOOLS_CAPTURE_EMAIL || "team@swiftscope.com.au";
-  const from = process.env.RESEND_FROM_EMAIL || "Swiftscope <team@swiftscope.com.au>";
+  const from = process.env.RESEND_FROM_EMAIL || "SwiftScope <team@swiftscope.com.au>";
 
   if (key) {
     try {

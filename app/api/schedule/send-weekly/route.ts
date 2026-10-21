@@ -16,7 +16,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
 import { buildWeeklyScheduleEmail, type WeeklyScheduleJob } from "@/lib/email/templates";
 
-const FROM_EMAIL = "Swiftscope <noreply@swiftscope.com.au>";
+const FROM_EMAIL = "SwiftScope <noreply@swiftscope.com.au>";
 
 function getWeekRange(weekOffset: number) {
   const now = new Date();
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     .eq("id", ownerId)
     .single();
 
-  const businessName = ownerProfile?.business_name || "Swiftscope";
+  const businessName = ownerProfile?.business_name || "SwiftScope";
 
   // Read optional week offset
   let weekOffset = 0;

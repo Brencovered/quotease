@@ -28,7 +28,7 @@ const BANDS: Band[] = [
     photoAlt: "Tradie on site scoping a residential job",
     photoPos: "object-[25%_center]",
     shot: "/marketing/v2/phone-plan-drawing.png",
-    shotAlt: "Floor plan markup pricing downlights in Swiftscope",
+    shotAlt: "Floor plan markup pricing downlights in SwiftScope",
     shotW: 325,
     shotH: 658,
   },

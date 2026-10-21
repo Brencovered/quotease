@@ -292,7 +292,7 @@ export default function SeoKeywordsPanel() {
             segmentFilter === "saas" ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--line)] bg-white text-[var(--ink-soft)] hover:border-[var(--navy)]"
           }`}
         >
-          <Search size={12} /> Tradies looking for Swiftscope (SaaS)
+          <Search size={12} /> Tradies looking for SwiftScope (SaaS)
         </button>
         <button
           onClick={() => setSegmentFilter("directory")}

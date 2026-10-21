@@ -20,7 +20,7 @@ function AccessBadge({ label }: { label: string }) {
 }
 
 export const metadata: Metadata = {
-  title: "Free tradie calculators and homeowner tools - Swiftscope",
+  title: "Free tradie calculators and homeowner tools - SwiftScope",
   description:
     "Free Australian tradie tools: true charge-out rate with super and unbillable time, margin vs markup converter, quote PDF generator, and vehicle cost calculator. Plus homeowner ballpark and DIY tools. Guidelines only, not financial advice.",
 };

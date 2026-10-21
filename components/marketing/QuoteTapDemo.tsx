@@ -429,7 +429,7 @@ export default function QuoteTapDemo() {
           <div className="rounded-[22px] overflow-hidden bg-[#f2f4f6]">
             <div className="bg-[#1a242c] px-4 pt-3 pb-2.5">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-display text-[13px] tracking-wide text-white">SWIFTSCOPE</span>
+                <span className="font-display text-[13px] tracking-wide text-white">SwiftScope</span>
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[#ffb400]">
                   <Sparkles size={11} aria-hidden /> {trade.label}
                 </span>

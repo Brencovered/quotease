@@ -70,7 +70,7 @@ export default function TradeJobDemo({
             <div className="rounded-[1.55rem] bg-white overflow-hidden min-h-[520px] flex flex-col">
               <div className="bg-[#1a242c] px-4 pt-3 pb-3">
                 <p className="font-sans text-[10px] font-bold tracking-[0.14em] uppercase text-[#ffb400] mb-1">
-                  Swiftscope · quote
+                  SwiftScope · quote
                 </p>
                 <p className="font-display text-[1.25rem] tracking-wide text-white leading-none">
                   {active.label}

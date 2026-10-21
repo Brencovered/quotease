@@ -59,7 +59,7 @@ const FAQS = [
   },
   {
     q: "How are tradies selected?",
-    a: "Every listing on Swiftscope is curated with real Google reviews and a confirmed business listing.",
+    a: "Every listing on SwiftScope is curated with real Google reviews and a confirmed business listing.",
   },
 ];
 
@@ -150,7 +150,7 @@ function TrustSidebar() {
       {/* Why trust */}
       <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-6">
         <h3 className="font-display text-[1.15rem] text-[var(--ink)] mb-4">
-          Why homeowners trust Swiftscope
+          Why homeowners trust SwiftScope
         </h3>
         <div className="space-y-4">
           {TRUST_ITEMS.map((item, i) => (

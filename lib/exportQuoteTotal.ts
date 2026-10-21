@@ -27,7 +27,7 @@ export function sumMarkupMaterialsField(raw: unknown): number {
   return 0;
 }
 
-/** Invoice amount stored/calculated ex-GST in Swiftscope. */
+/** Invoice amount stored/calculated ex-GST in SwiftScope. */
 export function quoteInvoiceExGst(input: {
   totalCost: number | null | undefined;
   markupMaterials: unknown;

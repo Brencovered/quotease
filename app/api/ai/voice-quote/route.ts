@@ -2,7 +2,7 @@
  * POST /api/ai/voice-quote
  * ------------------------
  * Converts a tradie's voice dictation or rough text notes into structured
- * quote line items ready to insert into the Swiftscope quote builder.
+ * quote line items ready to insert into the SwiftScope quote builder.
  *
  * Input:  { transcript: string, trade: string, userId: string }
  * Output: { lineItems: LineItem[], raw: string, model: string }

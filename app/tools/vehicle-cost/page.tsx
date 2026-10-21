@@ -7,7 +7,7 @@ import { VEHICLE_FAQS, getToolBySlug } from "@/lib/marketing/tools";
 const tool = getToolBySlug("vehicle-cost")!;
 
 export const metadata: Metadata = {
-  title: `${tool.title} - Swiftscope`,
+  title: `${tool.title} - SwiftScope`,
   description: tool.description,
   alternates: { canonical: "https://swiftscope.com.au/tools/vehicle-cost" },
   openGraph: { title: tool.title, description: tool.description },

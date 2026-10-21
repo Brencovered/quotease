@@ -96,7 +96,7 @@ export default async function PublicVariationPage({
           )}
         </div>
       </div>
-      <p className="text-center text-[11.5px] text-[#94a3b8] mt-4">Quoting by Swiftscope</p>
+      <p className="text-center text-[11.5px] text-[#94a3b8] mt-4">Quoting by SwiftScope</p>
     </main>
   );
 }

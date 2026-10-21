@@ -68,7 +68,7 @@ export interface Screenshot {
 export const SHOTS = {
   quoteCapture: {
     src: "/product/quote-capture.webp",
-    alt: "Swiftscope quote capture screen with options for live site markup, uploading drawings, tracing over a floor plan and recording a voice note",
+    alt: "SwiftScope quote capture screen with options for live site markup, uploading drawings, tracing over a floor plan and recording a voice note",
     caption: "Four ways into a quote: camera markup, drawings, a traced plan, or just talking.",
     width: 718,
     height: 1474,
@@ -84,7 +84,7 @@ export const SHOTS = {
   },
   planMarkup: {
     src: "/product/plan-markup.webp",
-    alt: "Floor plan uploaded to Swiftscope with ten numbered downlights placed on it and a running labour and materials total above",
+    alt: "Floor plan uploaded to SwiftScope with ten numbered downlights placed on it and a running labour and materials total above",
     caption: "Tap downlights onto the plan. The total moves as you place them.",
     width: 600,
     height: 1330,
@@ -92,7 +92,7 @@ export const SHOTS = {
   },
   quoteJobPricing: {
     src: "/product/quote-job-pricing.webp",
-    alt: "Swiftscope quote builder job step with customer type set to residential at six percent, job size set to medium at twelve percent, and an effective margin of eighteen percent shown as six plus twelve",
+    alt: "SwiftScope quote builder job step with customer type set to residential at six percent, job size set to medium at twelve percent, and an effective margin of eighteen percent shown as six plus twelve",
     caption: "Customer type and job size stack into one margin, and it shows its working.",
     width: 706,
     height: 1474,
@@ -100,7 +100,7 @@ export const SHOTS = {
   },
   scopeConditions: {
     src: "/product/scope-conditions.webp",
-    alt: "Swiftscope scope step with roof cavity access set to tight crawl, subfloor to easy crawl, overall site access to moderate, and site condition fees for level 2 connection and switchboard isolation",
+    alt: "SwiftScope scope step with roof cavity access set to tight crawl, subfloor to easy crawl, overall site access to moderate, and site condition fees for level 2 connection and switchboard isolation",
     caption: "Tight crawl, moderate access, level 2 connection. The things that blow a job out.",
     width: 714,
     height: 1472,
@@ -108,7 +108,7 @@ export const SHOTS = {
   },
   quoteSend: {
     src: "/product/quote-send.webp",
-    alt: "Swiftscope send step listing on-site items pulled from a package with quantities and prices, a site items total of $1,181, and a job description field with a record option",
+    alt: "SwiftScope send step listing on-site items pulled from a package with quantities and prices, a site items total of $1,181, and a job description field with a record option",
     caption: "Priced, itemised and ready to send, with the job description talked in if you prefer.",
     width: 714,
     height: 1474,
@@ -116,7 +116,7 @@ export const SHOTS = {
   },
   packages: {
     src: "/product/packages.webp",
-    alt: "Swiftscope packages list showing a ten downlight install pack, a five downlight quote and a kitchen lighting package, each with item counts, estimated hours and price",
+    alt: "SwiftScope packages list showing a ten downlight install pack, a five downlight quote and a kitchen lighting package, each with item counts, estimated hours and price",
     caption: "The job you quote most often, saved once and reused in a tap.",
     width: 704,
     height: 1472,
@@ -124,7 +124,7 @@ export const SHOTS = {
   },
   quoteSentDetail: {
     src: "/product/quote-sent-detail.webp",
-    alt: "A sent Swiftscope quote for $829 showing scope and cost, the site conditions considered, labour and materials split, accept and decline actions, and a follow-up overdue by three days",
+    alt: "A sent SwiftScope quote for $829 showing scope and cost, the site conditions considered, labour and materials split, accept and decline actions, and a follow-up overdue by three days",
     caption: "What the client sees, plus a nudge when the follow-up is overdue.",
     width: 712,
     height: 1478,
@@ -132,7 +132,7 @@ export const SHOTS = {
   },
   settingsSiteConditions: {
     src: "/product/settings-site-conditions.webp",
-    alt: "Swiftscope settings screen listing per-trade site condition starting fees for electricians, including level 2 connection fees at $350 and main switchboard isolation at $120",
+    alt: "SwiftScope settings screen listing per-trade site condition starting fees for electricians, including level 2 connection fees at $350 and main switchboard isolation at $120",
     caption: "Your own starting fees per trade, editable on any quote, never fixed.",
     width: 702,
     height: 1470,
@@ -140,7 +140,7 @@ export const SHOTS = {
   },
   materials: {
     src: "/product/materials.webp",
-    alt: "Swiftscope materials catalogue with 72 items imported by CSV, searched for downlights, each showing cost price and sell price at residential markup",
+    alt: "SwiftScope materials catalogue with 72 items imported by CSV, searched for downlights, each showing cost price and sell price at residential markup",
     caption: "Your supplier price file, searchable, with cost and sell price side by side.",
     width: 646,
     height: 1472,
@@ -164,7 +164,7 @@ export const SHOTS = {
   },
   jobDetail: {
     src: "/product/job-detail.webp",
-    alt: "Swiftscope job screen showing progress from scheduled to invoiced, tasks, dayworks dockets and a timeline of the quote being accepted and paid",
+    alt: "SwiftScope job screen showing progress from scheduled to invoiced, tasks, dayworks dockets and a timeline of the quote being accepted and paid",
     caption: "Scheduled, in progress, complete, invoiced, with the whole history underneath.",
     width: 654,
     height: 1475,
@@ -204,7 +204,7 @@ export const SHOTS = {
   },
   dashboard: {
     src: "/product/dashboard.webp",
-    alt: "Swiftscope dashboard showing a quote pipeline of draft, sent, accepted, declined and paid quotes, a profit snapshot and time saved on quoting",
+    alt: "SwiftScope dashboard showing a quote pipeline of draft, sent, accepted, declined and paid quotes, a profit snapshot and time saved on quoting",
     caption: "What is out, what came back, and what it actually made you.",
     width: 654,
     height: 1481,
@@ -232,7 +232,7 @@ export const SHOTS = {
   // package, a plumbing quote's actual totals.
   plumberMaterials: {
     src: "/product/plumber-materials.webp",
-    alt: "Swiftscope materials catalogue searched for pipe, showing copper pipe and PVC pressure pipe from Reece with cost and sell price",
+    alt: "SwiftScope materials catalogue searched for pipe, showing copper pipe and PVC pressure pipe from Reece with cost and sell price",
     caption: "Your plumbing supplier's price list, searchable by item or SKU.",
     width: 718,
     height: 1310,
@@ -260,7 +260,7 @@ export const SHOTS = {
   // carpentry quote's actual totals.
   carpenterMaterials: {
     src: "/product/carpenter-materials.webp",
-    alt: "Swiftscope materials catalogue with 51 items, showing treated pine posts and Merbau decking from Bunnings Trade with cost and sell price",
+    alt: "SwiftScope materials catalogue with 51 items, showing treated pine posts and Merbau decking from Bunnings Trade with cost and sell price",
     caption: "Timber, decking and hardware, priced from your supplier's own list.",
     width: 720,
     height: 1306,
@@ -294,7 +294,7 @@ export const SHOTS = {
   // for "Runs and extras" in this trade's own quotingFlow copy.
   roofingMaterials: {
     src: "/product/roofer-materials.webp",
-    alt: "Swiftscope materials catalogue with 25 items, showing an Anti-Ponding Board and Barge Capping in Colorbond with cost and sell price",
+    alt: "SwiftScope materials catalogue with 25 items, showing an Anti-Ponding Board and Barge Capping in Colorbond with cost and sell price",
     caption: "Roofing supplies priced from your own list, not a generic default.",
     width: 704,
     height: 1306,

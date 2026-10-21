@@ -17,7 +17,7 @@ async function downloadAndStore(
     const t = setTimeout(() => controller.abort(), 12000);
     const res = await fetch(photoUrl, {
       signal: controller.signal,
-      headers: { "User-Agent": "Swiftscope-Bot/1.0 (+https://swiftscope.com.au)" },
+      headers: { "User-Agent": "SwiftScope-Bot/1.0 (+https://swiftscope.com.au)" },
     });
     clearTimeout(t);
     if (!res.ok) return null;

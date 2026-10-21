@@ -89,13 +89,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         method: "POST",
         headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: "Swiftscope <noreply@swiftscope.com.au>",
+          from: "SwiftScope <noreply@swiftscope.com.au>",
           to: [member.email],
           subject: `You've been added to ${subjectBits.join(" · ")}`,
           html: `
             <p>${member.name ? `Hi ${member.name},` : "Hi,"}</p>
             <p>You've been added to ${whereBits.join(", ")}.</p>
-            <p><a href="${jobUrl}">View the job on Swiftscope</a> for drawings, materials, and site notes.</p>
+            <p><a href="${jobUrl}">View the job on SwiftScope</a> for drawings, materials, and site notes.</p>
           `,
         }),
       });

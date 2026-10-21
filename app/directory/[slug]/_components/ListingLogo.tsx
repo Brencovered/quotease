@@ -37,7 +37,7 @@ export default function ListingLogo({
         <div className="w-12 h-12 rounded-xl mx-auto mb-1 flex items-center justify-center" style={{ background: accent }}>
           <Wrench size={20} className="text-white" />
         </div>
-        <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">Swiftscope</p>
+        <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">SwiftScope</p>
       </div>
     );
   }

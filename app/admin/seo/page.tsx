@@ -1,7 +1,7 @@
 import SeoKeywordsPanel from "@/components/SeoKeywordsPanel";
 import AdminSeoRefreshPanel from "@/components/AdminSeoRefreshPanel";
 
-export const metadata = { title: "SEO Keywords - Swiftscope Admin" };
+export const metadata = { title: "SEO Keywords - SwiftScope Admin" };
 
 export default function AdminSeoPage() {
   return (

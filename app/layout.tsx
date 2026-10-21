@@ -1,31 +1,38 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Inter, Anton } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import { PostHogProvider } from "@/components/PostHogProvider";
+import DeferredThirdParties from "@/components/DeferredThirdParties";
+import BrandFonts from "@/components/BrandFonts";
 import OrganizationSchema from "@/components/seo/OrganizationSchema";
 import { WebSiteSchema } from "@/components/seo/StructuredData";
 
-// next/font/google self-hosts files (no runtime Google Fonts request) and
-// generates preload + font-display: swap automatically.
+// next/font/google self-hosts the files (no runtime Google Fonts request).
+// preload is off so Next does not emit <link rel="preload" as="font">.
+// The families are still not applied until html.fonts-ready, which
+// BrandFonts adds from the load event. Chrome waits for an in-use
+// @font-face download before firing window.load, including with
+// font-display: swap, so a stalled woff2 otherwise holds the tab spinner
+// after the page has already painted.
 const inter = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
   display: "swap",
   variable: "--font-inter",
+  preload: false,
 });
 const anton = Anton({
   subsets: ["latin"],
   weight: "400",
   display: "swap",
   variable: "--font-anton",
+  preload: false,
 });
 
 export const metadata: Metadata = {
-  title: "Swiftscope - quote it, send it, win the job",
+  title: "SwiftScope - quote it, send it, win the job",
   description: "Quote the job before you've left the driveway.",
   icons: {
     icon: [
@@ -41,7 +48,7 @@ export const metadata: Metadata = {
     ],
   },
   appleWebApp: {
-    title: "Swiftscope",
+    title: "SwiftScope",
     statusBarStyle: "black-translucent",
   },
   manifest: "/site.webmanifest",
@@ -77,11 +84,14 @@ export default function RootLayout({
         <PostHogProvider>
           <Providers>{children}</Providers>
         </PostHogProvider>
-        <Analytics />
-        <SpeedInsights />
-        {/* Google Analytics */}
-        <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />
-        <Script id="google-analytics" strategy="afterInteractive">{`
+        <DeferredThirdParties />
+        <BrandFonts />
+        {/* Google Analytics. lazyOnload (no src) does not emit a
+            <link rel="preload">, and it runs from requestIdleCallback,
+            which is after window.load. Loading gtag from here — rather
+            than next/script afterInteractive — keeps a slow or stalled
+            googletagmanager request from holding the tab spinner. */}
+        <Script id="google-analytics" strategy="lazyOnload">{`
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
@@ -90,6 +100,10 @@ export default function RootLayout({
             allow_google_signals: false,
             allow_ad_personalization_signals: false,
           });
+          var s = document.createElement('script');
+          s.src = 'https://www.googletagmanager.com/gtag/js?id=${GA_ID}';
+          s.async = true;
+          document.head.appendChild(s);
         `}</Script>
       </body>
     </html>

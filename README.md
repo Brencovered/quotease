@@ -1,4 +1,4 @@
-# Swiftscope (quotease)
+# SwiftScope (quotease)
 
 AU trade quoting SaaS: build a live quote on site, send it, win the job, run the crew day, push a draft invoice to Xero.
 
@@ -36,7 +36,7 @@ Sign up at resend.com, verify a sending domain, add `RESEND_API_KEY` and `RESEND
 
 Register a developer app at developer.xero.com. Redirect URI: `<deployed-url>/api/xero/callback`. Set `XERO_CLIENT_ID`, `XERO_CLIENT_SECRET`, `XERO_REDIRECT_URI`.
 
-Each business connects their own org from Settings. On quote accept, Swiftscope pushes a **draft** invoice (scope lines when available, otherwise the quote total). Payment status does **not** sync back from Xero yet - mark jobs paid in Swiftscope when money clears. Variations do not auto-update the Xero invoice yet.
+Each business connects their own org from Settings. On quote accept, SwiftScope pushes a **draft** invoice (scope lines when available, otherwise the quote total). Payment status does **not** sync back from Xero yet - mark jobs paid in SwiftScope when money clears. Variations do not auto-update the Xero invoice yet.
 
 ### Enabling billing (Stripe)
 

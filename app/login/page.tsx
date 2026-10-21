@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -13,7 +13,6 @@ import {
   Users,
   ArrowRight,
   Sparkles,
-  Mail,
   Lock,
   X,
   Loader2,
@@ -28,6 +27,17 @@ const SUPABASE_CONFIGURED =
 /* ------------------------------------------------------------------ */
 /*  Feature item (right side)                                          */
 /* ------------------------------------------------------------------ */
+function FieldError({ id, children }: { id: string; children?: ReactNode }) {
+  if (!children) return null;
+  return (
+    <p id={id} role="alert" className="text-[12.5px] font-semibold text-[var(--red)] mt-1.5">
+      {children}
+    </p>
+  );
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function FeatureItem({
   icon: Icon,
   text,
@@ -63,7 +73,14 @@ function ResetPasswordModal({
 
   async function handleReset(e: React.FormEvent) {
     e.preventDefault();
-    if (!resetEmail) return;
+    if (!resetEmail.trim()) {
+      setResetError("Enter your email address.");
+      return;
+    }
+    if (!EMAIL_RE.test(resetEmail.trim())) {
+      setResetError("Enter a valid email address.");
+      return;
+    }
     setResetLoading(true);
     setResetError(null);
     try {
@@ -132,24 +149,28 @@ function ResetPasswordModal({
               password.
             </p>
 
-            <form onSubmit={handleReset} className="space-y-3">
+            <form onSubmit={handleReset} noValidate className="space-y-3">
               <div>
-                <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">
+                <label htmlFor="reset-email" className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">
                   Email
                 </label>
                 <input
+                  id="reset-email"
                   type="email"
                   value={resetEmail}
                   onChange={(e) => setResetEmail(e.target.value)}
-                  required
                   autoFocus
+                  autoComplete="email"
+                  inputMode="email"
+                  aria-invalid={!!resetError}
+                  aria-describedby={resetError ? "reset-email-error" : undefined}
                   className="app-field"
                   placeholder="you@example.com"
                 />
               </div>
 
               {resetError && (
-                <div className="bg-[var(--red-bg)] border border-red-200 rounded-lg px-3 py-2.5 text-[13px] text-[var(--red)] font-semibold">
+                <div id="reset-email-error" role="alert" className="bg-[var(--red-bg)] border border-red-200 rounded-lg px-3 py-2.5 text-[13px] text-[var(--red)] font-semibold">
                   {resetError}
                 </div>
               )}
@@ -219,7 +240,7 @@ function LoginRightPanel() {
         <div className="reveal flex items-center gap-2 mb-5">
           <Sparkles size={14} style={{ color: "var(--amber)" }} />
           <span className="text-[11px] font-bold tracking-[.2em] uppercase text-[var(--amber)]">
-            Swiftscope
+            SwiftScope
           </span>
         </div>
 
@@ -285,7 +306,7 @@ function MobileTeaser() {
           Welcome back
         </h2>
         <p className="text-[12.5px] text-[#8b96a1]">
-          Log in to your Swiftscope account
+          Log in to your SwiftScope account
         </p>
       </div>
     </div>
@@ -302,12 +323,20 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const nextErrors: { email?: string; password?: string } = {};
+    if (!email.trim()) nextErrors.email = "Enter your email address.";
+    else if (!EMAIL_RE.test(email.trim())) nextErrors.email = "Enter a valid email address.";
+    if (!password) nextErrors.password = "Enter your password.";
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
     if (!SUPABASE_CONFIGURED) {
       setError("Not connected to a database yet.");
       return;
@@ -389,7 +418,7 @@ function LoginForm() {
             href="/"
             className="font-display text-[15px] tracking-widest text-white"
           >
-            SWIFTSCOPE
+            SwiftScope
           </Link>
         </div>
 
@@ -400,7 +429,7 @@ function LoginForm() {
                 Welcome back
               </h1>
               <p className="text-[13.5px] text-[var(--ink-faint)] mb-6">
-                Log in to your Swiftscope account
+                Log in to your SwiftScope account
               </p>
 
               <GoogleSignInButton next={next} label="Log in with Google" />
@@ -411,29 +440,35 @@ function LoginForm() {
                 <div className="flex-1 h-px bg-[var(--line)]" />
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-3">
+              <form onSubmit={handleSubmit} noValidate className="space-y-3">
                 {/* Email */}
                 <div>
-                  <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">
+                  <label htmlFor="login-email" className="block text-[12.5px] font-semibold text-[var(--ink-soft)] mb-1.5">
                     Email
                   </label>
                   <input
+                    id="login-email"
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setFieldErrors((prev) => (prev.email ? { ...prev, email: undefined } : prev));
+                    }}
                     autoFocus
                     autoComplete="email"
                     inputMode="email"
+                    aria-invalid={!!fieldErrors.email}
+                    aria-describedby={fieldErrors.email ? "login-email-error" : undefined}
                     className="app-field"
                     placeholder="you@example.com"
                   />
+                  <FieldError id="login-email-error">{fieldErrors.email}</FieldError>
                 </div>
 
                 {/* Password */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-[12.5px] font-semibold text-[var(--ink-soft)]">
+                    <label htmlFor="login-password" className="block text-[12.5px] font-semibold text-[var(--ink-soft)]">
                       Password
                     </label>
                     <button
@@ -446,11 +481,16 @@ function LoginForm() {
                   </div>
                   <div className="relative">
                     <input
+                      id="login-password"
                       type={showPassword ? "text" : "password"}
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        setFieldErrors((prev) => (prev.password ? { ...prev, password: undefined } : prev));
+                      }}
                       autoComplete="current-password"
+                      aria-invalid={!!fieldErrors.password}
+                      aria-describedby={fieldErrors.password ? "login-password-error" : undefined}
                       className="app-field pr-16"
                       placeholder="••••••••"
                     />
@@ -463,6 +503,7 @@ function LoginForm() {
                       {showPassword ? "Hide" : "Show"}
                     </button>
                   </div>
+                  <FieldError id="login-password-error">{fieldErrors.password}</FieldError>
                 </div>
 
                 {/* Error */}
@@ -528,7 +569,7 @@ export default function LoginPage() {
         <div className="min-h-screen flex items-center justify-center px-4">
           <div className="text-center">
             <h1 className="font-display text-[26px] text-[var(--ink)] mb-1">Welcome back</h1>
-            <p className="text-[13.5px] text-[var(--ink-faint)]">Log in to your Swiftscope account</p>
+            <p className="text-[13.5px] text-[var(--ink-faint)]">Log in to your SwiftScope account</p>
           </div>
         </div>
       }

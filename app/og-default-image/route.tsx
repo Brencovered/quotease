@@ -38,7 +38,7 @@ export async function GET() {
           <div style={{ fontSize: 72, fontWeight: 700, color: "#ffffff" }}>S</div>
         </div>
         <div style={{ display: "flex", fontSize: 72, fontWeight: 800, color: "white", letterSpacing: -1 }}>
-          SWIFTSCOPE
+          SwiftScope
         </div>
         <div style={{ display: "flex", fontSize: 28, color: "#b7c7d4", marginTop: 16 }}>
           Quote it. Send it. Win it on site.

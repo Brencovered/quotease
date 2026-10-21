@@ -41,11 +41,11 @@ export default function FaqSchema({ faqs }: { faqs: FaqItem[] }) {
 // - Reusable FAQ sets ------------------------------------------------------------
 
 /**
- * Generic FAQs about Swiftscope itself - used on the homepage.
+ * Generic FAQs about SwiftScope itself - used on the homepage.
  */
 export const SWIFTSCOPE_FAQS: FaqItem[] = [
   {
-    question: "Who is Swiftscope for?",
+    question: "Who is SwiftScope for?",
     answer:
       "Solo tradies and small crews up to about 15. Residential and light commercial. Not a site office system for 200.",
   },
@@ -91,23 +91,23 @@ export function generateTradeSuburbFaqs(
   return [
     {
       question: `How much does a ${tradeSingular.toLowerCase()} cost in ${suburb}?`,
-      answer: `${tradeSingular} costs in ${suburb} vary by job size and complexity. Browse local listings on Swiftscope, compare Google ratings, then contact a few ${tradePlural.toLowerCase()} directly to compare quotes.`,
+      answer: `${tradeSingular} costs in ${suburb} vary by job size and complexity. Browse local listings on SwiftScope, compare Google ratings, then contact a few ${tradePlural.toLowerCase()} directly to compare quotes.`,
     },
     {
       question: `How many ${tradePlural.toLowerCase()} are available in ${suburb}?`,
-      answer: `There are ${listingCount} curated ${tradePlural.toLowerCase()} listings in ${suburb} on Swiftscope.${ratingLine}`,
+      answer: `There are ${listingCount} curated ${tradePlural.toLowerCase()} listings in ${suburb} on SwiftScope.${ratingLine}`,
     },
     {
       question: `How do I find a reliable ${tradeSingular.toLowerCase()} in ${suburb}, ${state}?`,
-      answer: `Browse the ${suburb} ${tradePlural.toLowerCase()} listed on Swiftscope for free. Compare Google ratings, reviews, licences, and photos, then contact your chosen ${tradeSingular.toLowerCase()} directly by phone, website, or quote request.`,
+      answer: `Browse the ${suburb} ${tradePlural.toLowerCase()} listed on SwiftScope for free. Compare Google ratings, reviews, licences, and photos, then contact your chosen ${tradeSingular.toLowerCase()} directly by phone, website, or quote request.`,
     },
     {
-      question: `Do ${suburb} ${tradePlural.toLowerCase()} on Swiftscope have insurance?`,
-      answer: `All tradies on Swiftscope are independent businesses responsible for their own licensing and insurance. We recommend confirming licence details with your chosen ${tradeSingular.toLowerCase()} directly before work begins.`,
+      question: `Do ${suburb} ${tradePlural.toLowerCase()} on SwiftScope have insurance?`,
+      answer: `All tradies on SwiftScope are independent businesses responsible for their own licensing and insurance. We recommend confirming licence details with your chosen ${tradeSingular.toLowerCase()} directly before work begins.`,
     },
     {
       question: `Can I get same-day quotes from ${suburb} ${tradePlural.toLowerCase()}?`,
-      answer: `Many ${suburb} ${tradePlural.toLowerCase()} on Swiftscope respond quickly to direct enquiries. Contact a few directly by phone or quote request to compare availability.`,
+      answer: `Many ${suburb} ${tradePlural.toLowerCase()} on SwiftScope respond quickly to direct enquiries. Contact a few directly by phone or quote request to compare availability.`,
     },
   ];
 }

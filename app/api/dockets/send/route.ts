@@ -91,7 +91,7 @@ export async function POST(request: Request) {
 
   <tr><td style="background:#f8fafc;border-radius:0 0 16px 16px;padding:16px 32px;border-top:1px solid #e2e8f0;">
     <p style="font-size:12px;color:#94a3b8;margin:0;text-align:center;">
-      Sent by ${business} via Swiftscope.
+      Sent by ${business} via SwiftScope.
     </p>
   </td></tr>
 

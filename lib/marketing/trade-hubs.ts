@@ -79,7 +79,7 @@ const VISUALS: Record<string, TradeVisual> = {
     supportAlt: "Electrician on site checking the install before quoting",
     supportPos: "object-center",
     phoneImage: "/marketing/v2/phone-plan-drawing.png",
-    phoneAlt: "Floor plan markup pricing electrical work in Swiftscope",
+    phoneAlt: "Floor plan markup pricing electrical work in SwiftScope",
   },
   plumber: {
     heroImage: pickTradeImage("/trades/new-plumber.png", "/trades/new-scaffold.png"),
@@ -89,7 +89,7 @@ const VISUALS: Record<string, TradeVisual> = {
     supportAlt: "Bathroom ready for plumbing fit-off after the measure",
     supportPos: "object-center",
     phoneImage: "/marketing/v2/phone-quote.png",
-    phoneAlt: "On-site plumbing quote building in Swiftscope",
+    phoneAlt: "On-site plumbing quote building in SwiftScope",
   },
   carpenter: {
     heroImage: pickTradeImage("/trades/new-carpenter.png", "/trades/new-carpenter.png"),
@@ -99,7 +99,7 @@ const VISUALS: Record<string, TradeVisual> = {
     supportAlt: "Residential framing site after the measure and quote",
     supportPos: "object-[70%_center]",
     phoneImage: "/marketing/v2/phone-quote-send.png",
-    phoneAlt: "Carpentry quote ready to send from Swiftscope",
+    phoneAlt: "Carpentry quote ready to send from SwiftScope",
   },
   roofer: {
     heroImage: pickTradeImage("/trades/new-roofer.png", "/trades/new-roofer.png"),
@@ -109,7 +109,7 @@ const VISUALS: Record<string, TradeVisual> = {
     supportAlt: "Residential roof line ready for sheet and flashing measure",
     supportPos: "object-center",
     phoneImage: "/marketing/v2/phone-quote-send.png",
-    phoneAlt: "Roofing quote ready to send from Swiftscope",
+    phoneAlt: "Roofing quote ready to send from SwiftScope",
   },
   painter: {
     heroImage: pickTradeImage("/trades/new-painter.png", "/trades/new-plasterer.png"),
@@ -119,7 +119,7 @@ const VISUALS: Record<string, TradeVisual> = {
     supportAlt: "Interior walls ready for paint",
     supportPos: "object-[center_30%]",
     phoneImage: "/marketing/v2/phone-quote.png",
-    phoneAlt: "Painting quote scoped in Swiftscope",
+    phoneAlt: "Painting quote scoped in SwiftScope",
   },
   tiler: {
     heroImage: pickTradeImage("/trades/new-tiler.png", "/trades/new-grinder.png"),
@@ -129,7 +129,7 @@ const VISUALS: Record<string, TradeVisual> = {
     supportAlt: "Interior surface ready for tiling",
     supportPos: "object-center",
     phoneImage: "/marketing/v2/phone-plan-drawing.png",
-    phoneAlt: "Plan markup for tiling scope in Swiftscope",
+    phoneAlt: "Plan markup for tiling scope in SwiftScope",
   },
   landscaper: {
     heroImage: pickTradeImage("/trades/new-landscaper.jpg", "/trades/new-landscaper.jpg"),
@@ -139,7 +139,7 @@ const VISUALS: Record<string, TradeVisual> = {
     supportAlt: "Fresh turf and outdoor landscaping finish",
     supportPos: "object-center",
     phoneImage: "/marketing/v2/phone-job-details.png",
-    phoneAlt: "Landscaping job details in Swiftscope",
+    phoneAlt: "Landscaping job details in SwiftScope",
   },
   arborist: {
     heroImage: pickTradeImage("/trades/new-arborist.jpg", "/trades/new-arborist.jpg"),
@@ -149,7 +149,7 @@ const VISUALS: Record<string, TradeVisual> = {
     supportAlt: "Arborist pruning at height on a residential property",
     supportPos: "object-[center_25%]",
     phoneImage: "/marketing/v2/phone-job-management.png",
-    phoneAlt: "Tree work job on the board in Swiftscope",
+    phoneAlt: "Tree work job on the board in SwiftScope",
   },
   concreter: {
     heroImage: pickTradeImage("/trades/new-concreter.jpg", "/trades/new-concreter.jpg"),
@@ -159,7 +159,7 @@ const VISUALS: Record<string, TradeVisual> = {
     supportAlt: "Fresh concrete poured over rebar on a residential pour",
     supportPos: "object-center",
     phoneImage: "/marketing/v2/phone-quote.png",
-    phoneAlt: "Concrete quote building in Swiftscope",
+    phoneAlt: "Concrete quote building in SwiftScope",
   },
   fencer: {
     heroImage: pickTradeImage("/trades/new-fencer.jpg", "/trades/new-fencer.jpg"),
@@ -169,7 +169,7 @@ const VISUALS: Record<string, TradeVisual> = {
     supportAlt: "Fresh timber paling fence along a suburban backyard",
     supportPos: "object-center",
     phoneImage: "/marketing/v2/phone-quote-send.png",
-    phoneAlt: "Fencing quote ready to send from Swiftscope",
+    phoneAlt: "Fencing quote ready to send from SwiftScope",
   },
   aircon: {
     heroImage: pickTradeImage("/trades/new-aircon.jpg", "/trades/new-aircon.jpg"),
@@ -179,7 +179,7 @@ const VISUALS: Record<string, TradeVisual> = {
     supportAlt: "Outdoor split-system condenser beside a brick house",
     supportPos: "object-center",
     phoneImage: "/marketing/v2/phone-job-details.png",
-    phoneAlt: "Air conditioning install job in Swiftscope",
+    phoneAlt: "Air conditioning install job in SwiftScope",
   },
   surveyor: {
     heroImage: pickTradeImage("/trades/new-surveyor.jpg", "/trades/new-surveyor.jpg"),
@@ -189,7 +189,7 @@ const VISUALS: Record<string, TradeVisual> = {
     supportAlt: "Total station set up for residential site set-out",
     supportPos: "object-center",
     phoneImage: "/marketing/v2/phone-job-management.png",
-    phoneAlt: "Survey job managed in Swiftscope",
+    phoneAlt: "Survey job managed in SwiftScope",
   },
   custom: {
     heroImage: pickTradeImage("/trades/new-custom.png", "/trades/new-carpenter.png"),
@@ -199,7 +199,7 @@ const VISUALS: Record<string, TradeVisual> = {
     supportAlt: "Specialist trade work on a residential site",
     supportPos: "object-center",
     phoneImage: "/marketing/v2/phone-quote.png",
-    phoneAlt: "Specialist trade quote in Swiftscope",
+    phoneAlt: "Specialist trade quote in SwiftScope",
   },
 };
 
@@ -277,7 +277,7 @@ const COPY: Record<string, HubCopy> = {
       {
         question: "Does it handle COES and compliance notes?",
         answer:
-          "Add notes and line items for compliance work on the quote. You keep your COES process. Swiftscope keeps the priced scope with the job.",
+          "Add notes and line items for compliance work on the quote. You keep your COES process. SwiftScope keeps the priced scope with the job.",
       },
       {
         question: "Is it built for solo sparkies or crews?",
@@ -293,7 +293,7 @@ const COPY: Record<string, HubCopy> = {
     headline: "Price the rough-in and fit-off while you are still on site.",
     subhead:
       "Fixtures, drainage runs, and labour load from your book. Send from your phone, not from memory at the desk later.",
-    pain: "Bathroom and rough-in quotes die in the gap between the site visit and the PDF. Swiftscope closes that gap for plumbers who hate desk rewrites.",
+    pain: "Bathroom and rough-in quotes die in the gap between the site visit and the PDF. SwiftScope closes that gap for plumbers who hate desk rewrites.",
     outcomes: [
       "Mark fixtures and pipe routes on plans or photos",
       "Pull fittings and labour from your price book",
@@ -318,7 +318,7 @@ const COPY: Record<string, HubCopy> = {
       {
         question: "Does it replace my supplier price lists?",
         answer:
-          "No. You load your own negotiated rates. Swiftscope uses your book, not a generic rate card.",
+          "No. You load your own negotiated rates. SwiftScope uses your book, not a generic rate card.",
       },
       {
         question: "Will clients accept quotes on their phone?",
@@ -565,7 +565,7 @@ const COPY: Record<string, HubCopy> = {
       {
         question: "Is this for climbing crews or ground crews?",
         answer:
-          "Either. Keep your own method. Swiftscope holds the priced scope and the won job.",
+          "Either. Keep your own method. SwiftScope holds the priced scope and the won job.",
       },
     ],
   },
@@ -740,7 +740,7 @@ const COPY: Record<string, HubCopy> = {
     headline: "Your trade, your book, quotes from site.",
     subhead:
       "Not every trade fits a default template. Load your rates, scope the job on site, send for accept, and run the work from your phone.",
-    pain: "Specialist trades get stuck with generic forms that do not match how they price. Swiftscope starts from your book instead.",
+    pain: "Specialist trades get stuck with generic forms that do not match how they price. SwiftScope starts from your book instead.",
     outcomes: [
       "Build quotes from your own materials and labour book",
       "Send from site without a desk rewrite",

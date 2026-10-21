@@ -6,8 +6,8 @@ import MarketingNav from "@/components/MarketingNav";
 import SavingsCalculator from "@/components/SavingsCalculator";
 
 export const metadata = {
-  title: "How it works - Swiftscope",
-  description: "See how tradies use Swiftscope to quote on-site in minutes: build the quote, send it from your phone, and win the job before you leave the driveway.",
+  title: "How it works - SwiftScope",
+  description: "See how tradies use SwiftScope to quote on-site in minutes: build the quote, send it from your phone, and win the job before you leave the driveway.",
 };
 
 export default function HowItWorksPage() {
@@ -100,7 +100,7 @@ export default function HowItWorksPage() {
           <div className="text-center mb-12">
             <p className="font-sans text-[11px] font-bold tracking-[.2em] uppercase text-[#ffb400] mb-3">Savings calculator</p>
             <h2 className="font-display uppercase text-[2.4rem] sm:text-[3rem] leading-[0.93] text-[#0a1722] mb-4">
-              See what you&apos;d save<br />switching to Swiftscope
+              See what you&apos;d save<br />switching to SwiftScope
             </h2>
             <p className="text-[15px] text-[#5a6a78] max-w-xl mx-auto">
               Select the platforms you&apos;re currently paying for, adjust your seat count and pricing, then calculate.
@@ -120,7 +120,7 @@ export default function HowItWorksPage() {
         </div>
         <div className="border-t border-white/[0.08]">
           <div className="max-w-7xl mx-auto px-6 py-5 flex flex-wrap items-center justify-between gap-4">
-            <span className="font-display text-lg text-white">SWIFTSCOPE</span>
+            <span className="font-display text-lg text-white">SwiftScope</span>
             <div className="flex gap-6 text-[12.5px] font-semibold text-white/40">
               <Link href="/features" className="hover:text-white transition-colors">Features</Link>
               <Link href="/directory" className="hover:text-white transition-colors">Directory</Link>

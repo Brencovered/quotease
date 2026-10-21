@@ -61,7 +61,7 @@ export interface TradePage {
 
   /** What this trade is actually up against, in their words. */
   problem: string;
-  /** How Swiftscope answers that specific problem. */
+  /** How SwiftScope answers that specific problem. */
   answer: string;
   /** Three things generic job software gets wrong for this trade. */
   genericFails: string[];
@@ -102,7 +102,7 @@ export const TRADE_PAGES: TradePage[] = [
     dedicated: true,
     image: "/trades/electrician.jpg",
     alt: "Electrician fitting a ceiling light from a step ladder",
-    metaTitle: "Quoting Software for Electricians | Swiftscope",
+    metaTitle: "Quoting Software for Electricians | SwiftScope",
     metaDescription:
       "Quote electrical work on site: points, runs, downlights and switchboard upgrades, priced from a marked-up plan. Flat $45/month, unlimited users. 7-day free trial.",
     lede:
@@ -124,14 +124,14 @@ export const TRADE_PAGES: TradePage[] = [
     problem:
       "Most sparkies quote from a notepad and a memory of what the last similar job cost. The number is usually close, but the twenty minutes finding the old quote, the retyped client details and the chase for current cable pricing all happen at 9pm, unpaid.",
     answer:
-      "Swiftscope prices the things that actually move an electrical number: points, runs, board work and access. You count them once, on site, and the quote is built as you go.",
+      "SwiftScope prices the things that actually move an electrical number: points, runs, board work and access. You count them once, on site, and the quote is built as you go.",
     genericFails: [
       "A blank line-item table with no idea that a downlight has a grade, a supply arrangement and sometimes a provisional sum",
       "No concept of access, so a 1960s tile roof with a crawl-through is priced identically to a new-build ceiling space",
       "Cable priced as a lump rather than by the metre, which is fine until the run to the shed is thirty metres",
     ],
     setupMaterials:
-      "Upload your wholesaler price file as a CSV and Swiftscope reads the columns itself: description, unit, cost, supplier and SKU. GPOs, switches, downlights, cable by the metre and RCBOs land in your pricebook in one go.",
+      "Upload your wholesaler price file as a CSV and SwiftScope reads the columns itself: description, unit, cost, supplier and SKU. GPOs, switches, downlights, cable by the metre and RCBOs land in your pricebook in one go.",
     packageName: "Standard bathroom rough-in",
     packageContents:
       "Exhaust fan, two downlights, one GPO, switch and the cable run, saved once and dropped into every bathroom you quote after that.",
@@ -161,7 +161,7 @@ export const TRADE_PAGES: TradePage[] = [
     dedicated: true,
     image: "/trades/plumber.jpg",
     alt: "Plumber working under a kitchen sink",
-    metaTitle: "Quoting Software for Plumbers | Swiftscope",
+    metaTitle: "Quoting Software for Plumbers | SwiftScope",
     metaDescription:
       "Quote plumbing work on site: fixtures, rough-ins, hot water units and gas points, with variations signed before the extra work starts. Flat $45/month, 7-day free trial.",
     lede:
@@ -182,14 +182,14 @@ export const TRADE_PAGES: TradePage[] = [
     problem:
       "Plumbing quotes go wrong in two places: fixtures counted as a lump instead of individually, and the gas certification nobody mentioned until handover. Both get discovered late, and both come out of your margin.",
     answer:
-      "Swiftscope counts every fixture as its own line and flags gas certification at quote time, so the scope on paper matches the job you actually do.",
+      "SwiftScope counts every fixture as its own line and flags gas certification at quote time, so the scope on paper matches the job you actually do.",
     genericFails: [
       "Tapware as one line, so a basin mixer and a shower mixer are priced the same",
       "No distinction between a fixture swap and a full rough-in, which are hours apart",
       "Gas certification treated as an afterthought rather than a cost with a date attached",
     ],
     setupMaterials:
-      "Upload your supplier's price file and Swiftscope maps the columns itself. Mixers, pans, PVC and copper by the metre, and hot water units by type all land in the pricebook ready to price against.",
+      "Upload your supplier's price file and SwiftScope maps the columns itself. Mixers, pans, PVC and copper by the metre, and hot water units by type all land in the pricebook ready to price against.",
     packageName: "Full bathroom rough-in",
     packageContents:
       "Shower mixer, basin mixer, toilet, waste and vent, plus the labour allowance, saved once and reused on every bathroom.",
@@ -219,7 +219,7 @@ export const TRADE_PAGES: TradePage[] = [
     dedicated: true,
     image: "/trades/roofer.jpg",
     alt: "Roofer fixing sheeting on a metal roof",
-    metaTitle: "Quoting Software for Roofers | Swiftscope",
+    metaTitle: "Quoting Software for Roofers | SwiftScope",
     metaDescription:
       "Quote roofing work by area, pitch and linear metres: ridge, valley, fascia, gutter and downpipe. Restoration or full re-roof. Flat $45/month, 7-day free trial.",
     lede:
@@ -240,7 +240,7 @@ export const TRADE_PAGES: TradePage[] = [
     problem:
       "Roofing is quoted as a lump sum more than almost any trade, which is why a steep roof and a low one too often carry the same price, and why rotten battens turn into an argument rather than a variation.",
     answer:
-      "Swiftscope prices roofing the way it is actually built: area and pitch for the sheeting, linear metres for everything that runs along an edge.",
+      "SwiftScope prices roofing the way it is actually built: area and pitch for the sheeting, linear metres for everything that runs along an edge.",
     genericFails: [
       "No pitch multiplier, so the roof that needs harnesses and staging is priced like a garage",
       "Ridge, valley, fascia, gutter and downpipe collapsed into one 'flashings' line",
@@ -277,7 +277,7 @@ export const TRADE_PAGES: TradePage[] = [
     dedicated: true,
     image: "/trades/carpenter.jpg",
     alt: "Carpenter using a nail gun on timber wall framing",
-    metaTitle: "Quoting Software for Carpenters | Swiftscope",
+    metaTitle: "Quoting Software for Carpenters | SwiftScope",
     metaDescription:
       "Quote carpentry by linear and square metre: framing, decking, doors, skirting and fit-out. Built for framing, decks and renovation work. Flat $45/month, 7-day free trial.",
     lede:
@@ -299,7 +299,7 @@ export const TRADE_PAGES: TradePage[] = [
     problem:
       "Carpentry quotes get rebuilt from scratch every time, because the last one was a spreadsheet with a different structure. Deck, fit-out and framing all price differently, and a generic form makes you flatten them into the same shape.",
     answer:
-      "Swiftscope keeps linear metre, square metre and unit work as separate things, and saves the combinations you quote most so you are not starting from a blank sheet.",
+      "SwiftScope keeps linear metre, square metre and unit work as separate things, and saves the combinations you quote most so you are not starting from a blank sheet.",
     genericFails: [
       "Doors as one number, with no separation between a hung door and a frame where the client supplies the leaf",
       "Skirting and architrave lumped into 'trim', which hides where the hours actually go",
@@ -336,7 +336,7 @@ export const TRADE_PAGES: TradePage[] = [
     dedicated: false,
     image: "/trades/plasterer.jpg",
     alt: "Plasterer holding a trowel on a work site",
-    metaTitle: "Quoting Software for Painters & Plasterers | Swiftscope",
+    metaTitle: "Quoting Software for Painters & Plasterers | SwiftScope",
     metaDescription:
       "Quote painting and plastering room by room or whole house, on your own rates and units. Flat $45/month, unlimited users, unlimited quotes. 7-day free trial.",
     lede:
@@ -356,7 +356,7 @@ export const TRADE_PAGES: TradePage[] = [
     problem:
       "Painting and plastering quotes live or die on the pricebook. Re-costing the second bedroom from memory, or forgetting that paint went up eleven percent in March, is where the margin quietly goes.",
     answer:
-      "Swiftscope gives you a builder you shape to your own units, backed by a pricebook and saved packages so the same room is never priced twice from scratch.",
+      "SwiftScope gives you a builder you shape to your own units, backed by a pricebook and saved packages so the same room is never priced twice from scratch.",
     genericFails: [
       "Rigid trade templates that assume you price by the item rather than by the square metre or the coat",
       "Materials and labour merged, so a paint price rise is invisible until the job is finished",
@@ -397,7 +397,7 @@ export const TRADE_PAGES: TradePage[] = [
     dedicated: false,
     image: "/trades/general.jpg",
     alt: "Tradesperson kneeling with a cordless drill",
-    metaTitle: "Quoting Software for Australian Tradies | Swiftscope",
+    metaTitle: "Quoting Software for Australian Tradies | SwiftScope",
     metaDescription:
       "Quoting and job management for concreters, tilers, fencers, landscapers and every other trade. Flat $45/month, unlimited users and jobs. 7-day free trial.",
     lede:
@@ -417,14 +417,14 @@ export const TRADE_PAGES: TradePage[] = [
     problem:
       "Most trade software is built for one or two trades and everyone else gets the leftovers: a blank form, someone else's units, and a monthly bill that goes up when you hire someone.",
     answer:
-      "Swiftscope gives you a builder you define yourself, on a pricebook and packages you control, at the same flat price no matter how many people are on it.",
+      "SwiftScope gives you a builder you define yourself, on a pricebook and packages you control, at the same flat price no matter how many people are on it.",
     genericFails: [
       "Templates built for plumbing and electrical, with your trade squeezed into the nearest fit",
       "Per-user pricing that makes hiring an apprentice a software decision",
       "Per-job credits, so your busiest month is also your most expensive",
     ],
     setupMaterials:
-      "Upload whatever price file your supplier sends. Swiftscope reads the columns itself, so you are not remapping a spreadsheet before you can quote.",
+      "Upload whatever price file your supplier sends. SwiftScope reads the columns itself, so you are not remapping a spreadsheet before you can quote.",
     packageName: "Your most repeated job",
     packageContents:
       "Whatever you quote every week, saved with its materials, labour and allowances, and dropped into a quote in one tap.",

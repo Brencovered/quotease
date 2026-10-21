@@ -495,7 +495,7 @@ export default function GetQuotesForm({ user, homeowner }: { user: UserData | nu
             <input type="checkbox" checked={form.consent} onChange={e => update({ consent: e.target.checked })}
               className={`mt-0.5 w-4 h-4 rounded accent-[var(--navy)] ${errors.consent ? "outline outline-2 outline-red-300 outline-offset-2" : ""}`} />
             <span className={`text-[12.5px] leading-relaxed ${errors.consent ? "text-red-500 font-medium" : "text-[var(--ink-soft)]"}`}>
-              I agree to Swiftscope sharing my job details with up to 3 matched local tradies so they can contact me with quotes.
+              I agree to SwiftScope sharing my job details with up to 3 matched local tradies so they can contact me with quotes.
             </span>
           </label>
           {errors.consent && <p className="text-red-500 text-[12px] font-medium ml-7">{errors.consent}</p>}
