@@ -1081,11 +1081,12 @@ function autoScale(){const S=doc.settings;const cands=[];
   if(!cands.length)return null;
   // A pen line is the wall, not the outside of a 250 mm wall. The labelled size already matches the box.
   if(penTrace){const rs=[];cands.forEach(c=>{const px=[c.w,c.h].sort((a,b)=>a-b);const r1=c.dims[0]/px[0],r2=c.dims[1]/px[1];if(Math.abs(r1/r2-1)<0.12)rs.push(r1,r2);});if(rs.length>=2){rs.sort((a,b)=>a-b);if(rs[rs.length-1]/rs[0]<=1.22)return rs[Math.floor(rs.length/2)];}}
+  // A label sitting in an open-plan face (Living 9.3 x 3.0 dropped into a much taller room) does not agree with itself. Leave it out so the rooms that do close can still set the scale.
   let s=null,spread=1;
-  for(let it=0;it<4;it++){const rs=[];cands.forEach(c=>{const iw=s?c.w-c.wA/s:c.w,ih=s?c.h-c.hA/s:c.h;if(iw<3||ih<3)return;const px=[iw,ih].sort((x,y)=>x-y);const r1=c.dims[0]/px[0],r2=c.dims[1]/px[1];if(!s||Math.abs(r1/r2-1)<0.15)rs.push(r1,r2);});
-    if(rs.length<2){if(s)break;cands.forEach(c=>{const px=[c.w,c.h].sort((x,y)=>x-y);rs.push(c.dims[0]/px[0],c.dims[1]/px[1]);});}
-    if(!rs.length)return null;rs.sort((x,y)=>x-y);spread=rs[rs.length-1]/rs[0];s=rs[Math.floor(rs.length/2)];}
-  if(spread>1.22)return null;return s;}
+  for(let it=0;it<4;it++){const rs=[];cands.forEach(c=>{const iw=s?c.w-c.wA/s:c.w,ih=s?c.h-c.hA/s:c.h;if(iw<3||ih<3)return;const px=[iw,ih].sort((x,y)=>x-y);const r1=c.dims[0]/px[0],r2=c.dims[1]/px[1];if(Math.abs(r1/r2-1)>=0.15)return;rs.push(r1,r2);});
+    if(rs.length<2){if(s)break;return null;}
+    rs.sort((x,y)=>x-y);spread=rs[rs.length-1]/rs[0];if(spread>1.22){if(s)break;return null;}s=rs[Math.floor(rs.length/2)];}
+  return s;}
 /* ---------- tabs ---------- */
 const SET_FIELDS=[['wallH','Ceiling height','num','mm',[2100,3600,50]],['extThk','External wall thickness','num','mm',[90,400,10]],['intThk','Internal wall thickness','num','mm',[70,200,5]],['extStud','External studs','sel',[['90x45','90 x 45'],['90x35','90 x 35']]],['intStud','Internal studs','sel',[['90x35','90 x 35'],['70x35','70 x 35'],['90x45','90 x 45']]],['studSp','External stud spacing','sel',[[450,'45 cm'],[600,'60 cm']]],
   ['extClad','Outside walls','sel',Object.entries(CLAD).map(([k,v])=>[k,v.n])],['roofType','Roof shape','sel',[['hip','Hip'],['gable','Gable']]],['pitch','Roof pitch','num','°',[5,45,0.5]],['eave','Eaves','num','mm',[0,900,50]],['roofMat','Roof cover','sel',Object.entries(ROOFM).map(([k,v])=>[k,v.n])],['floor','Floor','sel',[['slab','Concrete slab'],['timber','Timber floor']]],['slabT','Slab thickness','num','mm',[85,200,5]],['lineGarage','Line and paint the garage','chk']];
@@ -1371,8 +1372,55 @@ function detectIn(c,w,h,sx,sy){
   // Site features (trees, text, hatching) inflate the dark-run estimate, so redo the clean-up at the wall thickness actually found.
   // The first pass's thickness is the outside wall; a second pass at that thickness keeps thin internal walls and short corner stubs.
   // A 1 px pen stroke disappears in the thick-wall filter. Thicken it first and keep single pixels.
-  let wallMask=dark,thin=T95<=3||runs.length<40;if(thin){wallMask=dilate1(ink,w,h);const runs2=[];for(let x=0;x<w;x+=2){let r=0;for(let y=0;y<=h;y++){if(y<h&&wallMask[y*w+x])r++;else{if(r>=2&&r<=maxT)runs2.push(r);r=0;}}}for(let y=0;y<h;y+=2){let r=0;for(let x=0;x<=w;x++){if(x<w&&wallMask[y*w+x])r++;else{if(r>=2&&r<=maxT)runs2.push(r);r=0;}}}if(runs2.length>=40){runs2.sort((a,b)=>a-b);T95=runs2[Math.floor(runs2.length*0.95)];}else if(runs.length<40)return null;}
-  let P=pass1(thin?1:Math.max(2,Math.round(T95*0.32)));if(!P)return null;const Text=P.Text;const k2=thin?1:Math.max(2,Math.round(Text*0.32));if(!thin&&P.k>k2+1){const P2=pass1(k2,Text);if(P2)P=P2;}
+  // Filled poche is a run of strokes several pixels thick. A pen sheet, even after it is enlarged, stays a thin tail.
+  const thickN=runs.filter(r=>r>=6).length;
+  let wallMask=dark,thin=T95<=3||runs.length<40||(T95<6&&thickN<Math.max(40,runs.length*0.12));
+  if(thin){wallMask=dilate1(ink,w,h);const runs2=[];for(let x=0;x<w;x+=2){let r=0;for(let y=0;y<=h;y++){if(y<h&&wallMask[y*w+x])r++;else{if(r>=2&&r<=maxT)runs2.push(r);r=0;}}}for(let y=0;y<h;y+=2){let r=0;for(let x=0;x<=w;x++){if(x<w&&wallMask[y*w+x])r++;else{if(r>=2&&r<=maxT)runs2.push(r);r=0;}}}if(runs2.length>=40){runs2.sort((a,b)=>a-b);T95=runs2[Math.floor(runs2.length*0.95)];}else if(runs.length<40)return null;}
+  // Thick filled walls stay on the original tracer. The pen-plan gaps, hatch filter and long-segment outline
+  // read a small house on a large white sheet as no closed building, and the draft then draws the page margin.
+  if(!thin){
+  let P=pass1(Math.max(2,Math.round(T95*0.32)));if(!P)return null;const Text=P.Text;const k2=Math.max(2,Math.round(Text*0.32));if(P.k>k2+1){const P2=pass1(k2,Text);if(P2)P=P2;}
+  let S=P.S;const Lmin=P.Lmin,k=P.k;
+  const mmPx=Math.min(60,Math.max(4,230/Text));S=S.filter(s=>s.t<=Text*2.2);
+  const lineInfo=(sg,a,b)=>{let one=0,both=0,tot=0;const half=Math.ceil(sg.t/2)+2;for(let u=Math.ceil(a);u<=b;u++){tot++;let lo=false,hi=false;for(let d=-half;d<=half;d++){const cc=Math.round(sg.c)+d;const x=sg.axis==='h'?u:cc,y=sg.axis==='h'?cc:u;if(x>=0&&y>=0&&x<w&&y<h&&ink[y*w+x]){if(d<=0)lo=true;if(d>=0)hi=true;}}if(lo||hi)one++;if(lo&&hi)both++;}return tot?{one:one/tot,both:both/tot}:{one:0,both:0};};
+  const exterior=(sg,a,b)=>{const m=(a+b)/2;let lo=false,hi=false;S.forEach(o=>{if(!o||o===sg||o.axis!==sg.axis)return;if(Math.abs(o.c-sg.c)<=Text*2)return;if(o.a-Text>m||o.b+Text<m)return;if(o.c<sg.c)lo=true;else hi=true;});return !(lo&&hi);};
+  const okGap=(sg,a,b,single)=>{const g=b-a;if(g>Gdoor&&!exterior(sg,a,b))return {ok:false,line:false};const L=lineInfo(sg,a,b);if(L.both>0.5&&g<=Gwin)return {ok:true,line:true};if(single&&L.one>0.5&&g<=Gmid)return {ok:true,line:true};return {ok:g<=Gdoor,line:false};};
+  const gaps=[];const Gdoor=1250/mmPx,Gwin=4000/mmPx,Gmid=3200/mmPx;
+  ['h','v'].forEach(ax=>{const L=S.filter(s=>s.axis===ax).sort((p,q)=>p.a-q.a||p.c-q.c);for(let i=0;i<L.length;i++){const p=L[i];if(!p)continue;for(let j=i+1;j<L.length;j++){const q=L[j];if(!q||!same(p,q))continue;const g=q.a-p.b;if(g<=0){if(q.b>p.b)p.b=q.b;L[j]=null;continue;}const G=okGap(p,p.b,q.a,true);if(G.ok){gaps.push({axis:ax,c:(p.c+q.c)/2,a:p.b,b:q.a,line:G.line});p.b=Math.max(p.b,q.b);p.t=Math.max(p.t,q.t);L[j]=null;}}}
+    S=S.filter(s=>s.axis!==ax).concat(L.filter(Boolean));});
+  for(let pass=0;pass<3;pass++)S.forEach(p=>{['a','b'].forEach(end=>{const dir=end==='b'?1:-1;let best=null;
+    S.forEach(q=>{if(q===p||q.axis===p.axis)return;const tol=Math.max(p.t,q.t);if(p.c<q.a-tol||p.c>q.b+tol)return;const d=(q.c-p[end])*dir;if(d<=Math.max(p.t,q.t)||d>Gwin)return;if(!best||d<best.d)best={q,d};});
+    if(!best)return;const from=end==='b'?p.b:best.q.c,to=end==='b'?best.q.c:p.a;
+    if(S.some(o=>o!==p&&same(o,p)&&Math.min(o.b,to)-Math.max(o.a,from)>0))return;
+    const G=okGap(p,from,to,false);const line=G.line;if(pass>0&&!line)return;if(G.ok){gaps.push({axis:p.axis,c:p.c,a:end==='b'?p.b:best.q.c+best.q.t/2,b:end==='b'?best.q.c-best.q.t/2:p.a,line});p[end]=best.q.c;}});});
+  for(let pass=0;pass<2;pass++)S.forEach(p=>{['a','b'].forEach(end=>{let best=null;S.forEach(q=>{if(q===p||q.axis===p.axis)return;const tol=Math.max(p.t,q.t)+2*k;if(Math.abs(q.c-p[end])<=tol&&p.c>=q.a-tol&&p.c<=q.b+tol){const d=Math.abs(q.c-p[end]);if(!best||d<best.d)best={q,d};}});if(best){p[end]=best.q.c;if(p.c<best.q.a)best.q.a=p.c;if(p.c>best.q.b)best.q.b=p.c;}});});
+  S=S.filter(s=>s.b-s.a>=Lmin*0.8);
+  S.sort((p,q)=>(q.b-q.a)-(p.b-p.a));S=S.filter((p,i)=>!S.slice(0,i).some(q=>q.axis===p.axis&&Math.abs(q.c-p.c)<=(p.t+q.t)/2+3&&Math.min(p.b,q.b)-Math.max(p.a,q.a)>=0.6*(p.b-p.a)));
+  const toSeg=s=>s.axis==='h'?{a:[s.a,s.c],b:[s.b,s.c]}:{a:[s.c,s.a],b:[s.c,s.b]};
+  const segsD=S.map((s,i)=>Object.assign(toSeg(s),{ext:false,host:'d'+i,src:s}));
+  const eps=Math.max(2,k*1.5);const all=planarAll(segsD,eps);const outer=all.filter(f=>f.area<0).sort((p,q)=>p.area-q.area)[0];if(!outer||-outer.area<w*h*0.02)return null;
+  let centre=simplifyOrtho(outer.poly,Math.max(2,k));if(centre.length<3)return null;
+  const onOutline=pt=>{for(let i=0;i<centre.length;i++){const a=centre[i],b=centre[(i+1)%centre.length];if(dist(pt,lerp(a,b,projT(pt,a,b)))<=Text*0.8+k)return true;}return false;};
+  const outline=offsetOut(centre,Text/2).map(p=>[p[0]*sx,p[1]*sy]);
+  const conn=(pt,self)=>segsD.some(o=>o!==self&&dist(pt,lerp(o.a,o.b,projT(pt,o.a,o.b)))<=eps*2);
+  const inner=segsD.filter(s=>{const L=dist(s.a,s.b);const n=Math.max(2,Math.ceil(L/2));let run=0,best=0;for(let i=0;i<=n;i++){const pt=lerp(s.a,s.b,i/n);if(!onOutline(pt)&&pip(pt,centre)){run++;best=Math.max(best,run);}else run=0;}return best*L/n>=Text;});
+  const walls=inner.filter(s=>conn(s.a,s)||conn(s.b,s)).filter(s=>dist(s.a,s.b)*mmPx>=900||(conn(s.a,s)&&conn(s.b,s))).map(s=>({id:uid(),a:[s.a[0]*sx,s.a[1]*sy],b:[s.b[0]*sx,s.b[1]*sy]}));
+  const snapOut=(pt,other)=>{let best=null;for(let i=0;i<outline.length;i++){const a=outline[i],b=outline[(i+1)%outline.length];const ux=other[0]-pt[0],uy=other[1]-pt[1];const L=Math.hypot(ux,uy)||1;const X=segX([pt[0],pt[1]],[pt[0]-ux/L*(Text*2.2+k)*sx,pt[1]-uy/L*(Text*2.2+k)*sy],a,b);if(X){const q=lerp(a,b,X[1]);const d=dist(q,pt);if(!best||d<best.d)best={q,d};}}return best?best.q:pt;};
+  walls.forEach(wl=>{const a=wl.a,b=wl.b;wl.a=snapOut(a,b);wl.b=snapOut(b,a);});
+  // A partition that runs out through a deck or the alfresco is clipped back to the outside wall.
+  const offHouse=p=>{if(pip(p,outline))return false;for(let i=0;i<outline.length;i++){const a=outline[i],b=outline[(i+1)%outline.length];if(dist(p,lerp(a,b,projT(p,a,b)))<=3)return false;}return true;};
+  const pullIn=(pt,other)=>{if(!offHouse(pt))return pt;let hit=null;for(let i=0;i<outline.length;i++){const a=outline[i],b=outline[(i+1)%outline.length];const X=segX(pt,other,a,b);if(!X)continue;const q=lerp(a,b,X[1]);const d=dist(q,other);if(!hit||d<hit.d)hit={q,d};}return hit?hit.q:pt;};
+  walls.forEach(wl=>{wl.a=pullIn(wl.a,wl.b);wl.b=pullIn(wl.b,wl.a);});
+  for(let i=walls.length-1;i>=0;i--)if(dist(walls[i].a,walls[i].b)<8)walls.splice(i,1);
+  const ops=gaps.map(g=>{const mid=g.axis==='h'?[(g.a+g.b)/2,g.c]:[g.c,(g.a+g.b)/2];const ext=onOutline(mid);const wpx=g.b-g.a;const wmm=wpx*mmPx;
+    const type=ext?(g.line?(wmm>=2200?'garage':'window'):(wmm>1300?'slider':'door')):'door';return {type,mid:[mid[0]*sx,mid[1]*sy],wpx:wpx*(g.axis==='h'?sx:sy),wmm};}).filter(o=>o.wmm>=500);
+  const opsD=[];ops.sort((p,q)=>q.wmm-p.wmm).forEach(o=>{if(!opsD.some(q=>dist(q.mid,o.mid)<Text*2*sx))opsD.push(o);});
+  const areas=[];try{const faint=new Uint8Array(w*h);for(let i=0,j=0;i<w*h;i++,j+=4)faint[i]=(0.3*px[j]+0.59*px[j+1]+0.11*px[j+2])<238?1:0;const inkD=dilate1(faint,w,h);const lab=new Int32Array(w*h);const hA=Math.abs(polyArea(centre));let nid=0;const off=Text*0.9+3;
+    for(let i=0;i<centre.length;i++){const a=centre[i],b=centre[(i+1)%centre.length];const L=dist(a,b);if(L<Text*4)continue;let nx=(b[1]-a[1])/L,ny=-(b[0]-a[0])/L;const m=lerp(a,b,0.5);if(pip([m[0]+nx*2,m[1]+ny*2],centre)){nx=-nx;ny=-ny;}
+      [0.2,0.5,0.8].forEach(t=>{const q=lerp(a,b,t);const x=Math.round(q[0]+nx*off),y=Math.round(q[1]+ny*off);if(x<0||y<0||x>=w||y>=h||inkD[y*w+x]||lab[y*w+x])return;nid++;const r=flood(inkD,w,h,x,y,Math.round(hA*1.2),lab,nid);if(!r||r.edge)return;
+        const bw=r.x1-r.x0+1,bh=r.y1-r.y0+1;const fill=r.n/(bw*bh);const m2=bw*bh*mmPx*mmPx/1e6;if(fill<0.72||m2<2.5||m2>90||Math.min(bw,bh)*mmPx<1200)return;areas.push({a:[r.x0*sx,r.y0*sy],b:[(r.x1+1)*sx,(r.y1+1)*sy]});});}}catch(e){}
+  return {outline,walls,ops:opsD,areas,mmPerPx:mmPx/((sx+sy)/2),text:Text,lowConfidence:false,poche:true};}
+  let P=pass1(1);if(!P)return null;const Text=P.Text;const k2=1;if(P.k>k2+1){const P2=pass1(k2,Text);if(P2)P=P2;}
   let S=P.S;const Lmin=P.Lmin,k=P.k;
   // Filled walls are about 230 mm thick. A pen stroke is not, so door gaps are sized from the drawing instead.
   const long=Math.max(w,h);const gaps0=TraceGeom.gapLimits(long,Text);const mmPx=gaps0.mmPx;S=S.filter(s=>s.t<=Text*2.2);
@@ -1465,7 +1513,7 @@ function finishOpenings(){doc.openings.forEach(o=>{if(o.wpx){o.width=Math.max(50
 async function autoTrace(manual){if(!doc.underlay.src){flash('Upload a plan first.');return;}if(aiBusy)return;if(manual&&doc.outline.length>=3&&!confirmReplace())return;aiBusy=true;renderPlanTab();flash('Finding the walls on your plan...');
   try{const list=await detectPlans();const many=!!(list&&list.length>1);const r=list&&(list.find(x=>!x.failed)||list[0]);const haveGeo=r&&r.outline.length>=3;
     if(haveGeo){snapshot();doc.scale=r.lowConfidence?null:r.mmPerPx;
-      const longPx=Math.max(doc.underlay.w||1,doc.underlay.h||1);const sample=[r].concat(list||[]).find(x=>x&&x.text&&!x.lowConfidence)||r;penTrace=!(sample&&sample.text>=8&&sample.text>=longPx*0.008);
+      const longPx=Math.max(doc.underlay.w||1,doc.underlay.h||1);const sample=[r].concat(list||[]).find(x=>x&&x.text&&!x.lowConfidence)||r;penTrace=!(r.poche||(sample&&sample.poche))&&!(sample&&sample.text>=8&&sample.text>=longPx*0.008);
       if(many){ensureLevels();const old=doc.levels;doc.levels=list.map((_,i)=>({id:(old[i]&&old[i].id)||uid(),name:(old[i]&&old[i].name)||LEVEL_NAMES[i]||('Level '+(i+1)),h:old[i]?old[i].h:null,shift:[0,0],data:levelData({})}));doc.level=0;loadLevelData(0);doc.site=null;
         list.forEach((x,i)=>{if(!x.failed)withLevel(i,()=>applyGeo(x,true));});}
       else applyGeo(r,doc.level>0);}
@@ -1493,7 +1541,8 @@ async function autoTrace(manual){if(!doc.underlay.src){flash('Upload a plan firs
       return;}
     finishOpenings();
     invalidate();changed(true);setTool('select');const R=rooms();
-    flash(r.lowConfidence?`${lowRes}Outside walls traced. The other lines were too messy to use as walls. Set the scale on a labelled room, then add the internal walls.`:`${lowRes}Traced ${R.length} rooms, ${doc.walls.length} internal walls, ${doc.openings.length} openings. Check a room size, then open Materials.`);}
+    const scaled=scaleNote.startsWith('Scale set from')?` ${scaleNote}`:'';
+    flash(r.lowConfidence?`${lowRes}Outside walls traced. The other lines were too messy to use as walls. Set the scale on a labelled room, then add the internal walls.`:`${lowRes}Traced ${R.length} rooms, ${doc.walls.length} internal walls, ${doc.openings.length} openings.${scaled} Check a room size, then open Materials.`);}
   catch(e){console.error(e);flash('Auto trace failed on this file. Trace it with the Outline and Wall tools.');}
   finally{aiBusy=false;renderPlanTab();}}
 
