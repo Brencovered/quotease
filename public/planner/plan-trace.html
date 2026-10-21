@@ -359,7 +359,7 @@ dialog::backdrop{background:rgba(10,15,20,.5);}
 .phgrid figure{margin:0;position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid var(--line);}
 .phgrid img{width:100%;height:100%;object-fit:cover;display:block;}
 .phgrid .x{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:999px;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:11px;cursor:pointer;}
-.phread{margin-top:8px;}
+.phread{margin-top:8px;}.phsug{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--line,#e4e0d8);}.phsug .upl{flex:none;}
 .phnotes{margin:6px 0 0;padding-left:18px;font-size:12.5px;color:var(--muted);}
 .phgrid.pr{grid-template-columns:repeat(3,1fr);}
 
@@ -524,11 +524,12 @@ const SECTIONS={build:'Structure',floor:'Slab and floor',roof:'Roofing',line:'In
 function guessType(name){const n=String(name||'').toLowerCase();if(/ens/.test(n))return 'ens';if(/bath/.test(n))return 'bath';if(/\bwc\b|toilet|powder/.test(n))return 'wc';if(/laund|ldry/.test(n))return 'laundry';if(/kitch|meals/.test(n))return 'kitchen';if(/bed|master/.test(n))return 'bed';if(/garage|carport/.test(n))return 'garage';if(/robe|wir\b|store|pantry|ptry|linen/.test(n))return 'robe';if(/hall|entry|foyer|passage/.test(n))return 'hall';if(/study|office/.test(n))return 'study';if(/living|family|lounge|dining|rumpus|theatre|meals/.test(n))return 'living';return 'other';}
 
 /* ---------- document ---------- */
-function defaultDoc(){return {kind:'house',v:1,underlay:{src:null,path:null,w:0,h:0,opacity:0.55},scale:null,outline:[],walls:[],openings:[],rooms:[],site:null,photos:[],photoRead:null,runs:[],
+function defaultDoc(){return {kind:'house',v:1,underlay:{src:null,path:null,w:0,h:0,opacity:0.55},scale:null,outline:[],walls:[],openings:[],rooms:[],site:null,photos:[],photoRead:null,photoSuggestions:[],runs:[],
   settings:{wallH:2400,extThk:250,intThk:90,extStud:'90x45',intStud:'90x35',studSp:450,extClad:'brick',roofType:'hip',pitch:22.5,eave:450,roofMat:'tiles',floor:'slab',slabT:100,lineGarage:false},
   prices:{},links:{},items:[],areas:[],waste:10,labour:{},labourRate:null,scope:null,draft:false};}
 function migrate(p){const d=defaultDoc();p=p||{};return Object.assign({},d,p,{kind:'house',underlay:Object.assign({},d.underlay,p.underlay||{}),settings:Object.assign({},d.settings,p.settings||{}),
-  outline:Array.isArray(p.outline)?p.outline:[],walls:Array.isArray(p.walls)?p.walls:[],openings:Array.isArray(p.openings)?p.openings:[],rooms:Array.isArray(p.rooms)?p.rooms:[],items:Array.isArray(p.items)?p.items:[],areas:Array.isArray(p.areas)?p.areas:[],prices:p.prices||{},links:p.links||{},labour:p.labour||{}});}
+  outline:Array.isArray(p.outline)?p.outline:[],walls:Array.isArray(p.walls)?p.walls:[],openings:Array.isArray(p.openings)?p.openings:[],rooms:Array.isArray(p.rooms)?p.rooms:[],items:Array.isArray(p.items)?p.items:[],areas:Array.isArray(p.areas)?p.areas:[],prices:p.prices||{},links:p.links||{},labour:p.labour||{},
+  photoSuggestions:Array.isArray(p.photoSuggestions)?p.photoSuggestions:[],photos:Array.isArray(p.photos)?p.photos:[]});}
 function load(){if(EMBED)return null;try{const r=localStorage.getItem(STORE);if(r)return migrate(JSON.parse(r));}catch(e){}
   try{const u=sessionStorage.getItem('trace-underlay');if(u){sessionStorage.removeItem('trace-underlay');const d=defaultDoc();d.underlay.src=u;return d;}}catch(e){}return null;}
 let doc=load()||defaultDoc();
@@ -879,12 +880,13 @@ function computeRowsLevel(LV){LV=LV||{i:0};const rows=[],stages=[];if(!scaleMM()
   /* roof: on a lower floor only the part the floor above does not cover */
   if(roofFracNow()>0.05){
   const RM=ROOFM[S.roofMat]||ROOFM.tiles;const trusses=Math.ceil(Math.max(g.bw,g.bl)/0.6)+1;const gut=g.P+8*g.e;
-  add('roof','Roof framing','truss','Roof trusses',`${S.roofType==='hip'?'Hip':'Gable'} roof, ${S.pitch}° pitch`,`About ${trusses} at 600 centres. Get a truss plant quote`,trusses,'ea',['truss']);
+  const shape=S.roofType==='gable'?'Gable':S.roofType==='skillion'?'Skillion':S.roofType==='flat'?'Flat':'Hip';
+  add('roof','Roof framing','truss',S.roofType==='flat'?'Roof framing':'Roof trusses',`${shape} roof, ${S.pitch}° pitch`,`About ${trusses} at 600 centres. Get a truss plant quote`,trusses,'ea',['truss']);
   if(S.roofMat==='tiles'){add('roof','Roof cover','tiles','Concrete roof tiles','',`${fm(g.roofA,1)} m² at 10.5 per m² plus 5%`,Math.ceil(g.roofA*10.5*1.05),'ea',['roof tile','concrete tile','tile'],{'m²':Math.ceil(g.roofA*1.05)});add('roof','Roof cover','tbat','Tile battens','38 x 50',`${fm(g.roofA,1)} m² at 330 mm gauge`,Math.ceil(g.roofA/0.33),'m',['tile batten','38 x 50']);}
   else{add('roof','Roof cover','sheet','Colorbond roof sheeting','Trimdek or corrugated',`${fm(g.roofA,1)} m² plus 5%`,Math.ceil(g.roofA*1.05),'m²',['roof sheet','corrugated','trimdek']);add('roof','Roof cover','rbat','Roof battens','Steel top hat',`${fm(g.roofA,1)} m² at 900 mm`,Math.ceil(g.roofA/0.9),'m',['batten','top hat']);}
   add('roof','Roof cover','sark','Roof sarking or blanket','',`${fm(g.roofA,1)} m²`,Math.ceil(g.roofA*1.1),'m²',['sarking','anticon']);
-  const hips=S.roofType==='hip'?2*Math.min(g.bw,g.bl)*1.2+Math.abs(g.bw-g.bl):Math.max(g.bw,g.bl);
-  add('roof','Roof cover','ridge',S.roofType==='hip'?'Ridge and hip capping':'Ridge capping','',`About ${fm(hips,1)} m, from the overall size`,Math.ceil(hips),'m',['ridge','capping']);
+  if(S.roofType!=='flat'){const hips=S.roofType==='hip'?2*Math.min(g.bw,g.bl)*1.2+Math.abs(g.bw-g.bl):Math.max(g.bw,g.bl);
+  add('roof','Roof cover','ridge',S.roofType==='hip'?'Ridge and hip capping':S.roofType==='skillion'?'High-side capping':'Ridge capping','',`About ${fm(hips,1)} m, from the overall size`,Math.ceil(hips),'m',['ridge','capping']);}
   add('roof','Gutters','gutter','Gutter','Colorbond quad',`Eaves line ${fm(gut,1)} m`,Math.ceil(gut),'m',['gutter']);add('roof','Gutters','fascia','Fascia','Colorbond',`${fm(gut,1)} m`,Math.ceil(gut),'m',['fascia']);
   const rcount=k=>doc.items.filter(i=>i.kind===k).length;const dpPlaced=rcount('dp');
   const dps=dpPlaced||Math.max(2,Math.ceil(gut/10));add('roof','Gutters','dp','Downpipes','90 mm',dpPlaced?`${dpPlaced} placed on the model`:`${dps} drops`,dps,'ea',['downpipe']);
@@ -1089,7 +1091,7 @@ function autoScale(){const S=doc.settings;const cands=[];
   return s;}
 /* ---------- tabs ---------- */
 const SET_FIELDS=[['wallH','Ceiling height','num','mm',[2100,3600,50]],['extThk','External wall thickness','num','mm',[90,400,10]],['intThk','Internal wall thickness','num','mm',[70,200,5]],['extStud','External studs','sel',[['90x45','90 x 45'],['90x35','90 x 35']]],['intStud','Internal studs','sel',[['90x35','90 x 35'],['70x35','70 x 35'],['90x45','90 x 45']]],['studSp','External stud spacing','sel',[[450,'45 cm'],[600,'60 cm']]],
-  ['extClad','Outside walls','sel',Object.entries(CLAD).map(([k,v])=>[k,v.n])],['roofType','Roof shape','sel',[['hip','Hip'],['gable','Gable']]],['pitch','Roof pitch','num','°',[5,45,0.5]],['eave','Eaves','num','mm',[0,900,50]],['roofMat','Roof cover','sel',Object.entries(ROOFM).map(([k,v])=>[k,v.n])],['floor','Floor','sel',[['slab','Concrete slab'],['timber','Timber floor']]],['slabT','Slab thickness','num','mm',[85,200,5]],['lineGarage','Line and paint the garage','chk']];
+  ['extClad','Outside walls','sel',Object.entries(CLAD).map(([k,v])=>[k,v.n])],['roofType','Roof shape','sel',[['hip','Hip'],['gable','Gable'],['skillion','Skillion'],['flat','Flat']]],['pitch','Roof pitch','num','°',[1,45,0.5]],['eave','Eaves','num','mm',[0,900,50]],['roofMat','Roof cover','sel',Object.entries(ROOFM).map(([k,v])=>[k,v.n])],['floor','Floor','sel',[['slab','Concrete slab'],['timber','Timber floor']]],['slabT','Slab thickness','num','mm',[85,200,5]],['lineGarage','Line and paint the garage','chk']];
 function levelCard(){if(!multi())return '';const i=doc.level,lv=doc.levels[i];const sm=scaleMM();
   let h=`<div class="card lvcard"><div class="cardh"><b>${esc(levelName(i))}</b>${i>0?`<button class="x" data-lvdel="1" aria-label="Remove this floor">✕</button>`:''}</div>
   <label class="row"><span>Name</span><input type="text" data-lv="name" value="${esc(levelName(i))}"></label>
@@ -1119,7 +1121,7 @@ function renderPlanTab(){const U=doc.underlay;const sm=scaleMM();let h=levelCard
   h+=`<h3>Construction</h3>`+SET_FIELDS.map(([k,l,t,u,o])=>{const v=doc.settings[k];if(t==='num')return `<label class="row"><span>${l}</span><span class="inp"><input type="number" data-set="${k}" value="${v}" min="${o[0]}" max="${o[1]}" step="${o[2]}"><em>${u}</em></span></label>`;if(t==='chk')return `<label class="row"><span>${l}</span><input type="checkbox" data-set="${k}" ${v?'checked':''}></label>`;return `<label class="row"><span>${l}</span><select data-set="${k}">${u.map(([ov,ol])=>`<option value="${ov}" ${String(v)===String(ov)?'selected':''}>${ol}</option>`).join('')}</select></label>`;}).join('');
   h+=`<p class="note">Trace the outside face of the external walls and the middle of internal walls. Room areas allow for wall thickness.</p>`;
   $('#tab-plan').innerHTML=h;}
-$('#tab-plan').addEventListener('click',e=>{if(e.target.id==='ulPick'){$('#ulFile').click();return;}if(e.target.id==='aiBtn'){autoTrace(true);return;}if(e.target.id==='phPick'){$('#phFile').click();return;}if(e.target.id==='phRead'){readPhotos(null);return;}const pd=e.target.closest('[data-phdel]');if(pd){snapshot();doc.photos=doc.photos.filter(p=>p.id!==pd.dataset.phdel);changed(true);return;}if(e.target.id==='siteDel'){snapshot();doc.site=null;changed(true);return;}const st=e.target.closest('[data-settool]');if(st){setTool(st.dataset.settool);return;}if(e.target.closest('[data-del]'))deleteSel();});
+$('#tab-plan').addEventListener('click',e=>{if(e.target.id==='ulPick'){$('#ulFile').click();return;}if(e.target.id==='aiBtn'){autoTrace(true);return;}if(e.target.id==='phPick'){$('#phFile').click();return;}if(e.target.id==='phRead'){readPhotos(null);return;}const pu=e.target.closest('[data-phuse]');if(pu){usePhotoSuggestion(pu.dataset.phuse);return;}const ps=e.target.closest('[data-phskip]');if(ps){skipPhotoSuggestion(ps.dataset.phskip);return;}const pd=e.target.closest('[data-phdel]');if(pd){snapshot();doc.photos=doc.photos.filter(p=>p.id!==pd.dataset.phdel);changed(true);return;}if(e.target.id==='siteDel'){snapshot();doc.site=null;changed(true);return;}const st=e.target.closest('[data-settool]');if(st){setTool(st.dataset.settool);return;}if(e.target.closest('[data-del]'))deleteSel();});
 $('#tab-plan').addEventListener('change',e=>{const t=e.target;if(t.id==='ulFile'){const f=t.files&&t.files[0];t.value='';onUpload(f);return;}if(t.id==='phFile'){const fs=[...(t.files||[])];t.value='';addPhotos(fs);return;}
   if(t.dataset.set){const k=t.dataset.set;const f=SET_FIELDS.find(x=>x[0]===k);let v;if(f[2]==='num'){v=parseFloat(t.value);if(!isFinite(v))return;v=Math.min(f[4][1],Math.max(f[4][0],v));}else if(f[2]==='chk')v=t.checked;else{v=t.value;if(typeof doc.settings[k]==='number')v=Number(v);}doc.settings[k]=v;changed(false);renderPlanTab();return;}
   if(t.dataset.it&&sel&&sel.kind==='item'){const it=doc.items.find(x=>x.id===sel.id);if(!it)return;snapshot();it.kind=t.value;placeKind=t.value;changed(false);renderPlanTab();return;}
@@ -1200,27 +1202,44 @@ const scaleTo=(c,MAX)=>{const k=Math.min(1,MAX/Math.max(c.width,c.height));if(k>
 function photosHTML(){const P=doc.photos||[];const R=doc.photoRead;let h=`<h3>Photos of the house</h3><input type="file" id="phFile" accept="image/*" multiple hidden>`;
   if(P.length)h+=`<div class="phgrid">${P.map((p,i)=>`<figure><img src="${p.thumb}" alt="House photo ${i+1}"><button class="x" data-phdel="${p.id}" aria-label="Remove photo">✕</button></figure>`).join('')}</div>`;
   h+=`<div class="upl"><button class="btn" id="phPick" ${P.length>=8?'disabled':''}>${P.length?'Add more photos':'Add photos of the house'}</button>${P.length?`<button class="btn" id="phRead" ${phBusy?'disabled':''}>${phBusy?'Reading...':'Read them again'}</button>`:''}</div>`;
-  if(R){const parts=[];const CL={brick:'Brick veneer walls',weatherboard:'Weatherboard walls',fc:'Fibre cement walls',colorbond:'Metal clad walls',render:'Rendered walls'};const RM={tiles:'tiles',colorbond:'Colorbond sheeting'};
-    if(R.cladding!=='unknown')parts.push(CL[R.cladding]);if(R.roofShape!=='unknown')parts.push(`${R.roofShape} roof${R.roofMaterial!=='unknown'?' in '+RM[R.roofMaterial]:''}${R.roofPitch?' at about '+R.roofPitch+'°':''}`);else if(R.roofMaterial!=='unknown')parts.push('Roof in '+RM[R.roofMaterial]);
-    if(R.eavesMm)parts.push(`${R.eavesMm} mm eaves`);if(R.storeys)parts.push(R.storeys===1?'single storey':R.storeys+' storeys');
-    h+=`<div class="card phread"><b>Read from your photos</b><p class="note" style="margin:4px 0">${esc(parts.join(', ')||'Nothing clear enough to set.')}.${parts.length?' Set in Construction below.':''}</p>${[['Gutters',R.gutter],['Windows',R.windows],['Colours',R.colours]].filter(x=>x[1]).map(([k,v])=>`<p class="note" style="margin:2px 0"><b>${k}:</b> ${esc(v)}</p>`).join('')}${R.notes&&R.notes.length?`<ul class="phnotes">${R.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>`:''}</div>`;}
-  else h+=`<p class="note">Front, back and sides. The roof, walls and eaves are set from what the photos show, and they go in the plans pack.</p>`;
+  const sug=(doc.photoSuggestions||[]);
+  if(sug.length){h+=`<div class="card phread"><b>Check these against the house</b><p class="note" style="margin:4px 0 8px">Nothing is changed until you tap Use. Skip anything that looks wrong.</p>${sug.map(s=>{const use=s.kind==='floors'?'Add floor':s.kind==='scale'?'Check the scale':s.kind==='note'?'OK':'Use this';const skip=s.kind==='note'?'':'<button class="btn" data-phskip="'+esc(s.id)+'">Skip</button>';return `<div class="phsug"><div><b>${esc(s.label)}</b><p class="note" style="margin:2px 0 0">${esc(s.detail)}</p></div><div class="upl"><button class="btn" data-phuse="${esc(s.id)}">${use}</button>${skip}</div></div>`;}).join('')}</div>`;}
+  else if(R){h+=`<p class="note">Photos are with the build.${(R.notes||[]).length?' Notes are in the plans pack.':''}</p>`;}
+  else h+=`<p class="note">Optional. Front, back and sides. Read with the plan, they suggest the roof, walls, ceiling height and how many floors. You accept or skip each one.</p>`;
+  if(R)h+=`${[['Gutters',R.gutter],['Windows',R.windows],['Colours',R.colours]].filter(x=>x[1]).map(([k,v])=>`<p class="note" style="margin:2px 0"><b>${k}:</b> ${esc(v)}</p>`).join('')}${(R.notes||[]).length?`<ul class="phnotes">${R.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>`:''}`;
   return h;}
 async function addPhotos(files){files=files.filter(f=>/^image\//.test(f.type)||/\.(jpe?g|png|webp|heic)$/i.test(f.name)).slice(0,Math.max(0,8-(doc.photos||[]).length));if(!files.length)return;flash('Adding photos...');phFresh=[];
   for(const f of files){try{const c=await fileToCanvas(f);const big=canvasToJpeg(scaleTo(c,1280),900000).url;const thumb=canvasToJpeg(scaleTo(c,480),90000).url;const ph={id:uid(),thumb,path:null};doc.photos.push(ph);phFresh.push(big);
       if(EMBED){try{window.parent.postMessage({source:'ss-planner',type:'photo-upload',id:ph.id,dataUrl:canvasToJpeg(scaleTo(c,2000),2500000).url},location.origin);}catch(e){}}}catch(e){flash('One photo could not be opened. Use JPG or PNG.');}}
-  changed(true);readPhotos(phFresh.slice(0,4));}
-async function readPhotos(images){images=images&&images.length?images:(doc.photos||[]).slice(0,4).map(p=>p.thumb);if(!images.length||phBusy)return;phBusy=true;renderPlanTab();
-  try{const res=await fetch('/api/structures/photo-read',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({images})});const b=await res.json().catch(()=>({}));
+  changed(true);readPhotos(phFresh.slice(0,3));}
+function photoContext(){ensureLevels();const S=doc.settings;const sm=scaleMM();let widthM=null,depthM=null,footprintM=null;
+  if(sm&&doc.outline.length>=3){const b=bbox(doc.outline);widthM=Math.round(toM(b.x1-b.x0)*10)/10;depthM=Math.round(toM(b.y1-b.y0)*10)/10;footprintM=Math.round(outlineArea()*10)/10;}
+  const outdoor=(doc.areas||[]).map(a=>a.name||a.type).filter(Boolean);
+  return {storeys:doc.levels.length,widthM,depthM,footprintM,wallH:S.wallH,pitch:S.pitch,eave:S.eave,roofType:S.roofType,roofMat:S.roofMat,cladding:S.extClad,outdoor};}
+async function planJpeg(){if(!doc.underlay.src)return null;try{const c=await srcToCanvas(doc.underlay.src,1200);return canvasToJpeg(c,700000).url;}catch(e){return null;}}
+async function readPhotos(images){images=images&&images.length?images:(doc.photos||[]).slice(0,3).map(p=>p.thumb);if(!images.length||phBusy)return;phBusy=true;renderPlanTab();
+  try{const plan=await planJpeg();const res=await fetch('/api/structures/photo-read',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({images,plan,context:photoContext()})});const b=await res.json().catch(()=>({}));
     if(!res.ok){flash(b.signup?'Sign in to Swiftscope to read photos. They are kept with the build.':(b.error||'The photos could not be read.'));return;}
-    const R=b.read;snapshot();doc.photoRead=R;const S=doc.settings;const set=[];
-    if(R.cladding&&R.cladding!=='unknown'&&CLAD[R.cladding]){S.extClad=R.cladding;set.push(CLAD[R.cladding].n.toLowerCase());}
-    if(R.roofShape==='hip'||R.roofShape==='gable'){S.roofType=R.roofShape;set.push(R.roofShape+' roof');}
-    if(R.roofMaterial&&R.roofMaterial!=='unknown'&&ROOFM[R.roofMaterial]){S.roofMat=R.roofMaterial;set.push(ROOFM[R.roofMaterial].n.toLowerCase());}
-    if(R.roofPitch>0){S.pitch=R.roofPitch;set.push(R.roofPitch+'° pitch');}if(R.eavesMm>0){S.eave=R.eavesMm;set.push(R.eavesMm+' mm eaves');}
-    changed(true);flash(set.length?`From your photos: ${set.join(', ')}. Check them in Construction.`:'The photos did not show the roof or walls clearly. Set them in Construction.');}
+    snapshot();doc.photoRead=b.read;doc.photoSuggestions=Array.isArray(b.suggestions)?b.suggestions:[];
+    changed(true);flash(doc.photoSuggestions.length?`Found ${doc.photoSuggestions.length} thing${doc.photoSuggestions.length===1?'':'s'} to check. Nothing is changed until you tap Use.`:'The photos match what you already have. Notes are in the plans pack.');}
   catch(e){flash('The photos could not be read. Check your connection.');}
   finally{phBusy=false;renderPlanTab();}}
+function skipPhotoSuggestion(id){snapshot();doc.photoSuggestions=(doc.photoSuggestions||[]).filter(s=>s.id!==id);changed(true);flash('Skipped. Construction is unchanged.');}
+function addBlankFloors(n){ensureLevels();syncLevel();let added=0;while(added<n&&doc.levels.length<3){const i=doc.levels.length;const sh=levelShift(i-1);doc.levels.push({id:uid(),name:LEVEL_NAMES[i]||('Level '+(i+1)),h:null,shift:[sh[0],sh[1]],data:levelData({})});added++;}return added;}
+function usePhotoSuggestion(id){const s=(doc.photoSuggestions||[]).find(x=>x.id===id);if(!s)return;snapshot();const a=s.apply||{};const S=doc.settings;const ROOF={hip:1,gable:1,skillion:1,flat:1};
+  if(a.extClad&&CLAD[a.extClad])S.extClad=a.extClad;
+  if(a.roofType&&ROOF[a.roofType])S.roofType=a.roofType;
+  if(a.roofMat&&ROOFM[a.roofMat])S.roofMat=a.roofMat;
+  if(a.pitch>0)S.pitch=Math.min(45,Math.max(1,+a.pitch));
+  if(a.eave!=null&&a.eave>=0)S.eave=Math.min(900,Math.max(0,Math.round(+a.eave)));
+  if(a.wallH)S.wallH=Math.min(3600,Math.max(2100,Math.round(+a.wallH/50)*50));
+  let floors=0;if(a.addFloors)floors=addBlankFloors(Math.min(2,a.addFloors|0));
+  doc.photoSuggestions=(doc.photoSuggestions||[]).filter(x=>x.id!==id);
+  if(s.kind==='scale'){setTool('scale');flash('Tap both ends of something with a known size, like a garage door or a labelled room.');}
+  else if(floors){goLevel(doc.levels.length-1);flash(`${floors===1?'A blank floor was added':'Blank floors were added'}. Trace ${floors===1?'it':'them'} before ${floors===1?'it is':'they are'} priced.`);}
+  else if(s.kind==='note')flash('Noted. The outline is unchanged.');
+  else flash('Set from your photos. Change anything in Construction.');
+  changed(true);}
 
 /* ---------- auto trace from the drawing's pixels ---------- */
 function boxFilter(src,w,h,k,mode){const r0=Math.floor((k-1)/2),r1=k-1-r0;const tmp=new Uint8Array(w*h),out=new Uint8Array(w*h);const ps=new Int32Array(Math.max(w,h)+1);
@@ -1635,10 +1654,12 @@ function roofModel(P,S,H,cover){const sm=scaleMM();if(!sm||doc.outline.length<3)
     rects=[];got.forEach(r=>{if(rects.some(q=>q[0]<=r[0]&&q[1]>=r[1]&&q[2]<=r[2]&&q[3]>=r[3]))return;rects=rects.filter(q=>!(r[0]<=q[0]&&r[1]>=q[1]&&r[2]<=q[2]&&r[3]>=q[3]));rects.push(r);});
     rects=rects.map(([i0,i1,j0,j1])=>({x0:xs[i0],x1:xs[i1+1],z0:zs[j0],z1:zs[j1+1]}));}
   const dseg=(x,z,a,c)=>{const dx=c[0]-a[0],dz=c[1]-a[1];const L2=dx*dx+dz*dz||1;let u=((x-a[0])*dx+(z-a[1])*dz)/L2;u=Math.max(0,Math.min(1,u));return Math.hypot(x-a[0]-u*dx,z-a[1]-u*dz);};
-  const base=H-eave*t;const gable=S.roofType==='gable';
+  const base=H-eave*t;const shape=S.roofType==='gable'?'gable':S.roofType==='skillion'?'skillion':S.roofType==='flat'?'flat':'hip';
   // where a floor above sits on these walls there is no roof, only the part that sticks out gets one
   const inCover=(x,z)=>{const C=cover;let c=false;for(let i=0,j=C.length-1;i<C.length;j=i++){const [xi,zi]=C[i],[xj,zj]=C[j];if(((zi>z)!==(zj>z))&&(x<(xj-xi)*(z-zi)/((zj-zi)||1e-9)+xi))c=!c;}return c;};
-  const height=(x,z)=>{let d=0;if(rects){for(const r of rects){if(x<r.x0-1e-6||x>r.x1+1e-6||z<r.z0-1e-6||z>r.z1+1e-6)continue;const along=(r.x1-r.x0)>=(r.z1-r.z0);const dd=gable?(along?Math.min(z-r.z0,r.z1-z):Math.min(x-r.x0,r.x1-x)):Math.min(x-r.x0,r.x1-x,z-r.z0,r.z1-z);if(dd>d)d=dd;}}
+  const rise=(r,x,z)=>{const along=(r.x1-r.x0)>=(r.z1-r.z0);if(shape==='flat')return 0;if(shape==='skillion')return along?(z-r.z0):(x-r.x0);if(shape==='gable')return along?Math.min(z-r.z0,r.z1-z):Math.min(x-r.x0,r.x1-x);return Math.min(x-r.x0,r.x1-x,z-r.z0,r.z1-z);};
+  const height=(x,z)=>{let d=0;if(rects){for(const r of rects){if(x<r.x0-1e-6||x>r.x1+1e-6||z<r.z0-1e-6||z>r.z1+1e-6)continue;const dd=rise(r,x,z);if(dd>d)d=dd;}}
+    else if(shape==='flat')d=0;else if(shape==='skillion'){const along=(b.x1-b.x0)>=(b.z1-b.z0);d=Math.max(0,along?(z-b.z0):(x-b.x0));}
     else{d=Infinity;for(let i=0;i<n;i++)d=Math.min(d,dseg(x,z,E[i],E[(i+1)%n]));if(!isFinite(d))d=0;}return base+t*Math.max(0,d);};
   // clip the eave outline into small squares and lift every corner to the roof surface
   const cell=Math.max(0.18,Math.max(b.x1-b.x0,b.z1-b.z0)/110);const pos=[];
@@ -1708,8 +1729,8 @@ function roomInfo(pt,ev){const R=rooms();const i=R.findIndex(r=>pip(pt,r.f.poly)
   pop.onchange=e=>{const k=e.target.dataset.rf;if(!k)return;snapshot();const lab=roomLabelFor(i,true);if(k==='name'){lab.name=e.target.value.trim()||'Room';if(lab.type==='other'||!lab.typeSet)lab.type=guessType(lab.name);}else if(k==='type'){lab.type=e.target.value;lab.typeSet=true;}else lab.finish=e.target.value;changed(true);roomInfo(pt,ev);};return true;}
 function roofInfo(ev){const S=doc.settings;const g=geoAll();const pop=popAt(ev);
   pop.innerHTML=`<div class="cardh"><b>Roof, ${fm(g.roofA,1)} m²</b><button class="x" data-pclose="1" aria-label="Close">✕</button></div><p class="note" style="margin:2px 0 6px">${fm(g.planA||0,1)} m² on plan, eaves line ${fm(outlinePer()+0,1)} m around the walls.</p>
-  <div class="pbtns"><button class="chip ${S.roofType==='hip'?'on':''}" data-rset="roofType" data-v="hip">Hip</button><button class="chip ${S.roofType==='gable'?'on':''}" data-rset="roofType" data-v="gable">Gable</button><button class="chip ${S.roofMat==='tiles'?'on':''}" data-rset="roofMat" data-v="tiles">Tiles</button><button class="chip ${S.roofMat==='colorbond'?'on':''}" data-rset="roofMat" data-v="colorbond">Colorbond</button></div>
-  <div class="pgrid"><label>Pitch<span class="inp sm"><input type="number" data-rnum="pitch" value="${S.pitch}" min="2" max="45" step="0.5"><em>°</em></span></label><label>Eaves<span class="inp sm"><input type="number" data-rnum="eave" value="${S.eave}" min="0" max="900" step="50"><em>mm</em></span></label></div>
+  <div class="pbtns"><button class="chip ${S.roofType==='hip'?'on':''}" data-rset="roofType" data-v="hip">Hip</button><button class="chip ${S.roofType==='gable'?'on':''}" data-rset="roofType" data-v="gable">Gable</button><button class="chip ${S.roofType==='skillion'?'on':''}" data-rset="roofType" data-v="skillion">Skillion</button><button class="chip ${S.roofType==='flat'?'on':''}" data-rset="roofType" data-v="flat">Flat</button><button class="chip ${S.roofMat==='tiles'?'on':''}" data-rset="roofMat" data-v="tiles">Tiles</button><button class="chip ${S.roofMat==='colorbond'?'on':''}" data-rset="roofMat" data-v="colorbond">Colorbond</button></div>
+  <div class="pgrid"><label>Pitch<span class="inp sm"><input type="number" data-rnum="pitch" value="${S.pitch}" min="1" max="45" step="0.5"><em>°</em></span></label><label>Eaves<span class="inp sm"><input type="number" data-rnum="eave" value="${S.eave}" min="0" max="900" step="50"><em>mm</em></span></label></div>
   <p class="note" style="margin:6px 0 0">Place skylights, whirlybirds, solar panels and downpipes with Place item.</p>`;
   pop.onclick=e=>{if(e.target.closest('[data-pclose]')){pop.hidden=true;return;}const b=e.target.closest('[data-rset]');if(b){snapshot();S[b.dataset.rset]=b.dataset.v;changed(true);roofInfo(ev);}};
   pop.onchange=e=>{const k=e.target.dataset.rnum;if(!k)return;const v=parseFloat(e.target.value);if(!isFinite(v))return;snapshot();S[k]=v;changed(true);roofInfo(ev);};}

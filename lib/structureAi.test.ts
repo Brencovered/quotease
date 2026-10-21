@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeGeneratedPlan, normalizePhotoRead, normalizePlanRead, normalizeTraceDraft, type GeneratedPlan } from "./structureAi";
+import { normalizeGeneratedPlan, normalizePhotoRead, normalizePlanRead, normalizeTraceDraft, photoSuggestions, type GeneratedPlan, type PhotoContext } from "./structureAi";
 
 const base: GeneratedPlan = {
   name: "Test",
@@ -119,6 +119,11 @@ describe("normalizePhotoRead", () => {
       roofPitch: 22.3,
       cladding: "brick",
       eavesMm: 470,
+      wallHeightMm: 2720,
+      deck: "alfresco",
+      deckInOutline: "yes",
+      scaleOk: "check",
+      scaleNote: "  The house looks wider than 8 m. ",
       gutter: "  Quad   gutter, Monument ",
       windows: "Aluminium",
       colours: "x".repeat(300),
@@ -127,12 +132,70 @@ describe("normalizePhotoRead", () => {
     expect(n.storeys).toBe(3);
     expect(n.roofPitch).toBe(22.5);
     expect(n.eavesMm).toBe(450);
+    expect(n.wallHeightMm).toBe(2700);
+    expect(n.scaleNote).toBe("The house looks wider than 8 m.");
     expect(n.gutter).toBe("Quad gutter, Monument");
     expect(n.colours.length).toBe(120);
     expect(n.notes).toEqual(["a", "b", "c", "d", "e", "f"]);
-    const u = normalizePhotoRead({ storeys: 0, roofShape: "unknown", roofMaterial: "unknown", roofPitch: 0, cladding: "unknown", eavesMm: 0, gutter: "", windows: "", colours: "", notes: [] });
+    const u = normalizePhotoRead({
+      storeys: 0, roofShape: "unknown", roofMaterial: "unknown", roofPitch: 0, cladding: "unknown", eavesMm: 0,
+      wallHeightMm: 1800, deck: "unknown", deckInOutline: "unknown", scaleOk: "ok", scaleNote: "ignore",
+      gutter: "", windows: "", colours: "", notes: [],
+    });
     expect(u.storeys).toBe(0);
     expect(u.roofPitch).toBe(0);
     expect(u.eavesMm).toBe(0);
+    expect(u.wallHeightMm).toBe(0);
+    expect(u.scaleNote).toBe("");
+  });
+});
+
+const JOB: PhotoContext = { storeys: 1, wallH: 2400, extClad: "brick", roofType: "hip", roofMat: "tiles", pitch: 22.5, eave: 450, outdoor: [] };
+
+describe("photoSuggestions", () => {
+  const base = () => normalizePhotoRead({
+    storeys: 1, roofShape: "hip", roofMaterial: "tiles", roofPitch: 22.5, cladding: "brick", eavesMm: 450,
+    wallHeightMm: 2400, deck: "none", deckInOutline: "unknown", scaleOk: "ok", scaleNote: "",
+    gutter: "", windows: "", colours: "", notes: [],
+  });
+
+  it("stays quiet when the photos match the job", () => {
+    expect(photoSuggestions(base(), JOB)).toEqual([]);
+  });
+
+  it("bundles roof, walls and ceiling into one suggestion and leaves the scale alone", () => {
+    const read = base();
+    read.cladding = "weatherboard";
+    read.roofShape = "skillion";
+    read.roofMaterial = "colorbond";
+    read.roofPitch = 8;
+    read.eavesMm = 200;
+    read.wallHeightMm = 2700;
+    read.storeys = 2;
+    read.scaleOk = "check";
+    read.scaleNote = "A garage door looks wider than the scale allows.";
+    read.deck = "alfresco";
+    read.deckInOutline = "yes";
+    const s = photoSuggestions(read, JOB);
+    const build = s.find((x) => x.id === "build");
+    expect(build?.apply).toMatchObject({ extClad: "weatherboard", roofType: "skillion", roofMat: "colorbond", pitch: 8, eave: 200, wallH: 2700 });
+    expect(build?.kind).toBe("setting");
+    expect(s.find((x) => x.id === "floors")?.apply).toEqual({ addFloors: 1 });
+    expect(s.find((x) => x.id === "scale")).toMatchObject({ kind: "scale", detail: "A garage door looks wider than the scale allows." });
+    expect(s.find((x) => x.id === "scale")?.apply).toBeUndefined();
+    expect(s.find((x) => x.id === "deck")?.label).toMatch(/inside the house outline/);
+  });
+
+  it("treats a flat roof with no pitch as 2 degrees and skips a floor that is already there", () => {
+    const read = base();
+    read.roofShape = "flat";
+    read.roofPitch = 0;
+    read.storeys = 2;
+    read.deck = "deck";
+    read.deckInOutline = "no";
+    const s = photoSuggestions(read, { ...JOB, storeys: 2, outdoor: ["Alfresco"] });
+    expect(s.find((x) => x.id === "build")?.apply).toMatchObject({ roofType: "flat", pitch: 2 });
+    expect(s.find((x) => x.id === "floors")).toBeUndefined();
+    expect(s.find((x) => x.id === "deck")?.detail).toMatch(/already outside/);
   });
 });
