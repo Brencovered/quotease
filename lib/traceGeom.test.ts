@@ -107,4 +107,35 @@ describe("house tracer geometry", () => {
     const kept = TraceGeom.dropFloating([wall, leaf, ...bed], outline, 18);
     expect(kept).toEqual([wall]);
   });
+
+  it("turns a mirrored label set back onto the rooms the walls enclose", () => {
+    const outline = [[0, 0], [400, 0], [400, 200], [0, 200]];
+    const left = [[10, 10], [150, 10], [150, 110], [10, 110]];
+    const right = [[210, 10], [350, 10], [350, 90], [210, 90]];
+    const W = 1000, H = 500;
+    const sheet = (px: number, py: number) => ({ x: px / W * 1000, y: py / H * 1000 });
+    const wide = { name: "Bedroom", width: 4200, length: 3000, ...sheet(80, 60) };
+    const square = { name: "Bedroom", width: 4200, length: 2400, ...sheet(280, 50) };
+    const deck = { name: "Deck", width: 0, length: 0, ...sheet(420, 80) };
+    const straight = TraceGeom.orientLabels([wide, square, deck], W, H, outline, [left, right]);
+    expect(straight.pose).toBe("same");
+    expect(straight.rooms[0].x).toBeCloseTo(wide.x, 4);
+    expect(straight.rooms[2].x).toBeCloseTo(deck.x, 4);
+
+    const mirrorSheet = (r: { x: number; y: number }) => ({ ...r, x: 1000 - r.x });
+    const flipped = TraceGeom.orientLabels([wide, square, deck].map(mirrorSheet), W, H, outline, [left, right]);
+    expect(flipped.pose).toBe("flipx");
+    expect(flipped.rooms[0].x).toBeCloseTo(wide.x, 4);
+    expect(flipped.rooms[1].x).toBeCloseTo(square.x, 4);
+    expect(flipped.rooms[2].x).toBeCloseTo(deck.x, 4);
+
+    const cx = 200 / W * 1000;
+    const mirrorHouse = (r: { x: number; y: number }) => ({ ...r, x: 2 * cx - r.x });
+    const swapped = TraceGeom.orientLabels([wide, square, deck].map(mirrorHouse), W, H, outline, [left, right]);
+    expect(swapped.pose).toBe("housex");
+    expect(swapped.rooms[0].x).toBeCloseTo(wide.x, 4);
+    expect(swapped.rooms[1].x).toBeCloseTo(square.x, 4);
+    expect(swapped.rooms[2].name).toBe("Deck");
+    expect(swapped.rooms[2].x).toBeCloseTo(deck.x, 4);
+  });
 });

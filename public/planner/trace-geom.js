@@ -216,7 +216,79 @@
     return Math.round((prev + next) * 100) / 100;
   }
 
-  const api = { orderDrawings, roofUncovered, scaleDrawing, mergeQty, gapLimits, scaleMmPerPx, dropEvenGrid, dropFloating, segmentExtent, scrubWalls, siteLooksLikeLot, HOUSE_ONCE, pip, bbox };
+  /* The model sometimes returns room points mirrored across the sheet or across the house.
+     Walls come from the pixels, so the pose that drops the labelled sizes into faces of the same shape is the plan.
+     A face with two labels is open plan and does not vote. */
+  const OUTDOOR_NAME = /deck|alfresco|verand|patio|porch|pergola|drive|yard|garden|shed|pool|terrace|balcon|lawn|court|landscap|ramp/i;
+  function orientLabels(rooms, sheetW, sheetH, outline, faces) {
+    const labs = Array.isArray(rooms) ? rooms : [];
+    const W = +sheetW || 0, H = +sheetH || 0;
+    if (labs.length < 2 || W <= 0 || H <= 0 || !outline || outline.length < 3 || !faces || faces.length < 2) return { rooms: labs, pose: "same" };
+    const b = bbox(outline);
+    const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
+    const toPx = (rm) => [(+rm.x || 0) / 1000 * W, (+rm.y || 0) / 1000 * H];
+    const poses = [
+      { name: "same", map: (p) => p },
+      { name: "flipx", map: (p) => [W - p[0], p[1]] },
+      { name: "flipy", map: (p) => [p[0], H - p[1]] },
+      { name: "rot180", map: (p) => [W - p[0], H - p[1]] },
+      { name: "housex", map: (p) => [2 * cx - p[0], p[1]] },
+      { name: "housey", map: (p) => [p[0], 2 * cy - p[1]] },
+      { name: "house180", map: (p) => [2 * cx - p[0], 2 * cy - p[1]] },
+    ];
+    const voters = labs.filter((rm) => +rm.width > 0 && +rm.length > 0 && !OUTDOOR_NAME.test(rm.name || ""));
+    function score(map) {
+      const placed = voters.map((rm, i) => {
+        const p = map(toPx(rm));
+        let fi = -1;
+        for (let f = 0; f < faces.length; f++) if (pip(p, faces[f])) { fi = f; break; }
+        return { i, fi, rm, p };
+      });
+      const count = {};
+      placed.forEach((h) => { if (h.fi >= 0) count[h.fi] = (count[h.fi] || 0) + 1; });
+      const hits = [];
+      placed.forEach((h) => {
+        if (h.fi < 0 || count[h.fi] !== 1) return;
+        const bb = bbox(faces[h.fi]);
+        const px = [bb.x1 - bb.x0, bb.y1 - bb.y0].sort((a, c) => a - c);
+        const dm = [+h.rm.width, +h.rm.length].sort((a, c) => a - c);
+        if (px[0] < 2 || dm[0] < 2) return;
+        const r1 = dm[0] / px[0], r2 = dm[1] / px[1];
+        const aspect = Math.abs(r1 / r2 - 1);
+        if (aspect >= 0.08) return;
+        hits.push({ i: h.i, fi: h.fi, mm: (r1 + r2) / 2, aspect });
+      });
+      hits.sort((a, c) => a.aspect - c.aspect);
+      const usedF = {}, usedR = {}, kept = [];
+      hits.forEach((h) => {
+        if (usedF[h.fi] || usedR[h.i]) return;
+        usedF[h.fi] = true;
+        usedR[h.i] = true;
+        kept.push(h.mm);
+      });
+      if (kept.length < 2) return { n: kept.length, rank: kept.length };
+      kept.sort((a, c) => a - c);
+      const spread = kept[kept.length - 1] / kept[0];
+      if (spread > 1.12) return { n: 0, rank: 0 };
+      return { n: kept.length, rank: kept.length * 10 - (spread - 1) };
+    }
+    let best = poses[0], bestS = score(poses[0].map);
+    for (let i = 1; i < poses.length; i++) {
+      const s = score(poses[i].map);
+      if (s.rank > bestS.rank + 0.5) { best = poses[i]; bestS = s; }
+    }
+    if (best.name === "same" || bestS.n < 2) return { rooms: labs, pose: "same" };
+    const map = best.map;
+    return {
+      pose: best.name,
+      rooms: labs.map((rm) => {
+        const p = map(toPx(rm));
+        return Object.assign({}, rm, { x: Math.round(p[0] / W * 10000) / 10, y: Math.round(p[1] / H * 10000) / 10 });
+      }),
+    };
+  }
+
+  const api = { orderDrawings, roofUncovered, scaleDrawing, mergeQty, gapLimits, scaleMmPerPx, dropEvenGrid, dropFloating, segmentExtent, scrubWalls, siteLooksLikeLot, orientLabels, HOUSE_ONCE, pip, bbox };
   root.TraceGeom = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);

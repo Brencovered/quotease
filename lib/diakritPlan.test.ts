@@ -136,7 +136,16 @@ describe("Diakrit poche plan", () => {
         const walls = [...document.querySelectorAll("#ed .iw")].map((e) => ({
           x1: +e.getAttribute("x1")!, y1: +e.getAttribute("y1")!, x2: +e.getAttribute("x2")!, y2: +e.getAttribute("y2")!,
         }));
-        const labels = [...document.querySelectorAll("#ed .rlab")].map((e) => ({ t: e.textContent || "", orphan: e.classList.contains("orphan") }));
+        const labels = [...document.querySelectorAll("#ed .rlab")].map((e) => {
+          const next = e.nextElementSibling;
+          return {
+            t: e.textContent || "",
+            x: +(e.getAttribute("x") || 0),
+            y: +(e.getAttribute("y") || 0),
+            orphan: e.classList.contains("orphan"),
+            area: next && next.classList.contains("rarea") ? (next.textContent || "") : "",
+          };
+        });
         const site = document.querySelector("#ed .site");
         let siteBox = null as null | { x0: number; y0: number; x1: number; y1: number };
         if (site) {
@@ -154,7 +163,14 @@ describe("Diakrit poche plan", () => {
         });
         const areas = [...document.querySelectorAll("#ed polygon.area")].map((el) => {
           const next = el.nextElementSibling;
-          return { cls: el.getAttribute("class") || "", name: next && next.tagName === "text" ? (next.textContent || "") : "" };
+          const pts = (el.getAttribute("points") || "").trim().split(/\s+/).filter(Boolean).map((s) => s.split(",").map(Number));
+          const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+          return {
+            cls: el.getAttribute("class") || "",
+            name: next && next.tagName === "text" ? (next.textContent || "") : "",
+            cx: xs.length ? (Math.min(...xs) + Math.max(...xs)) / 2 : 0,
+            cy: ys.length ? (Math.min(...ys) + Math.max(...ys)) / 2 : 0,
+          };
         });
         return {
           box, walls, labels, siteBox, openings, areas, corners: pts.length,
@@ -226,12 +242,132 @@ describe("Diakrit poche plan", () => {
         expect(sw).toBeLessThan(sheetW * 0.7);
         expect(data.siteBox.x0).toBeGreaterThan(40);
       }
+      expectLayout(data);
+
+      // The live model has returned these same rooms mirrored. The browser path must put them back
+      // on the traced rooms, or the scale stays on the wall thickness and the names sit on the wrong side.
+      const cx = (box.x0 + box.x1) / 2 / sheetW * 1000;
+      const poses = [
+        ROOMS.map((r) => ({ ...r, x: Math.round((1000 - r.x) * 10) / 10 })),
+        ROOMS.map((r) => ({ ...r, x: Math.round((2 * cx - r.x) * 10) / 10 })),
+      ];
+      const b64 = png.toString("base64");
+      for (const rooms of poses) {
+        await page.evaluate((next) => sessionStorage.setItem("rooms", JSON.stringify(next)), rooms);
+        await page.reload({ waitUntil: "domcontentloaded" });
+        await page.waitForSelector("#ulFile");
+        await page.evaluate(async (src) => {
+          const bin = atob(src);
+          const arr = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+          const file = new File([arr], "diakrit-single-storey.png", { type: "image/png" });
+          const dt = new DataTransfer();
+          dt.items.add(file);
+          const input = document.querySelector("#ulFile") as HTMLInputElement;
+          input.files = dt.files;
+          input.dispatchEvent(new Event("change", { bubbles: true }));
+        }, b64);
+        await page.waitForFunction(() => {
+          const btn = document.querySelector("#aiBtn");
+          if (btn && /Tracing/.test(btn.textContent || "")) return false;
+          const f = document.querySelector("#flash");
+          const t = f instanceof HTMLElement && !f.hidden ? (f.textContent || "") : "";
+          return !!t && !/Opening the plan|Finding the walls/.test(t);
+        });
+        const again = await page.evaluate(readCanvas);
+        expect(errors, errors.join("\n")).toEqual([]);
+        expectLayout(again);
+      }
     } finally {
       await browser.close();
       server.close();
     }
-  }, 90_000);
+  }, 180_000);
 });
+
+function expectLayout(data: {
+  box: { x0: number; y0: number; x1: number; y1: number } | null;
+  labels: { t: string; x: number; y: number; orphan: boolean; area: string }[];
+  areas: { name: string; cx: number; cy: number; cls: string }[];
+  footprint: number | null;
+  pxPerM: number | null;
+  flash: string;
+  openings: string[];
+  hint: string;
+}) {
+  expect(data.flash).toMatch(/Scale set from the room sizes/);
+  expect(data.hint).not.toMatch(/AI draft/);
+  expect(data.pxPerM).toBeGreaterThan(30);
+  expect(data.pxPerM).toBeLessThan(45);
+  expect(data.footprint).toBeGreaterThan(95);
+  expect(data.footprint).toBeLessThan(120);
+  expect(data.openings).not.toContain("garage");
+  const box = data.box!;
+  const listed = data.labels.map((l) => `${l.t} @${Math.round(l.x)} ${l.area}`).join(" | ");
+  const bedBig = data.labels.find((l) => /plan 13\./.test(l.area));
+  const bedSmall = data.labels.find((l) => /plan 10\./.test(l.area));
+  expect(bedBig, listed).toBeTruthy();
+  expect(bedSmall, listed).toBeTruthy();
+  expect(bedBig!.x).toBeGreaterThan(bedSmall!.x + 20);
+  const laundry = data.labels.find((l) => /^Laundry/.test(l.t));
+  const living = data.labels.find((l) => /Living/.test(l.t) && !l.orphan);
+  expect(laundry && !laundry.orphan, listed).toBeTruthy();
+  expect(living, listed).toBeTruthy();
+  expect(laundry!.x).toBeLessThan(living!.x);
+  const dining = data.labels.find((l) => /Dining/.test(l.t));
+  expect(dining && !dining.orphan, listed).toBeTruthy();
+  const ramp = data.areas.find((a) => /ramp/i.test(a.name));
+  const alf = data.areas.find((a) => /alfresco/i.test(a.name));
+  expect(ramp, data.areas.map((a) => a.name).join(" | ")).toBeTruthy();
+  expect(alf).toBeTruthy();
+  expect(ramp!.cx).toBeGreaterThan((box.x0 + box.x1) / 2);
+  expect(alf!.cy).toBeLessThan(box.y0 + 40);
+  const orphans = data.labels.filter((l) => l.orphan).map((l) => l.t);
+  expect(orphans.every((t) => /^Bedroom/.test(t)), orphans.join(" | ")).toBe(true);
+  expect(orphans.length).toBeLessThanOrEqual(1);
+}
+
+function readCanvas() {
+  const outl = document.querySelector("#ed .outl");
+  const pts = (outl?.getAttribute("points") || "").trim().split(/\s+/).filter(Boolean).map((s) => s.split(",").map(Number));
+  const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+  const box = pts.length ? { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) } : null;
+  const labels = [...document.querySelectorAll("#ed .rlab")].map((e) => {
+    const next = e.nextElementSibling;
+    return {
+      t: e.textContent || "",
+      x: +(e.getAttribute("x") || 0),
+      y: +(e.getAttribute("y") || 0),
+      orphan: e.classList.contains("orphan"),
+      area: next && next.classList.contains("rarea") ? (next.textContent || "") : "",
+    };
+  });
+  const areas = [...document.querySelectorAll("#ed polygon.area")].map((el) => {
+    const next = el.nextElementSibling;
+    const poly = (el.getAttribute("points") || "").trim().split(/\s+/).filter(Boolean).map((s) => s.split(",").map(Number));
+    const ax = poly.map((p) => p[0]), ay = poly.map((p) => p[1]);
+    return {
+      cls: el.getAttribute("class") || "",
+      name: next && next.tagName === "text" ? (next.textContent || "") : "",
+      cx: ax.length ? (Math.min(...ax) + Math.max(...ax)) / 2 : 0,
+      cy: ay.length ? (Math.min(...ay) + Math.max(...ay)) / 2 : 0,
+    };
+  });
+  const tab = document.querySelector("#tab-plan")?.textContent || "";
+  const px = tab.match(/1 m is ([\d.]+) px/);
+  const foot = tab.match(/Footprint\s*([\d.]+)/);
+  const openings = [...document.querySelectorAll("#ed .op")].map((e) => {
+    const cls = (e.getAttribute("class") || "").split(/\s+/);
+    return cls.find((c) => c === "door" || c === "window" || c === "slider" || c === "garage") || "";
+  });
+  return {
+    box, labels, areas, openings,
+    pxPerM: px ? +px[1] : null,
+    footprint: foot ? +foot[1] : null,
+    flash: document.querySelector("#flash")?.textContent || "",
+    hint: document.querySelector("#stats .hint")?.textContent || "",
+  };
+}
 
 interface Page {
   setDefaultTimeout: (n: number) => void;
@@ -239,6 +375,7 @@ interface Page {
   on: (ev: string, fn: (e: Error) => void) => void;
   evaluateOnNewDocument: (fn: () => void) => Promise<void>;
   goto: (url: string, opts: object) => Promise<void>;
+  reload: (opts: object) => Promise<void>;
   waitForSelector: (sel: string) => Promise<unknown>;
   evaluate: <T>(fn: (...args: never[]) => T, ...args: unknown[]) => Promise<T>;
   waitForFunction: (fn: () => boolean) => Promise<unknown>;
