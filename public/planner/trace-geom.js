@@ -79,7 +79,130 @@
     const wallLike = text >= 8 && text >= long * 0.008;
     const mmPxWall = wallLike ? Math.min(40, Math.max(4, 230 / text)) : null;
     const mmPx = mmPxWall != null ? Math.min(mmPxWall, mmPxPlan * 1.75) : mmPxPlan;
-    return { mmPx: mmPx, door: Math.max(1250 / mmPx, long * 0.22), win: Math.max(4000 / mmPx, long * 0.36), mid: Math.max(2200 / mmPx, long * 0.28) };
+    /* Cap the jump. A door is about a metre, not a quarter of the sheet, or hatching and dimension lines weld into a grid. */
+    const cap = frac => long * frac;
+    return {
+      mmPx: mmPx,
+      door: Math.min(cap(0.14), Math.max(1400 / mmPx, long * 0.04)),
+      win: Math.min(cap(0.2), Math.max(2600 / mmPx, long * 0.055)),
+      mid: Math.min(cap(0.16), Math.max(1800 / mmPx, long * 0.045))
+    };
+  }
+  /* Parallel lines packed at an even pitch are tiles, hatching or a grid, not walls.
+     A real wall that runs well past the pattern is kept. */
+  function dropEvenGrid(segs, longSide) {
+    /* Hatch and tile grids are a few hundred millimetres apart. Room walls are further apart than that. */
+    const mmPx = Math.max(4, Math.min(24, 14000 / Math.max(longSide, 1)));
+    const maxSpace = Math.max(8, Math.min(longSide * 0.045, 450 / mmPx));
+    const drop = new Set();
+    ["h", "v"].forEach(axis => {
+      const L = segs.filter(s => s && s.axis === axis).slice().sort((a, b) => a.c - b.c || a.a - b.a);
+      let run = [];
+      const flush = () => {
+        if (run.length >= 4) {
+          const gaps = [];
+          for (let i = 1; i < run.length; i++) gaps.push(run[i].c - run[i - 1].c);
+          const mean = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+          if (mean > 1 && mean <= maxSpace) {
+            const sd = Math.sqrt(gaps.reduce((a, g) => a + (g - mean) * (g - mean), 0) / gaps.length);
+            if (sd / mean < 0.4) run.forEach(s => drop.add(s));
+          }
+        }
+        run = [];
+      };
+      L.forEach(s => {
+        if (!run.length) { run = [s]; return; }
+        if (s.c - run[run.length - 1].c <= maxSpace * 1.35) run.push(s);
+        else { flush(); run = [s]; }
+      });
+      flush();
+    });
+    return segs.filter(s => {
+      if (!drop.has(s)) return true;
+      const lens = [];
+      drop.forEach(o => { if (o.axis === s.axis && Math.abs(o.c - s.c) < maxSpace * 4) lens.push(o.b - o.a); });
+      lens.sort((a, b) => a - b);
+      const med = lens[Math.floor(lens.length / 2)] || 0;
+      return (s.b - s.a) > med * 1.85 && (s.b - s.a) > longSide * 0.12;
+    });
+  }
+  function segmentExtent(segs) {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    segs.forEach(s => {
+      const pts = s.axis === "h" ? [[s.a, s.c], [s.b, s.c]] : [[s.c, s.a], [s.c, s.b]];
+      pts.forEach(p => { if (p[0] < x0) x0 = p[0]; if (p[0] > x1) x1 = p[0]; if (p[1] < y0) y0 = p[1]; if (p[1] > y1) y1 = p[1]; });
+    });
+    return { x0, y0, x1, y1 };
+  }
+  /* Last-resort check on the walls that survived. A leftover lattice is dropped so the quote is not built on it. */
+  function scrubWalls(walls, outline) {
+    if (!walls || !walls.length) return { walls: walls || [], lowConfidence: false };
+    const segs = walls.map(w => {
+      const dx = w.b[0] - w.a[0], dy = w.b[1] - w.a[1], horiz = Math.abs(dx) >= Math.abs(dy);
+      return {
+        w, axis: horiz ? "h" : "v",
+        c: horiz ? (w.a[1] + w.b[1]) / 2 : (w.a[0] + w.b[0]) / 2,
+        a: horiz ? Math.min(w.a[0], w.b[0]) : Math.min(w.a[1], w.b[1]),
+        b: horiz ? Math.max(w.a[0], w.b[0]) : Math.max(w.a[1], w.b[1])
+      };
+    });
+    const box = bbox(outline && outline.length >= 3 ? outline : [[0, 0], [1, 0], [1, 1]]);
+    const long = Math.max(box.x1 - box.x0, box.y1 - box.y0, 1);
+    const kept = dropEvenGrid(segs, long);
+    const dropped = segs.length - kept.length;
+    const low = dropped >= 4 && kept.length <= 1;
+    return { walls: kept.map(s => s.w), lowConfidence: low };
+  }
+  /* Furniture, a door swing and a dimension line sit inside the drawing but do not meet the walls.
+     A real internal wall meets the outside walls, or another wall that does. A spur with a free end (the door leaf) does not. */
+  function dropFloating(walls, outline, tol) {
+    if (!walls || !walls.length) return walls || [];
+    const reach = tol > 0 ? tol : 18;
+    const near = (p, a, b) => {
+      const dx = b[0] - a[0], dy = b[1] - a[1];
+      const L2 = dx * dx + dy * dy || 1;
+      let t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2;
+      if (t < 0) t = 0; else if (t > 1) t = 1;
+      return Math.hypot(p[0] - (a[0] + dx * t), p[1] - (a[1] + dy * t)) <= reach;
+    };
+    const onOutline = p => {
+      if (!outline || outline.length < 2) return false;
+      for (let i = 0; i < outline.length; i++) if (near(p, outline[i], outline[(i + 1) % outline.length])) return true;
+      return false;
+    };
+    const n = walls.length;
+    const parent = [];
+    for (let i = 0; i < n; i++) parent.push(i);
+    const find = i => parent[i] === i ? i : (parent[i] = find(parent[i]));
+    const unite = (i, j) => { parent[find(i)] = find(j); };
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+      const a = walls[i], b = walls[j];
+      if (near(a.a, b.a, b.b) || near(a.b, b.a, b.b) || near(b.a, a.a, a.b) || near(b.b, a.a, a.b)) unite(i, j);
+    }
+    const rooted = {};
+    for (let i = 0; i < n; i++) if (onOutline(walls[i].a) || onOutline(walls[i].b)) rooted[find(i)] = true;
+    return walls.filter((w, i) => {
+      if (!rooted[find(i)]) return false;
+      let aHit = onOutline(w.a), bHit = onOutline(w.b);
+      for (let j = 0; j < n && !(aHit && bHit); j++) {
+        if (j === i) continue;
+        if (!aHit && near(w.a, walls[j].a, walls[j].b)) aHit = true;
+        if (!bHit && near(w.b, walls[j].a, walls[j].b)) bHit = true;
+      }
+      return aHit && bHit;
+    });
+  }
+  /* A line around the building is the house, not the lot. A lot runs well past the walls. */
+  function siteLooksLikeLot(site, house) {
+    if (!site || site.length < 3 || !house || house.length < 3) return false;
+    const s = bbox(site), h = bbox(house);
+    const hw = Math.max(1, h.x1 - h.x0), hh = Math.max(1, h.y1 - h.y0);
+    const pads = [(h.x0 - s.x0) / hw, (s.x1 - h.x1) / hw, (h.y0 - s.y0) / hh, (s.y1 - h.y1) / hh];
+    const beyond = pads.filter(p => p > 0.12).length;
+    let hs = 0, ss = 0;
+    for (let i = 0; i < house.length; i++) { const a = house[i], b = house[(i + 1) % house.length]; hs += a[0] * b[1] - b[0] * a[1]; }
+    for (let i = 0; i < site.length; i++) { const a = site[i], b = site[(i + 1) % site.length]; ss += a[0] * b[1] - b[0] * a[1]; }
+    return beyond >= 2 && Math.abs(ss) > Math.abs(hs) * 1.8;
   }
   /* Millimetres per pixel of the original plan. longPx and textPx are in that image, not an upscaled working copy. */
   function scaleMmPerPx(longPx, textPx) {
@@ -93,7 +216,7 @@
     return Math.round((prev + next) * 100) / 100;
   }
 
-  const api = { orderDrawings, roofUncovered, scaleDrawing, mergeQty, gapLimits, scaleMmPerPx, HOUSE_ONCE, pip, bbox };
+  const api = { orderDrawings, roofUncovered, scaleDrawing, mergeQty, gapLimits, scaleMmPerPx, dropEvenGrid, dropFloating, segmentExtent, scrubWalls, siteLooksLikeLot, HOUSE_ONCE, pip, bbox };
   root.TraceGeom = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);

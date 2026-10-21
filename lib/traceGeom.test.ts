@@ -8,11 +8,14 @@ describe("house tracer geometry", () => {
   it("sizes a pen-plan door gap from the drawing, not the stroke", () => {
     const pen = TraceGeom.gapLimits(1500, 3);
     const thick = TraceGeom.gapLimits(1500, 18);
-    expect(pen.door).toBeGreaterThanOrEqual(1500 * 0.22);
+    expect(pen.door).toBeGreaterThanOrEqual(100);
+    expect(pen.door).toBeLessThanOrEqual(1500 * 0.14);
+    expect(pen.win).toBeLessThanOrEqual(1500 * 0.2);
     expect(pen.mmPx).toBeLessThanOrEqual(24);
     expect(thick.mmPx).toBeGreaterThan(8);
     expect(thick.mmPx).toBeLessThan(20);
-    expect(thick.door).toBeGreaterThanOrEqual(pen.door * 0.5);
+    expect(thick.door).toBeGreaterThan(60);
+    expect(thick.door).toBeLessThanOrEqual(1500 * 0.14);
     const upscaledPen = TraceGeom.gapLimits(1500, 8);
     expect(upscaledPen.mmPx).toBeLessThanOrEqual(12);
     expect(TraceGeom.scaleMmPerPx(280, 3)).toBeLessThanOrEqual(24);
@@ -75,5 +78,33 @@ describe("house tracer geometry", () => {
     expect(TraceGeom.mergeQty("h:elec:board", 1, 1)).toBe(1);
     expect(TraceGeom.mergeQty("h:plumb:hws", 1, 2)).toBe(2);
     expect(TraceGeom.mergeQty("h:build:studx", 10, 4)).toBe(14);
+  });
+
+  it("drops an even hatch and keeps a lot that runs past the house", () => {
+    const hatch = [];
+    for (let i = 0; i < 8; i++) hatch.push({ axis: "h", c: 100 + i * 16, a: 40, b: 220 });
+    hatch.push({ axis: "h", c: 40, a: 10, b: 400 });
+    hatch.push({ axis: "v", c: 30, a: 20, b: 360 });
+    const kept = TraceGeom.dropEvenGrid(hatch, 800);
+    expect(kept.some((s: { c: number }) => s.c === 40)).toBe(true);
+    expect(kept.filter((s: { c: number }) => s.c >= 100).length).toBe(0);
+
+    const house = [[0, 0], [100, 0], [100, 80], [0, 80]];
+    expect(TraceGeom.siteLooksLikeLot([[-2, -2], [102, -2], [102, 82], [-2, 82]], house)).toBe(false);
+    expect(TraceGeom.siteLooksLikeLot([[-40, -30], [160, -30], [160, 140], [-40, 140]], house)).toBe(true);
+  });
+
+  it("drops a bed and a door leaf that never close a room", () => {
+    const outline = [[0, 0], [400, 0], [400, 300], [0, 300]];
+    const wall = { a: [200, 0], b: [200, 300] };
+    const leaf = { a: [200, 80], b: [260, 80] };
+    const bed = [
+      { a: [40, 40], b: [120, 40] },
+      { a: [120, 40], b: [120, 110] },
+      { a: [120, 110], b: [40, 110] },
+      { a: [40, 110], b: [40, 40] },
+    ];
+    const kept = TraceGeom.dropFloating([wall, leaf, ...bed], outline, 18);
+    expect(kept).toEqual([wall]);
   });
 });

@@ -1054,7 +1054,7 @@ $('#pdfUse').addEventListener('click',()=>{if(!pdfPages)return;const ix=[...docu
   if(pages.length===1){acceptPlan(canvasToJpeg(pages[0],3500000),{forceFresh:true});return;}
   const stacked=stackPages(pages);const j=canvasToJpeg(stacked.canvas,3500000);const boxes=stacked.boxes.map(b=>({x:Math.round(b.x*j.scaled),y:Math.round(b.y*j.scaled),w:Math.round(b.w*j.scaled),h:Math.round(b.h*j.scaled)}));acceptPlan(j,{forceFresh:true,pageOrder:true,pageBoxes:boxes});});
 /* ---------- AI draft ---------- */
-let aiBusy=false;
+let aiBusy=false,penTrace=false;
 async function aiDraft(){if(!doc.underlay.src){flash('Upload a plan first.');return;}if(aiBusy)return;aiBusy=true;renderPlanTab();
   try{let image=doc.underlay.src;if(!/^data:image\/jpeg/.test(image)){const c=await srcToCanvas(image,2200);image=canvasToJpeg(c,3500000).url;}else if(image.length>3500000){const c=await srcToCanvas(image,2200);image=canvasToJpeg(c,3500000).url;}
     const r=await fetch('/api/structures/trace-draft',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({image})});const b=await r.json().catch(()=>({}));
@@ -1074,15 +1074,18 @@ function applyDraft(d){if(!d)return;const W=doc.underlay.w,H=doc.underlay.h;cons
   if(!doc.scale){const s=autoScale();if(s){doc.scale=s;invalidate();msg=`AI draft added and the scale was worked out from the room sizes (1 m = ${fm(1000/s,0)} px). Check it with the Scale tool, then drag corners onto the real walls.`;}else msg+=' Set the scale with the Scale tool.';}
   changed(true);setTool('select');flash(msg);}
 function autoScale(){const S=doc.settings;const cands=[];
-  faces().forEach(f=>{const r=doc.rooms.find(x=>x.dims&&pip(x.pt,f.poly));if(!r)return;const bb=bbox(f.poly);const tol=(bb.x1-bb.x0+bb.y1-bb.y0)/200+1;
+  faces().forEach(f=>{const rs=doc.rooms.filter(x=>x.dims&&pip(x.pt,f.poly));if(rs.length!==1)return;const r=rs[0];const bb=bbox(f.poly);const tol=(bb.x1-bb.x0+bb.y1-bb.y0)/200+1;
     const side=(test)=>{let ext=false,hit=false;for(let k=0;k<f.poly.length;k++){const a=f.poly[k],c=f.poly[(k+1)%f.poly.length];if(test(a)&&test(c)){hit=true;if(f.edges[k].ext)ext=true;}}return hit?(ext?S.extThk:S.intThk/2):S.intThk/2;};
     const wAllow=side(p=>Math.abs(p[0]-bb.x0)<tol)+side(p=>Math.abs(p[0]-bb.x1)<tol),hAllow=side(p=>Math.abs(p[1]-bb.y0)<tol)+side(p=>Math.abs(p[1]-bb.y1)<tol);
     cands.push({w:bb.x1-bb.x0,h:bb.y1-bb.y0,wA:wAllow,hA:hAllow,dims:r.dims.slice().sort((x,y)=>x-y)});});
-  if(!cands.length)return null;let s=null;
+  if(!cands.length)return null;
+  // A pen line is the wall, not the outside of a 250 mm wall. The labelled size already matches the box.
+  if(penTrace){const rs=[];cands.forEach(c=>{const px=[c.w,c.h].sort((a,b)=>a-b);const r1=c.dims[0]/px[0],r2=c.dims[1]/px[1];if(Math.abs(r1/r2-1)<0.12)rs.push(r1,r2);});if(rs.length>=2){rs.sort((a,b)=>a-b);if(rs[rs.length-1]/rs[0]<=1.22)return rs[Math.floor(rs.length/2)];}}
+  let s=null,spread=1;
   for(let it=0;it<4;it++){const rs=[];cands.forEach(c=>{const iw=s?c.w-c.wA/s:c.w,ih=s?c.h-c.hA/s:c.h;if(iw<3||ih<3)return;const px=[iw,ih].sort((x,y)=>x-y);const r1=c.dims[0]/px[0],r2=c.dims[1]/px[1];if(!s||Math.abs(r1/r2-1)<0.15)rs.push(r1,r2);});
     if(rs.length<2){if(s)break;cands.forEach(c=>{const px=[c.w,c.h].sort((x,y)=>x-y);rs.push(c.dims[0]/px[0],c.dims[1]/px[1]);});}
-    if(!rs.length)return null;rs.sort((x,y)=>x-y);s=rs[Math.floor(rs.length/2)];}
-  return s;}
+    if(!rs.length)return null;rs.sort((x,y)=>x-y);spread=rs[rs.length-1]/rs[0];s=rs[Math.floor(rs.length/2)];}
+  if(spread>1.22)return null;return s;}
 /* ---------- tabs ---------- */
 const SET_FIELDS=[['wallH','Ceiling height','num','mm',[2100,3600,50]],['extThk','External wall thickness','num','mm',[90,400,10]],['intThk','Internal wall thickness','num','mm',[70,200,5]],['extStud','External studs','sel',[['90x45','90 x 45'],['90x35','90 x 35']]],['intStud','Internal studs','sel',[['90x35','90 x 35'],['70x35','70 x 35'],['90x45','90 x 45']]],['studSp','External stud spacing','sel',[[450,'45 cm'],[600,'60 cm']]],
   ['extClad','Outside walls','sel',Object.entries(CLAD).map(([k,v])=>[k,v.n])],['roofType','Roof shape','sel',[['hip','Hip'],['gable','Gable']]],['pitch','Roof pitch','num','°',[5,45,0.5]],['eave','Eaves','num','mm',[0,900,50]],['roofMat','Roof cover','sel',Object.entries(ROOFM).map(([k,v])=>[k,v.n])],['floor','Floor','sel',[['slab','Concrete slab'],['timber','Timber floor']]],['slabT','Slab thickness','num','mm',[85,200,5]],['lineGarage','Line and paint the garage','chk']];
@@ -1337,7 +1340,7 @@ async function detectPlans(){const U=doc.underlay;if(!U.src)return null;let c0=a
   const ordered=TraceGeom.orderDrawings(out,!!doc.pageOrder);out.length=0;ordered.items.forEach(r=>out.push(r));doc.floorHint=ordered.hint;
   const g0=out.shift();
   // the floors on one sheet share one scale
-  const donor=g0.failed?out.find(r=>!r.failed):g0;const sc=donor&&donor.mmPerPx;if(sc)out.concat([g0]).forEach(r=>{r.mmPerPx=sc;});
+  const donor=[g0].concat(out).find(r=>!r.failed&&!r.lowConfidence)||(g0.failed?out.find(r=>!r.failed):g0);const sc=donor&&!donor.lowConfidence&&donor.mmPerPx;if(sc)out.concat([g0]).forEach(r=>{if(!r.lowConfidence)r.mmPerPx=sc;});
   return [g0].concat(out);}
 async function detectPlan(c0,B,many){const U=doc.underlay;
   // work on the drawing at 1500 to 2600 px on its long side, whatever size it was printed or scanned at
@@ -1345,7 +1348,7 @@ async function detectPlan(c0,B,many){const U=doc.underlay;
   const w=c.width,h=c.height;const k0=(U.w||c0.width)/c0.width,k1=(U.h||c0.height)/c0.height;const sx=k0*B.w/w,sy=k1*B.h/h;const ox=B.x*k0,oy=B.y*k1;
   const res=detectIn(c,w,h,sx,sy);if(!res)return null;const sh=p=>[p[0]+ox,p[1]+oy];res.outline=res.outline.map(sh);res.walls.forEach(wl=>{wl.a=sh(wl.a);wl.b=sh(wl.b);});res.ops.forEach(o=>{o.mid=sh(o.mid);});
   res.areas=(res.areas||[]).map(a=>({a:sh(a.a),b:sh(a.b)}));
-  if(!many)try{const hb=bbox(res.outline);const site=findSite(c0,{x0:hb.x0/k0,x1:hb.x1/k0,y0:hb.y0/k1,y1:hb.y1/k1});if(site)res.site=site.map(p=>[p[0]*k0,p[1]*k1]);}catch(e){}
+  if(!many)try{const hb=bbox(res.outline);const site=findSite(c0,{x0:hb.x0/k0,x1:hb.x1/k0,y0:hb.y0/k1,y1:hb.y1/k1});if(site){res.site=site.map(p=>[p[0]*k0,p[1]*k1]);if(!TraceGeom.siteLooksLikeLot(res.site,res.outline))res.site=null;}}catch(e){}
   return res;}
 function detectIn(c,w,h,sx,sy){
   const px=c.getContext('2d').getImageData(0,0,w,h).data;const dark=new Uint8Array(w*h),ink=new Uint8Array(w*h);for(let i=0,j=0;i<w*h;i++,j+=4){const l=0.3*px[j]+0.59*px[j+1]+0.11*px[j+2];dark[i]=l<115?1:0;ink[i]=l<200?1:0;}
@@ -1381,12 +1384,14 @@ function detectIn(c,w,h,sx,sy){
   const exterior=(sg,a,b)=>{const m=(a+b)/2;let lo=false,hi=false;S.forEach(o=>{if(!o||o===sg||o.axis!==sg.axis)return;if(Math.abs(o.c-sg.c)<=Text*2)return;if(o.a-Text>m||o.b+Text<m)return;if(o.c<sg.c)lo=true;else hi=true;});return !(lo&&hi);};
   const okGap=(sg,a,b,single)=>{const g=b-a;if(g>Gdoor&&!exterior(sg,a,b))return {ok:false,line:false};const L=lineInfo(sg,a,b);if(L.both>0.5&&g<=Gwin)return {ok:true,line:true};if(single&&L.one>0.5&&g<=Gmid)return {ok:true,line:true};return {ok:g<=Gdoor,line:false};};
   // join collinear pieces across door and window gaps
-  const gaps=[];const Gdoor=gaps0.door,Gwin=gaps0.win,Gmid=gaps0.mid;
-  ['h','v'].forEach(ax=>{const L=S.filter(s=>s.axis===ax).sort((p,q)=>p.a-q.a||p.c-q.c);for(let i=0;i<L.length;i++){const p=L[i];if(!p)continue;for(let j=i+1;j<L.length;j++){const q=L[j];if(!q||!same(p,q))continue;const g=q.a-p.b;if(g<=0){if(q.b>p.b)p.b=q.b;L[j]=null;continue;}const G=okGap(p,p.b,q.a,true);if(G.ok){gaps.push({axis:ax,c:(p.c+q.c)/2,a:p.b,b:q.a,line:G.line});p.b=Math.max(p.b,q.b);p.t=Math.max(p.t,q.t);L[j]=null;}}}
+  const gaps=[];const Gdoor=gaps0.door,Gwin=gaps0.win,Gmid=gaps0.mid;const minJoin=Math.max(14,Math.round(long*0.02));
+  ['h','v'].forEach(ax=>{const L=S.filter(s=>s.axis===ax).sort((p,q)=>p.a-q.a||p.c-q.c);for(let i=0;i<L.length;i++){const p=L[i];if(!p)continue;for(let j=i+1;j<L.length;j++){const q=L[j];if(!q||!same(p,q))continue;const g=q.a-p.b;if(g<=0){if(q.b>p.b)p.b=q.b;L[j]=null;continue;}if((p.b-p.a)<minJoin||(q.b-q.a)<minJoin)continue;const G=okGap(p,p.b,q.a,true);if(G.ok){gaps.push({axis:ax,c:(p.c+q.c)/2,a:p.b,b:q.a,line:G.line});p.b=Math.max(p.b,q.b);p.t=Math.max(p.t,q.t);L[j]=null;}}}
     S=S.filter(s=>s.axis!==ax).concat(L.filter(Boolean));});
   // run wall ends across window and door gaps into the wall they meet
   for(let pass=0;pass<3;pass++)S.forEach(p=>{['a','b'].forEach(end=>{const dir=end==='b'?1:-1;let best=null;
-    S.forEach(q=>{if(q===p||q.axis===p.axis)return;const tol=Math.max(p.t,q.t);if(p.c<q.a-tol||p.c>q.b+tol)return;const d=(q.c-p[end])*dir;if(d<=Math.max(p.t,q.t)||d>Gwin)return;if(!best||d<best.d)best={q,d};});
+    // Only a long wall may reach across a doorway to the wall it meets. A bed, a table or a hatch line must not grow into one.
+    const jump=(p.b-p.a)>=long*0.12?Math.min(Gdoor,Gmid):Math.max(8,Math.round(long*0.012));
+    S.forEach(q=>{if(q===p||q.axis===p.axis)return;const tol=Math.max(p.t,q.t);if(p.c<q.a-tol||p.c>q.b+tol)return;const d=(q.c-p[end])*dir;if(d<=Math.max(p.t,q.t)||d>jump)return;if(!best||d<best.d)best={q,d};});
     if(!best)return;const from=end==='b'?p.b:best.q.c,to=end==='b'?best.q.c:p.a;
     if(S.some(o=>o!==p&&same(o,p)&&Math.min(o.b,to)-Math.max(o.a,from)>0))return;
     const G=okGap(p,from,to,false);const line=G.line;if(pass>0&&!line)return;if(G.ok){const ga=end==='b'?p.b+best.q.t/2*0:p.a,gb=end==='b'?best.q.c:p.a;gaps.push({axis:p.axis,c:p.c,a:end==='b'?p.b:best.q.c+best.q.t/2,b:end==='b'?best.q.c-best.q.t/2:p.a,line});void ga;void gb;p[end]=best.q.c;}});});
@@ -1394,22 +1399,29 @@ function detectIn(c,w,h,sx,sy){
   for(let pass=0;pass<2;pass++)S.forEach(p=>{['a','b'].forEach(end=>{let best=null;S.forEach(q=>{if(q===p||q.axis===p.axis)return;const tol=Math.max(p.t,q.t)+2*k;if(Math.abs(q.c-p[end])<=tol&&p.c>=q.a-tol&&p.c<=q.b+tol){const d=Math.abs(q.c-p[end]);if(!best||d<best.d)best={q,d};}});if(best){p[end]=best.q.c;if(p.c<best.q.a)best.q.a=p.c;if(p.c>best.q.b)best.q.b=p.c;}});});
   S=S.filter(s=>s.b-s.a>=Lmin*0.8);
   // drop near-duplicate parallel lines left after joining
-  S.sort((p,q)=>(q.b-q.a)-(p.b-p.a));S=S.filter((p,i)=>!S.slice(0,i).some(q=>q.axis===p.axis&&Math.abs(q.c-p.c)<=(p.t+q.t)/2+3&&Math.min(p.b,q.b)-Math.max(p.a,q.a)>=0.6*(p.b-p.a)));
+  S.sort((p,q)=>(q.b-q.a)-(p.b-p.a));const band=Math.max(4,Math.round(long*0.02));S=S.filter((p,i)=>!S.slice(0,i).some(q=>q.axis===p.axis&&Math.abs(q.c-p.c)<=Math.max((p.t+q.t)/2+3,band)&&Math.min(p.b,q.b)-Math.max(p.a,q.a)>=0.6*(p.b-p.a)));
+  // Tiles, hatching and a sheet grid are an even run of short lines. They are not walls, and they must not become the outline.
+  S=TraceGeom.dropEvenGrid(S,long);
   const toSeg=s=>s.axis==='h'?{a:[s.a,s.c],b:[s.b,s.c]}:{a:[s.c,s.a],b:[s.c,s.b]};
-  const segsD=S.map((s,i)=>Object.assign(toSeg(s),{ext:false,host:'d'+i,src:s}));
-  const eps=Math.max(2,k*1.5);const all=planarAll(segsD,eps);const faces=all.filter(f=>f.area<0&&-f.area>=w*h*0.02).sort((p,q)=>p.area-q.area);let outer=faces[0];
-  // The largest loop on a bordered sheet is the border. Use the house inside it.
-  if(outer&&faces.length>1){const edge=Math.max(8,Math.round(long*0.02));const onEdge=outer.poly.some(p=>p[0]<edge||p[1]<edge||p[0]>w-edge||p[1]>h-edge);if(onEdge){const house=faces.find(f=>-f.area<-outer.area*0.92&&-f.area>-outer.area*0.2);if(house)outer=house;}}
-  if(!outer)return null;
-  let centre=simplifyOrtho(outer.poly,Math.max(2,k));if(centre.length<3)return null;
+  const eps=Math.max(2,k*1.5);
+  const outerOf=segs=>{if(segs.length<4)return null;const segsD=segs.map((s,i)=>Object.assign(toSeg(s),{ext:false,host:'d'+i,src:s}));const all=planarAll(segsD,eps);const faces=all.filter(f=>f.area<0&&-f.area>=w*h*0.02).sort((p,q)=>p.area-q.area);let outer=faces[0];
+    if(outer&&faces.length>1){const edge=Math.max(8,Math.round(long*0.02));const onEdge=outer.poly.some(p=>p[0]<edge||p[1]<edge||p[0]>w-edge||p[1]>h-edge);if(onEdge){const house=faces.find(f=>-f.area<-outer.area*0.92&&-f.area>-outer.area*0.2);if(house)outer=house;}}
+    if(!outer)return null;const centre=simplifyOrtho(outer.poly,Math.max(2,k));if(centre.length<3)return null;return centre;};
+  let centre=outerOf(S);if(!centre)return null;
+  // A loop around one room or a furniture cluster is smaller than the long walls. Use those long walls for the outside.
+  let lowConfidence=false;const longSegs=S.filter(s=>s.b-s.a>=long*0.1);
+  if(longSegs.length>=4){const e=TraceGeom.segmentExtent(longSegs),ob=bbox(centre);const ew=e.x1-e.x0,eh=e.y1-e.y0,ow=ob.x1-ob.x0,oh=ob.y1-ob.y0;
+    if(ew>40&&eh>40&&(ow<ew*0.62||oh<eh*0.62)){const centre2=outerOf(longSegs);let upgraded=false;if(centre2){const b2=bbox(centre2);if((b2.x1-b2.x0)*(b2.y1-b2.y0)>(ow*oh)*1.35){centre=centre2;upgraded=true;}}if(!upgraded)lowConfidence=true;}}
   const onOutline=pt=>{for(let i=0;i<centre.length;i++){const a=centre[i],b=centre[(i+1)%centre.length];if(dist(pt,lerp(a,b,projT(pt,a,b)))<=Text*0.8+k)return true;}return false;};
   const outline=offsetOut(centre,Text/2).map(p=>[p[0]*sx,p[1]*sy]);
   // Both sides of the line sit inside the house: it is an internal wall, even when the outline loop ran along it to get past a door.
   const sideIn=s=>{const dx=s.b[0]-s.a[0],dy=s.b[1]-s.a[1],L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L,m=[(s.a[0]+s.b[0])/2,(s.a[1]+s.b[1])/2],d=Math.max(4,Text*0.9);return pip([m[0]+nx*d,m[1]+ny*d],centre)&&pip([m[0]-nx*d,m[1]-ny*d],centre);};
-  const walls=segsD.filter(s=>sideIn(s)&&dist(s.a,s.b)*mmPx>=600).map(s=>({id:uid(),a:[s.a[0]*sx,s.a[1]*sy],b:[s.b[0]*sx,s.b[1]*sy]}));
-  const reach=Math.max(Text*2.2+k,800/mmPx);
+  const segsD=S.map((s,i)=>Object.assign(toSeg(s),{ext:false,host:'d'+i,src:s}));
+  let walls=segsD.filter(s=>sideIn(s)&&dist(s.a,s.b)*mmPx>=600).map(s=>({id:uid(),a:[s.a[0]*sx,s.a[1]*sy],b:[s.b[0]*sx,s.b[1]*sy]}));
+  const reach=Math.max(Text*3+k,Math.min(long*0.035,450/mmPx));
   const snapOut=(pt,other)=>{let best=null;for(let i=0;i<outline.length;i++){const a=outline[i],b=outline[(i+1)%outline.length];const ux=other[0]-pt[0],uy=other[1]-pt[1];const L=Math.hypot(ux,uy)||1;const X=segX([pt[0],pt[1]],[pt[0]-ux/L*reach*sx,pt[1]-uy/L*reach*sy],a,b);if(X){const q=lerp(a,b,X[1]);const d=dist(q,pt);if(!best||d<best.d)best={q,d};}}return best?best.q:pt;};
   walls.forEach(wl=>{const a=wl.a,b=wl.b;wl.a=snapOut(a,b);wl.b=snapOut(b,a);});
+  walls=TraceGeom.dropFloating(walls,outline,Math.max(14,Math.min(36,Text*((sx+sy)/2)*2+6)));
   const ops=gaps.map(g=>{const mid=g.axis==='h'?[(g.a+g.b)/2,g.c]:[g.c,(g.a+g.b)/2];const ext=onOutline(mid);const wpx=g.b-g.a;const wmm=wpx*mmPx;
     const type=ext?(g.line?(wmm>=2200?'garage':'window'):(wmm>1300?'slider':'door')):'door';return {type,mid:[mid[0]*sx,mid[1]*sy],wpx:wpx*(g.axis==='h'?sx:sy),wmm};}).filter(o=>o.wmm>=500);
   const opsD=[];ops.sort((p,q)=>q.wmm-p.wmm).forEach(o=>{if(!opsD.some(q=>dist(q.mid,o.mid)<Text*2*sx))opsD.push(o);});
@@ -1418,8 +1430,9 @@ function detectIn(c,w,h,sx,sy){
     for(let i=0;i<centre.length;i++){const a=centre[i],b=centre[(i+1)%centre.length];const L=dist(a,b);if(L<Text*4)continue;let nx=(b[1]-a[1])/L,ny=-(b[0]-a[0])/L;const m=lerp(a,b,0.5);if(pip([m[0]+nx*2,m[1]+ny*2],centre)){nx=-nx;ny=-ny;}
       [0.2,0.5,0.8].forEach(t=>{const q=lerp(a,b,t);const x=Math.round(q[0]+nx*off),y=Math.round(q[1]+ny*off);if(x<0||y<0||x>=w||y>=h||inkD[y*w+x]||lab[y*w+x])return;nid++;const r=flood(inkD,w,h,x,y,Math.round(hA*1.2),lab,nid);if(!r||r.edge)return;
         const bw=r.x1-r.x0+1,bh=r.y1-r.y0+1;const fill=r.n/(bw*bh);const m2=bw*bh*mmPx*mmPx/1e6;if(fill<0.72||m2<2.5||m2>90||Math.min(bw,bh)*mmPx<1200)return;areas.push({a:[r.x0*sx,r.y0*sy],b:[(r.x1+1)*sx,(r.y1+1)*sy]});});}}catch(e){}
+  const scrub=TraceGeom.scrubWalls(walls,outline);if(scrub.lowConfidence)lowConfidence=true;walls=lowConfidence?[]:scrub.walls;
   const srcLong=Math.max(w*sx,h*sy),textSrc=Text*((sx+sy)/2);
-  return {outline,walls,ops:opsD,areas,mmPerPx:TraceGeom.scaleMmPerPx(srcLong,textSrc),text:Text};}
+  return {outline,walls,ops:lowConfidence?[]:opsD,areas:lowConfidence?[]:areas,mmPerPx:TraceGeom.scaleMmPerPx(srcLong,textSrc),text:Text,lowConfidence};}
 /* Outdoor labels name decks and paving, not rooms. */
 const OUTDOOR_RE=/deck|alfresco|verand|patio|porch|pergola|drive|yard|garden|shed|pool|terrace|balcon|lawn|court|landscap/i;
 function interiorPt(P){const b=bbox(P);let best=null,bd=-1;const n=14;for(let i=1;i<n;i++)for(let j=1;j<n;j++){const q=[b.x0+(b.x1-b.x0)*i/n,b.y0+(b.y1-b.y0)*j/n];if(!pip(q,P))continue;let d=1e9;for(let k=0;k<P.length;k++){const a=P[k],c=P[(k+1)%P.length];d=Math.min(d,dist(q,lerp(a,c,projT(q,a,c))));}if(d>bd){bd=d;best=q;}}return best||[(b.x0+b.x1)/2,(b.y0+b.y1)/2];}
@@ -1451,7 +1464,8 @@ function labelLevel(r,labs){const W=doc.underlay.w,H=doc.underlay.h;doc.rooms=la
 function finishOpenings(){doc.openings.forEach(o=>{if(o.wpx){o.width=Math.max(500,Math.round(o.wpx*doc.scale/10)*10);delete o.wpx;}});}
 async function autoTrace(manual){if(!doc.underlay.src){flash('Upload a plan first.');return;}if(aiBusy)return;if(manual&&doc.outline.length>=3&&!confirmReplace())return;aiBusy=true;renderPlanTab();flash('Finding the walls on your plan...');
   try{const list=await detectPlans();const many=!!(list&&list.length>1);const r=list&&(list.find(x=>!x.failed)||list[0]);const haveGeo=r&&r.outline.length>=3;
-    if(haveGeo){snapshot();doc.scale=r.mmPerPx;
+    if(haveGeo){snapshot();doc.scale=r.lowConfidence?null:r.mmPerPx;
+      const longPx=Math.max(doc.underlay.w||1,doc.underlay.h||1);const sample=[r].concat(list||[]).find(x=>x&&x.text&&!x.lowConfidence)||r;penTrace=!(sample&&sample.text>=8&&sample.text>=longPx*0.008);
       if(many){ensureLevels();const old=doc.levels;doc.levels=list.map((_,i)=>({id:(old[i]&&old[i].id)||uid(),name:(old[i]&&old[i].name)||LEVEL_NAMES[i]||('Level '+(i+1)),h:old[i]?old[i].h:null,shift:[0,0],data:levelData({})}));doc.level=0;loadLevelData(0);doc.site=null;
         list.forEach((x,i)=>{if(!x.failed)withLevel(i,()=>applyGeo(x,true));});}
       else applyGeo(r,doc.level>0);}
@@ -1466,19 +1480,20 @@ async function autoTrace(manual){if(!doc.underlay.src){flash('Upload a plan firs
         const W=doc.underlay.w,H=doc.underlay.h;const bxs=list.map(x=>x.failed?x.ubox:bbox(x.outline));const per=list.map(()=>[]);
         labels.rooms.forEach(rm=>{const p=[rm.x/1000*W,rm.y/1000*H];let bi=0,bd=Infinity;bxs.forEach((b,i)=>{const dx=Math.max(b.x0-p[0],0,p[0]-b.x1),dy=Math.max(b.y0-p[1],0,p[1]-b.y1);const d=Math.hypot(dx,dy);if(d<bd){bd=d;bi=i;}});per[bi].push(rm);});
         list.forEach((x,i)=>{if(!x.failed)withLevel(i,()=>labelLevel(x,per[i]));});
-        const s=withLevel(list.findIndex(x=>!x.failed),()=>autoScale());if(s&&s/doc.scale>0.6&&s/doc.scale<1.6){doc.scale=s;scaleNote=`Scale set from the room sizes on the plan (1 m = ${fm(1000/s,0)} px).`;}}
-      else{labelLevel(r,labels.rooms);const s=autoScale();if(s&&s/doc.scale>0.6&&s/doc.scale<1.6){doc.scale=s;scaleNote=`Scale set from the room sizes on the plan (1 m = ${fm(1000/s,0)} px).`;}}}
+        const s=withLevel(list.findIndex(x=>!x.failed),()=>autoScale());if(s&&(!doc.scale||(s/doc.scale>0.6&&s/doc.scale<1.6))){doc.scale=s;scaleNote=`Scale set from the room sizes on the plan (1 m = ${fm(1000/s,0)} px).`;}}
+      else{labelLevel(r,labels.rooms);const s=autoScale();if(s&&(!doc.scale||(s/doc.scale>0.6&&s/doc.scale<1.6))){doc.scale=s;scaleNote=`Scale set from the room sizes on the plan (1 m = ${fm(1000/s,0)} px).`;}}}
     if(many){list.forEach((x,i)=>{if(!x.failed)withLevel(i,finishOpenings);});
       // stack each floor over the one below it
       let fits=[];for(let i=1;i<list.length;i++){if(list[i].failed||list[i-1].failed)continue;const al=alignLevel(i);if(al){doc.levels[i].shift=al.shift;fits.push(al.fit);}}
       const per=eachLevel(()=>({n:doc.outline.length>=3?rooms().length:0,A:doc.outline.length>=3?outlineArea():0}));const lost=list.map((x,i)=>x.failed?levelName(i).toLowerCase():null).filter(Boolean);
       doc.level=list.length-1;loadLevelData(doc.level);if(three)three.fitted=false;invalidate();changed(true);setTool('select');setView('3d');
       const hint=doc.floorHint==='page'?'Ground floor is page 1.':doc.floorHint==='lower'?'Ground floor is the lower drawing.':'Ground floor is the left drawing.';
-      flash(lost.length?`${lowRes}${list.length} drawings. ${lost.join(' and ')} still need tracing. ${hint}`:`${lowRes}${list.length} floors traced and stacked. ${per.map((p,i)=>list[i].failed?'':`${levelName(i)} ${fm(p.A,0)} m²`).filter(Boolean).join(', ')}. ${hint} You're on the top floor.`);
+      const messy=list.some(x=>x.lowConfidence);
+      flash(lost.length?`${lowRes}${list.length} drawings. ${lost.join(' and ')} still need tracing. ${hint}`:`${lowRes}${list.length} floors traced and stacked. ${per.map((p,i)=>list[i].failed?'':`${levelName(i)} ${doc.scale?fm(p.A,0)+' m²':'scale not set'}`).filter(Boolean).join(', ')}. ${hint} You're on the top floor.${messy?' A messy floor was left as outside walls only. Set the scale, then add its internal walls.':''}`);
       return;}
     finishOpenings();
     invalidate();changed(true);setTool('select');const R=rooms();
-    flash(`${lowRes}Traced ${R.length} rooms, ${doc.walls.length} internal walls, ${doc.openings.length} openings. Check a room size, then open Materials.`);}
+    flash(r.lowConfidence?`${lowRes}Outside walls traced. The other lines were too messy to use as walls. Set the scale on a labelled room, then add the internal walls.`:`${lowRes}Traced ${R.length} rooms, ${doc.walls.length} internal walls, ${doc.openings.length} openings. Check a room size, then open Materials.`);}
   catch(e){console.error(e);flash('Auto trace failed on this file. Trace it with the Outline and Wall tools.');}
   finally{aiBusy=false;renderPlanTab();}}
 
