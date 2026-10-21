@@ -23,24 +23,24 @@ export default function AccountingLogos({
       <p className={`font-sans text-[12.5px] leading-snug ${label} mb-3 max-w-[48ch]`}>
         Xero invoice push is live. MYOB and QuickBooks are coming soon.
       </p>
-      <ul className={`flex flex-wrap items-center gap-x-6 gap-y-3 ${muted}`} aria-label="Accounting integrations">
-        <li className="inline-flex items-baseline gap-2">
+      <ul className={`flex flex-col items-start gap-y-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6 max-w-full ${muted}`} aria-label="Accounting integrations">
+        <li className="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1">
           <span className="font-sans text-[1.15rem] sm:text-[1.25rem] font-bold tracking-tight">Xero</span>
-          <span className={`font-sans text-[10px] font-bold tracking-[0.12em] uppercase px-1.5 py-0.5 rounded ${live}`}>
+          <span className={`font-sans text-[10px] font-bold tracking-[0.08em] uppercase px-1.5 py-0.5 rounded whitespace-nowrap ${live}`}>
             Live
           </span>
         </li>
-        <li className="inline-flex items-baseline gap-2">
+        <li className="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1">
           <span className="font-sans text-[1.15rem] sm:text-[1.25rem] font-bold tracking-tight">MYOB</span>
-          <span className={`font-sans text-[10px] font-bold tracking-[0.12em] uppercase px-1.5 py-0.5 rounded ${soon}`}>
+          <span className={`font-sans text-[10px] font-bold tracking-[0.08em] uppercase px-1.5 py-0.5 rounded whitespace-nowrap ${soon}`}>
             Coming soon
           </span>
         </li>
-        <li className="inline-flex items-baseline gap-2">
+        <li className="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1">
           <span className="font-sans text-[1.05rem] sm:text-[1.15rem] font-bold tracking-tight">
             QuickBooks
           </span>
-          <span className={`font-sans text-[10px] font-bold tracking-[0.12em] uppercase px-1.5 py-0.5 rounded ${soon}`}>
+          <span className={`font-sans text-[10px] font-bold tracking-[0.08em] uppercase px-1.5 py-0.5 rounded whitespace-nowrap ${soon}`}>
             Coming soon
           </span>
         </li>
