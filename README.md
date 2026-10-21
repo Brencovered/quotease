@@ -84,7 +84,9 @@ Secrets for the weekly GitHub Action `.github/workflows/abn-directory.yml` (Sett
 
 Optional variables: `ABN_ENRICH_LIMIT` (default 800), `DIRECTORY_VERIFY_LIMIT` (default 2000). The workflow runs Sundays at 16:00 UTC, or on demand with phase `all`, `ingest`, `enrich`, or `verify`. It downloads each ABR zip once, stream-parses it, bulk-inserts trade candidates, guesses websites in parallel, then re-checks ABNs (ABN Lookup) and email DNS MX records. It never sends email and it deletes `GOOGLE_PLACES_API_KEY` from the job environment before it starts. Google Places stays on the manual admin scrape, directory-page scrape, and listing-create screens. The paused `expand-directory` cron stays out of `vercel.json`.
 
-ABN bulk ingest from the admin UI returns 409 and points at this workflow. A small enrich batch can still be started from the admin screen; that path does not call Google.
+The admin page **ABN directory growth** starts that same workflow. The server needs `GITHUB_ACTIONS_DISPATCH_TOKEN` (Vercel env or `.env.local`): a fine-grained GitHub token with Actions read and write on this repository, or a classic token with the `workflow` scope. Optional `GITHUB_REPOSITORY` (default `Brencovered/quotease`) and `ABN_WORKFLOW_REF` (default `main`). Merge the workflow to that ref before using the button. Apply `supabase/migrations/20261021140000_abn_directory_runs.sql` so the page can show queued, running, done, or failed, with a link to the Actions run. The page polls that table and the newest candidates and listings. Phase 2 ("Process next 50", or continuous while the page is open) still runs on the server and does not call Google.
+
+The Actions workflow also writes progress into `abn_directory_runs`. A full run can take hours of GitHub-hosted time. It does not call a paid search API.
 
 ## What's still honest / incomplete
 

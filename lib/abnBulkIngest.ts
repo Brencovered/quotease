@@ -220,7 +220,11 @@ export async function insertTradeCandidates(
 export async function ingestZipFile(
   zipPath: string,
   admin: ReturnType<typeof createAdminClient>,
-  options?: { startEntryIndex?: number; onFile?: (entryIndex: number, entryName: string, result: CandidateInsertResult) => Promise<void> },
+  options?: {
+    startEntryIndex?: number;
+    onFile?: (entryIndex: number, entryName: string, result: CandidateInsertResult) => Promise<void>;
+    onBatch?: (snapshot: { entry: string; scanned: number; tradeMatches: number; candidatesInserted: number }) => Promise<void>;
+  },
 ): Promise<{ files: number; scanned: number; tradeMatches: number; candidatesInserted: number }> {
   const entries = await listZipXmlEntries(zipPath);
   const start = options?.startEntryIndex ?? 0;
@@ -237,6 +241,12 @@ export async function ingestZipFile(
         tradeMatches: fileResult.tradeMatches + inserted.tradeMatches,
         candidatesInserted: fileResult.candidatesInserted + inserted.candidatesInserted,
       };
+      await options?.onBatch?.({
+        entry,
+        scanned: fileResult.scanned,
+        tradeMatches: fileResult.tradeMatches,
+        candidatesInserted: fileResult.candidatesInserted,
+      });
     });
     if (fileResult.scanned === 0) fileResult.scanned = scanned;
     totals.files += 1;

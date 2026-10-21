@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   Globe, Image as ImageIcon, FileText, Briefcase, Play,
@@ -633,57 +633,216 @@ function DirectoryExpansionSweepPanel() {
   );
 }
 
+interface AbnRunRow {
+  id: string;
+  phase: string;
+  status: "queued" | "running" | "done" | "failed";
+  message: string | null;
+  error: string | null;
+  github_run_url: string | null;
+  candidates_inserted: number;
+  listings_created: number;
+  candidates_processed: number;
+  triggered_by: string | null;
+}
+
+interface AbnCandidateRow {
+  id: string;
+  abn: string;
+  legal_name: string;
+  trading_name: string | null;
+  matched_trade: string;
+  state: string | null;
+  postcode: string | null;
+  website_url_found: string | null;
+  created_at: string;
+}
+
+interface AbnListingRow {
+  id: string;
+  business_name: string;
+  trades: string[] | null;
+  suburb: string | null;
+  website_url: string | null;
+  abn: string | null;
+  verified_at: string | null;
+  verification_source: string | null;
+  email_valid: boolean | null;
+}
+
+interface AbnDirectoryStats {
+  totalCandidates: number;
+  unprocessed: number;
+  listingsCreated: number;
+  ingestCursor: { split_file_index: number; internal_file_index: number; last_run_at: string | null } | null;
+  migrationReady: boolean;
+  setupErrors: string[];
+  activeRun: AbnRunRow | null;
+  recentRuns: AbnRunRow[];
+  recentCandidates: AbnCandidateRow[];
+  recentListings: AbnListingRow[];
+}
+
+interface EnrichBatchResult {
+  processed: number;
+  websitesFound: number;
+  listingsCreated: number;
+  remaining: number;
+  detail: string[];
+  error?: string;
+}
+
+function verifiedLabel(listing: AbnListingRow): string {
+  if (!listing.verified_at) return "Not checked yet";
+  const parts = [listing.verification_source || "Checked"];
+  if (listing.email_valid === true) parts.push("email MX ok");
+  if (listing.email_valid === false) parts.push("email MX failed");
+  return parts.join(" · ");
+}
+
 /**
- * Two-phase ABN Bulk Extract pipeline - the free, government-data
- * path to new listings after Yellow Pages turned out to be IP-blocked
- * and the decision was made not to pay for a proxy to get past it.
- * Phase 1 downloads/filters the ABN register into a candidate queue
- * (large file, resumable across many runs); phase 2 processes that
- * queue 50 at a time, guessing and verifying a website for each via
- * free domain-guessing (validated against 5 real businesses earlier -
- * 3/5 hit rate - before being wired in here).
+ * Free ABN directory growth. Phase 1 is the ABR bulk extract, which is
+ * too large for this server, so the buttons start the GitHub Actions
+ * workflow and this panel polls abn_directory_runs plus the newest
+ * candidates and listings. Phase 2 still runs here, 50 at a time, and
+ * can keep going while the page is open.
  */
 function AbnDirectoryPanel() {
-  const [stats, setStats] = useState<{
-    totalCandidates: number; unprocessed: number; listingsCreated: number;
-    ingestCursor: { split_file_index: number; records_processed_in_file: number } | null;
-  } | null>(null);
+  const [stats, setStats] = useState<AbnDirectoryStats | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [starting, setStarting] = useState<"ingest" | "all" | null>(null);
   const [enriching, setEnriching] = useState(false);
-  const [enrichResult, setEnrichResult] = useState<{
-    processed: number; websitesFound: number; listingsCreated: number;
-    remaining: number; detail: string[];
-  } | null>(null);
+  const [continuous, setContinuous] = useState(false);
+  const [enrichResult, setEnrichResult] = useState<EnrichBatchResult | null>(null);
+  const [sessionLines, setSessionLines] = useState<string[]>([]);
+  const stopRef = useRef(false);
+  const continuousRef = useRef(false);
+  const liveRef = useRef(false);
 
   async function loadStats() {
     const res = await fetch("/api/admin/abn-directory");
-    if (res.ok) setStats(await res.json());
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setLoadError(body.error || `Could not load ABN directory status (${res.status}).`);
+      return;
+    }
+    setLoadError(null);
+    setStats(body);
+    const active = body.activeRun?.status === "queued" || body.activeRun?.status === "running";
+    liveRef.current = active || continuousRef.current;
   }
 
-  useEffect(() => { loadStats(); }, []);
+  useEffect(() => {
+    let cancelled = false;
+    async function loop() {
+      while (!cancelled) {
+        try {
+          await loadStats();
+        } catch (err) {
+          if (!cancelled) setLoadError(err instanceof Error ? err.message : "Could not load ABN directory status.");
+        }
+        await new Promise((resolve) => setTimeout(resolve, liveRef.current ? 4000 : 15000));
+      }
+    }
+    loop();
+    return () => { cancelled = true; };
+  }, []);
 
-  async function runEnrich() {
-    setEnriching(true);
+  async function startPipeline(phase: "ingest" | "all") {
+    setStarting(phase);
+    setActionError(null);
+    const res = await fetch("/api/admin/abn-directory", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phase }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) setActionError(body.error || "Could not start the workflow.");
+    setStarting(null);
+    liveRef.current = true;
+    await loadStats();
+  }
+
+  async function runEnrichOnce(): Promise<"ok" | "empty" | "error"> {
     const res = await fetch("/api/admin/abn-directory", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phase: "enrich" }),
     });
-    setEnrichResult(await res.json());
-    setEnriching(false);
-    loadStats();
+    const body = await res.json().catch(() => ({})) as EnrichBatchResult;
+    if (!res.ok) {
+      setActionError(body.error || "Phase 2 failed.");
+      return "error";
+    }
+    setEnrichResult(body);
+    if (body.detail?.length) {
+      setSessionLines((prev) => [...body.detail].reverse().concat(prev).slice(0, 80));
+    }
+    await loadStats();
+    return (body.processed ?? 0) > 0 ? "ok" : "empty";
   }
+
+  async function runEnrich() {
+    setEnriching(true);
+    setActionError(null);
+    const outcome = await runEnrichOnce();
+    if (outcome === "empty") setActionError("No candidates are waiting for phase 2. Start phase 1 and wait for trade businesses to land in the queue.");
+    setEnriching(false);
+  }
+
+  async function runContinuous() {
+    stopRef.current = false;
+    continuousRef.current = true;
+    setContinuous(true);
+    setActionError(null);
+    liveRef.current = true;
+    let createdAny = false;
+    while (!stopRef.current) {
+      const outcome = await runEnrichOnce();
+      if (outcome === "ok") createdAny = true;
+      if (outcome !== "ok" || stopRef.current) {
+        if (outcome === "empty") {
+          setActionError(createdAny
+            ? "Phase 2 queue is empty. New candidates from phase 1 will show up in the tables as the workflow inserts them."
+            : "No candidates are waiting for phase 2. Start phase 1 and wait for trade businesses to land in the queue.");
+        }
+        break;
+      }
+    }
+    continuousRef.current = false;
+    setContinuous(false);
+    await loadStats();
+  }
+
+  function stopContinuous() {
+    stopRef.current = true;
+  }
+
+  const run = stats?.activeRun ?? stats?.recentRuns?.[0] ?? null;
+  const phaseBusy = enriching || continuous || starting !== null;
+  const tokenMissing = (stats?.setupErrors ?? []).some((error) => error.includes("GITHUB_ACTIONS_DISPATCH_TOKEN"));
 
   return (
     <div className="card space-y-4">
       <div>
         <p className="section-tag">ABN directory growth</p>
         <p className="text-[12.5px] text-[var(--ink-faint)] mt-0.5">
-          Free, no IP-blocking risk - pulls trade businesses from the Australian Business Register&apos;s public bulk
-          data, then guesses their website from their name rather than paying for a search API. The bulk file is
-          too large for this server, so phase 1 runs on the free GitHub Actions workflow <span className="font-mono">abn-directory</span>.
-          This page can still process a small batch of candidates that workflow has already queued.
+          Free government data. Phase 1 downloads the ABR bulk extract on GitHub Actions (the file is too large for this server)
+          and streams trade businesses into the queue. Phase 2 guesses a website from the business name and adds a directory listing
+          when the suburb is confirmed. No Google Places calls.
         </p>
       </div>
+
+      {(loadError || actionError || (stats?.setupErrors.length ?? 0) > 0) && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 space-y-1">
+          {loadError && <p className="text-[12px] text-amber-900 flex gap-1.5"><AlertTriangle size={14} className="shrink-0 mt-0.5" />{loadError}</p>}
+          {actionError && <p className="text-[12px] text-amber-900 flex gap-1.5"><AlertTriangle size={14} className="shrink-0 mt-0.5" />{actionError}</p>}
+          {stats?.setupErrors.map((error) => (
+            <p key={error} className="text-[12px] text-amber-900 flex gap-1.5"><AlertTriangle size={14} className="shrink-0 mt-0.5" />{error}</p>
+          ))}
+        </div>
+      )}
 
       {stats && (
         <div className="grid grid-cols-3 gap-3">
@@ -702,38 +861,143 @@ function AbnDirectoryPanel() {
         </div>
       )}
 
-      <div className="grid sm:grid-cols-2 gap-3">
-        <div className="border border-[var(--line)] rounded-xl p-3">
-          <p className="text-[12px] font-bold text-[var(--ink)] mb-1">Phase 1: pull from ABN file</p>
-          <p className="text-[11px] text-[var(--ink-faint)] mb-2">
-            Runs weekly in GitHub Actions, or on demand with workflow_dispatch. It downloads each zip once,
-            stream-parses it, and bulk-inserts trade matches. No Google Places calls.
-            {stats?.ingestCursor ? ` Last cursor: file ${stats.ingestCursor.split_file_index}.` : ""}
+      {run && (
+        <div className="border border-[var(--line)] rounded-xl p-3 space-y-1">
+          <p className="text-[12px] font-bold text-[var(--ink)]">
+            Run {run.status} · phase {run.phase}
+            {run.triggered_by ? ` · ${run.triggered_by}` : ""}
           </p>
+          {run.message && <p className="text-[12px] text-[var(--ink-soft)]">{run.message}</p>}
+          {run.error && <p className="text-[12px] text-red-700">{run.error}</p>}
+          <p className="text-[11.5px] font-mono text-[var(--ink-faint)]">
+            this run: {run.candidates_inserted} candidates inserted, {run.candidates_processed} processed, {run.listings_created} listings created
+          </p>
+          {run.github_run_url && (
+            <a href={run.github_run_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[12px] font-bold text-[var(--ink)] underline">
+              Open the GitHub Actions run <ExternalLink size={12} />
+            </a>
+          )}
+        </div>
+      )}
+
+      <div className="grid sm:grid-cols-2 gap-3">
+        <div className="border border-[var(--line)] rounded-xl p-3 space-y-2">
+          <p className="text-[12px] font-bold text-[var(--ink)]">Phase 1: pull from the ABN file</p>
+          <p className="text-[11px] text-[var(--ink-faint)]">
+            Starts the free <span className="font-mono">abn-directory</span> workflow. The full pipeline also guesses websites and re-checks ABNs and email DNS.
+            {stats?.ingestCursor ? ` Cursor: split file ${stats.ingestCursor.split_file_index}.` : ""}
+          </p>
+          <button onClick={() => startPipeline("ingest")} disabled={phaseBusy || tokenMissing || !stats?.migrationReady}
+            className="w-full flex items-center justify-center gap-1.5 text-[12.5px] font-bold text-white bg-[#1f2937] px-3 py-2 rounded-lg disabled:opacity-50">
+            {starting === "ingest" ? <><RefreshCw size={12} className="animate-spin" /> Starting...</> : <><Play size={12} /> Start phase 1</>}
+          </button>
+          <button onClick={() => startPipeline("all")} disabled={phaseBusy || tokenMissing || !stats?.migrationReady}
+            className="w-full flex items-center justify-center gap-1.5 text-[12.5px] font-bold text-[var(--ink)] border border-[var(--line)] px-3 py-2 rounded-lg disabled:opacity-50">
+            {starting === "all" ? <><RefreshCw size={12} className="animate-spin" /> Starting...</> : <>Start full pipeline</>}
+          </button>
         </div>
 
-        <div className="border border-[var(--line)] rounded-xl p-3">
-          <p className="text-[12px] font-bold text-[var(--ink)] mb-1">Phase 2: guess + verify websites</p>
-          <p className="text-[11px] text-[var(--ink-faint)] mb-2">Processes 50 queued candidates per run</p>
-          <button onClick={runEnrich} disabled={enriching}
-            className="w-full flex items-center justify-center gap-1.5 text-[12.5px] font-bold text-white bg-[#ffb400] px-3 py-2 rounded-lg">
-            {enriching ? <><RefreshCw size={12} className="animate-spin" /> Processing...</> : <><Play size={12} /> Process next 50</>}
+        <div className="border border-[var(--line)] rounded-xl p-3 space-y-2">
+          <p className="text-[12px] font-bold text-[var(--ink)]">Phase 2: guess websites and add listings</p>
+          <p className="text-[11px] text-[var(--ink-faint)]">Processes 50 queued candidates per batch on this server. Continuous keeps going while this page is open.</p>
+          <button onClick={runEnrich} disabled={phaseBusy}
+            className="w-full flex items-center justify-center gap-1.5 text-[12.5px] font-bold text-white bg-[#ffb400] px-3 py-2 rounded-lg disabled:opacity-50">
+            {enriching && !continuous ? <><RefreshCw size={12} className="animate-spin" /> Processing...</> : <><Play size={12} /> Process next 50</>}
           </button>
+          {continuous ? (
+            <button onClick={stopContinuous}
+              className="w-full text-[12.5px] font-bold text-white bg-red-600 px-3 py-2 rounded-lg">
+              Stop after this batch
+            </button>
+          ) : (
+            <button onClick={runContinuous} disabled={phaseBusy}
+              className="w-full text-[12.5px] font-bold text-[var(--ink)] border border-[var(--line)] px-3 py-2 rounded-lg disabled:opacity-50">
+              Run phase 2 until I stop
+            </button>
+          )}
           {enrichResult && (
-            <p className="text-[11px] text-[var(--ink-faint)] mt-2 font-mono">
-              processed {enrichResult.processed}, found {enrichResult.websitesFound}, created {enrichResult.listingsCreated}
+            <p className="text-[11px] text-[var(--ink-faint)] font-mono">
+              last batch: processed {enrichResult.processed}, found {enrichResult.websitesFound}, created {enrichResult.listingsCreated}, remaining {enrichResult.remaining}
             </p>
           )}
         </div>
       </div>
 
-      {enrichResult && enrichResult.detail.length > 0 && (
-        <div className="bg-[var(--app-bg)] rounded-xl p-3 max-h-48 overflow-y-auto space-y-1">
-          {enrichResult.detail.map((line, i) => (
-            <p key={i} className="text-[11px] font-mono text-[var(--ink-soft)]">{line}</p>
-          ))}
+      {sessionLines.length > 0 && (
+        <div>
+          <p className="text-[11px] font-bold uppercase text-[var(--ink-faint)] mb-1">This session</p>
+          <div className="bg-[var(--app-bg)] rounded-xl p-3 max-h-48 overflow-y-auto space-y-1">
+            {sessionLines.map((line, i) => (
+              <p key={`${line}-${i}`} className="text-[11px] font-mono text-[var(--ink-soft)]">{line}</p>
+            ))}
+          </div>
         </div>
       )}
+
+      <div className="grid lg:grid-cols-2 gap-3">
+        <div>
+          <p className="text-[11px] font-bold uppercase text-[var(--ink-faint)] mb-1">Newest candidates</p>
+          <div className="border border-[var(--line)] rounded-xl overflow-x-auto max-h-72">
+            <table className="w-full text-left text-[11.5px]">
+              <thead className="text-[10px] uppercase text-[var(--ink-faint)]">
+                <tr>
+                  <th className="px-2 py-1.5">Name</th>
+                  <th className="px-2 py-1.5">Trade</th>
+                  <th className="px-2 py-1.5">Place</th>
+                  <th className="px-2 py-1.5">Website</th>
+                  <th className="px-2 py-1.5">ABN</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(stats?.recentCandidates ?? []).map((row) => (
+                  <tr key={row.id} className="border-t border-[var(--line)]">
+                    <td className="px-2 py-1.5 text-[var(--ink)]">{row.trading_name || row.legal_name}</td>
+                    <td className="px-2 py-1.5">{row.matched_trade}</td>
+                    <td className="px-2 py-1.5">{[row.state, row.postcode].filter(Boolean).join(" ") || "—"}</td>
+                    <td className="px-2 py-1.5 max-w-[8rem] truncate">{row.website_url_found ?? ""}</td>
+                    <td className="px-2 py-1.5 font-mono">{row.abn}</td>
+                  </tr>
+                ))}
+                {(stats?.recentCandidates.length ?? 0) === 0 && (
+                  <tr><td colSpan={5} className="px-2 py-3 text-[var(--ink-faint)]">No candidates yet. Start phase 1.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <p className="text-[11px] font-bold uppercase text-[var(--ink-faint)] mb-1">Newest directory listings from ABN</p>
+          <div className="border border-[var(--line)] rounded-xl overflow-x-auto max-h-72">
+            <table className="w-full text-left text-[11.5px]">
+              <thead className="text-[10px] uppercase text-[var(--ink-faint)]">
+                <tr>
+                  <th className="px-2 py-1.5">Name</th>
+                  <th className="px-2 py-1.5">Trade</th>
+                  <th className="px-2 py-1.5">Suburb</th>
+                  <th className="px-2 py-1.5">Website</th>
+                  <th className="px-2 py-1.5">ABN</th>
+                  <th className="px-2 py-1.5">Verified</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(stats?.recentListings ?? []).map((row) => (
+                  <tr key={row.id} className="border-t border-[var(--line)]">
+                    <td className="px-2 py-1.5 text-[var(--ink)]">{row.business_name}</td>
+                    <td className="px-2 py-1.5">{row.trades?.[0] ?? ""}</td>
+                    <td className="px-2 py-1.5">{row.suburb ?? ""}</td>
+                    <td className="px-2 py-1.5 max-w-[10rem] truncate">{row.website_url ?? ""}</td>
+                    <td className="px-2 py-1.5 font-mono">{row.abn ?? ""}</td>
+                    <td className="px-2 py-1.5">{verifiedLabel(row)}</td>
+                  </tr>
+                ))}
+                {(stats?.recentListings.length ?? 0) === 0 && (
+                  <tr><td colSpan={6} className="px-2 py-3 text-[var(--ink-faint)]">No ABN listings yet. Phase 2 adds them after a website and suburb are confirmed.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
