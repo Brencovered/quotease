@@ -57,7 +57,34 @@ npm run dev
 npm run build
 npm run lint
 npm test          # vitest unit tests (quote grouping, Xero line builder, trade normalize)
+npm run directory:merge    # dry-run duplicate plan; add -- --apply to write
+npm run directory:abn      # free ABN ingest + enrich + MX/ABN verify (local)
+npm run directory:verify   # re-check ABN status and email MX only
 ```
+
+## Directory data (free, scheduled)
+
+`directory_listing` feeds SEO pages and outreach. Phone numbers are stored as E.164 (`+61…`) in `phone_e164`, websites as a bare hostname in `website_domain`, and ABNs as 11 digits. Shared call-centre numbers (`13` / `1300` / `1800` / `1900`) and directory hosts (Facebook, Yellow Pages, supplier sites) are not used as unique identity.
+
+Apply order on an existing database (do this yourself; nothing in CI mutates production):
+
+1. Apply `supabase/migrations/20261021120000_directory_listing_identity.sql`. It adds `abn`, `phone_e164`, `website_domain`, `verified_at`, `verification_source`, `email_valid`, and the shared-key flags. It also relabels historical `source = 'scraper'` rows that have a `place_id` to `google_places`. Deploy the app only after this migration: outreach export and claim-invite select `email_valid`.
+2. Dry-run `npx tsx scripts/merge-directory-duplicates.ts` (or `npm run directory:merge`). Read the MERGE, SUPPRESS, and REVIEW lines.
+3. Apply with `npx tsx scripts/merge-directory-duplicates.ts --apply`. Same-suburb rows that are the same business are merged (claimed or richer row wins; the loser is snapshotted in `directory_listing_merge_log`). Different businesses that share a phone or domain keep both rows; the extra row drops the normalised key so the unique index can exist. The displayed phone and website stay. A group with two claimed profiles is left for a person to resolve.
+4. Apply `supabase/migrations/20261021130000_directory_listing_unique_identity.sql`. It refuses to create the unique indexes while any duplicate phone, domain, or ABN group remains in one suburb.
+5. Deploy the app.
+
+Secrets for the weekly GitHub Action `.github/workflows/abn-directory.yml` (Settings → Secrets and variables → Actions). Do not commit values.
+
+| Name | Where |
+| --- | --- |
+| `SUPABASE_URL` | same as `NEXT_PUBLIC_SUPABASE_URL` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API |
+| `ABN_LOOKUP_GUID` | free registration at https://abr.business.gov.au/Tools/WebServices |
+
+Optional variables: `ABN_ENRICH_LIMIT` (default 800), `DIRECTORY_VERIFY_LIMIT` (default 2000). The workflow runs Sundays at 16:00 UTC, or on demand with phase `all`, `ingest`, `enrich`, or `verify`. It downloads each ABR zip once, stream-parses it, bulk-inserts trade candidates, guesses websites in parallel, then re-checks ABNs (ABN Lookup) and email DNS MX records. It never sends email and it deletes `GOOGLE_PLACES_API_KEY` from the job environment before it starts. Google Places stays on the manual admin scrape, directory-page scrape, and listing-create screens. The paused `expand-directory` cron stays out of `vercel.json`.
+
+ABN bulk ingest from the admin UI returns 409 and points at this workflow. A small enrich batch can still be started from the admin screen; that path does not call Google.
 
 ## What's still honest / incomplete
 

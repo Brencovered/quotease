@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient();
   const { data: listings, error } = await admin
     .from("directory_listing")
-    .select("id, business_name, suburb, trades, scraped_contact_email, private_email, is_claimed")
+    .select("id, business_name, suburb, trades, scraped_contact_email, private_email, email_valid, is_claimed")
     .in("id", listingIds);
 
   if (error) {
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
 
   for (const listing of listings ?? []) {
     const toEmail = listing.scraped_contact_email || listing.private_email;
-    if (!toEmail) { results.skippedNoEmail++; continue; }
+    if (!toEmail || listing.email_valid === false) { results.skippedNoEmail++; continue; }
     if (listing.is_claimed) { results.skippedAlreadyClaimed++; continue; }
 
     const trade = listing.trades?.[0] ?? "";

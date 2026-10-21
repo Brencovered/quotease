@@ -6,6 +6,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdminEmail } from "@/lib/admin";
 import { findAndFetchGoogleListing } from "@/lib/googlePlaces";
 import { scrapeWebsite } from "@/lib/websiteScrape";
+import { DIRECTORY_SOURCE, listingPhoneE164, normalizeAbn, normalizeWebsiteDomain } from "@/lib/directoryIdentity";
+import { upsertDirectoryListing } from "@/lib/directoryListingUpsert";
 import { tradeToSlug, suburbToSlug, getTradeVariants } from "@/lib/seo/meta";
 
 async function requireAdmin(): Promise<NextResponse | null> {
@@ -210,9 +212,9 @@ export async function POST(req: NextRequest) {
   const websiteToScrape = website_url ?? google.website;
   const scraped = websiteToScrape ? await scrapeWebsite(websiteToScrape) : { email: null, logoUrl: null };
 
-  const { data, error } = await admin
-    .from("directory_listing")
-    .insert({
+  let data: { id: string } | null = null;
+  try {
+    const outcome = await upsertDirectoryListing(admin, {
       business_name,
       suburb,
       postcode,
@@ -222,17 +224,20 @@ export async function POST(req: NextRequest) {
       scraped_contact_phone: scraped_contact_phone ?? google.formatted_phone_number,
       blurb,
       logo_url: scraped.logoUrl,
-      source: "manual",
+      source: DIRECTORY_SOURCE.manual,
       place_id: google.place_id,
       google_rating: google.google_rating,
       google_reviews_count: google.google_reviews_count,
       photo_references: google.photo_references,
-    })
-    .select()
-    .single();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    });
+    if (!outcome.id || outcome.action === "conflict") {
+      return NextResponse.json({ error: outcome.conflict ?? "Could not save listing" }, { status: 409 });
+    }
+    const { data: row, error } = await admin.from("directory_listing").select("*").eq("id", outcome.id).single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    data = row;
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Could not save listing" }, { status: 500 });
   }
 
   // Set the page up the same way the weekly refresh-seo cron would for a
@@ -303,8 +308,8 @@ export async function PATCH(req: NextRequest) {
 
   // Only allow specific fields to be updated
   const allowed = ["business_name", "trades", "website_url", "suburb", "postcode",
-    "scraped_contact_email", "scraped_contact_phone", "private_email",
-    "google_rating", "google_reviews_count", "blurb", "logo_url"];
+    "scraped_contact_email", "scraped_contact_phone", "private_email", "contact_phone",
+    "google_rating", "google_reviews_count", "blurb", "logo_url", "abn"];
   const clean: Record<string, unknown> = {};
   for (const key of allowed) {
     if (key in updates) clean[key] = updates[key];
@@ -314,6 +319,15 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
   }
 
+  if ("abn" in clean) clean.abn = normalizeAbn(typeof clean.abn === "string" ? clean.abn : null);
+  if ("website_url" in clean) clean.website_domain = normalizeWebsiteDomain(typeof clean.website_url === "string" ? clean.website_url : null);
+  if ("scraped_contact_phone" in clean || "contact_phone" in clean) {
+    clean.phone_e164 = listingPhoneE164({
+      contact_phone: typeof clean.contact_phone === "string" ? clean.contact_phone : null,
+      scraped_contact_phone: typeof clean.scraped_contact_phone === "string" ? clean.scraped_contact_phone : null,
+    });
+    clean.phone_identity_shared = false;
+  }
   clean.updated_at = new Date().toISOString();
 
   const admin = createAdminClient();

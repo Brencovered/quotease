@@ -1,0 +1,70 @@
+# Free weekly directory maintenance. No Google Places, no paid search API.
+#
+# Secrets this workflow reads (set under Settings → Secrets and variables →
+# Actions). Do not commit the values.
+#
+#   SUPABASE_URL                 project URL, https://<ref>.supabase.co
+#   SUPABASE_SERVICE_ROLE_KEY    service role key (bypasses RLS). Server only.
+#   ABN_LOOKUP_GUID              free GUID from
+#                                https://abr.business.gov.au/Tools/WebServices
+#                                MX checks still run if this is unset. ABN
+#                                status stays due until it is set.
+#
+# Optional repository variables:
+#   ABN_ENRICH_LIMIT             default 800 candidates per run
+#   DIRECTORY_VERIFY_LIMIT       default 2000 listings per run
+#
+# The job downloads each ABR zip once, stream-parses it, bulk-inserts trade
+# matches, guesses websites in parallel, then re-checks ABNs and email MX
+# records (DNS only — it never sends email). Anything verified more than
+# 90 days ago is checked again.
+
+name: ABN directory
+
+on:
+  schedule:
+    # Sunday 16:00 UTC. The ABR bulk extract is published weekly.
+    - cron: "0 16 * * 0"
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: "all, ingest, enrich, or verify"
+        required: false
+        default: all
+        type: choice
+        options:
+          - all
+          - ingest
+          - enrich
+          - verify
+
+concurrency:
+  group: abn-directory
+  cancel-in-progress: false
+
+jobs:
+  pipeline:
+    name: Ingest, enrich, verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run directory pipeline
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ABN_LOOKUP_GUID: ${{ secrets.ABN_LOOKUP_GUID }}
+          ABN_ENRICH_LIMIT: ${{ vars.ABN_ENRICH_LIMIT }}
+          DIRECTORY_VERIFY_LIMIT: ${{ vars.DIRECTORY_VERIFY_LIMIT }}
+        run: npx tsx scripts/abn-directory-pipeline.ts --phase "${{ github.event.inputs.phase || 'all' }}"

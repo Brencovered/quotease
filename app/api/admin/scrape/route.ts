@@ -24,6 +24,8 @@ import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/admin";
 import { geocodeAddress } from "@/lib/geocode";
 import { formatPlacesApiError, isPlacesBillingBlock } from "@/lib/googlePlaces";
+import { DIRECTORY_SOURCE } from "@/lib/directoryIdentity";
+import { upsertDirectoryListing } from "@/lib/directoryListingUpsert";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -402,7 +404,6 @@ async function runTradeScrape(
   centerLat: number,
   centerLng: number,
   radiusMetres: number,
-  existingIds: Set<string>,
   admin: ReturnType<typeof createAdminClient>,
 ): Promise<{ results: ScrapeResultItem[]; summary: PerTradeSummary }> {
   console.log(`[scrape] --- ${trade} near postcode ${postcode} (${radiusMetres / 1000}km) ---`);
@@ -494,35 +495,36 @@ async function runTradeScrape(
   let newCount = 0, updatedCount = 0;
 
   for (const item of enriched) {
-    const isExisting = existingIds.has(item.placeId);
-    item.status = isExisting ? "updated" : "new";
-
-    const { error: rpcErr } = await admin.rpc("upsert_directory_listing", {
-      p_business_name: item.name, p_trades: [trade],
-      p_website_url: item.website, p_suburb: item.suburb,
-      p_postcode: item.postcode, p_latitude: item.latitude,
-      p_longitude: item.longitude, p_place_id: item.placeId,
-      p_google_rating: item.rating, p_google_reviews_count: item.reviewsCount,
-      p_photo_references: item.photoReferences,
-      p_scraped_contact_phone: item.phone,
-      p_private_email: item.email, p_logo_url: item.logoUrl,
-    });
-
-    if (rpcErr) {
-      const { error: fallbackErr } = await admin.from("directory_listing").upsert({
-        business_name: item.name, trades: [trade], website_url: item.website,
-        suburb: item.suburb, postcode: item.postcode, latitude: item.latitude,
-        longitude: item.longitude, place_id: item.placeId,
-        google_rating: item.rating, google_reviews_count: item.reviewsCount,
+    let outcome: { action: "inserted" | "updated" | "conflict" };
+    try {
+      outcome = await upsertDirectoryListing(admin, {
+        business_name: item.name,
+        trades: [trade],
+        website_url: item.website,
+        suburb: item.suburb,
+        postcode: item.postcode,
+        latitude: item.latitude,
+        longitude: item.longitude,
+        place_id: item.placeId,
+        google_rating: item.rating,
+        google_reviews_count: item.reviewsCount,
         photo_references: item.photoReferences,
-        scraped_contact_phone: item.phone, private_email: item.email,
-        logo_url: item.logoUrl, source: "scraper",
-      }, { onConflict: "place_id" });
-      if (fallbackErr) { console.error(`[scrape] Upsert failed:`, fallbackErr); continue; }
+        scraped_contact_phone: item.phone,
+        private_email: item.email,
+        logo_url: item.logoUrl,
+        source: DIRECTORY_SOURCE.googlePlaces,
+      }, { refresh: true });
+    } catch (err) {
+      console.error("[scrape] Upsert failed:", err instanceof Error ? err.message : err);
+      continue;
     }
-
-    if (isExisting) updatedCount++;
-    else { newCount++; existingIds.add(item.placeId); }
+    if (outcome.action === "conflict") {
+      console.error(`[scrape] Upsert conflict for ${item.name}`);
+      continue;
+    }
+    item.status = outcome.action === "updated" ? "updated" : "new";
+    if (outcome.action === "updated") updatedCount++;
+    else newCount++;
 
     results.push({
       placeId: item.placeId, name: item.name, suburb: item.suburb,
@@ -596,19 +598,14 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient();
 
-  // Load all existing place_ids once for deduplication across trades
-  const { data: existingRows } = await admin
-    .from("directory_listing")
-    .select("place_id");
-  const existingIds = new Set((existingRows ?? []).map((r) => r.place_id as string));
-
-  // Run pipeline for each trade
+  // Run pipeline for each trade. Upsert matches place_id, so a business
+  // found under two trades updates the same row instead of duplicating it.
   const allResults: ScrapeResultItem[] = [];
   const perTrade: PerTradeSummary[] = [];
 
   try {
     for (const trade of trades) {
-      const { results, summary } = await runTradeScrape(trade, postcode, center.lat, center.lng, radiusMetres, existingIds, admin);
+      const { results, summary } = await runTradeScrape(trade, postcode, center.lat, center.lng, radiusMetres, admin);
       allResults.push(...results);
       perTrade.push(summary);
     }

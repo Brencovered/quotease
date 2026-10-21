@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getActiveBusinessId } from "@/lib/team";
+import { DIRECTORY_SOURCE, listingPhoneE164, normalizeWebsiteDomain } from "@/lib/directoryIdentity";
+import { upsertDirectoryListing } from "@/lib/directoryListingUpsert";
 
 /**
  * Syncs a business's own directory_listing row from the directory_* fields
@@ -84,6 +86,8 @@ export async function POST(req: NextRequest) {
     contact_phone: phone,
     private_email: email,
     website_url: website,
+    phone_e164: listingPhoneE164({ contact_phone: phone }),
+    website_domain: normalizeWebsiteDomain(website),
   };
 
   if (existing) {
@@ -98,19 +102,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, synced: true, listingId: existing.id });
   }
 
-  const { data: created, error } = await admin
-    .from("directory_listing")
-    .insert({
+  let created: Awaited<ReturnType<typeof upsertDirectoryListing>>;
+  try {
+    created = await upsertDirectoryListing(admin, {
       ...sharedFields,
       profile_id: businessId,
-      source: "self_signup",
+      source: DIRECTORY_SOURCE.selfSignup,
       is_claimed: true,
-    })
-    .select("id")
-    .single();
+    }, { strategy: "insert" });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Failed to create listing" }, { status: 500 });
+  }
 
-  if (error) {
-    return NextResponse.json({ error: error.message || "Failed to create listing" }, { status: 500 });
+  if (created.action === "conflict" || !created.id) {
+    return NextResponse.json({
+      error: "A listing with this phone, website, or ABN is already in the directory. Claim that listing instead of creating another.",
+    }, { status: 409 });
   }
 
   return NextResponse.json({ ok: true, synced: true, listingId: created.id });

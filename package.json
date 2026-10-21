@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "directory:merge": "tsx scripts/merge-directory-duplicates.ts",
+    "directory:abn": "tsx scripts/abn-directory-pipeline.ts --phase all",
+    "directory:verify": "tsx scripts/abn-directory-pipeline.ts --phase verify"
   },
   "dependencies": {
     "@fontsource/anton": "^5.2.7",
@@ -25,6 +28,7 @@
     "jimp": "^1.6.1",
     "jszip": "^3.10.1",
     "leaflet": "^1.9.4",
+    "libphonenumber-js": "^1.13.15",
     "lucide-react": "^1.21.0",
     "next": "^15.5.20",
     "pdf-lib": "^1.17.1",
@@ -49,6 +53,7 @@
     "eslint": "^9",
     "eslint-config-next": "^15.5.19",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^3.2.7"
   }

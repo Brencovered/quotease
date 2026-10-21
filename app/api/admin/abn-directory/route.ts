@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ingestNextChunk } from "@/lib/abnBulkIngest";
 import { runAbnEnrichmentBatch } from "@/lib/abnDirectoryEnrichment";
 
 // Phase 1's real bottleneck turned out to be the download+unzip of one
@@ -35,8 +34,14 @@ export async function POST(req: NextRequest) {
   const phase = body.phase === "ingest" ? "ingest" : "enrich";
 
   if (phase === "ingest") {
-    const result = await ingestNextChunk();
-    return NextResponse.json({ phase, ...result });
+    // The bulk extract is a ~500MB zip. Downloading it inside this function
+    // re-fetched the file on every call and died on the Vercel timeout,
+    // so the candidate table never filled. The free scheduled runner is
+    // .github/workflows/abn-directory.yml.
+    return NextResponse.json({
+      phase,
+      error: "ABN bulk ingest runs as the free GitHub Actions workflow abn-directory (download once, stream-parse, bulk insert). It is not run from this server.",
+    }, { status: 409 });
   }
 
   const result = await runAbnEnrichmentBatch();

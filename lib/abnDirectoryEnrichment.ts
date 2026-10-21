@@ -31,6 +31,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { findWebsiteByGuessing } from "@/lib/domainGuesser";
 import { fetchWebsiteHtml, extractJsonLdBusiness } from "@/lib/websiteScraper";
+import { DIRECTORY_SOURCE } from "@/lib/directoryIdentity";
+import { upsertDirectoryListing } from "@/lib/directoryListingUpsert";
 
 const BATCH_SIZE = 50;
 const CONCURRENCY = 10;
@@ -45,6 +47,7 @@ export interface AbnEnrichmentResult {
 
 interface CandidateRow {
   id: string;
+  abn: string;
   legal_name: string;
   trading_name: string | null;
   matched_trade: string;
@@ -88,54 +91,55 @@ async function processCandidate(candidate: CandidateRow, admin: ReturnType<typeo
     return { websiteFound: true, listingCreated: false, detailLine: `~ ${displayName} - found ${url} but no confirmed suburb, no listing created` };
   }
 
-  // Dedupe against existing listings before inserting, same pattern
-  // as the Yellow Pages scraper.
-  const { data: existing } = await admin
-    .from("directory_listing")
-    .select("id")
-    .ilike("business_name", displayName)
-    .ilike("suburb", suburb)
-    .limit(1);
-
-  if (existing?.length) {
-    await admin.from("abn_trade_candidates").update({
-      processed_at: new Date().toISOString(),
-      website_url_found: url,
-      directory_listing_id: existing[0].id,
-    }).eq("id", candidate.id);
-    return { websiteFound: true, listingCreated: false, detailLine: `= ${displayName} - already listed` };
+  let outcome: { id: string | null; action: "inserted" | "updated" | "conflict"; conflict?: string };
+  try {
+    outcome = await upsertDirectoryListing(admin, {
+      business_name: displayName,
+      trades: [candidate.matched_trade],
+      suburb,
+      postcode: candidate.postcode,
+      website_url: url,
+      abn: candidate.abn,
+      source: DIRECTORY_SOURCE.abnBulk,
+      is_claimed: false,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "listing upsert failed";
+    await admin.from("abn_trade_candidates").update({ processed_at: new Date().toISOString(), website_url_found: url }).eq("id", candidate.id);
+    return { websiteFound: true, listingCreated: false, detailLine: `✗ ${displayName} - listing upsert failed: ${message}` };
   }
 
-  const { data: created, error } = await admin.from("directory_listing").insert({
-    business_name: displayName,
-    trades: [candidate.matched_trade],
-    suburb,
-    postcode: candidate.postcode,
-    state: candidate.state,
-    website_url: url,
-    source: "abn_bulk_extract",
-    is_claimed: false,
-  }).select("id").single();
-
-  if (error) {
+  if (!outcome.id || outcome.action === "conflict") {
     await admin.from("abn_trade_candidates").update({ processed_at: new Date().toISOString(), website_url_found: url }).eq("id", candidate.id);
-    return { websiteFound: true, listingCreated: false, detailLine: `✗ ${displayName} - listing insert failed: ${error.message}` };
+    return { websiteFound: true, listingCreated: false, detailLine: `✗ ${displayName} - ${outcome.conflict ?? "no listing id"}` };
   }
 
   await admin.from("abn_trade_candidates").update({
     processed_at: new Date().toISOString(),
     website_url_found: url,
-    directory_listing_id: created.id,
+    directory_listing_id: outcome.id,
   }).eq("id", candidate.id);
 
-  return { websiteFound: true, listingCreated: true, detailLine: `✓ ${displayName} - ${url} (${suburb})` };
+  const verb = outcome.action === "inserted" ? "created" : "matched";
+  return {
+    websiteFound: true,
+    listingCreated: outcome.action === "inserted",
+    detailLine: `✓ ${displayName} - ${verb} ${url} (${suburb})`,
+  };
 }
 
-export async function runAbnEnrichmentBatch(): Promise<AbnEnrichmentResult> {
+export async function runAbnEnrichmentBatch(options?: {
+  batchSize?: number;
+  concurrency?: number;
+  maxBatches?: number;
+}): Promise<AbnEnrichmentResult> {
   const admin = createAdminClient();
+  const batchSize = options?.batchSize ?? BATCH_SIZE;
+  const concurrency = options?.concurrency ?? CONCURRENCY;
+  const maxBatches = options?.maxBatches ?? 1;
 
   const [{ data: candidates }, { count: remainingCount }] = await Promise.all([
-    admin.from("abn_trade_candidates").select("*").is("processed_at", null).limit(BATCH_SIZE),
+    admin.from("abn_trade_candidates").select("*").is("processed_at", null).limit(batchSize * maxBatches),
     admin.from("abn_trade_candidates").select("id", { count: "exact", head: true }).is("processed_at", null),
   ]);
 
@@ -143,19 +147,19 @@ export async function runAbnEnrichmentBatch(): Promise<AbnEnrichmentResult> {
     processed: 0,
     websitesFound: 0,
     listingsCreated: 0,
-    remaining: Math.max(0, (remainingCount ?? 0) - BATCH_SIZE),
+    remaining: Math.max(0, (remainingCount ?? 0) - (candidates?.length ?? 0)),
     detail: [],
   };
 
   const rows = (candidates ?? []) as CandidateRow[];
-  for (let i = 0; i < rows.length; i += CONCURRENCY) {
-    const chunk = rows.slice(i, i + CONCURRENCY);
+  for (let i = 0; i < rows.length; i += concurrency) {
+    const chunk = rows.slice(i, i + concurrency);
     const outcomes = await Promise.all(chunk.map(c => processCandidate(c, admin)));
     for (const outcome of outcomes) {
       result.processed++;
       if (outcome.websiteFound) result.websitesFound++;
       if (outcome.listingCreated) result.listingsCreated++;
-      result.detail.push(outcome.detailLine);
+      if (result.detail.length < 80) result.detail.push(outcome.detailLine);
     }
   }
 
