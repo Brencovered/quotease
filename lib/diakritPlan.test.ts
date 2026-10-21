@@ -244,6 +244,45 @@ describe("Diakrit poche plan", () => {
       }
       expectLayout(data);
 
+      const roof = await page.evaluate(() => {
+        const num = (re: RegExp) => {
+          const t = document.querySelector(".summary")?.textContent || "";
+          const m = t.match(re);
+          return m ? parseFloat(m[1]) : 0;
+        };
+        const hip = num(/Roof area\s*([\d.]+)/);
+        const foot = num(/Footprint\s*([\d.]+)/);
+        const el = document.querySelector('[data-set="roofType"]') as HTMLSelectElement | null;
+        if (el) { el.value = "flat"; el.dispatchEvent(new Event("change", { bubbles: true })); }
+        const flat = num(/Roof area\s*([\d.]+)/);
+        return { hip, foot, flat };
+      });
+      expect(roof.foot).toBeGreaterThan(100);
+      expect(roof.foot).toBeLessThan(115);
+      expect(roof.hip).toBeGreaterThan(120);
+      expect(roof.hip).toBeLessThan(150);
+      expect(roof.flat).toBeGreaterThan(roof.foot);
+      expect(roof.flat).toBeLessThan(roof.hip);
+      expect(roof.flat).toBeLessThan(140);
+      await page.evaluate(() => { const b = document.querySelector('[data-tab="materials"]'); if (b instanceof HTMLElement) b.click(); });
+      const qty = await page.evaluate(() => {
+        const row = (name: string) => [...document.querySelectorAll(".mrow")].find((r) => (r.textContent || "").includes(name));
+        return {
+          text: document.querySelector("#tab-materials")?.textContent || "",
+          power: row("Power cable")?.querySelector(".mq")?.textContent || "",
+          light: row("Lighting cable")?.querySelector(".mq")?.textContent || "",
+        };
+      });
+      expect(qty.text).not.toContain("matched");
+      expect(qty.text).toContain("About 5 m per point");
+      expect(qty.text).toContain("About 4 m per light");
+      const powerM = parseFloat(qty.power);
+      const lightM = parseFloat(qty.light);
+      expect(powerM).toBeGreaterThan(40);
+      expect(powerM).toBeLessThan(140);
+      expect(lightM).toBeGreaterThan(30);
+      expect(lightM).toBeLessThan(140);
+
       // The live model has returned these same rooms mirrored. The browser path must put them back
       // on the traced rooms, or the scale stays on the wall thickness and the names sit on the wrong side.
       const cx = (box.x0 + box.x1) / 2 / sheetW * 1000;

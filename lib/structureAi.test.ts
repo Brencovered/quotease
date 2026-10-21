@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeGeneratedPlan, normalizePhotoRead, normalizePlanRead, normalizeTraceDraft, photoSuggestions, type GeneratedPlan, type PhotoContext } from "./structureAi";
+import { enrichPhotoRead, normalizeGeneratedPlan, normalizePhotoRead, normalizePlanRead, normalizeTraceDraft, photoReadGap, photoSuggestions, type GeneratedPlan, type PhotoContext } from "./structureAi";
 
 const base: GeneratedPlan = {
   name: "Test",
@@ -139,6 +139,7 @@ describe("normalizePhotoRead", () => {
       roofMaterial: "tiles",
       roofPitch: 22.3,
       cladding: "brick",
+      wallColour: "red",
       eavesMm: 470,
       wallHeightMm: 2720,
       deck: "alfresco",
@@ -147,6 +148,7 @@ describe("normalizePhotoRead", () => {
       scaleNote: "  The house looks wider than 8 m. ",
       gutter: "  Quad   gutter, Monument ",
       windows: "Aluminium",
+      windowStyle: "awning",
       colours: "x".repeat(300),
       notes: ["a", "", "b", "c", "d", "e", "f", "g"],
     });
@@ -156,14 +158,19 @@ describe("normalizePhotoRead", () => {
     expect(n.wallHeightMm).toBe(2700);
     expect(n.scaleNote).toBe("The house looks wider than 8 m.");
     expect(n.gutter).toBe("Quad gutter, Monument");
+    expect(n.wallColour).toBe("red");
+    expect(n.windowStyle).toBe("awning");
     expect(n.colours.length).toBe(120);
     expect(n.notes).toEqual(["a", "b", "c", "d", "e", "f"]);
     const u = normalizePhotoRead({
-      storeys: 0, roofShape: "unknown", roofMaterial: "unknown", roofPitch: 0, cladding: "unknown", eavesMm: 0,
+      storeys: 0, roofShape: "unknown", roofMaterial: "unknown", roofPitch: 0, cladding: "unknown", wallColour: "unknown", eavesMm: 0,
       wallHeightMm: 1800, deck: "unknown", deckInOutline: "unknown", scaleOk: "ok", scaleNote: "ignore",
-      gutter: "", windows: "", colours: "", notes: [],
+      gutter: "", windows: "", windowStyle: "unknown", colours: "", notes: [],
     });
     expect(u.storeys).toBe(0);
+    expect(u.wallColour).toBe("unknown");
+    expect(u.windowStyle).toBe("unknown");
+    expect(photoReadGap(u)).toMatch(/cladding or the roof/);
     expect(u.roofPitch).toBe(0);
     expect(u.eavesMm).toBe(0);
     expect(u.wallHeightMm).toBe(0);
@@ -175,9 +182,9 @@ const JOB: PhotoContext = { storeys: 1, wallH: 2400, extClad: "brick", roofType:
 
 describe("photoSuggestions", () => {
   const base = () => normalizePhotoRead({
-    storeys: 1, roofShape: "hip", roofMaterial: "tiles", roofPitch: 22.5, cladding: "brick", eavesMm: 450,
+    storeys: 1, roofShape: "hip", roofMaterial: "tiles", roofPitch: 22.5, cladding: "brick", wallColour: "unknown", eavesMm: 450,
     wallHeightMm: 2400, deck: "none", deckInOutline: "unknown", scaleOk: "ok", scaleNote: "",
-    gutter: "", windows: "", colours: "", notes: [],
+    gutter: "", windows: "", windowStyle: "unknown", colours: "", notes: [],
   });
 
   it("stays quiet when the photos match the job", () => {
@@ -200,6 +207,8 @@ describe("photoSuggestions", () => {
     const s = photoSuggestions(read, JOB);
     expect(s).toHaveLength(1);
     expect(s[0]?.apply).toMatchObject({ extClad: "weatherboard", roofType: "skillion", roofMat: "colorbond", pitch: 8, eave: 200, wallH: 2700 });
+    expect(s[0]?.apply).not.toHaveProperty("wallColour");
+    expect(s[0]?.apply).not.toHaveProperty("windowStyle");
     expect(s[0]?.kind).toBe("setting");
     expect(s[0]?.apply).not.toHaveProperty("addFloors");
     expect(s.map((x) => x.id)).toEqual(["build"]);
@@ -216,5 +225,37 @@ describe("photoSuggestions", () => {
     expect(s).toHaveLength(1);
     expect(s[0]?.apply).toMatchObject({ roofType: "flat", pitch: 2 });
     expect(s[0]?.apply).not.toHaveProperty("addFloors");
+  });
+
+  it("reads white weatherboard, a skillion metal roof and sliders out of the notes when the enums are unknown", () => {
+    const read = enrichPhotoRead(base());
+    read.cladding = "unknown";
+    read.roofShape = "unknown";
+    read.roofMaterial = "unknown";
+    read.roofPitch = 0;
+    read.colours = "White weatherboard and a low skillion metal roof";
+    read.windows = "Large aluminium sliders";
+    const filled = enrichPhotoRead(read);
+    expect(filled.cladding).toBe("weatherboard");
+    expect(filled.roofShape).toBe("skillion");
+    expect(filled.roofMaterial).toBe("colorbond");
+    expect(filled.wallColour).toBe("white");
+    expect(filled.windowStyle).toBe("sliding");
+    expect(filled.roofPitch).toBe(8);
+    expect(photoReadGap(filled)).toBeNull();
+    const s = photoSuggestions(filled, JOB);
+    expect(s).toHaveLength(1);
+    expect(s[0]?.apply).toMatchObject({ extClad: "weatherboard", wallColour: "white", windowStyle: "sliding", roofType: "skillion", roofMat: "colorbond", pitch: 8 });
+    expect(s[0]?.apply).not.toHaveProperty("addFloors");
+  });
+
+  it("says the photos failed when the outside was not read", () => {
+    const read = base();
+    read.cladding = "unknown";
+    read.roofShape = "unknown";
+    read.roofMaterial = "unknown";
+    read.notes = ["Well maintained interior", "Fireplace in living room"];
+    expect(photoSuggestions(read, JOB)).toEqual([]);
+    expect(photoReadGap(read)).toMatch(/cladding or the roof/);
   });
 });

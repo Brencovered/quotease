@@ -508,9 +508,9 @@ const RUN_T={
 const RUN_GROUPS=[['elec','Electrical',['tps25','tps15','cat6','conduit']],['plumb','Plumbing',['pex','dwv','gas']]];
 function runDef(r){if(r.kind==='pb')return {n:r.n||'Price list item',sec:r.sec||'build',col:0x7a5cc2};return RUN_T[r.kind]||{n:r.kind,sec:'build',col:0x5b6770};}
 function runLen(r){let L=0;for(let i=1;i<r.pts.length;i++){const a=r.pts[i-1],b=r.pts[i];L+=Math.hypot(toM(b[0]-a[0]),toM(b[1]-a[1]),((b[2]||0)-(a[2]||0))/1000);}return L;}
-function runPrice(k){const d=RUN_T[k];if(!d)return null;const L=doc.links[`h:${d.sec}:${k}`];return L===undefined?PB.match({item:d.n,size:'',match:d.match,unit:'m',sec:d.sec,strict:true}):(L?PB.byId(L):null);}
+function runPrice(k){const d=RUN_T[k];if(!d)return null;const L=doc.links[`h:${d.sec}:${k}`];return L?PB.byId(L):null;}
 const kindKey=k=>`h:${ITEM_T[k].sec}:${k}`;
-function kindPrice(k){const d=ITEM_T[k];if(!d)return null;const L=doc.links[kindKey(k)];return L===undefined?PB.match({item:d.n,size:'',match:d.match,unit:'ea',sec:d.sec,strict:true}):(L?PB.byId(L):null);}
+function kindPrice(k){const d=ITEM_T[k];if(!d)return null;const L=doc.links[kindKey(k)];return L?PB.byId(L):null;}
 /* A price list item placed on the plan looks like the closest built-in item, if its name says what it is. */
 function modelKindFor(name){const n=String(name||'').toLowerCase();for(const [re,k] of [[/ceiling fan/,'cfan'],[/exhaust/,'fan'],[/downlight/,'dl'],[/pendant/,'pend'],[/smoke/,'smoke'],[/usb/,'usb'],[/weatherproof|ip5\d|ip6\d/,'gpow'],[/single.*(power|gpo|outlet)/,'gpo1'],[/power point|gpo|power outlet|socket/,'gpo'],[/switch(?!board)/,'sw'],[/split system|air ?con/,'ac'],[/ev charg/,'ev'],[/data|cat ?6/,'data'],[/tv |antenna/,'tv'],[/wall light|outdoor light|sensor light/,'xl'],[/toilet/,'wc'],[/basin|vanity/,'basin'],[/shower/,'shower'],[/\bbath\b/,'bath'],[/sink/,'sink'],[/laundry|trough/,'tub'],[/dishwasher/,'dishwasher'],[/hot water/,'hws'],[/tap/,'tap'],[/floor waste/,'fw']])if(re.test(n))return k;return null;}
 const ITEM_GROUPS=[['roof','Roofing',['dp','sky','whirly','solar','flue','aerial']],['elec','Electrical',['gpo','gpo1','usb','gpow','sw','dl','pend','xl','smoke','fan','cfan','data','tv','ac','ev']],['plumb','Plumbing',['wc','basin','shower','bath','sink','tub','dishwasher','washer','hws','tap','fw']]];
@@ -525,7 +525,7 @@ function guessType(name){const n=String(name||'').toLowerCase();if(/ens/.test(n)
 
 /* ---------- document ---------- */
 function defaultDoc(){return {kind:'house',v:1,underlay:{src:null,path:null,w:0,h:0,opacity:0.55},scale:null,outline:[],walls:[],openings:[],rooms:[],site:null,photos:[],photoRead:null,photoSuggestions:[],runs:[],
-  settings:{wallH:2400,extThk:250,intThk:90,extStud:'90x45',intStud:'90x35',studSp:450,extClad:'brick',roofType:'hip',pitch:22.5,eave:450,roofMat:'tiles',floor:'slab',slabT:100,lineGarage:false},
+  settings:{wallH:2400,extThk:250,intThk:90,extStud:'90x45',intStud:'90x35',studSp:450,extClad:'brick',wallColour:'',windowStyle:'',roofType:'hip',pitch:22.5,eave:450,roofMat:'tiles',floor:'slab',slabT:100,lineGarage:false},
   prices:{},links:{},items:[],areas:[],waste:10,labour:{},labourRate:null,scope:null,draft:false};}
 function migrate(p){const d=defaultDoc();p=p||{};return Object.assign({},d,p,{kind:'house',underlay:Object.assign({},d.underlay,p.underlay||{}),settings:Object.assign({},d.settings,p.settings||{}),
   outline:Array.isArray(p.outline)?p.outline:[],walls:Array.isArray(p.walls)?p.walls:[],openings:Array.isArray(p.openings)?p.openings:[],rooms:Array.isArray(p.rooms)?p.rooms:[],items:Array.isArray(p.items)?p.items:[],areas:Array.isArray(p.areas)?p.areas:[],prices:p.prices||{},links:p.links||{},labour:p.labour||{},
@@ -594,7 +594,7 @@ function rooms(){const sm=scaleMM()||0;const S=doc.settings;return faces().map((
   let per=0,extL=0,intL=0;for(let k=0;k<f.poly.length;k++){const L=toM(dist(f.poly[k],f.poly[(k+1)%f.poly.length]));per+=L;if(f.edges[k].ext)extL+=L;else intL+=L;}
   const gross=f.area*sm*sm/1e6;const net=Math.max(0.2,gross-extL*S.extThk/1000-intL*S.intThk/2000);const netPer=Math.max(0,per-8*(S.intThk/1000));
   const name=lab?lab.name:`Room ${i+1}`;const type=lab?lab.type:'other';
-  return {i,f,lab,id:lab?lab.id:null,name,type,finish:lab&&lab.finish?lab.finish:DEF_FINISH[type],gpo:lab&&lab.gpo!=null?lab.gpo:DEF_GPO[type],lights:lab&&lab.lights!=null?lab.lights:Math.max(1,Math.ceil(net/2.5)),expect:lab?lab.expect:null,area:net,gross,per:netPer,extL,intL,
+  return {i,f,lab,id:lab?lab.id:null,name,type,finish:lab&&lab.finish?lab.finish:DEF_FINISH[type],gpo:lab&&lab.gpo!=null?lab.gpo:DEF_GPO[type],lights:lab&&lab.lights!=null?lab.lights:TraceGeom.defaultLights(net,type),expect:lab?lab.expect:null,area:net,gross,per:netPer,extL,intL,
     centroid:f.poly.reduce((a,p)=>[a[0]+p[0]/f.poly.length,a[1]+p[1]/f.poly.length],[0,0])};});}
 function hostOf(op){let best=null,bd=1e9;segs().forEach(s=>{const t=projT(op.pt,s.a,s.b);const d=dist(op.pt,lerp(s.a,s.b,t));if(d<bd){bd=d;best={s,t,d};}});const tol=Math.max(12,(doc.settings.extThk/(scaleMM()||10))*1.5);return best&&best.d<=tol?best:null;}
 function siteArea(){return doc.site&&doc.site.length>=3?Math.abs(polyArea(doc.site))*Math.pow(scaleMM()||0,2)/1e6:0;}
@@ -788,7 +788,7 @@ function renderPalette(){fillPalette();layoutOverlays();}
 /* The item tray: what to place, with your own price beside each, searchable, built-in items and your price list together. */
 let trayTab=null,trayQ='',trayOpen=true;
 const SEC_LABEL={elec:'Electrical',plumb:'Plumbing'};
-function trayRow(k){const d=ITEM_T[k];const pb=kindPrice(k);const on=!placePb&&k===placeKind;return `<button class="trow ${on?'on':''}" data-pk="${k}"><i class="pit-i ${d.sec}">${d.c}</i><span class="tn">${esc(d.n)}</span><span class="tp ${pb?'':'none'}">${pb?money(pb.p):'Not in your list'}</span></button>`;}
+function trayRow(k){const d=ITEM_T[k];const pb=kindPrice(k);const on=!placePb&&k===placeKind;return `<button class="trow ${on?'on':''}" data-pk="${k}"><i class="pit-i ${d.sec}">${d.c}</i><span class="tn">${esc(d.n)}</span><span class="tp ${pb?'':'none'}">${pb?money(pb.p):'No price yet'}</span></button>`;}
 function pbRow(it){const on=placePb&&placePb.id===it.id;const sec=TRADE_SEC[it.t]||'build';return `<button class="trow ${on?'on':''}" data-pbid="${esc(it.id)}"><i class="pit-i ${sec}">$</i><span class="tn">${esc(it.n)}</span><span class="tp">${money(it.p)}</span></button>`;}
 function fillPalette(){const pal=$('#palette');if(!pal)return;if(tool!=='place'&&tool!=='area'&&tool!=='run'&&tool!=='opening'){pal.hidden=true;return;}pal.hidden=false;
   if(tool==='opening'){pal.className='palette';pal.innerHTML=`<span class="pg">Tap a wall to add a</span>`+Object.entries(OPEN_NAMES).map(([k,n])=>`<button class="chip ${k===openType?'on':''}" data-opt="${k}">${n}</button>`).join('');return;}
@@ -806,7 +806,7 @@ function fillPalette(){const pal=$('#palette');if(!pal)return;if(tool!=='place'&
     if(trayTab==='pb')h+=`<div class="tlist">${PB.search('',it=>it.u==='ea'&&(!USER_TRADES.length||USER_TRADES.includes(it.t)),80).map(pbRow).join('')||'<p class="note" style="padding:8px">Search to find items from other trades.</p>'}</div>`;
     else{const g=groups.find(x=>x[0]===trayTab)||groups[0];h+=`<div class="tlist">${g[2].map(trayRow).join('')}</div>`;}}
   pal.innerHTML=h;const inp=pal.querySelector('.tsearch');if(inp&&trayQ&&document.activeElement!==inp&&pal.dataset.focus==='1'){inp.focus();inp.setSelectionRange(trayQ.length,trayQ.length);}}
-function runRow(k){const d=RUN_T[k];const pb=runPrice(k);const on=!runPb&&k===runKind;return `<button class="trow ${on?'on':''}" data-rk="${k}"><i class="pit-i ${d.sec}" style="background:#${d.col.toString(16).padStart(6,'0')};color:#fff">—</i><span class="tn">${esc(d.n)}</span><span class="tp ${pb?'':'none'}">${pb?money(pb.p)+(pb.pack?` / ${pb.pack} m`:' / m'):'Not in your list'}</span></button>`;}
+function runRow(k){const d=RUN_T[k];const pb=runPrice(k);const on=!runPb&&k===runKind;return `<button class="trow ${on?'on':''}" data-rk="${k}"><i class="pit-i ${d.sec}" style="background:#${d.col.toString(16).padStart(6,'0')};color:#fff">—</i><span class="tn">${esc(d.n)}</span><span class="tp ${pb?'':'none'}">${pb?money(pb.p)+(pb.pack?` / ${pb.pack} m`:' / m'):'No price yet'}</span></button>`;}
 function fillRunTray(pal){pal.className='palette tray';const pref=USER_TRADES.map(t=>TRADE_SEC[t]).filter(Boolean);const groups=RUN_GROUPS.slice().sort((a,b)=>(pref.includes(b[0])?1:0)-(pref.includes(a[0])?1:0));if(!trayTab||!(trayTab==='pb'||groups.some(g=>g[0]===trayTab)))trayTab=groups[0][0];
   const d=runPb?{n:runPb.n,sec:runPb.sec,col:0x7a5cc2}:RUN_T[runKind];const pb=runPb?PB.byId(runPb.id):runPrice(runKind);const L=runDraft.length>1?runLen({pts:runDraft}):0;const route=runRoute();
   let h=`<div class="tcur"><i class="pit-i ${d.sec}" style="background:#${d.col.toString(16).padStart(6,'0')};color:#fff">—</i><div><b>${esc(d.n)}</b><small>${pb?money(pb.p)+(pb.pack?` per ${pb.pack} m roll`:' per m')+' from your price list. ':''}${runDraft.length?`${fm(L,1)} m so far. Tap the next bend, tap the last point again to finish.`:'Tap where the run starts, then each bend.'}</small></div><button class="btn tdone" data-ttog="1">${trayOpen?'Hide list':'Change'}</button></div>`;
@@ -842,7 +842,7 @@ function geoAll(){const S=doc.settings,H=S.wallH/1000;const sg=segs();const R=ro
   const extL=sg.filter(s=>s.ext).reduce((a,s)=>a+toM(dist(s.a,s.b)),0),intL=sg.filter(s=>!s.ext).reduce((a,s)=>a+toM(dist(s.a,s.b)),0);
   const opA=(f)=>ops.filter(f).reduce((a,x)=>a+x.o.width*x.o.height/1e6,0);
   const extOps=ops.filter(x=>x.h.s.ext),intOps=ops.filter(x=>!x.h.s.ext);
-  const A=outlineArea(),P=outlinePer();const e=S.eave/1000;const cn=corners();const planA=A+P*e+(cn.convex-cn.concave)*e*e;const pitch=S.pitch*Math.PI/180;const roofA=planA*roofFracNow()/Math.cos(pitch);
+  const A=outlineArea(),P=outlinePer();const e=S.eave/1000;const cn=corners();const rc=TraceGeom.roofCoverArea(A,P,e,cn.convex,cn.concave,S.pitch,S.roofType);const planA=rc.planA;const pitch=rc.pitch*Math.PI/180;const roofA=rc.roofA*roofFracNow();
   const bb=doc.outline.length>=3?bbox(doc.outline):{x0:0,y0:0,x1:0,y1:0};const bw=toM(bb.x1-bb.x0),bl=toM(bb.y1-bb.y0);
   return {S,H,R,ops,extOps,intOps,extL,intL,extWall:Math.max(0,extL*H-opA(x=>x.h.s.ext)),intWall:Math.max(0,intL*H-opA(x=>!x.h.s.ext)),A,P,planA,roofA,bw,bl,pitch,e};}
 let ROOF_FRAC=null;
@@ -931,7 +931,7 @@ function computeRowsLevel(LV){LV=LV||{i:0};const rows=[],stages=[];if(!scaleMM()
   const gpo=pl('gpo',gpoE),lights=pl('dl',lightsE),fans=pl('fan',fansE),smoke=pl('smoke',smokeE),sw=pl('sw',swE);
   const xk=k=>cnt[k]||0;const powerPts=gpo+xk('gpo1')+xk('usb')+xk('gpow')+xk('ev');const lightPts=lights+fans+smoke+sw+xk('pend')+xk('xl')+xk('cfan');const dataPts=xk('data')+xk('tv');const pts=powerPts+lightPts+dataPts+xk('ac');
   const anyElec=R.length>0||Object.keys(cnt).some(k=>ITEM_T[k].sec==='elec');
-  add('elec','Electrical','gpo','Double power points','',why('gpo','Per room, see the room list'),gpo,'ea',ITEM_T.gpo.match);add('elec','Electrical','dl','LED downlights','',why('dl','About 1 per 2.5 m², per room'),lights,'ea',ITEM_T.dl.match);
+  add('elec','Electrical','gpo','Double power points','',why('gpo','Per room, see the room list'),gpo,'ea',ITEM_T.gpo.match);add('elec','Electrical','dl','LED downlights','',why('dl','One in a small room, about one per 8 m² in living and kitchen'),lights,'ea',ITEM_T.dl.match);
   add('elec','Electrical','fan','Exhaust fans','Ducted to outside',why('fan','Bathrooms, ensuites, toilets, laundry'),fans,'ea',ITEM_T.fan.match);add('elec','Electrical','smoke','Smoke alarms','240 V, interconnected',why('smoke','Each bedroom, hallway and living area'),smoke,'ea',ITEM_T.smoke.match);
   add('elec','Electrical','sw','Light switches','',why('sw',`${sw} switch plates`),sw,'ea',ITEM_T.sw.match);
   ['gpo1','usb','gpow','pend','xl','cfan','data','tv','ac','ev'].forEach(k=>add('elec','Electrical',k,ITEM_T[k].n,'',`${xk(k)} placed on the plan`,xk(k),'ea',ITEM_T[k].match));
@@ -939,7 +939,8 @@ function computeRowsLevel(LV){LV=LV||{i:0};const rows=[],stages=[];if(!scaleMM()
   /* runs drawn on the model are measured; they replace the per-point estimate for that cable or pipe */
   const rl={},rn={};(doc.runs||[]).forEach(r=>{if(r.kind==='pb')return;rl[r.kind]=(rl[r.kind]||0)+runLen(r);rn[r.kind]=(rn[r.kind]||0)+1;});
   const runQ=(k,est)=>rl[k]!=null?Math.ceil(rl[k]*1.1):est;const runWhy=(k,estTxt)=>rl[k]!=null?`Measured on the model: ${rn[k]} ${rn[k]===1?'run':'runs'}, ${fm(rl[k],1)} m plus 10% for terminations`:estTxt;
-  add('elec','Electrical','tps25','Power cable','2.5 mm² TPS',runWhy('tps25','About 8 m per point'),runQ('tps25',Math.ceil(powerPts*8+xk('ac')*12)),'m',RUN_T.tps25.match);add('elec','Electrical','tps15','Lighting cable','1.5 mm² TPS',runWhy('tps15','About 5 m per point'),runQ('tps15',Math.ceil(lightPts*5)),'m',RUN_T.tps15.match);
+  const cable=TraceGeom.elecCable({powerPts,lights,switches:sw,fans,smoke,ac:xk('ac')});
+  add('elec','Electrical','tps25','Power cable','2.5 mm² TPS',runWhy('tps25','About 5 m per point, shared along the circuit'),runQ('tps25',cable.powerM),'m',RUN_T.tps25.match);add('elec','Electrical','tps15','Lighting cable','1.5 mm² TPS',runWhy('tps15','About 4 m per light, plus a short drop to each switch'),runQ('tps15',cable.lightM),'m',RUN_T.tps15.match);
   add('elec','Electrical','conduit','Conduit','',runWhy('conduit',''),runQ('conduit',0),'m',RUN_T.conduit.match);
   add('elec','Electrical','cat6','Data and TV cable','Cat 6 and RG6',runWhy('cat6','About 15 m per point'),runQ('cat6',Math.ceil(dataPts*15)),'m',['cat6','rg6','data cable']);
   add('elec','Electrical','cook','Cooktop and oven circuits','6 mm² and isolators','',R.some(r=>r.type==='kitchen')?1:0,'lot',['6mm']);
@@ -998,7 +999,7 @@ function computeRowsLevel(LV){LV=LV||{i:0};const rows=[],stages=[];if(!scaleMM()
 /* Link each line to the price list and convert units, once the floors are added up. */
 function finalizeRows(rows){
   rows.forEach(r=>{const m=/^h:(elec|plumb):(\w+)$/.exec(r.key);if(m&&(ITEM_T[m[2]]||RUN_T[m[2]]))r.strict=true;});
-  rows.forEach(r=>{const L=doc.links[r.key];r.auto=L===undefined&&!r.fixed;r.pb=r.fixed?(L===undefined?PB.byId(r.fixed):(L?PB.byId(L):null)):(L===undefined?PB.match(r):(L?PB.byId(L):null));r.order=`${r.qty} ${r.unit}`;
+  rows.forEach(r=>{const L=doc.links[r.key];r.auto=false;r.suggest=(!r.fixed&&L===undefined)?PB.match(r):null;r.pb=r.fixed?(L===undefined?PB.byId(r.fixed):(L?PB.byId(L):null)):(L?PB.byId(L):null);r.order=`${r.qty} ${r.unit}`;
     // a price list item sold by a different unit prices the line in that unit (tiles per m² rather than each)
     if(r.pb&&r.pb.u&&r.pb.u!==PB.baseUnit(r.unit)){if(r.alt&&r.alt[r.pb.u]!=null){r.order=`${r.order}, priced as ${r.alt[r.pb.u]} ${r.pb.u}`;r.qty=r.alt[r.pb.u];r.unit=r.pb.u;r.pu={'m':'$/m','m²':'$/m²','m³':'$/m³'}[r.unit];}else r.unitWarn=`Your item is sold per ${r.pb.u}, this line is counted in ${r.unit}.`;}
     // cable and pipe sold by the roll or coil: buy whole rolls
@@ -1093,7 +1094,7 @@ function autoScale(){const S=doc.settings;const cands=[];
   return s;}
 /* ---------- tabs ---------- */
 const SET_FIELDS=[['wallH','Ceiling height','num','mm',[2100,3600,50]],['extThk','External wall thickness','num','mm',[90,400,10]],['intThk','Internal wall thickness','num','mm',[70,200,5]],['extStud','External studs','sel',[['90x45','90 x 45'],['90x35','90 x 35']]],['intStud','Internal studs','sel',[['90x35','90 x 35'],['70x35','70 x 35'],['90x45','90 x 45']]],['studSp','External stud spacing','sel',[[450,'45 cm'],[600,'60 cm']]],
-  ['extClad','Outside walls','sel',Object.entries(CLAD).map(([k,v])=>[k,v.n])],['roofType','Roof shape','sel',[['hip','Hip'],['gable','Gable'],['skillion','Skillion'],['flat','Flat']]],['pitch','Roof pitch','num','°',[1,45,0.5]],['eave','Eaves','num','mm',[0,900,50]],['roofMat','Roof cover','sel',Object.entries(ROOFM).map(([k,v])=>[k,v.n])],['floor','Floor','sel',[['slab','Concrete slab'],['timber','Timber floor']]],['slabT','Slab thickness','num','mm',[85,200,5]],['lineGarage','Line and paint the garage','chk']];
+  ['extClad','Outside walls','sel',Object.entries(CLAD).map(([k,v])=>[k,v.n])],['wallColour','Wall colour','sel',[['', 'From the cladding'],['white','White'],['cream','Cream'],['grey','Grey'],['charcoal','Charcoal'],['black','Black'],['green','Green'],['brown','Brown'],['red','Red']]],['windowStyle','Windows','sel',[['', 'Aluminium'],['sliding','Large sliders'],['awning','Awning'],['fixed','Fixed glass'],['louvre','Louvre'],['timber','Timber frame']]],['roofType','Roof shape','sel',[['hip','Hip'],['gable','Gable'],['skillion','Skillion'],['flat','Flat']]],['pitch','Roof pitch','num','°',[1,45,0.5]],['eave','Eaves','num','mm',[0,900,50]],['roofMat','Roof cover','sel',Object.entries(ROOFM).map(([k,v])=>[k,v.n])],['floor','Floor','sel',[['slab','Concrete slab'],['timber','Timber floor']]],['slabT','Slab thickness','num','mm',[85,200,5]],['lineGarage','Line and paint the garage','chk']];
 function levelCard(){if(!multi())return '';const i=doc.level,lv=doc.levels[i];const sm=scaleMM();
   let h=`<div class="card lvcard"><div class="cardh"><b>${esc(levelName(i))}</b>${i>0?`<button class="x" data-lvdel="1" aria-label="Remove this floor">✕</button>`:''}</div>
   <label class="row"><span>Name</span><input type="text" data-lv="name" value="${esc(levelName(i))}"></label>
@@ -1155,8 +1156,8 @@ function renderMaterials(){const {rows}=computeRows();const st=stagesOut(false);
   let sub=0;const groups=[...new Set(rows.filter(r=>inScope(r.sec)).map(r=>r.group))];
   if(EMBED&&!PB.has())h+=`<p class="note pbnote">Your material price list is empty. <a href="/settings/materials" target="_top">Add your materials and prices</a> and every line here prices itself from your list.</p>`;
   groups.forEach(gn=>{h+=`<h3>${esc(gn)}</h3><div class="mtable">`;rows.filter(r=>r.group===gn&&inScope(r.sec)).forEach(r=>{const own=doc.prices[r.key];const p=priceOf(r);sub+=p*r.qty;
-    const pbl=PB.has()?(r.pb?`<button class="pbl" data-pick="${esc(r.key)}" title="Change the price list item"><span>${esc(r.pb.n)}</span><em>${money(r.pb.p)}${r.auto?' · matched':''}</em></button>`:`<button class="pbl none" data-pick="${esc(r.key)}">Pick from your price list</button>`):'';
-    h+=`<div class="mrow"><div class="mi"><b>${esc(r.item)}</b><span class="sz">${esc(r.size)}</span>${r.detail?`<small>${esc(r.detail)}</small>`:''}${pbl}${r.unitWarn?`<small class="badc">${esc(r.unitWarn)}</small>`:''}</div><div class="mq">${esc(r.order)}</div><div class="mp"><span class="inp sm"><input type="number" data-price="${esc(r.key)}" value="${own??''}" placeholder="${r.pb?r.pb.p.toFixed(2):'0.00'}" min="0" step="0.01" aria-label="Price for ${esc(r.item)}"><em>${r.pu}</em></span><span class="cost">${money(p*r.qty)}</span></div></div>`;});h+='</div>';});
+    const pbl=PB.has()?(r.pb?`<button class="pbl" data-pick="${esc(r.key)}" title="Change the price list item"><span>${esc(r.pb.n)}</span><em>${money(r.pb.p)}</em></button>`:(r.suggest?`<button class="pbl none" data-useprice="${esc(r.key)}" data-pbid="${esc(r.suggest.id)}">Use ${esc(r.suggest.n)}, ${money(r.suggest.p)}</button>`:`<button class="pbl none" data-pick="${esc(r.key)}">Pick from your price list</button>`)):'';
+    h+=`<div class="mrow"><div class="mi"><b>${esc(r.item)}</b><span class="sz">${esc(r.size)}</span>${r.detail?`<small>${esc(r.detail)}</small>`:''}${pbl}${r.unitWarn?`<small class="badc">${esc(r.unitWarn)}</small>`:''}</div><div class="mq">${esc(r.order)}</div><div class="mp"><span class="inp sm"><input type="number" data-price="${esc(r.key)}" value="${own??''}" placeholder="${r.pb?r.pb.p.toFixed(2):'0.00'}" min="0" step="0.01" aria-label="Price for ${esc(r.item)}"><em>${r.pu}</em></span><span class="cost">${p?money(p*r.qty):''}</span></div></div>`;});h+='</div>';});
   const mat=sub*(1+(+doc.waste||0)/100);const hrs=st.reduce((a,s)=>a+s.hrs,0);
   h+=`<div class="total"><span>Materials total</span><b>${money(mat)}</b></div><h3>Labour</h3><p class="note" style="margin-top:0">Starting estimates in crew hours from the traced plan. Change any stage to match your crew.</p><div class="mtable lab">${st.map(s=>`<div class="mrow"><div class="mi"><b>${esc(s.n)}</b><small>${esc(s.note||'')}${s.ov?` · estimate ${s.est} h`:''}</small></div><div class="mp"><span class="inp sm"><input type="number" data-lab="${s.k}" value="${s.hrs}" min="0" step="0.5"><em>h</em></span></div></div>`).join('')}</div>
   <label class="row"><span>Labour rate</span><span class="inp"><input type="number" id="labRate" value="${labourRate()}" min="0" step="1"><em>$/h</em></span></label>
@@ -1164,7 +1165,7 @@ function renderMaterials(){const {rows}=computeRows();const st=stagesOut(false);
   <button class="primary" id="copyCsv">Copy list as CSV</button> <span class="note" id="csvMsg"></span><p class="note">Quantities come from the traced plan and are planning estimates. Check them against the drawings and engineering before ordering.</p>`;
   $('#tab-materials').innerHTML=h;}
 $('#tab-materials').addEventListener('change',e=>{const t=e.target;if(t.id==='waste'){const v=parseFloat(t.value);doc.waste=isFinite(v)?Math.max(0,v):0;}else if(t.dataset.price){const v=parseFloat(t.value);if(isFinite(v))doc.prices[t.dataset.price]=v;else delete doc.prices[t.dataset.price];}else if(t.dataset.lab){const v=parseFloat(t.value);if(isFinite(v)&&v>=0)doc.labour[t.dataset.lab]=v;else delete doc.labour[t.dataset.lab];}else if(t.id==='labRate'){const v=parseFloat(t.value);doc.labourRate=isFinite(v)&&v>0?v:null;}else return;renderMaterials();save();});
-$('#tab-materials').addEventListener('click',async e=>{const pk=e.target.closest('[data-pick]');if(pk){const key=pk.dataset.pick;const r=computeRows().rows.find(x=>x.key===key);if(!r)return;PB.pick({title:r.item+(r.size?', '+r.size:''),sec:r.sec,current:r.pb?r.pb.id:null,allowClear:true,onPick:it=>{doc.links[key]=it?it.id:null;delete doc.prices[key];renderMaterials();save();}});return;}
+$('#tab-materials').addEventListener('click',async e=>{const use=e.target.closest('[data-useprice]');if(use&&use.dataset.pbid){doc.links[use.dataset.useprice]=use.dataset.pbid;renderMaterials();save();return;}const pk=e.target.closest('[data-pick]');if(pk){const key=pk.dataset.pick;const r=computeRows().rows.find(x=>x.key===key);if(!r)return;PB.pick({title:r.item+(r.size?', '+r.size:''),sec:r.sec,current:r.pb?r.pb.id:null,allowClear:true,onPick:it=>{doc.links[key]=it?it.id:null;delete doc.prices[key];renderMaterials();save();}});return;}
   const s=e.target.closest('[data-scope]');if(s){doc.scope=Object.assign({},doc.scope||{});doc.scope[s.dataset.scope]=!inScope(s.dataset.scope);renderMaterials();save();return;}
   if(e.target.id!=='copyCsv')return;const q=v=>'"'+String(v).replace(/"/g,'""')+'"';const lines=[['Group','Item','Size','Detail','Quantity','Unit price','Cost'].map(q).join(',')];quoteLines().forEach(l=>lines.push([l.group,l.label,'','',l.quantity+' '+l.unit,l.unitCost.toFixed(2),l.totalCost.toFixed(2)].map(q).join(',')));stagesOut(false).forEach(s=>lines.push(['Labour',s.n,'','',s.hrs+' h',labourRate().toFixed(2),(s.hrs*labourRate()).toFixed(2)].map(q).join(',')));
   let ok=false;try{await navigator.clipboard.writeText(lines.join('\n'));ok=true;}catch(_){}$('#csvMsg').textContent=ok?'Copied. Paste it into a spreadsheet.':'Copy is blocked here.';});
@@ -1199,38 +1200,49 @@ $('#tab-plans').addEventListener('click',e=>{if(e.target.id==='openPlans')openPl
 function switchTab(name){document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===name));document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+name));if(name==='materials')renderMaterials();if(name==='rooms')renderRooms(true);if(name==='plan')renderPlanTab();}
 $('.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b)switchTab(b.dataset.tab);});
 /* ---------- photos of the house ---------- */
-let phBusy=false,phFresh=[];
+let phBusy=false,phFresh=[],phViews={};
 const scaleTo=(c,MAX)=>{const k=Math.min(1,MAX/Math.max(c.width,c.height));if(k>=1)return c;const n=document.createElement('canvas');n.width=Math.round(c.width*k);n.height=Math.round(c.height*k);const g=n.getContext('2d');g.imageSmoothingQuality='high';g.drawImage(c,0,0,n.width,n.height);return n;};
 function photosHTML(){const P=doc.photos||[];const R=doc.photoRead;let h=`<h3>Photos of the house</h3><input type="file" id="phFile" accept="image/*" multiple hidden>`;
   if(P.length)h+=`<div class="phgrid">${P.map((p,i)=>`<figure><img src="${p.thumb}" alt="House photo ${i+1}"><button class="x" data-phdel="${p.id}" aria-label="Remove photo">✕</button></figure>`).join('')}</div>`;
   h+=`<div class="upl"><button class="btn" id="phPick" ${P.length>=8?'disabled':''}>${P.length?'Add more photos':'Add photos of the house'}</button>${P.length?`<button class="btn" id="phRead" ${phBusy?'disabled':''}>${phBusy?'Reading...':'Read them again'}</button>`:''}</div>`;
   const sug=(doc.photoSuggestions||[]);
   if(sug.length){h+=`<div class="card phread"><b>Check these against the house</b><p class="note" style="margin:4px 0 8px">Nothing is changed until you tap Use. Skip anything that looks wrong.</p>${sug.map(s=>{const use=s.kind==='floors'?'Add floor':s.kind==='scale'?'Check the scale':s.kind==='note'?'OK':'Use this';const skip=s.kind==='note'?'':'<button class="btn" data-phskip="'+esc(s.id)+'">Skip</button>';return `<div class="phsug"><div><b>${esc(s.label)}</b><p class="note" style="margin:2px 0 0">${esc(s.detail)}</p></div><div class="upl"><button class="btn" data-phuse="${esc(s.id)}">${use}</button>${skip}</div></div>`;}).join('')}</div>`;}
-  else if(R){h+=`<p class="note">Photos are with the build.${(R.notes||[]).length?' Notes are in the plans pack.':''}</p>`;}
-  else h+=`<p class="note">Optional. Front, back and sides. Read with the plan, they set the roof and the wall finish. They do not move walls, doors or the scale.</p>`;
-  if(R)h+=`${[['Gutters',R.gutter],['Windows',R.windows],['Colours',R.colours]].filter(x=>x[1]).map(([k,v])=>`<p class="note" style="margin:2px 0"><b>${k}:</b> ${esc(v)}</p>`).join('')}${(R.notes||[]).length?`<ul class="phnotes">${R.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>`:''}`;
+  else if(R){const gap=R.error||photoGap(R);h+=gap?`<p class="warn">${esc(gap)}</p>`:`<p class="note">Photos are with the build.${(R.notes||[]).length?' Notes are in the plans pack.':''}</p>`;}
+  else h+=`<p class="note">Optional. Front, back and sides. Read with the plan, they set the roof, the wall finish and the windows. They do not move walls, doors or the scale.</p>`;
+  if(R){const known=(v)=>v&&v!=='unknown'?v:'';const bits=[['Walls',R.cladding&&CLAD[R.cladding]?CLAD[R.cladding].n:''],['Wall colour',known(R.wallColour)],['Roof',known(R.roofShape)],['Roof cover',R.roofMaterial==='colorbond'?'Colorbond':R.roofMaterial==='tiles'?'Tiles':''],['Windows',known(R.windowStyle)],['Gutters',known(R.gutter)],['Window note',known(R.windows)],['Colours',known(R.colours)]].filter(x=>x[1]);
+    h+=bits.map(([k,v])=>`<p class="note" style="margin:2px 0"><b>${k}:</b> ${esc(v)}</p>`).join('');
+    if((R.notes||[]).length)h+=`<ul class="phnotes">${R.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>`;}
   return h;}
+function photoGap(R){if(!R)return '';const clad=!R.cladding||R.cladding==='unknown',roof=(!R.roofShape||R.roofShape==='unknown')&&(!R.roofMaterial||R.roofMaterial==='unknown');
+  if(clad&&roof)return 'Could not tell the cladding or the roof from these photos. Add a photo of the outside walls and roof, or set them under Construction. The 3D is unchanged.';
+  if(clad)return 'Could not tell the wall cladding from these photos. Set it under Construction if you can see it.';
+  if(roof)return 'Could not tell the roof from these photos. Set it under Construction if you can see it.';
+  return '';}
+function pickPhotoShots(list){if(!list||list.length<=5)return list||[];const ix=[0,1,Math.floor(list.length/2),list.length-2,list.length-1];return [...new Set(ix)].map(i=>list[i]);}
 async function addPhotos(files){files=files.filter(f=>/^image\//.test(f.type)||/\.(jpe?g|png|webp|heic)$/i.test(f.name)).slice(0,Math.max(0,8-(doc.photos||[]).length));if(!files.length)return;flash('Adding photos...');phFresh=[];
-  for(const f of files){try{const c=await fileToCanvas(f);const big=canvasToJpeg(scaleTo(c,1280),900000).url;const thumb=canvasToJpeg(scaleTo(c,480),90000).url;const ph={id:uid(),thumb,path:null};doc.photos.push(ph);phFresh.push(big);
+  for(const f of files){try{const c=await fileToCanvas(f);const view=canvasToJpeg(scaleTo(c,960),220000).url;const thumb=canvasToJpeg(scaleTo(c,480),90000).url;const ph={id:uid(),thumb,path:null};doc.photos.push(ph);phViews[ph.id]=view;phFresh.push(view);
       if(EMBED){try{window.parent.postMessage({source:'ss-planner',type:'photo-upload',id:ph.id,dataUrl:canvasToJpeg(scaleTo(c,2000),2500000).url},location.origin);}catch(e){}}}catch(e){flash('One photo could not be opened. Use JPG or PNG.');}}
-  changed(true);readPhotos(phFresh.slice(0,3));}
+  changed(true);readPhotos(pickPhotoShots(phFresh));}
 function photoContext(){ensureLevels();const S=doc.settings;const sm=scaleMM();let widthM=null,depthM=null,footprintM=null;
   if(sm&&doc.outline.length>=3){const b=bbox(doc.outline);widthM=Math.round(toM(b.x1-b.x0)*10)/10;depthM=Math.round(toM(b.y1-b.y0)*10)/10;footprintM=Math.round(outlineArea()*10)/10;}
   const outdoor=(doc.areas||[]).map(a=>a.name||a.type).filter(Boolean);
-  return {storeys:doc.levels.length,widthM,depthM,footprintM,wallH:S.wallH,pitch:S.pitch,eave:S.eave,roofType:S.roofType,roofMat:S.roofMat,cladding:S.extClad,outdoor};}
+  return {storeys:doc.levels.length,widthM,depthM,footprintM,wallH:S.wallH,pitch:S.pitch,eave:S.eave,roofType:S.roofType,roofMat:S.roofMat,cladding:S.extClad,wallColour:S.wallColour||'',windowStyle:S.windowStyle||'',outdoor};}
 async function planJpeg(){if(!doc.underlay.src)return null;try{const c=await srcToCanvas(doc.underlay.src,1200);return canvasToJpeg(c,700000).url;}catch(e){return null;}}
-async function readPhotos(images){images=images&&images.length?images:(doc.photos||[]).slice(0,3).map(p=>p.thumb);if(!images.length||phBusy)return;phBusy=true;renderPlanTab();
+async function readPhotos(images){images=images&&images.length?images:pickPhotoShots(doc.photos||[]).map(p=>phViews[p.id]||p.thumb).filter(Boolean);if(!images.length||phBusy)return;phBusy=true;renderPlanTab();
   try{const plan=await planJpeg();const res=await fetch('/api/structures/photo-read',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({images,plan,context:photoContext()})});const b=await res.json().catch(()=>({}));
-    if(!res.ok){flash(b.signup?'Sign in to Swiftscope to read photos. They are kept with the build.':(b.error||'The photos could not be read.'));return;}
-    snapshot();doc.photoRead=b.read;const sug=Array.isArray(b.suggestions)?b.suggestions:[];const build=sug.find(s=>s&&s.id==='build'&&s.kind==='setting');
+    if(!res.ok){doc.photoRead={cladding:'unknown',roofShape:'unknown',roofMaterial:'unknown',notes:[],error:b.error||'The photos could not be read.'};flash(b.signup?'Sign in to Swiftscope to read photos. They are kept with the build.':(b.error||'The photos could not be read.'));changed(true);return;}
+    snapshot();doc.photoRead=b.read||{};const sug=Array.isArray(b.suggestions)?b.suggestions:[];const build=sug.find(s=>s&&s.id==='build'&&s.kind==='setting');
     doc.photoSuggestions=[];
     const applied=build?applyPhotoSettings(build.apply||{}):false;
-    changed(true);flash(applied?'Walls and roof set from the photos. Undo if that does not match the house.':'The photos match the walls and roof already set. Notes are in the plans pack.');}
-  catch(e){flash('The photos could not be read. Check your connection.');}
+    const gap=photoGap(doc.photoRead);
+    changed(true);flash(applied?(build.label?`Set from the photos: ${build.label}. Undo if that does not match the house.`:'Walls and roof set from the photos. Undo if that does not match the house.'):(gap||'The photos match the walls and roof already set.'));}
+  catch(e){doc.photoRead={cladding:'unknown',roofShape:'unknown',roofMaterial:'unknown',notes:[],error:'The photos could not be read.'};flash('The photos could not be read. Check your connection.');changed(true);}
   finally{phBusy=false;renderPlanTab();}}
 function skipPhotoSuggestion(id){snapshot();doc.photoSuggestions=(doc.photoSuggestions||[]).filter(s=>s.id!==id);changed(true);flash('Skipped. Construction is unchanged.');}
-function applyPhotoSettings(a){if(!a)return false;const S=doc.settings;const ROOF={hip:1,gable:1,skillion:1,flat:1};let hit=false;
+function applyPhotoSettings(a){if(!a)return false;const S=doc.settings;const ROOF={hip:1,gable:1,skillion:1,flat:1};const COLOUR={white:1,cream:1,grey:1,charcoal:1,black:1,green:1,brown:1,red:1};const WIN={sliding:1,awning:1,fixed:1,louvre:1,timber:1};let hit=false;
   if(a.extClad&&CLAD[a.extClad]&&S.extClad!==a.extClad){S.extClad=a.extClad;hit=true;}
+  if(a.wallColour&&COLOUR[a.wallColour]&&S.wallColour!==a.wallColour){S.wallColour=a.wallColour;hit=true;}
+  if(a.windowStyle&&WIN[a.windowStyle]&&S.windowStyle!==a.windowStyle){S.windowStyle=a.windowStyle;hit=true;}
   if(a.roofType&&ROOF[a.roofType]&&S.roofType!==a.roofType){S.roofType=a.roofType;hit=true;}
   if(a.roofMat&&ROOFM[a.roofMat]&&S.roofMat!==a.roofMat){S.roofMat=a.roofMat;hit=true;}
   if(a.pitch>0){const p=Math.min(45,Math.max(1,+a.pitch));if(S.pitch!==p){S.pitch=p;hit=true;}}
@@ -1685,7 +1697,7 @@ function runInfo(r,ev){const d=runDef(r);const L=runLen(r);const pb=r.kind==='pb
 /* ---------- roof: the surface rises from the eaves at the roof pitch. For a hip roof the height is the distance in from the eave line
    (the straight skeleton of the plan), with eave lines run on past inside corners so valleys come out straight. For a gable roof only the
    eave lines along the length count, so the ends rise to gables. ---------- */
-function roofModel(P,S,H,cover){const sm=scaleMM();if(!sm||doc.outline.length<3)return null;const eave=(+S.eave||0)/1000,t=Math.tan((+S.pitch||22.5)*Math.PI/180);
+function roofModel(P,S,H,cover){const sm=scaleMM();if(!sm||doc.outline.length<3)return null;const seat=TraceGeom.roofSeat(S.wallH,S.eave,S.pitch,S.roofType);const eave=(+S.eave||0)/1000,t=seat.t;
   const E=offsetOut(doc.outline,eave*1000/sm).map(P);const n=E.length;if(n<3)return null;const area=E.reduce((a,p,i)=>{const q=E[(i+1)%n];return a+p[0]*q[1]-q[0]*p[1];},0);const sgn=Math.sign(area)||1;
   const b={x0:Infinity,x1:-Infinity,z0:Infinity,z1:-Infinity};E.forEach(p=>{b.x0=Math.min(b.x0,p[0]);b.x1=Math.max(b.x1,p[0]);b.z0=Math.min(b.z0,p[1]);b.z1=Math.max(b.z1,p[1]);});const longX=(b.x1-b.x0)>=(b.z1-b.z0);
   // Square plans: cover the plan with overlapping rectangles, give each its own hip (or gable along its length), and take the highest
@@ -1699,7 +1711,7 @@ function roofModel(P,S,H,cover){const sm=scaleMM();if(!sm||doc.outline.length<3)
     rects=[];got.forEach(r=>{if(rects.some(q=>q[0]<=r[0]&&q[1]>=r[1]&&q[2]<=r[2]&&q[3]>=r[3]))return;rects=rects.filter(q=>!(r[0]<=q[0]&&r[1]>=q[1]&&r[2]<=q[2]&&r[3]>=q[3]));rects.push(r);});
     rects=rects.map(([i0,i1,j0,j1])=>({x0:xs[i0],x1:xs[i1+1],z0:zs[j0],z1:zs[j1+1]}));}
   const dseg=(x,z,a,c)=>{const dx=c[0]-a[0],dz=c[1]-a[1];const L2=dx*dx+dz*dz||1;let u=((x-a[0])*dx+(z-a[1])*dz)/L2;u=Math.max(0,Math.min(1,u));return Math.hypot(x-a[0]-u*dx,z-a[1]-u*dz);};
-  const base=H-eave*t;const shape=S.roofType==='gable'?'gable':S.roofType==='skillion'?'skillion':S.roofType==='flat'?'flat':'hip';
+  const base=seat.base;const shape=S.roofType==='gable'?'gable':S.roofType==='skillion'?'skillion':S.roofType==='flat'?'flat':'hip';
   // where a floor above sits on these walls there is no roof, only the part that sticks out gets one
   const inCover=(x,z)=>{const C=cover;let c=false;for(let i=0,j=C.length-1;i<C.length;j=i++){const [xi,zi]=C[i],[xj,zj]=C[j];if(((zi>z)!==(zj>z))&&(x<(xj-xi)*(z-zi)/((zj-zi)||1e-9)+xi))c=!c;}return c;};
   const rise=(r,x,z)=>{const along=(r.x1-r.x0)>=(r.z1-r.z0);if(shape==='flat')return 0;if(shape==='skillion')return along?(z-r.z0):(x-r.x0);if(shape==='gable')return along?Math.min(z-r.z0,r.z1-z):Math.min(x-r.x0,r.x1-x);return Math.min(x-r.x0,r.x1-x,z-r.z0,r.z1-z);};
@@ -1718,7 +1730,7 @@ function roofModel(P,S,H,cover){const sm=scaleMM();if(!sm||doc.outline.length<3)
   mesh.castShadow=true;mesh.receiveShadow=true;mesh.userData.pick='roof';mesh.userData.roof=true;
   // gutters along the eave line
   const gut=new THREE.Group();const gm=new THREE.MeshStandardMaterial({color:0xd8d4cb,roughness:0.5});for(let i=0;i<n;i++){const a=E[i],c=E[(i+1)%n];const L=Math.hypot(c[0]-a[0],c[1]-a[1]);if(L<0.05)continue;const ya=height(a[0],a[1]),yc=height(c[0],c[1]);if(Math.abs(ya-base)>0.05&&Math.abs(yc-base)>0.05)continue;if(cover&&inCover((a[0]+c[0])/2,(a[1]+c[1])/2))continue;
-    const g=new THREE.Mesh(new THREE.BoxGeometry(L,0.12,0.12),gm);g.position.set((a[0]+c[0])/2,base-0.04,(a[1]+c[1])/2);g.rotation.y=-Math.atan2(c[1]-a[1],c[0]-a[0]);g.userData.roof=true;g.userData.pick='roof';gut.add(g);}
+    const g=new THREE.Mesh(new THREE.BoxGeometry(L,0.12,0.12),gm);g.position.set((a[0]+c[0])/2,Math.min(ya,yc)-0.1,(a[1]+c[1])/2);g.rotation.y=-Math.atan2(c[1]-a[1],c[0]-a[0]);g.userData.roof=true;g.userData.pick='roof';gut.add(g);}
   return {mesh,gut,height,base,t};}
 /* ---------- frame: what the carpenter builds, from the takeoff settings ---------- */
 function frameModel(P,S,H){const g=new THREE.Group();const pine=new THREE.MeshStandardMaterial({color:0xd8b77e,roughness:0.8}),lvl=new THREE.MeshStandardMaterial({color:0xc29a5b,roughness:0.8});const sgn=Math.sign(polyArea(doc.outline))||1;
@@ -1739,10 +1751,13 @@ function trussModel(R,P,S,H){const g=new THREE.Group();if(!R)return g;const pts=
 
 /* ---------- doors and windows that look like what they are ---------- */
 function openingModel(o,cx,cz,ang,thk,box,setUd){const w=o.b-o.a,ux=Math.cos(-ang),uz=Math.sin(-ang);const at=(du,y,sx,sy,sz,m)=>box(cx+ux*du,y,cz+uz*du,sx,sy,sz,ang,m);setUd({opId:o.id,pick:'wall'});
-  const frame=m3('frameW',0xeceae4,{roughness:0.5}),glassM=m3('glassO',0x9fc7e0,{transparent:true,opacity:0.45,roughness:0.05}),door=m3('doorO',0x8a6a4a,{roughness:0.6}),handle=m3('handleO',0xc9ced3,{metalness:0.8,roughness:0.2}),gd=m3('gdoor',0xd9d6cf,{roughness:0.5}),groove=m3('groove',0x9a9890);
+  const ws=doc.settings.windowStyle||'';const frame=m3(ws==='timber'?'frameT':'frameW',ws==='timber'?0x6b4a32:0xf7f6f2,{roughness:ws==='timber'?0.7:0.45}),glassM=m3('glassO',0x9fc7e0,{transparent:true,opacity:0.45,roughness:0.05}),door=m3('doorO',0x8a6a4a,{roughness:0.6}),handle=m3('handleO',0xc9ced3,{metalness:0.8,roughness:0.2}),gd=m3('gdoor',0xd9d6cf,{roughness:0.5}),groove=m3('groove',0x9a9890);
   const y0=o.sill,y1=o.sill+o.h,fw=0.05;
   if(o.t==='window'||o.t==='slider'){at(0,y1-fw/2,w,fw,thk*0.6,frame);at(0,y0+fw/2,w,fw,thk*0.6,frame);at(-w/2+fw/2,(y0+y1)/2,fw,o.h,thk*0.6,frame);at(w/2-fw/2,(y0+y1)/2,fw,o.h,thk*0.6,frame);at(0,(y0+y1)/2,w-fw*2,o.h-fw*2,0.02,glassM);
-    at(0,(y0+y1)/2,0.04,o.h,thk*0.5,frame);if(o.t==='slider')at(w*0.25,(y0+y1)/2-0.05,0.02,0.12,thk*0.7,handle);}
+    at(0,(y0+y1)/2,0.04,o.h,thk*0.5,frame);
+    if(ws==='awning')at(0,y0+o.h*0.72,w-fw,0.03,thk*0.55,frame);
+    if(ws==='louvre'){for(let i=1;i<=4;i++)at(0,y0+o.h*i/5,w-fw,0.02,thk*0.55,frame);}
+    if(o.t==='slider'||ws==='sliding')at(w*0.22,(y0+y1)/2-0.05,0.02,0.12,thk*0.7,handle);}
   else if(o.t==='garage'){at(0,o.h/2,w,o.h,0.06,gd);for(let y=0.45;y<o.h-0.1;y+=0.45)at(0,y,w-0.04,0.025,0.08,groove);at(0,0.35,0.3,0.04,0.09,handle);}
   else{at(0,o.h/2,w-0.02,o.h,0.045,door);at(w/2-0.12,1.0,0.12,0.03,0.09,handle);at(0,o.h+0.03,w+0.08,0.06,thk*0.7,frame);}
   setUd(null);}
@@ -1881,7 +1896,8 @@ function build3D(){const T=init3D();if(!T)return;hook3D();const root=T.root;root
   if(!T.fitted){const span=Math.max(toM(b.x1-b.x0),toM(b.y1-b.y0),2);const top=levelY(Math.max(0,n-1))+T.H;T.camera.position.set(span*0.9,Math.max(span*0.85,top*0.7)+levelY(act),span*1.25);T.controls.target.set(0,Math.min(top*0.45,levelY(act)+0.8),0);T.fitted=true;}}
 function build3DLevel(T,root,LI,P,cover){const S=doc.settings,H=S.wallH/1000;
   const CLAD_COL={brick:0xb5755a,weatherboard:0xf7f6f2,fc:0xe6e1d4,colorbond:0xc5cdd4,render:0xf3efe6};
-  const extM=new THREE.MeshStandardMaterial({color:CLAD_COL[S.extClad]||0xe8e4da,roughness:S.extClad==='weatherboard'?0.55:0.85}),intM=new THREE.MeshStandardMaterial({color:0xf2f0ea,roughness:0.9}),glass=new THREE.MeshStandardMaterial({color:0x9fc7e0,transparent:true,opacity:0.45}),doorM=new THREE.MeshStandardMaterial({color:0x8a6a4a,roughness:0.6});
+  const WALL_COL={white:0xf7f6f2,cream:0xf3ead7,grey:0xc5c9c4,charcoal:0x4e5550,black:0x2c2f31,green:0x3f5c45,brown:0x8a6a4a,red:0x8d4a3a};
+  const extM=new THREE.MeshStandardMaterial({color:WALL_COL[S.wallColour]||CLAD_COL[S.extClad]||0xe8e4da,roughness:S.extClad==='weatherboard'||S.wallColour==='white'?0.55:0.85}),intM=new THREE.MeshStandardMaterial({color:0xf2f0ea,roughness:0.9}),glass=new THREE.MeshStandardMaterial({color:0x9fc7e0,transparent:true,opacity:0.45}),doorM=new THREE.MeshStandardMaterial({color:0x8a6a4a,roughness:0.6});
   const finCol={tiles:0xd9d6cf,carpet:0x9aa0a6,hybrid:0xc9a77c,timber:0xb07c4f,epoxy:0x8f9aa3,none:0xbdb9b1};
   const sgn=Math.sign(polyArea(doc.outline))||1;
   let pickTag=null,ud=null;const box=(x,y,z,sx,sy,sz,ang,m)=>{const me=new THREE.Mesh(new THREE.BoxGeometry(Math.max(sx,0.01),Math.max(sy,0.01),Math.max(sz,0.01)),m);me.position.set(x,y,z);me.rotation.y=ang;me.castShadow=true;me.receiveShadow=true;if(pickTag)me.userData.pick=pickTag;if(ud)Object.assign(me.userData,ud);root.add(me);return me;};
@@ -1889,9 +1905,10 @@ function build3DLevel(T,root,LI,P,cover){const S=doc.settings,H=S.wallH/1000;
   pickTag='wall';
   segs().forEach(s=>{const a=P(s.a),c=P(s.b);const L=Math.hypot(c[0]-a[0],c[1]-a[1]);if(L<0.05)return;const ux=(c[0]-a[0])/L,uz=(c[1]-a[1])/L;const thk=(s.ext?S.extThk:S.intThk)/1000;
     let nx=-uz,nz=ux;if(s.ext){nx*=sgn;nz*=sgn;}const off=s.ext?thk/2:0;const ang=-Math.atan2(uz,ux);const m=s.ext?extM:intM;
-    const ops=doc.openings.map(o=>({o,h:hostOf(o)})).filter(x=>x.h&&x.h.s.host===s.host).map(x=>{const c0=x.h.t*L,w=x.o.width/1000;return {a:Math.max(0,c0-w/2),b:Math.min(L,c0+w/2),sill:x.o.type==='window'?x.o.sill/1000:0,h:Math.min(H-0.05,x.o.height/1000),t:x.o.type,id:x.o.id};}).sort((p,q)=>p.a-q.a);
+    const top=s.ext?H:Math.max(0.5,H-0.04);
+    const ops=doc.openings.map(o=>({o,h:hostOf(o)})).filter(x=>x.h&&x.h.s.host===s.host).map(x=>{const c0=x.h.t*L,w=x.o.width/1000;return {a:Math.max(0,c0-w/2),b:Math.min(L,c0+w/2),sill:x.o.type==='window'?x.o.sill/1000:0,h:Math.min(top-0.05,x.o.height/1000),t:x.o.type,id:x.o.id};}).sort((p,q)=>p.a-q.a);
     const piece=(s0,s1,y0,y1)=>{if(L3.frame||s1-s0<0.01||y1-y0<0.01)return;const mid=(s0+s1)/2;ud={host:s.host};box(a[0]+ux*mid+nx*off,(y0+y1)/2,a[1]+uz*mid+nz*off,s1-s0,y1-y0,thk,ang,m);ud=null;};
-    let cur=0;ops.forEach(o=>{piece(cur,o.a,0,H);piece(o.a,o.b,0,o.sill);piece(o.a,o.b,o.sill+o.h,H);const mid=(o.a+o.b)/2;const cxo=a[0]+ux*mid+nx*off,czo=a[1]+uz*mid+nz*off;openingModel(o,cxo,czo,ang,thk,box,(v)=>{ud=v;});cur=Math.max(cur,o.b);});piece(cur,L,0,H);});
+    let cur=0;ops.forEach(o=>{piece(cur,o.a,0,top);piece(o.a,o.b,0,o.sill);piece(o.a,o.b,o.sill+o.h,top);const mid=(o.a+o.b)/2;const cxo=a[0]+ux*mid+nx*off,czo=a[1]+uz*mid+nz*off;openingModel(o,cxo,czo,ang,thk,box,(v)=>{ud=v;});cur=Math.max(cur,o.b);});piece(cur,L,0,top);});
   if(L3.frame){const F=frameModel(P,S,H);root.add(F);}
   pickTag=null;
   if(LI>0){const sh=new THREE.Shape(doc.outline.map(p=>{const q=P(p);return new THREE.Vector2(q[0],-q[1]);}));const sl=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:0.3,bevelEnabled:false}),new THREE.MeshStandardMaterial({color:0xd6d2c8,roughness:0.9}));sl.rotation.x=-Math.PI/2;sl.position.y=-0.31;sl.castShadow=true;sl.receiveShadow=true;root.add(sl);}

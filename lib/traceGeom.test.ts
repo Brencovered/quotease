@@ -138,4 +138,34 @@ describe("house tracer geometry", () => {
     expect(swapped.rooms[2].name).toBe("Deck");
     expect(swapped.rooms[2].x).toBeCloseTo(deck.x, 4);
   });
+
+  it("seats every roof on the walls and does not pitch a flat roof up to 169 m²", () => {
+    const hip = TraceGeom.roofCoverArea(106, 41.2, 0.45, 4, 0, 22.5, "hip");
+    const flat = TraceGeom.roofCoverArea(106, 41.2, 0.45, 4, 0, 22.5, "flat");
+    const low = TraceGeom.roofCoverArea(106, 41.2, 0.45, 4, 0, 5, "skillion");
+    expect(flat.planA).toBeGreaterThan(120);
+    expect(flat.planA).toBeLessThan(140);
+    expect(flat.roofA).toBeCloseTo(flat.planA, 5);
+    expect(hip.roofA).toBeGreaterThan(hip.planA);
+    expect(hip.roofA).toBeLessThan(150);
+    expect(low.roofA).toBeLessThan(140);
+    expect(hip.roofA).toBeLessThan(169);
+    const sunk = TraceGeom.roofSeat(2400, 450, 22.5, "flat");
+    const plate = TraceGeom.roofSeat(2400, 450, 22.5, "hip");
+    expect(sunk.t).toBe(0);
+    expect(sunk.base).toBeGreaterThanOrEqual(2.4);
+    expect(plate.base).toBeGreaterThanOrEqual(2.4);
+    expect(plate.base).toBeCloseTo(2.45, 2);
+  });
+
+  it("allows a shared circuit of cable, not a home run to every point", () => {
+    expect(TraceGeom.defaultLights(40, "living")).toBeLessThanOrEqual(5);
+    expect(TraceGeom.defaultLights(12, "bed")).toBe(1);
+    expect(TraceGeom.defaultLights(3, "robe")).toBe(1);
+    const cable = TraceGeom.elecCable({ powerPts: 24, lights: 15, switches: 8, fans: 2, smoke: 3, ac: 0 });
+    expect(cable.powerM).toBe(120);
+    expect(cable.powerM).toBeLessThan(192);
+    expect(cable.lightM).toBe(15 * 4 + 13 * 2);
+    expect(cable.lightM).toBeLessThan(160);
+  });
 });

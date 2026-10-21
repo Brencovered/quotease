@@ -288,7 +288,45 @@
     };
   }
 
-  const api = { orderDrawings, roofUncovered, scaleDrawing, mergeQty, gapLimits, scaleMmPerPx, dropEvenGrid, dropFloating, segmentExtent, scrubWalls, siteLooksLikeLot, orientLabels, HOUSE_ONCE, pip, bbox };
+  /* Roof sheet on the flat, then the slope. A flat roof is not stretched by a leftover hip pitch.
+     Eaves add perimeter × eave, plus a corner square where the outline turns. */
+  function roofCoverArea(footprint, perimeter, eaveM, convex, concave, pitchDeg, roofType) {
+    const e = Math.max(0, +eaveM || 0);
+    const planA = Math.max(0, (+footprint || 0) + (+perimeter || 0) * e + ((+convex || 0) - (+concave || 0)) * e * e);
+    const flat = roofType === "flat";
+    const pitch = flat ? 0 : Math.max(0, Math.min(75, +pitchDeg || 0));
+    const c = Math.cos(pitch * Math.PI / 180);
+    const slope = c > 0.2 ? 1 / c : 1;
+    return { planA, roofA: planA * slope, pitch };
+  }
+  /* Lowest point of the sheet, at the outer eave. It sits on the wall plate so the walls cannot stick up through it. */
+  function roofSeat(wallHmm, eaveMm, pitchDeg, roofType) {
+    const H = Math.max(0, +wallHmm || 0) / 1000;
+    const flat = roofType === "flat";
+    const pitch = flat ? 0 : Math.max(0, Math.min(75, +pitchDeg || 0));
+    const t = Math.tan(pitch * Math.PI / 180);
+    const cover = 0.05;
+    return { base: H + cover, t, cover, plate: H };
+  }
+  /* One light in a small room. Living and kitchen get one per 8 m², not a downlight every 2.5 m². */
+  function defaultLights(net, type) {
+    const a = Math.max(0, +net || 0);
+    if (type === "robe" || type === "wc") return 1;
+    if (type === "living" || type === "kitchen") return Math.max(1, Math.ceil(a / 8));
+    if (a < 16) return 1;
+    return Math.max(1, Math.ceil(a / 10));
+  }
+  /* Shared circuit, not a private run from the board to every point. */
+  function elecCable(p) {
+    p = p || {};
+    const power = Math.max(0, +p.powerPts || 0);
+    const lights = Math.max(0, +p.lights || 0);
+    const extra = Math.max(0, (+p.switches || 0) + (+p.fans || 0) + (+p.smoke || 0));
+    const ac = Math.max(0, +p.ac || 0);
+    return { powerM: Math.ceil(power * 5 + ac * 8), lightM: Math.ceil(lights * 4 + extra * 2) };
+  }
+
+  const api = { orderDrawings, roofUncovered, scaleDrawing, mergeQty, gapLimits, scaleMmPerPx, dropEvenGrid, dropFloating, segmentExtent, scrubWalls, siteLooksLikeLot, orientLabels, roofCoverArea, roofSeat, defaultLights, elecCable, HOUSE_ONCE, pip, bbox };
   root.TraceGeom = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);

@@ -9,7 +9,7 @@ import { generateObject } from "ai";
 import { MODELS } from "@/lib/ai/gateway";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit, rateLimitResponseInit } from "@/lib/rateLimit";
-import { PHOTO_READ_PROMPT, PhotoReadSchema, normalizePhotoRead, photoSuggestions, type PhotoContext } from "@/lib/structureAi";
+import { PHOTO_READ_PROMPT, PhotoReadSchema, normalizePhotoRead, enrichPhotoRead, photoSuggestions, type PhotoContext } from "@/lib/structureAi";
 
 export const maxDuration = 60;
 
@@ -30,15 +30,15 @@ export async function POST(req: NextRequest) {
   }
   const isImg = (i: unknown): i is string => typeof i === "string" && /^data:image\/(jpeg|png|webp);base64,/.test(i);
   const plan = isImg(body.plan) && body.plan.length <= 1_600_000 ? body.plan : "";
-  const images = (Array.isArray(body.images) ? body.images : []).filter(isImg).slice(0, plan ? 3 : 4);
+  const images = (Array.isArray(body.images) ? body.images : []).filter(isImg).slice(0, 5);
   const total = images.reduce((a, i) => a + i.length, 0) + plan.length;
   if (!images.length) return NextResponse.json({ error: "Add a photo of the house first." }, { status: 400 });
   if (total > 5_000_000) return NextResponse.json({ error: "Those photos are too big. Try fewer at a time." }, { status: 413 });
   const context = cleanContext(body.context);
 
   const content = [
-    ...(plan ? [{ type: "image" as const, image: plan }] : []),
     ...images.map((image) => ({ type: "image" as const, image })),
+    ...(plan ? [{ type: "image" as const, image: plan }] : []),
     { type: "text" as const, text: promptText(images.length, !!plan, context, body.context) },
   ];
   for (const model of [MODELS.VISION_PRIMARY, MODELS.VISION_FALLBACK]) {
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
         instructions: PHOTO_READ_PROMPT,
         messages: [{ role: "user", content }],
       });
-      const read = normalizePhotoRead(result.object);
+      const read = enrichPhotoRead(normalizePhotoRead(result.object));
       return NextResponse.json({ read, suggestions: photoSuggestions(read, context), model });
     } catch (err) {
       console.error(`[structures/photo-read] ${model} failed:`, err);
@@ -62,6 +62,8 @@ export async function POST(req: NextRequest) {
 
 const ROOFS = new Set(["hip", "gable", "skillion", "flat"]);
 const CLADS = new Set(["brick", "weatherboard", "fc", "colorbond", "render"]);
+const COLOURS = new Set(["white", "cream", "grey", "charcoal", "black", "green", "brown", "red"]);
+const WINS = new Set(["sliding", "awning", "fixed", "louvre", "timber"]);
 
 function cleanContext(raw: unknown): PhotoContext {
   const o = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
@@ -74,10 +76,14 @@ function cleanContext(raw: unknown): PhotoContext {
     : [];
   const roof = String(o.roofType || "");
   const clad = String(o.cladding || o.extClad || "");
+  const colour = String(o.wallColour || "");
+  const win = String(o.windowStyle || "");
   return {
     storeys: Math.round(num("storeys", 1, 3, 1)),
     wallH: num("wallH", 2100, 3600, 2400),
     extClad: CLADS.has(clad) ? clad : "brick",
+    wallColour: COLOURS.has(colour) ? colour : "",
+    windowStyle: WINS.has(win) ? win : "",
     roofType: ROOFS.has(roof) ? roof : "hip",
     roofMat: o.roofMat === "colorbond" ? "colorbond" : "tiles",
     pitch: num("pitch", 1, 45, 22.5),
@@ -103,8 +109,8 @@ function measuredLine(raw: unknown) {
 function promptText(photos: number, plan: boolean, c: PhotoContext, raw: unknown) {
   const lead = plan
     ? photos === 1
-      ? "The first image is the floor plan. The next image is a photo of the finished house."
-      : `The first image is the floor plan. The next ${photos} images are photos of the finished house.`
+      ? "The first image is a photo of the finished house. The last image is the floor plan, and it shows the walls only."
+      : `The first ${photos} images are photos of the finished house. The last image is the floor plan, and it shows the walls only.`
     : photos === 1
       ? "This is a photo of the house. No floor plan is attached."
       : `These are ${photos} photos of the same house. No floor plan is attached.`;
