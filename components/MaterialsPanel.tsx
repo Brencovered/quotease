@@ -336,6 +336,7 @@ export default function MaterialsPanel() {
       {/* ---- Tab 1: Materials ---- */}
       {activeTab === "materials" && (
         <MaterialsCatalog
+          accountTrade={accountTrade}
           materials={materials}
           loading={materialsLoading}
           error={materialsError}
