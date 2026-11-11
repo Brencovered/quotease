@@ -8,6 +8,8 @@ import SavingsCalculator from "@/components/SavingsCalculator";
 export const metadata = {
   title: "How it works - SwiftScope",
   description: "See how tradies use SwiftScope to quote on-site in minutes: build the quote, send it from your phone, and win the job before you leave the driveway.",
+  alternates: { canonical: "https://swiftscope.com.au/how-it-works" },
+  robots: { index: true, follow: true },
 };
 
 export default function HowItWorksPage() {

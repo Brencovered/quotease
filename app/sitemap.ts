@@ -4,8 +4,7 @@
  * Dynamic sitemap generated from live Supabase data.
  *
  * Includes:
- * 1. Static marketing pages (home, features, how-it-works, directory,
- *    login, signup)
+ * 1. Static marketing pages (home, features, how-it-works, directory)
  * 2. Individual tradie listing pages (/directory/[slug])
  * 3. Trade×suburb programmatic pages (/electricians-seaford-vic etc.)
  *    - only included when at least MIN_LISTINGS_FOR_INDEX listings exist
@@ -42,6 +41,7 @@ import { LEADS_ENABLED } from "@/lib/featureFlags";
 import { TRADE_HUBS } from "@/lib/marketing/trade-hubs";
 import {
   CANONICAL_ORIGIN,
+  sitemapShouldQueryDatabase,
   blogSitemapEntries,
   listingSitemapEntries,
   suburbHubSitemapEntries,
@@ -100,15 +100,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     })),
     { url: `${BASE_URL}/how-it-works`,     changeFrequency: "monthly", priority: 0.7 },
-    { url: `${BASE_URL}/signup`,           changeFrequency: "monthly", priority: 0.6 },
-    { url: `${BASE_URL}/login`,            changeFrequency: "monthly", priority: 0.4 },
     { url: `${BASE_URL}/terms`,            changeFrequency: "yearly",  priority: 0.2 },
     { url: `${BASE_URL}/privacy`,          changeFrequency: "yearly",  priority: 0.2 },
   ];
 
-  // Supabase env vars won't be present at build time in CI - return
-  // static-only sitemap then; the revalidation will hydrate it at runtime.
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  // Missing credentials, and CI's placeholder Supabase host, both return
+  // the static sitemap. A live fetch failure below still throws: that is
+  // a production read, and swallowing it would publish a short sitemap.
+  if (!sitemapShouldQueryDatabase({
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  })) {
     return staticPages;
   }
 

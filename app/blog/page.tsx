@@ -9,6 +9,8 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Blog & Insights - SwiftScope",
   description: "Trade business tips, industry insights, and product updates from the SwiftScope team.",
+  alternates: { canonical: "https://swiftscope.com.au/blog" },
+  robots: { index: true, follow: true },
 };
 
 export default async function BlogPage() {

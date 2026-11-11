@@ -113,7 +113,23 @@ type Listing = {
   logo_url: string | null;
 };
 
-export const metadata: Metadata = directoryMeta();
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}): Promise<Metadata> {
+  const params = await searchParams;
+  const filtered = Object.values(params).some((value) => {
+    if (Array.isArray(value)) return value.some((item) => item.trim().length > 0);
+    return typeof value === "string" && value.trim().length > 0;
+  });
+  // Faceted URLs (/directory?trade=plumber&page=2) are the same directory
+  // with a query string. Their canonical is the bare /directory. noindex
+  // stops Google treating each filter combination as its own page while
+  // follow still passes the listing links.
+  if (!filtered) return directoryMeta();
+  return { ...directoryMeta(), robots: { index: false, follow: true } };
+}
 
 export default async function DirectoryPage({
   searchParams,

@@ -8,6 +8,22 @@ import { tradeToSlug } from "@/lib/seo/meta";
 export const CANONICAL_ORIGIN = "https://swiftscope.com.au";
 
 /**
+ * CI's build step sets a placeholder Supabase URL and service key so
+ * `next build` can prerender without production credentials. Querying
+ * that host throws, and a thrown sitemap prerender fails the build.
+ * Production still queries, and a failed page there still throws so a
+ * short read is not published as a complete sitemap.
+ */
+export function sitemapShouldQueryDatabase(env: { url?: string | null; serviceKey?: string | null }): boolean {
+  const url = env.url?.trim() ?? "";
+  const serviceKey = env.serviceKey?.trim() ?? "";
+  if (!url || !serviceKey) return false;
+  if (url.includes("placeholder.supabase.co")) return false;
+  if (serviceKey.startsWith("placeholder")) return false;
+  return true;
+}
+
+/**
  * Same thin-page threshold as tradeSuburbMeta and the suburb hub pages.
  * Combinations under this stay out of the sitemap because those pages
  * are deliberately noindex.

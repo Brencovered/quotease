@@ -9,7 +9,11 @@ import {
 import MarketingNav from "@/components/MarketingNav";
 import { FEATURES_GRID } from "@/lib/marketing/features-grid-data";
 
-export const metadata = { title: "Features - SwiftScope" };
+export const metadata = {
+  title: "Features - SwiftScope",
+  alternates: { canonical: "https://swiftscope.com.au/features" },
+  robots: { index: true, follow: true },
+};
 
 export default function FeaturesPage() {
   return (

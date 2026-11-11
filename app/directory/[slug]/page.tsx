@@ -13,7 +13,15 @@ import { CLAIMED_DIRECTORY_PAGES_ENABLED, QUOTE_REQUESTS_ENABLED } from "@/lib/f
 import MarketingNav from "@/components/MarketingNav";
 import DirectoryCard from "@/components/DirectoryCard";
 import { tradieListingMeta, buildDirectorySlug, getTradeVariants, getTradeDisplay, tradeToSlug, suburbToSlug, postcodeToState } from "@/lib/seo/meta";
-import { isLegacyDirectoryUuid, legacyUuidRedirectPath } from "@/lib/seo/directoryUrl";
+import {
+  chooseListingForSlug,
+  isLegacyDirectoryUuid,
+  listingSlugSuffix,
+  nonCanonicalListingRedirect,
+  removedListingRedirectPath,
+  suburbSlugCandidatesFromListingSlug,
+  type SuburbHubCandidate,
+} from "@/lib/seo/directoryUrl";
 import { BreadcrumbSchema, type Crumb } from "@/components/seo/StructuredData";
 import { getGoogleReviewsUrl } from "@/lib/seo/gbp";
 import PhotoGallery from "./_components/PhotoGallery";
@@ -101,30 +109,62 @@ function domainFromUrl(url: string): string | null {
  *    resolves it via a Postgres function (PostgREST can't LIKE-filter a
  *    uuid column directly without a cast).
  *  - A raw UUID - what every listing page used to be linked/shared/
- *    indexed as before this fix. Still resolved (so existing bookmarks
- *    and any already-indexed raw-UUID URLs keep working), flagged via
- *    isLegacyId so the caller can 308-redirect to the canonical pretty
- *    slug instead of serving duplicate content at two URLs.
+ *    indexed as before pretty slugs. Still resolved so bookmarks keep
+ *    working; the page 308s to the current pretty slug.
  *
- * Two candidate rows back from the suffix lookup (an astronomically
- * unlikely 6-hex-char collision) is treated as not-found rather than
- * silently guessing which business the visitor meant.
+ * More than one row for a suffix is a real collision. The row whose
+ * canonical slug equals the request is used. Anything else is not this
+ * URL, and guessing would attach the page to the wrong business.
  */
 async function resolveListingBySlug(
   supabase: Awaited<ReturnType<typeof createClient>>,
   slug: string
-): Promise<{ listing: Listing | null; isLegacyId: boolean }> {
+): Promise<{ listing: Listing | null }> {
   if (isLegacyDirectoryUuid(slug)) {
-    const { data } = await supabase.from("directory_listing").select("*").eq("id", slug).single();
-    return { listing: (data as Listing | null) ?? null, isLegacyId: true };
+    const { data } = await supabase.from("directory_listing").select("*").eq("id", slug).maybeSingle();
+    return { listing: (data as Listing | null) ?? null };
   }
 
-  const suffix = slug.slice(-6);
-  if (!/^[0-9a-f]{6}$/i.test(suffix)) return { listing: null, isLegacyId: false };
+  const suffix = listingSlugSuffix(slug);
+  if (!suffix) return { listing: null };
 
   const { data } = await supabase.rpc("resolve_directory_listing_by_uid_suffix", { p_suffix: suffix });
-  if (!data || data.length !== 1) return { listing: null, isLegacyId: false };
-  return { listing: data[0] as Listing, isLegacyId: false };
+  const rows = (data ?? []) as Listing[];
+  return { listing: chooseListingForSlug(slug, rows) };
+}
+
+/**
+ * A pretty slug with no row is a listing that was deleted or merged into
+ * a new id. Send it to the suburb hub when that hub exists, otherwise the
+ * directory. A 404 here is what Search Console recorded for those URLs,
+ * including a noindex tag on the not-found page.
+ */
+async function redirectRemovedListing(slug: string): Promise<never> {
+  let target = "/directory";
+  const suburbCandidates = suburbSlugCandidatesFromListingSlug(slug);
+  try {
+    if (
+      suburbCandidates.length > 0 &&
+      process.env.SUPABASE_SERVICE_ROLE_KEY &&
+      process.env.NEXT_PUBLIC_SUPABASE_URL
+    ) {
+      const admin = createAdminClient();
+      const { data } = await admin
+        .from("trade_suburb_pages")
+        .select("suburb_slug, state, listing_count")
+        .in("suburb_slug", suburbCandidates);
+      const hubs: SuburbHubCandidate[] = (data ?? []).map((row) => ({
+        suburbSlug: row.suburb_slug,
+        state: row.state,
+        count: row.listing_count ?? 0,
+      }));
+      target = removedListingRedirectPath(slug, hubs);
+    }
+  } catch (err) {
+    console.error("[directory] removed-listing redirect lookup failed:", err);
+    target = "/directory";
+  }
+  permanentRedirect(target);
 }
 
 export async function generateMetadata({
@@ -133,7 +173,7 @@ export async function generateMetadata({
   const { slug } = await params;
   const supabase = await createClient();
   const { listing } = await resolveListingBySlug(supabase, slug);
-  if (!listing) return { title: "Not found | SwiftScope" };
+  if (!listing) return { title: "Not found | SwiftScope", robots: { index: false, follow: true } };
   // Canonical always points at the pretty slug, even when this metadata
   // is being generated for a request that arrived via the legacy raw-UUID
   // URL - that's the whole point of a canonical tag here: tell Google
@@ -161,14 +201,20 @@ export default async function TradieProfilePage({
   const supabase = await createClient();
 
   const { listing: maybeListing } = await resolveListingBySlug(supabase, slug);
+  if (!maybeListing) {
+    // Not a former listing URL (no id suffix): real 404. A pretty slug
+    // whose row is gone 308s to the suburb hub or the directory.
+    if (!listingSlugSuffix(slug)) notFound();
+    await redirectRemovedListing(slug);
+  }
   if (!maybeListing) notFound();
   const listing: Listing = maybeListing;
 
-  // Someone hit the old raw-UUID URL (a bookmark, an already-indexed
-  // link, a share from before this fix) - send them to the canonical
-  // pretty-slug URL instead of rendering the same page at two addresses.
-  const legacyRedirect = legacyUuidRedirectPath(slug, listing);
-  if (legacyRedirect) permanentRedirect(legacyRedirect);
+  // UUID bookmarks and renamed pretty slugs both 308 to the current
+  // canonical path. Serving them as 200 leaves a second URL for the
+  // same listing.
+  const canonicalRedirect = nonCanonicalListingRedirect(slug, listing);
+  if (canonicalRedirect) permanentRedirect(canonicalRedirect);
 
   /* Similar tradies - always geographically scoped. The previous query
      used an OR between trade-match and suburb-match, so a trade match

@@ -3,6 +3,7 @@ import { POSTGREST_PAGE_SIZE } from "./fetchAllPages";
 import {
   blogSitemapEntries,
   listingSitemapEntries,
+  sitemapShouldQueryDatabase,
   suburbHubSitemapEntries,
   tradeSuburbSitemapEntries,
   type ListingSitemapRow,
@@ -110,6 +111,20 @@ describe("programmatic sitemap exclusions", () => {
       "https://swiftscope.com.au/tradies-in/seaford-vic",
       "https://swiftscope.com.au/tradies-in/seaford-sa",
     ]);
+  });
+});
+
+describe("sitemap database gate", () => {
+  it("skips CI placeholder credentials and still queries a real project", () => {
+    expect(sitemapShouldQueryDatabase({
+      url: "https://placeholder.supabase.co",
+      serviceKey: "placeholder-service-role-key",
+    })).toBe(false);
+    expect(sitemapShouldQueryDatabase({ url: "", serviceKey: "real" })).toBe(false);
+    expect(sitemapShouldQueryDatabase({
+      url: "https://ltmxsmoyaoennqksxyqt.supabase.co",
+      serviceKey: "service-role",
+    })).toBe(true);
   });
 });
 

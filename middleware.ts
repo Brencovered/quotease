@@ -33,6 +33,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest, type NextFetchEvent } from "next/server";
 import { getActiveBusinessId } from "@/lib/team";
+import { canonicalRequestPath } from "@/lib/seo/canonicalPath";
 
 /* ------------------------------------------------------------------ */
 /*  Route classification                                               */
@@ -449,9 +450,19 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
     "quotease-git-main-brennorris360-3348s-projects.vercel.app",
   ]);
   const requestHost = request.headers.get("host") ?? "";
+  // Trailing-slash duplicates (/electricians-box-hill-vic/) are the same
+  // document as the slash-free canonical. Fold that into the host redirect
+  // so www + slash is one hop, and redirect a canonical-host slash URL on
+  // its own. /ingest and /api keep their slashes.
+  const canonicalPath = canonicalRequestPath(pathname);
   if (!pathname.startsWith("/api/") && NON_CANONICAL_HOSTS.has(requestHost)) {
-    const canonicalUrl = new URL(request.nextUrl.pathname + request.nextUrl.search, `https://${CANONICAL_HOST}`);
+    const canonicalUrl = new URL(canonicalPath + request.nextUrl.search, `https://${CANONICAL_HOST}`);
     return NextResponse.redirect(canonicalUrl, 308);
+  }
+  if (canonicalPath !== pathname && !pathname.startsWith("/api/")) {
+    const url = request.nextUrl.clone();
+    url.pathname = canonicalPath;
+    return NextResponse.redirect(url, 308);
   }
 
   // Start with a mutable response so Supabase can set refreshed cookies

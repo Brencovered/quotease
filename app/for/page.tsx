@@ -9,6 +9,8 @@ export const metadata: Metadata = {
   title: "Quoting software by trade - SwiftScope",
   description:
     "On-site quoting and job software for electricians, plumbers, carpenters, roofers, and every trade SwiftScope supports.",
+  alternates: { canonical: "https://swiftscope.com.au/for" },
+  robots: { index: true, follow: true },
 };
 
 export default function ForTradesIndexPage() {

@@ -4,6 +4,8 @@ import MarketingNav from "@/components/MarketingNav";
 export const metadata = {
   title: "Terms of Use - SwiftScope",
   description: "The terms and conditions governing use of the SwiftScope quoting and job management platform.",
+  alternates: { canonical: "https://swiftscope.com.au/terms" },
+  robots: { index: true, follow: true },
 };
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {

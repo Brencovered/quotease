@@ -33,6 +33,9 @@ const anton = Anton({
 });
 
 export const metadata: Metadata = {
+  // Absolute canonicals and Open Graph image URLs resolve against this.
+  // Without it, `next build` falls back to http://localhost:3000.
+  metadataBase: new URL("https://swiftscope.com.au"),
   title: "SwiftScope - quote it, send it, win the job",
   description: "Quote the job before you've left the driveway.",
   icons: {

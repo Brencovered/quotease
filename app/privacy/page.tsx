@@ -4,6 +4,8 @@ import MarketingNav from "@/components/MarketingNav";
 export const metadata = {
   title: "Privacy Policy - SwiftScope",
   description: "How SwiftScope collects, uses, stores, and protects personal information, in line with the Australian Privacy Principles and the New Zealand Privacy Act 2020.",
+  alternates: { canonical: "https://swiftscope.com.au/privacy" },
+  robots: { index: true, follow: true },
 };
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
