@@ -390,6 +390,10 @@ dialog::backdrop{background:rgba(10,15,20,.5);}
 .lvcard{border-color:#7a5cc2;}.nudge{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:13px;}.nudge .btn{padding:4px 10px;}.nudge em{color:var(--muted);font-style:normal;font-size:12px;}
 .tbar.views .chip.lv{padding-left:10px;padding-right:10px;}
 .tbar.views .vsep{width:1px;background:var(--line);margin:0 2px;}
+
+.note.warn{background:color-mix(in srgb,#d97706 12%,transparent);border-left:3px solid #d97706;padding:6px 8px;border-radius:6px;color:var(--ink);}
+#v3pop .pgrid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}#v3pop .pgrid.one{grid-template-columns:minmax(0,1fr);}
+#v3pop .pgrid select{width:100%;min-width:0;box-sizing:border-box;}#v3pop .pgrid .inp{min-width:0;}
 </style>
 </head>
 <body>
@@ -514,12 +518,22 @@ const AREA_T={deck:{n:'Deck',col:'#b07c4f'},verandah:{n:'Verandah roof',col:'#7d
 const BOARDS={merbau:{n:'Merbau decking',w:90,t:19},pine:{n:'Treated pine decking',w:90,t:22},spotted:{n:'Spotted gum decking',w:86,t:19},composite:{n:'Composite decking',w:137,t:23}};
 const VROOF={colorbond:'Colorbond roof sheeting',poly:'Polycarbonate roof sheeting'};
 const OPEN_T={door:{n:'Door',w:820,h:2040,sill:0},window:{n:'Window',w:1200,h:1200,sill:900},slider:{n:'Sliding door',w:2100,h:2100,sill:0},garage:{n:'Garage door',w:2400,h:2100,sill:0}};
+/* The kind of door or window, what it is made of, and the hours to fit one. */
+const OPEN_STYLE={door:{hinged:{p:'doors',n:'Hinged',h:[1.5,2.5],match:[]},double:{p:'French door pairs',n:'Double, French pair',h:[3,3.5],match:['french door','double door']},cavity:{p:'cavity sliding doors',n:'Cavity slider',h:[3.5,3.5],match:['cavity slider','cavity sliding door']},barn:{p:'barn sliding doors',n:'Barn slider',h:[2,2],match:['barn door']},bifold:{p:'bifold doors',n:'Bifold',h:[2.5,3],match:['bifold door']},pivot:{p:'pivot doors',n:'Pivot entry',h:[5,5],match:['pivot door','entry door']}},
+  window:{sliding:{n:'Sliding',h:[2,2]},awning:{n:'Awning',h:[2,2]},casement:{n:'Casement',h:[2,2]},hung:{n:'Double hung',h:[2.5,2.5]},fixed:{n:'Fixed',h:[1.5,1.5]},louvre:{n:'Louvre',h:[2.5,2.5]}},
+  slider:{slider:{n:'Sliding, 2 panel',h:[2.5,2.5],match:['sliding door']},stacker:{n:'Stacker, 3 panel',h:[3.5,3.5],match:['stacker door','stacking door']},bifold:{n:'Bifold',h:[6,6],match:['bifold door']},french:{n:'French doors',h:[3.5,3.5],match:['french door']}},
+  garage:{sectional:{n:'Panel lift',h:[5,5],match:['panel lift','sectional door']},roller:{n:'Roller door',h:[4,4],match:['roller door']},tilt:{n:'Tilt door',h:[4,4],match:['tilt door']}}};
+const OPEN_MAT={door:{hollow:'Hollow core',solid:'Solid core',glass:'Glass panel',timber:'Solid timber'},window:{alu:'Aluminium',timber:'Timber',upvc:'uPVC'},slider:{alu:'Aluminium',timber:'Timber',upvc:'uPVC'},garage:{steel:'Colorbond steel',timber:'Timber look',alu:'Aluminium'}};
+const GLAZE={single:'Single glazed',double:'Double glazed'};
+function opStyle(o){const S=OPEN_STYLE[o.type]||{};return S[o.style]?o.style:Object.keys(S)[0];}
+function opMat(o,ext){const M=OPEN_MAT[o.type]||{};if(M[o.mat])return o.mat;return o.type==='door'?(ext?'solid':'hollow'):Object.keys(M)[0];}
+function openHrs(o,ext){const st=(OPEN_STYLE[o.type]||{})[opStyle(o)];return st?st.h[ext?1:0]:2;}
 const SECTIONS={build:'Structure',floor:'Slab and floor',roof:'Roofing',line:'Insulation and lining',finish:'Floor and wall finishes',elec:'Electrical',plumb:'Plumbing',paint:'Painting',outdoor:'Decks and outdoor'};
 function guessType(name){const n=String(name||'').toLowerCase();if(/ens/.test(n))return 'ens';if(/bath/.test(n))return 'bath';if(/\bwc\b|toilet|powder/.test(n))return 'wc';if(/laund|ldry/.test(n))return 'laundry';if(/kitch|meals/.test(n))return 'kitchen';if(/bed|master/.test(n))return 'bed';if(/garage|carport/.test(n))return 'garage';if(/robe|wir\b|store|pantry|ptry|linen/.test(n))return 'robe';if(/hall|entry|foyer|passage/.test(n))return 'hall';if(/study|office/.test(n))return 'study';if(/living|family|lounge|dining|rumpus|theatre|meals/.test(n))return 'living';return 'other';}
 
 /* ---------- document ---------- */
 function defaultDoc(){return {kind:'house',v:1,underlay:{src:null,path:null,w:0,h:0,opacity:0.55},scale:null,outline:[],walls:[],openings:[],rooms:[],site:null,photos:[],photoRead:null,runs:[],
-  settings:{wallH:2400,extThk:250,intThk:90,extStud:'90x45',intStud:'90x35',studSp:450,extClad:'brick',roofType:'hip',pitch:22.5,eave:450,roofMat:'tiles',floor:'slab',slabT:100,lineGarage:false},
+  settings:{wallH:2400,extThk:250,intThk:90,extStud:'90x45',intStud:'90x35',studSp:450,extClad:'brick',roofType:'hip',pitch:22.5,eave:450,roofMat:'tiles',roofExist:'none',roofJob:'replace',floor:'slab',slabT:100,lineGarage:false},
   prices:{},links:{},items:[],areas:[],waste:10,labour:{},labourRate:null,scope:null,draft:false};}
 function migrate(p){const d=defaultDoc();p=p||{};return Object.assign({},d,p,{kind:'house',underlay:Object.assign({},d.underlay,p.underlay||{}),settings:Object.assign({},d.settings,p.settings||{}),
   outline:Array.isArray(p.outline)?p.outline:[],walls:Array.isArray(p.walls)?p.walls:[],openings:Array.isArray(p.openings)?p.openings:[],rooms:Array.isArray(p.rooms)?p.rooms:[],items:Array.isArray(p.items)?p.items:[],areas:Array.isArray(p.areas)?p.areas:[],prices:p.prices||{},links:p.links||{},labour:p.labour||{}});}
@@ -826,7 +840,11 @@ $('#palette').addEventListener('click',e=>{const a=e.target.closest('[data-atype
 
 /* ---------- takeoff ---------- */
 const CLAD={brick:{n:'Brick veneer',rate:0.9},weatherboard:{n:'Weatherboard',rate:0.6},fc:{n:'Fibre cement sheet',rate:0.45},colorbond:{n:'Colorbond cladding',rate:0.3},render:{n:'Rendered lightweight panel',rate:0.7}};
-const ROOFM={tiles:{n:'Concrete roof tiles',rate:0.45},colorbond:{n:'Colorbond roof sheeting',rate:0.35}};
+const ROOFM={tiles:{n:'Concrete roof tiles',rate:0.45,tile:true,per:10.5,match:['roof tile','concrete tile','tile']},terracotta:{n:'Terracotta roof tiles',rate:0.5,tile:true,per:13,match:['terracotta tile','roof tile','tile']},colorbond:{n:'Colorbond roof sheeting',rate:0.35,match:['roof sheet','corrugated','trimdek','colorbond']},zincalume:{n:'Zincalume roof sheeting',rate:0.35,match:['zincalume','roof sheet','corrugated']}};
+/* What is on the roof now, for re-roofs, restorations and repairs. kg a m² and strip hours a m² for the strip-out. */
+const ROOF_EXIST={none:{n:'Nothing, new roof'},tiles:{n:'Concrete tiles',tile:true,kg:48,heavy:true,strip:0.22},terracotta:{n:'Terracotta tiles',tile:true,kg:45,heavy:true,strip:0.22},metal:{n:'Metal sheet',kg:6,strip:0.1},asbestos:{n:'Asbestos sheet',kg:17,heavy:true,strip:0},slate:{n:'Slate',tile:true,kg:40,heavy:true,strip:0.3}};
+const ROOF_JOBS={replace:'Replace',restore:'Restore',repair:'Repair'};
+function roofJob(){const S=doc.settings;return S.roofExist&&S.roofExist!=='none'?(ROOF_JOBS[S.roofJob]?S.roofJob:'replace'):'new';}
 const TRADE_SCOPE={electrician:['elec'],plumber:['plumb'],roofer:['roof'],painter:['paint'],tiler:['finish'],concreter:['floor'],plasterer:['line'],carpenter:['build','line'],builder:null,custom:null};
 function applyTradeScope(trades){const t=(trades||[]).filter(x=>x in TRADE_SCOPE);if(!t.length||t.some(x=>TRADE_SCOPE[x]===null))return;const sc={};Object.keys(SECTIONS).forEach(s=>sc[s]=false);t.forEach(x=>TRADE_SCOPE[x].forEach(s=>sc[s]=true));doc.scope=sc;}
 function inScope(s){return !doc.scope||doc.scope[s]!==false;}
@@ -862,28 +880,65 @@ function computeRowsLevel(LV){LV=LV||{i:0};const rows=[],stages=[];if(!scaleMM()
   else add('build','External walls','clad',C.n,'',`${fm(g.extWall,1)} m² net of openings plus 10%`,Math.ceil(g.extWall*1.1),'m²',[C.n.toLowerCase()],C.n);
   add('build','External walls','wrap','Wall wrap (sarking)','',`${fm(g.extWall,1)} m²`,Math.ceil(g.extWall*1.1),'m²',['wall wrap','sarking']);
   const doors=g.ops.filter(x=>x.o.type==='door'),ext=doors.filter(x=>x.h.s.ext),intD=doors.filter(x=>!x.h.s.ext);const wins=g.ops.filter(x=>x.o.type==='window'),sl=g.ops.filter(x=>x.o.type==='slider'),gar=g.ops.filter(x=>x.o.type==='garage');
-  add('build','Doors and windows','intdoor','Internal doors','Hollow core, jamb set, hinges, handle',`${intD.length} doors`,intD.length,'ea',['hollow core','internal door']);
-  add('build','Doors and windows','extdoor','External doors','Solid core, jamb, lockset, seals',`${ext.length} doors`,ext.length,'ea',['solid core','external door']);
-  const wsz={};wins.forEach(x=>{const k=`${Math.round(x.o.height/10)*10} x ${Math.round(x.o.width/10)*10}`;wsz[k]=(wsz[k]||0)+1;});Object.entries(wsz).forEach(([k,n])=>add('build','Doors and windows','win'+k,'Aluminium windows',k+' mm (H x W)','Quote from your window supplier',n,'ea',['aluminium window','window']));
-  add('build','Doors and windows','slider','Aluminium sliding doors','2100 high','',sl.length,'ea',['sliding door']);
-  add('build','Doors and windows','garage','Garage doors','Panel lift or roller, with motor','',gar.length,'ea',['garage door','roller door']);
+  // each kind of door and window is its own line, so cavity sliders, bifolds and stackers price from their own entries
+  const grp={};g.ops.forEach(x=>{const o=x.o,ext=x.h.s.ext;const st=opStyle(o),mt=opMat(o,ext),gl=o.glaze||'single';let key,item,size,match,detail;
+    const SN=OPEN_STYLE[o.type][st].n,MN=(OPEN_MAT[o.type]||{})[mt]||'';
+    if(o.type==='door'){const def=st==='hinged'&&mt===(ext?'solid':'hollow');key=def?(ext?'extdoor':'intdoor'):`door-${ext?'e':'i'}-${st}-${mt}`;item=def?(ext?'External doors':'Internal doors'):`${ext?'External':'Internal'} ${OPEN_STYLE.door[st].p}`;
+      size=def?(ext?'Solid core, jamb, lockset, seals':'Hollow core, jamb set, hinges, handle'):`${MN}, jamb and hardware`;match=(OPEN_STYLE.door[st].match||[]).concat(mt==='hollow'?['hollow core']:mt==='solid'?['solid core']:mt==='glass'?['glass door']:['timber door'],[ext?'external door':'internal door']);}
+    else if(o.type==='window'){const k=`${Math.round(o.height/10)*10} x ${Math.round(o.width/10)*10}`;const def=st==='sliding'&&mt==='alu'&&gl==='single';key=def?'win'+k:`win${k}-${st}-${mt}-${gl}`;item=`${MN} windows`;size=`${k} mm (H x W)${def?'':`, ${SN.toLowerCase()}, ${GLAZE[gl].toLowerCase()}`}`;detail='Quote from your window supplier';match=[`${SN.toLowerCase()} window`,`${MN.toLowerCase()} window`,'window'];}
+    else if(o.type==='slider'){const def=st==='slider'&&mt==='alu'&&gl==='single';key=def?'slider':`slider-${st}-${mt}-${gl}`;item=def?'Aluminium sliding doors':`${MN} ${SN.toLowerCase().replace(/, .*/,'')} doors`;size=def?'2100 high':`${SN}, ${GLAZE[gl].toLowerCase()}`;match=(OPEN_STYLE.slider[st].match||[]).concat(['sliding door']);}
+    else{const mot=o.motor!==false;const def=st==='sectional'&&mt==='steel'&&mot;key=def?'garage':`garage-${st}-${mt}-${mot?'m':'n'}`;item='Garage doors';size=def?'Panel lift or roller, with motor':`${SN}, ${MN}${mot?', with motor':', manual'}`;match=(OPEN_STYLE.garage[st].match||[]).concat(['garage door']);}
+    (grp[key]=grp[key]||{item,size,match,detail,n:0}).n++;});
+  Object.entries(grp).forEach(([k,v])=>add('build','Doors and windows',k,v.item,v.size,v.detail||`${v.n} ${v.n===1?'opening':'openings'}`,v.n,'ea',v.match));
+  // the extra hardware some doors need
+  const nSt=(t,st)=>g.ops.filter(x=>x.o.type===t&&opStyle(x.o)===st).length;
+  add('build','Doors and windows','cavunit','Cavity slider units','Frame kit and track','Built in before the walls are lined',nSt('door','cavity'),'ea',['cavity slider','cavity unit','cavislide']);
+  add('build','Doors and windows','barnkit','Barn door track kits','','',nSt('door','barn'),'ea',['barn door track','sliding track']);
   add('build','Doors and windows','arch','Architraves','Primed MDF',`Both sides of internal doors, inside of windows`,Math.ceil((intD.length*2*5.2+ext.length*5.2+wins.reduce((a,x)=>a+2*(x.o.width+x.o.height)/1000,0))*1.1),'m',['architrave']);
   stage('build','h-frame','Wall framing',0.9*g.extL+0.6*g.intL,'Frames, stand, brace');stage('build','h-clad',C.n,C.rate*g.extWall,'External cladding');
-  stage('build','h-open','Doors and windows',2*wins.length+2.5*(ext.length+sl.length)+1.5*intD.length+5*gar.length,'Fit and trim');
+  stage('build','h-open','Doors and windows',g.ops.reduce((t,x)=>t+openHrs(x.o,x.h.s.ext),0),'Fit and trim');
   /* roof: on a lower floor only the part the floor above does not cover */
   if(roofFracNow()>0.05){
   const RM=ROOFM[S.roofMat]||ROOFM.tiles;const trusses=Math.ceil(Math.max(g.bw,g.bl)/0.6)+1;const gut=g.P+8*g.e;
-  add('roof','Roof framing','truss','Roof trusses',`${S.roofType==='hip'?'Hip':'Gable'} roof, ${S.pitch}° pitch`,`About ${trusses} at 600 centres. Get a truss plant quote`,trusses,'ea',['truss']);
-  if(S.roofMat==='tiles'){add('roof','Roof cover','tiles','Concrete roof tiles','',`${fm(g.roofA,1)} m² at 10.5 per m² plus 5%`,Math.ceil(g.roofA*10.5*1.05),'ea',['roof tile','concrete tile','tile'],{'m²':Math.ceil(g.roofA*1.05)});add('roof','Roof cover','tbat','Tile battens','38 x 50',`${fm(g.roofA,1)} m² at 330 mm gauge`,Math.ceil(g.roofA/0.33),'m',['tile batten','38 x 50']);}
-  else{add('roof','Roof cover','sheet','Colorbond roof sheeting','Trimdek or corrugated',`${fm(g.roofA,1)} m² plus 5%`,Math.ceil(g.roofA*1.05),'m²',['roof sheet','corrugated','trimdek']);add('roof','Roof cover','rbat','Roof battens','Steel top hat',`${fm(g.roofA,1)} m² at 900 mm`,Math.ceil(g.roofA/0.9),'m',['batten','top hat']);}
-  add('roof','Roof cover','sark','Roof sarking or blanket','',`${fm(g.roofA,1)} m²`,Math.ceil(g.roofA*1.1),'m²',['sarking','anticon']);
   const hips=S.roofType==='hip'?2*Math.min(g.bw,g.bl)*1.2+Math.abs(g.bw-g.bl):Math.max(g.bw,g.bl);
+  const job=roofJob(),EX=ROOF_EXIST[S.roofExist]||ROOF_EXIST.none;const ac=S.roofExist==='asbestos';
+  if(job==='new')add('roof','Roof framing','truss','Roof trusses',`${S.roofType==='hip'?'Hip':'Gable'} roof, ${S.pitch}° pitch`,`About ${trusses} at 600 centres. Get a truss plant quote`,trusses,'ea',['truss']);
+  /* re-roof: strip what is there first */
+  if(job==='replace'){
+    if(ac){add('roof','Strip existing roof','acrem','Asbestos roof removal','Licensed removalist',`${fm(g.roofA,1)} m² of asbestos cement sheet. Over 10 m² needs a licensed removalist and WorkSafe notified before work starts`,Math.ceil(g.roofA),'m²',['asbestos removal','asbestos']);
+      add('roof','Strip existing roof','acdisp','Asbestos disposal','Wrapped, to a licensed landfill',`About 17 kg a m²`,Math.ceil(g.roofA*0.017*10)/10,'t',['asbestos disposal','asbestos']);
+      add('roof','Strip existing roof','acclear','Asbestos clearance certificate','Independent assessor','Inspection after removal, before the new roof goes on',1,'ea',['clearance certificate','asbestos clearance','asbestos assessor']);}
+    else{add('roof','Strip existing roof','strip','Strip existing roof',EX.n,`${fm(g.roofA,1)} m² of ${EX.n.toLowerCase()}, battens and capping`,Math.ceil(g.roofA),'m²',['roof strip','strip roof','demolition']);
+      add('roof','Strip existing roof','skip','Skip bin',EX.heavy?'Heavy waste':'Mixed waste',`About ${fm(g.roofA*EX.kg/1000,1)} t of ${EX.n.toLowerCase()}`,Math.max(1,Math.ceil(g.roofA*EX.kg/1000/(EX.heavy?3:4))),'ea',['skip bin','skip']);
+      stage('roof','h-strip','Strip the old roof',EX.strip*g.roofA,'Strip, lower and load out');}
+    add('roof','Roof framing','tdamage','Timber repairs to the roof frame','','Allowance until the old roof is off',1,'ea',['timber repair','rafter','roof frame']);}
+  /* new cover: a new house or a re-roof */
+  if(job==='new'||job==='replace'){
+  if(RM.tile){add('roof','Roof cover','tiles',RM.n,'',`${fm(g.roofA,1)} m² at ${RM.per} per m² plus 5%`,Math.ceil(g.roofA*RM.per*1.05),'ea',RM.match,{'m²':Math.ceil(g.roofA*1.05)});add('roof','Roof cover','tbat','Tile battens','38 x 50',`${fm(g.roofA,1)} m² at 330 mm gauge`,Math.ceil(g.roofA/0.33),'m',['tile batten','38 x 50']);}
+  else{add('roof','Roof cover','sheet',RM.n,'Trimdek or corrugated',`${fm(g.roofA,1)} m² plus 5%`,Math.ceil(g.roofA*1.05),'m²',RM.match);add('roof','Roof cover','rbat','Roof battens','Steel top hat',`${fm(g.roofA,1)} m² at 900 mm`,Math.ceil(g.roofA/0.9),'m',['batten','top hat']);}
+  add('roof','Roof cover','sark','Roof sarking or blanket','',`${fm(g.roofA,1)} m²`,Math.ceil(g.roofA*1.1),'m²',['sarking','anticon']);
   add('roof','Roof cover','ridge',S.roofType==='hip'?'Ridge and hip capping':'Ridge capping','',`About ${fm(hips,1)} m, from the overall size`,Math.ceil(hips),'m',['ridge','capping']);
   add('roof','Gutters','gutter','Gutter','Colorbond quad',`Eaves line ${fm(gut,1)} m`,Math.ceil(gut),'m',['gutter']);add('roof','Gutters','fascia','Fascia','Colorbond',`${fm(gut,1)} m`,Math.ceil(gut),'m',['fascia']);
   const rcount=k=>doc.items.filter(i=>i.kind===k).length;const dpPlaced=rcount('dp');
   const dps=dpPlaced||Math.max(2,Math.ceil(gut/10));add('roof','Gutters','dp','Downpipes','90 mm',dpPlaced?`${dpPlaced} placed on the model`:`${dps} drops`,dps,'ea',['downpipe']);
-  ['sky','whirly','solar','flue','aerial'].forEach(k=>{const n=rcount(k);if(n)add('roof','Roof items',k,ITEM_T[k].n,'',`${n} placed on the roof`,n,'ea',ITEM_T[k].match);});add('roof','Gutters','eavelin','Eave lining','4.5 mm FC',`${fm(gut*g.e,1)} m²`,Math.ceil(gut*g.e*1.1),'m²',['eave lining','eave sheet']);
-  stage('roof','h-truss','Roof trusses and battens',0.25*g.planA,'Stand, brace, batten');stage('roof','h-roof',RM.n,RM.rate*g.roofA,'Lay roof cover and capping');stage('roof','h-gut','Gutters, fascia and eaves',0.3*gut+0.4*gut*g.e,'');
+  ['sky','whirly','solar','flue','aerial'].forEach(k=>{const n=rcount(k);if(n)add('roof','Roof items',k,ITEM_T[k].n,'',`${n} placed on the roof`,n,'ea',ITEM_T[k].match);});
+  if(job==='new'){add('roof','Gutters','eavelin','Eave lining','4.5 mm FC',`${fm(gut*g.e,1)} m²`,Math.ceil(gut*g.e*1.1),'m²',['eave lining','eave sheet']);stage('roof','h-truss','Roof trusses and battens',0.25*g.planA,'Stand, brace, batten');}
+  else stage('roof','h-truss','Roof battens',0.08*g.roofA,'Check the frame, batten');
+  stage('roof','h-roof',RM.n,RM.rate*g.roofA,'Lay roof cover and capping');stage('roof','h-gut','Gutters and fascia'+(job==='new'?', eaves':''),0.3*gut+(job==='new'?0.4*gut*g.e:0),'');}
+  /* restore the roof that is there */
+  if(job==='restore'){
+    if(ac){add('roof','Restore existing roof','acseal','Asbestos roof sealer','Low pressure, brush or airless spray only',`${fm(g.roofA,1)} m², two coats. No high pressure water or grinding on asbestos`,Math.ceil(g.roofA*2/5),'L',['asbestos sealer','encapsulation','roof sealer']);
+      stage('roof','h-rest','Seal the asbestos roof',0.12*g.roofA,'Licensed contractor, low pressure only');}
+    else if(EX.tile){add('roof','Restore existing roof','rclean','Pressure clean','','Clean, then treat for moss and lichen',Math.ceil(g.roofA),'m²',['pressure clean','roof clean']);
+      add('roof','Restore existing roof','rbed','Rebed and repoint ridges','Flexible pointing',`About ${fm(hips,1)} m of capping`,Math.ceil(hips),'m',['pointing','repoint','bedding']);
+      add('roof','Restore existing roof','rtile','Replacement tiles',EX.n,'Allow 1 in 100 broken',Math.max(5,Math.ceil(g.roofA*0.1)),'ea',['roof tile','tile']);
+      add('roof','Restore existing roof','rcoat','Roof membrane coating','Primer plus two coats',`${fm(g.roofA,1)} m²`,Math.ceil(g.roofA*3/6),'L',['roof coating','roof membrane','roof paint']);
+      stage('roof','h-rest','Restore the tiled roof',0.18*g.roofA+0.4*hips,'Clean, rebed, repoint, coat');}
+    else{add('roof','Restore existing roof','rclean','Pressure clean','','',Math.ceil(g.roofA),'m²',['pressure clean','roof clean']);
+      add('roof','Restore existing roof','rscrew','Roof screws','Class 4, with seals','Replace rusted fixings, about 8 a m²',Math.ceil(g.roofA*8),'ea',['roof screw','tek screw']);
+      add('roof','Restore existing roof','rcoat','Metal roof primer and paint','Two coats',`${fm(g.roofA,1)} m²`,Math.ceil(g.roofA*3/8),'L',['roof paint','metal primer']);
+      stage('roof','h-rest','Restore the metal roof',0.12*g.roofA,'Clean, rescrew, prime, paint');}}
+  if(job==='repair'){add('roof','Roof repairs','rrep','Roof repairs',EX.n,ac?'Asbestos: no cutting, drilling or high pressure cleaning. Licensed contractor for anything over 10 m²':'Allowance. Add the parts once you have been up there',1,'ea',ac?['asbestos']:['roof repair']);stage('roof','h-rep','Inspect and repair',4,'');}
   }
   /* slab */
   if(LV.i>0){add('floor','Upper floor framing','ujoist','Floor joists','LVL or I-joists, per span tables',`${fm(g.A,1)} m² ${LV.name||'upper floor'}`,Math.ceil(g.A*2.2),'m',['floor joist','i-joist','lvl joist','joist']);add('floor','Upper floor framing','yt','Yellow tongue flooring','19 mm, 3600 x 800',`${fm(g.A,1)} m² plus 5%`,Math.ceil(g.A*1.05/2.88),'ea',['yellow tongue','particleboard'],{'m²':Math.ceil(g.A*1.05)});add('build','Stairs','stairs','Staircase','',`To the ${(LV.name||'upper floor').toLowerCase()}`,1,'set',['staircase','stair']);stage('floor','h-ufloor','Upper floor frame and sheet',0.9*g.A,'Joists, blocking, sheet');stage('build','h-stairs','Stairs',16,'Install the staircase and balustrade');}
@@ -1063,7 +1118,7 @@ function autoScale(){const S=doc.settings;const cands=[];
   return s;}
 /* ---------- tabs ---------- */
 const SET_FIELDS=[['wallH','Ceiling height','num','mm',[2100,3600,50]],['extThk','External wall thickness','num','mm',[90,400,10]],['intThk','Internal wall thickness','num','mm',[70,200,5]],['extStud','External studs','sel',[['90x45','90 x 45'],['90x35','90 x 35']]],['intStud','Internal studs','sel',[['90x35','90 x 35'],['70x35','70 x 35'],['90x45','90 x 45']]],['studSp','External stud spacing','sel',[[450,'45 cm'],[600,'60 cm']]],
-  ['extClad','Outside walls','sel',Object.entries(CLAD).map(([k,v])=>[k,v.n])],['roofType','Roof shape','sel',[['hip','Hip'],['gable','Gable']]],['pitch','Roof pitch','num','°',[5,45,0.5]],['eave','Eaves','num','mm',[0,900,50]],['roofMat','Roof cover','sel',Object.entries(ROOFM).map(([k,v])=>[k,v.n])],['floor','Floor','sel',[['slab','Concrete slab'],['timber','Timber floor']]],['slabT','Slab thickness','num','mm',[85,200,5]],['lineGarage','Line and paint the garage','chk']];
+  ['extClad','Outside walls','sel',Object.entries(CLAD).map(([k,v])=>[k,v.n])],['roofType','Roof shape','sel',[['hip','Hip'],['gable','Gable']]],['pitch','Roof pitch','num','°',[5,45,0.5]],['eave','Eaves','num','mm',[0,900,50]],['roofMat','Roof cover','sel',Object.entries(ROOFM).map(([k,v])=>[k,v.n])],['roofExist','Existing roof','sel',Object.entries(ROOF_EXIST).map(([k,v])=>[k,v.n])],['roofJob','Roof work','sel',Object.entries(ROOF_JOBS)],['floor','Floor','sel',[['slab','Concrete slab'],['timber','Timber floor']]],['slabT','Slab thickness','num','mm',[85,200,5]],['lineGarage','Line and paint the garage','chk']];
 function levelCard(){if(!multi())return '';const i=doc.level,lv=doc.levels[i];const sm=scaleMM();
   let h=`<div class="card lvcard"><div class="cardh"><b>${esc(levelName(i))}</b>${i>0?`<button class="x" data-lvdel="1" aria-label="Remove this floor">✕</button>`:''}</div>
   <label class="row"><span>Name</span><input type="text" data-lv="name" value="${esc(levelName(i))}"></label>
@@ -1668,7 +1723,7 @@ function roofModel(P,S,H,cover){const sm=scaleMM();if(!sm||doc.outline.length<3)
   for(let x=b.x0;x<b.x1;x+=cell)for(let z=b.z0;z<b.z1;z+=cell){const pc=clip(E,x,x+cell,z,z+cell);if(pc.length<3)continue;let tri;try{tri=THREE.ShapeUtils.triangulateShape(pc.map(p=>new THREE.Vector2(p[0],p[1])),[]);}catch(e){continue;}
     tri.forEach(f=>{if(cover){const mx=(pc[f[0]][0]+pc[f[1]][0]+pc[f[2]][0])/3,mz=(pc[f[0]][1]+pc[f[1]][1]+pc[f[2]][1])/3;if(inCover(mx,mz))return;}f.forEach(k=>{const p=pc[k];pos.push(p[0],height(p[0],p[1]),p[1]);});});}
   if(!pos.length)return null;const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));geo.computeVertexNormals();
-  const col=S.roofMat==='tiles'?0x8f5a46:0x4c5359;const mesh=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:col,roughness:S.roofMat==='tiles'?0.85:0.45,metalness:S.roofMat==='tiles'?0:0.3,side:THREE.DoubleSide,flatShading:true}));
+  const RC={tiles:0x8f5a46,terracotta:0xb0553a,colorbond:0x4c5359,zincalume:0xb4b9bd,metal:0x7d8287,asbestos:0xa8a69c,slate:0x4a4f57};const showMat=roofJob()==='restore'||roofJob()==='repair'?S.roofExist:S.roofMat;const col=RC[showMat]||RC.tiles;const mesh=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:col,roughness:/tiles|terracotta|slate|asbestos/.test(showMat)?0.85:0.45,metalness:/tiles|terracotta|slate|asbestos/.test(showMat)?0:0.3,side:THREE.DoubleSide,flatShading:true}));
   mesh.castShadow=true;mesh.receiveShadow=true;mesh.userData.pick='roof';mesh.userData.roof=true;
   // gutters along the eave line
   const gut=new THREE.Group();const gm=new THREE.MeshStandardMaterial({color:0xd8d4cb,roughness:0.5});for(let i=0;i<n;i++){const a=E[i],c=E[(i+1)%n];const L=Math.hypot(c[0]-a[0],c[1]-a[1]);if(L<0.05)continue;const ya=height(a[0],a[1]),yc=height(c[0],c[1]);if(Math.abs(ya-base)>0.05&&Math.abs(yc-base)>0.05)continue;if(cover&&inCover((a[0]+c[0])/2,(a[1]+c[1])/2))continue;
@@ -1695,10 +1750,27 @@ function trussModel(R,P,S,H){const g=new THREE.Group();if(!R)return g;const pts=
 function openingModel(o,cx,cz,ang,thk,box,setUd){const w=o.b-o.a,ux=Math.cos(-ang),uz=Math.sin(-ang);const at=(du,y,sx,sy,sz,m)=>box(cx+ux*du,y,cz+uz*du,sx,sy,sz,ang,m);setUd({opId:o.id,pick:'wall'});
   const frame=m3('frameW',0xeceae4,{roughness:0.5}),glassM=m3('glassO',0x9fc7e0,{transparent:true,opacity:0.45,roughness:0.05}),door=m3('doorO',0x8a6a4a,{roughness:0.6}),handle=m3('handleO',0xc9ced3,{metalness:0.8,roughness:0.2}),gd=m3('gdoor',0xd9d6cf,{roughness:0.5}),groove=m3('groove',0x9a9890);
   const y0=o.sill,y1=o.sill+o.h,fw=0.05;
-  if(o.t==='window'||o.t==='slider'){at(0,y1-fw/2,w,fw,thk*0.6,frame);at(0,y0+fw/2,w,fw,thk*0.6,frame);at(-w/2+fw/2,(y0+y1)/2,fw,o.h,thk*0.6,frame);at(w/2-fw/2,(y0+y1)/2,fw,o.h,thk*0.6,frame);at(0,(y0+y1)/2,w-fw*2,o.h-fw*2,0.02,glassM);
-    at(0,(y0+y1)/2,0.04,o.h,thk*0.5,frame);if(o.t==='slider')at(w*0.25,(y0+y1)/2-0.05,0.02,0.12,thk*0.7,handle);}
-  else if(o.t==='garage'){at(0,o.h/2,w,o.h,0.06,gd);for(let y=0.45;y<o.h-0.1;y+=0.45)at(0,y,w-0.04,0.025,0.08,groove);at(0,0.35,0.3,0.04,0.09,handle);}
-  else{at(0,o.h/2,w-0.02,o.h,0.045,door);at(w/2-0.12,1.0,0.12,0.03,0.09,handle);at(0,o.h+0.03,w+0.08,0.06,thk*0.7,frame);}
+  const pane=(c,wd,yy0,yy1,z)=>{at(c,yy1-fw/2,wd,fw,thk*0.6,frame);at(c,yy0+fw/2,wd,fw,thk*0.6,frame);at(c-wd/2+fw/2,(yy0+yy1)/2,fw,yy1-yy0,thk*0.6,frame);at(c+wd/2-fw/2,(yy0+yy1)/2,fw,yy1-yy0,thk*0.6,frame);at(c,(yy0+yy1)/2,wd-fw*2,yy1-yy0-fw*2,0.02,glassM);};
+  const leaf=(c,wd,m,hx)=>{at(c,o.h/2,wd-0.01,o.h,0.045,m);if(hx!=null)at(hx,1.0,0.03,0.12,0.09,handle);};
+  if(o.t==='window'){const st=o.st;at(0,y1-fw/2,w,fw,thk*0.6,frame);at(0,y0+fw/2,w,fw,thk*0.6,frame);at(-w/2+fw/2,(y0+y1)/2,fw,o.h,thk*0.6,frame);at(w/2-fw/2,(y0+y1)/2,fw,o.h,thk*0.6,frame);at(0,(y0+y1)/2,w-fw*2,o.h-fw*2,0.02,glassM);
+    if(st==='louvre'){for(let y=y0+0.12;y<y1-0.05;y+=0.11)at(0,y,w-fw*2,0.012,0.09,frame);}
+    else if(st==='hung'||st==='awning'){at(0,(y0+y1)/2,w,0.04,thk*0.5,frame);}
+    else if(st==='casement'){at(0,(y0+y1)/2,0.04,o.h,thk*0.5,frame);at(-0.06,(y0+y1)/2,0.02,0.1,0.07,handle);at(0.06,(y0+y1)/2,0.02,0.1,0.07,handle);}
+    else if(st!=='fixed'){at(0,(y0+y1)/2,0.04,o.h,thk*0.5,frame);}}
+  else if(o.t==='slider'){const st=o.st;const n=st==='stacker'?3:st==='bifold'?Math.max(3,Math.round(w/0.8)):2;const pw=w/n;
+    for(let i=0;i<n;i++){const c=-w/2+pw*(i+0.5);if(st==='bifold'){const z=(i%2?1:-1)*0.03;box(cx+ux*c+Math.sin(ang)*z,(y0+y1)/2,cz+uz*c+Math.cos(ang)*z,pw-0.01,o.h,0.05,ang+(i%2?0.12:-0.12),frame);at(c,(y0+y1)/2,pw-0.1,o.h-0.1,0.055,glassM);}else pane(c,pw,y0,y1);}
+    at(st==='french'?0.06:w*0.25,(y0+y1)/2-0.05,0.02,0.12,thk*0.7,handle);if(st==='french')at(-0.06,(y0+y1)/2-0.05,0.02,0.12,thk*0.7,handle);}
+  else if(o.t==='garage'){const st=o.st;at(0,o.h/2,w,o.h,0.06,gd);if(st==='roller'){for(let y=0.08;y<o.h-0.02;y+=0.08)at(0,y,w-0.02,0.012,0.07,groove);at(0,o.h+0.12,w+0.1,0.24,0.3,gd);}
+    else if(st==='sectional'){for(let y=0.45;y<o.h-0.1;y+=0.45)at(0,y,w-0.04,0.025,0.08,groove);}
+    at(0,0.35,0.3,0.04,0.09,handle);}
+  else{const st=o.st;const m=o.mt==='glass'?glassM:door;
+    if(st==='double'){leaf(-w/4,w/2,m,-0.06);leaf(w/4,w/2,m,0.06);}
+    else if(st==='bifold'){const n=w>1.2?4:2;for(let i=0;i<n;i++)leaf(-w/2+w/n*(i+0.5),w/n,m,null);at(0,1.0,0.03,0.12,0.09,handle);}
+    else if(st==='cavity'){leaf(-w*0.25,w,m,-w*0.25+w/2-0.06);}
+    else if(st==='barn'){box(cx+ux*(w*0.2)+Math.sin(ang)*thk*0.6,o.h/2,cz+uz*(w*0.2)+Math.cos(ang)*thk*0.6,w+0.1,o.h+0.05,0.04,ang,m);at(w*0.2,o.h+0.12,w*2.1,0.04,thk*1.4,handle);}
+    else if(st==='pivot'){leaf(0,w,m,w/2-0.15);at(w/2-0.15,1.0,0.03,0.9,0.09,handle);}
+    else leaf(0,w,m,w/2-0.12);
+    at(0,o.h+0.03,w+0.08,0.06,thk*0.7,frame);}
   setUd(null);}
 
 /* ---------- layers: roof and frame, per build ---------- */
@@ -1710,13 +1782,17 @@ function renderViews(){const L=layers3d();ensureLevels();const LVS=`<span class=
 function popAt(ev){const pop=ensurePop();pop.onclick=null;pop.onchange=null;const host=$('#v3').getBoundingClientRect();const x=Math.min(host.width-290,Math.max(10,ev.clientX-host.left+14)),y=Math.min(host.height-260,Math.max(60,ev.clientY-host.top-20));pop.style.left=x+'px';pop.style.top=y+'px';pop.hidden=false;return pop;}
 const OPEN_NAMES={door:'Door',window:'Window',slider:'Sliding door',garage:'Garage door'};
 function openingInfo(op,ev){const pop=popAt(ev);const h=hostOf(op);const ext=h&&h.s.ext;
-  pop.innerHTML=`<div class="cardh"><b>${OPEN_NAMES[op.type]||'Opening'}, ${op.width} × ${op.height}</b><button class="x" data-pclose="1" aria-label="Close">✕</button></div><p class="note" style="margin:2px 0 6px">${ext?'Outside wall':'Inside wall'}. Change it to what the plan shows.</p>
+  pop.innerHTML=`<div class="cardh"><b>${OPEN_STYLE[op.type][opStyle(op)].n} ${(OPEN_NAMES[op.type]||'opening').toLowerCase()}, ${op.width} × ${op.height}</b><button class="x" data-pclose="1" aria-label="Close">✕</button></div><p class="note" style="margin:2px 0 6px">${ext?'Outside wall':'Inside wall'}. Change it to what the plan shows.</p>
   <div class="pbtns">${Object.entries(OPEN_NAMES).map(([k,n])=>`<button class="chip ${op.type===k?'on':''}" data-otype="${k}" ${(k==='slider'||k==='garage')&&!ext?'disabled':''}>${n}</button>`).join('')}</div>
-  <div class="pgrid"><label>Width<span class="inp sm"><input type="number" data-ofld="width" value="${op.width}" min="300" max="6000" step="10"><em>mm</em></span></label><label>Height<span class="inp sm"><input type="number" data-ofld="height" value="${op.height}" min="300" max="3000" step="10"><em>mm</em></span></label>${op.type==='window'?`<label>Sill<span class="inp sm"><input type="number" data-ofld="sill" value="${op.sill}" min="0" max="2000" step="10"><em>mm</em></span></label>`:''}</div>
+  <div class="pgrid"><label>Kind<select data-osel="style">${Object.entries(OPEN_STYLE[op.type]).map(([k,v])=>`<option value="${k}" ${opStyle(op)===k?'selected':''}>${v.n}</option>`).join('')}</select></label><label>${op.type==='door'?'Door':'Frame'}<select data-osel="mat">${Object.entries(OPEN_MAT[op.type]).map(([k,v])=>`<option value="${k}" ${opMat(op,ext)===k?'selected':''}>${v}</option>`).join('')}</select></label>${op.type==='window'||op.type==='slider'?`<label>Glass<select data-osel="glaze">${Object.entries(GLAZE).map(([k,v])=>`<option value="${k}" ${(op.glaze||'single')===k?'selected':''}>${v}</option>`).join('')}</select></label>`:''}${op.type==='garage'?`<label>Motor<select data-osel="motor"><option value="1" ${op.motor!==false?'selected':''}>With motor</option><option value="0" ${op.motor===false?'selected':''}>Manual</option></select></label>`:''}<label>Width<span class="inp sm"><input type="number" data-ofld="width" value="${op.width}" min="300" max="6000" step="10"><em>mm</em></span></label><label>Height<span class="inp sm"><input type="number" data-ofld="height" value="${op.height}" min="300" max="3000" step="10"><em>mm</em></span></label>${op.type==='window'?`<label>Sill<span class="inp sm"><input type="number" data-ofld="sill" value="${op.sill}" min="0" max="2000" step="10"><em>mm</em></span></label>`:''}</div>
   <div class="upl"><button class="btn" data-odel="1">Remove</button></div>`;
-  pop.onclick=e=>{if(e.target.closest('[data-pclose]')){pop.hidden=true;return;}const t=e.target.closest('[data-otype]');if(t&&!t.disabled){snapshot();const k=t.dataset.otype;op.type=k;op.height=OPEN_T[k].h;op.sill=OPEN_T[k].sill;if(k==='garage'&&op.width<2000)op.width=OPEN_T.garage.w;if(k==='slider'&&op.width<1500)op.width=OPEN_T.slider.w;if(k==='door'&&op.width>1200)op.width=OPEN_T.door.w;changed(false);openingInfo(op,ev);return;}
+  pop.onclick=e=>{if(e.target.closest('[data-pclose]')){pop.hidden=true;return;}const t=e.target.closest('[data-otype]');if(t&&!t.disabled){snapshot();const k=t.dataset.otype;op.type=k;delete op.style;delete op.mat;op.height=OPEN_T[k].h;op.sill=OPEN_T[k].sill;if(k==='garage'&&op.width<2000)op.width=OPEN_T.garage.w;if(k==='slider'&&op.width<1500)op.width=OPEN_T.slider.w;if(k==='door'&&op.width>1200)op.width=OPEN_T.door.w;changed(false);openingInfo(op,ev);return;}
     if(e.target.closest('[data-odel]')){snapshot();doc.openings=doc.openings.filter(x=>x.id!==op.id);pop.hidden=true;changed(false);flash('Removed. Undo puts it back.');}};
-  pop.onchange=e=>{const f=e.target.dataset.ofld;if(!f)return;const v=parseFloat(e.target.value);if(!isFinite(v))return;snapshot();op[f]=Math.round(v);changed(false);openingInfo(op,ev);};}
+  pop.onchange=e=>{const sk=e.target.dataset.osel;if(sk){snapshot();if(sk==='motor')op.motor=e.target.value==='1';else op[sk]=e.target.value;
+      // a French pair or a bifold is wider than a single door
+      if(sk==='style'&&op.type==='door'&&['double','bifold'].includes(op.style)&&op.width<1200)op.width=1640;if(sk==='style'&&op.type==='slider'&&op.style==='stacker'&&op.width<2700)op.width=3000;if(sk==='style'&&op.type==='slider'&&op.style==='bifold'&&op.width<2400)op.width=3600;
+      changed(false);openingInfo(op,ev);return;}
+    const f=e.target.dataset.ofld;if(!f)return;const v=parseFloat(e.target.value);if(!isFinite(v))return;snapshot();op[f]=Math.round(v);changed(false);openingInfo(op,ev);};}
 function wallInfo(host,pt,ev){const s=segs().find(x=>x.host===host);if(!s)return;const pop=popAt(ev);const q=lerp(s.a,s.b,projT(pt,s.a,s.b));const L=toM(dist(s.a,s.b));const w=host.startsWith('w:')||!s.ext?doc.walls.find(x=>'w:'+x.id===host||x.id===host.replace(/^w:/,'')):null;
   pop.innerHTML=`<div class="cardh"><b>${s.ext?'Outside wall':'Inside wall'}, ${fm(L,2)} m</b><button class="x" data-pclose="1" aria-label="Close">✕</button></div><p class="note" style="margin:2px 0 6px">Add an opening where you tapped.</p><div class="pbtns">${Object.entries(OPEN_NAMES).filter(([k])=>s.ext||k==='door'||k==='window').map(([k,n])=>`<button class="chip" data-oadd="${k}">${n}</button>`).join('')}</div>${!s.ext&&w?'<div class="upl"><button class="btn" data-wdel="1">Remove this wall</button></div>':''}`;
   pop.onclick=e=>{if(e.target.closest('[data-pclose]')){pop.hidden=true;return;}const a=e.target.closest('[data-oadd]');if(a){const n0=doc.openings.length;addOpening(a.dataset.oadd,q);if(doc.openings.length>n0){const op=doc.openings[doc.openings.length-1];openingInfo(op,ev);}return;}
@@ -1726,13 +1802,17 @@ function roomInfo(pt,ev){const R=rooms();const i=R.findIndex(r=>pip(pt,r.f.poly)
   <div class="pgrid one"><label>Name<input type="text" data-rf="name" value="${esc(r.name)}"></label><label>Type<select data-rf="type">${Object.entries(ROOM_TYPES).map(([k,v])=>`<option value="${k}" ${k===r.type?'selected':''}>${v}</option>`).join('')}</select></label><label>Floor<select data-rf="finish">${Object.entries(FINISHES).map(([k,v])=>`<option value="${k}" ${k===r.finish?'selected':''}>${v}</option>`).join('')}</select></label></div>`;
   pop.onclick=e=>{if(e.target.closest('[data-pclose]'))pop.hidden=true;};
   pop.onchange=e=>{const k=e.target.dataset.rf;if(!k)return;snapshot();const lab=roomLabelFor(i,true);if(k==='name'){lab.name=e.target.value.trim()||'Room';if(lab.type==='other'||!lab.typeSet)lab.type=guessType(lab.name);}else if(k==='type'){lab.type=e.target.value;lab.typeSet=true;}else lab.finish=e.target.value;changed(true);roomInfo(pt,ev);};return true;}
-function roofInfo(ev){const S=doc.settings;const g=geoAll();const pop=popAt(ev);
+function roofInfo(ev){const S=doc.settings;const g=geoAll();const pop=popAt(ev);const job=roofJob();const ac=S.roofExist==='asbestos';
   pop.innerHTML=`<div class="cardh"><b>Roof, ${fm(g.roofA,1)} m²</b><button class="x" data-pclose="1" aria-label="Close">✕</button></div><p class="note" style="margin:2px 0 6px">${fm(g.planA||0,1)} m² on plan, eaves line ${fm(outlinePer()+0,1)} m around the walls.</p>
-  <div class="pbtns"><button class="chip ${S.roofType==='hip'?'on':''}" data-rset="roofType" data-v="hip">Hip</button><button class="chip ${S.roofType==='gable'?'on':''}" data-rset="roofType" data-v="gable">Gable</button><button class="chip ${S.roofMat==='tiles'?'on':''}" data-rset="roofMat" data-v="tiles">Tiles</button><button class="chip ${S.roofMat==='colorbond'?'on':''}" data-rset="roofMat" data-v="colorbond">Colorbond</button></div>
-  <div class="pgrid"><label>Pitch<span class="inp sm"><input type="number" data-rnum="pitch" value="${S.pitch}" min="2" max="45" step="0.5"><em>°</em></span></label><label>Eaves<span class="inp sm"><input type="number" data-rnum="eave" value="${S.eave}" min="0" max="900" step="50"><em>mm</em></span></label></div>
+  <div class="pbtns"><button class="chip ${S.roofType==='hip'?'on':''}" data-rset="roofType" data-v="hip">Hip</button><button class="chip ${S.roofType==='gable'?'on':''}" data-rset="roofType" data-v="gable">Gable</button></div>
+  <div class="pgrid"><label>On it now<select data-rsel="roofExist">${Object.entries(ROOF_EXIST).map(([k,v])=>`<option value="${k}" ${(S.roofExist||'none')===k?'selected':''}>${v.n}</option>`).join('')}</select></label>${job!=='new'?`<label>The job<select data-rsel="roofJob">${Object.entries(ROOF_JOBS).map(([k,v])=>`<option value="${k}" ${job===k?'selected':''}>${v}</option>`).join('')}</select></label>`:''}
+  ${job==='new'||job==='replace'?`<label>${job==='new'?'Roof cover':'New cover'}<select data-rsel="roofMat">${Object.entries(ROOFM).map(([k,v])=>`<option value="${k}" ${S.roofMat===k?'selected':''}>${v.n}</option>`).join('')}</select></label>`:''}
+  <label>Pitch<span class="inp sm"><input type="number" data-rnum="pitch" value="${S.pitch}" min="2" max="45" step="0.5"><em>°</em></span></label><label>Eaves<span class="inp sm"><input type="number" data-rnum="eave" value="${S.eave}" min="0" max="900" step="50"><em>mm</em></span></label></div>
+  ${ac?`<p class="note warn" style="margin:6px 0 0"><b>Asbestos.</b> No cutting, drilling, grinding or high pressure water. Removing more than 10 m² needs a licensed removalist, WorkSafe told before work starts, and a clearance certificate after. Check the current WorkSafe rules for your state.</p>`:''}
   <p class="note" style="margin:6px 0 0">Place skylights, whirlybirds, solar panels and downpipes with Place item.</p>`;
   pop.onclick=e=>{if(e.target.closest('[data-pclose]')){pop.hidden=true;return;}const b=e.target.closest('[data-rset]');if(b){snapshot();S[b.dataset.rset]=b.dataset.v;changed(true);roofInfo(ev);}};
-  pop.onchange=e=>{const k=e.target.dataset.rnum;if(!k)return;const v=parseFloat(e.target.value);if(!isFinite(v))return;snapshot();S[k]=v;changed(true);roofInfo(ev);};}
+  pop.onchange=e=>{const r=e.target.dataset.rsel;if(r){snapshot();S[r]=e.target.value;if(r==='roofExist'&&S.roofExist!=='none'&&!ROOF_JOBS[S.roofJob])S.roofJob='replace';changed(true);roofInfo(ev);return;}
+    const k=e.target.dataset.rnum;if(!k)return;const v=parseFloat(e.target.value);if(!isFinite(v))return;snapshot();S[k]=v;changed(true);roofInfo(ev);};}
 function areaInfo(ar,ev){sel={kind:'area',id:ar.id};switchTab('plan');renderPlanTab();const G=areaGeo(ar);const pop=popAt(ev);
   pop.innerHTML=`<div class="cardh"><b>${esc(ar.name||(AREA_T[ar.type]||AREA_T.deck).n)}, ${fm(G.Lx,1)} × ${fm(G.Ly,1)} m</b><button class="x" data-pclose="1" aria-label="Close">✕</button></div><div class="pbtns">${Object.entries(AREA_T).map(([k,v])=>`<button class="chip ${ar.type===k?'on':''}" data-atype2="${k}">${v.n}</button>`).join('')}</div><p class="note" style="margin:6px 0 0">Height, boards and balustrade are in the panel on the left.</p><div class="upl"><button class="btn" data-adel="1">Remove</button></div>`;
   pop.onclick=e=>{if(e.target.closest('[data-pclose]')){pop.hidden=true;return;}const b=e.target.closest('[data-atype2]');if(b){snapshot();ar.type=b.dataset.atype2;if(ar.type==='deck'&&!ar.h)ar.h=600;changed(true);areaInfo(ar,ev);return;}if(e.target.closest('[data-adel]')){snapshot();doc.areas=doc.areas.filter(x=>x!==ar);sel=null;pop.hidden=true;changed(true);}};pop.onchange=null;}
@@ -1841,7 +1921,7 @@ function build3DLevel(T,root,LI,P,cover){const S=doc.settings,H=S.wallH/1000;
   pickTag='wall';
   segs().forEach(s=>{const a=P(s.a),c=P(s.b);const L=Math.hypot(c[0]-a[0],c[1]-a[1]);if(L<0.05)return;const ux=(c[0]-a[0])/L,uz=(c[1]-a[1])/L;const thk=(s.ext?S.extThk:S.intThk)/1000;
     let nx=-uz,nz=ux;if(s.ext){nx*=sgn;nz*=sgn;}const off=s.ext?thk/2:0;const ang=-Math.atan2(uz,ux);const m=s.ext?extM:intM;
-    const ops=doc.openings.map(o=>({o,h:hostOf(o)})).filter(x=>x.h&&x.h.s.host===s.host).map(x=>{const c0=x.h.t*L,w=x.o.width/1000;return {a:Math.max(0,c0-w/2),b:Math.min(L,c0+w/2),sill:x.o.type==='window'?x.o.sill/1000:0,h:Math.min(H-0.05,x.o.height/1000),t:x.o.type,id:x.o.id};}).sort((p,q)=>p.a-q.a);
+    const ops=doc.openings.map(o=>({o,h:hostOf(o)})).filter(x=>x.h&&x.h.s.host===s.host).map(x=>{const c0=x.h.t*L,w=x.o.width/1000;return {a:Math.max(0,c0-w/2),b:Math.min(L,c0+w/2),sill:x.o.type==='window'?x.o.sill/1000:0,h:Math.min(H-0.05,x.o.height/1000),t:x.o.type,st:opStyle(x.o),mt:opMat(x.o,s.ext),id:x.o.id};}).sort((p,q)=>p.a-q.a);
     const piece=(s0,s1,y0,y1)=>{if(L3.frame||s1-s0<0.01||y1-y0<0.01)return;const mid=(s0+s1)/2;ud={host:s.host};box(a[0]+ux*mid+nx*off,(y0+y1)/2,a[1]+uz*mid+nz*off,s1-s0,y1-y0,thk,ang,m);ud=null;};
     let cur=0;ops.forEach(o=>{piece(cur,o.a,0,H);piece(o.a,o.b,0,o.sill);piece(o.a,o.b,o.sill+o.h,H);const mid=(o.a+o.b)/2;const cxo=a[0]+ux*mid+nx*off,czo=a[1]+uz*mid+nz*off;openingModel(o,cxo,czo,ang,thk,box,(v)=>{ud=v;});cur=Math.max(cur,o.b);});piece(cur,L,0,H);});
   if(L3.frame){const F=frameModel(P,S,H);root.add(F);}
