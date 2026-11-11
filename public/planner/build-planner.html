@@ -18,6 +18,8 @@
 .descmsg ul{margin:4px 0 0;padding-left:18px;}
 .descmsg a{color:inherit;font-weight:700;}
 .upl{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.traceoffer{margin-top:10px;padding:10px 12px;border:1px solid var(--accent);border-radius:10px;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--text);font-size:13px;}
+.traceoffer .primary{display:block;margin-top:8px;}
 .upl .note{margin:0;flex:1;min-width:160px;}
 .savetpl{display:flex;gap:8px;margin-top:8px;}
 .card.trade{margin-top:10px;}
@@ -136,7 +138,7 @@ input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-rad
 .mi b{font-weight:650;font-size:14px;}
 .mi .sz{color:var(--muted);font-size:12.5px;margin-left:4px;}
 .mi small{display:block;color:var(--muted);font-size:12px;}
-.mi .bun{margin-top:2px;}.mi .bun a{color:inherit;text-decoration-color:var(--accent);text-underline-offset:2px;}.bunbar{display:flex;flex-direction:column;gap:6px;margin-top:14px;}.bunbar .primary{align-self:flex-start;}
+
 .mq{grid-column:1;font-size:12.5px;font-variant-numeric:tabular-nums;}
 .mp{grid-column:2;grid-row:1 / span 2;display:flex;flex-direction:column;align-items:flex-end;gap:3px;}
 .cost{font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--muted);}
@@ -328,6 +330,7 @@ dialog::backdrop{background:rgba(10,15,20,.5);}
 
 <script src="/planner/vendor/three.min.js"></script>
 <script src="/planner/vendor/OrbitControls.js"></script>
+<script src="/planner/pricebook.js"></script>
 <script>
 (function(){
 'use strict';
@@ -436,7 +439,7 @@ function defaultPlan(){
       {id:uid(),kind:'shelf',name:'Shelving unit',w:1200,h:1800,d:450,x:-1480,z:-500,y:0,rot:90,color:'#7a828a',bom:false},
       {id:uid(),kind:'box',name:'Ride-on mower',w:1700,h:1100,d:1100,x:600,z:600,y:0,rot:90,color:'#3d8b3d',bom:false}
     ],
-    prices:{},extra:{},waste:10,labour:{},labourRate:null,xray:1,selected:null,
+    prices:{},links:{},extra:{},waste:10,labour:{},labourRate:null,xray:1,selected:null,
     trades:{},scope:null,walls:[],
     layers:{slab:true,frame:true,clad:true,roof:true,openings:true,services:true,items:true,dims:true}
   };
@@ -1000,7 +1003,10 @@ async function runDescribe(){
     if(!r.ok){descState={busy:false,err:true,warn:[],msg:b.signup?'signup':(b.error||'Could not build that one. Try rewording it.')};renderDescMsg();return;}
     descDraft='';plan.planRooms=[];applyGenerated(b.plan);descState={busy:false,err:false,msg:'Done. Check the model, then tap any part to adjust it.',warn:b.plan.warnings||[]};renderDescMsg();
   }catch(e){descState={busy:false,err:true,warn:[],msg:'No connection. Try again.'};renderDescMsg();}}
-let planState={busy:false,msg:'',err:false,warn:[],rooms:[]};
+let planState={busy:false,msg:'',err:false,warn:[],rooms:[]};let lastPlanImage=null;
+async function toTrace(){if(!lastPlanImage)return;const im=new Image();await new Promise(r=>{im.onload=r;im.onerror=r;im.src=lastPlanImage;});
+  if(EMBED){try{window.parent.postMessage({source:'ss-planner',type:'switch-to-trace',image:lastPlanImage,w:im.naturalWidth,h:im.naturalHeight},location.origin);}catch(e){}return;}
+  try{sessionStorage.setItem('trace-underlay',lastPlanImage);}catch(e){}location.href='/planner/plan-trace.html';}
 function loadPdfjs(){return new Promise((res,rej)=>{if(window.pdfjsLib)return res(window.pdfjsLib);const s=document.createElement('script');s.src='/planner/vendor/pdf.min.js';s.onload=()=>{try{window.pdfjsLib.GlobalWorkerOptions.workerSrc='/planner/vendor/pdf.worker.min.js';res(window.pdfjsLib);}catch(e){rej(e);}};s.onerror=rej;document.head.appendChild(s);});}
 async function fileToImage(file){const MAX=2200;let src,w,hh;
   if(file.type==='application/pdf'||/\.pdf$/i.test(file.name)){const lib=await loadPdfjs();const pdf=await lib.getDocument({data:await file.arrayBuffer()}).promise;const pg=await pdf.getPage(1);const v1=pg.getViewport({scale:1});const sc=Math.min(4,MAX/Math.max(v1.width,v1.height));const vp=pg.getViewport({scale:sc});
@@ -1012,17 +1018,17 @@ async function fileToImage(file){const MAX=2200;let src,w,hh;
 async function runPlan(file){if(!file||planState.busy)return;
   if(file.size>25*1024*1024){planState={busy:false,err:true,msg:'That file is over 25 MB. Export one page or take a smaller photo.',warn:[],rooms:[]};renderPlanMsg();return;}
   planState={busy:true,err:false,msg:'Reading the plan. This takes about 20 seconds...',warn:[],rooms:[]};renderPlanMsg();
-  try{const image=await fileToImage(file);
+  try{const image=await fileToImage(file);lastPlanImage=image;
     const r=await fetch('/api/structures/from-plan',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({image,notes:(descDraft||'').trim()})});
     const b=await r.json().catch(()=>({}));
     if(!r.ok){planState={busy:false,err:true,warn:[],rooms:[],msg:b.signup?'signup':(b.error||'Could not read that plan.')};renderPlanMsg();return;}
     plan.planRooms=b.plan.rooms||[];applyGenerated(b.plan);
     const conf={high:'',medium:' Some sizes were hard to read, so check them against the drawing.',low:' The dimensions were hard to read. Check every size before you price it.'}[b.plan.confidence]||'';
-    planState={busy:false,err:b.plan.confidence==='low',msg:`Built from ${file.name}.${conf}`,warn:b.plan.warnings||[],rooms:b.plan.rooms||[]};renderPlanMsg();
+    planState={busy:false,err:b.plan.confidence==='low',msg:`Built from ${file.name}.${conf}`,warn:b.plan.warnings||[],rooms:b.plan.rooms||[],house:b.plan.footprint!=='rectangle'||(b.plan.rooms||[]).length>=4};renderPlanMsg();
   }catch(e){planState={busy:false,err:true,warn:[],rooms:[],msg:'Could not open that file. Try a JPG or PNG.'};renderPlanMsg();}}
 function renderPlanMsg(){const el=$('#planMsg');if(!el)return;const s=planState;const b=$('#planPick');if(b){b.disabled=s.busy;b.textContent=s.busy?'Reading...':'Upload a plan';}
   if(s.msg==='signup'){el.className='descmsg';el.innerHTML='Building from a plan is part of Swiftscope. <a href="/signup" target="_top">Start a free trial</a> to use it.';return;}
-  el.className='descmsg'+(s.err?' err':'');el.innerHTML=esc(s.msg||'')+(s.warn.length?`<ul>${s.warn.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>`:'')+(s.rooms.length?`<p style="margin:6px 0 0">Rooms on the plan: ${s.rooms.map(r=>esc(r.name)+(r.width&&r.length?` ${fm(r.width/1000,1)} × ${fm(r.length/1000,1)} m`:'')).join(', ')}</p>`:'');}
+  el.className='descmsg'+(s.err?' err':'');el.innerHTML=esc(s.msg||'')+(s.warn.length?`<ul>${s.warn.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>`:'')+(s.house?`<div class="traceoffer"><b>This looks like a house.</b> The 3D planner builds one rectangle. Trace mode follows every wall and room on the drawing and prices it room by room.<button class="primary" id="toTrace" type="button">Trace it as a house</button></div>`:'')+(s.rooms.length?`<p style="margin:6px 0 0">Rooms on the plan: ${s.rooms.map(r=>esc(r.name)+(r.width&&r.length?` ${fm(r.width/1000,1)} × ${fm(r.length/1000,1)} m`:'')).join(', ')}</p>`:'');}
 function renderDescMsg(){const el=$('#descMsg');if(!el)return;const s=descState;const go=$('#descGo');if(go){go.disabled=s.busy;go.textContent=s.busy?'Building...':'Build it';}
   if(s.msg==='signup'){el.className='descmsg';el.innerHTML='Describe-to-build is part of Swiftscope. <a href="/signup" target="_top">Start a free trial</a> to use it, or start from a template below.';return;}
   el.className='descmsg'+(s.err?' err':'');el.innerHTML=esc(s.msg||'')+(s.warn&&s.warn.length?`<ul>${s.warn.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>`:'');}
@@ -1080,6 +1086,7 @@ $('#tab-shed').addEventListener('click',e=>{
   if(e.target.id==='descGo'){runDescribe();return;}
   if(e.target.id==='descMic'){toggleMic(e.target);return;}
   if(e.target.id==='planPick'){$('#planFile').click();return;}
+  if(e.target.id==='toTrace'){toTrace();return;}
   if(e.target.id==='tplSave'){const n=($('#tplName').value||'').trim();if(!n){$('#tplName').focus();return;}
     try{window.parent.postMessage({source:'ss-planner',type:'save-template',name:n,plan:Object.assign({},clone(plan),{selected:null}),summary:summary()},location.origin);}catch(_){}
     tplMsg='Saving template...';renderShedTab();return;}
@@ -1198,38 +1205,29 @@ document.addEventListener('keydown',e=>{
 /* ---------- Materials ---------- */
 const CAT_ORDER=['Stumps','Bearers (doubled)','Floor joists','Posts','Beams','Ledger','Bottom plate','Top plate','Studs','Noggings','Lintels','Sill trimmers','Internal plates','Internal studs','Internal noggings','Internal lintels','Balustrade posts','Balustrade rails','Balusters','Rafters','Ridge board','Roof battens'];
 let lastRows=[];
-const BUN_DATE='17 Oct 2026';
-const BUN_TIMBER={'70x35':{p:4.11,n:'70 x 35mm Framing MGP10 H2 Blue Pine'},'90x35':{p:4.01,n:'90 x 35mm Framing MGP10 H2 Blue Pine'},'90x45':{p:5.82,n:'90 x 45mm Framing MGP10 H2 Blue Pine',u:'https://www.bunnings.com.au/90-x-45mm-framing-mgp10-h2-blue-pine-6-0m_p8031034'},'140x45':{p:11.28,n:'140 x 45mm Framing MGP10 Untreated Pine'}};
-const bunSearch=q=>'https://www.bunnings.com.au/search/products?q='+encodeURIComponent(q);
-function bunningsFor(r){
-  const k=r.key;
-  if(r.part)return r.part.p?{p:r.part.p,n:r.part.pn||r.part.n,u:bunSearch(r.part.bq)}:{n:'Find '+r.part.n.toLowerCase(),u:bunSearch(r.part.bq)};
-  if(k.startsWith('t:')){const t=BUN_TIMBER[r.size];if(t)return {p:t.p,n:t.n,u:t.u||bunSearch(t.n)};return r.size==='90x90'?{n:'Find 90 x 90mm H4 treated pine (or use concrete stumps)',u:bunSearch('90 x 90mm H4 treated pine')}:{n:'Find '+r.size+' framing pine',u:bunSearch(r.size.replace('x',' x ')+'mm framing pine')};}
-  if(k==='s:wall:fc')return {p:81.07,n:'James Hardie HardieFlex 2400 x 1200 x 6mm',u:'https://www.bunnings.com.au/james-hardie-hardieflex-2400-x-1200-x-6mm-cladding-2-88m-2400-x-1200-x-6_p0711095'};
-  if(k==='s:wall:weatherboard')return {p:15.69,n:'185 x 18mm H3 primed rusticated weatherboard 5.4m ($84.70 each, special order)',u:bunSearch('185 x 18mm weatherboard H3 treated pine primed')};
-  if(k==='s:wall:ply')return {n:'Find plywood cladding',u:bunSearch('plywood cladding')};
-  if(k.startsWith('s:')&&k.endsWith('trimdek'))return {n:'Find Trimdek',u:bunSearch('Trimdek Colorbond')};
-  if(k==='s:roof:zinc')return {n:'Find Zincalume corrugated',u:bunSearch('zincalume corrugated roofing')};
-  if(k==='s:roof:poly')return {n:'Find polycarbonate roofing',u:bunSearch('corrugated polycarbonate roofing')};
-  if(k==='s:wrap')return {n:'Find wall wrap',u:bunSearch('wall wrap sarking')};
-  if(k==='fl:yt')return {p:53.80,n:'STRUCTAflor 3600 x 800 x 19mm YELLOWtongue',u:'https://www.bunnings.com.au/structaflor-3600x800mm-19mm-yellow-tongue-particle-board_p0148884'};
-  if(k==='fl:pav-old')return {n:'Find 400 x 400 pavers',u:bunSearch('400 x 400 paver')};
-  if(k==='fl:sand')return {n:'Find paving sand',u:bunSearch('paving sand 20kg')};
-  if(k==='fl:rock')return {n:'Find crushed rock',u:bunSearch('crushed rock road base')};
-  if(k==='s:wall:corr'||k==='s:roof:corr'){const mon=r.size==='Monument';return {p:20.38,n:'Fielders S-Rib Corrugated 0.42mm Colorbond '+r.size+' (special order)',u:mon?'https://www.bunnings.com.au/s-rib-corrugated-steel-cladding-0-42mm-bmt-colorbond-steel-monument_p1141864':bunSearch('S-Rib Corrugated Colorbond '+r.size)};}
-  if(k.startsWith('o:roller'))return {p:986,n:'Steel-Line A Series roller door 2200 x 2490mm',u:bunSearch('Steel-Line roller door')};
-  if(k.startsWith('o:pa'))return {n:'Find an external door',u:bunSearch('external door')};
-  if(k.startsWith('o:window'))return {n:'Find an aluminium window',u:bunSearch('aluminium sliding window')};
-  if(k==='f:Gutter')return {n:'Find Colorbond gutter',u:bunSearch('colorbond gutter')};
-  if(k.startsWith('f:'))return {n:'Find Colorbond flashing',u:bunSearch('colorbond flashing')};
-  if(k==='c:concrete')return {n:'Find concrete mix (ready-mix is usually cheaper for a full slab)',u:bunSearch('concrete mix 20kg')};
-  if(k==='c:mesh-old')return {n:'Find reinforcing mesh',u:bunSearch('reinforcing mesh')};
-  return {n:'Find '+r.item.toLowerCase(),u:bunSearch(r.bq||r.item)};
-}
+const PB=window.SSPB||{set(){},has:()=>false,byId:()=>null,match:()=>null,pick(){},baseUnit:u=>u};
+/* Prices the planner used to fill in from a hardware store list. Lines still carrying exactly these are cleared once, so they price from the business's own list. */
+const LEGACY_SEED={'t:70x35':4.11,'t:90x35':4.01,'t:90x45':5.82,'t:140x45':11.28,'s:wall:fc':81.07,'s:wall:weatherboard':15.69,'fl:yt':53.8,'s:wall:corr':20.38,'s:roof:corr':20.38,'roller-door':986};
+function legacySeed(r){if(r.key.startsWith('t:'))return LEGACY_SEED['t:'+r.size];if(r.part)return LEGACY_SEED[r.part.id];return LEGACY_SEED[r.key];}
+function clearLegacyPrices(rows){if(plan.pricesClean)return;rows.forEach(r=>{const v=plan.prices[r.key],seed=legacySeed(r);if(seed!=null&&v!=null&&Math.abs(+v-seed)<0.005)delete plan.prices[r.key];});plan.pricesClean=true;}
+/* Words a line is likely called in a price list, best first. */
+function matchFor(r){const k=r.key,lo=String(r.item||'').toLowerCase();
+  if(k.startsWith('t:'))return [r.size.replace('x',' x ')+' framing',r.size+' framing','framing timber','framing',r.size];
+  if(k.startsWith('s:roof'))return [lo.replace(/ sheets$/,''),'roof sheet','roofing','colorbond roof'];
+  if(k.startsWith('s:wall'))return [lo.replace(/ sheets$/,''),'cladding','wall sheet'];
+  if(k==='s:wrap')return ['wall wrap','sarking'];
+  if(k==='f:Gutter')return ['gutter'];if(k.startsWith('f:'))return [lo,'flashing'];
+  if(k==='c:concrete'||k==='c:footing')return ['concrete'];if(k.startsWith('c:mesh'))return [String(r.size).split(',')[0].toLowerCase(),'reinforcing mesh','mesh'];
+  if(k==='c:base'||k==='fl:rock')return ['crushed rock','road base'];if(k==='c:stirrup')return ['post stirrup','stirrup','post base'];if(k==='c:ledgerbolts')return ['masonry anchor','ledger bolt','anchor'];
+  if(k==='fl:deck')return ['decking board','decking'];if(k==='fl:deckscrew')return ['decking screw','screw'];if(k==='fl:yt')return ['yellow tongue','particleboard floor','flooring sheet'];if(k==='fl:ply')return ['structural ply','plywood floor','plywood'];
+  if(k.startsWith('fl:pav'))return [lo,'paver'];if(k==='fl:sand'||k==='fl:joint')return ['paving sand','sand'];if(k.startsWith('fl:gravel'))return [lo,'gravel'];
+  if(r.part)return [lo,String(r.part.bq||'').toLowerCase()].filter(Boolean);
+  return [lo];}
 function stockFor(lens){const stock={};let buy=0;const K=0.005;const bins=[];
   lens.slice().sort((a,b)=>b-a).forEach(l=>{if(l>6){const n=Math.ceil(l/6-1e-9);stock[6]=(stock[6]||0)+n;buy+=6*n;return;}
     const b=bins.find(b=>6-b.used>=l+K);if(b)b.used+=l+K;else bins.push({used:l+K});});
   bins.forEach(b=>{const s=STOCK.find(x=>x>=b.used-K-0.0005)||6;stock[s]=(stock[s]||0)+1;buy+=s;});const common=+(Object.entries(stock).sort((a,b)=>b[1]-a[1])[0]||[6])[0];return {buy,common,text:Object.entries(stock).sort((a,b)=>a[0]-b[0]).map(([s,n])=>`${n} × ${fm(s,1)} m`).join(', ')};}
+const UNIT_OF_PU={'$/m':'m','$/m²':'m²','$/m³':'m³','$ ea':'ea'};
 function computeMaterials(){
   const D=dims(),S=plan.shed;const rows=[];
   const groups={};lastPieces.forEach(p=>{const k=p.cat+'|'+p.size;(groups[k]=groups[k]||{cat:p.cat,size:p.size,lens:[]}).lens.push(p.len);});
@@ -1268,7 +1266,10 @@ function computeMaterials(){
     else{const v=Math.ceil(n*0.1215*10)/10;rows.push({key:'c:footing',group:'Footings',sec:'floor',item:'Concrete for post footings',size:'45 x 45 x 60 cm deep',detail:`${n} footings`,order:`${fm(v,1)} m³ (about ${Math.ceil(n*0.1215/0.011)} × 20 kg bags)`,buy:v,pu:'$/m³',bq:'concrete mix 20kg'});rows.push({key:'c:stirrup',group:'Footings',sec:'floor',item:'Post stirrups',size:'Galvanised, cast in',detail:'One per post',order:`${n}`,buy:n,pu:'$ ea',bq:'post stirrup'});}}
   if(stype()==='verandah'){const nb=Math.ceil(D.L/0.6)+1;rows.push({key:'c:ledgerbolts',group:'Footings',sec:'build',item:'Ledger bolts or masonry anchors',size:'M12',detail:'Ledger to the house frame or brickwork at about 60 cm centres',order:`${nb}`,buy:nb,pu:'$ ea',bq:'m12 masonry anchor'});}
   tradeRows().forEach(r=>rows.push(r));
-  rows.forEach(r=>{r.sec=secOf(r);const pb=pbPrice(r);if(pb)r.pb=pb;});
+  rows.forEach(r=>{r.sec=secOf(r);if(!r.match)r.match=matchFor(r);r.unit=UNIT_OF_PU[r.pu]||'ea';});
+  clearLegacyPrices(rows);
+  rows.forEach(r=>{const L=(plan.links||{})[r.key];r.auto=L===undefined;r.pb=L===undefined?PB.match(r):(L?PB.byId(L):null);
+    if(r.pb&&r.pb.u&&r.pb.u!==PB.baseUnit(r.unit))r.unitWarn=`Your item is sold per ${r.pb.u}, this line is counted in ${r.unit==='ea'?'each':r.unit}. Check the price.`;});
   rows.forEach(r=>{let step=1,lab='';
     if(r.key.startsWith('t:')){step=r.common||6;lab='× '+fm(step,1)+' m';}
     else if(r.sheetLen){step=r.sheetLen;lab='sheets';}
@@ -1314,11 +1315,11 @@ function renderMaterials(){
   lastRows=computeMaterials();const groups=[...new Set(lastRows.filter(r=>inScope(r.sec)).map(r=>r.group))];
   const secs=[...new Set(lastRows.map(r=>r.sec).concat(labourStagesAll().map(s=>s.sec)))].filter(s=>SECTIONS[s]);
   const scopeHTML=secs.length>1?`<div class="scope"><span class="note">In this quote:</span>${secs.map(s=>`<button class="chip ${inScope(s)?'on':''}" data-scope="${s}" aria-pressed="${inScope(s)}">${SECTIONS[s]}</button>`).join('')}</div>${secs.some(s=>!inScope(s))?'<p class="note" style="margin-top:2px">Sections switched off are left out of the totals and the quote.</p>':''}`:'';
-  let h=`<div class="bunbar"><button class="primary" id="useBun">Use Bunnings prices</button><span class="note" style="margin:0">Prices checked ${BUN_DATE} and vary by store and state. Tap a product to check your local price. Items without a price need a quick search.</span></div><label class="row" style="margin-top:12px"><span>Waste and fixings allowance</span><span class="inp"><input type="number" id="waste" value="${plan.waste}" min="0" max="50" step="1"><em>%</em></span></label>${scopeHTML}`;
+  let h=(EMBED&&!PB.has()?`<p class="note pbnote">Your material price list is empty. <a href="/settings/materials" target="_top">Add your materials and prices</a> and every line here prices itself from your list.</p>`:PB.has()?'<p class="note">Lines price from your own material price list. Tap a line\'s item to change it, or type a price to override it for this build.</p>':'')+`<label class="row" style="margin-top:12px"><span>Waste and fixings allowance</span><span class="inp"><input type="number" id="waste" value="${plan.waste}" min="0" max="50" step="1"><em>%</em></span></label>${scopeHTML}`;
   groups.forEach(g=>{
     h+=`<h3>${g}</h3><div class="mtable">`;
-    lastRows.filter(r=>r.group===g&&inScope(r.sec)).forEach(r=>{const own=plan.prices[r.key];const pr=own??'';const b=bunningsFor(r);const pbh=(own===undefined&&r.pb)?`<small class="pbk">Your price book: ${esc(r.pb.n)} ${money(r.pb.p)}</small>`:'';
-      h+=`<div class="mrow"><div class="mi"><b>${esc(r.item)}</b><span class="sz">${esc(r.size)}</span>${r.detail?`<small>${esc(r.detail)}</small>`:''}${pbh}<small class="bun"><a href="${b.u}" target="_blank" rel="noopener">Bunnings: ${esc(b.n)}</a>${b.p?` ${money(b.p)} ${r.pu.replace('$','')}`:''}</small></div><div class="mq">${esc(r.order)}<span class="step"><button data-ex="${esc(r.key)}" data-d="-1" aria-label="Fewer">−</button><b>${r.extra>0?'+'+r.extra:r.extra}</b><button data-ex="${esc(r.key)}" data-d="1" aria-label="More">+</button></span></div><div class="mp"><span class="inp sm"><input type="number" data-price="${esc(r.key)}" value="${pr}" placeholder="${r.pb?r.pb.p.toFixed(2):'0.00'}" min="0" step="0.01" aria-label="Price for ${esc(r.item)}"><em>${r.pu}</em></span><span class="cost" data-cost="${esc(r.key)}">${money(priceOf(r)*r.buy)}</span></div></div>`;});
+    lastRows.filter(r=>r.group===g&&inScope(r.sec)).forEach(r=>{const own=plan.prices[r.key];const pr=own??'';const pbh=PB.has()?(r.pb?`<button class="pbl" data-pick="${esc(r.key)}" title="Change the price list item"><span>${esc(r.pb.n)}</span><em>${money(r.pb.p)}${r.auto?' · matched':''}</em></button>`:`<button class="pbl none" data-pick="${esc(r.key)}">Pick from your price list</button>`):'';
+      h+=`<div class="mrow"><div class="mi"><b>${esc(r.item)}</b><span class="sz">${esc(r.size)}</span>${r.detail?`<small>${esc(r.detail)}</small>`:''}${pbh}${r.unitWarn?`<small class="badc">${esc(r.unitWarn)}</small>`:''}</div><div class="mq">${esc(r.order)}<span class="step"><button data-ex="${esc(r.key)}" data-d="-1" aria-label="Fewer">−</button><b>${r.extra>0?'+'+r.extra:r.extra}</b><button data-ex="${esc(r.key)}" data-d="1" aria-label="More">+</button></span></div><div class="mp"><span class="inp sm"><input type="number" data-price="${esc(r.key)}" value="${pr}" placeholder="${r.pb?r.pb.p.toFixed(2):'0.00'}" min="0" step="0.01" aria-label="Price for ${esc(r.item)}"><em>${r.pu}</em></span><span class="cost" data-cost="${esc(r.key)}">${money(priceOf(r)*r.buy)}</span></div></div>`;});
     h+='</div>';
   });
   h+=`<div class="total"><span>Materials total</span><b id="grand">${money(grandTotal())}</b></div>${labourHTML()}<button class="primary" id="copyCsv">Copy list as CSV</button> <span class="note" id="csvMsg"></span>
@@ -1337,7 +1338,7 @@ $('#tab-materials').addEventListener('input',e=>{
 $('#tab-materials').addEventListener('click',async e=>{
   const exb=e.target.closest('[data-ex]');if(exb){bumpExtra(exb.dataset.ex,+exb.dataset.d);return;}
   const scb=e.target.closest('[data-scope]');if(scb){const s=scb.dataset.scope;plan.scope=Object.assign({},plan.scope||{});plan.scope[s]=!inScope(s);renderMaterials();save();return;}
-  if(e.target.id==='useBun'){lastRows.forEach(r=>{const b=bunningsFor(r);if(b.p)plan.prices[r.key]=b.p;});save();renderMaterials();return;}
+  const pk=e.target.closest('[data-pick]');if(pk){const key=pk.dataset.pick;const r=lastRows.find(x=>x.key===key);if(!r)return;PB.pick({title:r.item+(r.size?', '+r.size:''),sec:r.sec,current:r.pb?r.pb.id:null,allowClear:true,onPick:it=>{plan.links=Object.assign({},plan.links);plan.links[key]=it?it.id:null;delete plan.prices[key];renderMaterials();updateTotals();save();}});return;}
   if(e.target.id!=='copyCsv')return;
   const q=s=>'"'+String(s).replace(/"/g,'""')+'"';
   const lines=[['Group','Item','Size','Detail','Order','Unit price','Cost'].map(q).join(',')].concat(lastRows.filter(r=>inScope(r.sec)).map(r=>{const p=priceOf(r);return [r.group,r.item,r.size,r.detail,r.order,p?p.toFixed(2)+' '+r.pu:'',(p*r.buy).toFixed(2)].map(q).join(',');}));
@@ -1441,7 +1442,7 @@ function renderPick(){
     if(builds.length>1)h+=`<label class="row"><span>Made from</span><select data-po="build">${builds.map(x=>`<option value="${x.id}" ${x.id===b?'selected':''}>${x.n}</option>`).join('')}</select></label>`;
     h+=`<div class="grid2">${pkOp('Width','width',o.width,1)}${pkOp('Height','height',o.height,1)}${pkOp('Offset from centre','offset',o.offset,5)}${o.type==='window'?pkOp('Sill height','sill',o.sill,5):''}</div>`;
     const parts=openingParts(o);
-    if(parts.length){h+=`<h4>What it’s made of</h4><div class="parts">`+parts.map(pt=>`<div class="part"><input type="checkbox" data-pp="${pt.id}" ${pt.on?'checked':''} aria-label="Include ${esc(pt.n)}"><span class="pn">${esc(pt.n)}<a href="${bunSearch(pt.bq)}" target="_blank" rel="noopener">${pt.p?'Bunnings '+money(pt.p):'Find at Bunnings'}</a></span><span class="inp sm"><input type="number" data-pq="${pt.id}" value="${pt.qty}" min="0" step="${pt.unit==='m'?0.1:1}" aria-label="Quantity"><em>${pt.unit}</em></span></div>`).join('')+'</div><p class="pkn">Untick anything you already have. Quantities flow into the Materials tab.</p>';}
+    if(parts.length){h+=`<h4>What it’s made of</h4><div class="parts">`+parts.map(pt=>`<div class="part"><input type="checkbox" data-pp="${pt.id}" ${pt.on?'checked':''} aria-label="Include ${esc(pt.n)}"><span class="pn">${esc(pt.n)}</span><span class="inp sm"><input type="number" data-pq="${pt.id}" value="${pt.qty}" min="0" step="${pt.unit==='m'?0.1:1}" aria-label="Quantity"><em>${pt.unit}</em></span></div>`).join('')+'</div><p class="pkn">Untick anything you already have. Quantities flow into the Materials tab.</p>';}
     const iss=openingIssue(o);if(iss)h+=`<p class="warn">${esc(iss)}</p>`;
     h+=`<div class="btns"><button class="btn danger" data-pk="delop">Remove this ${OPEN_TYPES[o.type].label.toLowerCase()}</button></div>`;
   }
@@ -1831,9 +1832,6 @@ function tradeRows(){const out=[];Object.keys(TRADES).forEach(id=>{if(!tradeOn(i
   res.rows.forEach(r=>{if(!(r.qty>0))return;const pu=TU[r.unit]||'$ ea';out.push({key:`x:${id}:${r.id}`,group:T.n,sec:T.sec,item:r.item,size:r.size||'',detail:r.detail||'',order:TU[r.unit]?`${fm(r.qty,r.unit==='m³'?1:0)} ${r.unit}`:`${r.qty} ${r.unit}`,buy:r.qty,pu,bq:r.bq,match:r.match});});});return out;}
 function tradeLabour(){const out=[];Object.keys(TRADES).forEach(id=>{if(!tradeOn(id))return;const T=TRADES[id];tradeResult(id).lab.forEach(([k,n,v,note])=>out.push({k,n,v,note,sec:T.sec}));});return out;}
 /* price book: a business's own Swiftscope material prices, matched by name */
-let PRICEBOOK=[];
-function pbPrice(r){if(!PRICEBOOK.length)return null;const keys=(r.match||[]).map(s=>s.toLowerCase());if(!keys.length)return null;
-  for(const k of keys){const hit=PRICEBOOK.find(p=>p.l.includes(k));if(hit)return hit;}return null;}
 function priceOf(r){const v=plan.prices[r.key];if(v!==undefined&&v!==null&&v!==''&&isFinite(v))return +v;return r.pb?r.pb.p:0;}
 /* scope + layer defaults from the business's trades */
 const TRADE_DEFAULTS={electrician:{layers:['elec'],scope:['elec']},plumber:{layers:['plumb'],scope:['plumb']},roofer:{layers:['roofx'],scope:['roof']},painter:{layers:['paint'],scope:['paint']},tiler:{layers:['finish'],scope:['finish']},concreter:{layers:['concx'],scope:['floor']},landscaper:{layers:[],scope:['floor']}};
@@ -1908,10 +1906,10 @@ if(EMBED){
   window.addEventListener('message',e=>{
     if(e.origin!==location.origin||e.source!==window.parent)return;const d=e.data||{};if(d.target!=='ss-planner')return;
     if(d.type==='load'){if(d.meta)META=d.meta;if(Array.isArray(d.templates))BIZ_TEMPLATES=d.templates;
-      PRICEBOOK=(Array.isArray(d.pricebook)?d.pricebook:[]).map(x=>({l:String(x.label||'').toLowerCase(),n:String(x.label||''),p:+x.unit_cost||0})).filter(x=>x.l&&x.p>0);if(d.settings)SETTINGS=Object.assign(SETTINGS,d.settings);
+      PB.set(d.pricebook);if(d.settings)SETTINGS=Object.assign(SETTINGS,d.settings);
       plan=d.plan&&d.plan.shed?migrate(d.plan):defaultPlan();if(!d.plan||!d.plan.shed)applyTradeDefaults(d.trades);if(d.prices&&!Object.keys(plan.prices).length)plan.prices=Object.assign({},d.prices);
       plan.selected=null;refreshAll();
-      if(!d.plan||!d.plan.shed){computeMaterials().forEach(r=>{const bp=bunningsFor(r);if(bp.p&&plan.prices[r.key]===undefined)plan.prices[r.key]=bp.p;});if($('#tab-materials').classList.contains('on'))renderMaterials();postPlan();}}
+      if(!d.plan||!d.plan.shed){if($('#tab-materials').classList.contains('on'))renderMaterials();postPlan();}}
     if(d.type==='meta'){META=Object.assign(META,d.meta||{});}
     if(d.type==='templates'){BIZ_TEMPLATES=Array.isArray(d.templates)?d.templates:[];tplMsg=d.message||'';renderShedTab();}
     if(d.type==='print'){openPlans();setTimeout(()=>{try{window.print();}catch(_){}},150);}
