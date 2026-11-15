@@ -272,6 +272,14 @@ const BOT_PATTERNS: { pattern: RegExp; label: string }[] = [
   { pattern: /vercel-screenshot/i, label: "Vercel (internal)" },
 ];
 
+// Crawlers refused outright. ShapBot (a headless Lightpanda browser on
+// Google Cloud IPs) ignores robots.txt, runs the page JavaScript and so
+// fires the directory lookup APIs for every listing it opens: 18,000+
+// hits in two hours on 14 Nov 2026, about 4,100 of them on /api/directory/*,
+// which drove a 17x spike in function invocations and the lookup rate limits.
+// Refused before logging, so a crawl like that cannot also flood traffic_log.
+const BLOCKED_UA = /shapbot/i;
+
 /**
  * Fire-and-forget insert into public.traffic_log via the REST API
  * directly (plain fetch, no supabase-js client) - this file runs on the
@@ -354,6 +362,14 @@ function logTraffic(request: NextRequest, pathname: string, event: NextFetchEven
 
 export async function middleware(request: NextRequest, event: NextFetchEvent) {
   const { pathname } = request.nextUrl;
+
+  // ------------------------------------------------------------------
+  // -2. Crawlers that are refused outright (see BLOCKED_UA). 404, same
+  //     reasoning as the IP blocklist below.
+  // ------------------------------------------------------------------
+  if (BLOCKED_UA.test(request.headers.get("user-agent") ?? "")) {
+    return new NextResponse("Not found", { status: 404 });
+  }
 
   // ------------------------------------------------------------------
   // -1. Traffic log, for the real-time admin activity view. Deliberately

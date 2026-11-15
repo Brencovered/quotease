@@ -88,6 +88,13 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: "SemrushBot",
         crawlDelay: 10,
       },
+      // ShapBot ignored the general /api/ disallow and crawled the
+      // directory hard enough to trip rate limits. Middleware refuses it
+      // regardless; this is the polite version for if it starts listening.
+      {
+        userAgent: "ShapBot",
+        disallow: "/",
+      },
     ],
     sitemap: `${BASE_URL}/sitemap.xml`,
   };
