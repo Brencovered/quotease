@@ -219,34 +219,63 @@ function isAdminEmail(email: string | undefined): boolean {
 // the same isolate. Worst case, a newly blocked IP takes up to 60s to
 // start being enforced here; the two route-level checks remain instant
 // regardless, since they call the uncached lib/ipBlocklist.ts directly.
+//
+// Every Supabase call in here has a hard timeout. 17 Nov 2026: Supabase
+// stalled (connection timeouts, 522/503/504 on traffic_log and
+// ip_blocklist) during a bot surge, and middleware sat waiting on those
+// calls until Vercel killed it ("did not return an initial response
+// within 25s", "Task timed out after 60 seconds"), so pages 504'd sitewide.
+// Rules now: never wait on the blocklist when any copy is cached (serve
+// the cached copy, refresh in the background); one refresh at a time per
+// isolate; a failed refresh backs off instead of being retried by every
+// request; and nothing waits on Supabase longer than the timeouts below.
 let blockedIpCache: { ips: Set<string>; fetchedAt: number } | null = null;
+let blocklistRefresh: Promise<void> | null = null;
+let blocklistRetryAt = 0;
 const BLOCKLIST_TTL_MS = 60_000;
+const BLOCKLIST_RETRY_MS = 15_000;
+const BLOCKLIST_TIMEOUT_MS = 1_500;
 
-async function getBlockedIps(): Promise<Set<string>> {
-  if (blockedIpCache && Date.now() - blockedIpCache.fetchedAt < BLOCKLIST_TTL_MS) {
+function refreshBlockedIps(): Promise<void> {
+  if (blocklistRefresh) return blocklistRefresh;
+  blocklistRefresh = (async () => {
+    try {
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!url || !key) return;
+      const res = await fetch(`${url}/rest/v1/ip_blocklist?select=ip_address`, {
+        headers: { apikey: key, Authorization: `Bearer ${key}` },
+        signal: AbortSignal.timeout(BLOCKLIST_TIMEOUT_MS),
+      });
+      if (!res.ok) throw new Error(`ip_blocklist ${res.status}`);
+      const rows = (await res.json()) as { ip_address: string }[];
+      blockedIpCache = { ips: new Set(rows.map((r) => r.ip_address)), fetchedAt: Date.now() };
+    } catch {
+      // Fail open on whatever is cached (or nothing) - same reasoning as
+      // lib/ipBlocklist.ts: a lookup failure blocking real traffic
+      // sitewide is worse than a known-bad IP getting through for a bit.
+      // Back off so a struggling Supabase is not hit by every request.
+      blocklistRetryAt = Date.now() + BLOCKLIST_RETRY_MS;
+    } finally {
+      blocklistRefresh = null;
+    }
+  })();
+  return blocklistRefresh;
+}
+
+async function getBlockedIps(event: NextFetchEvent): Promise<Set<string>> {
+  const fresh = blockedIpCache && Date.now() - blockedIpCache.fetchedAt < BLOCKLIST_TTL_MS;
+  if (fresh || Date.now() < blocklistRetryAt) return blockedIpCache?.ips ?? new Set();
+  if (blockedIpCache) {
+    // Stale but usable: answer now, refresh behind the response.
+    event.waitUntil(refreshBlockedIps());
     return blockedIpCache.ips;
   }
-  try {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!url || !key) return blockedIpCache?.ips ?? new Set();
-
-    const res = await fetch(`${url}/rest/v1/ip_blocklist?select=ip_address`, {
-      headers: { apikey: key, Authorization: `Bearer ${key}` },
-    });
-    if (!res.ok) return blockedIpCache?.ips ?? new Set();
-
-    const rows = (await res.json()) as { ip_address: string }[];
-    blockedIpCache = { ips: new Set(rows.map((r) => r.ip_address)), fetchedAt: Date.now() };
-    return blockedIpCache.ips;
-  } catch {
-    // Fail open on the cached value if we have one, otherwise fail open
-    // entirely - same reasoning as lib/ipBlocklist.ts: a lookup failure
-    // blocking real traffic sitewide is worse than a known-bad IP getting
-    // through occasionally. This is a targeted response to specific
-    // abuse, never the primary defence.
-    return blockedIpCache?.ips ?? new Set();
-  }
+  // Cold isolate, nothing cached: wait, but never past the timeout.
+  await refreshBlockedIps();
+  // (re-read: the refresh above may have filled it; TS narrowed it to null)
+  const filled = blockedIpCache as { ips: Set<string> } | null;
+  return filled?.ips ?? new Set();
 }
 
 /* ------------------------------------------------------------------ */
@@ -287,8 +316,16 @@ const BLOCKED_UA = /shapbot/i;
  * one insert. Never awaited by the caller and never throws: a failure
  * here must never be able to affect the response middleware returns.
  */
+// Traffic logging is best-effort. When an insert fails, stop logging for
+// a while rather than adding one more stalled request per page view to a
+// Supabase that is already struggling.
+let trafficLogPausedUntil = 0;
+const TRAFFIC_LOG_TIMEOUT_MS = 3_000;
+const TRAFFIC_LOG_PAUSE_MS = 30_000;
+
 function logTraffic(request: NextRequest, pathname: string, event: NextFetchEvent) {
   try {
+    if (Date.now() < trafficLogPausedUntil) return;
     // Next.js's <Link> prefetches the target page the moment it scrolls
     // into the viewport, by default, on every Link in the app -- not on
     // click. That request hits this exact middleware and, until this
@@ -345,9 +382,13 @@ function logTraffic(request: NextRequest, pathname: string, event: NextFetchEven
         Prefer: "return=minimal",
       },
       body,
+      signal: AbortSignal.timeout(TRAFFIC_LOG_TIMEOUT_MS),
+    }).then((res) => {
+      if (!res.ok && res.status >= 500) trafficLogPausedUntil = Date.now() + TRAFFIC_LOG_PAUSE_MS;
     }).catch(() => {
       // Logging is best-effort. A dropped row here is a gap in the
       // activity feed, never a broken page for a real visitor.
+      trafficLogPausedUntil = Date.now() + TRAFFIC_LOG_PAUSE_MS;
     });
 
     // NextFetchEvent.waitUntil keeps this fetch alive past the point
@@ -412,7 +453,7 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
     const xff = request.headers.get("x-forwarded-for");
     const realIp = xff?.split(",")[0]?.trim() ?? request.headers.get("x-real-ip");
     if (realIp) {
-      const blocked = await getBlockedIps();
+      const blocked = await getBlockedIps(event);
       if (blocked.has(realIp)) {
         // 404, not 403. A 403 confirms "you have been specifically
         // detected and blocked," which is exactly the signal that tells
@@ -569,6 +610,11 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      // Cap each Supabase call well under Vercel's 25s first-byte limit, so
+      // a stalled backend gives a slow page instead of a 504.
+      global: {
+        fetch: (input, init) => fetch(input, { ...init, signal: init?.signal ?? AbortSignal.timeout(8_000) }),
+      },
       cookies: {
         getAll() {
           return request.cookies.getAll();
