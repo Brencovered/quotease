@@ -5,7 +5,7 @@ import { usePostHog } from "posthog-js/react";
 import Link from "next/link";
 import { MapPin, Star, Phone, Mail, ChevronLeft, ChevronRight, Check, BadgeCheck, ArrowRight } from "lucide-react";
 import { getGoogleReviewsUrl } from "@/lib/seo/gbp";
-import { buildDirectorySlug } from "@/lib/seo/meta";
+import { directoryProfilePath } from "@/lib/seo/directoryUrl";
 import { CLAIMED_DIRECTORY_PAGES_ENABLED, QUOTE_REQUESTS_ENABLED } from "@/lib/featureFlags";
 
 // Temporarily off (kept in sync with app/directory/[slug]/page.tsx): with few
@@ -265,7 +265,7 @@ export default function DirectoryCard({ listing, index = 0 }: { listing: Listing
   // than no form at all.
   const canReceiveQuote = Boolean(listing.is_claimed || listing.scraped_contact_email || listing.private_email);
   const showQuoteFlow = QUOTE_REQUESTS_ENABLED && canReceiveQuote;
-  const profileHref = `/directory/${listing.suburb ? buildDirectorySlug(listing as { id: string; business_name: string; suburb: string }) : listing.id}`;
+  const profileHref = directoryProfilePath(listing);
   const posthogClient = usePostHog();
 
   return (

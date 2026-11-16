@@ -13,6 +13,7 @@ import { CLAIMED_DIRECTORY_PAGES_ENABLED, QUOTE_REQUESTS_ENABLED } from "@/lib/f
 import MarketingNav from "@/components/MarketingNav";
 import DirectoryCard from "@/components/DirectoryCard";
 import { tradieListingMeta, buildDirectorySlug, getTradeVariants, getTradeDisplay, tradeToSlug, suburbToSlug, postcodeToState } from "@/lib/seo/meta";
+import { isLegacyDirectoryUuid, legacyUuidRedirectPath } from "@/lib/seo/directoryUrl";
 import { BreadcrumbSchema, type Crumb } from "@/components/seo/StructuredData";
 import { getGoogleReviewsUrl } from "@/lib/seo/gbp";
 import PhotoGallery from "./_components/PhotoGallery";
@@ -92,8 +93,6 @@ function domainFromUrl(url: string): string | null {
 /* ------------------------------------------------------------------ */
 /*  Metadata (server)                                                   */
 /* ------------------------------------------------------------------ */
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 /**
  * Resolves a URL slug to a listing row. Handles two shapes:
  *  - The pretty slug buildDirectorySlug produces (business-suburb-uid6) -
@@ -115,7 +114,7 @@ async function resolveListingBySlug(
   supabase: Awaited<ReturnType<typeof createClient>>,
   slug: string
 ): Promise<{ listing: Listing | null; isLegacyId: boolean }> {
-  if (UUID_RE.test(slug)) {
+  if (isLegacyDirectoryUuid(slug)) {
     const { data } = await supabase.from("directory_listing").select("*").eq("id", slug).single();
     return { listing: (data as Listing | null) ?? null, isLegacyId: true };
   }
@@ -161,16 +160,15 @@ export default async function TradieProfilePage({
   const { slug } = await params;
   const supabase = await createClient();
 
-  const { listing: maybeListing, isLegacyId } = await resolveListingBySlug(supabase, slug);
+  const { listing: maybeListing } = await resolveListingBySlug(supabase, slug);
   if (!maybeListing) notFound();
   const listing: Listing = maybeListing;
 
   // Someone hit the old raw-UUID URL (a bookmark, an already-indexed
   // link, a share from before this fix) - send them to the canonical
   // pretty-slug URL instead of rendering the same page at two addresses.
-  if (isLegacyId) {
-    permanentRedirect(`/directory/${buildDirectorySlug({ id: listing.id, business_name: listing.business_name, suburb: listing.suburb ?? "" })}`);
-  }
+  const legacyRedirect = legacyUuidRedirectPath(slug, listing);
+  if (legacyRedirect) permanentRedirect(legacyRedirect);
 
   /* Similar tradies - always geographically scoped. The previous query
      used an OR between trade-match and suburb-match, so a trade match

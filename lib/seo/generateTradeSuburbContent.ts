@@ -24,6 +24,7 @@
  */
 
 import { createPublicClient } from "@/lib/supabase/public";
+import { fetchAllPages } from "@/lib/seo/fetchAllPages";
 import { getTradeDisplay, suburbToSlug, slugToSuburbDisplay, buildDirectorySlug, getTradeVariants } from "@/lib/seo/meta";
 import { generateTradeSuburbFaqs, type FaqItem } from "@/components/seo/FaqSchema";
 
@@ -113,8 +114,8 @@ export async function generateTradeSuburbContent(
     // (e.g. "South Melbourne"), but the URL only has a slug
     // ("south-melbourne"). Rather than guess at a SQL pattern that handles
     // every punctuation/casing variant, pull every listing for the trade and
-    // match in code by re-slugifying each row's suburb - small dataset,
-    // simpler and more reliable than fragile ILIKE patterns.
+    // match in code by re-slugifying each row's suburb. The read is paged
+    // so it is the full trade, not whatever happened to fit in one response.
     //
     // Real bug, confirmed against live data: two different raw trade
     // strings ("aircon" and "air conditioning") both legitimately occur in
@@ -128,15 +129,21 @@ export async function generateTradeSuburbContent(
     // "No air con installers listed" because of this. getTradeVariants()
     // returns every raw string that maps to the same slug, and
     // .overlaps() matches if the trades array contains any of them.
-    const { data: tradeRows, error } = await supabase
-      .from("directory_listing")
-      .select("id, business_name, trades, suburb, google_rating, google_reviews_count, logo_url, photo_references, blurb, scraped_contact_phone, website_url")
-      .overlaps("trades", getTradeVariants(trade));
-
-    if (error) {
-      console.error("[generateTradeSuburbContent] query failed:", error.message);
-    }
-    rows = tradeRows ?? [];
+    // Same PostgREST cap as the sitemap: an unpaged select returns at
+    // most 1,000 rows. A trade with more listings than that silently
+    // dropped the rest, so a suburb whose businesses fell outside that
+    // window undercounted and could be marked noindex despite having
+    // enough real listings. Page on id until a short page.
+    rows = await fetchAllPages(async (from, pageSize) => {
+      const { data: tradeRows, error } = await supabase
+        .from("directory_listing")
+        .select("id, business_name, trades, suburb, google_rating, google_reviews_count, logo_url, photo_references, blurb, scraped_contact_phone, website_url")
+        .overlaps("trades", getTradeVariants(trade))
+        .order("id", { ascending: true })
+        .range(from, from + pageSize - 1);
+      if (error) throw new Error(error.message);
+      return tradeRows ?? [];
+    });
   } catch (err) {
     // A genuinely unavailable Supabase client (missing env vars in CI, a
     // transient network failure during background ISR revalidation) should
