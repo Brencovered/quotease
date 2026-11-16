@@ -4,7 +4,9 @@
 # Actions). Do not commit the values.
 #
 #   SUPABASE_URL                 project URL, https://<ref>.supabase.co
+#                                REQUIRED. The job stops immediately when this is empty.
 #   SUPABASE_SERVICE_ROLE_KEY    service role key (bypasses RLS). Server only.
+#                                REQUIRED. The job stops immediately when this is empty.
 #   ABN_LOOKUP_GUID              free GUID from
 #                                https://abr.business.gov.au/Tools/WebServices
 #                                MX checks still run if this is unset. ABN
@@ -40,7 +42,7 @@ on:
   workflow_dispatch:
     inputs:
       phase:
-        description: "all, ingest, enrich, or verify"
+        description: "all, ingest, enrich, verify, or asic"
         required: false
         default: all
         type: choice
@@ -49,6 +51,7 @@ on:
           - ingest
           - enrich
           - verify
+          - asic
       run_id:
         description: "abn_directory_runs id. Leave empty for a manual or scheduled run."
         required: false
@@ -65,6 +68,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
+      - name: Check Actions secrets SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          missing=()
+          if [ -z "$SUPABASE_URL" ]; then missing+=("SUPABASE_URL"); fi
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then missing+=("SUPABASE_SERVICE_ROLE_KEY"); fi
+          if [ ${#missing[@]} -gt 0 ]; then
+            list="${missing[0]}"
+            if [ ${#missing[@]} -gt 1 ]; then list="${missing[0]} and ${missing[1]}"; fi
+            echo "::error::Missing GitHub Actions secret(s): ${list}. Add them under Settings → Secrets and variables → Actions (repository secrets, not Vercel). SUPABASE_URL is the project URL (https://<ref>.supabase.co). SUPABASE_SERVICE_ROLE_KEY is the service_role key. The workflow cannot insert directory candidates until both are set."
+            exit 1
+          fi
+          echo "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set."
+
       - name: Checkout
         uses: actions/checkout@v4
 

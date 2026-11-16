@@ -81,12 +81,17 @@ function execFile(command: string, args: string[]): Promise<string> {
   });
 }
 
-export async function listZipXmlEntries(zipPath: string): Promise<string[]> {
+export async function listZipEntries(zipPath: string): Promise<string[]> {
   const listing = await execFile("unzip", ["-Z1", zipPath]);
   return listing
     .split("\n")
     .map((line) => line.trim())
-    .filter((name) => name.toLowerCase().endsWith(".xml") && !name.endsWith("/"));
+    .filter((name) => name.length > 0 && !name.endsWith("/"));
+}
+
+export async function listZipXmlEntries(zipPath: string): Promise<string[]> {
+  const entries = await listZipEntries(zipPath);
+  return entries.filter((name) => name.toLowerCase().endsWith(".xml"));
 }
 
 export function openZipEntry(zipPath: string, entry: string): NodeReadable {

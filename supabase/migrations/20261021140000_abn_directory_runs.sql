@@ -26,7 +26,7 @@ create table if not exists public.abn_directory_runs (
   finished_at timestamptz,
   updated_at timestamptz not null default now(),
   created_at timestamptz not null default now(),
-  constraint abn_directory_runs_phase_check check (phase in ('all', 'ingest', 'enrich', 'verify')),
+  constraint abn_directory_runs_phase_check check (phase in ('all', 'ingest', 'enrich', 'verify', 'asic')),
   constraint abn_directory_runs_status_check check (status in ('queued', 'running', 'done', 'failed'))
 );
 

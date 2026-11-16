@@ -47,7 +47,7 @@ export interface AbnEnrichmentResult {
 
 interface CandidateRow {
   id: string;
-  abn: string;
+  abn: string | null;
   legal_name: string;
   trading_name: string | null;
   matched_trade: string;
@@ -138,10 +138,20 @@ export async function runAbnEnrichmentBatch(options?: {
   const concurrency = options?.concurrency ?? CONCURRENCY;
   const maxBatches = options?.maxBatches ?? 1;
 
-  const [{ data: candidates }, { count: remainingCount }] = await Promise.all([
-    admin.from("abn_trade_candidates").select("*").is("processed_at", null).limit(batchSize * maxBatches),
-    admin.from("abn_trade_candidates").select("id", { count: "exact", head: true }).is("processed_at", null),
-  ]);
+  const remainingQuery = admin.from("abn_trade_candidates").select("id", { count: "exact", head: true }).is("processed_at", null);
+  const ordered = await admin
+    .from("abn_trade_candidates")
+    .select("*")
+    .is("processed_at", null)
+    .order("registered_at", { ascending: false, nullsFirst: false })
+    .limit(batchSize * maxBatches);
+  const candidatesResult = ordered.error && /registered_at|does not exist|schema cache/i.test(ordered.error.message)
+    ? await admin.from("abn_trade_candidates").select("*").is("processed_at", null).limit(batchSize * maxBatches)
+    : ordered;
+  if (candidatesResult.error) throw new Error(candidatesResult.error.message);
+  const { count: remainingCount, error: remainingError } = await remainingQuery;
+  if (remainingError) throw new Error(remainingError.message);
+  const candidates = candidatesResult.data;
 
   const result: AbnEnrichmentResult = {
     processed: 0,

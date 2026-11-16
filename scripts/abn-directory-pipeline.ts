@@ -5,6 +5,7 @@
  *   npx tsx scripts/abn-directory-pipeline.ts --phase ingest
  *   npx tsx scripts/abn-directory-pipeline.ts --phase enrich
  *   npx tsx scripts/abn-directory-pipeline.ts --phase verify
+ *   npx tsx scripts/abn-directory-pipeline.ts --phase asic
  *
  * Phase ingest downloads each ABR zip once, stream-parses every XML
  * file inside it, and bulk-upserts trade matches into
@@ -33,6 +34,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { downloadToFile, fetchDownloadUrls, ingestZipFile } from "@/lib/abnBulkIngest";
 import { AbnRunReporter, type AbnRunPhase } from "@/lib/abnDirectoryRun";
 import { runAbnEnrichmentBatch } from "@/lib/abnDirectoryEnrichment";
+import { ingestAsicCompanies } from "@/lib/asicIngest";
 import { runDirectoryVerification } from "@/lib/directoryVerification";
 
 function arg(name: string): string | undefined {
@@ -140,6 +142,16 @@ async function enrich(reporter: AbnRunReporter) {
   return { processed, created };
 }
 
+async function asic(reporter: AbnRunReporter) {
+  const result = await ingestAsicCompanies(createAdminClient(), {
+    onProgress: async (message, inserted) => {
+      await reporter.progress({ message, candidates_inserted: inserted }, true);
+    },
+  });
+  console.log("[asic]", result);
+  return result;
+}
+
 async function verify() {
   const admin = createAdminClient();
   const limit = Number(process.env.DIRECTORY_VERIFY_LIMIT ?? "2000");
@@ -153,8 +165,8 @@ async function verify() {
 async function main() {
   requireEnv();
   const phase = arg("--phase") ?? "all";
-  if (!["all", "ingest", "enrich", "verify"].includes(phase)) {
-    console.error("--phase must be all, ingest, enrich, or verify");
+  if (!["all", "ingest", "enrich", "verify", "asic"].includes(phase)) {
+    console.error("--phase must be all, ingest, enrich, verify, or asic");
     process.exit(1);
   }
   const admin = createAdminClient();
@@ -171,6 +183,11 @@ async function main() {
     let inserted = 0;
     let created = 0;
     let processed = 0;
+    let asicInserted = 0;
+    if (phase === "all" || phase === "asic") {
+      const asicResult = await asic(reporter);
+      asicInserted = asicResult.inserted;
+    }
     if (phase === "all" || phase === "ingest") inserted = await ingest(admin, reporter);
     if (phase === "all" || phase === "enrich") {
       const enriched = await enrich(reporter);
@@ -182,7 +199,8 @@ async function main() {
       await verify();
     }
     const summary = [`Finished ${phase}.`];
-    if (phase === "all" || phase === "ingest") summary.push(`${inserted} candidates inserted.`);
+    if (phase === "all" || phase === "asic") summary.push(`${asicInserted} new ASIC companies queued.`);
+    if (phase === "all" || phase === "ingest") summary.push(`${inserted} ABR candidates inserted.`);
     if (phase === "all" || phase === "enrich") summary.push(`${created} listings created from ${processed} candidates.`);
     await reporter.finish(summary.join(" "));
   } catch (err) {

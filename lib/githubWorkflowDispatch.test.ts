@@ -4,6 +4,7 @@ import {
   dispatchSetupErrors,
   explainGithubDispatchFailure,
   pickDispatchedRun,
+  messageForFailedSteps,
   statusFromGithubRun,
   type WorkflowRunSummary,
 } from "./githubWorkflowDispatch";
@@ -36,6 +37,21 @@ describe("explainGithubDispatchFailure", () => {
     expect(explainGithubDispatchFailure(403, "")).toContain("Actions write");
     expect(explainGithubDispatchFailure(404, "")).toContain("abn-directory");
     expect(explainGithubDispatchFailure(422, "unexpected input")).toContain("run_id");
+  });
+});
+
+describe("messageForFailedSteps", () => {
+  it("names the empty Actions secrets when that step failed", () => {
+    const message = messageForFailedSteps(
+      [{ name: "Check Actions secrets SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY", conclusion: "failure" }],
+      [{ message: "Missing GitHub Actions secret(s): SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY. Add them under Settings." }],
+    );
+    expect(message).toContain("SUPABASE_URL");
+    expect(message).toContain("SUPABASE_SERVICE_ROLE_KEY");
+  });
+
+  it("leaves other failures alone", () => {
+    expect(messageForFailedSteps([{ name: "Run directory pipeline", conclusion: "failure" }])).toBeNull();
   });
 });
 

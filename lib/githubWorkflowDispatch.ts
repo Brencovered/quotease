@@ -22,7 +22,26 @@ const WORKFLOW_FILE = "abn-directory.yml";
 const DEFAULT_REPOSITORY = "Brencovered/quotease";
 const DEFAULT_REF = "main";
 
-export type AbnWorkflowPhase = "all" | "ingest" | "enrich" | "verify";
+export type AbnWorkflowPhase = "all" | "ingest" | "enrich" | "verify" | "asic";
+
+export const MISSING_ACTIONS_SECRETS_STEP = "Check Actions secrets SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY";
+
+export function secretFailureMessage(missing: string[]): string {
+  const names = missing.length > 0 ? missing.join(" and ") : "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY";
+  return `Missing GitHub Actions secret(s): ${names}. Add them under Settings → Secrets and variables → Actions (repository secrets, not Vercel). SUPABASE_URL is the project URL (https://<ref>.supabase.co). SUPABASE_SERVICE_ROLE_KEY is the service_role key. The workflow cannot insert directory candidates until both are set.`;
+}
+
+export function messageForFailedSteps(
+  steps: { name: string; conclusion: string | null }[],
+  annotations: { message?: string | null }[] = [],
+): string | null {
+  const secretStepFailed = steps.some((step) => (
+    step.conclusion === "failure" && step.name.includes("SUPABASE_URL") && step.name.includes("SUPABASE_SERVICE_ROLE_KEY")
+  ));
+  if (!secretStepFailed) return null;
+  const annotation = annotations.map((item) => item.message ?? "").find((message) => message.includes("SUPABASE_URL"));
+  return annotation || secretFailureMessage(["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]);
+}
 
 export interface DispatchConfig {
   token: string;
@@ -154,6 +173,69 @@ export async function dispatchAbnWorkflow(
 
   const found = await findRun(config, fetchImpl, sleep, dispatchedAt);
   return { ok: true, githubRunUrl: found?.html_url ?? null, githubRunId: found ? String(found.id) : null };
+}
+
+export async function readLatestWorkflowRun(
+  config: DispatchConfig,
+  fetchImpl: typeof fetch = fetch,
+): Promise<{ id: number; status: string; conclusion: string | null; html_url: string } | null> {
+  if (!config.token || dispatchSetupErrors(config).some((error) => error.startsWith("GITHUB_REPOSITORY") || error.startsWith("ABN_WORKFLOW_REF"))) {
+    return null;
+  }
+  if (!config.token) return null;
+  try {
+    const response = await fetchImpl(
+      `https://api.github.com/repos/${config.repository}/actions/workflows/${WORKFLOW_FILE}/runs?per_page=1`,
+      { headers: githubHeaders(config.token) },
+    );
+    if (!response.ok) return null;
+    const body = await response.json() as {
+      workflow_runs?: { id: number; status: string; conclusion: string | null; html_url: string }[];
+    };
+    return body.workflow_runs?.[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function describeFailedRun(
+  config: DispatchConfig,
+  githubRunId: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string | null> {
+  if (!config.token || !/^\d+$/.test(githubRunId)) return null;
+  try {
+    const response = await fetchImpl(
+      `https://api.github.com/repos/${config.repository}/actions/runs/${githubRunId}/jobs`,
+      { headers: githubHeaders(config.token) },
+    );
+    if (!response.ok) return null;
+    const body = await response.json() as {
+      jobs?: { check_run_url?: string; steps?: { name: string; conclusion: string | null }[] }[];
+    };
+    const jobs = body.jobs ?? [];
+    const steps = jobs.flatMap((job) => job.steps ?? []);
+    const annotations: { message?: string | null }[] = [];
+    for (const job of jobs) {
+      if (!job.check_run_url) continue;
+      const notes = await fetchImpl(`${job.check_run_url}/annotations`, { headers: githubHeaders(config.token) });
+      if (!notes.ok) continue;
+      const parsed = await notes.json() as { message?: string | null }[];
+      if (Array.isArray(parsed)) annotations.push(...parsed);
+    }
+    return messageForFailedSteps(steps, annotations);
+  } catch {
+    return null;
+  }
+}
+
+function githubHeaders(token: string): Record<string, string> {
+  return {
+    Accept: "application/vnd.github+json",
+    Authorization: `Bearer ${token}`,
+    "X-GitHub-Api-Version": "2022-11-28",
+    "User-Agent": "swiftscope-abn-directory",
+  };
 }
 
 export async function readWorkflowRun(

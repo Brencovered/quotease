@@ -30,7 +30,10 @@ create table if not exists public.abn_ingest_cursor (
 
 create table if not exists public.abn_trade_candidates (
   id uuid not null default gen_random_uuid(),
-  abn text not null,
+  abn text,
+  source text not null default 'abn_bulk',
+  acn text,
+  registered_at date,
   legal_name text not null,
   trading_name text,
   matched_trade text not null,
@@ -59,7 +62,7 @@ create table if not exists public.abn_directory_runs (
   finished_at timestamptz,
   updated_at timestamptz not null default now(),
   created_at timestamptz not null default now(),
-  constraint abn_directory_runs_phase_check check (phase in ('all', 'ingest', 'enrich', 'verify')),
+  constraint abn_directory_runs_phase_check check (phase in ('all', 'ingest', 'enrich', 'verify', 'asic')),
   constraint abn_directory_runs_status_check check (status in ('queued', 'running', 'done', 'failed'))
 );
 
@@ -1540,8 +1543,44 @@ alter table public.abn_directory_runs enable row level security;
 revoke all on public.abn_directory_runs from public, anon, authenticated;
 alter table public.abn_trade_candidates
   add column if not exists created_at timestamptz not null default now();
+alter table public.abn_trade_candidates
+  add column if not exists source text not null default 'abn_bulk';
+alter table public.abn_trade_candidates
+  add column if not exists acn text;
+alter table public.abn_trade_candidates
+  add column if not exists registered_at date;
+alter table public.abn_trade_candidates alter column abn drop not null;
 create index if not exists abn_trade_candidates_created_at_idx
   on public.abn_trade_candidates (created_at desc);
+create unique index if not exists abn_trade_candidates_acn_uidx
+  on public.abn_trade_candidates (acn) where acn is not null;
+
+-- Same lock as 20261116015755. is_admin() exists by this point in the file.
+do $$
+declare
+  tbl text;
+  tables text[] := array[
+    'abn_ingest_cursor',
+    'abn_trade_candidates',
+    'directory_listing_traffic_daily',
+    'directory_scrape_coverage',
+    'signup_attempts'
+  ];
+begin
+  foreach tbl in array tables loop
+    if to_regclass('public.' || tbl) is null then
+      continue;
+    end if;
+    execute format('alter table public.%I enable row level security', tbl);
+    execute format('revoke all on table public.%I from anon', tbl);
+    execute format('drop policy if exists %I on public.%I', tbl || '_admin_all', tbl);
+    execute format(
+      'create policy %I on public.%I for all to authenticated using (public.is_admin()) with check (public.is_admin())',
+      tbl || '_admin_all',
+      tbl
+    );
+  end loop;
+end $$;
 
 -- Policies on missing tables -------------------------------------------------
 drop policy if exists "Business suppliers" on public.business_suppliers; create policy "Business suppliers" on public.business_suppliers as permissive for all to public using ((profile_id IN ( SELECT accessible_business_ids(( SELECT auth.uid() AS uid)) AS accessible_business_ids)));

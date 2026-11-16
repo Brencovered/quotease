@@ -72,7 +72,10 @@ Apply order on an existing database (do this yourself; nothing in CI mutates pro
 2. Dry-run `npx tsx scripts/merge-directory-duplicates.ts` (or `npm run directory:merge`). Read the MERGE, SUPPRESS, and REVIEW lines.
 3. Apply with `npx tsx scripts/merge-directory-duplicates.ts --apply`. Same-suburb rows that are the same business are merged (claimed or richer row wins; the loser is snapshotted in `directory_listing_merge_log`). Different businesses that share a phone or domain keep both rows; the extra row drops the normalised key so the unique index can exist. The displayed phone and website stay. A group with two claimed profiles is left for a person to resolve.
 4. Apply `supabase/migrations/20261021130000_directory_listing_unique_identity.sql`. It refuses to create the unique indexes while any duplicate phone, domain, or ABN group remains in one suburb.
-5. Deploy the app.
+5. Apply `supabase/migrations/20261021140000_abn_directory_runs.sql`. It creates the run-status table and `created_at` on candidates. It does not delete rows.
+6. Apply `supabase/migrations/20261116015755_rls_internal_directory_tables.sql`. It turns on RLS for `abn_ingest_cursor`, `abn_trade_candidates`, `directory_listing_traffic_daily`, `directory_scrape_coverage`, and `signup_attempts`. Anon can no longer read them. The service role and `is_admin()` still can. It does not delete rows.
+7. Apply `supabase/migrations/20261116015756_asic_company_candidates.sql`. It adds `source`, `acn`, and `registered_at`, and allows an ACN-only company to be queued without an ABN. It does not delete rows.
+8. Deploy the app.
 
 Secrets for the weekly GitHub Action `.github/workflows/abn-directory.yml` (Settings → Secrets and variables → Actions). Do not commit values.
 
@@ -83,6 +86,18 @@ Secrets for the weekly GitHub Action `.github/workflows/abn-directory.yml` (Sett
 | `ABN_LOOKUP_GUID` | free registration at https://abr.business.gov.au/Tools/WebServices |
 
 Optional variables: `ABN_ENRICH_LIMIT` (default 800), `DIRECTORY_VERIFY_LIMIT` (default 2000). The workflow runs Sundays at 16:00 UTC, or on demand with phase `all`, `ingest`, `enrich`, or `verify`. It downloads each ABR zip once, stream-parses it, bulk-inserts trade candidates, guesses websites in parallel, then re-checks ABNs (ABN Lookup) and email DNS MX records. It never sends email and it deletes `GOOGLE_PLACES_API_KEY` from the job environment before it starts. Google Places stays on the manual admin scrape, directory-page scrape, and listing-create screens. The paused `expand-directory` cron stays out of `vercel.json`.
+
+The workflow refuses to start when the Actions secrets `SUPABASE_URL` or `SUPABASE_SERVICE_ROLE_KEY` are empty. The failing step is named `Check Actions secrets SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY`, and the admin panel copies that message onto the run. Add both under the repository's Actions secrets. They are separate from the Vercel env vars.
+
+Phase `asic` (also the first step of phase `all`) downloads the current ASIC Company Dataset zip. The URL comes from the data.gov.au CKAN API for package `asic-companies` (newest `company_YYYYMM.zip`), not a hardcoded filename. It keeps registered companies whose names match the trade keywords and whose registration date is inside the lookback (default 30 days, or 90 days when no ASIC rows exist yet). Override with Actions variables `ASIC_LOOKBACK_DAYS` and `ASIC_FIRST_RUN_LOOKBACK_DAYS`. Matching companies are queued on `abn_trade_candidates` with `source = asic_company`, ACN, ABN, and registration date, skipping ABNs already on a listing or an already-processed candidate. Phase 2 then guesses websites the same way as the ABN extract. The admin panel's **New businesses** list is companies registered in the last 30 days, filterable by source. ASIC data is CC BY 3.0 AU; the panel shows the attribution.
+
+Run it after the migrations below:
+
+```bash
+npx tsx scripts/abn-directory-pipeline.ts --phase asic
+```
+
+Or Actions → ABN directory → Run workflow → phase `asic`. From the admin page, **Pull new ASIC companies** dispatches that phase.
 
 The admin page **ABN directory growth** starts that same workflow. The server needs `GITHUB_ACTIONS_DISPATCH_TOKEN` (Vercel env or `.env.local`): a fine-grained GitHub token with Actions read and write on this repository, or a classic token with the `workflow` scope. Optional `GITHUB_REPOSITORY` (default `Brencovered/quotease`) and `ABN_WORKFLOW_REF` (default `main`). Merge the workflow to that ref before using the button. Apply `supabase/migrations/20261021140000_abn_directory_runs.sql` so the page can show queued, running, done, or failed, with a link to the Actions run. The page polls that table and the newest candidates and listings. Phase 2 ("Process next 50", or continuous while the page is open) still runs on the server and does not call Google.
 

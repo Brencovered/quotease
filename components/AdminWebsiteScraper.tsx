@@ -648,7 +648,7 @@ interface AbnRunRow {
 
 interface AbnCandidateRow {
   id: string;
-  abn: string;
+  abn: string | null;
   legal_name: string;
   trading_name: string | null;
   matched_trade: string;
@@ -656,6 +656,21 @@ interface AbnCandidateRow {
   postcode: string | null;
   website_url_found: string | null;
   created_at: string;
+}
+
+interface NewBusinessRow {
+  id: string;
+  abn: string | null;
+  acn: string | null;
+  legal_name: string;
+  trading_name: string | null;
+  matched_trade: string;
+  source: string | null;
+  state: string | null;
+  postcode: string | null;
+  website_url_found: string | null;
+  directory_listing_id: string | null;
+  registered_at: string | null;
 }
 
 interface AbnListingRow {
@@ -676,7 +691,9 @@ interface AbnDirectoryStats {
   listingsCreated: number;
   ingestCursor: { split_file_index: number; internal_file_index: number; last_run_at: string | null } | null;
   migrationReady: boolean;
+  asicReady: boolean;
   setupErrors: string[];
+  newBusinesses: NewBusinessRow[];
   activeRun: AbnRunRow | null;
   recentRuns: AbnRunRow[];
   recentCandidates: AbnCandidateRow[];
@@ -711,7 +728,8 @@ function AbnDirectoryPanel() {
   const [stats, setStats] = useState<AbnDirectoryStats | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [starting, setStarting] = useState<"ingest" | "all" | null>(null);
+  const [starting, setStarting] = useState<"ingest" | "all" | "asic" | null>(null);
+  const [sourceFilter, setSourceFilter] = useState<"all" | "asic_company" | "abn_bulk">("all");
   const [enriching, setEnriching] = useState(false);
   const [continuous, setContinuous] = useState(false);
   const [enrichResult, setEnrichResult] = useState<EnrichBatchResult | null>(null);
@@ -749,7 +767,7 @@ function AbnDirectoryPanel() {
     return () => { cancelled = true; };
   }, []);
 
-  async function startPipeline(phase: "ingest" | "all") {
+  async function startPipeline(phase: "ingest" | "all" | "asic") {
     setStarting(phase);
     setActionError(null);
     const res = await fetch("/api/admin/abn-directory", {
@@ -895,6 +913,10 @@ function AbnDirectoryPanel() {
             className="w-full flex items-center justify-center gap-1.5 text-[12.5px] font-bold text-[var(--ink)] border border-[var(--line)] px-3 py-2 rounded-lg disabled:opacity-50">
             {starting === "all" ? <><RefreshCw size={12} className="animate-spin" /> Starting...</> : <>Start full pipeline</>}
           </button>
+          <button onClick={() => startPipeline("asic")} disabled={phaseBusy || tokenMissing || !stats?.migrationReady || stats?.asicReady === false}
+            className="w-full flex items-center justify-center gap-1.5 text-[12.5px] font-bold text-[var(--ink)] border border-[var(--line)] px-3 py-2 rounded-lg disabled:opacity-50">
+            {starting === "asic" ? <><RefreshCw size={12} className="animate-spin" /> Starting...</> : <>Pull new ASIC companies</>}
+          </button>
         </div>
 
         <div className="border border-[var(--line)] rounded-xl p-3 space-y-2">
@@ -933,6 +955,65 @@ function AbnDirectoryPanel() {
           </div>
         </div>
       )}
+
+      <div>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+          <p className="text-[11px] font-bold uppercase text-[var(--ink-faint)]">New businesses</p>
+          <div className="flex gap-1">
+            {([
+              ["all", "All sources"],
+              ["asic_company", "ASIC"],
+              ["abn_bulk", "ABN bulk"],
+            ] as const).map(([value, label]) => (
+              <button key={value} onClick={() => setSourceFilter(value)}
+                className={`text-[11px] font-bold px-2 py-1 rounded-md border ${sourceFilter === value ? "bg-[#1f2937] text-white border-[#1f2937]" : "border-[var(--line)] text-[var(--ink-soft)]"}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <p className="text-[11px] text-[var(--ink-faint)] mb-1">
+          Registered in the last 30 days. ASIC rows are new companies from the weekly Company Dataset. Use phase 2 to guess a website, then outreach from the listing.
+        </p>
+        <div className="border border-[var(--line)] rounded-xl overflow-x-auto max-h-72">
+          <table className="w-full text-left text-[11.5px]">
+            <thead className="text-[10px] uppercase text-[var(--ink-faint)]">
+              <tr>
+                <th className="px-2 py-1.5">Name</th>
+                <th className="px-2 py-1.5">Trade</th>
+                <th className="px-2 py-1.5">Source</th>
+                <th className="px-2 py-1.5">Registered</th>
+                <th className="px-2 py-1.5">State</th>
+                <th className="px-2 py-1.5">Website</th>
+                <th className="px-2 py-1.5">ACN</th>
+                <th className="px-2 py-1.5">ABN</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(stats?.newBusinesses ?? [])
+                .filter((row) => sourceFilter === "all" || row.source === sourceFilter)
+                .map((row) => (
+                  <tr key={row.id} className="border-t border-[var(--line)]">
+                    <td className="px-2 py-1.5 text-[var(--ink)]">{row.trading_name || row.legal_name}</td>
+                    <td className="px-2 py-1.5">{row.matched_trade}</td>
+                    <td className="px-2 py-1.5">{row.source === "asic_company" ? "ASIC" : row.source === "abn_bulk" ? "ABN bulk" : (row.source ?? "")}</td>
+                    <td className="px-2 py-1.5">{row.registered_at ?? ""}</td>
+                    <td className="px-2 py-1.5">{[row.state, row.postcode].filter(Boolean).join(" ")}</td>
+                    <td className="px-2 py-1.5 max-w-[8rem] truncate">{row.website_url_found ?? ""}</td>
+                    <td className="px-2 py-1.5 font-mono">{row.acn ?? ""}</td>
+                    <td className="px-2 py-1.5 font-mono">{row.abn ?? ""}</td>
+                  </tr>
+                ))}
+              {(stats?.newBusinesses ?? []).filter((row) => sourceFilter === "all" || row.source === sourceFilter).length === 0 && (
+                <tr><td colSpan={8} className="px-2 py-3 text-[var(--ink-faint)]">No companies registered in the last 30 days yet. Pull new ASIC companies, then watch this list fill in.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-[10.5px] text-[var(--ink-faint)] mt-1">
+          Contains ASIC company data, © Commonwealth of Australia, licensed under CC BY 3.0 AU. Source: ASIC Company Dataset, data.gov.au.
+        </p>
+      </div>
 
       <div className="grid lg:grid-cols-2 gap-3">
         <div>

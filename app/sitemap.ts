@@ -106,9 +106,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/privacy`,          changeFrequency: "yearly",  priority: 0.2 },
   ];
 
-  // Supabase env vars won't be present at build time in CI - return
-  // static-only sitemap then; the revalidation will hydrate it at runtime.
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  // CI sets placeholder Supabase values so `next build` can finish without
+  // a database. Treat those the same as missing keys: ship the static
+  // pages, and let the daily revalidation fill listings once real
+  // credentials are present. A real URL that fails still throws below,
+  // so a production build cannot publish a quietly truncated sitemap.
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+  const placeholderBuild = supabaseUrl.includes("placeholder.supabase.co") || serviceKey === "placeholder-service-role-key";
+  if (!supabaseUrl || !serviceKey || placeholderBuild) {
     return staticPages;
   }
 

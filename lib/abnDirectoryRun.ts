@@ -6,7 +6,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type AbnRunPhase = "all" | "ingest" | "enrich" | "verify";
+export type AbnRunPhase = "all" | "ingest" | "enrich" | "verify" | "asic";
 export type AbnRunStatus = "queued" | "running" | "done" | "failed";
 
 export interface AbnRunPatch {

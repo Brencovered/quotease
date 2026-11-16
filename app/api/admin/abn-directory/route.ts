@@ -4,10 +4,13 @@ import { isAdminEmail } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runAbnEnrichmentBatch } from "@/lib/abnDirectoryEnrichment";
 import { migrationHint, schemaNotReady } from "@/lib/abnDirectoryRun";
+import { ASIC_MIGRATION_HINT } from "@/lib/asicCompany";
 import {
   dispatchAbnWorkflow,
   dispatchConfigFromEnv,
   dispatchSetupErrors,
+  describeFailedRun,
+  readLatestWorkflowRun,
   readWorkflowRun,
   statusFromGithubRun,
   type AbnWorkflowPhase,
@@ -47,6 +50,7 @@ export async function GET() {
     runsResult,
     candidatesResult,
     listingsResult,
+    newBusinessesResult,
   ] = await Promise.all([
     admin.from("abn_trade_candidates").select("id", { count: "exact", head: true }),
     admin.from("abn_trade_candidates").select("id", { count: "exact", head: true }).is("processed_at", null),
@@ -62,11 +66,19 @@ export async function GET() {
       .eq("source", "abn_bulk_extract")
       .order("created_at", { ascending: false })
       .limit(20),
+    admin.from("abn_trade_candidates")
+      .select("id, abn, acn, legal_name, trading_name, matched_trade, source, state, postcode, website_url_found, directory_listing_id, registered_at")
+      .gte("registered_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10))
+      .order("registered_at", { ascending: false })
+      .limit(200),
   ]);
 
   const migrationErrors = [runsResult.error, candidatesResult.error].filter(schemaNotReady);
   const setup = [...setupErrors];
   if (migrationErrors.length > 0) setup.push(migrationHint());
+  const asicReady = !newBusinessesResult.error;
+  if (newBusinessesResult.error && schemaNotReady(newBusinessesResult.error)) setup.push(ASIC_MIGRATION_HINT);
+  else if (newBusinessesResult.error) setup.push(newBusinessesResult.error.message);
 
   const runs = runsResult.data ?? [];
   let activeRun = runs.find((run) => run.status === "queued" || run.status === "running") ?? null;
@@ -85,12 +97,24 @@ export async function GET() {
         patch.error = null;
       }
       if (nextStatus === "failed") {
-        patch.message = "GitHub Actions reported this run as failed. Open the log for the step that stopped.";
+        const secretError = await describeFailedRun(dispatchConfigFromEnv(), String(activeRun.github_run_id));
+        patch.message = secretError
+          ? "The workflow stopped because GitHub Actions secrets are missing."
+          : "GitHub Actions reported this run as failed. Open the log for the step that stopped.";
         patch.finished_at = new Date().toISOString();
-        patch.error = activeRun.error || `GitHub conclusion: ${remote.conclusion ?? "unknown"}`;
+        patch.error = secretError || activeRun.error || `GitHub conclusion: ${remote.conclusion ?? "unknown"}`;
       }
       await admin.from("abn_directory_runs").update(patch).eq("id", activeRun.id);
       activeRun = { ...activeRun, ...patch };
+    }
+  }
+
+  const dispatchConfig = dispatchConfigFromEnv();
+  if (dispatchConfig.token) {
+    const latest = await readLatestWorkflowRun(dispatchConfig);
+    if (latest && latest.conclusion && latest.conclusion !== "success") {
+      const secretError = await describeFailedRun(dispatchConfig, String(latest.id));
+      if (secretError && !setup.includes(secretError)) setup.push(secretError);
     }
   }
 
@@ -100,7 +124,9 @@ export async function GET() {
     listingsCreated: listingsCreatedResult.count ?? 0,
     ingestCursor: cursorResult.data ?? null,
     migrationReady: migrationErrors.length === 0,
+    asicReady,
     setupErrors: setup,
+    newBusinesses: newBusinessesResult.data ?? [],
     activeRun,
     recentRuns: runs,
     recentCandidates: candidatesResult.data ?? [],
@@ -114,7 +140,7 @@ export async function POST(req: NextRequest) {
   if (isResponse(auth)) return auth;
 
   const body = await req.json().catch(() => ({}));
-  const phase = body.phase === "ingest" || body.phase === "all" || body.phase === "verify"
+  const phase = body.phase === "ingest" || body.phase === "all" || body.phase === "verify" || body.phase === "asic"
     ? body.phase
     : "enrich";
 
