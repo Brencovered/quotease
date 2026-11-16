@@ -81,12 +81,17 @@ function execFile(command: string, args: string[]): Promise<string> {
   });
 }
 
-export async function listZipXmlEntries(zipPath: string): Promise<string[]> {
+export async function listZipEntries(zipPath: string): Promise<string[]> {
   const listing = await execFile("unzip", ["-Z1", zipPath]);
   return listing
     .split("\n")
     .map((line) => line.trim())
-    .filter((name) => name.toLowerCase().endsWith(".xml") && !name.endsWith("/"));
+    .filter((name) => name.length > 0 && !name.endsWith("/"));
+}
+
+export async function listZipXmlEntries(zipPath: string): Promise<string[]> {
+  const entries = await listZipEntries(zipPath);
+  return entries.filter((name) => name.toLowerCase().endsWith(".xml"));
 }
 
 export function openZipEntry(zipPath: string, entry: string): NodeReadable {
@@ -220,7 +225,11 @@ export async function insertTradeCandidates(
 export async function ingestZipFile(
   zipPath: string,
   admin: ReturnType<typeof createAdminClient>,
-  options?: { startEntryIndex?: number; onFile?: (entryIndex: number, entryName: string, result: CandidateInsertResult) => Promise<void> },
+  options?: {
+    startEntryIndex?: number;
+    onFile?: (entryIndex: number, entryName: string, result: CandidateInsertResult) => Promise<void>;
+    onBatch?: (snapshot: { entry: string; scanned: number; tradeMatches: number; candidatesInserted: number }) => Promise<void>;
+  },
 ): Promise<{ files: number; scanned: number; tradeMatches: number; candidatesInserted: number }> {
   const entries = await listZipXmlEntries(zipPath);
   const start = options?.startEntryIndex ?? 0;
@@ -237,6 +246,12 @@ export async function ingestZipFile(
         tradeMatches: fileResult.tradeMatches + inserted.tradeMatches,
         candidatesInserted: fileResult.candidatesInserted + inserted.candidatesInserted,
       };
+      await options?.onBatch?.({
+        entry,
+        scanned: fileResult.scanned,
+        tradeMatches: fileResult.tradeMatches,
+        candidatesInserted: fileResult.candidatesInserted,
+      });
     });
     if (fileResult.scanned === 0) fileResult.scanned = scanned;
     totals.files += 1;

@@ -115,6 +115,12 @@ export async function GET() {
       GOOGLE_PLACES_API_KEY: secret("GOOGLE_PLACES_API_KEY"),
       GOOGLE_SERVICE_ACCOUNT_KEY: secret("GOOGLE_SERVICE_ACCOUNT_KEY"),
     },
+    directory_abn: {
+      GITHUB_ACTIONS_DISPATCH_TOKEN: secret("GITHUB_ACTIONS_DISPATCH_TOKEN"),
+      ABN_LOOKUP_GUID: secret("ABN_LOOKUP_GUID"),
+      GITHUB_REPOSITORY: config("GITHUB_REPOSITORY"),
+      ABN_WORKFLOW_REF: config("ABN_WORKFLOW_REF"),
+    },
     admin_and_cron: {
       ADMIN_EMAILS: config("ADMIN_EMAILS"),
       CRON_SECRET: secret("CRON_SECRET"),
