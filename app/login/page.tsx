@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { BLOCKED_EMAIL_MESSAGE, BLOCKED_EMAIL_PARAM } from "@/lib/blockedEmail";
 import { getActiveBusinessId, getTeamContext, isFieldWorker } from "@/lib/team";
 import { setCachedIsFieldWorker } from "@/lib/navRoleCache";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
@@ -329,6 +330,11 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // A Google signup refused for its email domain comes back here from the
+  // auth callback with ?error=blocked_email.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("error") === BLOCKED_EMAIL_PARAM) setError(BLOCKED_EMAIL_MESSAGE);
+  }, []);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { BLOCKED_EMAIL_PARAM } from "@/lib/blockedEmail";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getActiveBusinessId } from "@/lib/team";
@@ -8,6 +9,15 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const next = searchParams.get("next");
+
+  // Supabase sends OAuth failures back here as ?error_description=... with
+  // no code. "Database error saving new user" is the email domain block
+  // (trigger on auth.users): say so on the login page instead of
+  // dropping the person on a page that just bounces them.
+  const oauthError = searchParams.get("error_description");
+  if (!code && oauthError && /database error saving new user|not available for this email/i.test(oauthError)) {
+    return NextResponse.redirect(`${origin}/login?error=${BLOCKED_EMAIL_PARAM}`);
+  }
 
   if (code) {
     const supabase = await createClient();
