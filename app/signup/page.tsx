@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { BLOCKED_EMAIL_MESSAGE, isBlockedEmail, signupErrorMessage } from "@/lib/blockedEmail";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
 import { PRODUCT_TRADES } from "@/lib/genericTrades";
 import {
@@ -196,6 +197,7 @@ function SignupForm() {
     if (!SUPABASE_CONFIGURED) { setError("Not connected to a database yet."); return; }
     setLoading(true); setError(null);
     try {
+      if (await isBlockedEmail(email)) { setError(BLOCKED_EMAIL_MESSAGE); return; }
       const supabase = createClient();
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
@@ -205,7 +207,7 @@ function SignupForm() {
           emailRedirectTo: next ? `${window.location.origin}${next}` : `${window.location.origin}/onboarding`,
         },
       });
-      if (signUpError) { setError(signUpError.message); return; }
+      if (signUpError) { setError(signupErrorMessage(signUpError.message, email)); return; }
       if (data.session) {
         await supabase.from("profiles").update({
           business_name: businessName.trim(),

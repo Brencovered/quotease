@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { BLOCKED_EMAIL_MESSAGE, isBlockedEmail, signupErrorMessage } from "@/lib/blockedEmail";
 import MarketingNav from "@/components/MarketingNav";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
 import {
@@ -310,6 +311,7 @@ function ClaimDirectoryListingInner() {
     try {
       const supabase = createClient();
       if (authMode === "signup") {
+        if (await isBlockedEmail(email.trim())) { setError(BLOCKED_EMAIL_MESSAGE); return; }
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: email.trim(),
           password,
@@ -333,7 +335,7 @@ function ClaimDirectoryListingInner() {
             data: { signup_source: "directory_claim" },
           },
         });
-        if (signUpError) { setError(signUpError.message); return; }
+        if (signUpError) { setError(signupErrorMessage(signUpError.message, email)); return; }
         if (data.session) {
           // Best-effort, same as app/signup/page.tsx - this path also
           // bypasses /auth/callback's inline logging. The claim
