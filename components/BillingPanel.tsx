@@ -13,6 +13,25 @@ export default function BillingPanel({ trialEndsAt, isSubscribed, now }: { trial
     ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - now) / 86400000))
     : 0;
   const trialExpired = !!trialEndsAt && trialDaysLeft === 0 && !isSubscribed;
+  // No trial yet: a directory claim, which deliberately does not start one.
+  // Offer the same 7-day trial a /signup gets instead of "0 days left".
+  const noTrialYet = !trialEndsAt && !isSubscribed;
+  const [starting, setStarting] = useState(false);
+
+  async function startTrial() {
+    setStarting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/billing/start-trial", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) { window.location.href = "/dashboard"; return; }
+      setError(data.error ?? "Couldn't start the trial - try again or contact support.");
+    } catch {
+      setError("Couldn't reach the server - check your connection and try again.");
+    } finally {
+      setStarting(false);
+    }
+  }
 
   async function startCheckout() {
     setLoading(true);
@@ -38,7 +57,7 @@ export default function BillingPanel({ trialEndsAt, isSubscribed, now }: { trial
       <h1 className="font-display text-2xl text-[var(--ink)] mb-3">Your plan</h1>
       <div className="bg-[var(--navy)] rounded-2xl p-6 mb-6">
         <p className="text-[11px] font-bold tracking-[.16em] uppercase text-[var(--steel-3)] mb-1">
-          {isSubscribed ? "Current plan" : trialExpired ? "Trial ended" : "Free trial"}
+          {isSubscribed ? "Current plan" : trialExpired ? "Trial ended" : noTrialYet ? "7 days free" : "Free trial"}
         </p>
         <p className="font-display text-[2.5rem] text-[var(--amber)] leading-tight">$45</p>
         <p className="text-[var(--steel-2)] text-[14px] mb-1">per month</p>
@@ -53,15 +72,24 @@ export default function BillingPanel({ trialEndsAt, isSubscribed, now }: { trial
         <p className="text-[14px] text-[var(--ink-faint)] leading-relaxed mb-4">
           Your 7-day free trial has ended. Subscribe to keep quoting - no setup, cancel any time.
         </p>
+      ) : noTrialYet ? (
+        <p className="text-[14px] text-[var(--ink-faint)] leading-relaxed mb-4">
+          Your directory listing is free. Try the full quoting and job app free for 7 days. No credit card needed.
+        </p>
       ) : (
         <p className="text-[14px] text-[var(--ink-faint)] leading-relaxed mb-4">
           You&apos;re on a free trial, {trialDaysLeft} day{trialDaysLeft === 1 ? "" : "s"} left. No credit card needed until then.
         </p>
       )}
 
+      {noTrialYet && (
+        <button onClick={startTrial} disabled={starting} className="btn-primary w-full mb-3">
+          {starting ? "Starting..." : "Start 7-day free trial"}
+        </button>
+      )}
       {!isSubscribed && (
         <>
-          <button onClick={startCheckout} disabled={loading} className="btn-primary w-full mb-4">
+          <button onClick={startCheckout} disabled={loading} className={noTrialYet ? "btn-secondary w-full mb-4" : "btn-primary w-full mb-4"}>
             {loading ? "Redirecting..." : "Subscribe - $45/month"}
           </button>
           {error && <p className="text-[13px] text-[var(--red)] mb-4">{error}</p>}
