@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { BLOCKED_EMAIL_MESSAGE, isBlockedEmail, signupErrorMessage } from "@/lib/blockedEmail";
 import MarketingNav from "@/components/MarketingNav";
+import DirectoryAccountBar from "@/components/DirectoryAccountBar";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
 import {
   Search, Loader2, CheckCircle2, ArrowRight, Star,
@@ -595,6 +596,7 @@ function ClaimDirectoryListingInner() {
   return (
     <main className="min-h-screen" style={{ background: "var(--app-bg)" }}>
       <MarketingNav />
+      <DirectoryAccountBar />
 
       <div className="max-w-2xl mx-auto px-6 py-14">
         <h1 className="font-display text-[2.2rem] sm:text-[2.6rem] text-[#0a1722] leading-tight mb-3">

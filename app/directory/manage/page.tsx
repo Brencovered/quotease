@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import MarketingNav from "@/components/MarketingNav";
+import DirectoryAccountBar from "@/components/DirectoryAccountBar";
 import { buildDirectorySlug } from "@/lib/seo/meta";
 import OwnerGoalWidget from "./_components/OwnerGoalWidget";
 import PlatformTrialCard from "./_components/PlatformTrialCard";
@@ -216,6 +217,7 @@ export default function ManageDirectoryListingPage() {
     return (
       <main className="min-h-screen" style={{ background: "var(--app-bg)" }}>
         <MarketingNav />
+        <DirectoryAccountBar />
         <div className="max-w-2xl mx-auto px-6 py-14">
           <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 text-[13.5px] rounded-xl px-4 py-3">
             <AlertCircle size={16} className="shrink-0 mt-0.5" />
@@ -232,6 +234,7 @@ export default function ManageDirectoryListingPage() {
   return (
     <main className="min-h-screen" style={{ background: "var(--app-bg)" }}>
       <MarketingNav />
+      <DirectoryAccountBar />
 
       <div className="max-w-2xl mx-auto px-6 py-14">
         <div className="flex items-center justify-between mb-2">
