@@ -338,6 +338,11 @@ function LoginForm() {
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
+  // /login?reset=1 (linked from the directory sign-in) opens straight onto
+  // the password reset.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("reset") === "1") setShowResetModal(true);
+  }, []);
   const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
