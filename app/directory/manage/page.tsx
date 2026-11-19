@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import MarketingNav from "@/components/MarketingNav";
 import DirectoryAccountBar from "@/components/DirectoryAccountBar";
+import DirectorySignIn from "@/components/DirectorySignIn";
 import { buildDirectorySlug } from "@/lib/seo/meta";
 import OwnerGoalWidget from "./_components/OwnerGoalWidget";
 import PlatformTrialCard from "./_components/PlatformTrialCard";
@@ -42,6 +43,8 @@ export default function ManageDirectoryListingPage() {
   const [saved, setSaved] = useState(false);
 
   const [listing, setListing] = useState<Listing | null>(null);
+
+  const [signedOut, setSignedOut] = useState(false);
   const [businessId, setBusinessId] = useState<string | null>(null);
 
   const [blurb, setBlurb] = useState("");
@@ -64,7 +67,9 @@ export default function ManageDirectoryListingPage() {
     fetch("/api/directory/manage")
       .then(async (r) => {
         if (!r.ok) {
-          const d = await r.json();
+          // Signed out: show the sign-in instead of a bare "Unauthorized"
+          if (r.status === 401) { setSignedOut(true); return; }
+          const d = await r.json().catch(() => ({}));
           setError(d.error ?? "Could not load your page.");
           return;
         }
@@ -209,6 +214,17 @@ export default function ManageDirectoryListingPage() {
     return (
       <main className="min-h-screen flex items-center justify-center" style={{ background: "var(--app-bg)" }}>
         <Loader2 className="animate-spin text-[#0a1722]" size={28} />
+      </main>
+    );
+  }
+
+  if (!listing && signedOut) {
+    return (
+      <main className="min-h-screen" style={{ background: "var(--app-bg)" }}>
+        <MarketingNav />
+        <div className="max-w-md mx-auto px-6 py-14">
+          <DirectorySignIn next="/directory/manage" />
+        </div>
       </main>
     );
   }
