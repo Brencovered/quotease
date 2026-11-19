@@ -714,9 +714,16 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
   // Fetch the business's profile for subscription and onboarding status
   const { data: profile } = await supabase
     .from("profiles")
-    .select("subscription_status, trial_ends_at, comp_access, onboarded_at, trades")
+    .select("subscription_status, trial_ends_at, comp_access, onboarded_at, trades, account_type")
     .eq("id", businessId)
     .single();
+
+  // A directory login (claimed a listing, never chose the app) is not a
+  // SwiftScope account: no dashboard, onboarding or billing. Its home is
+  // the listing editor, where it can opt in with a 7-day trial.
+  if (profile?.account_type === "directory") {
+    return NextResponse.redirect(new URL("/directory/manage", request.url));
+  }
 
   // Site members (basic access) only need My day / their jobs - bounce them
   // off owner tooling so they never land on an empty dashboard.

@@ -64,9 +64,10 @@ export async function GET(request: Request) {
         const admin = createAdminClient();
         const { error } = await admin
           .from("profiles")
-          .update({ trial_ends_at: null })
-          .eq("id", user.id)
-          .not("trial_ends_at", "is", null); // only touch it if the trigger actually set one
+          .update({ trial_ends_at: null, account_type: "directory" })
+          .eq("id", user.id);
+        // Directory login only, same as an email claim (handle_new_user
+        // reads signup_source for those): no trial, no app access.
         if (error) {
           console.error("[directory/auth-callback] failed to clear trial for new Google signup:", error.message);
           // Not fatal to the sign-in itself -- worst case this account
