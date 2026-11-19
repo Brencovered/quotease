@@ -678,7 +678,7 @@ function ClaimDirectoryListingInner() {
                     onClick={() => setAuthMode("signup")}
                     className={`flex-1 text-[13px] font-semibold py-1.5 rounded-md transition-colors ${authMode === "signup" ? "bg-white shadow-sm text-[#0a1722]" : "text-[#5a6b78]"}`}
                   >
-                    Create account
+                    Create login
                   </button>
                   <button
                     type="button"
@@ -723,7 +723,7 @@ function ClaimDirectoryListingInner() {
                   className="btn-primary w-full flex items-center justify-center gap-2"
                 >
                   {authLoading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
-                  {authLoading ? "One moment..." : authMode === "signup" ? "Create my account" : "Log in"}
+                  {authLoading ? "One moment..." : authMode === "signup" ? "Create my login" : "Log in"}
                 </button>
 
                 <p className="text-[12px] text-[#8a97a1] text-center">
@@ -985,7 +985,7 @@ function ClaimDirectoryListingInner() {
               className="btn-primary w-full flex items-center justify-center gap-2"
             >
               {submitting ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-              {submitting ? "Setting up your page..." : isAuthed ? "Finish setup" : "Create account & finish setup"}
+              {submitting ? "Setting up your page..." : isAuthed ? "Finish setup" : "Create login & finish setup"}
             </button>
           </div>
         )}

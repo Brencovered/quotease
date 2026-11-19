@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import MarketingNav from "@/components/MarketingNav";
 import { buildDirectorySlug } from "@/lib/seo/meta";
 import OwnerGoalWidget from "./_components/OwnerGoalWidget";
+import PlatformTrialCard from "./_components/PlatformTrialCard";
 import {
   Loader2, ImagePlus, X, Save, AlertCircle, CheckCircle2,
   Link2, Globe, ExternalLink,
@@ -462,6 +463,8 @@ export default function ManageDirectoryListingPage() {
         <div className="card p-6 rounded-2xl bg-[#fffbeb] mt-6">
           <OwnerGoalWidget />
         </div>
+
+        <PlatformTrialCard />
       </div>
     </main>
   );

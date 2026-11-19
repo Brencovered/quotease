@@ -384,10 +384,12 @@ function LoginForm() {
         } else if (ctx.isOwner) {
           const { data: profile } = await supabase
             .from("profiles")
-            .select("onboarded_at")
+            .select("onboarded_at, account_type")
             .eq("id", ctx.businessId)
             .maybeSingle();
-          if (!profile?.onboarded_at) target = "/onboarding";
+          // A directory login only edits its listing
+          if (profile?.account_type === "directory") target = "/directory/manage";
+          else if (!profile?.onboarded_at) target = "/onboarding";
         } else {
           // Managers/admins land on dashboard unless next is set
           const businessId = await getActiveBusinessId(supabase, user.id);
